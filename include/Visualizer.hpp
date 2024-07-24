@@ -17,6 +17,15 @@ class Visualizer
     block, //!< line segment, quad, or hex depending on the number of topological dimensions
     simplex, //!< line segment, triangle, or tet depending on the number of topological dimensions
   };
+
+  /*! \brief Default file format to visualize in, depending on what libraries you have enabled.
+   * \details Determined based on build options as follows:
+   * -# if `--use_xdmf` is true, then `"xdmf"`
+   * -# otherwise, if `--use_tecio` is true, then `"tecplot"`
+   * -# otherwise, `"csv"`
+   */
+  const static std::string default_format;
+
   virtual ~Visualizer() = default;
 
   /*! \brief writes a structured block of data
@@ -54,6 +63,7 @@ class Visualizer
    *   - `"tecplot"`: Writes all data in [Tecplot](https://tecplot.com/)'s
    *     [native format](https://tecplot.azureedge.net/products/360/current/360_data_format_guide.pdf).
    *     Uses `Tecplot_file`.
+   *   - `"default"`: Defaults to `Visualizer::default_format`.
    * \param n_dim_geom Number of geometric dimensions. I.e., does your data exist in 1D, 2D, or 3D space?
    * \param n_dim_topo Number of topological dimensions. I.e. 1 => curve, 2 => surface, 3 => solid
    * \param file_name Name of file to write, not including extension.

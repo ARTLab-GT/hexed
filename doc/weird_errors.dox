@@ -1,0 +1,31 @@
+__Error:__
+~~~{.unparsed}
+/home/micaiah/Desktop/hexed/libhexed/Block.cpp:187:9: runtime error: member access within address 0x72c03c52ac80 which does not point to an object of type 'Block'
+0x72c03c52ac80: note: object has invalid vptr
+~~~
+
+__Solution:__
+Initialization of base class referenced one of its own members:
+~~~
+class Block
+{
+  public:
+  int n_dim
+  Block(int, ...);
+};
+
+class Mesh_element : public Block
+{
+  ...
+}
+
+Mesh_element::Mesh_element(...) : Block(n_dim, ...)
+~~~
+
+__Error:__
+~~~{.unparsed}
+undefined reference to `vtable for hexed::Mortal'
+~~~
+
+__Solution:__
+`hexed::Mortal` had declared a virtual destructor in the header file which was never defined in the `.cpp` file.

@@ -1,6 +1,7 @@
-#include <Occt.hpp>
+#include <hexed/Occt.hpp>
 #if HEXED_USE_OCCT
 
+#include <filesystem>
 // geometry
 #include <TopoDS_Iterator.hxx>
 #include <BRep_Tool.hxx>
@@ -25,17 +26,15 @@
 #include <IMeshTools_Parameters.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #if HEXED_USE_TECPLOT
-#include <Tecplot_file.hpp>
+#include <hexed/Tecplot_file.hpp>
 #endif
-#include <Simplex_geom.hpp>
+#include <hexed/Simplex_geom.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
 bool Occt::message_set = false;
 
-void Occt::set_message()
-{
+void Occt::set_message() {
   if (!message_set) {
     message_set = true;
     auto& printers = Message::DefaultMessenger()->ChangePrinters();
@@ -47,14 +46,13 @@ void Occt::set_message()
 
 // recursively iterates through a shape and all its sub-shapes and invokes `callback`
 // on any shape of the specified type
-void iterate(const TopoDS_Shape& shape, TopAbs_ShapeEnum shape_type, std::function<void(const TopoDS_Shape&)> callback)
-{
+void iterate(const TopoDS_Shape& shape, TopAbs_ShapeEnum shape_type,
+             std::function<void(const TopoDS_Shape&)> callback) {
   if (shape.ShapeType() == shape_type) callback(shape);
   for (TopoDS_Iterator it(shape); it.More(); it.Next()) iterate(it.Value(), shape_type, callback);
 }
 
-void collect_curves(std::vector<opencascade::handle<Geom2d_Curve>>& curves, const TopoDS_Shape& shape)
-{
+void collect_curves(std::vector<opencascade::handle<Geom2d_Curve>>& curves, const TopoDS_Shape& shape) {
   opencascade::handle<Geom_Plane> plane = GC_MakePlane(0., 0., 1., 0.); // x_2 = 0 plane
   TopLoc_Location location;
   double unused [2] {}; // used by `CurveOnPlane` to return values we don't care about
@@ -78,7 +76,8 @@ Occt::Geom::Geom(const TopoDS_Shape& shape, int n_dim, double angle, double defl
       _surfaces.push_back(BRep_Tool::Surface(face));
       if (!(_surfaces.back()->Continuity() >= GeomAbs_C1)) {
         std::cerr << "WARNING: Surface is not C1 continuous! Falling back on triangulated intersections.\n"
-                  << "If you see this warning, please contact Micaiah: https://artlab-gt.github.io/hexed/index.html#Contact\n";
+                  << "If you see this warning, please contact "
+                  << "Micaiah: https://artlab-gt.github.io/hexed/index.html#Contact\n";
       }
     });
     Triangulation triang = _triangulate(shape, angle, deflection);
@@ -89,14 +88,12 @@ Occt::Geom::Geom(const TopoDS_Shape& shape, int n_dim, double angle, double defl
 
 void Occt::Geom::visualize(std::string format, std::string file_name) {_simplex->visualize(format, file_name);}
 
-Nearest_point<dyn> Occt::Geom::nearest_point(Mat<> point, double max_distance, double distance_guess)
-{
+Nearest_point<dyn> Occt::Geom::nearest_point(Mat<> point, double max_distance, double distance_guess) {
   HEXED_ASSERT(point.size() == nd, format_str(100, "`point` must be %iD", nd));
   return _simplex->nearest_point(point, max_distance, distance_guess);
 }
 
-std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
-{
+std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1) {
   HEXED_ASSERT(point0.size() == nd, format_str(100, "`point0` must be %iD", nd));
   HEXED_ASSERT(point1.size() == nd, format_str(100, "`point1` must be %iD", nd));
   auto inters = _simplex->simplex_intersections(point0, point1);
@@ -116,6 +113,8 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
         gp_Pnt point;
         gp_Vec vecs[2];
         surf->D1(guess(0), guess(1), point, vecs[0], vecs[1]);
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
         Mat<3> pos {point.X(), point.Y(), point.Z()};
         pos *= 1e-3;
         err_jac(all, 0) = pos - (point0 + guess(2)*diff);
@@ -124,9 +123,11 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
           err_jac(all, 1 + i_param) = deriv*1e-3;
         };
         err_jac(all, 3) = -diff;
+        #pragma GCC diagnostic pop
         return err_jac;
       };
-      Mat<> soln = math::newton(error_jacobian, Mat<3>{params[0], params[1], inters.points[i_inter]}, {.ftol = 1e-10*diff.norm(), .max_iters = 100});
+      Mat<> soln = math::newton(error_jacobian, Mat<3>{params[0], params[1], inters.points[i_inter]},
+                                {.ftol = 1e-10*diff.norm(), .max_iters = 100});
       if (std::abs(soln(2) - inters.points[i_inter]) < 0.5) inters.points[i_inter] = soln(2);
     }
   }
@@ -134,18 +135,18 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1)
 }
 
 template <typename reader_t>
-TopoDS_Shape Occt::execute_reader(std::string file_name)
-{
+TopoDS_Shape Occt::execute_reader(std::string file_name) {
+  HEXED_ASSERT(std::filesystem::exists(file_name), format_str(1000, "could not find file `%s`", file_name.c_str()));
   set_message();
   reader_t reader;
   auto result = reader.ReadFile(file_name.c_str());
-  HEXED_ASSERT(result == IFSelect_RetDone, "failed to read geometry file");
+  HEXED_ASSERT(result == IFSelect_RetDone, format_str(1000, "failed to read geometry file (return value %i of options "
+                                                            "{Void, Done, Error, Fail, Stop})", result));
   reader.TransferRoots();
   return reader.OneShape();
 }
 
-TopoDS_Shape Occt::read(std::string file_name)
-{
+TopoDS_Shape Occt::read(std::string file_name) {
   unsigned extension_start = file_name.find_last_of(".");
   HEXED_ASSERT(extension_start != std::string::npos, "`file_name` has no extension");
   std::string case_sensitive = file_name.substr(extension_start + 1, std::string::npos);
@@ -153,11 +154,12 @@ TopoDS_Shape Occt::read(std::string file_name)
   for (char& c : ext) c = tolower(c);
   if      (ext == "igs" || ext == "iges") return execute_reader<IGESControl_Reader>(file_name);
   else if (ext == "stp" || ext == "step") return execute_reader<STEPControl_Reader>(file_name);
-  throw std::runtime_error(format_str(1000, "`hexed::Occt::read` failed to recognize file exteinsion `.%s`.", case_sensitive.c_str()));
+  HEXED_THROW(format_str(1000, "`hexed::Occt::read` failed to recognize file exteinsion `.%s`.",
+                         case_sensitive.c_str()));
+  throw; // just to shut up the `-Wreturn-type`---the above statement throws the actual exception
 }
 
-Occt::Triangulation Occt::_triangulate(opencascade::handle<Poly_Triangulation> poly, int face)
-{
+Occt::Triangulation Occt::_triangulate(opencascade::handle<Poly_Triangulation> poly, int face) {
   HEXED_ASSERT(!poly.IsNull(), "handle is null");
   Triangulation triang;
   bool has_params = poly->HasUVNodes();
@@ -182,8 +184,7 @@ Occt::Triangulation Occt::_triangulate(opencascade::handle<Poly_Triangulation> p
   return triang;
 }
 
-Occt::Triangulation Occt::_triangulate(TopoDS_Shape shape, double angle, double deflection)
-{
+Occt::Triangulation Occt::_triangulate(TopoDS_Shape shape, double angle, double deflection) {
   // setup parameters
   IMeshTools_Parameters params;
   params.Deflection               = deflection*1e3;
@@ -213,10 +214,11 @@ Occt::Triangulation Occt::_triangulate(TopoDS_Shape shape, double angle, double 
   return triang;
 }
 
-std::vector<Mat<3, 3>> Occt::triangles(opencascade::handle<Poly_Triangulation> poly) {return _triangulate(poly, 0).tris;}
+std::vector<Mat<3, 3>> Occt::triangles(opencascade::handle<Poly_Triangulation> poly) {
+  return _triangulate(poly, 0).tris;
+}
 
-std::vector<Mat<3, 3>> Occt::triangles(TopoDS_Shape shape, double angle, double deflection)
-{
+std::vector<Mat<3, 3>> Occt::triangles(TopoDS_Shape shape, double angle, double deflection) {
   // setup parameters
   IMeshTools_Parameters params;
   params.Deflection               = deflection*1e3;
@@ -243,8 +245,24 @@ std::vector<Mat<3, 3>> Occt::triangles(TopoDS_Shape shape, double angle, double 
   return tris;
 }
 
-opencascade::handle<Poly_Triangulation> Occt::read_stl(std::string file_name, double scale)
-{
+Simplex_geom<3> Occt::triangulate(TopoDS_Shape shape, double angle, double deflection, int n_div_edge) {
+  Simplex_geom<3> geom(triangles(shape, angle, deflection));
+  iterate(shape, TopAbs_EDGE, [&](const TopoDS_Shape& s) {
+    TopoDS_Edge edge = TopoDS::Edge(s);
+    double param_bounds [2];
+    auto curve = BRep_Tool::Curve(edge, param_bounds[0], param_bounds[1]);
+    Array<double> points({n_div_edge + 1, 3});
+    for (int i_point = 0; i_point < n_div_edge + 1; ++i_point) {
+      gp_Pnt point = curve->Value(param_bounds[0] + i_point*(param_bounds[1] - param_bounds[0])/n_div_edge);
+      points(i_point).vector() << point.X(), point.Y(), point.Z();
+    }
+    points *= 1e-3; // convert to m
+    geom.add_edge(points);
+  });
+  return geom;
+}
+
+opencascade::handle<Poly_Triangulation> Occt::read_stl(std::string file_name, double scale) {
   set_message();
   opencascade::handle<Poly_Triangulation> poly = RWStl::ReadFile(file_name.c_str());
   HEXED_ASSERT(!poly.IsNull(), "`hexed::read_stl` failed (sorry, that's all i know)");
@@ -255,8 +273,7 @@ opencascade::handle<Poly_Triangulation> Occt::read_stl(std::string file_name, do
   return poly;
 }
 
-std::vector<Mat<2, 2>> Occt::segments(const TopoDS_Shape& shape, int n_segments)
-{
+std::vector<Mat<2, 2>> Occt::segments(const TopoDS_Shape& shape, int n_segments) {
   std::vector<Mat<2, 2>> segs;
   std::vector<opencascade::handle<Geom2d_Curve>> curves;
   collect_curves(curves, shape);

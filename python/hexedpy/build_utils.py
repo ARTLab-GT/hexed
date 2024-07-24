@@ -7,6 +7,12 @@ import inspect
 import re
 import sys
 
+## \namespace hexedpy.build_utils
+## \brief Library for creating build scripts.
+## \details Provides classes to manage dependency resolution (which can apply to both package management and building)
+## and option configuration, as well as miscellaneous tools that are useful for building.
+## \todo more documentation is needed here.
+
 def format_time(t):
     return time.strftime("%Y-%m-%d %H:%M:%S (UTC %z)", time.localtime(t))
 
@@ -242,26 +248,36 @@ class Buildable(Deliverable):
         return utd
     def __str__(self):
         return str(self.output())
+    def has_test(self):
+        return False
     def find(self):
+        prev_indent = self.builder.indent
         if not isinstance(self.depends(), Dummy):
-            self.builder.message(    "\x1b[0;94mChecking dependencies--\x1b[0m" + str(self))
-        #self.builder.indent_level += 1
+            self.builder.message("\x1b[0;94mChecking dependencies--\x1b[0m" + str(self))
+            self.builder.indent += "\x1b[;94m| \x1b[0m"
         assert self.found_depends, f"Failed to obtain dependencies {Deliverable.make(self.depends())} for {self.output()}."
+        cwd = os.getcwd()
+        os.chdir(self.bdir)
         if self.up_to_date():
-            #self.builder.indent_level -= 1
+            self.builder.indent = prev_indent
             self.builder.message("\x1b[0;94mFound up-to-date-------\x1b[0m" + str(self))
         else:
-            #self.builder.indent_level -= 1
+            self.builder.indent = prev_indent
             self.builder.message("\x1b[1;35mBuilding---------------\x1b[0m" + str(self))
-            cwd = os.getcwd()
-            os.chdir(self.builder.build_dir)
-            #self.builder.indent_level += 1
+            self.builder.indent += "\x1b[;35m| \x1b[0m"
             self.build()
-            os.chdir(cwd)
             self._found_output = Deliverable.make(self.output()).find()
             self.touch()
-            #self.builder.indent_level -= 1
+            self.builder.indent = prev_indent
             self.builder.message("\x1b[1;32mBuilt------------------\x1b[0m" + str(self))
+        if self.has_test():
+            os.chdir(self.bdir)
+            self.builder.message("\x1b[1;36mTesting----------------\x1b[0m" + str(self))
+            self.builder.indent += "\x1b[;36m| \x1b[0m"
+            assert self.test(), f"Tests for {self} failed after building."
+            self.builder.indent = prev_indent
+            self.builder.message("\x1b[1;32mPassed tests-----------\x1b[0m" + str(self))
+        os.chdir(cwd)
         return self.found_output
     @property
     def do(self):
@@ -311,7 +327,7 @@ class Copy(Buildable):
         shutil.copy(self._source, self._dest)
 
 class Subprocess(Buildable):
-    def __init__(self, builder, commands, outputs, depends=[], **kwargs):
+    def __init__(self, builder, commands, outputs, depends=[], directory=None, **kwargs):
         self._depends = depends
         self._output = outputs
         if isinstance(commands, str):
@@ -320,12 +336,15 @@ class Subprocess(Buildable):
             self.commands = [list(commands)]
         else:
             self.commands = list(commands)
+        self._dir = directory
         self._kwargs = kwargs
     def depends(self):
         return self._depends
     def output(self):
         return self._output
     def build(self):
+        if self._dir:
+            os.chdir(self._dir)
         for comm in self.commands:
             if self.builder.options["verbose"]:
                 self.builder.message(" ".join(comm))
@@ -356,20 +375,6 @@ class Extract(Buildable):
         self.builder.subproc(["tar", "-xf", self.archive])
     def __str__(self):
         return str(self.extracted)
-
-class Git_clone(Buildable):
-    def __init__(self, builder, repo, cloned_name):
-        self.repo = repo
-        self.name = cloned_name
-    def __str__(self):
-        return f"git repo {self.name}"
-    def output(self):
-        return File(self.name)
-    def build(self):
-        self[Pip]("gitpython").find()
-        assert not self.repo.startswith("https://") or self.builder.options["internet"], \
-            "`Git_clone` from a remote repository requires internet access. (You passed `--internet=False`.)"
-        self.builder.python("-c", f"import git; git.Repo.clone_from('{self.repo}', '{self.name}')")
 
 class C_project(Buildable):
     version = "<unspecified version>"
@@ -405,24 +410,21 @@ class HDF5(C_project):
 
 class Libxml2_base(C_project):
     version = "2.12.7"
-    installed_files = {"include":["libxml2"], "lib":["xml2"], "cmake":["libxml2"]}
+    installed_files = {"include":["libxml2"], "lib":["xml2"], "cmake":[f"libxml2-{version}"]}
     def build(self):
         directory = self.builder.fetch_archive(
             f"https://download.gnome.org/sources/libxml2/{'.'.join(self.version.split('.')[:-1])}/libxml2-{self.version}.tar.xz"
         )[0]
-        os.chdir(directory)
-        self.builder.subproc([
-            slash(os.getcwd()) + "configure",
-            f"--prefix={self.builder.build_dir}",
-            "--with-python=no",
-            "--enable-static=no",
-            "--enable-shared=yes"
+        self.builder.cmake(directory, opts=[
+            "-DBUILD_SHARED_LIBS=ON",
+            "-DLIBXML2_WITH_PYTHON=OFF",
+            "-DLIBXML2_WITH_LZMA=OFF",
+            "-DLIBXML2_WITH_ZLIB=OFF",
         ])
-        self.builder.make()
 
 class Libxml2(C_project):
-    version = "2.12.7"
-    installed_files = {"include":["libxml2", "libxml"], "lib":["xml2"], "cmake":["libxml2"]}
+    version = Libxml2_base.version
+    installed_files = {"include":["libxml2", "libxml"], "lib":["xml2"], "cmake":[f"libxml2-{Libxml2_base.version}"]}
     def build(self):
         self[Libxml2_base]().do
         link = self.bdir + "include/libxml"
@@ -430,14 +432,23 @@ class Libxml2(C_project):
             os.remove(link)
         os.symlink(self.builder.find_in("include", "libxml2/libxml").find().assets[0], link)
 
+class Boost(C_project):
+    version = "1.85.0"
+    installed_files = {"include":["boost"], "lib":[], "cmake":[f"Boost-{version}"]}
+    def build(self):
+        directory = self.builder.fetch_archive(f"https://archives.boost.io/release/1.85.0/source/boost_{self.version.replace('.', '_')}.tar.gz")[0]
+        os.chdir(directory)
+        self.builder.subproc([os.getcwd() + "/bootstrap.sh", "--prefix=" + self.bdir, "--with-libraries=chrono"])
+        self.builder.subproc([os.getcwd() + "/b2", "headers", "install"])
+
 class Xdmf(C_project):
     installed_files = {"include":["Xdmf.hpp"], "lib":["Xdmf", "XdmfCore"], "cmake":["Xdmf"]}
     def depends(self):
-        return self[Libxml2]() & self[HDF5]()
+        return self[Boost]() & self[Libxml2]() & self[HDF5]()
     def build(self):
-        self[Git_clone]("https://gitlab.kitware.com/xdmf/xdmf.git", "xdmf").do
+        directory = self.builder.fetch_archive(f"https://gitlab.kitware.com/xdmf/xdmf/-/archive/master/xdmf-master.tar.gz")[0]
         self.builder.env["XDMF_INSTALL_DIR"] = self.builder.build_dir
-        problem_file = f"{os.getcwd()}/xdmf/core/XdmfHDF5Controller.hpp"
+        problem_file = directory + "core/XdmfHDF5Controller.hpp"
         with open(problem_file, "r") as in_file:
             text = in_file.read()
         ind = text.find("#include")
@@ -445,7 +456,7 @@ class Xdmf(C_project):
         text = text.replace("typedef int hid_t", "typedef int64_t hid_t")
         with open(problem_file, "w") as out_file:
             out_file.write(text)
-        self.builder.cmake("xdmf", opts=["-Wno-dev", "-DBUILD_STATIC_LIBS=OFF", "-DBUILD_SHARED_LIBS=ON"])
+        self.builder.cmake(directory, opts=["-Wno-dev", "-DBUILD_STATIC_LIBS=OFF", "-DBUILD_SHARED_LIBS=ON"])
 
 class Catch2(C_project):
     version = "3.6.0"
@@ -455,6 +466,17 @@ class Catch2(C_project):
             f"https://github.com/catchorg/Catch2/archive/refs/tags/v{self.version}.tar.gz", outputs=f"Catch2-{self.version}"
         )[0]
         self.builder.cmake(directory, ["-DBUILD_TESTING=OFF", "-DBUILD_SHARED_LIBS=ON"])
+
+class Occt(C_project):
+    version = "7.8.0"
+    def __init__(self, builder, toolkits=[]):
+        self.installed_files = {"include":["opencascade"], "lib":toolkits, "cmake":["opencascade"]}
+    def find(self):
+        found = super().find()
+        self.builder.prefices["include"] += (self.builder.find_in("include", "opencascade").find().assets[0],)
+        return found
+    def build(self):
+        raise Exception("Sorry, auto-installing OCCT is not implemented. You have to install it yourself")
 
 class Pip(Buildable):
     fake_names = {
@@ -487,21 +509,25 @@ class Configure(Buildable):
     def __init__(self, builder, old_name, new_name):
         self.old_name = old_name
         self.new_name = new_name
+        with open(self.old_name, "r") as in_file:
+            self._text = in_file.read()
+        self._opts = []
+        for opt in re.findall(r'options\["(\w+)"\]', self._text):
+            if opt != "build_dir" and opt not in self._opts:
+                self._opts.append(opt)
     def depends(self):
-        return File(self.old_name) & File(self.builder.cache_file)
+        return File(self.old_name) & all_([self.builder.cache_dir + opt for opt in self._opts], name="configuration options")
     def output(self):
         return File(self.new_name)
     def build(self):
-        with open(self.old_name, "r") as in_file:
-            text = in_file.read()
         while True:
-            match = re.search(r"{\[([^}]+)\]}", text)
+            match = re.search(r"{\[([^}]+)\]}", self._text)
             if match is None: break
             options = self.builder.options
             info = self.builder.info
-            text = f"{text[:match.start()]}{eval(match.group(1))}{text[match.end():]}"
+            self._text = f"{self._text[:match.start()]}{eval(match.group(1))}{self._text[match.end():]}"
         with open(self.new_name, "w") as out_file:
-            out_file.write(text)
+            out_file.write(self._text)
 
 class Python_script(Buildable):
     def __init__(self, builder, output, script, args=[], extra_depends=[]):
@@ -519,13 +545,14 @@ class Python_script(Buildable):
 class Compiler:
     high_level_flags = True
     position_independent = True
-    warn = ["all"]
+    warn = ["all", "no-array-bounds"]
     cpp_standard = None
     optimize = 0
     debug = 0
     sanitize = False
     openmp = False
     architecture = None
+    profile = False
     extra_flags = []
     def flags(self):
         fs = []
@@ -534,11 +561,15 @@ class Compiler:
             assert isinstance(self.warn, list), '`Compiler.warn` must be a list of warning options (e.g. `["all", "error"]` for `-Wall -Werror`)'
             for w in self.warn: fs.append("-W" + w)
             if self.cpp_standard: fs += [f"-std=c++{int(self.cpp_standard)}", "-pedantic"]
-            if self.optimize: fs += [f"-O{self.optimize}", "-DNDEBUG"]
-            if self.debug: fs += [f"-g{self.debug}", "-DDEBUG"]
+            if self.optimize:
+                fs += [f"-O{self.optimize}", "-DNDEBUG"]
+            else:
+                fs.append("-DDEBUG")
+            if self.debug: fs.append(f"-g{self.debug}")
             if self.sanitize: fs += [f"-fsanitize={f}" for f in ["bounds-strict", "undefined", "address", "leak", "pointer-compare", "pointer-subtract"]]
             if self.openmp: fs.append("-fopenmp")
             if self.architecture: fs.append("-march=" + self.architecture)
+            if self.profile: fs.append("-pg")
         assert isinstance(self.extra_flags, list)
         for f in self.extra_flags: fs.append(f)
         return fs
@@ -556,11 +587,13 @@ class Compile(Subprocess):
             output = self.bdir + "object/" + src[len(root):]
         obj = ".".join(output.split(".")[:-1] + ["o"])
         builder.mkdir(parent(obj))
+        self.builder.assert_command("g++", "build-essential")
         command = ["g++", "-c"] + compiler.flags() + ["-I" + d for d in builder.prefices["include"]] + ["-o", obj, src]
         super().__init__(builder, command, obj, depends=self.builder.find_source_depends(src).find().assets)
 
 class Link(Subprocess):
     def __init__(self, builder, name, objects, libs=[], compiler=Compiler()):
+        self.builder.assert_command("g++", "build-essential")
         args = ["g++"] + compiler.flags()
         if re.fullmatch(r"lib\w+\.so", name):
             args.append("-shared")
@@ -652,7 +685,7 @@ class Union(Buildable):
                 with Pool(processes=builder.options["n_build_procs"]) as pool:
                     pool.map(lambda p: exec(p), procs, chunksize=1)
             """.replace(16*" ", "")
-            self.builder.python("-", "--build_dir=" + self.builder.build_dir, input=bytes(commands, encoding="utf8"))
+            self.builder.python("-", "__base_indent=" + self.builder.indent, "--build_dir=" + self.builder.build_dir, input=bytes(commands, encoding="utf8"))
         else:
             for b in self._buildables:
                 b.do
@@ -731,6 +764,8 @@ class Prefices(Dict_wrapper):
     def add(self, name, env_vars=[], suffix="", sys_paths=()):
         self._env_vars[name] = env_vars
         self._suffices[name] = suffix
+        if isinstance(sys_paths, str):
+            sys_paths = (sys_paths,)
         self._sys_paths[name] = tuple(sys_paths)
         paths = []
         for var in env_vars:
@@ -757,6 +792,9 @@ class Prefices(Dict_wrapper):
 
 class Builder:
     def _merge_option(self, opt):
+        if opt.startswith("__base_indent"):
+            self.indent = opt.split("=")[1]
+            return
         match = re.fullmatch("--([a-z_]+)=(.*)", opt)
         assert match, f"Invalid option syntax `{opt}`. Options must be of the form --option_name=value"
         name = match.group(1)
@@ -778,13 +816,13 @@ class Builder:
             "internet": Option(True, convert=as_bool),
         }
         self.info = {"date":time.strftime("%Y-%m-%d", time.gmtime())}
+        self.indent = ""
         for opt in opts:
             self._merge_option(opt)
         self.mkdir(self.build_dir)
-        self.cache_file = self.build_dir + "option_cache"
+        self.cache_dir = self.build_dir + "cache/"
+        self.mkdir(self.cache_dir)
         self.synch_cache()
-        self.indent_level = 0
-        self.tab = " \x1b[1;34m|\x1b[0m"
         self.env = dict(os.environ)
         if self.options["venv"]:
             self.venv_dir = self.build_dir + ".build_venv/"
@@ -793,10 +831,12 @@ class Builder:
         else:
             self.venv_dir = None
             self._python = "python3"
+        if self.options["internet"]:
+            self.python("-m", "pip", "install", "--upgrade", "pip")
         self.prefices = Prefices(self.env)
         self.prefices.add("bin", env_vars=["PATH"])
         self.prefices.add("lib", env_vars=["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"],
-            sys_paths=(("usr/lib/") if self.options["use_system_paths"] else ()))
+            sys_paths=(("/usr/lib/") if self.options["use_system_paths"] else ()))
         self.prefices.add("include", env_vars=["INCLUDE_PATH", "CPLUS_INCLUDE_PATH"],
             sys_paths=(("/usr/include/", "/usr/local/include/") if self.options["use_system_paths"] else ()))
         self.prefices.add("share")
@@ -811,7 +851,6 @@ class Builder:
                     self.prefices[prefix] = ()
         module_path = parent(parent(os.path.realpath(__file__)))
         self.prefices["python"] = (module_path,) + self.prefices["python"]
-        self.prefices["cmake"] = (f"{self.build_dir}lib/cmake/",) + self.prefices["cmake"]
         for p in self.prefices:
             self.prefices[p] = (f"{self.build_dir}{p}/",) + self.prefices[p]
         cmake_paths = ()
@@ -819,7 +858,7 @@ class Builder:
             p = Prefices.remove_suffix(p, "bin")
             p = Prefices.remove_suffix(p, "sbin")
             cmake_paths += (p, p + "lib/")
-        self.prefices["cmake"] = (self.build_dir + "lib/",) + tuple(self.prefices["cmake"]) + ('/home/mcsp3/codes/hexed/build_test/', '/home/mcsp3/codes/hexed/build_test/lib/', '/home/mcsp3/.main_venv/', '/home/mcsp3/.main_venv/lib/', '/home/mcsp3/.local/', '/home/mcsp3/.local/lib/', '/usr/local/', '/usr/local/lib/', '/usr/local/', '/usr/local/lib/', '/usr/', '/usr/lib/', '/usr/', '/usr/lib/', '/', '/lib/', '/', '/lib/', '/usr/games/', '/usr/games/lib/', '/usr/local/games/', '/usr/local/games/lib/', '/snap/', '/snap/lib/', '/opt/tecplot/360ex_2020r2/', '/opt/tecplot/360ex_2020r2/lib/', '/opt/tecplot/chorus_2020r2/', '/opt/tecplot/chorus_2020r2/lib/')
+        self.prefices["cmake"] = cmake_paths + tuple(self.prefices["cmake"])
         self[Pip](["cmake", "pypisearch"]).do
 
     def site_packages(self, python=None):
@@ -849,32 +888,30 @@ class Builder:
 
     def synch_cache(self):
         in_text = ""
-        if os.path.isfile(self.cache_file):
-            with open(self.cache_file, "r") as cache:
-                in_text = cache.read()
-                for line in in_text.split("\n"):
-                    if line:
-                        self._merge_option(line)
-        out_text = ""
+        existing_opts = {}
+        for fname in os.listdir(self.cache_dir):
+            with open(self.cache_dir + fname, "r") as cache:
+                text = cache.read()
+                existing_opts[fname] = text
+                self._merge_option(f"--{fname}={text}")
         for name in self.options:
             if name != "build_dir":
-                out_text += f"--{name}={self.options[name]}\n"
-        if out_text != in_text:
-            with open(self.cache_file, "w") as cache:
-                cache.write(out_text)
-
-    def indent(self):
-        return self.indent_level*self.tab
+                text = str(self.options[name])
+                if name not in existing_opts.keys() or text != existing_opts[name]:
+                    with open(self.cache_dir + name, "w") as cache:
+                        cache.write(text)
 
     def message(self, text, **kwargs):
-        print(self.indent() + text, flush=True, **kwargs)
+        print(self.indent + text, flush=True, **kwargs)
 
     def mkdir(self, name):
         os.makedirs(absolute(name), exist_ok=True)
 
-    def subproc(self, args, **kwargs):
+    def subproc(self, args, err_message=None, **kwargs):
         proc = subp.run(args, env=self.env, **kwargs)
-        assert proc.returncode == 0, f"command {args} failed"
+        if err_message is None:
+            err_message = f"command {args} failed"
+        assert proc.returncode == 0, err_message
         return proc
 
     def python(self, *args, **kwargs):
@@ -887,6 +924,9 @@ class Builder:
         return f"\n{package} " in "\n" + output
 
     def cmake(self, source_dir, opts=[], build_dir="build"):
+        self.assert_command("g++", "build-essential")
+        self.assert_command("gcc", "build-essential")
+        self.assert_command("make", "build-essential")
         cwd = os.getcwd()
         os.chdir(source_dir)
         self.mkdir(build_dir)
@@ -901,7 +941,14 @@ class Builder:
         self.make()
         os.chdir(cwd)
 
+    def assert_command(self, command, package=None):
+        message = f"Command `{command}` not found."
+        if package:
+            message += f" (Have you tried `sudo apt install {package}`?)"
+        self.subproc(["which", command], capture_output=True, err_message=message).stdout.decode()
+
     def make(self, args=["install"]):
+        self.assert_command("make", "build-essential")
         self.subproc(["make", f"-j{self.options['n_build_procs']}", *args])
 
     def fetch_archive(self, url, outputs=None):
@@ -952,8 +999,8 @@ class Builder:
             ]
             prefix = self.prefices["python"] + (parent(absolute(file)),)
         elif ext in ["c", "cpp", "cxx", "c++", "h", "hpp", "hxx", "h++"]:
-            patterns = [r'#include +["<]([\w.]+)[">]']
-            prefix = (self.build_dir + "include/hexed",)
+            patterns = [r'#include +["<]([\w./]+)[">]']
+            prefix = self.prefices["include"]
         elif ext == "hil":
             patterns = [r"read {(\w+)}"]
             raise NotImplementedError("need to implement prefix for HIL")

@@ -14,38 +14,24 @@ class Hexed(bu.C_project):
             "max_row_size": bu.Option(8, convert=int, assertions=bu.assert_true(lambda n: n >= 2, "max_row_size must be at least 2")),
             "threaded": bu.Option(True, convert=bu.as_bool),
             "n_threads": bu.Option(os.cpu_count(), convert=int, assertions=bu.assert_nonneg),
+            "profile": bu.Option(False, convert=bu.as_bool),
             "use_xdmf": bu.Option(True, convert=bu.as_bool),
             "use_tecio": bu.Option(False, convert=bu.as_bool),
+            "use_occt": bu.Option(False, convert=bu.as_bool),
             "build_tests": bu.Option(True, convert=bu.as_bool),
             "build_docs": bu.Option(False, convert=bu.as_bool),
             "obsessive_timing": bu.Option(False, convert=bu.as_bool),
             "install_wheel": bu.Option(True, convert=bu.as_bool),
             "test_args": bu.Option(""),
+            "gdb": bu.Option(False, convert=bu.as_bool),
         })
         is_release = self.builder.options["build_mode"] == "release"
         self.builder.add_options({
             "architecture": bu.Option(["any", "native"][is_release]),
             "build_wheel": bu.Option(is_release, convert=bu.as_bool),
             "run_tests": bu.Option(not is_release, convert=bu.as_bool),
+            "sanitize": bu.Option(not is_release, convert=bu.as_bool),
         })
-        self.builder.info["version"] = self.version
-        self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
-        self[bu.Pip]("gitpython").do
-        command = f"import git; repo = git.Repo('{self.sdir}'); print(repo.head.commit, end='')"
-        self.builder.info["commit"] = self.builder.python("-c", command, capture_output=True).stdout.decode()
-        #### determine compile flags
-        bu.Compiler.cpp_standard = 20
-        if self.builder.options["architecture"] != "any":
-            bu.Compiler.architecture = self.builder.options["architecture"]
-        if self.builder.options["build_mode"] == "release":
-            bu.Compiler.optimize = 3
-        elif self.builder.options["build_mode"] == "debug":
-            bu.Compiler.debug = 3
-            bu.Compiler.sanitize = True
-        if self.builder.options["threaded"]:
-            bu.Compiler.openmp = True
-        else:
-            bu.Compiler.warn.append("no-unknown-pragmas")
         # Get a list of all source files. The entire build process can be bypassed if there are no changes to any of these files
         self._all_sources = bu.all_(bu.contents(self.sdir, ignore=lambda f:
             bu.not_source(f) or
@@ -63,11 +49,39 @@ class Hexed(bu.C_project):
         ]
         if self.builder.options["use_xdmf"]:
             deps.append(self[bu.Xdmf]())
+        if self.builder.options["use_occt"]:
+            self.occt_libs = ["TKDEIGES", "TKDESTEP", "TKDESTL", "TKBRep", "TKV3d"]
+            deps.append(self[bu.Occt](toolkits=self.occt_libs))
         if self.builder.options["build_tests"]:
             deps.append(self[bu.Catch2]())
         return deps
 
     def build(self):
+        #### configure
+        if os.path.isdir(self.sdir + ".git/"):
+            self[bu.Pip]("gitpython").do
+            command = f"import git; repo = git.Repo('{self.sdir}'); print(repo.head.commit, end='')"
+            self.builder.info["commit"] = self.builder.python("-c", command, capture_output=True).stdout.decode()
+        else:
+            self.builder.info["commit"] = "notagitrepo"
+        self.builder.info["version"] = self.version
+        self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
+        bu.Compiler.cpp_standard = 20
+        if self.builder.options["architecture"] != "any":
+            bu.Compiler.architecture = self.builder.options["architecture"]
+        if self.builder.options["build_mode"] == "release":
+            bu.Compiler.optimize = 3
+        elif self.builder.options["build_mode"] == "debug":
+            bu.Compiler.debug = 3
+        if self.builder.options["threaded"]:
+            bu.Compiler.openmp = True
+        else:
+            bu.Compiler.warn.append("no-unknown-pragmas")
+        if self.builder.options["sanitize"]:
+            bu.Compiler.sanitize = True
+        if self.builder.options["profile"]:
+            bu.Compiler.debug = 3
+            bu.Compiler.profile = True
         #### compile and link
         self.builder.prefices["include"] = (self.bdir + "include/hexed",) + self.builder.prefices["include"]
         self.builder.mkdir(self.bdir + "libhexed")
@@ -92,11 +106,14 @@ class Hexed(bu.C_project):
         libs = ["hdf5_cpp"]
         if self.builder.options["use_xdmf"]:
             libs.append("Xdmf")
+        if self.builder.options["use_occt"]:
+            libs += self.occt_libs
         self[bu.Link]("libhexed.so", bu.contents(self.bdir + "object/libhexed"), libs=libs).do
         self[bu.Link]("hil", ["execs/hil.o"], libs=["hexed"]).do
         self[bu.Link]("hexecute", ["execs/hexecute.o"], libs=["hexed"]).do
         if self.builder.options["build_tests"]:
-            self[bu.Link]("hexed_test", bu.contents(self.bdir + "object/test"), libs=["hexed", "Catch2Main", "Catch2"]).do
+            self[bu.Link]("hexed_test", bu.contents(self.bdir + "object/test"),
+                          libs=["hexed", "Catch2Main", "Catch2"]).do
 
         ### build python package
         package_dir = self.bdir + "python_package/"
@@ -126,8 +143,8 @@ class Hexed(bu.C_project):
 
         ### build documentation
         if self.builder.options["build_docs"]:
-            assert self.builder.subproc(["which", "doxygen"], capture_output=True).stdout.decode(), \
-                "Doxygen not found (`which doxygen` returned empty). Cannot build documentation."
+            self.builder.assert_command("doxygen", "doxygen")
+            self.builder.assert_command("dot", "graphviz")
             def not_dox(f):
                 return not (f.endswith(".dox") or f.endswith(".tag") or f.endswith(".doxytags") or os.path.isdir(f))
             self.builder.copy(self.sdir + "doc/", self.bdir + "doc/", ignore=not_dox).do
@@ -153,12 +170,14 @@ class Hexed(bu.C_project):
                     stdout=log_file,
                 ).do
 
-        ### run tests
-        if self.builder.options["build_tests"] and self.builder.options["run_tests"]:
-            try:
-                self.builder.subproc([self.bdir + "bin/hexed_test", self.builder.options["test_args"]])
-            except Exception as e:
-                print(e)
+    def has_test(self):
+        return self.builder.options["build_tests"] and self.builder.options["run_tests"]
+
+    def test(self):
+        args = [self.bdir + "bin/hexed_test", self.builder.options["test_args"]]
+        if self.builder.options["gdb"]:
+            args = ["gdb", "--args"] + args
+        return self.builder.subproc(args)
 
 if __name__ == "__main__":
     builder = bu.Builder()

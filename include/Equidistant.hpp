@@ -21,13 +21,12 @@ class Equidistant : public Basis
   //! constructor
   Equidistant(int row_size_arg);
   double node(int i) const override;
-  Eigen::MatrixXd diff_mat() const override;
-  Eigen::VectorXd node_weights() const override; //!< placeholder (throws an exception)
-  Eigen::MatrixXd boundary() const override;
-  Eigen::VectorXd orthogonal(int degree) const override; //!< placeholder (throws an exception)
-  Eigen::MatrixXd filter() const override; //!< placeholder (throws an exception)
-  Eigen::MatrixXd prolong(int i_half) const override; //!< placeholder (throws an exception)
-  Eigen::MatrixXd restrict(int i_half) const override; //!< placeholder (throws an exception)
+  Mat<dyn, dyn> diff_mat() const override;
+  Mat<> node_weights() const override; //!< placeholder (throws an exception)
+  Mat<dyn, dyn> boundary() const override;
+  Mat<> orthogonal(int degree) const override; //!< placeholder (throws an exception)
+  Mat<dyn, dyn> filter() const override; //!< placeholder (throws an exception)
+  Mat<dyn, dyn> restrict(int i_half) const override; //!< placeholder (throws an exception)
   double min_eig_diffusion() const override; //!< placeholder (throws an exception)
 };
 

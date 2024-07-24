@@ -4,9 +4,9 @@
 #include <memory>
 #include "math.hpp"
 #include "Nearest_point.hpp"
+#include "Geom_edge.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Represents a surface geometry implicitly for meshing.
  * \details Abstract class which represents geometry by supporting
@@ -20,8 +20,7 @@ namespace hexed
  * The derived class may impose dimensionality restrictions on the arguments.
  * Implementations must be thread-safe.
  */
-class Surface_geom
-{
+class Surface_geom {
   public:
   virtual ~Surface_geom() = default;
   /*! \brief Computes the point on the surface which is nearest to `point` within `max_distance`.
@@ -38,6 +37,11 @@ class Surface_geom
    * Returns the (potentially empty) set of \f$ t \f$ values where the line intersects the surface.
    */
   virtual std::vector<double> intersections(Mat<> point0, Mat<> point1) = 0;
+  /*! \brief Returns a list of any geometry edges that require mesh edges to be snapped to them.
+   * \details Only used in 3D.
+   * Default implementation returns an empty sequence, but derived classes may override.
+   */
+  inline virtual next::Sequence<Geom_edge&> edges() {return {};}
 };
 
 /*! \brief Combines multiple `Surface_geom`s into one.
@@ -45,13 +49,13 @@ class Surface_geom
  * is the nearest of the nearest points on the component geometries
  * and the intersection set is the union of the intersection sets of the components.
  */
-class Compound_geom : public Surface_geom
-{
+class Compound_geom : public Surface_geom {
   std::vector<std::unique_ptr<Surface_geom>> components;
   public:
   Compound_geom(std::vector<Surface_geom*>); //!< acquires ownership
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
+  next::Sequence<Geom_edge&> edges() override;
 };
 
 /*! \brief Represents hypersphere in any dimensionality.
@@ -60,8 +64,7 @@ class Compound_geom : public Surface_geom
  * However, all points supplied must have the same dimensionality,
  * or else behavior is undefined.
  */
-class Hypersphere : public Surface_geom
-{
+class Hypersphere : public Surface_geom {
   Mat<> c;
   double r;
   public:

@@ -173,7 +173,7 @@ You will probably want to adjust these parameters for some simulations, but you 
 __type:__ integer \n
 __default:__ 3 \n
 Number of levels to refine the mesh in \ref init_refinement before surface geometry is introduced.
-May be any nonnegative integer, up to time and memory constraints.
+May be any non-negative integer, up to time and memory constraints.
 
 <hr>
 \subsubsection surface_bc
@@ -206,7 +206,7 @@ Sets the temperature offset passed to `hexed::standard_atmosphere`.
 __type:__ float \n
 __default:__ 3e-3 \n
 When performing geometry-based refinement with \ref set_geometry_refinement,
-a nondimensional uncertainty metric for the surface representation will be compared to this value,
+a non-dimensional uncertainty metric for the surface representation will be compared to this value,
 and any elements with a larger value will be refined.
 Thus reducing this number results in a finer mesh and vice versa,
 although the default value produces reasonable results in a wide range of cases, in my opinion.
@@ -221,7 +221,7 @@ If set to a positive number, turns on artificial viscosity and sets the artifici
 \subsubsection fix_therm_admis
 __type:__ integer \n
 __default:__ \ref false \n
-If \ref true, check thermodynamic admissibility (positive density, nonnegative energy, non-NaN state) after every time integration stage
+If \ref true, check thermodynamic admissibility (positive density, non-negative energy, non-NaN state) after every time integration stage
 and if problems are found, run as many Laplacian smearing iterations as necessary to restore admissibility.
 Results in a major robustness improvement for hypersonic cases and comes at a modest performance cost.
 
@@ -250,7 +250,7 @@ Mesh and state files will be written every `vis_freq` iterations.
 \subsubsection print_freq
 __type:__ integer \n
 __default:__ 100 \n
-Solver status will be printed to stdout every `print_freq` iterations.
+Solver status will be printed to `stdout` every `print_freq` iterations.
 
 <hr>
 \subsubsection unrefine_if

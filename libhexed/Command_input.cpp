@@ -40,7 +40,7 @@ std::string Command_input::get()
     if (*data == 'R') break;
   }
   HEXED_ASSERT(response[0] == 27 && response[1] == '[', "attempt to obtain cursor position received unintelligible response");
-  int line_start = std::stoi(std::find(response, response + 100, ';') + 1);
+  int line_start = std::stoi(response + std::string(response).find(';') + 1);
   // function to set the current command to a new (modified) command rather than an unmodified entry from the history
   auto modify = [&]() {
     if (display != begin) {

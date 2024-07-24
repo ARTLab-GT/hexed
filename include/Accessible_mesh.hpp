@@ -5,17 +5,15 @@
 #include "Mesh_by_type.hpp"
 #include "Tree.hpp"
 #include "Kernel_mesh.hpp"
+#include "Gauss_lobatto.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief A mesh that supports access to the actual elements with the numerical data they contain.
- * \details This level of
- * access is required by the numerical scheme but should be hidden from the library user, who should not be
- * concerned with numerical details.
+ * \details This level of access is required by the numerical scheme but should be hidden from the library user,
+ * who should not be concerned with numerical details.
  */
-class Accessible_mesh : public Mesh
-{
+class Accessible_mesh : public Mesh {
   Storage_params params;
   int n_vert;
   double root_sz;
@@ -42,18 +40,22 @@ class Accessible_mesh : public Mesh
   std::vector<std::vector<Vertex::Non_transferable_ptr>> boundary_verts; // a vector of the vertices that are on each boundary
   std::vector<Vertex::Non_transferable_ptr> smooth_verts; // a vector of the vertices that need to be smoothed in this sweep
   int _mask_levels;
+  Gauss_lobatto _basis;
+  next::Mesh_blocks _blocks;
+  int _n_verts;
+  std::vector<Geom_edge> _geom_edges;
+  Stopwatch_tree _stopwatch;
 
   // masked sequences
   template <typename view_t, typename storage_t>
-  struct Masked
-  {
+  struct Masked {
     std::vector<storage_t*> ptrs;
     Vector_view<view_t&, storage_t*, ptr_convert<view_t&, storage_t*>> view;
     Slice<view_t&> slice;
     Masked() : view(ptrs), slice(view) {}
+
     template <typename T, typename U>
-    void populate(T& base_seq, U criterion)
-    {
+    void populate(T& base_seq, U criterion) {
       ptrs.resize(base_seq.size());
       int i_ptr = 0;
       for (int i = 0; i < int(base_seq.size()); ++i) {
@@ -64,7 +66,8 @@ class Accessible_mesh : public Mesh
   };
 
   Element_container& container(bool is_deformed);
-  int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin, int aniso_ref_level = 0);
+  int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin,
+                  int aniso_ref_level = 0, int surface_face = next::Mesh_blocks::no_face);
   Element& add_elem(bool is_deformed, Tree&);
   bool intersects_surface(Tree*);
   bool is_surface(Tree*);
@@ -83,6 +86,19 @@ class Accessible_mesh : public Mesh
   void snap_vertices();
   void create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
   void read_file(std::string file_name);
+  void _connect(std::array<Element*, 2>, Con_dir<Element>);
+  void _connect(std::array<Deformed_element*, 2>, Con_dir<Deformed_element>);
+  void _connect(Element*, std::vector<Element*>, Con_dir<Deformed_element>);
+  void _connect(Deformed_element*, std::vector<Deformed_element*>, Con_dir<Deformed_element>,
+                std::array<bool, 2> = {false, false});
+
+  template <typename Elem_t>
+  void _connect_shapes(Elem_t*, std::vector<Elem_t*>, Con_dir<Deformed_element>, std::array<bool, 2>);
+
+  struct Edge_match {
+    Mortal_ptr<next::Edge> edge;
+    std::array<Geom_edge::Node, 2> nodes;
+  };
 
   public:
   //! \brief how far must the center of an element be from the geometry relative to the nominal size
@@ -132,6 +148,7 @@ class Accessible_mesh : public Mesh
 
   void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
   void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
+  void relax_and_match(int n_relax = 0, double factor = .9) override;
   void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
   void set_all_smooth() override;
@@ -156,8 +173,7 @@ class Accessible_mesh : public Mesh
    * After modifying the mesh, you should call `reset_masks()` before making any new masks.
    * \todo Make this more intuitive and less error-prone.
    */
-  class Masked_mesh
-  {
+  class Masked_mesh {
     Masked<Kernel_element, Element> _masked_elems;
     Masked<Kernel_element, Element> _masked_car_elems;
     Masked<Kernel_element, Element> _masked_def_elems;
@@ -203,6 +219,8 @@ class Accessible_mesh : public Mesh
                      ptr_convert<Element_connection&, Element_face_connection<Deformed_element>*>> extruded_connections() {return {extrude_cons};}
   void write(std::string file_name) override;
   void export_polymesh(std::string dir_name) override;
+  void visualize(std::string format, std::string file_name) override;
+  inline const Stopwatch_tree& stopwatch_tree() const override {return _stopwatch;}
 
   protected:
   void reset_verts() override;

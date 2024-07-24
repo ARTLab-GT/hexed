@@ -14,6 +14,7 @@ test_Derivative.cpp
 test_erase_if.cpp
 test_Element.cpp
 test_Element_container.cpp
+test_Element_new.cpp
 test_func.cpp
 test_Face_permutation.cpp
 test_filter_limit.cpp

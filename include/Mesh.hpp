@@ -7,9 +7,10 @@
 #include "Layer_sequence.hpp"
 #include "Surface_geom.hpp"
 #include "connection.hpp"
+#include "Geom_edge.hpp"
+#include "Stopwatch_tree.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \details
  * Represents a collection of interconnected elements. This class is an interface which supports
@@ -21,8 +22,7 @@ namespace hexed
  * pointers or references because they preclude (illegal) attempts to relate objects owned by different
  * meshes.
  */
-class Mesh
-{
+class Mesh {
   public:
   //! \returns Nominal size (\f$\Delta h\f$) of elements with refinement level 0.
   virtual double root_size() = 0;
@@ -101,8 +101,7 @@ class Mesh
    */
   virtual void extrude(bool collapse = false, double offset = 0, bool force = false) = 0;
   //! \overload
-  inline void extrude(Layer_sequence layers)
-  {
+  inline void extrude(Layer_sequence layers) {
     double height = 1;
     for (int i_layer = layers.n_layers() - 1; i_layer > 0; --i_layer) {
       double new_height = height - layers.spacing(i_layer);
@@ -166,29 +165,28 @@ class Mesh
   virtual bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) = 0;
   virtual void set_all_smooth() = 0; //!< sets `need_smooth` to `true` for all vertices to perform global relaxation (only effective until the next `update()` cycle)
   /*! \brief Relax the vertices to improve mesh quality.
-   * \details By default, relaxation is performed incrementally
-   * -- only vertices of elements that are new in the most recent `update()` cycle are smoothed.
-   *  To smooth all, call `set_all_smooth()`.
+   * \details By default, relaxation is performed incrementally---only vertices of elements that are new
+   * in the most recent `update()` cycle are smoothed.
+   * To smooth all, call `set_all_smooth()`.
    * \param factor A larger number yields more change in the mesh. 0 => no update, 1 => "full" update, > 1 allowed but suspect
    */
   virtual void relax(double factor = 0.9) = 0;
   virtual int surface_bc_sn() = 0; //!< what is the serial number of the geometry surface BC?
+  virtual void relax_and_match(int n_relax = 0, double factor = .9) = 0;
   //! \}
 
   //! \name observers
   //!\{
   virtual int n_elements() = 0; //!< \brief number of elements currently in the mesh
   //! An object to provide information about whether the mesh connectivity is valid and if not, why.
-  class Connection_validity
-  {
+  class Connection_validity {
     public:
     const int n_redundant; //!< number of redundant connections, counting each participating face as one
     const int n_missing; //!< number of missing connections
     //! returns true if connectivity is valid
     inline operator bool() {return (n_redundant == 0) && (n_missing == 0);}
     //! if connectivity is invalid, throw an exception with a helpful message
-    inline void assert_valid()
-    {
+    inline void assert_valid() {
       if (!*this) {
         auto message = "Invalid mesh with " + std::to_string(n_redundant) + " redundant connections and "
                        + std::to_string(n_missing) + " missing connections.";
@@ -207,8 +205,7 @@ class Mesh
   //! get handles for all elements currently in the mesh, in no particular order (mostly for testing/debugging)
   virtual std::vector<elem_handle> elem_handles() = 0;
   //! Temporarily resets the vertices of a mesh to their nominal positions for debugging
-  class Reset_vertices
-  {
+  class Reset_vertices {
     Mesh& m;
     public:
     //! resets to nominal position
@@ -216,6 +213,8 @@ class Mesh
     //! restores vertices to where they were before this object was constructed
     inline ~Reset_vertices() {m.restore_verts();}
   };
+  //! \brief Obtain performance data.
+  virtual const Stopwatch_tree& stopwatch_tree() const = 0;
   //!\}
 
   //! \name I/O
@@ -224,6 +223,9 @@ class Mesh
   virtual void write(std::string file_name) = 0;
   //! \brief write the mesh in the OpenFOAM PolyMesh format
   virtual void export_polymesh(std::string dir_name) = 0;
+  //! \brief visualize the mesh
+  //! \details For debugging. For actual simulations, use `Solver::visualize_field`.
+  virtual void visualize(std::string format, std::string file_name) = 0;
   //!\}
   protected:
   virtual void reset_verts() = 0;

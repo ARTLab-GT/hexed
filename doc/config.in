@@ -8,14 +8,14 @@ USE_MATHJAX = YES
 FILE_PATTERNS += *.in *.py
 EXTENSION_MAPPING += in=c++
 WARN_IF_UNDOCUMENTED = NO
+MACRO_EXPANSION = YES
 GENERATE_LATEX = NO
 GENERATE_TAGFILE = hexed.tag
 PREDEFINED = HEXED_USE_NLOPT=1 HEXED_USE_OTTER=1 HEXED_USE_TECPLOT=1 HEXED_USE_XDMF=1 HEXED_THREADED=1 HEXED_USE_OCCT=1
 VERBATIM_HEADERS = NO
-TAGFILES = {[options["source_dir"]]}/doc/occt_short.tag=https://dev.opencascade.org/doc/refman/html \
-           {[options["source_dir"]]}/doc/Eigen.doxytags=https://eigen.tuxfamily.org/dox
 EXAMPLE_PATH = {[options["source_dir"]]}
 HTML_EXTRA_STYLESHEET = {[options["source_dir"]]}/doc/style.css
 ALIASES += today="{[info["date"]]}" proj_version=" version {[info["version"]]}, commit `{[info["commit"]]}`" me="\ref Contact \"me\"" show_details="\details \f$ \f$"
 IMAGE_PATH = {[options["build_dir"]]}doc/html/
 CITE_BIB_FILES = {[options["source_dir"]]}/doc/references.bib
+COLLABORATION_GRAPH = NO

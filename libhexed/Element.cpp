@@ -1,8 +1,7 @@
 #include <Element.hpp>
 #include <math.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
 Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level,
                  Mat<> origin_arg, bool mobile_vertices, int aniso_r_level) :
@@ -58,13 +57,11 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
 : Element(params_arg, pos, mesh_size, ref_level, origin_arg, false, aniso_r_level)
 {}
 
-Storage_params Element::storage_params()
-{
+Storage_params Element::storage_params() {
   return params;
 }
 
-std::vector<double> Element::position(const Basis& basis, int i_qpoint)
-{
+std::vector<double> Element::position(const Basis& basis, int i_qpoint) {
   std::vector<double> pos;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
     const int stride = math::pow(params.row_size, params.n_dim - i_dim - 1);
@@ -73,8 +70,7 @@ std::vector<double> Element::position(const Basis& basis, int i_qpoint)
   return pos;
 }
 
-std::vector<double> Element::face_position(const Basis& basis, int i_face, int i_face_qpoint)
-{
+std::vector<double> Element::face_position(const Basis& basis, int i_face, int i_face_qpoint) {
   const int i_dim = i_face/2;
   const int face_positive = i_face%2;
   // extract a row of quadrature points
@@ -99,8 +95,7 @@ std::vector<double> Element::face_position(const Basis& basis, int i_face, int i
   return pos;
 }
 
-void Element::set_jacobian(const Basis& basis)
-{
+void Element::set_jacobian(const Basis& basis) {
   // set face jacobian
   int nfq = params.n_qpoint()/params.row_size;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -114,72 +109,59 @@ void Element::set_jacobian(const Basis& basis)
   }
 }
 
-double* Element::stage(int i_stage)
-{
+double* Element::stage(int i_stage) {
   return (i_stage > 0) ? residual_cache() + (i_stage - 1)*n_dof : state();
 }
 
-double* Element::time_step_scale()
-{
+double* Element::time_step_scale() {
   return data.data() + params.n_dof();
 }
 
-double* Element::bulk_av_coef()
-{
+double* Element::bulk_av_coef() {
   return time_step_scale() + params.n_qpoint();
 }
 
-double* Element::laplacian_av_coef()
-{
+double* Element::laplacian_av_coef() {
   return bulk_av_coef() + params.n_qpoint();
 }
 
-double* Element::art_visc_forcing()
-{
+double* Element::art_visc_forcing() {
   return laplacian_av_coef() + params.n_qpoint();
 }
 
-double* Element::advection_state()
-{
+double* Element::advection_state() {
   return art_visc_forcing() + params.n_forcing*params.n_qpoint();
 }
 
-double Element::jacobian(int i_dim, int j_dim, int i_qpoint)
-{
+double Element::jacobian(int i_dim, int j_dim, int i_qpoint) {
   return (i_dim == j_dim) ? 1. : 0.;
 }
 
-void Element::push_shareable_value(std::function<double(Element&, int i_vertex)> fun)
-{
+void Element::push_shareable_value(std::function<double(Element&, int i_vertex)> fun) {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
     vertices[i_vert].shareable_value = fun(*this, i_vert);
   }
 }
 
-void Element::fetch_shareable_value(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduction)
-{
+void Element::fetch_shareable_value(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduction) {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
     access_fun(*this, i_vert) = vertices[i_vert]->shared_value(reduction);
   }
 }
 
-double& Element::vertex_time_step_scale(int i_vertex)
-{
+double& Element::vertex_time_step_scale(int i_vertex) {
   return vertex_data[i_vertex];
 }
 
-double& Element::vertex_elwise_av(int i_vertex)
-{
+double& Element::vertex_elwise_av(int i_vertex) {
   return vertex_data[params.n_vertices() + i_vertex];
 }
 
-double& Element::vertex_fix_admis_coef(int i_vertex)
-{
+double& Element::vertex_fix_admis_coef(int i_vertex) {
   return vertices[i_vertex].fix_admis_coef;
 }
 
-void Element::set_needs_smooth(bool value)
-{
+void Element::set_needs_smooth(bool value) {
   for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
     vertices[i_vert].needs_smooth = value;
   }
@@ -187,6 +169,15 @@ void Element::set_needs_smooth(bool value)
 
 void Element::set_face(int i_face, double* data) {faces[i_face] = data;}
 bool Element::is_connected(int i_face) {return faces[i_face];}
+
+void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
+  _shape.reset(new next::Element_shape{blocks.create_element(vertex(0).pos, nominal_size(), boundary_face)});
+}
+next::Element_shape& Element::shape() {
+  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
+  return *_shape;
+}
+
 double* Element::state() {return data.data();}
 double* Element::residual_cache() {return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();}
 double* Element::face(int i_face, bool is_ldg) {return faces[i_face] + is_ldg*params.n_dof()/params.row_size;}

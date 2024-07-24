@@ -4,8 +4,7 @@
 #include <hexed/Simplex_geom.hpp>
 #include <hexed/Gauss_legendre.hpp>
 
-TEST_CASE("Accessible_mesh")
-{
+TEST_CASE("Accessible_mesh") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 5, 3, row_size};
   hexed::Accessible_mesh mesh {params, 1.};
@@ -357,8 +356,7 @@ TEST_CASE("extruded hanging node connection validity")
   REQUIRE(mesh.valid().n_missing == 2*(4 + 8) + 4);
 }
 
-TEST_CASE("Tree meshing")
-{
+TEST_CASE("Tree meshing") {
   hexed::Accessible_mesh mesh({1, 5, 3, hexed::config::max_row_size}, .7);
   REQUIRE_THROWS(mesh.update(hexed::criteria::always));
   SECTION("wrong number of BCs") {
@@ -378,8 +376,7 @@ TEST_CASE("Tree meshing")
   }
   REQUIRE(mesh.elements().size() == 1);
   mesh.valid().assert_valid();
-  SECTION("refinement")
-  {
+  SECTION("refinement") {
     mesh.update();
     REQUIRE(mesh.elements().size() == 8);
     mesh.valid().assert_valid();
@@ -395,8 +392,7 @@ TEST_CASE("Tree meshing")
     mesh.valid().assert_valid();
     REQUIRE(mesh.elements().size() == 78);
   }
-  SECTION("unrefinement")
-  {
+  SECTION("unrefinement") {
     for (int i = 0; i < 3; ++i) mesh.update();
     REQUIRE(mesh.elements().size() == 512);
     mesh.valid().assert_valid();

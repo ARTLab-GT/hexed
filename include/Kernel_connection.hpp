@@ -9,17 +9,17 @@ class Connection_direction
   public:
   std::array<int, 2> i_dim;
   std::array<bool, 2> face_sign;
-  int i_face(int i_side) {return 2*i_dim[i_side] + face_sign[i_side];}
+  int i_face(int i_side) const {return 2*i_dim[i_side] + face_sign[i_side];}
   /*!
    * Answers the question: Is it necessary to flip the normal of element `i_side` so that it
    * points from element 0 into element 1?
    */
-  bool flip_normal(int i_side) {return face_sign[i_side] == i_side;}
+  bool flip_normal(int i_side) const {return face_sign[i_side] == i_side;}
   /*!
    * Answers the question: Is it neccesary to flip axis `face_index(0).i_dim` of element 1
    * to match the coordinate systems?
    */
-  bool flip_tangential()
+  bool flip_tangential() const
   {
     //! if you're swapping two axes, you have to flip one of them to make a valid rotation. If you're not
     //! flipping a normal (or flipping both of them) then you have to flip a tangential
@@ -30,7 +30,7 @@ class Connection_direction
    * quadrature points of element 1 to match element 0? Only applicable to 3D, where some
    * face combinations can create a row vs column major mismatch. If 2D, always returns `false`.
    */
-  bool transpose()
+  bool transpose() const
   {
     return ((i_dim[0] == 0) && (i_dim[1] == 2)) || ((i_dim[0] == 2) && (i_dim[1] == 0));
   }

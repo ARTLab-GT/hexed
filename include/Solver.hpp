@@ -16,11 +16,11 @@
 #include "Visualizer.hpp"
 #include "kernels.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief The main class that basically runs everything.
- * \details If you want to run a simulation with hexed through the C++ API, your workflow should be roughly the following:
+ * \details If you want to run a simulation with hexed through the C++ API,
+ * your workflow should be roughly the following:
  * -# construct a `Solver` object
  * -# interact with the `mesh()` object to build the mesh topology and/or snap vertices
  * -# call `calc_jacobian()` to initialize internal parameters based on the mesh
@@ -28,8 +28,7 @@ namespace hexed
  * -# call `update()` repeatedly to progress the simulation
  * -# call the some of the functions in output section to get the data you want from the simulation
  */
-class Solver
-{
+class Solver {
   Storage_params params;
   std::unique_ptr<Accessible_mesh> acc_mesh;
   Gauss_legendre basis;
@@ -51,7 +50,8 @@ class Solver
   void _put_cache(); // copies the flow state to the residual cache
   void _get_cache(); // copies the residual cache to the flow state
   void share_vertex_data(std::function<double&(Element&, int i_vertex)>, std::function<double(Mat<>)>);
-  void share_vertex_data(std::function<double(Element&, int i_vertex)> get, std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)>);
+  void share_vertex_data(std::function<double(Element&, int i_vertex)> get,
+                         std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)>);
   bool fix_admissibility(double stability_ratio);
   void apply_state_bcs();
   void apply_flux_bcs();
@@ -65,8 +65,7 @@ class Solver
   void _init_face_state();
 
   //! \brief linearizes the steady state equations by finite difference
-  class Linearized : public Linear_equation
-  {
+  class Linearized : public Linear_equation {
     Solver& _solver;
     Mat<> _ref_state;
     Mat<> _weights;
@@ -83,7 +82,8 @@ class Solver
     double inner(int input0, int input1) override;
     /*! \brief applies linearized operator
      * \details defined as \f$ A x = \frac{1}{\epsilon}(\nabla F(u) - \nabla F(u + \epsilon x)) \f$
-     * where \f$ u \f$ is the linearization point (the state to linearize about), \f$ \epsilon \f$ is given by `Linearized::finite_diff`,
+     * where \f$ u \f$ is the linearization point (the state to linearize about),
+     * \f$ \epsilon \f$ is given by `Linearized::finite_diff`,
      * and \f$ \nabla F \f$ is of course the residual of the nonlinear steady-state equations.
      */
     void matvec(int output, int input) override;
@@ -95,14 +95,18 @@ class Solver
    * \param row_size row size of the basis (see \ref Terminology)
    * \param root_mesh_size sets the value of `Mesh::root_mesh_size()`
    * \param local_time_stepping whether to use local or global time stepping
-   * \param viscosity_model determines whether the flow has viscosity (natural, not artificial) and if so, how it depends on temperature
-   * \param thermal_conductivity_model determines whether the flow has thermal conductivity and if so, how it depends on temperature
+   * \param viscosity_model determines whether the flow has viscosity (natural, not artificial) and if so,
+   * how it depends on temperature
+   * \param thermal_conductivity_model determines whether the flow has thermal conductivity and if so,
+   *        how it depends on temperature
    * \param space `Namespace` containing any user-defined parameters affecting the behavior of the solver.
    *        If no namespace is provided, a new blank namespace is creqated.
    *        Any optional parameters which are not found in the namespace shall be created with their default values.
    * \param printer what to do with any information the solver wants to print for the user to see
-   * \param implicit if `true`, allocate storage for solving with an implicit method (experimental feature -- not ready for production use)
-   * \details If `viscosity_model` and `thermal_conductivity_model` are both `inviscid` _and_ you don't turn on artificial viscosity,
+   * \param implicit if `true`, allocate storage for solving with an implicit method
+   *        (experimental feature---not ready for production use)
+   * \details If `viscosity_model` and `thermal_conductivity_model` are both `inviscid`
+   * _and_ you don't turn on artificial viscosity,
    * you will be solving the pure inviscid flow equations.
    * Otherwise, you will be solving the viscous flow equations using the LDG scheme,
    * potentially with some of the diffusion coefficients
@@ -110,8 +114,8 @@ class Solver
    */
   Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
          Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
-         std::shared_ptr<Namespace> space = std::make_shared<Namespace>(), std::shared_ptr<Printer_set> printer = std::make_shared<Printer_set>(),
-         bool implicit = false);
+         std::shared_ptr<Namespace> space = std::make_shared<Namespace>(),
+         std::shared_ptr<Printer_set> printer = std::make_shared<Printer_set>(), bool implicit = false);
 
   //! \name setup
   //!\{
@@ -127,13 +131,16 @@ class Solver
   Mesh& mesh();
   /*! \brief reads mesh from file
    * \details Wipes old mesh and flow state.
-   * File must be in the native (HDF5-based) mesh format, which you can generate from a previous simulation with `Mesh::write`.
+   * File must be in the native (HDF5-based) mesh format,
+   * which you can generate from a previous simulation with `Mesh::write`.
    * `.mesh.h5` will be automatically appended to `file_name`.
-   * New mesh must match the `Storage_params` of the current one, but the root mesh size will be replaced with that of the new mesh.
+   * New mesh must match the `Storage_params` of the current one,
+   * but the root mesh size will be replaced with that of the new mesh.
    * You still have to `initialize` (even if you already did before reading the new mesh),
    * but you don't have to `calc_jacobian` unless you further modify the mesh.
    */
-  void read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* = nullptr, Flow_bc* surface_bc = nullptr);
+  void read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* = nullptr,
+                 Flow_bc* surface_bc = nullptr);
   //! \brief Reads flow state from file.
   //! \details Essentially a substitute for `initialize`.
   //! `.state.h5` will be appended to file name
@@ -141,7 +148,8 @@ class Solver
   Storage_params storage_params();
   //! warps the boundary elements such that the element faces coincide with the boundary at their quadrature points.
   void snap_faces();
-  /*! \brief compute the Jacobian of all elements based on the current position of the vertices and value of any face warping.
+  /*! \brief compute the Jacobian of all elements based on the current position of the vertices
+   * and value of any face warping.
    * \details Mesh topology must be valid (no duplicate or missing connections) before calling this function.
    * \param snap_faces if `true`, this function will go ahead and perform face snapping for you
    */
@@ -150,9 +158,14 @@ class Solver
   void initialize(const Spacetime_func&);
   bool using_art_visc(); //!< \brief returns `true` if artificial viscosity is currently turned on
   void set_art_visc_off(); //!< \brief turns off artificial viscosity
-  void set_art_visc_constant(double); //!< \brief turns on artificial viscosity and initializes coefficient to a uniform value
-  void set_art_visc_row_size(int); //!< \brief modify the polynomial order of smoothness-based artificial viscosity (must be <= row size of discretization (which is the default))
-  void set_fix_admissibility(bool); //!< \brief turns on/off the thermodynamic admissibility-preserving scheme \details increases robustness at some computational overhead
+  //! \brief turns on artificial viscosity and initializes coefficient to a uniform value
+  void set_art_visc_constant(double);
+  //! \brief modify the polynomial order of smoothness-based artificial viscosity
+  //! \details must be <= row size of discretization (which is the default)
+  void set_art_visc_row_size(int);
+  //! \brief turns on/off the thermodynamic admissibility-preserving scheme
+  //! \details increases robustness at some computational overhead
+  void set_fix_admissibility(bool);
   /*! \brief set `Element::uncertainty` for each element according to `func`.
    * \details Uncertainty metric can be evaluated via `sample(ref_level, is_deformed, serial_n, Uncertainty())`.
    * This function does some additional work to enforce some conditions on the uncertainty of neighboring elements.
@@ -174,14 +187,15 @@ class Solver
 
   //! \name time marching
   //!\{
-  /*!
-   * March the simulation forward by a time step equal to `time_step` or
+  /*! \details March the simulation forward by a time step equal to `time_step` or
    * `max_safety` times the estimated maximum stable time step, whichever is smaller.
    * Also, the safety factor is __not__ the same as the CFL number
    * (it is scaled by the max allowable CFL for the chosen DG scheme which is often O(1e-2)).
    */
   void update();
-  void update_implicit(); //!< \brief (experimental) performs an implicit time step \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
+  //! \brief (experimental) performs an implicit time step
+  //! \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
+  void update_implicit();
   void compute_residual();
   /*! \brief Computes the minimum ratio between the local diffusive and convective time steps.
    * \details Assumes no Chebyshev acceleration.
@@ -189,19 +203,22 @@ class Solver
    */
   void compute_lts_constraints();
   bool is_admissible(); //!< \brief check whether flowfield is admissible (e.g. density and energy are positive)
-  void update_art_visc_smoothness(double advect_length); //!< \brief updates the aritificial viscosity coefficient based on smoothness of the flow variables
+  //! \brief updates the aritificial viscosity coefficient based on smoothness of the flow variables
+  void update_art_visc_smoothness(double advect_length);
   /*! \brief (experimental) sets artificial viscosity based on elementwise smoothness
    * \details Based on the work of Persson et al. on artificial viscosity with elementwise smoothness indicators.
-   * Implemented primarily for evaluating the difference between grid-independent artificial viscosity and conventional methods.
+   * Implemented primarily for evaluating the difference
+   * between grid-independent artificial viscosity and conventional methods.
    * \warning Not recommended for use in practice.
    * Use `Solver::update_art_visc_smoothness`, which was developed to supplant this type of approach.
    */
   void update_art_visc_elwise(double width, bool pde_based = false);
+  //! \brief set the Laplacian artificial viscosity to a minimal value that will encourage thermodynamic admissibility
+  void set_art_visc_admis();
   /*! \brief an object providing all available information about the status of the time marching iteration.
    * \details The `Iteration_status::start_time` member will refer to when the `Solver` object was created
    * (specifically at the start of the `Solver::Solver` body).
    */
-  void set_art_visc_admis(); //!< \brief set the Laplacian artificial viscosity to a minimal value that will encourage thermodynamic admissibility
   Iteration_status iteration_status();
   /*!
    * reset any variables in `iteration_status()` that count something since the last call to `reset_counters()`
@@ -213,16 +230,19 @@ class Solver
   //! \name output
   //! functions that compute some form of output data
   //!\{
-  std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func&); //!< evaluate arbitrary functions at arbitrary locations
+
+  //! \brief evaluate arbitrary functions at arbitrary locations
+  std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func&);
   std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, const Element_func&); //!< \overload
-  //! obtain performance data
+  //! \brief obtain performance data
   const Stopwatch_tree& stopwatch_tree();
-  //! compute an integral over the entire flow field at the current time
+  //! \brief compute an integral over the entire flow field at the current time
   std::vector<double> integral_field(const Qpoint_func& integrand);
-  //! compute an integral over all surfaces where a particular boundary condition has been enforced
+  //! \brief compute an integral over all surfaces where a particular boundary condition has been enforced
   std::vector<double> integral_surface(const Boundary_func& integrand, int bc_sn);
-  /*! compute the min and max of variables over entire flow field. layout: `{{var0_min, var0_max}, {var1_min, var1_max}, ...}`
-   * bounds are approximated by uniformly sampling a block `n_sample`-on-a-side in each element
+  /*! \brief compute the min and max of variables over entire flow field.
+   * \details Layout: `{{var0_min, var0_max}, {var1_min, var1_max}, ...}`.
+   * Bounds are approximated by uniformly sampling a block `n_sample`-on-a-side in each element.
    */
   std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);
 
@@ -233,14 +253,20 @@ class Solver
    * \param n_sample each element will contain an `n_sample` by `n_sample` array of uniformly-spaced sample points
    * \param wireframe if `true`, visualize the mesh edges as a wireframe instead of the filled surface/solid
    */
-  void visualize_field(std::string format, std::string name, const Qpoint_func& output_variables, int n_sample = 10, bool wireframe = false);
+  void visualize_field(std::string format, std::string name, const Qpoint_func& output_variables,
+                       int n_sample = 10, bool wireframe = false);
   //! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
-  void visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func&, int n_sample = 10, bool wireframe = false);
-  void visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by, const Qpoint_func& output_variables, int n_sample = 10);
-  //! \brief visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping
+  void visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func&,
+                         int n_sample = 10, bool wireframe = false);
+  void visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by,
+                         const Qpoint_func& output_variables, int n_sample = 10);
+  //! \brief visualize the Cartesian surface which theoretically exists after element deletion
+  //! but before any vertex snapping
   void vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func = Uncertainty());
-  //! \brief visualize the local time step constraints imposed by convection and diffusion, respectively
-  //! \warning This function overwrites the reference state, which will invalidate any residual evaluation until `update` is called again.
+  /*! \brief visualize the local time step constraints imposed by convection and diffusion, respectively
+   * \warning This function overwrites the reference state,
+   * which will invalidate any residual evaluation until `update` is called again.
+   */
   void vis_lts_constraints(std::string format, std::string name, int n_sample = 10);
   //! \brief Writes flow state to file.
   //! \details `.state.h5` will be appended to `file_name`.

@@ -3,53 +3,80 @@
  * which I suppose it probably was.
  * This sheet mostly tweaks the colors and fonts to make it look a little more precise and modern.
  * Note: I tried doxygen-awesome-css, but while it looks modern, it honestly looks a little immature.
- * This is computational engineering -- it should look diginified.
+ * This is computational engineering---it should look diginified.
  */
 
-
-/* try to parameterize with these variables as much as possible */
+/*
+ * general parameters
+ */
 html {
-  --base-color: white;
-  --text-color: black;
-  --link-color: #3D578C;
-  --highlight-color: #e8e8e8;
-  --decor-color: DarkGoldenRod;
-  --anti-base-color: #303030;
-  --anti-text-color: #f0f0f0;
-  --anti-highlight-color: #606060;
-  --anti-link-color: #8da7dc;
-  --line-weight: 2px;
-  --syntax-comment-color: #2596b7;
-  --syntax-keyword-color: Blue;
-  --syntax-literal-color: #A347BA;
+  --glow-color: GoldenRod;
+  --hexed-border-color: #383838;
+  --hexed-contrast0: #f4f4f4;
+  --hexed-contrast1: #e8e8e8;
+  --hexed-contrast2: #d8d8d8;
+  --hexed-table-color: #d0e0f8;
+  --line-weight: 4px;
+  --hexed-border-style: solid;
+  --page-visited-link-color: var(--page-link-color);
+  --nav-background-color: var(--page-background-color);
+  --nav-text-active-color: var(--page-foreground-color);
+  --memdecl-background-color: var(--hexed-contrast0);
+  --memdef-title-background-color: var(--hexed-contrast1);
+  --memdef-proto-background-color: var(--hexed-contrast1);
+  --memdef-doc-background-color: var(--page-background-color);
+  --fragment-background-color: var(--hexed-contrast1);
+  --memdef-border-color: var(--hexed-table-color);
+}
+@media (prefers-color-scheme: dark) {
+  html:not(.dark-mode) {
+    --glow-color: GoldenRod;
+    --page-background-color: #191919;
+    --page-link-color: #a0b0f0;
+    --hexed-contrast0: #212121;
+    --hexed-contrast1: #282828;
+    --hexed-contrast2: #353535;
+    --hexed-table-color: #282858;
+    --hexed-border-color: var(--hexed-contrast1);
+    --hexed-border-style: none;
+    --page-visited-link-color: var(--page-link-color);
+    --nav-background-color: var(--hexed-contrast0);
+    --nav-text-active-color: var(--page-foreground-color);
+    --memdecl-background-color: var(--hexed-contrast0);
+    --memdef-proto-background-color: var(--hexed-contrast1);
+    --memdef-title-background-color: var(--hexed-contrast1);
+    --memdef-doc-background-color: var(--hexed-contrast0);
+    --fragment-background-color: var(--hexed-contrast2);
+    --memdef-border-color: var(--hexed-table-color);
+  }
 }
 
-/* project title bar at the very top */
+/*
+ * project title bar at the very top
+ */
 #titlearea {
-  background-color: var(--anti-base-color);
   background-image: url('header_background.png');
   background-size: cover;
   border-width: 10px;
-  border-color: var(--anti-base-color);
+  border-color: var(--hexed-border-color);
+}
+div#projectname {
+  color: black;
+  font-size: 250%;
 }
 
-/* page title bar */
-div.summary, div.headertitle {
-  background-color: var(--highlight-color);
+/*
+ * page title bar
+ */
+div.summary, div.headertitle, div.header, div.title {
+  background-color: var(--hexed-contrast1);
+  border: none;
 }
-
 div.headertitle {
-  border-color: var(--anti-base-color);
-  border-bottom-style: solid;
-  border-bottom-width: var(--line-weight);
+  border-bottom: var(--hexed-border-style);
 }
 
-.title {
-  font-weight: normal;
-  font-size: 200%;
-}
-
-/* change the main font to one that can distinguish betwee I and l. */
+/* general text */
 body, table, div, p, dl, #nav-tree .label, .title,
 .sm-dox a, .sm-dox a:hover, .sm-dox a:focus, #projectname,
 .SelectItem, #MSearchField, .navpath li.navelem a,
@@ -57,133 +84,81 @@ body, table, div, p, dl, #nav-tree .label, .title,
   font-family: "Noto Sans", "Noto Sans CJK JP", "Ubuntu", sans-serif;
 }
 
-/* format code blocks */
-code, div.fragment, pre.fragment {
-  font-family: "Noto Sans Mono", "Ubuntu Mono", monospace;
-  color: var(--text-color);
-  background-color: var(--highlight-color);
-  border-radius: .2em;
-  padding-left: .2em;
-  padding-right: .2em;
-  border-width: 0px;
+/* navigation sidebar */
+#nav-tree {
+  border: none:
 }
-
-span.comment {
-  color: var(--syntax-comment-color);
-}
-
-span.stringliteral {
-  color: var(--syntax-literal-color);
-}
-
-div.fragment {
-  padding: .4em;
-}
-
-/* format subheaders */
-h1, h2, h3, h4, h5, h6, h2.groupheader {
-  color: var(--text-color);
-  border-color: var(--text-color);
-}
-
-/* format member declarations */
-.mlabels {
-  box-shadow: none;
+#nav-tree .selected {
   background-image: none;
+  background-color: var(--hexed-contrast2);
+  text-shadow: none;
+}
+#side-nav {
+  background-color: var(--nav-background-color);
+}
+.ui-resizable-e {
+  background-image: none;
+  background-color: var(--hexed-border-color);
+  border: none;
+  width: 4px;
 }
 
-.mdescLeft, .mdescRight, .memItemLeft, .memItemRight,
-.memTemplItemLeft, .memTemplItemRight, .memTemplParams {
-  background-color: var(--base-color);
+/* class index */
+dl.classindex.odd {
+  background-color: var(--page-background-color);
+}
+dl.classindex.even {
+  background-color: var(--hexed-contrast0);
 }
 
-/* format member detailed documentation */
+/* members */
+td {
+  border: none;
+}
 .memdoc, .memproto, .memtitle {
   box-shadow: none;
   background-image: none;
-  border-width: var(--line-weight);
-  border-color: var(--anti-base-color);
+  border: none;
 }
-
-.memproto, .memtitle {
-  text-shadow: none;
-  color: var(--text-color);
-  background-color: var(--highlight-color);
-}
-
-.memtitle {
-  margin-bottom: calc(0px - var(--line-weight));
-}
-
-.memproto {
-  border-style: solid;
-}
-
-.paramname {
-  color: var(--decor-color);
-  font-weight: 550;
-}
-
-/* format general tables */
-.fieldtable th {
-  background-image: none;
-  background-color: var(--highlight-color);
-  text-shadow: none;
-  color: var(--text-color);
-}
-
-.fieldtable td.fielddoc, .fieldtable td.fieldname, .fieldtable th {
-  border-color: var(--antibase-color);
-}
-
-table.fieldtable {
-  box-shadow: none;
-  border-color: var(--antibase-color);
-}
-
-/* format glow effects */
-.memberdecls td.glow, .fieldtable tr.glow {
-  background-color: var(--decor-color);
-  box-shadow: 0 0 10px var(--decor-color);
-}
-
-h1.glow, h2.glow, h3.glow, h4.glow, h5.glow, h6.glow {
-  text-shadow: 0 0 15px var(--decor-color);
-}
-
-/* format navigation sidebar */
-#nav-tree, .ui-resizable-e {
-  background-color: var(--base-color);
-  background-image: none;
-}
-
-#nav-tree .selected {
-  background-image: none;
-  background-color: var(--highlight-color);
-  text-shadow: none;
-}
-
-#nav-tree .selected a {
-  color: var(--link-color);
-}
-
-.ui-resizable-e {
-  border-right-style: solid;
-  border-color: var(--anti-base-color);
-  border-width: var(--line-weight);
-  width: 4px;
+.memdoc {
+  border: var(--hexed-border-style);
+  border-color: var(--memdef-title-background-color);
 }
 
 /* format footer at the very bottom */
 .navpath ul {
   background-image: none;
-  background-color: var(--anti-base-color);
+  background-color: var(--hexed-border-color);
   border: none;
   text-shadow: none;
+  color: #a0b0f0;
 }
-
 .navpath li.navelem a, .navpath li.footer {
   text-shadow: none;
-  color: var(--anti-link-color);
-  font-weight: normal;
+  color: #a0b0f0;
+}
+
+/* code */
+code, div.fragment, pre.fragment {
+  font-family: "Noto Sans Mono", "Ubuntu Mono", monospace;
+  background-color: var(--fragment-background-color);
+  border-radius: .4em;
+  padding-left: .2em;
+  padding-right: .2em;
+  border: none;
+}
+
+/* tables */
+table.fieldtable {
+  box-shadow: none;
+  border-width: 3px;
+  border-radius: 6px;
+}
+.fieldtable td.fieldname, .fieldtable td.fieldtype, .fieldtable td.fielddoc {
+  border: none;
+}
+.fieldtable th {
+  background-image: none;
+  background-color: var(--hexed-table-color);
+  border: 2px solid var(--hexed-table-color);
 }

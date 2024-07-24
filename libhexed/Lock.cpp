@@ -1,7 +1,6 @@
 #include <Lock.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
 Lock::Acquire::Acquire(Lock& ref)
 : lock{ref}
@@ -11,22 +10,19 @@ Lock::Acquire::Acquire(Lock& ref)
   #endif
 }
 
-Lock::Acquire::~Acquire()
-{
+Lock::Acquire::~Acquire() {
   #if HEXED_THREADED
   omp_unset_lock(&lock.l);
   #endif
 }
 
-Lock::Lock()
-{
+Lock::Lock() {
   #if HEXED_THREADED
   omp_init_lock(&l);
   #endif
 }
 
-Lock::~Lock()
-{
+Lock::~Lock() {
   #if HEXED_THREADED
   omp_destroy_lock(&l);
   #endif

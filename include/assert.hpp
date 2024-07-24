@@ -2,14 +2,35 @@
 #define HEXED_ASSERT_HPP_
 
 #include <stdexcept>
+#include <vector>
+#include <string>
 #include <omp.h>
 #include "config.hpp"
-#include "utils.hpp"
 
 //! \file assert.hpp utilities for custom assertions
 
+namespace hexed
+{
+
+/*! \brief Standard string formatting.
+ * \details Basically a knockoff of `std::format` in C++20 (which at the time of writing we can't use on the lab machines).
+ * Invokes `snprintf`, but works in terms of `std::string`s and handles buffer creation for you.
+ * Will allocate a buffer of size `max_chars`.
+ * Throws an exception if resulting formatted string is larger than `max_chars`.
+ * \headerfile utils.hpp
+ */
+template <typename... format_args>
+std::string format_str(int max_chars, std::string fstring, format_args... args)
+{
+  std::vector<char> buffer(max_chars);
+  int overflow = snprintf(buffer.data(), max_chars, fstring.c_str(), args...);
+  if (overflow < 0) throw std::runtime_error("encoding error in `hexed::format_str`");
+  if (overflow >= max_chars) throw std::runtime_error("`max_chars` is too small in `hexed::format_str`");
+  return std::string(buffer.data());
+}
+
 //! utilities for custom assertions
-namespace hexed::assert
+namespace assert
 {
 
 class Exception : public std::exception
@@ -55,28 +76,37 @@ void throw_critical(const char* message)
   }
 }
 
-}
+} // namespace assert
+} // namespace hexed
 
-/*! \brief Assert something with a helpful error message.
- * \details If `expression` is false, throws an exception with a message
+/*! \brief Throws an exception with an informative error message.
+ * \details Throws an exception with a message
  * that includes `message` plus some additional info for debugging.
  * Works inside single-threaded regions as well as OpenMP parallel regions.
  * If desired, supply the type of exception as the third argument.
  * Exception type must be constructible from a string.
  * Defaults to `std::runtime_error`.
  */
+#define HEXED_THROW(message, ...) { \
+  assert::throw_critical<__VA_ARGS__>(format_str(1000, \
+    "%s\n" \
+    "  At: line %d of `%s`\n" \
+    "  In: %s", \
+    std::string(message).c_str(), __LINE__, __FILE__, __PRETTY_FUNCTION__).c_str()); \
+}
+
+/*! \brief Assert something with an informative error message.
+ * \details If `expression` is false, throws an exception with `HEXED_THROW`.
+ * `message` and an optional third argument are passed to `HEXED_THROW`.
+ */
 #define HEXED_ASSERT(expression, message, ...) { \
   if (!(expression)) { \
-    char buffer [1000]; \
-    snprintf(buffer, 1000, "%s\n" \
-                           "technical details: assertion `%s` failed in `%s`.\n" \
-                           "Assertion invoked at line %d of %s in function %s.", \
-             std::string(message).c_str(), #expression, __FUNCTION__, __LINE__, __FILE__, __PRETTY_FUNCTION__); \
-    assert::throw_critical<__VA_ARGS__>(format_str(1000, \
+    HEXED_THROW(format_str(1000, \
       "%s\n" \
-      "technical details: assertion `%s` failed in `%s`.\n" \
-      "Assertion invoked at line %d of %s in function %s.", \
-      std::string(message).c_str(), #expression, __FUNCTION__, __LINE__, __FILE__, __PRETTY_FUNCTION__).c_str()); \
+      "  Assertion `%s` failed in `%s`.\n", \
+      std::string(message).c_str(), #expression, __FUNCTION__) \
+      __VA_OPT__(,) __VA_ARGS__ \
+    ); \
   } \
 }
 

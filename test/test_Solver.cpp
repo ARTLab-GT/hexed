@@ -639,22 +639,18 @@ void test_conservation(Test_mesh& tm, std::string name)
 }
 
 // test the solver on a sinusoid-derived initial condition which has a simple analytic solution
-TEST_CASE("Solver time marching")
-{
-  SECTION("all cartesian")
-  {
+TEST_CASE("Solver time marching") {
+  SECTION("all cartesian") {
     All_cartesian ac(true);
     test_marching(ac, "car");
   }
-  SECTION("all deformed")
-  {
+  SECTION("all deformed") {
     All_deformed ad0 (0, true);
     test_marching(ad0, "def0");
     All_deformed ad1 (1, true);
     test_marching(ad1, "def1");
   }
-  SECTION("extruded with deformed hanging nodes")
-  {
+  SECTION("extruded with deformed hanging nodes") {
     #define TEST_DIMENSIONS(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
           Extrude_hanging eh(i_dim, j_dim, true); \
@@ -673,22 +669,18 @@ TEST_CASE("Solver time marching")
 }
 
 // test the solver on a sinusoid-derived initial condition which has a simple analytic solution
-TEST_CASE("Solver viscosity")
-{
-  SECTION("all cartesian")
-  {
+TEST_CASE("Solver viscosity") {
+  SECTION("all cartesian") {
     All_cartesian ac(true, hexed::Transport_model::constant(3.));
     test_visc(ac, "car");
   }
-  SECTION("all deformed")
-  {
+  SECTION("all deformed") {
     All_deformed ad0 (0, true, hexed::Transport_model::constant(3.));
     test_visc(ad0, "def0");
     All_deformed ad1 (1, true, hexed::Transport_model::constant(3.));
     test_visc(ad1, "def1");
   }
-  SECTION("extruded with deformed hanging nodes")
-  {
+  SECTION("extruded with deformed hanging nodes") {
     #define TEST_DIMENSIONS(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
           Extrude_hanging eh(i_dim, j_dim, true, hexed::Transport_model::constant(3.)); \
@@ -707,22 +699,18 @@ TEST_CASE("Solver viscosity")
 }
 
 // test the solver on a randomly perturbed input (for which it can't possibly be accurate) and verify conservation
-TEST_CASE("Solver conservation")
-{
-  SECTION("all cartesian")
-  {
+TEST_CASE("Solver conservation") {
+  SECTION("all cartesian") {
     All_cartesian ac(true);
     test_conservation(ac, "car");
   }
-  SECTION("all deformed")
-  {
+  SECTION("all deformed") {
     All_deformed ad0 (0, true);
     test_conservation(ad0, "def0");
     All_deformed ad1 (1, true);
     test_conservation(ad1, "def1");
   }
-  SECTION("extruded with deformed hanging nodes")
-  {
+  SECTION("extruded with deformed hanging nodes") {
     #define TEST_CONSERVATION(i_dim, j_dim) \
       SECTION("dimensions " #i_dim " " #j_dim) { \
           Extrude_hanging eh(i_dim, j_dim, true); \
@@ -740,10 +728,8 @@ TEST_CASE("Solver conservation")
   }
 }
 
-TEST_CASE("face extrusion")
-{
-  SECTION("2D")
-  {
+TEST_CASE("face extrusion") {
+  SECTION("2D") {
     int serial_n [3][3];
     serial_n[1][1] = -1; // so that we know if we accidentally use this
     hexed::Solver solver {2, 2, 1.};
@@ -778,8 +764,7 @@ TEST_CASE("face extrusion")
     // check that state variables have been interpolated correctly during second extrusion
     REQUIRE(solver.integral_field(hexed::Qpoint_expr(hexed::Struct_expr("errsq = (density - (1 + pos0))^2"), inter))[0] == Catch::Approx(0.).scale(1.));
   }
-  SECTION("3D")
-  {
+  SECTION("3D") {
     int serial_n [3][3][3];
     serial_n[1][1][1] = -1; // so that we know if we accidentally use this
     hexed::Solver solver {3, 2, 1.};
@@ -808,8 +793,7 @@ TEST_CASE("face extrusion")
   }
 }
 
-TEST_CASE("normal continuity uncertainty")
-{
+TEST_CASE("normal continuity uncertainty") {
   hexed::Solver sol({3, hexed::config::max_row_size, .2});
   int elem_sn = sol.mesh().add_element(0, true, {0, 0, 0});
   sol.mesh().extrude();
@@ -826,9 +810,7 @@ TEST_CASE("normal continuity uncertainty")
   }
 }
 
-TEST_CASE("artificial viscosity convergence")
-{
-  #if NDEBUG
+TEST_CASE("artificial viscosity convergence", "[.slow]") {
   const int len0 = 100;
   const int len1 = 2;
   hexed::Solver sol(2, hexed::config::max_row_size, 1./len0);
@@ -876,11 +858,9 @@ TEST_CASE("artificial viscosity convergence")
   REQUIRE(sol.iteration_status().adv_res < 1e-12);
   REQUIRE(sol.iteration_status().diff_res < 1e-12);
   CHECK(std::log(sol.bounds_field(hexed::Art_visc_coef())[0][1]/init_max)/std::log(2) > hexed::config::max_row_size - 2.);
-  #endif
 }
 
-TEST_CASE("uncertainty")
-{
+TEST_CASE("uncertainty") {
   hexed::Solver sol(2, 2, 1.);
   int sn = sol.mesh().add_element(0, true, {0, 0});
   sol.mesh().extrude();
@@ -899,8 +879,7 @@ TEST_CASE("uncertainty")
   REQUIRE(sol.sample(0, true, sn, hexed::Uncertainty())[0] == Catch::Approx(correct));
 }
 
-TEST_CASE("cylinder tree mesh")
-{
+TEST_CASE("cylinder tree mesh") {
   static_assert(hexed::config::max_row_size >= 6);
   constexpr int row_size = 6;
   hexed::Solver solver (2, row_size, 1.);
@@ -914,6 +893,8 @@ TEST_CASE("cylinder tree mesh")
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
+  solver.mesh().visualize("default", "cyl_before_ref");
+  solver.visualize_field("default", "cyl_before_ref_soln", hexed::Constant_func({}));
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
     // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
@@ -936,6 +917,8 @@ TEST_CASE("cylinder tree mesh")
   }
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
+  solver.mesh().visualize("default", "cyl_after_ref");
+  solver.visualize_field("default", "cyl_after_ref_soln", hexed::Constant_func({}));
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
     solver.mesh().update(hexed::criteria::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
@@ -945,8 +928,79 @@ TEST_CASE("cylinder tree mesh")
   REQUIRE(solver.mesh().n_elements() == n_initial); // this mesh should have been completely unrefined to where it started
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
+  solver.mesh().visualize("default", "cyl_after_unref");
+  solver.visualize_field("default", "cyl_after_unref_soln", hexed::Constant_func({}));
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
 }
+
+#if 0
+TEST_CASE("sphere tree mesh", "[.slow]") {
+  static_assert(hexed::config::max_row_size >= 4);
+  constexpr int row_size = 4;
+  hexed::Solver solver (3, row_size, 1.);
+  std::vector<hexed::Flow_bc*> bcs;
+  hexed::Mat<3> origin{2., 2., 2.};
+  for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Freestream(hexed::Mat<5>{0., 0., 0., 1., 1e5}));
+  solver.mesh().add_tree(bcs, origin);
+  for (int i = 0; i < 3; ++i) {
+    solver.mesh().update();
+  }
+  solver.mesh().set_surface(new hexed::Hypersphere(origin, .5), new hexed::Nonpenetration, origin + Eigen::Vector3d{.8, .8, .8});
+  solver.mesh().visualize("default", "sph_before_edge");
+  {
+    std::vector<hexed::Geom_edge> edges;
+    int n = 1000;
+    hexed::Array<double> arr({n + 1, 3});
+    for (int i = 0; i <= n; ++i) {
+      double angle = i*.5*hexed::constants::pi/n;
+      hexed::Mat<3> point = origin + .5*hexed::Mat<3>{.5, std::cos(angle), std::sin(angle)}.normalized();
+      arr(i).vector() = point;
+    }
+    edges.emplace_back(arr.copy());
+    edges.back().visualize("default", "edge");
+    solver.mesh().set_edges(std::move(edges));
+  }
+  solver.mesh().relax_and_match(6);
+  int n_initial = solver.mesh().n_elements();
+  for (int i = 0; i < 3; ++i) solver.mesh().relax();
+  solver.calc_jacobian();
+  solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
+  solver.mesh().visualize("default", "sph_before_ref");
+
+  for (int i = 0; i < 2; ++i) {
+    // this criterion will refine all elements with a vertex that is within .1 of the midpoint of the arc
+    auto criterion = [origin](hexed::Element& elem) {
+      bool ref = false;
+      for (int i_vert = 0; i_vert < 8; ++i_vert) {
+        double dist = 0;
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          dist += hexed::math::pow(elem.vertex(i_vert).pos[i_dim] - origin(i_dim) - .5/std::sqrt(3), 2);
+        }
+        double r = .1;
+        ref = ref || dist < r*r;
+      }
+      ref = ref && elem.refinement_level() <= 6;
+      return ref;
+    };
+    solver.mesh().update(criterion);
+    solver.mesh().relax_and_match(6);
+    solver.mesh().valid().assert_valid();
+  }
+  solver.calc_jacobian();
+  solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
+  solver.mesh().visualize("default", "sph_after_ref");
+  for (int i = 0; i < 3; ++i) {
+    solver.mesh().update(hexed::criteria::never, [](hexed::Element& elem){return elem.refinement_level() > 3;});
+    solver.mesh().relax_and_match(6);
+    solver.mesh().valid().assert_valid();
+  }
+  REQUIRE(solver.mesh().n_elements() == n_initial); // this mesh should have been completely unrefined to where it started
+  solver.calc_jacobian();
+  solver.initialize(hexed::Constant_func({0., 0., 0., 1., 1e5}));
+  solver.mesh().visualize("default", "sph_after_unref");
+  std::cout << solver.mesh().stopwatch_tree().report() << std::endl;
+}
+#endif
 
 TEST_CASE("file I/O")
 {

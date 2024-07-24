@@ -1,6 +1,9 @@
 #ifndef HEXED_ARRAY_HPP_
 #define HEXED_ARRAY_HPP_
 
+//! \file Array.hpp \brief Defines `Array` and related macros, functions, and constants
+
+//! \brief Controls whether bounds-checking assertions are used in `hexed::Array`.
 #ifndef HEXED_ARRAY_BOUNDS_CHECK
   #ifdef DEBUG
     #define HEXED_ARRAY_BOUNDS_CHECK true
@@ -11,9 +14,19 @@
 
 #include <vector>
 #include "assert.hpp"
+#include "math.hpp"
+#include "Iterator.hpp"
 
-namespace hexed
-{
+//! \brief Enforces an assertion iff `HEXED_ARRAY_BOUNDS_CHECK` is `true`.
+#define HEXED_ARRAY_ASSERT(...) \
+  if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
+    HEXED_ASSERT(__VA_ARGS__); \
+  } \
+
+namespace hexed {
+
+constexpr int whatever = -1; //!< \brief used in `Array<T>::reshaped()`
+constexpr int same = -2; //!< \brief used in `Array<T>::reshaped()`
 
 /*! \brief Represents a dynamic-sized multidimensional array.
  * \details This is an array-style container designed to meet the following objectives:
@@ -44,46 +57,76 @@ namespace hexed
  * Otherwise, no bounds checking is performed and out-of-bounds access is undefined behavior.
  * This can be overridden by explicitly defining the `HEXED_ARRAY_BOUNDS_CHECK` macro to be `true` or `false`.
  *
+ * `Array`s support the unary arithmetic operators `-` and `+` as well as the binary operators `-`, `+`, `/`, `*`, `%`, `&&`, and `||`.
+ * Binary operators can operate on two arrays or on an array and a scalar.
+ * All operators perform their operations elementwise.
+ * They always create a copy, so for truly optimal performance you might consider a loop instead.
+ * For binary operators, both operands (arrays or scalars) must have the same data type.
+ * To perform operations on arrays that have different, but compatible, types, you can cast them to the same type with `Array::copy<U>()`.
+ *
  * \note Implementing a feature-complete array container is a large task,
  * and I have not yet implemented all of the features that I ultimately plan to.
  * If there is a feature you want and feel that an array class ought to have,
  * feel free to let \me know and I may be able to move it up in the queue.
  */
 template <typename T>
-class Array
-{
-  int _order;
-  std::vector<T> _data_storage;
-  std::vector<int> _shape_storage;
-  std::vector<int> _stride_storage;
-  T* _data;
-  int* _shape;
-  int* _strides;
-  Array(int o, T* d, int* sh, int* st) : _order{o}, _data{d}, _shape{sh}, _strides{st} {}
-
+class Array {
   public:
   /*! \brief Creates an array from scratch.
    * \details Array will have dimensions specified by `shape_arg`.
-   * If `data_arg` is `nullptr` (the default), new data will be allocated which this `Array` will now own.
-   * Data values are set to `0`.
-   * Otherwise, this array will be a reference to the data starting at `data_arg` and will not own that data.
+   * This array will be a reference to the data starting at `data_arg` and will not own that data.
    */
-  Array(std::vector<int> shape_arg, T* data_arg = nullptr)
-  : _order{int(shape_arg.size())}, _shape_storage{shape_arg}, _shape{_shape_storage.data()}
-  {
+  Array(std::vector<int> shape_arg, T* data_arg)
+  : _order{int(shape_arg.size())}, _shape_storage{shape_arg}, _shape{_shape_storage.data()} {
     _shape_storage.shrink_to_fit();
     _stride_storage.resize(_order + 1);
     _stride_storage.shrink_to_fit();
     _strides = _stride_storage.data();
     _strides[_order] = 1;
     for (int i = _order - 1; i >= 0; --i) _strides[i] = _strides[i + 1]*_shape[i];
-    if (data_arg) _data = data_arg;
-    else {
-      _data_storage.resize(size(), T(0));
-      _data_storage.shrink_to_fit();
-      _data = _data_storage.data();
-    }
+    _data = data_arg;
   }
+  /*! \brief Creates an array from scratch.
+   * \details Array will have dimensions specified by `shape_arg`.
+   * This array will allocate new data, which it will now own.
+   * Data values are uninitialized.
+   */
+  Array(std::vector<int> shape_arg)
+  : Array(shape_arg, nullptr) {
+    _data_storage.resize(size());
+    _data_storage.shrink_to_fit();
+    _data = _data_storage.data();
+  }
+
+  template <typename input_it>
+  Array(std::vector<int> shape_arg, input_it first, input_it last)
+  : Array(shape_arg, nullptr) {
+    _data_storage.assign(first, last);
+    _data_storage.shrink_to_fit();
+    _data = _data_storage.data();
+  }
+  Array(std::vector<int> shape_arg, std::function<T(std::size_t)> func)
+  : Array(shape_arg, nullptr) {
+    _data_storage.assign(Iterator<T>(func, 0), Iterator<T>(func, size()));
+    _data_storage.shrink_to_fit();
+    _data = _data_storage.data();
+  }
+
+  //! \brief Constructs a 1D array whose elements are `args`.
+  template <typename... U>
+  static Array<T> make(U... args) {
+    std::vector<T> vec{args...};
+    Array<T> arr({int(vec.size())}, vec.data());
+    return arr.copy();
+  }
+
+  //! \brief Constructs an array from an `Eigen::Vector`.
+  //! \details Elements are copied.
+  template <int sz>
+  Array(Eigen::Vector<T, sz> vec)
+  : Array({vec.size()}, vec.begin(), vec.end()) {
+  }
+
   //! \brief Creates an array which is a reference to `other`'s data.
   //! \details Note that this array does not own the data, and if `other` is deleted it will now contain a dangling pointer.
   Array(Array<T>& other) : Array(other.shape(), other.data()) {}
@@ -92,8 +135,7 @@ class Array
    * If `other` had a reference to existing data, `this` will also be a reference to that data.
    * Leaves `other` in an unspecified but valid state.
    */
-  Array(Array<T>&& other) : Array(other.shape(), other.data())
-  {
+  Array(Array<T>&& other) : Array(other.shape(), other.data()) {
     _data_storage = std::move(other._data_storage);
     other._order = 0;
   }
@@ -102,17 +144,29 @@ class Array
    * Not allocations are performed and no new references are created.
    * You are simply assigning values to existing data.
    */
-  Array<T>& operator=(const Array<T>& other)
-  {
+  Array<T>& operator=(const Array<T>& other) {
     for (int i = 0; i < size(); ++i) _data[i] = other[i];
     return *this;
   }
+  //! \brief Sets all entries to the specified value.
+  Array<T>& operator=(const T& value) {
+    for (int i = 0; i < size(); ++i) _data[i] = value;
+    return *this;
+  }
+  //! \brief Sets the entries to the first `size()` objects pointed to by `ptr`.
+  Array<T>& operator=(T* ptr) {
+    for (int i = 0; i < size(); ++i) _data[i] = ptr[i];
+    return *this;
+  }
   ~Array() = default;
-  //! \brief Creates a new array that owns its data, which is a copy of `this`'s data (i.e. new data is allocated).
-  Array<T> copy() const
-  {
-    Array<T> c(shape());
-    c = *this;
+  /*! \brief Creates a new array that owns its data, which is a copy of `this`'s data (i.e. new data is allocated).
+   * \details If the template argument is specified to be something other than `T`, the array will be cast to a different type.
+   * The old type must by copy-assignable to the new type.
+   */
+  template <typename U = T>
+  Array<U> copy() const {
+    Array<U> c(shape());
+    for (int i = 0; i < size(); ++i) c[i] = _data[i];
     return c;
   }
 
@@ -120,8 +174,7 @@ class Array
   //! \details If you think of the array as a tensor, then this is the order of the tensor.
   int order() const {return _order;}
   //! \brief Fetches the shape (size of each dimension) of the `Array`.
-  std::vector<int> shape() const
-  {
+  std::vector<int> shape() const {
     std::vector<int> s(_order);
     for (int i = 0; i < _order; ++i) s[i] = _shape[i];
     return s;
@@ -131,69 +184,189 @@ class Array
   int size() const {return bool(_order)*_strides[0];}
   //! \brief `true` iff `this` and `other` have the same `shape()`.
   //! \details It's okay to call this on arrays of different `order()`; naturally it will return `false`.
-  bool same_shape(const Array<T>& other)
-  {
+  bool same_shape(const Array<T>& other) {
     bool same = _order == other._order;
     if (same) for (int i = 0; i < _order; ++i) same = same && _shape[i] == other._shape[i];
     return same;
   }
-
-  T* data() {return _data;} //!< \brief fetches pointer to data
-  const T* data() const {return _data;} //!< \overload
-
-  #define BODY \
-    if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
-      HEXED_ASSERT(_order, "indexing an order-0 `Array` with `[]`"); \
-      HEXED_ASSERT(i < size(), "indexing an `Array` out of bounds with `[]`"); \
-    } \
-    return _data[i];
-  //! \brief Accesses elements by flat indexing.
-  //! \details Equivalent to `data()[i]`, give or take bounds checking
-  T&       operator[](int i)        {BODY}
-  const T& operator[] (int i) const {BODY} //!< \overload
-  #undef BODY
-
-  Array<T>       operator()()       {return {_order, _data, _shape, _strides};} //!< \brief Creates an array as a reference to `this`'s data
-  const Array<T> operator()() const {return {_order, _data, _shape, _strides};} //!< \overload
-
-  #define BODY \
-    if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
-      HEXED_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
-      HEXED_ASSERT(i < _shape[0], "indexing an `Array` out of bounds with `()`"); \
-    } \
-    return {_order - 1, _data + i*_strides[1], _shape + 1, _strides + 1};
-  /*! \brief Creates an array which is a view of the `i`th "row" of `this`.
-   * \details Resulting array will have 1 less `order()`
-   * and shape equal to the shape of `this` but with the first element removed.
-   * You can think of it as equivalent to the operator `[]` of multidimensional builtin arrays
-   * or [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
-   * For example, if you have an order 3 array `a` with shape {10, 4, 5}, you can access the element at (5, 2, 3)
-   * with either `a[113]` (5*4*5 + 2*5 + 3 = 113) or `a(5)(2)[3]`.
+  /*! \brief The stride for indexing along demension `i_dim`.
+   * \details E.g.,
+   * - `arr(1).data() == arr.data() + arr.stride(0)`
+   * - `arr(0)(1).data() == arr.data() + arr.stride(1)`
    */
-  Array<T>       operator()(int i)       {BODY}
-  const Array<T> operator()(int i) const {BODY} //!< \overload
-  #undef BODY
+  int stride(int i_dim) const {
+    return _strides[i_dim + 1];
+  }
 
-  #define BODY \
-    if constexpr (HEXED_ARRAY_BOUNDS_CHECK) { \
-      HEXED_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
+  #define QUALIFIED(CONST) \
+    CONST T* data() CONST {return _data;} /*!< \brief fetches pointer to data */ \
+    /*! \brief Accesses elements by flat indexing. \
+     * \details Equivalent to `data()[i]`, give or take bounds checking \
+     */ \
+    CONST T& operator[](int i) CONST { \
+      HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `[]`"); \
+      HEXED_ARRAY_ASSERT(i < size(), "indexing an `Array` out of bounds with `[]`"); \
+      return _data[i]; \
     } \
-    std::vector<int> s = shape(); \
-    s[0] = std::max(0, std::min(stop, _shape[0]) - start); \
-    return {s, _data + start*_strides[1]};
-  /*! \brief Creates an array which is a view of rows [`start`, `stop`) of this.
-   * \details As indicated by the interval notation, includes `start` but not `stop`.
-   * If `stop` is less than `start` or not less than `size()[0]`,
-   * this results in an array with 0 as the first entry of its `shape` (and consequently size 0).
-   * _This will not result in an exception nor undefined behavior_, unless of course you attempt to access data from this empty array.
-   * Equivalent to `array[start:stop]` for [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
-   * The resulting array will have the same order as `this`.
-   * The first entry of `shape()` will be `stop - start` and the rest will be the same as `this` (granted the above caveat about empty results).
-   */
-  Array<T>       operator()(int start, int stop)       {BODY}
-  const Array<T> operator()(int start, int stop) const {BODY} //!< \overload
-  #undef BODY
+    /*! \brief Creates an array as a reference to `this`'s data */ \
+    CONST Array<T> operator()() CONST {return {_order, _data, _shape, _strides};} \
+    /*! \brief Creates an array which is a view of the `i`th "row" of `this`. \
+     * \details Resulting array will have 1 less `order()` \
+     * and shape equal to the shape of `this` but with the first element removed. \
+     * You can think of it as equivalent to the operator `[]` of multidimensional builtin arrays \
+     * or [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array). \
+     * For example, if you have an order 3 array `a` with shape {10, 4, 5}, you can access the element at (5, 2, 3) \
+     * with either `a[113]` (5*4*5 + 2*5 + 3 = 113) or `a(5)(2)[3]`. \
+     */ \
+    CONST Array<T> operator()(int i) CONST { \
+      HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
+      HEXED_ARRAY_ASSERT(i < _shape[0], "indexing an `Array` out of bounds with `()`"); \
+      return {_order - 1, _data + i*_strides[1], _shape + 1, _strides + 1}; \
+    } \
+    /*! \brief Creates an array which is a view of rows [`start`, `stop`) of this. \
+     * \details As indicated by the interval notation, includes `start` but not `stop`. \
+     * If `stop` is less than `start` or not less than `size()[0]`, \
+     * this results in an array with 0 as the first entry of its `shape` (and consequently size 0). \
+     * _This will not result in an exception nor undefined behavior_, \
+     * unless of course you attempt to access data from this empty array. \
+     * Equivalent to `array[start:stop]` for \
+     * [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array). \
+     * The resulting array will have the same order as `this`. \
+     * The first entry of `shape()` will be `stop - start` and the rest will be the same as `this` \
+     * (granted the above caveat about empty results). \
+     */ \
+    CONST Array operator()(int start, int stop) CONST { \
+      HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
+      std::vector<int> s = shape(); \
+      s[0] = std::max(0, std::min(stop, _shape[0]) - start); \
+      return {s, _data + start*_strides[1]}; \
+    } \
+    /*! \brief Returns an array referencing the same data as `this` but with a different shape. \
+     * \details The new size must be less than or equal to the old size, or else behavior is undefined. \
+     * If any entries of `new_shape` are `hexed::same`, \
+     * then they will be converted to the entry of the current shape at the same index. \
+     * E.g., if `shape()` is `{2, 3, 4}` and you call `reshape({1, same, 4})`, \
+     * the resulting shape will be `{1, 3, 4}`. \
+     * Of course, the index of any `same` arguments must be less than `order()`.
+     * If exactly one of the entries of `new_shape` is `whatever`, \
+     * it will be converted to whatever value is necessary to keep the size the same. \
+     * Making more than 1 entry `whatever` is not allowed. \
+     * Note that reshaping maintains the underlying (row-major) storage order of the values
+     * (unlike Eigen's [conservativeResize]
+     * (https://eigen.tuxfamily.org/dox/classEigen_1_1PlainObjectBase.html#a712c25be1652e5a64a00f28c8ed11462)),
+     * so it can't generally be used to select a block of an `Array`.
+     * It is more useful for adding or removing dimensions.
+     * E.g., `array.reshaped({whatever})` flattens `array`.
+     */ \
+    CONST Array reshaped(std::vector<int> new_shape) CONST { \
+      std::vector<int> s = new_shape; \
+      int sz = 1; \
+      int i_whatever = -1; \
+      for (std::size_t i = 0; i < s.size(); ++i) { \
+        if (s[i] == same) { \
+          HEXED_ARRAY_ASSERT(i < order(), "`same` appears at a position >= `order()`"); \
+          s[i] = _shape[i]; \
+        } \
+        if (s[i] == whatever) { \
+          HEXED_ARRAY_ASSERT(i_whatever == -1, "more than one `hexed::whatever` in `new_shape`"); \
+          i_whatever = i; \
+        } else sz *= s[i]; \
+      } \
+      if (i_whatever >= 0) { \
+        HEXED_ARRAY_ASSERT(size()%sz == 0, "`whatever` dimension is not an integer"); \
+        s[i_whatever] = size()/sz; \
+      } \
+      HEXED_ARRAY_ASSERT(sz <= size(), "`new_shape` is larger than current shape"); \
+      return {s, _data}; \
+    } \
+    /*! \brief %Iterator type to allow `Array` to function like a \
+     * [standard container](https://en.cppreference.com/w/cpp/container). \
+     * \details Iterators remain valid throughout the lifetime of the array, \
+     * since there is no mechanism that changes the address of its underlying data. \
+     */ \
+    typedef CONST T* CONST##iterator; \
+    CONST##iterator begin() CONST {return data();} /*!< \brief %Iterator to beginning of (flat) data. */ \
+    CONST##iterator end() CONST {return data() + size();} /*!< \brief %Iterator 1 word past the end of (flat) data. */ \
+    /*! \brief view of data as an `Eigen` vector object */ \
+    CONST Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector() CONST {return {_data, size()};} \
+
+  QUALIFIED()
+  QUALIFIED(const)
+  #undef QUALIFIED
+
+  #define DEFINE_OPERATOR(BIN_OP) \
+    Array<T>& operator BIN_OP(const Array<T>& that) { \
+      HEXED_ARRAY_ASSERT(that.size() == size(), "array sizes must match for arithmetic"); \
+      for (int i = 0; i < size(); ++i) { \
+        _data[i] BIN_OP that[i]; \
+      } \
+      return *this; \
+    } \
+    template <typename Scalar> \
+    Array<T>& operator BIN_OP(Scalar s) { \
+      for (int i = 0; i < size(); ++i) { \
+        _data[i] BIN_OP s; \
+      } \
+      return *this; \
+    } \
+
+  DEFINE_OPERATOR(-=)
+  DEFINE_OPERATOR(+=)
+  DEFINE_OPERATOR(/=)
+  DEFINE_OPERATOR(*=)
+  DEFINE_OPERATOR(%=)
+  #undef DEFINE_OPERATOR
+
+  private:
+  int _order;
+  std::vector<T> _data_storage;
+  std::vector<int> _shape_storage;
+  std::vector<int> _stride_storage;
+  T* _data;
+  int* _shape;
+  int* _strides;
+  Array(int o, T* d, int* sh, int* st) : _order{o}, _data{d}, _shape{sh}, _strides{st} {}
 };
+
+#define DEFINE_OPERATOR(BIN_OP) \
+  template <typename T> \
+  Array<T> operator BIN_OP(const Array<T>& op0, const Array<T>& op1) { \
+    HEXED_ARRAY_ASSERT(op0.size() == op1.size(), "array sizes must match for arithmetic"); \
+    Array<T> result = op0.copy(); \
+    for (int i = 0; i < op0.size(); ++i) result[i] = op0[i] BIN_OP op1[i]; \
+    return result; \
+  } \
+  template <typename T> \
+  Array<T> operator BIN_OP(const Array<T>& op0, const T& op1) { \
+    Array<T> result = op0.copy(); \
+    for (int i = 0; i < op0.size(); ++i) result[i] = op0[i] BIN_OP op1; \
+    return result; \
+  } \
+  template <typename T> \
+  Array<T> operator BIN_OP(const T& op0, const Array<T>& op1) { \
+    Array<T> result = op1.copy(); \
+    for (int i = 0; i < op1.size(); ++i) result[i] = op0 BIN_OP op1[i]; \
+    return result; \
+  }
+DEFINE_OPERATOR(-)
+DEFINE_OPERATOR(+)
+DEFINE_OPERATOR(/)
+DEFINE_OPERATOR(*)
+DEFINE_OPERATOR(%)
+DEFINE_OPERATOR(&&)
+DEFINE_OPERATOR(||)
+#undef DEFINE_OPERATOR
+
+#define DEFINE_OPERATOR(UN_OP) \
+  template <typename T> \
+  Array<T> operator UN_OP(const Array<T>& op0) { \
+    Array<T> result = op0.copy(); \
+    for (int i = 0; i < op0.size(); ++i) result[i] = UN_OP op0[i]; \
+    return result; \
+  }
+DEFINE_OPERATOR(-)
+DEFINE_OPERATOR(+)
+#undef DEFINE_OPERATOR
 
 }
 #endif

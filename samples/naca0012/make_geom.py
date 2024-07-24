@@ -5,7 +5,7 @@ This script is executed by the input file `run.hil`.
 """
 
 import numpy as np
-from hexedpy import naca
+from hexedpy.utils import naca
 
 data = naca("0012")
 np.savetxt("auto.csv", data, delimiter = ", ")

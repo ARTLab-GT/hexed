@@ -10,8 +10,8 @@ from sys import argv
 def add_path(path_name, var):
     old_value = ""
     if var in environ.keys():
-        old_value = environ[var] + ":"
-    environ[var] = old_value + path_name
+        old_value = ":" + environ[var]
+    environ[var] = path_name + old_value
 
 def run_exec(name):
     with as_file(files("hexedpy")/"bin"/name) as file:

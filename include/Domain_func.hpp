@@ -4,8 +4,7 @@
 #include "Qpoint_func.hpp"
 #include "Surface_func.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 class Spacetime_func;
 
@@ -14,20 +13,19 @@ class Spacetime_func;
  * That is, all the variables in the mathematical problem domain.
  * Useful for defining error functions and computing integrals.
  */
-class Domain_func : public Qpoint_func, public Surface_func
-{
+class Domain_func : public Qpoint_func, public Surface_func {
+  public:
   std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
   std::vector<double> operator()(std::vector<double> pos, double time,
                                  std::vector<double> state, std::vector<double> outward_normal) const override;
-
-  public:
+  using Surface_func::operator();
+  using Qpoint_func::operator();
   virtual std::vector<double> operator()(std::vector<double> pos, double time,
                                          std::vector<double> state) const = 0;
 };
 
 //! A function that simply gives you back the state variables. Useful for visualization and conservation checking.
-class State_variables : public Domain_func
-{
+class State_variables : public Domain_func {
   public:
   inline int n_var(int n_dim) const override {return n_dim + 2;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "state" + std::to_string(i_var);}
@@ -37,8 +35,7 @@ class State_variables : public Domain_func
 };
 
 //! computes the elementwise squared difference between the output of 2 `Domain_func`s
-class Diff_sq : public Domain_func
-{
+class Diff_sq : public Domain_func {
   const Domain_func& func0;
   const Domain_func& func1;
   public:
@@ -54,8 +51,7 @@ class Diff_sq : public Domain_func
 
 /*! Computes elementwise difference between `state` and `correct(point_pos, point_time)`, squared.
  * Useful for evaluating \f$L_2\f$ error in the state variables relative to an analytic solution. */
-class Error_func : public Domain_func
-{
+class Error_func : public Domain_func {
   const Spacetime_func& correct;
   public:
   Error_func(const Spacetime_func&);
@@ -67,8 +63,7 @@ class Error_func : public Domain_func
 };
 
 //! Computes stagnation pressure.
-class Stag_pres : public Domain_func
-{
+class Stag_pres : public Domain_func {
   double hr;
   public:
   Stag_pres(double heat_rat = 1.4);
@@ -79,8 +74,7 @@ class Stag_pres : public Domain_func
 };
 
 //! Computes (static) pressure.
-class Pressure : public Domain_func
-{
+class Pressure : public Domain_func {
   double hr;
   public:
   Pressure(double heat_rat = 1.4);
@@ -91,8 +85,7 @@ class Pressure : public Domain_func
 };
 
 //! Computes velocity vector.
-class Velocity : public Domain_func
-{
+class Velocity : public Domain_func {
   public:
   inline int n_var(int n_dim) const override {return n_dim;}
   std::string variable_name(int n_dim, int i_var) const override;
@@ -101,32 +94,27 @@ class Velocity : public Domain_func
 };
 
 //! Aka density.
-class Mass : public Domain_func
-{
+class Mass : public Domain_func {
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "mass";}
   inline std::vector<double> operator()(std::vector<double> point_pos, double point_time,
-                                        std::vector<double> state) const override
-  {
+                                        std::vector<double> state) const override {
     return {state[point_pos.size()]};
   }
 };
 
 //! \brief useful for detecting elements that require stabilization
-class Stab_indicator : public Domain_func
-{
+class Stab_indicator : public Domain_func {
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "stab_indicator";}
   inline std::vector<double> operator()(std::vector<double> point_pos, double point_time,
-                                        std::vector<double> state) const override
-  {
+                                        std::vector<double> state) const override {
     return {1./state[point_pos.size()]};
   }
 };
 
 //! Computes Mach number
-class Mach : public Domain_func
-{
+class Mach : public Domain_func {
   double hr;
   public:
   inline Mach(double heat_rat = 1.4) : hr{heat_rat} {}
@@ -143,8 +131,7 @@ class Mach : public Domain_func
  * but that's actually kind of hard because it involves numerically finding roots of a somewhat ill-behaved function.
  * \see Ringleb
  */
-class Ringleb_errsq : public Domain_func
-{
+class Ringleb_errsq : public Domain_func {
   double hr;
   public:
   inline Ringleb_errsq(double heat_rat = 1.4) : hr{heat_rat} {}

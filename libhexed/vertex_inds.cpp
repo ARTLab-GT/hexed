@@ -1,9 +1,10 @@
-#include <connection.hpp>
+#include <hexed/vertex_inds.hpp>
+#include <hexed/math.hpp>
 
 namespace hexed
 {
 
-std::vector<int> face_vertex_inds(int n_dim, Con_dir<Deformed_element> direction)
+std::vector<int> face_vertex_inds(int n_dim, const Connection_direction& direction)
 {
   int n_vert = math::pow(2, n_dim - 1);
   std::vector<int> inds;
@@ -26,7 +27,7 @@ std::vector<int> face_vertex_inds(int n_dim, Con_dir<Deformed_element> direction
   return inds;
 }
 
-std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element> direction)
+std::array<std::vector<int>, 2> vertex_inds(int n_dim, const Connection_direction& direction)
 {
   // get vertices involved
   std::array<std::vector<int>, 2> inds;

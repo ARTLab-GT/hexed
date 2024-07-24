@@ -8,6 +8,7 @@
 #include "Boundary_face.hpp"
 #include "math.hpp"
 #include "Refined_face.hpp"
+#include "vertex_inds.hpp"
 
 namespace hexed
 {
@@ -34,16 +35,6 @@ class Con_dir<Element>
   int i_face(int i_side) {return 2*i_dim + 1 - i_side;}
   operator Con_dir<Deformed_element>() const {return {{i_dim, i_dim}, {1, 0}};}
 };
-
-//! The indices required to permute the vertices of face 1 of a connection to match face 0.
-std::vector<int> face_vertex_inds(int n_dim, Con_dir<Deformed_element> direction);
-/*!
- * The indices of the vertices which participate in a deformed connection, ordered
- * so that vertices which align in physical space correspond in the lists
- * and the vertices of face 0 are ordered in the same way as they would be if the face
- * were considered in isolation.
- */
-std::array<std::vector<int>, 2> vertex_inds(int n_dim, Con_dir<Deformed_element> direction);
 
 /*!
  * Represents a connection between faces (which may belong to elements or something else like
@@ -247,7 +238,12 @@ class Refined_connection
         any_str = true;
       }
     }
-    if (int(fine.size()) != n_fine) throw std::runtime_error("wrong number of elements in `Refined_connection`");
+    HEXED_ASSERT(int(fine.size()) == n_fine,
+      format_str(
+        1000, "wrong number of fine elements (%i) in `Refined_connection` (stretch = {%i, %i})",
+        int(fine.size()), int(stretch_arg[0]), int(stretch_arg[1])
+      )
+    );
     std::vector<int> permutation_inds {face_vertex_inds(nd, con_dir)};
     auto vert_inds {vertex_inds(nd, con_dir)};
     // merge vertices
