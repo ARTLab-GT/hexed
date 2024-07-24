@@ -3,7 +3,7 @@ import os
 import re
 
 class Hexed(bu.C_project):
-    version = "0.2.2"
+    version = "0.3.0"
     installed_files = {"bin":["hil", "hexecute"], "include":["hexed"], "lib":["hexed"]}
 
     def __init__(self, builder):

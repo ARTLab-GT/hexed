@@ -18,7 +18,7 @@ __hex__  (_verb_)
 Anyone who has spent a substantial amount of time working with computational fluid dynamics (CFD)
 can attest that it is decidedly arcane and sometimes tends toward evil (in the [programming sense](https://isocpp.org/wiki/faq/big-picture#defn-evil) of the word).
 As its name suggests, Hexed scarcely presumes to change that.
-What it *does* aim to provide is a more accurate and automated solver, enabling you to practice your witchcraft on a previously unattainable scale.
+What it *does* aim to provide is a more accurate and automated solver, making your workflow faster and less subjective.
 Specifically, it addresses the following problems with conventional CFD:
 - Meshing usually takes a lot of the user's time.
   Although automated meshing algorithms exist, they tend to be fragile when applied to complex geometry.
@@ -29,17 +29,11 @@ Specifically, it addresses the following problems with conventional CFD:
   For this reason, many engineers distrust CFD.
 
 Hexed (or perhaps "Vexed", as a certain insightful friend suggested it might be more aptly named)
-is an all-hex meshing algorithm with a high-order DG solver.
-The meshing algorithm has a straightforward geometric interpretation, making it robust to challenging geometries (e.g. small gaps or non-watertight surfaces),
-and you can rest assured that whatever output you get results from simple math
-and not you, or some sophisticated AI-adjacent algorithm, doing something quirky.
-Furthermore, the low-dissipation DG scheme generally gives highly accurate results (when it doesn't blow up),
-and when it doesn't, it fails in the form of obviously spurious oscillations.
-Thus when you manage to get an answer you can generally be confident in its accuracy.
-
-Hexed is written in C++ and is currently capable of solving the compressible, laminar Navier-Stokes equations for a calorically-perfect gas.
-It uses Cartesian meshes with hanging-node refinement, modified to include body-fitted cells at the geometry surface.
-In the relatively near future, I hope to include adaptive mesh refinement, moving geometry, and RANS turbulence modeling.
+is a combined mesh generator and solver.
+It couples a highly automated all-hex meshing algorithm for complex 2D and 3D geometry
+with a highly accurate discontinuous Galerkin solver for the laminar, calorically perfect Navier-Stokes equations.
+Currently, it only supports execution on a single CPU.
+Support for turbulent flows, adaptive meshing, and massively parallel execution are planned for future releases.
 
 \subsection citing Citing and Usage Guidelines
 Hexed is open source under terms specified in the [license](https://github.com/ARTLab-GT/hexed/blob/v0.1.1/LICENSE.txt).
@@ -63,7 +57,7 @@ _AIAA SCITECH 2024 Forum_, 2024. <https://doi.org/10.2514/6.2024-2176>.
 \snippet doc/references.bib solver_citation
 
 \subsection Contact
-This code is maintained by Micaiah Smith-Pierce.
+This code is developed and maintained by Micaiah Smith-Pierce.
 I am a PhD student of Professor Stephen Ruffin at the Aerothermodynamics Research and Technology Laboratory (ARTLab),
 of the Georgia Tech School of Aerospace Engineering.
 If you have any questions or feedback, you can reach me at <micaiah@gatech.edu> or on [GitHub](https://github.com/micaiah-sp).
