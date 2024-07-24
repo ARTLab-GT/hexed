@@ -118,13 +118,11 @@ Surface_geom* Case::_make_geom() {
       if (nd == 2) {
         geoms.emplace_back(new Simplex_geom<2>(Occt::segments(shape, _vari("geom_n_segments"))));
       } else if (nd == 3) {
-        auto ptr = new Simplex_geom<3>(Occt::triangles(shape, _vard("max_angle"), _vard("max_deflection")));
+        auto ptr = new Simplex_geom<3>(
+          Occt::triangulate(shape, _vard("max_angle"), _vard("max_deflection"), _vari("geom_n_segments"))
+        );
         std::string vis_name = format_str(1000, "%sgeom%i_triangulation", _vars("working_dir").c_str(), i_geom);
-        #if HEXED_USE_XDMF
-        ptr->visualize("xdmf", vis_name);
-        #elif HEXED_USE_TECPLOT
-        ptr->visualize("tecplot", vis_name);
-        #endif
+        ptr->visualize("default", vis_name);
         geoms.emplace_back(ptr);
       }
     } else if (ext == "stl") {
@@ -298,7 +296,10 @@ Case::Case(std::string input_script)
     if (geom) {
       _has_geom = true;
       _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc")), _get_vector("flood_fill_start", _vari("n_dim")));
-      for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.5);
+      int n_smooth = _vari("n_smooth");
+      for (int i_smooth = 0; i_smooth < n_smooth/2; ++i_smooth) _solver().mesh().relax(0.5);
+      _solver().mesh().match_edges();
+      for (int i_smooth = 0; i_smooth < n_smooth - n_smooth/2; ++i_smooth) _solver().mesh().relax(0.5);
       _solver().calc_jacobian();
     }
     return "";
@@ -321,7 +322,10 @@ Case::Case(std::string input_script)
     _solver().set_uncertainty(Elem_nonsmooth(jidf));
     _solver().mesh().set_unref_locks(criteria::if_extruded);
     bool changed = _solver().mesh().update(crits[0], crits[1]);
-    for (int i_smooth = 0; i_smooth < _vari("n_smooth"); ++i_smooth) _solver().mesh().relax(0.5);
+    int n_smooth = _vari("n_smooth");
+    for (int i_smooth = 0; i_smooth < n_smooth/2; ++i_smooth) _solver().mesh().relax(0.5);
+    _solver().mesh().match_edges();
+    for (int i_smooth = 0; i_smooth < n_smooth - n_smooth/2; ++i_smooth) _solver().mesh().relax(0.5);
     _solver().calc_jacobian();
     return changed;
   }));

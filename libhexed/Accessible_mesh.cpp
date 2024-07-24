@@ -120,9 +120,12 @@ void Accessible_mesh::snap_vertices() {
 }
 
 void Accessible_mesh::match_edges() {
+  if (!surf_geom) return;
   _blocks.edges_2d();
   _blocks.faces_3d();
-  for (auto& geom_edge : _geom_edges) {
+  std::cout << "matching edges" << std::endl;
+  for (auto& geom_edge : surf_geom->edges()) {
+    std::cout << "  edge" << std::endl;
     auto verts = _blocks.boundary_verts();
     next::Vertex* best_vert = nullptr;
     double badness = huge;
@@ -151,8 +154,9 @@ void Accessible_mesh::match_edges() {
       for (auto& edge : curr->edges()) if (!edge.glued()) {
         next::Vertex* vert = &edge.vertex(0) == curr ? &edge.vertex(1) : &edge.vertex(0);
         Mat<3> p = vert->point({});
-        auto node = geom_edge.nearest(p, arc_len);
-        double prog = node.arc_len - (p - node.pos).norm();
+        double d = 2*edge.element()->nominal_size();
+        auto node = geom_edge.nearest(p, arc_len - d, arc_len + d);
+        double prog = node.arc_len - .3*(p - node.pos).norm();
         if (prog > progress) {
           best_edge = &edge;
           best_vert = vert;
@@ -164,8 +168,10 @@ void Accessible_mesh::match_edges() {
       if (!geom_edge.matched_edges.empty()) if (best_edge == geom_edge.matched_edges.back().get()) {
         geom_edge.matched_edges.erase(geom_edge.matched_edges.end());
         geom_edge.matched_vertices.erase(geom_edge.matched_vertices.end());
+        std::cout << "    backtracking " << progress << std::endl;
         break;
       }
+      std::cout << "    " << progress << std::endl;
       geom_edge.matched_edges.emplace_back(best_edge);
       curr = best_vert;
       geom_edge.matched_vertices.emplace_back(best_vert);
@@ -835,7 +841,6 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
 }
 
 void Accessible_mesh::set_edges(std::vector<Geom_edge>&& geom_edges) {
-  _geom_edges = std::move(geom_edges);
   match_edges();
 }
 
@@ -1437,7 +1442,8 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   snap_vertices();
   id_smooth_verts();
   _n_verts = _blocks.verts().size();
-  for (auto& edge : _geom_edges) {
+  std::cout << "clearing" << std::endl;
+  if (surf_geom) for (auto& edge : surf_geom->edges()) {
     edge.matched_vertices.clear();
     edge.matched_edges.clear();
   }
@@ -1515,7 +1521,7 @@ void Accessible_mesh::relax(double factor) {
       vert.pos(seq) = surf_geom->nearest_point(vert.pos(seq), huge, vert.nominal_size()).point();
     }
     // snap vertices to geometry edges
-    for (auto& geom_edge : _geom_edges) {
+    for (auto& geom_edge : surf_geom->edges()) {
       if (!geom_edge.matched_vertices.empty()) {
         geom_edge.matched_vertices.front().value().pos = geom_edge.points()(0).vector();
         geom_edge.matched_vertices.back().value().pos = geom_edge.points()(geom_edge.n_points() - 1).vector();
@@ -1547,7 +1553,7 @@ void Accessible_mesh::relax(double factor) {
     // This has to happen after snapping edges to the surface (which would undo this)
     // but before snapping faces to the surface
     // (or else the `reset()` function would be called with incorrect edge data)
-    for (auto& geom_edge : _geom_edges) {
+    for (auto& geom_edge : surf_geom->edges()) {
       for (auto& edge : geom_edge.matched_edges) {
         edge.value().reset();
         Array<double> interior = edge.value().interior();

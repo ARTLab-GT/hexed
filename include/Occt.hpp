@@ -23,7 +23,8 @@ namespace hexed {
  * For usage purposes, this class is just a namespace.
  * Don't actually instantiate it.
  * (In fact, you shouldn't be able to, since the constructor is deleted).
- * It is a class and not a namespace because it has private static data members to facilitate startup tasks for interacting with OCCT.
+ * It is a class and not a namespace because it has private static data members
+ * to facilitate startup tasks for interacting with OCCT.
  *
  * \section occt_units Units
  * All length/position values are interpreted dimensionally.
@@ -77,7 +78,8 @@ class Occt {
    * \details File can be in ASCII or binary format.
    * STL files contain no unit information, so it will be assumed to be in meters by default.
    * It will then be converted to mm for consistency with other OCCT objects.
-   * If the STL was written with a different unit in mind, you can supply that unit definition from `constants.hpp` as the `scale` argument
+   * If the STL was written with a different unit in mind,
+   * you can supply that unit definition from `constants.hpp` as the `scale` argument
    * and it will be effectively converted from that unit.
    * In general, the geometry coordinates will be multiplied by `scale`.
    * Result can be piped to `triangles()` to ultimately construct a `Simplex_geom<3>`.
@@ -90,21 +92,28 @@ class Occt {
   static std::vector<Mat<3, 3>> triangles(opencascade::handle<Poly_Triangulation>);
   /*! \brief Obtains a triangulation of a CAD geometry.
    * \details This is now the preferred way to interact with CAD geometry---`Occt_geom` instances are unreliable.
-   * Size of the mesh is determined by `angle` and `deflection`, where in both cases a smaller value results in a finer mesh.
-   * Usually, it is preferable to use only `angle`, since `deflection` doesn't do as well at refining high-curvature regions.
+   * Size of the mesh is determined by `angle` and `deflection`,
+   * where in both cases a smaller value results in a finer mesh.
+   * Usually, it is preferable to use only `angle`,
+   * since `deflection` doesn't do as well at refining high-curvature regions.
    * The result can be piped to `triangles()` to fetch the elements of the triangulation.
    * \param shape CAD object to triangulate. Can be obtained from, e.g., `read()`.
    * \param angle Max angle allowed between neighboring triangles (note that as always, angles are radian).
    * \param deflection Max distance allowed between points on the triangulation and the true surface.
-   *        Note that this is a dimensional parameter and appropriate values will depend on the length scale of your simulation,
+   *        Note that this is a dimensional parameter
+   *        and appropriate values will depend on the length scale of your simulation,
    *        which is why the only reasonable default is an irrelevantly large parameter.
    */
-  static std::vector<Mat<3, 3>> triangles(TopoDS_Shape shape, double angle = 10*constants::degree, double deflection = huge);
+  static std::vector<Mat<3, 3>> triangles(TopoDS_Shape shape, double angle = 10*constants::degree,
+                                          double deflection = huge);
 
-  static Simplex_geom<3> triangulate(TopoDS_Shape shape, double angle = 10*constants::degree, double deflection = huge);
+  static Simplex_geom<3> triangulate(TopoDS_Shape shape, double angle = 10*constants::degree,
+                                     double deflection = huge, int n_div_edge = 1000);
 
-  //! \brief Discretizes the curves in a `TopoDS_Shape` into segments of a polygonal line.
-  //! \details A `TopoDS_Shape` can be obtained from `read()`, and the results can be used to construct a `Simplex_geom<2>`.
+  /*! \brief Discretizes the curves in a `TopoDS_Shape` into segments of a polygonal line.
+   * \details A `TopoDS_Shape` can be obtained from `read()`,
+   * and the results can be used to construct a `Simplex_geom<2>`.
+   */
   static std::vector<Mat<2, 2>> segments(const TopoDS_Shape&, int n_segments);
 
   /*! \brief A `Surface_geom` that interacts with a CAD object directly.
@@ -139,7 +148,8 @@ class Occt {
      * (i.e. xy-plane).
      * Coordinates are interpreted dimensionally and automatically converted to m.
      */
-    Geom(const TopoDS_Shape&, int n_dim, double angle = 10*constants::degree, double deflection = huge, int n_segments = 1000);
+    Geom(const TopoDS_Shape&, int n_dim, double angle = 10*constants::degree,
+         double deflection = huge, int n_segments = 1000);
     Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
     //! \note May return duplicate points if intersection is on the boundary of multiple faces.
     std::vector<double> intersections(Mat<> point0, Mat<> point1) override;

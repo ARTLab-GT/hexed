@@ -46,7 +46,8 @@ void Occt::set_message() {
 
 // recursively iterates through a shape and all its sub-shapes and invokes `callback`
 // on any shape of the specified type
-void iterate(const TopoDS_Shape& shape, TopAbs_ShapeEnum shape_type, std::function<void(const TopoDS_Shape&)> callback) {
+void iterate(const TopoDS_Shape& shape, TopAbs_ShapeEnum shape_type,
+             std::function<void(const TopoDS_Shape&)> callback) {
   if (shape.ShapeType() == shape_type) callback(shape);
   for (TopoDS_Iterator it(shape); it.More(); it.Next()) iterate(it.Value(), shape_type, callback);
 }
@@ -75,7 +76,8 @@ Occt::Geom::Geom(const TopoDS_Shape& shape, int n_dim, double angle, double defl
       _surfaces.push_back(BRep_Tool::Surface(face));
       if (!(_surfaces.back()->Continuity() >= GeomAbs_C1)) {
         std::cerr << "WARNING: Surface is not C1 continuous! Falling back on triangulated intersections.\n"
-                  << "If you see this warning, please contact Micaiah: https://artlab-gt.github.io/hexed/index.html#Contact\n";
+                  << "If you see this warning, please contact "
+                  << "Micaiah: https://artlab-gt.github.io/hexed/index.html#Contact\n";
       }
     });
     Triangulation triang = _triangulate(shape, angle, deflection);
@@ -124,7 +126,8 @@ std::vector<double> Occt::Geom::intersections(Mat<> point0, Mat<> point1) {
         #pragma GCC diagnostic pop
         return err_jac;
       };
-      Mat<> soln = math::newton(error_jacobian, Mat<3>{params[0], params[1], inters.points[i_inter]}, {.ftol = 1e-10*diff.norm(), .max_iters = 100});
+      Mat<> soln = math::newton(error_jacobian, Mat<3>{params[0], params[1], inters.points[i_inter]},
+                                {.ftol = 1e-10*diff.norm(), .max_iters = 100});
       if (std::abs(soln(2) - inters.points[i_inter]) < 0.5) inters.points[i_inter] = soln(2);
     }
   }
@@ -151,7 +154,9 @@ TopoDS_Shape Occt::read(std::string file_name) {
   for (char& c : ext) c = tolower(c);
   if      (ext == "igs" || ext == "iges") return execute_reader<IGESControl_Reader>(file_name);
   else if (ext == "stp" || ext == "step") return execute_reader<STEPControl_Reader>(file_name);
-  throw std::runtime_error(format_str(1000, "`hexed::Occt::read` failed to recognize file exteinsion `.%s`.", case_sensitive.c_str()));
+  HEXED_THROW(format_str(1000, "`hexed::Occt::read` failed to recognize file exteinsion `.%s`.",
+                         case_sensitive.c_str()));
+  throw; // just to shut up the `-Wreturn-type`---the above statement throws the actual exception
 }
 
 Occt::Triangulation Occt::_triangulate(opencascade::handle<Poly_Triangulation> poly, int face) {
@@ -209,7 +214,9 @@ Occt::Triangulation Occt::_triangulate(TopoDS_Shape shape, double angle, double 
   return triang;
 }
 
-std::vector<Mat<3, 3>> Occt::triangles(opencascade::handle<Poly_Triangulation> poly) {return _triangulate(poly, 0).tris;}
+std::vector<Mat<3, 3>> Occt::triangles(opencascade::handle<Poly_Triangulation> poly) {
+  return _triangulate(poly, 0).tris;
+}
 
 std::vector<Mat<3, 3>> Occt::triangles(TopoDS_Shape shape, double angle, double deflection) {
   // setup parameters
@@ -236,6 +243,23 @@ std::vector<Mat<3, 3>> Occt::triangles(TopoDS_Shape shape, double angle, double 
   });
   BRepTools::Clean(shape); // get rid of triangulation to avoid messing other things up
   return tris;
+}
+
+Simplex_geom<3> Occt::triangulate(TopoDS_Shape shape, double angle, double deflection, int n_div_edge) {
+  Simplex_geom<3> geom(triangles(shape, angle, deflection));
+  iterate(shape, TopAbs_EDGE, [&](const TopoDS_Shape& s) {
+    TopoDS_Edge edge = TopoDS::Edge(s);
+    double param_bounds [2];
+    auto curve = BRep_Tool::Curve(edge, param_bounds[0], param_bounds[1]);
+    Array<double> points({n_div_edge + 1, 3});
+    for (int i_point = 0; i_point < n_div_edge + 1; ++i_point) {
+      gp_Pnt point = curve->Value(param_bounds[0] + i_point*(param_bounds[1] - param_bounds[0])/n_div_edge);
+      points(i_point).vector() << point.X(), point.Y(), point.Z();
+    }
+    points *= 1e-3; // convert to m
+    geom.add_edge(points);
+  });
+  return geom;
 }
 
 opencascade::handle<Poly_Triangulation> Occt::read_stl(std::string file_name, double scale) {

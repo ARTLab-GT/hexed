@@ -3,8 +3,8 @@
 
 namespace hexed {
 
-Geom_edge::Geom_edge(Array<double>&& p)
-: _points{std::move(p)}, _n_points{_points.shape()[0]}, _arc_len({_n_points})
+Geom_edge::Geom_edge(Array<double> p)
+: _points{p.copy()}, _n_points{_points.shape()[0]}, _arc_len({_n_points})
 {
   HEXED_ASSERT(_points.order() == 2, "point array must be order 2");
   HEXED_ASSERT(_points.shape()[1] == 3, "point array must have 3 columns");
