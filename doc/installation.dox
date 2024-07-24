@@ -1,9 +1,32 @@
 /*! \page installation Installation
 
+\section install_py_pack Install from Python package (the easy way)
+
+The easiest way to install Hexed is from via the [Python package](https://test.pypi.org/project/hexedpy/)
+with [pip](https://packaging.python.org/en/latest/key_projects/#pip):
+```{.sh}
+python3 -m pip install --index-url https://test.pypi.org/simple/ hexedpy
+```
+\note You can't just do `pip install hexedpy` because, for now,
+Hexed is only on the [TestPyPI](https://test.pypi.org/), not the [real PyPI](https://pypi.org/).
+
+Once you do this, you can run Hexed with the command \ref hexecute.
+You will also have access to the \ref hexedpy Python module.
+This is probably the best option if you're curious about Hexed and want to test it out.
+However, this installation won't include
+[OpenCASCADE](https://dev.opencascade.org/doc/overview/html/index.html) support
+and won't be optimized for your CPU architecture.
+As a result, you won't be able to import geometry from CAD software and it the performance may be suboptimal.
+In the future, I hope to release more complete pre-compiled packages.
+However, for now, if you want to use Hexed for a serious project, or you want to develop the source code,
+it is recommended that you build it from the source, as explained below.
+
+\section install_source Building from source
+
 Below are instructions to install Hexed by building from the source.
 Hexed currently only supports GNU/Linux and GCC compiler,
 although you may be able to coerce it to work in other environments.
-Precompiled binaries and support for other operating systems and compilers are planned in future releases.
+Pre-compiled binaries and support for other operating systems and compilers are planned in future releases.
 
 \section quick Quick Start
 If look at these instructions and don't know what I'm talking about, skip to \ref detailed.
