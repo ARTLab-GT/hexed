@@ -267,6 +267,7 @@ class Buildable(Deliverable):
             self.builder.indent += "\x1b[;35m| \x1b[0m"
             self.build()
             self._found_output = Deliverable.make(self.output()).find()
+            assert self.found_output, f"Attempt to build {self} did not produce required output."
             self.touch()
             self.builder.indent = prev_indent
             self.builder.message("\x1b[1;32mBuilt------------------\x1b[0m" + str(self))
@@ -281,7 +282,7 @@ class Buildable(Deliverable):
         return self.found_output
     @property
     def do(self):
-        assert self.find(), f"Attempt to build {self} did not produce required output."
+        self.find()
         return self
     def __getitem__(self, class_):
         assert issubclass(class_, Buildable), "`self[buildable]` syntax is only for `Buildable` objects"
@@ -467,16 +468,24 @@ class Catch2(C_project):
         )[0]
         self.builder.cmake(directory, ["-DBUILD_TESTING=OFF", "-DBUILD_SHARED_LIBS=ON"])
 
-class Occt(C_project):
-    version = "7.8.0"
+class Occt_modules(C_project):
+    version = "7.8.1"
     def __init__(self, builder, toolkits=[]):
-        self.installed_files = {"include":["opencascade"], "lib":toolkits, "cmake":["opencascade"]}
+        self.installed_files = {"include":["opencascade"], "lib":toolkits}
+    def build(self):
+        underscore_version = self.version.replace('.', '_')
+        directory = self.builder.fetch_archive(
+            f"https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore_version}.tar.gz",
+            outputs=f"OCCT-{underscore_version}",
+        )[0]
+        os.chdir(directory)
+        self.builder.mkdir(self.bdir + "include/opencascade")
     def find(self):
         found = super().find()
+        print(found)
+        assert False
         self.builder.prefices["include"] += (self.builder.find_in("include", "opencascade").find().assets[0],)
         return found
-    def build(self):
-        raise Exception("Sorry, auto-installing OCCT is not implemented. You have to install it yourself")
 
 class Pip(Buildable):
     fake_names = {
