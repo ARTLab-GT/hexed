@@ -21,7 +21,7 @@ In the future, I hope to release more complete pre-compiled packages.
 However, for now, if you want to use Hexed for a serious project, or you want to develop the source code,
 it is recommended that you build it from the source, as explained below.
 
-\section install_source Building from source
+\section install_source Building from source (the harder way)
 
 To build Hexed from source, perform the following steps:
 -# Make sure you have a working Python installation, including
