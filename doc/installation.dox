@@ -23,6 +23,50 @@ it is recommended that you build it from the source, as explained below.
 
 \section install_source Building from source
 
+To build Hexed from source, perform the following steps:
+-# Make sure you have a working Python installation, including
+   [pip](https://packaging.python.org/en/latest/key_projects/#pip):
+   ```{.sh}
+   sudo apt install python3-full
+   ```
+-# Make sure you have basic compiling tools including [GCC](https://gcc.gnu.org/) and [Make](https://www.gnu.org/software/make/):
+   ```{.sh}
+   sudo apt install build-essential
+   ```
+-# Obtain the Hexed source code and navigate to the root directory.
+   You can do this by downloading the latest version from the [releases page](https://github.com/ARTLab-GT/hexed/releases),
+   or by cloning the repository and checking out the latest release as follows:
+   ```{.sh}
+   git clone https://github.com/ARTLab-GT/hexed.git
+   cd hexed
+   git checkout latest_release
+   ```
+   The branch `latest_release` will always reflect the latest release version of the code.
+   If a new version is released, you can simply do `git pull` to update your local version
+   (you will still have to recompile it, as explained in the next step).
+   If you prefer, you can also checkout the tag for the version you want instead of the branch `latest_release`.
+   In any case, do not stay on the branch `main`,
+   as this is for the next version under development and may not be in a usable state.
+-# (Optional) Install [OpenCASCADE Technology](https://github.com/Open-Cascade-SAS/OCCT/tree/V7_8_1) (OCCT),
+   Version 7.8.0 or later.
+   This is necessary iff you want to be able to import geometry in \ref add_geom "CAD formats".
+   The OpenCASCADE headers must be available in your `INCLUDE_PATH` and the libraries must be available in your `LIBRARY_PATH`,
+   and the CMake configuration files must be in a location where CMake can find them (even though Hexed doesn't use CMake).
+   For instructions on how to do this, see \ref install_occt below.
+-# Compile the code:
+   ```{.sh}
+   python3 build.py
+   ```
+   This one command will configure build options for your system, compile the code, create the `hexedpy` Python package,
+   and install it in your current Python environment.
+   As long as you've done everything above correctly, this should just work.
+   If it doesn't, you can refer to the more detailed explanation below to troubleshoot,
+   and you are also encouraged to contact \me and report the issue.
+   If you have OpenCASCADE installed and want to use it, you can do `python3 build.py --use_occt=yes`
+   instead of the above command.
+
+You should now be able to use the \ref hexecute command as well as the \ref hexedpy Python module.
+
 Below are instructions to install Hexed by building from the source.
 Hexed currently only supports GNU/Linux and GCC compiler,
 although you may be able to coerce it to work in other environments.
