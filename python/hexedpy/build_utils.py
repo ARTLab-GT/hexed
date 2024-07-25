@@ -468,22 +468,43 @@ class Catch2(C_project):
         )[0]
         self.builder.cmake(directory, ["-DBUILD_TESTING=OFF", "-DBUILD_SHARED_LIBS=ON"])
 
-class Occt_modules(C_project):
+class Occt(C_project):
     version = "7.8.1"
-    def __init__(self, builder, toolkits=[]):
-        self.installed_files = {"include":["opencascade"], "lib":toolkits}
+    all_modules = [
+            "ApplicationFramework",
+            "DETools",
+            "DataExchange",
+            "Draw",
+            "FoundationClasses",
+            "ModelingAlgorithms",
+            "ModelingData",
+            "Visualization",
+    ]
+    def __init__(self, builder, modules=all_modules, use_graphics=True):
+        self.modules = modules
+        self.installed_files = {"include":["opencascade"], "cmake":["opencascade"]}
+        self.use_graphics = use_graphics
     def build(self):
+        if not self.use_graphics:
+            with open(self.bdir + "empty.cpp", "w") as empty:
+                empty.write("\n")
+            self[Compile](self.bdir + "empty.cpp").do
+            for lib_name in ["GL", "EGL"]:
+                self[Link](f"lib{lib_name}.so", [self.bdir + "object/empty.o"]).do
         underscore_version = self.version.replace('.', '_')
         directory = self.builder.fetch_archive(
             f"https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore_version}.tar.gz",
             outputs=f"OCCT-{underscore_version}",
         )[0]
-        os.chdir(directory)
-        self.builder.mkdir(self.bdir + "include/opencascade")
+        if self.use_graphics:
+            options = []
+        else:
+            options = ["-DUSE_FREETYPE=OFF", "-DUSE_GLES2=OFF", "-DUSE_OPENGL=OFF", "-DUSE_TK=OFF", "-DUSE_XLIB=OFF"]
+        for module in self.all_modules:
+            options.append(f"-DBUILD_MODULE_{module}={['OFF', 'ON'][module in self.modules]}")
+        self.builder.cmake(directory, options)
     def find(self):
         found = super().find()
-        print(found)
-        assert False
         self.builder.prefices["include"] += (self.builder.find_in("include", "opencascade").find().assets[0],)
         return found
 
@@ -910,8 +931,10 @@ class Builder:
                     with open(self.cache_dir + name, "w") as cache:
                         cache.write(text)
 
-    def message(self, text, **kwargs):
-        print(self.indent + text, flush=True, **kwargs)
+    def message(self, text, start="indent", **kwargs):
+        if start == "indent":
+            start = self.indent
+        print(start + text, flush=True, **kwargs)
 
     def mkdir(self, name):
         os.makedirs(absolute(name), exist_ok=True)
@@ -929,7 +952,7 @@ class Builder:
     def in_pypi(self, package):
         self.message("searching PyPI...", end="")
         output = self.python("-m", "pypisearch", package, capture_output=True).stdout.decode()
-        self.message("done")
+        self.message("done", start="")
         return f"\n{package} " in "\n" + output
 
     def cmake(self, source_dir, opts=[], build_dir="build"):

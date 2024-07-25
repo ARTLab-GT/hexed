@@ -17,7 +17,7 @@ class Hexed(bu.C_project):
             "profile": bu.Option(False, convert=bu.as_bool),
             "use_xdmf": bu.Option(True, convert=bu.as_bool),
             "use_tecio": bu.Option(False, convert=bu.as_bool),
-            "use_occt": bu.Option(False, convert=bu.as_bool),
+            "use_occt": bu.Option(True, convert=bu.as_bool),
             "build_tests": bu.Option(True, convert=bu.as_bool),
             "build_docs": bu.Option(False, convert=bu.as_bool),
             "obsessive_timing": bu.Option(False, convert=bu.as_bool),
@@ -50,8 +50,14 @@ class Hexed(bu.C_project):
         if self.builder.options["use_xdmf"]:
             deps.append(self[bu.Xdmf]())
         if self.builder.options["use_occt"]:
-            self.occt_libs = ["TKDEIGES", "TKDESTEP", "TKDESTL", "TKBRep", "TKV3d"]
-            deps.append(self[bu.Occt](toolkits=self.occt_libs))
+            deps.append(self[bu.Occt](modules = [
+                "DETools",
+                "DataExchange",
+                "FoundationClasses",
+                "ModelingAlgorithms",
+                "ModelingData",
+            ], use_graphics=False))
+            self.occt_libs = ["TKDEIGES", "TKDESTEP", "TKDESTL", "TKBRep"]
         if self.builder.options["build_tests"]:
             deps.append(self[bu.Catch2]())
         return deps
