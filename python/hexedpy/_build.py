@@ -57,7 +57,6 @@ class Hexed(bu.C_project):
                 "ModelingAlgorithms",
                 "ModelingData",
             ], use_graphics=False))
-            self.occt_libs = ["TKDEIGES", "TKDESTEP", "TKDESTL", "TKBRep"]
         if self.builder.options["build_tests"]:
             deps.append(self[bu.Catch2]())
         return deps
@@ -113,7 +112,8 @@ class Hexed(bu.C_project):
         if self.builder.options["use_xdmf"]:
             libs.append("Xdmf")
         if self.builder.options["use_occt"]:
-            libs += self.occt_libs
+            libs += ["TKDEIGES", "TKDESTEP", "TKDESTL", "TKBRep"]
+
         self[bu.Link]("libhexed.so", bu.contents(self.bdir + "object/libhexed"), libs=libs).do
         self[bu.Link]("hil", ["execs/hil.o"], libs=["hexed"]).do
         self[bu.Link]("hexecute", ["execs/hexecute.o"], libs=["hexed"]).do

@@ -1,20 +1,18 @@
 #include <cstdlib>
-#include <config.hpp>
-#include <Path.hpp>
+#include <hexed/config.hpp>
+#include <hexed/Path.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
 Path::Path(path subdir)
-: _home{std::getenv("HOME")}, _paths{"/", "/local", "/usr", "/usr/local", _home, _home/".local"}
-{
+: _home{std::getenv("HOME")}, _paths{"/", "/local", "/usr", "/usr/local", _home, _home/".local"} {
   for (path& p : _paths) p /= subdir;
 }
 
-Path::path Path::find(path target, std::vector<path> extra_dirs)
-{
+Path::path Path::find(path target, std::vector<path> extra_dirs) {
   // add pathes in `$HEXED_PATH`
   const char* env_hexedpath = std::getenv("HEXED_PATH");
+  printf("%s\n", env_hexedpath);
   if (env_hexedpath) {
     std::string hexedpath = env_hexedpath;
     std::string::size_type start = 0;

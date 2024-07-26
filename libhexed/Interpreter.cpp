@@ -7,15 +7,13 @@
 #include <Interpreter.hpp>
 #include <Path.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
 const std::string Interpreter::builtin_file = "builtin.hil";
 const std::string Interpreter::const_file = "constants.hil";
 
 bool Interpreter::_more() {return _text.size() > 1;}
-char Interpreter::_pop()
-{
+char Interpreter::_pop() {
   char c = _text.front();
   _text.pop_front();
   return c;
@@ -25,8 +23,7 @@ void Interpreter::_skip_spaces() {
   while (_text.front() == ' ') _pop(); // note: list ends with null character so this will never pop a non-existant element
 }
 
-bool Interpreter::_char_is(int index, char value)
-{
+bool Interpreter::_char_is(int index, char value) {
   auto iter = _text.begin();
   for (int i = 0; i < index; ++i) {
     if (iter == _text.end()) return false;
@@ -35,8 +32,7 @@ bool Interpreter::_char_is(int index, char value)
   return *iter == value;
 }
 
-std::string Interpreter::_read_name()
-{
+std::string Interpreter::_read_name() {
   std::string name = "";
   while (std::isalpha(_text.front()) || std::isdigit(_text.front())  || _text.front() == '_') {
     name.push_back(_pop());
@@ -44,26 +40,22 @@ std::string Interpreter::_read_name()
   return name;
 }
 
-std::string Interpreter::_debug_info()
-{
+std::string Interpreter::_debug_info() {
   std::string rest(_text.begin(), _text.end());
   if (rest.size() > 1000) rest.erase(rest.begin() + 1000, rest.end());
   return "next 1000 characters of HIL code to process were:\n" + rest;
 }
 
-void Interpreter::_substitute()
-{
+void Interpreter::_substitute() {
   _pop();
   _Dynamic_value val = _eval(0);
   HEXED_ASSERT(val.s.has_value(), "only a string can be substituted as code", Hil_exception);
   _text.insert(_text.begin(), val.s->begin(), val.s->end());
 }
 
-Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
-{
+Interpreter::_Dynamic_value Interpreter::_eval(int precedence) {
   _Dynamic_value val;
-  while (_more())
-  {
+  while (_more()) {
     _skip_spaces();
     // parse expression tokens by kind
     if (_text.front() == '$') {
@@ -160,8 +152,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence)
 
 template<> int Interpreter::_pow<int>(int op0, int op1) {return math::pow(op0, op1);}
 
-Interpreter::_Dynamic_value Interpreter::_mod(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
-{
+Interpreter::_Dynamic_value Interpreter::_mod(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1) {
   HEXED_ASSERT(o0.i && o1.i, "binary operator `%` only accepts integers", Hil_exception);
   _Dynamic_value v;
   v.i = *o0.i%*o1.i;
@@ -169,8 +160,7 @@ Interpreter::_Dynamic_value Interpreter::_mod(Interpreter::_Dynamic_value o0, In
 }
 
 template<double (*dop)(double, double), int (*iop)(int, int)>
-Interpreter::_Dynamic_value Interpreter::_arithmetic_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
-{
+Interpreter::_Dynamic_value Interpreter::_arithmetic_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1) {
   HEXED_ASSERT(!o0.s && !o1.s, "numeric binary operator does not accept strings", Hil_exception);
   Interpreter::_Dynamic_value v;
   if (o0.i && o1.i) v.i = iop(*o0.i, *o1.i);
@@ -183,8 +173,7 @@ Interpreter::_Dynamic_value Interpreter::_arithmetic_op(Interpreter::_Dynamic_va
 }
 
 template<bool (*dop)(double, double), bool (*iop)(int, int)>
-Interpreter::_Dynamic_value Interpreter::_comparison_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
-{
+Interpreter::_Dynamic_value Interpreter::_comparison_op(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1) {
   HEXED_ASSERT(!o0.s && !o1.s, "numeric binary operator does not accept strings", Hil_exception);
   Interpreter::_Dynamic_value v;
   if (o0.i && o1.i) v.i = iop(*o0.i, *o1.i);
@@ -196,8 +185,7 @@ Interpreter::_Dynamic_value Interpreter::_comparison_op(Interpreter::_Dynamic_va
   return v;
 }
 
-Interpreter::_Dynamic_value Interpreter::_general_eq(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
-{
+Interpreter::_Dynamic_value Interpreter::_general_eq(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1) {
   if (o0.s && o1.s) {
     _Dynamic_value val;
     val.i.emplace(*o0.s == *o1.s);
@@ -208,8 +196,7 @@ Interpreter::_Dynamic_value Interpreter::_general_eq(Interpreter::_Dynamic_value
   }
 }
 
-Interpreter::_Dynamic_value Interpreter::_general_add(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1)
-{
+Interpreter::_Dynamic_value Interpreter::_general_add(Interpreter::_Dynamic_value o0, Interpreter::_Dynamic_value o1) {
   if (!o0.s && !o1.s) return _arithmetic_op<_add<double>, _add<int>>(o0, o1);
   _Dynamic_value val;
   std::string fd = variables->lookup<std::string>("format_double").value();
@@ -226,8 +213,7 @@ Interpreter::_Dynamic_value Interpreter::_general_add(Interpreter::_Dynamic_valu
   return val;
 }
 
-std::function<Interpreter::_Dynamic_value(Interpreter::_Dynamic_value)> Interpreter::_numeric_unary(double (*f)(double), std::string name)
-{
+std::function<Interpreter::_Dynamic_value(Interpreter::_Dynamic_value)> Interpreter::_numeric_unary(double (*f)(double), std::string name) {
   return [f, name](_Dynamic_value val) {
     double operand;
     if (val.i) operand = *val.i;
@@ -240,8 +226,8 @@ std::function<Interpreter::_Dynamic_value(Interpreter::_Dynamic_value)> Interpre
   };
 }
 
-Interpreter::Interpreter(std::vector<std::string> preload) :
-  _un_ops {
+Interpreter::Interpreter(std::vector<std::string> preload)
+: _un_ops {
     {"-", [this](_Dynamic_value val) {
       if      (val.i) *val.i *= -1;
       else if (val.d) *val.d *= -1;
@@ -310,8 +296,8 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
       std::cout << std::flush; // apparently this is necessary sometimes?
       return _Dynamic_value(std::system(val.s->c_str()));
     }},
-  },
-  _bin_ops {
+  }
+, _bin_ops {
     {"^" , {1, _arithmetic_op<_pow<double>, _pow<int>>}}, // note: 0 is for unary ops
     {"#" , {1, [this](_Dynamic_value str, _Dynamic_value i) {
       HEXED_ASSERT(str.s && i.i, "firt operand of binary `#` must be `string` and second must be `int`", Hil_exception);
@@ -332,10 +318,10 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
     {">" , {4, _comparison_op<_gt<double>, _gt<int>>}},
     {"&" , {5, _comparison_op<_and<double>, _and<int>>}},
     {"|" , {5, _comparison_op<_or<double>, _or<int>>}},
-  },
-  _input(100),
-  variables{std::make_shared<Namespace>()},
-  printer{std::make_shared<Printer_set>()}
+  }
+, _input(100)
+, variables{std::make_shared<Namespace>()}
+, printer{std::make_shared<Printer_set>()}
 {
   // create some Heisenberg variables
   variables->create("ask", new Namespace::Heisenberg<std::string>([this]() {return _input.get();}));
@@ -369,8 +355,7 @@ Interpreter::Interpreter(std::vector<std::string> preload) :
   }
 }
 
-void Interpreter::exec(std::string comms)
-{
+void Interpreter::exec(std::string comms) {
   Lock::Acquire a(_lock);
   _text.assign(comms.begin(), comms.end());
   _text.push_back('\0');
@@ -393,8 +378,7 @@ void Interpreter::exec(std::string comms)
   _text.clear();
 }
 
-Interpreter Interpreter::make_sub() const
-{
+Interpreter Interpreter::make_sub() const {
   Interpreter inter(std::vector<std::string>{});
   #pragma omp critical
   inter.variables->supers.push_back(variables);
