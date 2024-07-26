@@ -1020,7 +1020,7 @@ class Builder:
         elif os.path.isfile(source):
             return Copy(self, source, destination)
         else:
-            raise Exception(f"Cannot copy from {source} as it does not exist")
+            raise Exception(f"Cannot copy from `{source}` as it is not an existing file.")
 
     def find_source_depends(self, file):
         ext = file.split(".")[-1]
@@ -1062,6 +1062,15 @@ class Builder:
                     depends.append(self[Pip](f))
         find_recursive(file)
         return all_(depends)
+
+    def find_lib_depends(self, file):
+        depends = []
+        for line in self.subproc(["ldd", file], capture_output=True).stdout.decode().split("\n"):
+            if "=> " in line:
+                lib = line.split("=> ")[-1].split(" (")[0]
+                if lib.startswith(self.build_dir):
+                    depends.append(lib)
+        return depends
 
     def __getitem__(self, class_):
         assert issubclass(class_, Buildable), "`self[buildable]` syntax is only for `Buildable` objects"

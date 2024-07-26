@@ -125,8 +125,9 @@ class Hexed(bu.C_project):
         package_dir = self.bdir + "python_package/"
         self.builder.copy(self.sdir + "python/", package_dir).do
         self[bu.Configure](package_dir + "pyproject.toml.in", package_dir + "pyproject.toml").do
-        for d in ["lib", "bin"]:
-            self.builder.copy(self.bdir + d, f"{package_dir}hexedpy/{d}").do
+        self.builder.copy(self.bdir + "bin/hexecute", f"{package_dir}hexedpy/bin/").do
+        for lib in self.builder.find_lib_depends("bin/hexecute"):
+            self.builder.copy(lib, f"{package_dir}hexedpy/lib/").do
         self.builder.copy(self.sdir + "hil/", package_dir + "hexedpy/lib/hexed/").do
         self.builder.copy(self.sdir + "LICENSE.txt", package_dir + "hexedpy/lib/hexed/").do
         def translate(out_file, preamble, lang):
@@ -140,7 +141,6 @@ class Hexed(bu.C_project):
         translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
         translate(package_dir + "hexedpy/constants.py",
             r"## \namespace hexed.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
-        self.builder.env["HEXED_PATH"] = self.bdir + "python_package/hexedpy/lib/hexed/"
         if self.builder.options["build_wheel"]:
             package = self[bu.Python_package](package_dir).find()
             assert package, "Failed to build Hexed Python package"
@@ -183,6 +183,7 @@ class Hexed(bu.C_project):
         args = [self.bdir + "bin/hexed_test", self.builder.options["test_args"]]
         if self.builder.options["gdb"]:
             args = ["gdb", "--args"] + args
+        self.builder.env["HEXED_PATH"] = self.bdir + "python_package/hexedpy/lib/hexed/"
         return self.builder.subproc(args)
 
 if __name__ == "__main__":
