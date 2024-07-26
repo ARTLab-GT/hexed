@@ -12,7 +12,6 @@ Path::Path(path subdir)
 Path::path Path::find(path target, std::vector<path> extra_dirs) {
   // add pathes in `$HEXED_PATH`
   const char* env_hexedpath = std::getenv("HEXED_PATH");
-  printf("%s\n", env_hexedpath);
   if (env_hexedpath) {
     std::string hexedpath = env_hexedpath;
     std::string::size_type start = 0;
