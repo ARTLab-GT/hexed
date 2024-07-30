@@ -75,7 +75,7 @@ and then it will install the wheel in your current environment.
 
 Notes:
 - This may take a while, especially the first time (repeat builds should be much faster).
-  If you want to speed it up, see the \ref option_n_build_procs option.
+  If you want to speed it up, see the \ref n_build_procs option.
 - It will automatically download and build any dependencies you don't already have.
   See \ref auto_dependencies below for more information.
 - If you make changes to the source code,
@@ -96,9 +96,67 @@ so if `value` contains spaces you must escape them or quote it (e.g., `--some_op
 Any unrecognized option names are simply ignored, so watch carefully for typos.
 
 The options are listed below.
-Any options which take a Boolean value can accept any of the following values, all of which are case insensitive
+Any options which expect a path can accept an absolute path or a path relative to your current working directory (`.`).
+Any options which expect a Boolean value can accept any of the following values, all of which are case insensitive
 (although otherwise options are case sensitive):
 - `0`, `false`, `no`, `off`, `n`, `f` all translate to False.
 - `1`, `true`, `yes`, `on`, `y`, `t` all translate to True.
+
+\subsubsection source_dir
+__Expects:__ path \n
+__Default:__ `.` \n
+Root directory of the source code.
+
+\subsubsection build_dir
+__Expects:__ path \n
+__Default:__ `./build` \n
+Directory in which compiled binaries will be placed.
+This is also where cached options are stored.
+So, if you run the build script multiple times with different `build_dir`s,
+then each time you run it in a particular `build_dir` it will remember the most recent options you used
+in that `build_dir` without affecting the options used for other `build_dir`s.
+This is why the option `--build_dir` isn't cached---in order to access the cached options,
+the script needs to already know the `build_dir`.
+
+\subsubsection n_build_procs
+__Expects:__ Positive integer \n
+__Default:__ 1 \n
+When compiling, use up to this many parallel processes.
+This can significantly speed up the build, but it also uses more memory.
+You can easily max out your RAM this way, so use caution.
+As a rule of thumb, I usually use 1 process for every 2 GB of RAM available.
+
+\subsubsection verbose
+__Expects:__ Boolean \n
+__Default:__ False \n
+Print additional diagnostic information.
+
+\subsubsection use_system_paths
+__Expects:__ Boolean \n
+__Default:__ True \n
+If True, before installing any dependencies,
+the build script will first search for them in paths typically used by the system to install files.
+These include
+- `/usr/lib/` for libraries
+- `/usr/include/` and `/usr/local/include/` for headers
+
+\subsubsection use_env_paths
+__Expects:__ Boolean \n
+__Default:__ True \n
+If True, before installing any dependencies,
+the build script will first search for them in paths specified by environment variables.
+These include:
+- `PATH` for executables
+- `LIBRARY_PATH`, `LD_LIBRARY_PATH`, and `DT_RPATH` for libraries
+- `INCLUDE_PATH`, and `CPLUS_INCLUDE_PATH` for headers
+- `CMAKE_PREFIX_PATH` and `PATH` (with the `bin` suffices removed) for CMake configuration files.
+
+\subsubsection internet
+__Expects:__ Boolean \n
+__Default:__ True \n
+If False, the build script will avoid internet usage to install dependencies.
+As a result, if some dependencies are not available, the build process will fail instead of downloading them.
+This option is generally only appropriate for repeat builds,
+where time may be wasted in unnecessary internet access.
 
 */
