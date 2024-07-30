@@ -85,4 +85,20 @@ Notes:
   If you encounter inexplicable problems on repeat builds,
   try deleting the `build` directory and then rebuilding.
 
+\subsection build_options Build options
+The build script (`build.py`) accepts some command line arguments.
+All arguments except `--build_dir` are cached in files in the build directory.
+If you rerun the build, it will remember the values of any previous options you passed
+until you explicitly override them (by passing the option again with a different value) or delete the build directory.
+Every option takes the form `--option_name=value`.
+The whole option (including `value`) must be a valid shell token,
+so if `value` contains spaces you must escape them or quote it (e.g., `--some_option="some value"`).
+Any unrecognized option names are simply ignored, so watch carefully for typos.
+
+The options are listed below.
+Any options which take a Boolean value can accept any of the following values, all of which are case insensitive
+(although otherwise options are case sensitive):
+- `0`, `false`, `no`, `off`, `n`, `f` all translate to False.
+- `1`, `true`, `yes`, `on`, `y`, `t` all translate to True.
+
 */
