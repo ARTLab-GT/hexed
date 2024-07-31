@@ -22,9 +22,6 @@ def run_exec(name):
     add_path(lib_dir + "/hexed/", "HEXED_PATH")
     run([exec_path] + argv[1:])
 
-def hil():
-    run_exec("hil")
-
 def hexecute():
     run_exec("hexecute")
 

@@ -3,21 +3,23 @@ import os
 import re
 
 class Hexed(bu.C_project):
-    version = "0.2.2"
+    version = "0.3.0"
     installed_files = {"bin":["hil", "hexecute"], "include":["hexed"], "lib":["hexed"]}
 
     def __init__(self, builder):
         self.builder = builder
         #### add extra build options and information to be passed to the code
         self.builder.add_options({
-            "build_mode": bu.Option("release", convert=lambda s: s.lower(), assertions=bu.assert_true(lambda s: s in ["release", "debug"])),
-            "max_row_size": bu.Option(8, convert=int, assertions=bu.assert_true(lambda n: n >= 2, "max_row_size must be at least 2")),
+            "build_mode": bu.Option("release", convert=lambda s: s.lower(),
+                                    assertions=bu.assert_true(lambda s: s in ["release", "debug"])),
+            "max_row_size": bu.Option(8, convert=int,
+                                      assertions=bu.assert_true(lambda n: n >= 2, "max_row_size must be at least 2")),
             "threaded": bu.Option(True, convert=bu.as_bool),
             "n_threads": bu.Option(os.cpu_count(), convert=int, assertions=bu.assert_nonneg),
             "profile": bu.Option(False, convert=bu.as_bool),
             "use_xdmf": bu.Option(True, convert=bu.as_bool),
             "use_tecio": bu.Option(False, convert=bu.as_bool),
-            "use_occt": bu.Option(False, convert=bu.as_bool),
+            "use_occt": bu.Option(True, convert=bu.as_bool),
             "build_tests": bu.Option(True, convert=bu.as_bool),
             "build_docs": bu.Option(False, convert=bu.as_bool),
             "obsessive_timing": bu.Option(False, convert=bu.as_bool),
@@ -27,12 +29,13 @@ class Hexed(bu.C_project):
         })
         is_release = self.builder.options["build_mode"] == "release"
         self.builder.add_options({
-            "architecture": bu.Option(["any", "native"][is_release]),
+            "architecture": bu.Option("native"),
             "build_wheel": bu.Option(is_release, convert=bu.as_bool),
             "run_tests": bu.Option(not is_release, convert=bu.as_bool),
             "sanitize": bu.Option(not is_release, convert=bu.as_bool),
         })
-        # Get a list of all source files. The entire build process can be bypassed if there are no changes to any of these files
+        # Get a list of all source files.
+        # The entire build process can be bypassed if there are no changes to any of these files
         self._all_sources = bu.all_(bu.contents(self.sdir, ignore=lambda f:
             bu.not_source(f) or
             re.match(self.sdir + r"build(?!\.py)", bu.absolute(f)) or
@@ -50,10 +53,17 @@ class Hexed(bu.C_project):
         if self.builder.options["use_xdmf"]:
             deps.append(self[bu.Xdmf]())
         if self.builder.options["use_occt"]:
-            self.occt_libs = ["TKDEIGES", "TKDESTEP", "TKDESTL", "TKBRep", "TKV3d"]
-            deps.append(self[bu.Occt](toolkits=self.occt_libs))
+            deps.append(self[bu.Occt](modules = [
+                "DETools",
+                "DataExchange",
+                "FoundationClasses",
+                "ModelingAlgorithms",
+                "ModelingData",
+            ], use_graphics=False))
         if self.builder.options["build_tests"]:
             deps.append(self[bu.Catch2]())
+        if self.builder.options["build_docs"]:
+            deps.append(self[bu.Doxygen]())
         return deps
 
     def build(self):
@@ -107,7 +117,8 @@ class Hexed(bu.C_project):
         if self.builder.options["use_xdmf"]:
             libs.append("Xdmf")
         if self.builder.options["use_occt"]:
-            libs += self.occt_libs
+            libs += ["TKDEIGES", "TKDESTEP", "TKDESTL", "TKBRep"]
+
         self[bu.Link]("libhexed.so", bu.contents(self.bdir + "object/libhexed"), libs=libs).do
         self[bu.Link]("hil", ["execs/hil.o"], libs=["hexed"]).do
         self[bu.Link]("hexecute", ["execs/hexecute.o"], libs=["hexed"]).do
@@ -119,8 +130,9 @@ class Hexed(bu.C_project):
         package_dir = self.bdir + "python_package/"
         self.builder.copy(self.sdir + "python/", package_dir).do
         self[bu.Configure](package_dir + "pyproject.toml.in", package_dir + "pyproject.toml").do
-        for d in ["lib", "bin"]:
-            self.builder.copy(self.bdir + d, f"{package_dir}hexedpy/{d}").do
+        self.builder.copy(self.bdir + "bin/hexecute", f"{package_dir}hexedpy/bin/").do
+        for lib in self.builder.find_lib_depends("bin/hexecute"):
+            self.builder.copy(lib, f"{package_dir}hexedpy/lib/").do
         self.builder.copy(self.sdir + "hil/", package_dir + "hexedpy/lib/hexed/").do
         self.builder.copy(self.sdir + "LICENSE.txt", package_dir + "hexedpy/lib/hexed/").do
         def translate(out_file, preamble, lang):
@@ -134,7 +146,6 @@ class Hexed(bu.C_project):
         translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
         translate(package_dir + "hexedpy/constants.py",
             r"## \namespace hexed.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
-        self.builder.env["HEXED_PATH"] = self.bdir + "python_package/hexedpy/lib/hexed/"
         if self.builder.options["build_wheel"]:
             package = self[bu.Python_package](package_dir).find()
             assert package, "Failed to build Hexed Python package"
@@ -143,7 +154,6 @@ class Hexed(bu.C_project):
 
         ### build documentation
         if self.builder.options["build_docs"]:
-            self.builder.assert_command("doxygen", "doxygen")
             self.builder.assert_command("dot", "graphviz")
             def not_dox(f):
                 return not (f.endswith(".dox") or f.endswith(".tag") or f.endswith(".doxytags") or os.path.isdir(f))
@@ -177,6 +187,7 @@ class Hexed(bu.C_project):
         args = [self.bdir + "bin/hexed_test", self.builder.options["test_args"]]
         if self.builder.options["gdb"]:
             args = ["gdb", "--args"] + args
+        self.builder.env["HEXED_PATH"] = self.bdir + "python_package/hexedpy/lib/hexed/"
         return self.builder.subproc(args)
 
 if __name__ == "__main__":

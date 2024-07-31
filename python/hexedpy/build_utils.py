@@ -267,6 +267,7 @@ class Buildable(Deliverable):
             self.builder.indent += "\x1b[;35m| \x1b[0m"
             self.build()
             self._found_output = Deliverable.make(self.output()).find()
+            assert self.found_output, f"Attempt to build {self} did not produce required output."
             self.touch()
             self.builder.indent = prev_indent
             self.builder.message("\x1b[1;32mBuilt------------------\x1b[0m" + str(self))
@@ -281,7 +282,7 @@ class Buildable(Deliverable):
         return self.found_output
     @property
     def do(self):
-        assert self.find(), f"Attempt to build {self} did not produce required output."
+        self.find()
         return self
     def __getitem__(self, class_):
         assert issubclass(class_, Buildable), "`self[buildable]` syntax is only for `Buildable` objects"
@@ -467,16 +468,54 @@ class Catch2(C_project):
         )[0]
         self.builder.cmake(directory, ["-DBUILD_TESTING=OFF", "-DBUILD_SHARED_LIBS=ON"])
 
+class Doxygen(Buildable):
+    version = "1.11.0"
+    def output(self):
+        return self.builder.find_in("bin", "doxygen")
+    def build(self):
+        directory = self.builder.fetch_archive(f"https://www.doxygen.nl/files/doxygen-{self.version}.linux.bin.tar.gz",
+                                               outputs=f"doxygen-{self.version}")[0]
+        self.builder.copy(directory + "bin/", self.bdir + "bin/").do
+
 class Occt(C_project):
-    version = "7.8.0"
-    def __init__(self, builder, toolkits=[]):
-        self.installed_files = {"include":["opencascade"], "lib":toolkits, "cmake":["opencascade"]}
+    version = "7.8.1"
+    all_modules = [
+            "ApplicationFramework",
+            "DETools",
+            "DataExchange",
+            "Draw",
+            "FoundationClasses",
+            "ModelingAlgorithms",
+            "ModelingData",
+            "Visualization",
+    ]
+    def __init__(self, builder, modules=all_modules, use_graphics=True):
+        self.modules = modules
+        self.installed_files = {"include":["opencascade"], "cmake":["opencascade"]}
+        self.use_graphics = use_graphics
+    def build(self):
+        if not self.use_graphics:
+            with open(self.bdir + "empty.cpp", "w") as empty:
+                empty.write("\n")
+            self[Compile](self.bdir + "empty.cpp").do
+            for lib_name in ["GL", "EGL"]:
+                self[Link](f"lib{lib_name}.so", [self.bdir + "object/empty.o"]).do
+        underscore_version = self.version.replace('.', '_')
+        directory = self.builder.fetch_archive(
+            f"https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore_version}.tar.gz",
+            outputs=f"OCCT-{underscore_version}",
+        )[0]
+        if self.use_graphics:
+            options = []
+        else:
+            options = ["-DUSE_FREETYPE=OFF", "-DUSE_GLES2=OFF", "-DUSE_OPENGL=OFF", "-DUSE_TK=OFF", "-DUSE_XLIB=OFF"]
+        for module in self.all_modules:
+            options.append(f"-DBUILD_MODULE_{module}={['OFF', 'ON'][module in self.modules]}")
+        self.builder.cmake(directory, options)
     def find(self):
         found = super().find()
         self.builder.prefices["include"] += (self.builder.find_in("include", "opencascade").find().assets[0],)
         return found
-    def build(self):
-        raise Exception("Sorry, auto-installing OCCT is not implemented. You have to install it yourself")
 
 class Pip(Buildable):
     fake_names = {
@@ -901,8 +940,10 @@ class Builder:
                     with open(self.cache_dir + name, "w") as cache:
                         cache.write(text)
 
-    def message(self, text, **kwargs):
-        print(self.indent + text, flush=True, **kwargs)
+    def message(self, text, start="indent", **kwargs):
+        if start == "indent":
+            start = self.indent
+        print(start + text, flush=True, **kwargs)
 
     def mkdir(self, name):
         os.makedirs(absolute(name), exist_ok=True)
@@ -920,7 +961,7 @@ class Builder:
     def in_pypi(self, package):
         self.message("searching PyPI...", end="")
         output = self.python("-m", "pypisearch", package, capture_output=True).stdout.decode()
-        self.message("done")
+        self.message("done", start="")
         return f"\n{package} " in "\n" + output
 
     def cmake(self, source_dir, opts=[], build_dir="build"):
@@ -988,7 +1029,7 @@ class Builder:
         elif os.path.isfile(source):
             return Copy(self, source, destination)
         else:
-            raise Exception(f"Cannot copy from {source} as it does not exist")
+            raise Exception(f"Cannot copy from `{source}` as it is not an existing file.")
 
     def find_source_depends(self, file):
         ext = file.split(".")[-1]
@@ -1030,6 +1071,15 @@ class Builder:
                     depends.append(self[Pip](f))
         find_recursive(file)
         return all_(depends)
+
+    def find_lib_depends(self, file):
+        depends = []
+        for line in self.subproc(["ldd", file], capture_output=True).stdout.decode().split("\n"):
+            if "=> " in line:
+                lib = line.split("=> ")[-1].split(" (")[0]
+                if lib.startswith(self.build_dir):
+                    depends.append(lib)
+        return depends
 
     def __getitem__(self, class_):
         assert issubclass(class_, Buildable), "`self[buildable]` syntax is only for `Buildable` objects"

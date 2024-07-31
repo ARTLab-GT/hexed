@@ -1,290 +1,299 @@
 /*! \page installation Installation
 
-Below are instructions to install Hexed by building from the source.
-Hexed currently only supports GNU/Linux and GCC compiler,
-although you may be able to coerce it to work in other environments.
-Precompiled binaries and support for other operating systems and compilers are planned in future releases.
+\section install_prereqs Prerequisites
 
-\section quick Quick Start
-If look at these instructions and don't know what I'm talking about, skip to \ref detailed.
--# Ensure that the following mandatory dependencies are installed (all Python packages must be installed for Python3):
-   - [Eigen](https://eigen.tuxfamily.org/)
-   - [HDF5](https://www.hdfgroup.org/solutions/hdf5/)
-   - [numpy](https://numpy.org/)
-   - [scipy](https://scipy.org/)
-   - [matplotlib](https://matplotlib.org/)
-   - [sympy](https://www.sympy.org/en/index.html)
-   - [GitPython](https://gitpython.readthedocs.io/en/stable/)
--# You are recommended to also install the following dependencies which are required for some optional features:
-   - One of the following visualization systems:
-     - [ParaView](https://www.paraview.org/) and [XDMF](https://www.xdmf.org/index.php/Main_Page)
-     - [Tecplot](https://www.tecplot.com/) and [TecIO](https://www.tecplot.com/products/tecio-library/)
-   - [OpenCASCADE Technology](https://dev.opencascade.org/doc/overview/html/index.html): required for CAD geometry import
-   - [Catch2](https://github.com/catchorg/Catch2): required for unit testing
--# Create and navigate to a build directory (git will ignore names that start with `build`).
--# Use \ref ccmake to configure build options.
-   This project has been configured to show you the available options and their defaults specifically with the `ccmake` interface for CMake.
-   - Be sure to set `CMAKE_INSTALL_PREFIX`.
-   - `PYTHON_INSTALL_PREFIX` should be set to somewhere in your Python module search path.
-     It will try to automatically detect your [user site-packages](https://docs.python.org/3/library/site.html#cmdoption-site-user-site) directory,
-     but you might have to manually override it.
--# `make -j install`
--# Hexed is now ready to use. To verify the success of the build, execute the following:
-   - `test/unit` to run the unit tests.
-   - `cd ../samples/naca0012; hexecute run.hil` to run the [NACA 0012 sample case](https://github.com/ARTLab-GT/hexed/blob/v0.1.1/samples/naca0012/run.hil).
+\subsection install_prereq_os OS
+Currently, Hexed supports only GNU/Linux operating systems.
+The instructions on this page are targeted at and have been tested on Ubuntu 24.04 (Noble Numbat),
+but should be easily adapted to other Linux distributions.
+Support for Windows and Mac OS are planned for future releases.
 
-To uninstall Hexed (remove its files from the system-wide installation directories), do `make uninstall`.
-This uninstall rule _should_ be comprehensive.
-After executing it, there shouldn't be any traces of Hexed outside the build tree.
-If you find this is not the case, please let \me know.
+\subsection install_prereq_python Python/pip
+To install Hexed, you will need Python3, and you will need to be able to install packages with
+[pip](https://packaging.python.org/en/latest/key_projects/#pip).
+You likely already have those things, but if you don't, you can obtain them with
+```{.sh}
+sudo apt install python3-full
+```
+If you don't have root permissions, you can also [build Python from source](https://docs.python.org/3/using/unix.html).
+Also, if this is your first time installing Python packages, you should create a virtual environment
+(this has always been recommended, but in Ubuntu 24.04 it is now mandatory).
+You can create and activate a virtual environment with the following commands:
+```{.sh}
+python3 -m venv my_venv
+source my_venv/bin/activate
+```
+You will have to repeat the `sourc my_venv/bin/activate` command every time you open a new terminal,
+or else you won't be able to use your `hexed` installation.
+See [this tutorial](https://docs.python.org/3/tutorial/venv.html)
+for more information about Python packages and virtual environments.
 
-\section detailed Detailed instructions
-Since Hexed is meant for aerospace engineers, who often aren't programmers, this section provides a detailed tutorial on how to build the source.
-If you don't want to use XDMF/ParaView for visualization, you can skip steps 4 through 7.
-These instructions will work on an ARTLab machine.
-They will hopefully also work on any other GNU/Linux system, but you may have to adapt some of the details.
-If you have any trouble following these instructions,
-please let \me know so that this documentation can be improved.
+Currently, Hexed is installed via a Python package,
+which includes both a Python library of helper functions and the binaries for the Hexed solver.
+This could be construed as an abuse of the Python packaging system,
+but to make the installation as straightforward as possible,
+I wanted a packaging system that:
+- nearly everyone already has
+- can install executables and libraries in the user tree,
+  since not everyone has root permissions on their own machine
 
-\subsection configure Step 1: Set up installation directory
-In a GNU/Linux system, by convention programs are typically installed in `/usr/local`,
-so when you try to execute them, the system knows where to find them.
-However, this requires you to have superuser privileges, which, on the ARTLab machines for example, we do not.
-So, you need an alternative place to install things that the system knows about.
-My solution is to install things in `~/.local`.
-If you already have an installation directory that works for you, or you don't mind installing things in `/usr/local`, you can skip this step.
-Otherwise, you can do the following to set up `~/.local` for installing programs.
-- To start with, create the directories `~/.local/bin`, `~/.local/include`, `~/.local/lib`, and `~/.local/share`,
-  if they don't already exist.
-- To tell your system to look for executable programs there,
-  you need to set some environment variables by editing the file `.bashrc`.
-  First, it is recommended that you make a backup copy:
-  ~~~{.sh}
-  cp .bashrc .bashrc_backup
-  ~~~
-  - Now edit `.bashrc` and add the following lines at the end:
-  ~~~{.sh}
-export PATH=$PATH:~/.local/bin
-export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH::~/.local/include/
-export LIBRARY_PATH=$LIBRARY_PATH:~/.local/lib
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/.local/lib
-  ~~~
-- Close and reopen the terminal. This will allow changes to take effect.
+Currently, Python packages are the only system that appears to meet these requirements.
+\section install_py_pack Install from Python package (the easy way)
 
-You also need somewhere to put all the code I'm about to make you download, as opposed to dumping it in your home directory.
-Personally, I recommend making a directory called `~/codes`, but of course you are free to use any directory you like.
+The easiest way to install Hexed is from via the [Python package](https://test.pypi.org/project/hexedpy/)
+with [pip](https://packaging.python.org/en/latest/key_projects/#pip):
+```{.sh}
+python3 -m pip install --index-url https://test.pypi.org/simple/ hexedpy
+```
+\note You can't just do `pip install hexedpy` because, for now,
+Hexed is only on the [TestPyPI](https://test.pypi.org/), not the [real PyPI](https://pypi.org/).
 
-\subsection install_python Step 2: install Python libraries
-Hexed uses Python scripts for some small tasks during the build process and output post-processing and requires
-a few 3rd-party libraries.
-- Install the numerical computing libraries numpy and scipy (although you likely have them already):
-  - `pip3 install numpy`
-  - `pip3 install scipy`
-- Install the plotting library matplotlib (used for residual plotting, among other things)
-  - `pip3 install matplotlib`
-- Install the symbolic computation library sympy (used to generate quadrature rules):
-  - `pip3 install sympy`
+Once you do this, you can run Hexed with the command \ref hexecute.
+You will also have access to the \ref hexedpy Python module.
 
-\subsection install_eigen Step 3: install Eigen
-- Download the %Eigen [source code](http://eigen.tuxfamily.org/index.php?title=Main_Page#Download) (latest stable release).
-- Unpack the %Eigen source in `~/codes`. `~/codes` should now contain a directory named something like `eigen-X.X.X`, depending on the
-  current version number.
-- `cd eigen-X.X.X` (replace "X"s with appropriate numbers).
-- `cp -r Eigen/ ~/.local/include/`
-  - Obviously, if you decided to make your install path somewhere other than `~/.local`, substitute that instead.
+\section install_source Building from source (the harder way)
 
-\subsection install_hdf5 Step 4: install HDF5
-Hexed uses the [Hierarchical Data Format](https://en.wikipedia.org/wiki/Hierarchical_Data_Format), version 5 to store data.
-The following steps can be used to install the [HDF5 library](https://www.hdfgroup.org/solutions/hdf5/).
-- Download the [source code](https://www.hdfgroup.org/downloads/hdf5/source-code/) (latest release) and unpack it in `~/codes`.
-  - Ignore the installation instructions that come with it---they are rather cursed.
-- `cd hdf5-X.XX.X`
-- `mkdir build`
-- `cd build`
-- `cmake -D CMAKE_INSTALL_PREFIX=~/.local`
-- `make -j install`
+For optimal performance, or if you want to modify the source code, it is recommended that you build Hexed from source.
+Even when you do so, Hexed is still installed as a Python wheel,
+so you will still need pip as explained in \ref install_prereqs.
+You will also need some basic development tools including
+[git](https://git-scm.com/), [GCC](https://gcc.gnu.org/), and [Make](https://www.gnu.org/software/make/).
+Again, if you're reading this, you probably already have these, but if you don't, you can install them (on Ubuntu) with
+```{.sh}
+sudo apt install build-essential git
+```
 
-\subsection install_boost Step 5: install Boost headers
-\ref install_xdmf "XDMF" uses header files from Boost.
-To install these:
-- Go to the [Boost website](https://www.boost.org/) and download the latest release.
-- Unpack it in `~/codes`.
-- Copy the header files: `cp -r boost_X_XX_X/boost ~/.local/include`
-  - __or__ symlink them: \verbatim ln -s $(pwd )/boost_X_XX_X/boost ~/.local/include \endverbatim
+Once you have these basic prerequisites, all you have to do is:
+```{.sh}
+git clone https://github.com/ARTLab-GT/hexed.git
+cd hexed
+git checkout latest_release
+python3 build.py
+```
+This will create a directory named `build` in which it will compile the code and create the `hexedpy` Python wheel,
+and then it will install the wheel in your current environment.
 
-\subsection install_xml Step 6: install libxml2
-\ref install_xdmf "XDMF" uses [XML](https://github.com/GNOME/libxml2).
-To install:
-- Go to [Release page](https://download.gnome.org/sources/libxml2/) and download latest.
-- Unpack  in `~/codes`
-- `cd libxml2-X.X.X`
-- `./configure --prefix=$HOME/.local --with-python=no`
-- `make install`
+Notes:
+- This may take a while, especially the first time (repeat builds should be much faster).
+  If you want to speed it up, see the \ref n_build_procs option.
+- It will automatically download and build any dependencies you don't already have.
+  See \ref auto_dependencies below for more information.
+- If you make changes to the source code,
+  it you _should_ be able to just rerun `build.py` and it should do a pretty good job of
+  rebuilding/reinstalling the files that were affected by the change.
+  However, occasionally, a repeat build might break.
+  If you encounter inexplicable problems on repeat builds,
+  try deleting the `build` directory and then rebuilding.
 
-\subsection install_xdmf Step 7: install XDMF
-Hexed uses the [Extensible Data Model and Format](https://www.xdmf.org/index.php/Main_Page) to store visualization data.
-Use the following steps to install the XDMF library:
-- Clone the git repo: `git clone https://gitlab.kitware.com/xdmf/xdmf.git`
-- `cd xdmf`
-- `mkdir build`
-- `cd build`
-- `export XDMF_INSTALL_DIR=~/.local`
-- `cmake .. -DCMAKE_INSTALL_PREFIX=${XDMF_INSTALL_DIR} -DBUILD_SHARED_LIBS=1 -Wno-dev`
-- `make install`
+\subsection build_options Build options
+The build script (`build.py`) accepts some command line arguments.
+All arguments except `--build_dir` are cached in files in the build directory.
+If you rerun the build, it will remember the values of any previous options you passed
+until you explicitly override them (by passing the option again with a different value) or delete the build directory.
+Every option takes the form `--option_name=value`.
+The whole option (including `value`) must be a valid shell token,
+so if `value` contains spaces you must escape them or quote it (e.g., `--some_option="some value"`).
+Any unrecognized option names are simply ignored, so watch carefully for typos.
 
-\subsection install_occt Step 8: install OpenCASCADE Technology
-OpenCASCADE Technology is an open source CAD Engine which Hexed uses to read and manipulate geometry from standard CAD file formats.
-- Obtain the source code by one of the following approaches:
-  - Visit the [download page](https://dev.opencascade.org/release) and download the latest release.
-    Before you can download the source, you will be prompted to make an account.
-  - If you're an ARTLab member, just ask \me for a copy.
-- `cd ~/codes`
-- `tar -xzf ~/Downloads/opencascade-7.7.0.tgz`
-- `cd opencascade-7.7.0`
-- `mkir build`
-- `cd build`
-- `cmake -D INSTALL_DIR=~/.local -D BUILD_MODULE_Draw=OFF -D USE_FREETYPE=OFF ..`
-  - This will disable the "Draw" module, which creates a basic example CAD program with OCCT.
-    We don't need that for our purposes, and I've had trouble compiling it on the ARTLab machines,
-    but if you want to enable it and can get it to compile, it certainly won't cause any problems.
-- `make install` (may take a while). As a warning, I've maxed out my RAM trying to speed it up with the `-j` option.
+The options are listed below.
+Any options which expect a path can accept an absolute path or a path relative to your current working directory (`.`).
+Any options which expect a Boolean value can accept any of the following values, all of which are case insensitive
+(although otherwise options are case sensitive):
+- `0`, `false`, `no`, `off`, `n`, `f` all translate to False.
+- `1`, `true`, `yes`, `on`, `y`, `t` all translate to True.
 
-\subsection install_hexed Step 9: compile and install Hexed
-- `cd ~/codes`
-- Obtain the Hexed source code.
-  - The simplest way to do this is by visiting the [releases](https://github.com/ARTLab-GT/hexed/releases) page,
-    downloading the latest one, and unpacking it in `~/codes`.
-  - However, if you want to make changes to the code or keep up to date with new releases, you should clone the GitHub repository:
-    `git clone git@github.com:ARTLab-GT/hexed.git`
-    - This may require you to
-      [add an SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
-      to your GitHub account, if you haven't already.
-  - You will, at this point, be on the `main` branch, which is the latest in-development version.
-    To switch to a stable release, you can do something like `git checkout v0.1.1 -b v0.1.1_branch`.
-- `cd hexed`
-- `mkdir build_Release`
-- `cd build_Release`
-- `ccmake ..` \anchor ccmake
-  This will open the [CMake curses interface](https://cmake.org/cmake/help/latest/manual/ccmake.1.html),
-  which is a sort-of-GUI for [CMake](https://cmake.org/).
-  This allows you to choose some options for how to build Hexed.
-  Personally, I always use `ccmake` when I'm building a CMake project,
-  since it lets me see what options are available and modify any that seem relevant.
-- Press `c`.
-  - You might see some nonsense warnings about "Argument not separated from the preceding token by whitespace".
-    This is not a real problem, just some sloppiness we inherited from XDMF,
-    but if it bothers you I have a \ref xdmf_problems "fix" for it.
-    You should be able to just exit the warning screen by pressing `e`.
-  - If you see other warnings/errors besides the above, you might have a real problem to fix.
-- You should now see a list of options.
-  To edit options, use the arrow keys or [hjkl](https://vimdoc.sourceforge.net/htmldoc/usr_02.html#hjkl)
-  to move the cursor and Enter to edit the option under the cursor.
-  - Change `CMAKE_INSTALL_PREFIX` to `~/.local` (or wherever you want to install binaries).
-  - If you want to use Tecplot, change `use_tecplot` to `ON`.
-    After you hit `c` the first time, you will have to edit the variable `TECPLOT_DIR` to point to wherever you installed Tecplot.
-  - If you __don't__ want to use XDMF, change `use_xdmf` to `OFF`.
-  - Otherwise, the default options should be fine.
-- Press `c` again.
-- Press `g` to generate. The GUI should exit (sometimes you have to hit `c` several times before it will let you exit with `g`).
-  - If something goes wrong and you can't get `g` to work, you can abort with `q`.
-- `make -j install`
-  - You do actually have to install it.
-    If you try to do `make -j` and just execute the binary executable from the build directory,
-    it won't be able to find its \ref hil "HIL" scripts.
+\subsubsection source_dir
+__Expects:__ path \n
+__Default:__ `.` \n
+Root directory of the source code.
 
-\subsection verify Step 10: verify success
-Hexed should now be ready to use.
-To verify that it actually works, try running one of the sample cases:
--  You should still be in the build directory.
-- `cd ../samples/naca0012/`
-- `hexecute run.hil`
-- You should see it print out a convergence history and then a performance summary.
-  It should create a few `.xmf` files which you can open in ParaView to see the flowfield.
-  The entire simulation should take a bit less than a minute.
+\subsubsection build_dir
+__Expects:__ path \n
+__Default:__ `./build` \n
+Directory in which compiled binaries will be placed.
+This is also where cached options are stored.
+So, if you run the build script multiple times with different `build_dir`s,
+then each time you run it in a particular `build_dir` it will remember the most recent options you used
+in that `build_dir` without affecting the options used for other `build_dir`s.
+This is why the option `--build_dir` isn't cached---in order to access the cached options,
+the script needs to already know the `build_dir`.
 
-\subsection dev_build Development build
-The above instructions are sufficient if you just want to run simulations.
-However, if you're going to be doing any development of Hexed, I recommend you perform the following additional steps.
+\subsubsection n_build_procs
+__Expects:__ Positive integer \n
+__Default:__ 1 \n
+When compiling, use up to this many parallel processes.
+This can significantly speed up the build, but it also uses more memory.
+You can easily max out your RAM this way, so use caution.
+As a rule of thumb, I usually use 1 process for every 2 GB of RAM available.
 
-\subsubsection additional_python Step 1: Install additional python packages
-- Install GitPython (used by benchmarking script):
-  - `pip3 install GitPython`
+\subsubsection verbose
+__Expects:__ Boolean \n
+__Default:__ False \n
+Print additional diagnostic information.
 
-\subsubsection install_catch2 Step 2: install Catch2
-Hexed uses Catch2 is for unit testing. Install Catch2 so that you can compile the unit tests.
-- Visit the Catch2 [Releases](https://github.com/catchorg/Catch2/releases) page and download the latest one (select "source code (tar.gz)").
-  Do not clone the `devel` branch from the GitHub repo, as that is not a stable release.
-- Extract (e.g., unzip) the source code and place it in `~/codes`. `~/codes` should now contain a directory named something like `Catch2-2.XX.X`,
-  except instead of "X"s there will be a version number.
-- `cd ~/codes/Catch2-2.XX.X` (replace the "X"s to match whatever the actual directory name is).
-- `cmake -Bbuild -H. -DBUILD_TESTING=OFF -DCMAKE_INSTALL_PREFIX=~/.local`
-- `cmake --build build/ --target install`
+\subsubsection use_system_paths
+__Expects:__ Boolean \n
+__Default:__ True \n
+If True, before installing any dependencies,
+the build script will first search for them in paths typically used by the system to install files.
+These include
+- `/usr/lib/` for libraries
+- `/usr/include/` and `/usr/local/include/` for headers
 
-\subsubsection build_tests Step 3: build unit tests
-Now you need to update your Hexed build to include the unit tests, as follows:
-- `cd ~/codes/hexed/build_Release`
-- `ccmake ..`
-  - Set the option `build_tests` to `ON`.
-- `make -j install`
-- The code is now compiled. You can run the unit tests with the command `test/unit` (executed from the build directory, still).
-- You should see "All tests passed".
+\subsubsection use_env_paths
+__Expects:__ Boolean \n
+__Default:__ True \n
+If True, before installing any dependencies,
+the build script will first search for them in paths specified by environment variables.
+These include:
+- `PATH` for executables
+- `LIBRARY_PATH`, `LD_LIBRARY_PATH`, and `DT_RPATH` for libraries
+- `INCLUDE_PATH`, and `CPLUS_INCLUDE_PATH` for headers
+- `CMAKE_PREFIX_PATH` and `PATH` (with the `bin` suffices removed) for CMake configuration files.
 
-\subsubsection build_debug Step 4: build in debug mode
-So far, we've only compiled Hexed in Release mode, which is designed to run as fast as possible at the expense of ease of debugging.
-That's what you want when you're running simulations, but if you're in the process of implementing and debugging new features,
-you would probably prefer to be able to use debugging tools like [GDB](https://www.sourceware.org/gdb/) and the
-[sanitizers](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html).
-So, we will create a new build directory where we compile in Debug mode.
-- `cd ~/codes/hexed`
-- `mkdir build_Debug`
-- `ccmake ..`
-  - this time, set `CMAKE_BUILD_TYPE` to `Debug` ("Enter" toggles between `Release` and `Debug`),
-    `build_tests` to `ON`, and `sanitize` to `ON`.
-  - `c` as many times as you need and then `g`.
-- `make -j` (__don't__ add `install`, since you still want to be running simulations with your nice and fast Release mode).
-- `test/unit` This may take a while.
-   Again, you should see "All tests passed".
-   However, now if you were to, for example, write to an array out of bounds, you will get an error message with the line number of the problem
-   instead of just a segfault.
+\subsubsection internet
+__Expects:__ Boolean \n
+__Default:__ True \n
+If False, the build script will avoid internet usage to install dependencies.
+As a result, if some dependencies are not available, the build process will fail instead of downloading them.
+This option is generally only appropriate for repeat builds,
+where time may be wasted in unnecessary internet access.
 
-\section Troubleshooting
-\subsection repeat_builds Repeat builds
-Under the hood, the build system of Hexed is fairly complicated.
-It involves automatically-generated source files as well as using some of the files that are later going to be installed and accessible system-wide.
-It is designed to work reliably the _first_ time you do it.
-When you change things and then rebuild it, _usually_ it still works, but sometimes it breaks.
-So, if your build used to work, but now it doesn't, try the following:
--# Navigate to your build directory.
--# `make uninstall`
--# `rm -r *`
--# Repeat the build from scratch.
+\subsubsection build_mode
+__Expects:__ `release` or `debug` \n
+__Default:__ `release` \n
+If `release`, compile flags will be chosen to provide the best possible performance.
+If `debug`, compile flags will be chosen to simplify debugging (debug symbols and sanitizers are turned on).
+This option also influences the default values of some other options below.
 
-\subsection xdmf_problems XDMF problems
-When compiling XDMF, if you get the compiler error `conflicting declaration ‘typedef int hid_t’`, try:
-- `vi ../core/XdmfHDF5Controller.hpp`.
-- Add `include <stdint.h>` after line 29
-- On line 37 replace `typedef int hid_t` with `typedef int64_t hid_t`.
+\subsubsection max_row_size
+__Expects:__ Integer \f$ \ge \f$ 2 \n
+__Default:__ 8 \n
+Maximum \ref basis_row_size "row size" for simulations.
+The larger this number, the longer the code will take to compile
+(although usually most of the time is taken by compiling \ref use_occt "OCCT").
+However, attempts to use a row size larger than Hexed was compiled for will result in a runtime exception.
 
-When building Hexed, you might get a CMake warning that looks something like:
-~~~{.unparsed}
-CMake Warning (dev) at /home/micaiah/.local/lib/cmake/Xdmf/XdmfConfig.cmake:87:
-  Syntax Warning in cmake code at column 42
+\subsubsection threaded
+__Expects:__ Boolean \n
+__Default:__ True \n
+If True, simulations will be parallelized with OpenMP.
 
-  Argument not separated from preceding token by whitespace.
-Call Stack (most recent call first):
-  CMakeLists.txt:136 (find_package)
-This warning is for project developers.  Use -Wno-dev to suppress it.
-~~~
-(probably followed by many similar warnings).
-This appears to be because the XDMF developers forgot to escape some quotes in their CMake scripts.
-You can probably just ignore these errors (at least, this works for me).
-However, if you want to silence the warnings, or if you're afraid this might be the cause of some other problems you're having,
-you can fix it with a find/replace command in vim: 
-- `vi /your/install/path/lib/cmake/Xdmf/XdmfConfig.cmake`
-- \verbatim :%s/""\(.\{-}\)"/"\\"\1\\" \endverbatim
-  This changes, for instance, `""this is supposed to be in nested quotes" this is not"` to `"\"this is supposed to be in nested quotes\\" this is not"`.
-\if false
-If you're reading the .dox file directly, note that the double backslash in the example text above will render as a single backslash (the first one escapes the second).
-\endif
+\subsubsection n_threads
+__Expects:__ Positive integer \n
+__Default:__ [maximum supported](https://docs.python.org/3/library/os.html#os.cpu_count)
+             by the system you're building on \n
+Maximum number of threads used to parallelize the code.
+
+\subsubsection profile
+__Expects:__ Boolean \n
+__Default:__ False \n
+If True, compile for profiling with `gprof`.
+This will slow down the execution.
+
+\subsubsection use_xdmf
+__Expects:__ Boolean \n
+__Default:__ True \n
+If true, compile with the XDMF library to enable writing visualization files in XDMF.
+
+\subsubsection use_tecio
+__Expects:__ Boolean \n
+__Default:__ False \n
+If true, compile with Tecplot's TecIO library to enable writing visualization files in `.szplt` format.
+This requires TecIO to already be installed on your system---it won't install it automatically.
+
+\subsubsection use_occt
+__Expects:__ Boolean \n
+__Default:__ True \n
+If true, compile with the OpenCASCADE library to enable reading geometry from \ref add_geom "CAD files".
+\attention This will cause the compiled executables to be bound by the LGPL license,
+meaning essentially that if you distribute them you must also share the source code.
+Refer to the [OpenCASCADE license](https://dev.opencascade.org/resources/licensing) for precise terms.
+
+\subsubsection build_tests
+__Expects:__ Boolean \n
+__Default:__ True \n
+Compile unit tests.
+
+\subsubsection run_tests
+__Expects:__ Boolean \n
+__Default:__ True if \ref build_mode is `debug`, otherwise false.
+If true, run the unit tests immediately after completing the build.
+
+\subsubsection test_args
+__Expects:__ Any string \n
+__Default:__ Empty \n
+If non-empty (and \ref run_tests is true), will be passed as command-line arguments to the unit test executable.
+Unit testing is done with Catch2, so may use this to interact with Catch2's
+[command line interface](https://github.com/catchorg/Catch2/blob/devel/docs/command-line.md).
+
+\subsubsection gdb
+__Expects:__ Boolean \n
+__Default:__ False \n
+If true (and \ref run_tests is true), rather than running the unit tests directly
+it will start a [GDB](https://sourceware.org/gdb/current/onlinedocs/gdb.html/) session
+and load the unit test executable.
+
+\subsubsection build_docs
+__Expects:__ Boolean \n
+__Default:__ False \n
+If true, build the documentation, when will be placed in the directory `build_dir/doc/html`.
+This is primarily for developers who wish to view their changes to the documentation.
+Users may simply refer to the [online documentation](https://artlab-gt.github.io/hexed/).
+
+\subsubsection obsessive_timing
+__Expects:__ Boolean \n
+__Default:__ False \n
+Causes Hexed to perform additional timing measurements and print them to the screen on execution.
+For developers.
+
+\subsubsection build_wheel
+__Expects:__ Boolean \n
+__Default:__ True if \ref build_mode is `release`, otherwise false. \n
+If true, build the wheel for the `hexedpy` Python package.
+Otherwise, the Hexed binaries are compiled but not assembled into any type of package.
+The wheel includes:
+- The \ref hexedpy Python library
+- The \ref hexecute executable
+- All library dependencies of `hexecute` including the \ref hexed library
+
+\subsubsection install_wheel
+__Expects:__ Boolean \n
+__Default:__ True \n
+If \ref build_wheel is true, then install the Python wheel in your current Python environment after building it.
+If \ref build_wheel is false, has no effect.
+
+\subsubsection architecture
+__Expects:__ Architecture name, `native`, or `any` \n
+__Default:__ `native` \n
+CPU architecture to compile for.
+Compiling for a specific architecture may improve performance on that architecture
+but makes the executable incompatible with other architectures.
+`native` implies that it will compile for the architecture of the machine you're building on.
+`any` implies that the executable shall be compatible with any architecture, at the potential cost of performance.
+Thus far, I have not conducted sufficient investigation to determine to what extent this actually affects performance.
+
+\subsubsection sanitize
+__Expects:__ Boolean \n
+__Default:__ True if \ref build_mode is `debug`, otherwise false
+If true, compile with
+[sanitizer flags](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html#index-fsanitize_003daddress).
+
+\subsection auto_dependencies Automatically-installed dependencies
+Below is a list of source code dependencies of Hexed.
+The build script will automatically install any which you don't already have in the build tree (not system-wide).
+If you wish to supply your own version of any of them, simply make sure the header, library, and CMake files
+can be found in the standard \ref use_system_paths "system paths" or \ref use_env_paths "environment variables".
+The build script isn't smart enough to check the version (yet),
+so the versions listed are just the versions that will be installed if the dependency isn't found.
+- [Eigen 3.4.0](https://eigen.tuxfamily.org/index.php?title=Main_Page)
+- [HDF5 1.14.4.3](https://www.hdfgroup.org/solutions/hdf5/)
+- [XDMF](https://www.xdmf.org/index.php/Main_Page)
+- [OpenCASCADE 7.8.0](https://dev.opencascade.org/doc/overview/html/)
+- [Catch2 3.6.0](https://github.com/catchorg/Catch2?tab=readme-ov-file)
+
+Dependencies of the dependencies are not listed but are also installed automatically.
+The build script will also automatically obtain dependencies of the build process itself,
+including [Doxygen](https://www.doxygen.nl/download.html) and some Python packages.
 
 */

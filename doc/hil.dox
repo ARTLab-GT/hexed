@@ -2,12 +2,15 @@
 
 \section hil_tldr TL;DR
 Input files for Hexed are written in the Hexed Interface Language (HIL).
-Most of your input files should consist of simple \ref variables "assignment statements" of the form `variable = expression`.
+Most of your input files should consist of simple \ref variables "assignment statements"
+of the form `variable = expression`.
 E.g., `x = 1 + 1`.
-You can create any variable you want, but some variables are \ref parameters "parameters" that affect the behavior of the solver,
+You can create any variable you want,
+but some variables are \ref parameters "parameters" that affect the behavior of the solver,
 some are \ref builtins "builtin", and some have \ref heisenberg "side effects" when you evaluate them.
 Strings are enclosed in `{}`, e(.g., `working_dir = {my_working_dir_name}`),
-and some string variables are actually \ref Macros "macros" which should be evaluated with a `$` in front of them (e.g., `$run` runs the simulation).
+and some string variables are actually \ref Macros "macros" which should be evaluated with a `$` in front of them
+(e.g., `$run` runs the simulation).
 
 \section Introduction
 __The Hexed Interface Language (HIL) is a simple scripting language designed for interfacing with Hexed.__
@@ -20,12 +23,16 @@ For examples of effective HIL scripting, see the `samples` directory.
 
 Creating a whole scripting language just to interface with a CFD solver may seem excessive,
 but in fact it addresses some of my greatest frustrations with computational analysis.
-Most CFD solvers behave roughly like a washing machine: you adjust a few numbers, hit "go", and hope it gives you what you want.
-Usually it does, but, also like a washing machine, occasionally it starts spiraling out of control and requires manual intervention.
-This design is generally adequate to solve easy problems, but more challenging cases often call for more granular control,
+Most CFD solvers behave roughly like a washing machine:
+you adjust a few numbers, hit "go", and hope it gives you what you want.
+Usually it does, but, also like a washing machine,
+occasionally it starts spiraling out of control and requires manual intervention.
+This design is generally adequate to solve easy problems,
+but more challenging cases often call for more granular control,
 such as various types of CFL ramping, complex termination conditions, local/global time step switching, etc.
 Because there is an infinite variety of convoluted pathways a simulation might need to take,
-many solvers implement a multitude of ridiculously specific input parameters and/or require you to manually babysit a simulation
+many solvers implement a multitude of ridiculously specific input parameters
+and/or require you to manually babysit a simulation
 and tweak parameters as it runs.
 We need to recognize that the real purpose of a CFD solver is to do things that you can't do---in particular,
 running iterations and standard file IO tasks.
@@ -36,17 +43,20 @@ and give you full control over the high-level iteration process.
 Of course, there should be builtin defaults to let you run basic cases without any significant programming,
 but you should be able to modify it arbitrarily without dealing with the solver's source code.
 
-Initially, I thought the best way to achieve this ideal would be to implement bindings to \ref hexed in an existing scripting language (namely Python).
+Initially, I thought the best way to achieve this ideal
+would be to implement bindings to \ref hexed in an existing scripting language (namely Python).
 However, this turned out to have several problems:
 - It required much more boilerplate code than I would have liked.
 - It made it much harder to debug memory errors, since binding systems tend to confuse memory checking tools.
-- It doesn't provide an easy way to implement user-defined callback functions (e.g. mesh refinement criteria, integral error metrics)
-  that execute in parallel and at C++ speed.
+- It doesn't provide an easy way to implement user-defined callback functions
+  (e.g. mesh refinement criteria, integral error metrics) that execute in parallel and at C++ speed.
 
-Technically, most CFD solvers _already_ implement a custom scripting language, since input parameters are provided via a text file with custom syntax.
+Technically, most CFD solvers _already_ implement a custom scripting language,
+since input parameters are provided via a text file with custom syntax.
 Hexed simply adds support for operator expressions (`=`, `+`, `*`, `&`, etc.) and basic control flow
 to enable you to construct cases with arbitrarily complex logic.
-The goal of the HIL is to be as simple as possible (both to implement and to learn) while providing all the functionality that you strictly need.
+The goal of the HIL is to be as simple as possible (both to implement and to learn)
+while providing all the functionality that you strictly need.
 
 \section literals Types and Literals
 Values in HIL have one of 3 types:
@@ -87,13 +97,15 @@ chars
 ~~~
 
 \warning
-If you have never programmed in a low-level language before, beware of [integer overflow](https://en.wikipedia.org/wiki/Integer_overflow).
+If you have never programmed in a low-level language before,
+beware of [integer overflow](https://en.wikipedia.org/wiki/Integer_overflow).
 
 \section Operators
 HIL supports a variety of _operators_, which in this context means
 things that take in input values (operands), which can be literals or variable references, and produce an output.
 Some of these operators are implemented as functions in other languages, but HIL has no concept of a function.
-So-called unary operators are placed directly before their operand and binary operators are placed between their operands.
+So-called unary operators are placed directly before their operand and binary operators
+are placed between their operands.
 The operators are listed below with their precedence.
 Operators with a lower precedence level are evaluated before those with a higher precedence number,
 and operators with the same precedence level are evaluated left-to-right.
