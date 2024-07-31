@@ -468,6 +468,15 @@ class Catch2(C_project):
         )[0]
         self.builder.cmake(directory, ["-DBUILD_TESTING=OFF", "-DBUILD_SHARED_LIBS=ON"])
 
+class Doxygen(Buildable):
+    version = "1.11.0"
+    def output(self):
+        return self.builder.find_in("bin", "doxygen")
+    def build(self):
+        directory = self.builder.fetch_archive(f"https://www.doxygen.nl/files/doxygen-{self.version}.linux.bin.tar.gz",
+                                               outputs=f"doxygen-{self.version}")[0]
+        self.builder.copy(directory + "bin/", self.bdir + "bin/").do
+
 class Occt(C_project):
     version = "7.8.1"
     all_modules = [

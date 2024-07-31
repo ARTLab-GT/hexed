@@ -159,4 +159,67 @@ As a result, if some dependencies are not available, the build process will fail
 This option is generally only appropriate for repeat builds,
 where time may be wasted in unnecessary internet access.
 
+\subsubsection build_mode
+__Expects:__ `release` or `debug` \n
+__Default:__ `release` \n
+If `release`, compile flags will be chosen to provide the best possible performance.
+If `debug`, compile flags will be chosen to simplify debugging (debug symbols and sanitizers are turned on).
+This option also influences the default values of some other options below.
+
+\subsubsection max_row_size
+__Expects:__ Integer \f$ \ge \f$ 2 \n
+__Default:__ 8 \n
+Maximum \ref basis_row_size "row size" for simulations.
+The larger this number, the longer the code will take to compile
+(although usually most of the time is taken by compiling \ref use_occt "OCCT").
+However, attempts to use a row size larger than Hexed was compiled for will result in a runtime exception.
+
+\subsubsection threaded
+__Expects:__ Boolean \n
+__Default:__ True \n
+If True, simulations will be parallelized with OpenMP.
+
+\subsubsection n_threads
+__Expects:__ Positive integer \n
+__Default:__ [maximum supported](https://docs.python.org/3/library/os.html#os.cpu_count)
+             by the system you're building on \n
+Maximum number of threads used to parallelize the code.
+
+\subsubsection profile
+__Expects:__ Boolean \n
+__Default:__ False \n
+If True, compile for profiling with `gprof`.
+This will slow down the execution.
+
+\subsubsection use_xdmf
+__Expects:__ Boolean \n
+__Default:__ True \n
+If true, compile with the XDMF library to enable writing visualization files in XDMF.
+
+\subsubsection use_tecio
+__Expects:__ Boolean \n
+__Default:__ False \n
+If true, compile with Tecplot's TecIO library to enable writing visualization files in `.szplt` format.
+This requires TecIO to already be installed on your system---it won't install it automatically.
+
+\subsubsection use_occt
+__Expects:__ Boolean \n
+__Default:__ True \n
+If true, compile with the OpenCASCADE library to enable reading geometry from \ref add_geom "CAD files".
+\attention This will cause the compiled executables to be bound by the LGPL license,
+meaning essentially that if you distribute them you must also share the source code.
+Refer to the [OpenCASCADE license](https://dev.opencascade.org/resources/licensing) for precise terms.
+
+\subsubsection build_tests
+__Expects:__ Boolean \n
+__Default:__ True \n
+Compile unit tests.
+
+\subsubsection build_docs
+__Expects:__ Boolean \n
+__Default:__ False \n
+If true, build the documentation, when will be placed in the directory `build_dir/doc/html`.
+This is primarily for developers who wish to view their changes to the documentation.
+Users may simply refer to the [online documentation](https://artlab-gt.github.io/hexed/).
+
 */

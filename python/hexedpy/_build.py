@@ -10,8 +10,10 @@ class Hexed(bu.C_project):
         self.builder = builder
         #### add extra build options and information to be passed to the code
         self.builder.add_options({
-            "build_mode": bu.Option("release", convert=lambda s: s.lower(), assertions=bu.assert_true(lambda s: s in ["release", "debug"])),
-            "max_row_size": bu.Option(8, convert=int, assertions=bu.assert_true(lambda n: n >= 2, "max_row_size must be at least 2")),
+            "build_mode": bu.Option("release", convert=lambda s: s.lower(),
+                                    assertions=bu.assert_true(lambda s: s in ["release", "debug"])),
+            "max_row_size": bu.Option(8, convert=int,
+                                      assertions=bu.assert_true(lambda n: n >= 2, "max_row_size must be at least 2")),
             "threaded": bu.Option(True, convert=bu.as_bool),
             "n_threads": bu.Option(os.cpu_count(), convert=int, assertions=bu.assert_nonneg),
             "profile": bu.Option(False, convert=bu.as_bool),
@@ -32,7 +34,8 @@ class Hexed(bu.C_project):
             "run_tests": bu.Option(not is_release, convert=bu.as_bool),
             "sanitize": bu.Option(not is_release, convert=bu.as_bool),
         })
-        # Get a list of all source files. The entire build process can be bypassed if there are no changes to any of these files
+        # Get a list of all source files.
+        # The entire build process can be bypassed if there are no changes to any of these files
         self._all_sources = bu.all_(bu.contents(self.sdir, ignore=lambda f:
             bu.not_source(f) or
             re.match(self.sdir + r"build(?!\.py)", bu.absolute(f)) or
@@ -59,6 +62,8 @@ class Hexed(bu.C_project):
             ], use_graphics=False))
         if self.builder.options["build_tests"]:
             deps.append(self[bu.Catch2]())
+        if self.builder.options["build_docs"]:
+            deps.append(self[bu.Doxygen]())
         return deps
 
     def build(self):
@@ -149,7 +154,6 @@ class Hexed(bu.C_project):
 
         ### build documentation
         if self.builder.options["build_docs"]:
-            self.builder.assert_command("doxygen", "doxygen")
             self.builder.assert_command("dot", "graphviz")
             def not_dox(f):
                 return not (f.endswith(".dox") or f.endswith(".tag") or f.endswith(".doxytags") or os.path.isdir(f))
