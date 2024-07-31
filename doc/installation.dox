@@ -1,5 +1,11 @@
 /*! \page installation Installation
 
+\attention Although the Hexed source code is published under the very permissive
+[MIT License](https://github.com/ARTLab-GT/hexed/blob/main/LICENSE.txt),
+compiled binaries may be linked with OpenCASCADE, causing them to be bound by the
+[LGPL License](https://dev.opencascade.org/resources/licensing).
+If you redistribute compiled binaries, you must observe the terms of this license.
+
 \section install_prereqs Prerequisites
 
 \subsection install_prereq_os OS
@@ -38,6 +44,7 @@ I wanted a packaging system that:
   since not everyone has root permissions on their own machine
 
 Currently, Python packages are the only system that appears to meet these requirements.
+
 \section install_py_pack Install from Python package (the easy way)
 
 The easiest way to install Hexed is from via the [Python package](https://test.pypi.org/project/hexedpy/)
@@ -50,10 +57,14 @@ Hexed is only on the [TestPyPI](https://test.pypi.org/), not the [real PyPI](htt
 
 Once you do this, you can run Hexed with the command \ref hexecute.
 You will also have access to the \ref hexedpy Python module.
+Unfortunately, due to licensing considerations, this package does not include OpenCASCADE,
+so you will not be able to import geometry in \ref add_geom "CAD file formats".
+For that, you need to build Hexed from source, as explained below.
 
 \section install_source Building from source (the harder way)
 
-For optimal performance, or if you want to modify the source code, it is recommended that you build Hexed from source.
+For optimal performance, if you want to modify the source code, or if you need OpenCASCADE support,
+you will need to build Hexed from source.
 Even when you do so, Hexed is still installed as a Python wheel,
 so you will still need pip as explained in \ref install_prereqs.
 You will also need some basic development tools including
@@ -206,9 +217,7 @@ This requires TecIO to already be installed on your system---it won't install it
 __Expects:__ Boolean \n
 __Default:__ True \n
 If true, compile with the OpenCASCADE library to enable reading geometry from \ref add_geom "CAD files".
-\attention This will cause the compiled executables to be bound by the LGPL license,
-meaning essentially that if you distribute them you must also share the source code.
-Refer to the [OpenCASCADE license](https://dev.opencascade.org/resources/licensing) for precise terms.
+The LGPL license will apply to the compiled binaries iff this is option is true.
 
 \subsubsection build_tests
 __Expects:__ Boolean \n
