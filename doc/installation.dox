@@ -252,6 +252,10 @@ __Expects:__ Boolean \n
 __Default:__ True if \ref build_mode is `release`, otherwise false. \n
 If true, build the wheel for the `hexedpy` Python package.
 Otherwise, the Hexed binaries are compiled but not assembled into any type of package.
+The wheel includes:
+- The \ref hexedpy Python library
+- The \ref hexecute executable
+- All library dependencies of `hexecute` including the \ref hexed library
 
 \subsubsection install_wheel
 __Expects:__ Boolean \n
@@ -274,5 +278,22 @@ __Expects:__ Boolean \n
 __Default:__ True if \ref build_mode is `debug`, otherwise false
 If true, compile with
 [sanitizer flags](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html#index-fsanitize_003daddress).
+
+\subsection auto_dependencies Automatically-installed dependencies
+Below is a list of source code dependencies of Hexed.
+The build script will automatically install any which you don't already have in the build tree (not system-wide).
+If you wish to supply your own version of any of them, simply make sure the header, library, and CMake files
+can be found in the standard \ref use_system_paths "system paths" or \ref use_env_paths "environment variables".
+The build script isn't smart enough to check the version (yet),
+so the versions listed are just the versions that will be installed if the dependency isn't found.
+- [Eigen 3.4.0](https://eigen.tuxfamily.org/index.php?title=Main_Page)
+- [HDF5 1.14.4.3](https://www.hdfgroup.org/solutions/hdf5/)
+- [XDMF](https://www.xdmf.org/index.php/Main_Page)
+- [OpenCASCADE 7.8.0](https://dev.opencascade.org/doc/overview/html/)
+- [Catch2 3.6.0](https://github.com/catchorg/Catch2?tab=readme-ov-file)
+
+Dependencies of the dependencies are not listed but are also installed automatically.
+The build script will also automatically obtain dependencies of the build process itself,
+including [Doxygen](https://www.doxygen.nl/download.html) and some Python packages.
 
 */
