@@ -375,7 +375,6 @@ Case::Case(std::string input_script)
   _inter.variables->create("write_mesh", new Namespace::Heisenberg<std::string>([this]() {
     _printers->info("writing mesh... ");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
-    _solver().mesh().visualize("default", _vars("working_dir") + "mesh_diagnostic");
     _solver().mesh().write(file_name);
     force_symlink(_iteration_suffix() + ".mesh.h5", _vars("working_dir") + "latest.mesh.h5");
     _printers->info("done\n");

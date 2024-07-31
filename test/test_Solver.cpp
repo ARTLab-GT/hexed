@@ -893,7 +893,6 @@ TEST_CASE("cylinder tree mesh") {
   for (int i = 0; i < 3; ++i) solver.mesh().relax();
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
-  solver.mesh().visualize("default", "cyl_before_ref");
   solver.visualize_field("default", "cyl_before_ref_soln", hexed::Constant_func({}));
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
@@ -917,7 +916,6 @@ TEST_CASE("cylinder tree mesh") {
   }
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
-  solver.mesh().visualize("default", "cyl_after_ref");
   solver.visualize_field("default", "cyl_after_ref_soln", hexed::Constant_func({}));
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
   for (int i = 0; i < 6; ++i) {
@@ -928,7 +926,6 @@ TEST_CASE("cylinder tree mesh") {
   REQUIRE(solver.mesh().n_elements() == n_initial); // this mesh should have been completely unrefined to where it started
   solver.calc_jacobian();
   solver.initialize(hexed::Constant_func({0., 0., 1., 1e5}));
-  solver.mesh().visualize("default", "cyl_after_unref");
   solver.visualize_field("default", "cyl_after_unref_soln", hexed::Constant_func({}));
   REQUIRE_THAT(solver.integral_field(hexed::Constant_func({1.}))[0], Catch::Matchers::WithinRel(1 - M_PI*.25/4, 1e-6));
 }

@@ -40,7 +40,8 @@ class Simplex_geom_nd : public Surface_geom {
  * or a list of node coordinates in 2D.
  * Each simplex is represented as an `n_dim` by `n_dim` matrix where each column is the coordinates of one vertex.
  * The order of the vertices is arbitrary, and there are no requirements on inter-simplex continuity.
- * Since the `Surface_geom` interface is so minimal, the geometry is simply viewed as a collection of unrelated simplices,
+ * Since the `Surface_geom` interface is so minimal,
+ * the geometry is simply viewed as a collection of unrelated simplices,
  * so we do not care about orientation or watertightness.
  * The you are free to modify the simplex list at will, since there are no requirements on it.
  * All input points must have exactly `n_dim` entries.
@@ -124,16 +125,12 @@ class Simplex_geom : public Simplex_geom_nd {
 
   void visualize(std::string format, std::string file_name) override;
 
-  next::Sequence<Geom_edge&> edges() override {return next::Sequence<Geom_edge&>::vector_view(_geom_edges);}
-  void add_edge(Array<double> points) {_geom_edges.emplace_back(points);}
-
   private:
   std::vector<Mat<n_dim, n_dim>> _simplices;
   std::vector<Mat<n_dim - 1, n_dim>> _parameters;
   std::vector<int> _faces;
   Mat<n_dim, 2> _bounding_box;
   Tree _tree;
-  std::vector<Geom_edge> _geom_edges;
 
   void merge(Nearest_point<n_dim>& nearest, Mat<n_dim, n_dim> sim, Mat<n_dim> point); // helper for `nearest_point`
 

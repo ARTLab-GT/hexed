@@ -170,14 +170,6 @@ void Element::set_needs_smooth(bool value) {
 void Element::set_face(int i_face, double* data) {faces[i_face] = data;}
 bool Element::is_connected(int i_face) {return faces[i_face];}
 
-void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
-  _shape.reset(new next::Element_shape{blocks.create_element(vertex(0).pos, nominal_size(), boundary_face)});
-}
-next::Element_shape& Element::shape() {
-  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
-  return *_shape;
-}
-
 double* Element::state() {return data.data();}
 double* Element::residual_cache() {return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();}
 double* Element::face(int i_face, bool is_ldg) {return faces[i_face] + is_ldg*params.n_dof()/params.row_size;}

@@ -4,7 +4,6 @@
 #include <memory>
 #include "math.hpp"
 #include "Nearest_point.hpp"
-#include "Geom_edge.hpp"
 
 namespace hexed {
 
@@ -37,11 +36,6 @@ class Surface_geom {
    * Returns the (potentially empty) set of \f$ t \f$ values where the line intersects the surface.
    */
   virtual std::vector<double> intersections(Mat<> point0, Mat<> point1) = 0;
-  /*! \brief Returns a list of any geometry edges that require mesh edges to be snapped to them.
-   * \details Only used in 3D.
-   * Default implementation returns an empty sequence, but derived classes may override.
-   */
-  inline virtual next::Sequence<Geom_edge&> edges() {return {};}
 };
 
 /*! \brief Combines multiple `Surface_geom`s into one.
@@ -55,7 +49,6 @@ class Compound_geom : public Surface_geom {
   Compound_geom(std::vector<Surface_geom*>); //!< acquires ownership
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
-  next::Sequence<Geom_edge&> edges() override;
 };
 
 /*! \brief Represents hypersphere in any dimensionality.

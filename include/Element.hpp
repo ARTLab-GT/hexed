@@ -12,7 +12,6 @@
 #include "Basis.hpp"
 #include "Lock.hpp"
 #include "Mutual_ptr.hpp"
-#include "Block.hpp"
 
 namespace hexed {
 
@@ -33,7 +32,6 @@ class Element : public Kernel_element {
   int _r_level;
   int _aniso_r_level;
   std::vector<Vertex::Transferable_ptr> vertices;
-  std::unique_ptr<next::Element_shape> _shape;
   // constructor that allows the vertices to be created as mobile, for the  benefit of `Deformed_element`
   Element(Storage_params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, bool mobile_vertices, int aniso_r_level);
 
@@ -118,9 +116,6 @@ class Element : public Kernel_element {
   void set_needs_smooth(bool); //!< \brief sets the `Vertex::Transferable_ptr::needs_smooth` of the vertices
   void set_face(int i_face, double* data);
   bool is_connected(int i_face);
-
-  void create_shape(next::Mesh_blocks&, int boundary_face = next::Mesh_blocks::no_face);
-  next::Element_shape& shape();
 
   double* state() override;
   double* residual_cache() override;

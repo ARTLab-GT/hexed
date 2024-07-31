@@ -7,7 +7,6 @@
 #include "Layer_sequence.hpp"
 #include "Surface_geom.hpp"
 #include "connection.hpp"
-#include "Geom_edge.hpp"
 #include "Stopwatch_tree.hpp"
 
 namespace hexed {
@@ -28,7 +27,8 @@ class Mesh {
   virtual double root_size() = 0;
 
   //! \name Manual mesh creation
-  //! \attention You __must__ call `cleanup()` in between calling any of these functions and doing anything else (like relaxing vertices).
+  //! \attention You __must__ call `cleanup()` in between calling any of these functions
+  //! and doing anything else (like relaxing vertices).
   //! \{
   /*!
    * Add an element at specified nominal position and serial number which uniquely identifies it
@@ -49,7 +49,8 @@ class Mesh {
    * Coarse element comes first in `Con_dir`.
    * `coarse_deformed` and `fine_deformed` specify whether the elements are Cartesian or deformed.
    * If any of the elements are Cartesian, the entire face is assumed to be Cartesian.
-   * In this case, all the vertices must occupy their nominal positions and the `Con_dir` must be appropriate for a Cartesian connection.
+   * In this case, all the vertices must occupy their nominal positions and the `Con_dir`
+   * must be appropriate for a Cartesian connection.
    * If these requirements are not satisfied, the invocation is incorrect.
    * The number of fine elements can be any power of 2 (with a maximum of 2^(`n_dim - 1`)).
    * In order to match the faces when less than the maximum number of elements is used,
@@ -57,23 +58,25 @@ class Mesh {
    * Only the first `n_dim - 1` elements of `stretch` are meaningful.
    * The rest are ignored.
    */
-  virtual void connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>,
-                               bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
+  virtual void connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial,
+                               Con_dir<Deformed_element>, bool coarse_deformed = false,
+                               std::vector<bool> fine_deformed = {false, false, false, false},
                                std::array<bool, 2> stretch = {false, false}) = 0;
-  /*!
-   * Acquires owenership of `*flow_bc` and `*mesh_bc` and constructs a `Boundary_condition` from them.
-   * Returns a serial number which uniquely identifies the new boundary condition among this `Mesh`'s boundary conditions.
+  /*! \brief Acquires owenership of `*flow_bc` and `*mesh_bc` and constructs a `Boundary_condition` from them.
+   * \details Returns a serial number which uniquely identifies the new boundary condition
+   * among this `Mesh`'s boundary conditions.
    * It is recommended to use this with `new`, like the constructor for `std::unique_ptr`.
    */
   virtual int add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc) = 0;
-  /*!
-   * Connect a face of an element to a boundary condition. This BC will now be applied to that face. `i_dim` and `face_sign`
-   * are used to identify which face of the element is participating in the boundary condition.
+  /*! \brief Connect a face of an element to a boundary condition.
+   * \details This BC will now be applied to that face.
+   * `i_dim` and `face_sign` are used to identify which face of the element is participating in the boundary condition.
    */
-  virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) = 0;
-  //! delete all boundary connections involving a certain boundary condition
+  virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign,
+                                int bc_serial_n) = 0;
+  //! \brief delete all boundary connections involving a certain boundary condition
   virtual void disconnect_boundary(int bc_sn) = 0;
-  //! connects all yet-unconnected faces to a boundary condition specified by serial number
+  //! \brief connects all yet-unconnected faces to a boundary condition specified by serial number
   virtual void connect_rest(int bc_sn) = 0;
   /*!
    * Extrudes a layer of elements from unconnected faces:
@@ -95,8 +98,8 @@ class Mesh {
    * (but maintaining a valid mesh state).
    * Offsetting thus provides a rudimentary way of creating anisotropic wall layers.
    * If `force == false` (default) then in a tree mesh, only tree elements will be extruded from
-   * (which is necessary because some of the extruded elements from the previous refinement sweep may have non-surface-facing
-   * exposed faces).
+   * (which is necessary because some of the extruded elements from the previous refinement sweep
+   * may have non-surface-facing exposed faces).
    * If `force == true` then all exposed faces will be extruded from.
    */
   virtual void extrude(bool collapse = false, double offset = 0, bool force = false) = 0;
@@ -121,7 +124,8 @@ class Mesh {
    * but they will not be connected to the tree.
    * Only one tree can be created.
    * Connections and boundary conditions are set automatically for tree elements,
-   * so tree meshes should always automatically be valid unless you explicitly invalidate it with `Mesh::disconnect_boundary`.
+   * so tree meshes should always automatically be valid
+   * unless you explicitly invalidate it with `Mesh::disconnect_boundary`.
    * \param extremal_bcs Boundary conditions to apply to elements
    *   with exposed faces at the extremal boundaries of the tree.
    *   Takes ownership of objects that the vector entries point to.
@@ -145,14 +149,15 @@ class Mesh {
    * So, `Mesh::update` should be calling a few times before `Mesh::set_surfaces`.
    * Any surfaces defined by previous invokations of `set_surface` are forgotten.
    */
-  virtual void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
+  virtual void set_surface(Surface_geom* geometry, Flow_bc* surface_bc,
+                           Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
   //!< sets the `Element::unrefinement_locked` member of all elements
   virtual void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) = 0;
   /*! \brief Updates tree mesh based on user-supplied (un)refinement criteria.
    * \details Evaluates `refine_criterion` and `unrefine_criterion` on every element in the tree (if a tree exists).
    * Whenever `refine_criterion` is `true` and `unrefine_criterion` is `false`, that element is refined.
-   * Whenever `unrefine_criterion` is `true` and `refine_criterion` is `false` for a complete group of sibling elements,
-   * that group is unrefined.
+   * Whenever `unrefine_criterion` is `true` and `refine_criterion` is `false`
+   * for a complete group of sibling elements, that group is unrefined.
    * Since extruded elements cannot be directly refined or unrefined,
    * their extrusion parents inherit their (un)refinement flags and any unrefinement locks.
    * In order to satisfy some criteria regarding the refinement level of neighbors,
@@ -162,13 +167,17 @@ class Mesh {
    * The flood fill and extrusion are also updated.
    * \returns `true` if the mesh was changed, else `false`
    */
-  virtual bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) = 0;
-  virtual void set_all_smooth() = 0; //!< sets `need_smooth` to `true` for all vertices to perform global relaxation (only effective until the next `update()` cycle)
+  virtual bool update(std::function<bool(Element&)> refine_criterion = criteria::always,
+                      std::function<bool(Element&)> unrefine_criterion = criteria::never) = 0;
+  //! \breif sets `need_smooth` to `true` for all vertices to perform global relaxation
+  //! \details(only effective until the next `update()` cycle)
+  virtual void set_all_smooth() = 0;
   /*! \brief Relax the vertices to improve mesh quality.
    * \details By default, relaxation is performed incrementally---only vertices of elements that are new
    * in the most recent `update()` cycle are smoothed.
    * To smooth all, call `set_all_smooth()`.
-   * \param factor A larger number yields more change in the mesh. 0 => no update, 1 => "full" update, > 1 allowed but suspect
+   * \param factor A larger number yields more change in the mesh.
+   *        0 => no update, 1 => "full" update, > 1 allowed but suspect
    */
   virtual void relax(double factor = 0.9) = 0;
   virtual int surface_bc_sn() = 0; //!< what is the serial number of the geometry surface BC?
@@ -223,9 +232,6 @@ class Mesh {
   virtual void write(std::string file_name) = 0;
   //! \brief write the mesh in the OpenFOAM PolyMesh format
   virtual void export_polymesh(std::string dir_name) = 0;
-  //! \brief visualize the mesh
-  //! \details For debugging. For actual simulations, use `Solver::visualize_field`.
-  virtual void visualize(std::string format, std::string file_name) = 0;
   //!\}
   protected:
   virtual void reset_verts() = 0;

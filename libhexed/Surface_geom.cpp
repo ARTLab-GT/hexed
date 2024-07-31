@@ -21,12 +21,6 @@ std::vector<double> Compound_geom::intersections(Mat<> point0, Mat<> point1) {
   return inters;
 }
 
-next::Sequence<Geom_edge&> Compound_geom::edges() {
-  next::Sequence<Geom_edge&> e;
-  for (auto& comp : components) e = e + comp->edges();
-  return e;
-}
-
 Hypersphere::Hypersphere(Mat<> center, double radius)
 : c{center}, r{radius}
 {}

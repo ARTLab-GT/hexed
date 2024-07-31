@@ -247,18 +247,6 @@ std::vector<Mat<3, 3>> Occt::triangles(TopoDS_Shape shape, double angle, double 
 
 Simplex_geom<3> Occt::triangulate(TopoDS_Shape shape, double angle, double deflection, int n_div_edge) {
   Simplex_geom<3> geom(triangles(shape, angle, deflection));
-  iterate(shape, TopAbs_EDGE, [&](const TopoDS_Shape& s) {
-    TopoDS_Edge edge = TopoDS::Edge(s);
-    double param_bounds [2];
-    auto curve = BRep_Tool::Curve(edge, param_bounds[0], param_bounds[1]);
-    Array<double> points({n_div_edge + 1, 3});
-    for (int i_point = 0; i_point < n_div_edge + 1; ++i_point) {
-      gp_Pnt point = curve->Value(param_bounds[0] + i_point*(param_bounds[1] - param_bounds[0])/n_div_edge);
-      points(i_point).vector() << point.X(), point.Y(), point.Z();
-    }
-    points *= 1e-3; // convert to m
-    geom.add_edge(points);
-  });
   return geom;
 }
 

@@ -41,9 +41,7 @@ class Accessible_mesh : public Mesh {
   std::vector<Vertex::Non_transferable_ptr> smooth_verts; // a vector of the vertices that need to be smoothed in this sweep
   int _mask_levels;
   Gauss_lobatto _basis;
-  next::Mesh_blocks _blocks;
   int _n_verts;
-  std::vector<Geom_edge> _geom_edges;
   Stopwatch_tree _stopwatch;
 
   // masked sequences
@@ -67,7 +65,7 @@ class Accessible_mesh : public Mesh {
 
   Element_container& container(bool is_deformed);
   int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin,
-                  int aniso_ref_level = 0, int surface_face = next::Mesh_blocks::no_face);
+                  int aniso_ref_level = 0);
   Element& add_elem(bool is_deformed, Tree&);
   bool intersects_surface(Tree*);
   bool is_surface(Tree*);
@@ -91,14 +89,6 @@ class Accessible_mesh : public Mesh {
   void _connect(Element*, std::vector<Element*>, Con_dir<Deformed_element>);
   void _connect(Deformed_element*, std::vector<Deformed_element*>, Con_dir<Deformed_element>,
                 std::array<bool, 2> = {false, false});
-
-  template <typename Elem_t>
-  void _connect_shapes(Elem_t*, std::vector<Elem_t*>, Con_dir<Deformed_element>, std::array<bool, 2>);
-
-  struct Edge_match {
-    Mortal_ptr<next::Edge> edge;
-    std::array<Geom_edge::Node, 2> nodes;
-  };
 
   public:
   //! \brief how far must the center of an element be from the geometry relative to the nominal size
@@ -219,7 +209,6 @@ class Accessible_mesh : public Mesh {
                      ptr_convert<Element_connection&, Element_face_connection<Deformed_element>*>> extruded_connections() {return {extrude_cons};}
   void write(std::string file_name) override;
   void export_polymesh(std::string dir_name) override;
-  void visualize(std::string format, std::string file_name) override;
   inline const Stopwatch_tree& stopwatch_tree() const override {return _stopwatch;}
 
   protected:
