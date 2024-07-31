@@ -1,5 +1,11 @@
 /*! \page installation Installation
 
+\attention Although the Hexed source code is published under the very permissive
+[MIT License](https://github.com/ARTLab-GT/hexed/blob/main/LICENSE.txt),
+compiled binaries may be linked with OpenCASCADE, causing them to be bound by the
+[LGPL License](https://dev.opencascade.org/resources/licensing).
+If you redistribute compiled binaries, you must observe the terms of this license.
+
 \section install_prereqs Prerequisites
 
 \subsection install_prereq_os OS
@@ -206,9 +212,7 @@ This requires TecIO to already be installed on your system---it won't install it
 __Expects:__ Boolean \n
 __Default:__ True \n
 If true, compile with the OpenCASCADE library to enable reading geometry from \ref add_geom "CAD files".
-\attention This will cause the compiled executables to be bound by the LGPL license,
-meaning essentially that if you distribute them you must also share the source code.
-Refer to the [OpenCASCADE license](https://dev.opencascade.org/resources/licensing) for precise terms.
+The LGPL license will apply to the compiled binaries iff this is option is true.
 
 \subsubsection build_tests
 __Expects:__ Boolean \n
