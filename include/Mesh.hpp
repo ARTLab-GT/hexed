@@ -169,7 +169,7 @@ class Mesh {
    */
   virtual bool update(std::function<bool(Element&)> refine_criterion = criteria::always,
                       std::function<bool(Element&)> unrefine_criterion = criteria::never) = 0;
-  //! \breif sets `need_smooth` to `true` for all vertices to perform global relaxation
+  //! \brief sets `need_smooth` to `true` for all vertices to perform global relaxation
   //! \details(only effective until the next `update()` cycle)
   virtual void set_all_smooth() = 0;
   /*! \brief Relax the vertices to improve mesh quality.
