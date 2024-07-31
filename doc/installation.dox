@@ -215,11 +215,64 @@ __Expects:__ Boolean \n
 __Default:__ True \n
 Compile unit tests.
 
+\subsubsection run_tests
+__Expects:__ Boolean \n
+__Default:__ True if \ref build_mode is `debug`, otherwise false.
+If true, run the unit tests immediately after completing the build.
+
+\subsubsection test_args
+__Expects:__ Any string \n
+__Default:__ Empty \n
+If non-empty (and \ref run_tests is true), will be passed as command-line arguments to the unit test executable.
+Unit testing is done with Catch2, so may use this to interact with Catch2's
+[command line interface](https://github.com/catchorg/Catch2/blob/devel/docs/command-line.md).
+
+\subsubsection gdb
+__Expects:__ Boolean \n
+__Default:__ False \n
+If true (and \ref run_tests is true), rather than running the unit tests directly
+it will start a [GDB](https://sourceware.org/gdb/current/onlinedocs/gdb.html/) session
+and load the unit test executable.
+
 \subsubsection build_docs
 __Expects:__ Boolean \n
 __Default:__ False \n
 If true, build the documentation, when will be placed in the directory `build_dir/doc/html`.
 This is primarily for developers who wish to view their changes to the documentation.
 Users may simply refer to the [online documentation](https://artlab-gt.github.io/hexed/).
+
+\subsubsection obsessive_timing
+__Expects:__ Boolean \n
+__Default:__ False \n
+Causes Hexed to perform additional timing measurements and print them to the screen on execution.
+For developers.
+
+\subsubsection build_wheel
+__Expects:__ Boolean \n
+__Default:__ True if \ref build_mode is `release`, otherwise false. \n
+If true, build the wheel for the `hexedpy` Python package.
+Otherwise, the Hexed binaries are compiled but not assembled into any type of package.
+
+\subsubsection install_wheel
+__Expects:__ Boolean \n
+__Default:__ True \n
+If \ref build_wheel is true, then install the Python wheel in your current Python environment after building it.
+If \ref build_wheel is false, has no effect.
+
+\subsubsection architecture
+__Expects:__ Architecture name, `native`, or `any` \n
+__Default:__ `native` \n
+CPU architecture to compile for.
+Compiling for a specific architecture may improve performance on that architecture
+but makes the executable incompatible with other architectures.
+`native` implies that it will compile for the architecture of the machine you're building on.
+`any` implies that the executable shall be compatible with any architecture, at the potential cost of performance.
+Thus far, I have not conducted sufficient investigation to determine to what extent this actually affects performance.
+
+\subsubsection sanitize
+__Expects:__ Boolean \n
+__Default:__ True if \ref build_mode is `debug`, otherwise false
+If true, compile with
+[sanitizer flags](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html#index-fsanitize_003daddress).
 
 */

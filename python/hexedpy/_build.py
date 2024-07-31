@@ -29,7 +29,7 @@ class Hexed(bu.C_project):
         })
         is_release = self.builder.options["build_mode"] == "release"
         self.builder.add_options({
-            "architecture": bu.Option(["any", "native"][is_release]),
+            "architecture": bu.Option("native"),
             "build_wheel": bu.Option(is_release, convert=bu.as_bool),
             "run_tests": bu.Option(not is_release, convert=bu.as_bool),
             "sanitize": bu.Option(not is_release, convert=bu.as_bool),
