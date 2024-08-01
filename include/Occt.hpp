@@ -70,7 +70,7 @@ class Occt {
    * - IGES: `.igs`, `.iges`
    * - STEP: `.stp`, `.step`
    * \warning I've gotten a memory leak of over **40 MB** when calling this on a nonexistent file path
-   * (accoring to LeakSanitizer anyway), so check your paths in advance!
+   * (according to LeakSanitizer anyway), so check your paths in advance!
    */
   static TopoDS_Shape read(std::string file_name);
 
