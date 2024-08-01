@@ -172,7 +172,7 @@ set_geometry_refinement = {
     println({max deflection } + max_deflection)
 }
 
-plot_history = {shell({python3 -c "from hexedpy import History_plot;History_plot('} + working_dir + {')" &})}
+plot_history = {shell({python3 -c "from hexedpy.utils import History_plot;History_plot('} + working_dir + {')" &})}
 
 {scalar parameters}
 row_size = 6
