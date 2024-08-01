@@ -527,8 +527,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   // perform pseudotime iteration
-  for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter)
-  {
+  for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter) {
     sw_adv["setup"].stopwatch.start();
     // evaluate advection operator
     compute_write_face_advection(_kernel_mesh());

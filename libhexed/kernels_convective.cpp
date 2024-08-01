@@ -2,11 +2,9 @@
 #include <pde.hpp>
 #include <Spatial.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
-#define COMPUTE_CONVECTION(Pde_templ, ...) \
-{ \
+#define COMPUTE_CONVECTION(Pde_templ, ...) { \
   (*kernel_factory<Spatial<Pde_templ, false>::Neighbor>(mesh.n_dim, mesh.row_size, opts.i_stage, mesh.mask_level __VA_OPT__(,) __VA_ARGS__))(mesh.car_cons, opts.sw_car, "neighbor"); \
   (*kernel_factory<Spatial<Pde_templ,  true>::Neighbor>(mesh.n_dim, mesh.row_size, opts.i_stage, mesh.mask_level __VA_OPT__(,) __VA_ARGS__))(mesh.def_cons, opts.sw_def, "neighbor"); \
   (*kernel_factory<Spatial<Pde_templ, false>::Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level))(mesh.ref_faces, opts.sw_pr); \
@@ -20,38 +18,31 @@ void compute_advection(Kernel_mesh mesh, Kernel_options opts, double advect_leng
 
 #undef COMPUTE_CONVECTION
 
-void compute_prolong(Kernel_mesh mesh, bool scale, bool offset)
-{
+void compute_prolong(Kernel_mesh mesh, bool scale, bool offset) {
   (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, scale, offset))(mesh.ref_faces);
 }
 
-void compute_restrict(Kernel_mesh mesh, bool scale, bool offset)
-{
+void compute_restrict(Kernel_mesh mesh, bool scale, bool offset) {
   (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, scale, offset))(mesh.ref_faces);
 }
 
-void compute_prolong_advection(Kernel_mesh mesh)
-{
+void compute_prolong_advection(Kernel_mesh mesh) {
   (*kernel_factory<Spatial<pde::Advection, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, false, false))(mesh.ref_faces);
 }
 
-std::unique_ptr<Face_permutation_dynamic> face_permutation(int n_dim, int row_size, Connection_direction dir, double* data)
-{
+std::unique_ptr<Face_permutation_dynamic> face_permutation(int n_dim, int row_size, Connection_direction dir, double* data) {
   return kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, true>::Face_permutation>(n_dim, row_size, dir, data);
 }
 
-void compute_write_face(Kernel_mesh mesh)
-{
+void compute_write_face(Kernel_mesh mesh) {
   (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis))(mesh.elems);
 }
 
-void compute_write_face_advection(Kernel_mesh mesh)
-{
+void compute_write_face_advection(Kernel_mesh mesh) {
   (*kernel_factory<Spatial<pde::Advection, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, 1.))(mesh.elems);
 }
 
-void compute_write_face_smooth_av(Kernel_mesh mesh)
-{
+void compute_write_face_smooth_av(Kernel_mesh mesh) {
   (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, 1., 1.))(mesh.elems);
 }
 
