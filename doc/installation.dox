@@ -29,7 +29,7 @@ You can create and activate a virtual environment with the following commands:
 python3 -m venv my_venv
 source my_venv/bin/activate
 ```
-You will have to repeat the `sourc my_venv/bin/activate` command every time you open a new terminal,
+You will have to repeat the `source my_venv/bin/activate` command every time you open a new terminal,
 or else you won't be able to use your `hexed` installation.
 See [this tutorial](https://docs.python.org/3/tutorial/venv.html)
 for more information about Python packages and virtual environments.
@@ -47,7 +47,7 @@ Currently, Python packages are the only system that appears to meet these requir
 
 \section install_py_pack Install from Python package (the easy way)
 
-The easiest way to install Hexed is from via the [Python package](https://test.pypi.org/project/hexedpy/)
+The easiest way to install Hexed is via the [Python package](https://test.pypi.org/project/hexedpy/)
 with [pip](https://packaging.python.org/en/latest/key_projects/#pip):
 ```{.sh}
 python3 -m pip install --index-url https://test.pypi.org/simple/ hexedpy
