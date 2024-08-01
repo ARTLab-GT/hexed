@@ -47,7 +47,7 @@ Currently, Python packages are the only system that appears to meet these requir
 
 \section install_py_pack Install from Python package (the easy way)
 
-The easiest way to install Hexed is from via the [Python package](https://test.pypi.org/project/hexedpy/)
+The easiest way to install Hexed is via the [Python package](https://test.pypi.org/project/hexedpy/)
 with [pip](https://packaging.python.org/en/latest/key_projects/#pip):
 ```{.sh}
 python3 -m pip install --index-url https://test.pypi.org/simple/ hexedpy
