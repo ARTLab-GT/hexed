@@ -9,8 +9,7 @@
 
 //! \file assert.hpp utilities for custom assertions
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Standard string formatting.
  * \details Basically a knockoff of `std::format` in C++20 (which at the time of writing we can't use on the lab machines).
@@ -20,8 +19,7 @@ namespace hexed
  * \headerfile utils.hpp
  */
 template <typename... format_args>
-std::string format_str(int max_chars, std::string fstring, format_args... args)
-{
+std::string format_str(int max_chars, std::string fstring, format_args... args) {
   std::vector<char> buffer(max_chars);
   int overflow = snprintf(buffer.data(), max_chars, fstring.c_str(), args...);
   if (overflow < 0) throw std::runtime_error("encoding error in `hexed::format_str`");
@@ -29,39 +27,40 @@ std::string format_str(int max_chars, std::string fstring, format_args... args)
   return std::string(buffer.data());
 }
 
-//! utilities for custom assertions
-namespace assert
-{
+//! \brief utilities for custom assertions
+namespace assert {
 
-class Exception : public std::exception
-{
+class Exception : public std::exception {
   std::string msg;
   public:
   inline Exception(std::string message) : msg{message} {}
   inline const char* what() const noexcept override {return msg.c_str();}
 };
 
-//! \brief represents a fatal problem in the numerics of the code (such as nonphysical values)
+//! \brief Represents a fatal problem in the numerics of the code (such as nonphysical values)
 //! \details as opposed to, for example, an out-of-bounds error or user error
 //! \see \ref numerical_error
-class Numerical_exception : public Exception
-{
+class Numerical_exception : public Exception {
   public:
   Numerical_exception(std::string message) : Exception(message) {}
 };
 
-//! \brief represents an exception which clearly results from a mistake made by the user
-class User_error : public Exception
-{
+//! \brief Represents an exception which clearly results from a mistake made by the user.
+class User_error : public Exception {
   public:
-  User_error(std::string message) : Exception(message) {}
+  inline User_error(std::string message) : Exception(message) {}
+};
+
+//! \brief Indicates that the user invoked functionality which should be implemented in the future but isn't yet.
+class Not_implemented_error : public Exception {
+  public:
+  inline Not_implemented_error(std::string message) : Exception(message) {}
 };
 
 //! throws a `std::runtime_error` with message `message`, wrapped in a `#pragma omp critical` if necessary.
 //! Used in \ref HEXED_ASSERT
 template <typename except_t = std::runtime_error>
-void throw_critical(const char* message)
-{
+void throw_critical(const char* message) {
   #if HEXED_THREADED
   if (omp_get_level()) {
     // if this is in a parallel region, only let one thread throw

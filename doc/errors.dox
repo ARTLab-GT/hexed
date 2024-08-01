@@ -18,12 +18,20 @@ This type of error indicates a basic mistake in the input parameters
 Unlike a \ref hil_exception, this indicates that your input file is (probably) valid \ref hil code,
 but what you're specifying with that code doesn't make sense.
 
+\section not_implemented_error Not Implemented Error
+- `hexed::assert::Not_implemented_error`
+
+This one is not your fault.
+It indicates that you told Hexed to do something that it ought to be able to do,
+and that I plan for it to be capable of in future releases, but that I haven't implemented yet.
+If you encounter this error, I would appreciate feedback to help prioritize future development.
+
 \section numerical_error Numerical Exception
 - `hexed::assert::Numerical_exception`
 
 The most frustrating thing about CFD is that no solver is guaranteed to converge for all meshes and all problems.
 This error indicates that apparently, you have found a case where this solver does not converge.
-For example, it will be thrown if the code encounters NaN values or nonphysical states (e.g. nonpositive density)
+For example, it will be thrown if the code encounters NaN values or nonphysical states (e.g. non-positive density)
 and cannot recover.
 This error could likely be avoided by improvements to the algorithms or adjustments to your input parameters,
 but it is not necessarily the result of a blatant mistake on anyone's part.
@@ -43,6 +51,6 @@ feel free to let \me know.
 - `Segmentation fault (core dumpted)`
 - `SIGSEGV`
 
-Woah, this is embarrassing. Please let \me know and also laugh at me.
+Whoa, this is embarrassing. Please let \me know and also laugh at me.
 
 */

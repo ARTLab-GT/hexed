@@ -6,8 +6,7 @@
 #include "assert.hpp"
 #include "utils.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 const int dyn = Eigen::Dynamic; //!< \brief convenience alias for `Eigen::dynamic`
 //! \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = 1>`
@@ -16,12 +15,12 @@ template <int rows = dyn, int cols = 1> using Mat = Eigen::Matrix<double, rows, 
 template <int rows = dyn, int cols = dyn> using Mat_rm = Eigen::Matrix<double, rows, cols, Eigen::RowMajor>;
 const auto all = Eigen::all; //!< \brief convenience alias for `Eigen::all`
 const auto last = Eigen::last; //!< \brief convenience alias for `Eigen::last`
+typedef intmax_t Int; //!< \brief basic integer type  to use for potentially-large numbers, such as sizes
 //! \brief convenience alias for largest double value
 constexpr double huge = std::numeric_limits<double>::max();
 
 //! Miscellaneous mathematical functions that aren't in `std::math`
-namespace math
-{
+namespace math {
 
 /*! \brief Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.
  * \details
@@ -29,8 +28,7 @@ namespace math
  * (although the GCC implementation can anyway).
  */
 template<typename number_t>
-constexpr number_t pow(number_t base, int exponent)
-{
+constexpr number_t pow(number_t base, int exponent) {
   number_t result = 1;
   for (int i = 0; i < exponent; ++i) result *= base;
   for (int i = 0; i > exponent; --i) result /= base;
@@ -42,8 +40,7 @@ constexpr number_t pow(number_t base, int exponent)
  * Otherwise, if `arg` < 1, returns 0. In the usual case where neither
  * of the above are true, returns \f$\lceil\log_{\mathtt{base}}(\mathtt{arg})\rceil\f$.
  */
-constexpr int log(int base, int arg)
-{
+constexpr int log(int base, int arg) {
   if (base <= 1) return -1;
   int result = 0;
   for (int compare = 1; compare < arg; compare *= base) ++result;
@@ -51,8 +48,7 @@ constexpr int log(int base, int arg)
 }
 
 //! returns 1 if `condition` is true, otherwise -1
-constexpr int sign(bool condition)
-{
+constexpr int sign(bool condition) {
   return 2*condition - 1;
 }
 
@@ -137,16 +133,12 @@ Eigen::VectorXd pow_outer(const Eigen::VectorXd&, int n_dim);
  * - Inner product of `i_dim`th columns of return matrix and `basis` is positive.
  */
 template <int n_dim>
-Eigen::Matrix<double, n_dim, n_dim> orthonormal (Eigen::Matrix<double, n_dim, n_dim> basis, int i_dim)
-{
+Eigen::Matrix<double, n_dim, n_dim> orthonormal (Eigen::Matrix<double, n_dim, n_dim> basis, int i_dim) {
   static_assert (n_dim <= 3, "Not implemented for n_dim > 3.");
   static_assert (n_dim > 0, "dimensionality must be positive");
-  if constexpr (n_dim == 1)
-  {
+  if constexpr (n_dim == 1) {
     return basis/std::abs(basis(0, 0));
-  }
-  else
-  {
+  } else {
     auto col_i = basis.col(i_dim);
     std::array<int, n_dim - 1> j_col;
     for (int offset = 1; offset < n_dim; ++offset) {
@@ -173,8 +165,7 @@ Eigen::Matrix<double, n_dim, n_dim> orthonormal (Eigen::Matrix<double, n_dim, n_
 Eigen::MatrixXd orthonormal (Eigen::MatrixXd basis, int i_dim);
 
 //! for indexing faces/vertices in \ref Refined_face s with possible stretching
-inline int stretched_ind(int n_dim, int ind, std::array<bool, 2> stretch)
-{
+inline int stretched_ind(int n_dim, int ind, std::array<bool, 2> stretch) {
   int stride = 1;
   int stretched = 0;
   for (int i_dim = n_dim - 2; i_dim >= 0; --i_dim) {
@@ -192,8 +183,7 @@ inline int stretched_ind(int n_dim, int ind, std::array<bool, 2> stretch)
  * \param coords Coordinates to interpolate to.
  */
 template <int n_dim>
-double interp(Mat<pow(2, n_dim)> values, Mat<n_dim> coords)
-{
+double interp(Mat<pow(2, n_dim)> values, Mat<n_dim> coords) {
   int stride = pow(2, n_dim);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     stride /= 2;
@@ -207,8 +197,7 @@ double interp(Mat<pow(2, n_dim)> values, Mat<n_dim> coords)
 //! Finds the nearest point to `target` on the line segment defined by `endpoints`.
 //! Works for 2D or 3D.
 template <typename vec_t>
-vec_t proj_to_segment(std::array<vec_t, 2> endpoints, vec_t target)
-{
+vec_t proj_to_segment(std::array<vec_t, 2> endpoints, vec_t target) {
   vec_t diff = endpoints[1] - endpoints[0];
   double proj = diff.dot(target - endpoints[0])/diff.squaredNorm();
   proj = std::min(1., std::max(0., proj));
@@ -216,8 +205,7 @@ vec_t proj_to_segment(std::array<vec_t, 2> endpoints, vec_t target)
 }
 
 //! functor to compare whether values are approximately equal
-class Approx_equal
-{
+class Approx_equal {
   double a;
   double r;
   public:
@@ -227,8 +215,7 @@ class Approx_equal
 
 //! Constructs an `Eigen::VectorXd` from iterators `begin()` and `end()` to arithmetic types.
 template <typename T>
-Mat<> to_mat(T begin, T end)
-{
+Mat<> to_mat(T begin, T end) {
   Mat<> vec(end - begin);
   int i = 0;
   for (auto it = begin; it < end; ++it) vec(i++) = *it;
@@ -237,15 +224,13 @@ Mat<> to_mat(T begin, T end)
 
 //! Constructs an `Eigen::VectorXd` from any object supporting `begin()` and `end()` members.
 template <typename T>
-Mat<> to_mat(const T& range)
-{
+Mat<> to_mat(const T& range) {
   return to_mat(range.begin(), range.end());
 }
 
 //! \brief minimal representation of an `n_dim`-dimensional ball
 template <int n_dim = dyn>
-struct Ball
-{
+struct Ball {
   Mat<n_dim> center;
   double radius_sq; //!< square of the radius, since normally that's what you actually need
 };
@@ -256,8 +241,7 @@ struct Ball
  * Note that a simplex is the convex hull of its vertices.
  */
 template <int n_dim, int n_point>
-Ball<n_dim> bounding_ball(Mat<n_dim, n_point> points)
-{
+Ball<n_dim> bounding_ball(Mat<n_dim, n_point> points) {
   Ball<n_dim> b;
   b.center = points.rowwise().mean();
   b.radius_sq = (points.colwise() - b.center).colwise().squaredNorm().maxCoeff();
@@ -266,8 +250,7 @@ Ball<n_dim> bounding_ball(Mat<n_dim, n_point> points)
 
 //! \brief returns true if the ball `b` intersects the line through `endpoint0` and `endpoint1`
 template <int n_dim>
-bool intersects(Ball<n_dim> b, Mat<n_dim> endpoint0, Mat<n_dim> endpoint1)
-{
+bool intersects(Ball<n_dim> b, Mat<n_dim> endpoint0, Mat<n_dim> endpoint1) {
   Mat<n_dim> diff = endpoint1 - endpoint0;
   Mat<n_dim> center = b.center - endpoint0;
   return (center - center.dot(diff)/diff.squaredNorm()*diff).squaredNorm() <= b.radius_sq;
