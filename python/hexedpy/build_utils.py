@@ -679,8 +679,8 @@ class Install_wheel(Buildable):
         return self.builder.find_in(self.builder.site_packages(self._python), self._name)
     def build(self):
         if self.output().find():
-            self.builder.subproc([self._python, "-m", "pip", "uninstall", "--yes", self._wheel])
-        self.builder.subproc([self._python, "-m", "pip", "install", self._wheel])
+            self.builder.subproc([self._python, "-m", "pip", "uninstall", "--yes", self._wheel], env=dict(os.environ))
+        self.builder.subproc([self._python, "-m", "pip", "install", self._wheel], env=dict(os.environ))
     def __str__(self):
         return f"install `{self._name}` for `{self._python}`"
 
@@ -949,7 +949,9 @@ class Builder:
         os.makedirs(absolute(name), exist_ok=True)
 
     def subproc(self, args, err_message=None, **kwargs):
-        proc = subp.run(args, env=self.env, **kwargs)
+        if "env" not in kwargs.keys():
+            kwargs["env"] = self.env
+        proc = subp.run(args, **kwargs)
         if err_message is None:
             err_message = f"command {args} failed"
         assert proc.returncode == 0, err_message

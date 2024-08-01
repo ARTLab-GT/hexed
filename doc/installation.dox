@@ -29,7 +29,7 @@ You can create and activate a virtual environment with the following commands:
 python3 -m venv my_venv
 source my_venv/bin/activate
 ```
-You will have to repeat the `sourc my_venv/bin/activate` command every time you open a new terminal,
+You will have to repeat the `source my_venv/bin/activate` command every time you open a new terminal,
 or else you won't be able to use your `hexed` installation.
 See [this tutorial](https://docs.python.org/3/tutorial/venv.html)
 for more information about Python packages and virtual environments.
