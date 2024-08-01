@@ -1,4 +1,4 @@
 first start entry                                                       S0000001
 second start entry                                                      S0000002
-1H___12Hfirst,_entry,12Hsecond entry_   5Hthird                         G0000001
-_25__9.8_;                                                              G0000002
+1H___12Hfirst,_entry_12Hsecond entry_                            5HthirdG0000001
+_25__9.8;                                                               G0000002
