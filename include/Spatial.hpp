@@ -11,14 +11,12 @@
 #include "Face_permutation.hpp"
 #include "Refined_face.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 //! class to contain all the kernels in a scope
 //! parameterized by the type of element (deformed/cartesian) and the PDE
 template <template<int, int> typename Pde_templ, bool is_deformed>
-class Spatial
-{
+class Spatial {
   public:
   //! this class has no non-static data members, so there is no reason to construct it
   Spatial() = delete;
@@ -27,8 +25,7 @@ class Spatial
 
   //! extrapolates the values in the interior of an element to the faces
   template <int n_dim, int row_size>
-  class Write_face : public Kernel<Kernel_element&>
-  {
+  class Write_face : public Kernel<Kernel_element&> {
     using Pde = Pde_templ<n_dim, row_size>;
     Pde _eq;
     const Eigen::Matrix<double, 2, row_size> boundary;
@@ -38,8 +35,7 @@ class Spatial
     Write_face(const Basis& basis, pde_args... args) : _eq(args...), boundary{basis.boundary()} {}
 
     //! apply to a single element
-    void operator()(const double* read, std::array<double*, 6> faces)
-    {
+    void operator()(const double* read, std::array<double*, 6> faces) {
       constexpr int n_qpoint = math::pow(row_size, n_dim);
       double extrap [Pde::n_extrap][n_qpoint];
       // fetch the extrapolation variables and store them in `time_rate`
@@ -57,8 +53,7 @@ class Spatial
     }
 
     //! apply to a sequence of elements
-    virtual void operator()(Sequence<Kernel_element&>& elements)
-    {
+    virtual void operator()(Sequence<Kernel_element&>& elements) {
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
         Kernel_element& elem {elements[i_elem]};
@@ -71,8 +66,7 @@ class Spatial
   };
 
   template<int n_dim, int row_size>
-  class Face_permutation : public Face_permutation_dynamic
-  {
+  class Face_permutation : public Face_permutation_dynamic {
     static constexpr int n_qpoint = math::pow(row_size, n_dim - 1);
     static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
     Connection_direction dir;
@@ -82,8 +76,7 @@ class Spatial
      * For 3d connections, the dimensions corresponding to major/minor indices may not match.
      * To solve this problem, this function transposes the major/minor axes if necessary.
      */
-    virtual void transpose()
-    {
+    virtual void transpose() {
       if (dir.transpose()) {
         if constexpr (n_dim == 3) {
           for (int i_var = 0; i_var < n_var; ++i_var) {
@@ -98,8 +91,7 @@ class Spatial
      * normal vectors might be opposite.
      * To solve this problem, this function reverses the order in `i_dim[0]` if necessary.
      */
-    virtual void flip()
-    {
+    virtual void flip() {
       if (dir.flip_tangential()) {
         if constexpr (n_dim == 3) {
           // figure out if the dimension we want to reverse is the major or minor axis of face 1
@@ -136,8 +128,7 @@ class Spatial
    * This interpolation is exact (and therefore conservative).
    */
   template <int n_dim, int row_size>
-  class Prolong_refined : public Kernel<Refined_face&>
-  {
+  class Prolong_refined : public Kernel<Refined_face&> {
     static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
     const Eigen::Matrix<double, row_size, row_size> prolong_mat [2];
     bool scl;
@@ -152,14 +143,12 @@ class Spatial
       _mask{mask}
     {}
 
-    virtual void operator()(Sequence<Refined_face&>& ref_faces)
-    {
+    virtual void operator()(Sequence<Refined_face&>& ref_faces) {
       constexpr int n_face = math::pow(2, n_dim - 1);
       constexpr int nfq = math::pow(row_size, n_dim - 1);
 
       #pragma omp parallel for
-      for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face)
-      {
+      for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face) {
         auto& ref_face {ref_faces[i_ref_face]};
         if (ref_face.fine_mask() >= _mask) {
           double* coarse {ref_face.coarse + off*(n_dim + 2)*nfq};
@@ -211,8 +200,7 @@ class Spatial
    * but of course not always exact.
    */
   template <int n_dim, int row_size>
-  class Restrict_refined : public Kernel<Refined_face&>
-  {
+  class Restrict_refined : public Kernel<Refined_face&> {
     static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
     const Eigen::Matrix<double, row_size, row_size> restrict_mat [2];
     bool scl;
@@ -227,8 +215,7 @@ class Spatial
       _mask{mask}
     {}
 
-    virtual void operator()(Sequence<Refined_face&>& ref_faces)
-    {
+    virtual void operator()(Sequence<Refined_face&>& ref_faces) {
       constexpr int n_face = math::pow(2, n_dim - 1);
       constexpr int nfq = math::pow(row_size, n_dim - 1);
 
@@ -293,8 +280,7 @@ class Spatial
    * Note that face data is updated to reflect the updated interior state.
    */
   template <int n_dim, int row_size>
-  class Local : public Kernel<Kernel_element&>
-  {
+  class Local : public Kernel<Kernel_element&> {
     using Pde = Pde_templ<n_dim, row_size>;
     const Pde _eq;
     static constexpr int n_qpoint = math::pow(row_size, n_dim);
@@ -313,26 +299,25 @@ class Spatial
 
     public:
     template <typename... pde_args>
-    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, pde_args... args) :
-      _eq(args...),
-      derivative{basis},
-      boundary{basis.boundary()},
-      _nodes{basis.nodes()},
-      write_face(basis, args...),
-      filter{basis.filter()},
-      _update{stage ? dt*basis.step_ratio() : dt},
-      _stage{stage},
-      _compute_residual{compute_residual},
-      _use_filter{use_filter},
-      _mask{mask},
-      _conv_substep{conv_substep}
+    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, pde_args... args)
+    : _eq(args...)
+    , derivative{basis}
+    , boundary{basis.boundary()}
+    , _nodes{basis.nodes()}
+    , write_face(basis, args...)
+    , filter{basis.filter()}
+    , _update{stage ? dt*basis.step_ratio() : dt}
+    , _stage{stage}
+    , _compute_residual{compute_residual}
+    , _use_filter{use_filter}
+    , _mask{mask}
+    , _conv_substep{conv_substep}
     {
       HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
       HEXED_ASSERT(!(_stage && _compute_residual), "residual calculation is a single-stage operation");
     }
 
-    virtual void operator()(Sequence<Kernel_element&>& elements)
-    {
+    virtual void operator()(Sequence<Kernel_element&>& elements) {
       // dummy face normal vector to use when deformed elements participate in cartesian connections
       #pragma GCC diagnostic push
       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -347,8 +332,7 @@ class Spatial
       }
 
       #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
-      {
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
         auto& elem = elements[i_elem];
         double* state = elem.state();
         std::array<double*, 6> faces;
@@ -376,8 +360,7 @@ class Spatial
         }
 
         // compute gradient (times jacobian determinant, cause that's easier)
-        if constexpr (Pde::has_diffusion)
-        {
+        if constexpr (Pde::has_diffusion) {
           static_assert(Pde::n_extrap >= Pde::n_update);
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             Mat<Pde::n_extrap> grad_vars = _eq.fetch_extrap(n_qpoint, state + i_qpoint);
@@ -527,8 +510,7 @@ class Spatial
 
   //! account for the difference between the real and numerical viscous fluxes to enforce conservation
   template <int n_dim, int row_size>
-  class Reconcile_ldg_flux : public Kernel<Kernel_element&>
-  {
+  class Reconcile_ldg_flux : public Kernel<Kernel_element&> {
     using Pde = Pde_templ<n_dim, row_size>;
     const Pde _eq;
     static constexpr int n_qpoint = math::pow(row_size, n_dim);
@@ -545,25 +527,24 @@ class Spatial
 
     public:
     template <typename... pde_args>
-    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, pde_args... args) :
-      _eq(args...),
-      _nodes{basis.nodes()},
-      derivative{basis},
-      write_face(basis, args...),
-      filter{basis.filter()},
-      _update{dt},
-      _stage{which_stage},
-      _compute_residual{compute_residual},
-      _use_filter{use_filter},
-      _mask{mask},
-      _conv_substep{conv_substep}
+    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, pde_args... args)
+    : _eq(args...)
+    , _nodes{basis.nodes()}
+    , derivative{basis}
+    , write_face(basis, args...)
+    , filter{basis.filter()}
+    , _update{dt}
+    , _stage{which_stage}
+    , _compute_residual{compute_residual}
+    , _use_filter{use_filter}
+    , _mask{mask}
+    , _conv_substep{conv_substep}
     {
       HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
       HEXED_ASSERT(Pde::has_convection || !_stage, "for pure diffusion use alternating time steps");
     }
 
-    virtual void operator()(Sequence<Kernel_element&>& elements)
-    {
+    virtual void operator()(Sequence<Kernel_element&>& elements) {
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
       {
@@ -624,8 +605,7 @@ class Spatial
    * and replaces the state of both faces with the computed flux.
    */
   template <int n_dim, int row_size>
-  class Neighbor : public Kernel<Kernel_connection&>
-  {
+  class Neighbor : public Kernel<Kernel_connection&> {
     using Pde = Pde_templ<n_dim, row_size>;
     const Pde _eq;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
@@ -636,11 +616,9 @@ class Spatial
     template <typename... pde_args>
     Neighbor(int i_stage, int mask, pde_args... args) : _eq(args...), _stage{i_stage}, _mask{mask} {}
 
-    virtual void operator()(Sequence<Kernel_connection&>& connections)
-    {
+    virtual void operator()(Sequence<Kernel_connection&>& connections) {
       #pragma omp parallel for
-      for (int i_con = 0; i_con < connections.size(); ++i_con)
-      {
+      for (int i_con = 0; i_con < connections.size(); ++i_con) {
         auto& con = connections[i_con];
         auto dir = con.get_direction();
         double face [2 + 2*Pde::has_diffusion][Pde::n_extrap*n_fqpoint] {}; // copying face data to temporary stack storage improves efficiency
@@ -666,8 +644,7 @@ class Spatial
           }
         }
         // compute flux
-        for (int i_qpoint = 0; i_qpoint < n_fqpoint; ++i_qpoint)
-        {
+        for (int i_qpoint = 0; i_qpoint < n_fqpoint; ++i_qpoint) {
           // compute average face state for LDG scheme
           if constexpr (Pde::has_diffusion) {
             for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
@@ -733,19 +710,16 @@ class Spatial
   //! compute the difference between the numerical (average) viscous flux and
   //! the viscous flux on each face in preparation for reconciling the different face fluxes
   template <int n_dim, int row_size>
-  class Neighbor_reconcile : public Kernel<Kernel_connection&>
-  {
+  class Neighbor_reconcile : public Kernel<Kernel_connection&> {
     using Pde = Pde_templ<n_dim, row_size>;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
     int _mask;
 
     public:
     Neighbor_reconcile(int mask) : _mask{mask} {}
-    virtual void operator()(Sequence<Kernel_connection&>& connections)
-    {
+    virtual void operator()(Sequence<Kernel_connection&>& connections) {
       #pragma omp parallel for
-      for (int i_con = 0; i_con < connections.size(); ++i_con)
-      {
+      for (int i_con = 0; i_con < connections.size(); ++i_con) {
         auto& con = connections[i_con];
         auto dir = con.get_direction();
         double face [2][(n_dim + 2)*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
@@ -780,8 +754,7 @@ class Spatial
 
   //! compute the maximum stable time step
   template <int n_dim, int row_size>
-  class Max_dt : public Kernel<Kernel_element&, double>
-  {
+  class Max_dt : public Kernel<Kernel_element&, double> {
     using Pde = Pde_templ<n_dim, row_size>;
     const Pde _eq;
     double max_cfl_c;
@@ -791,17 +764,16 @@ class Spatial
 
     public:
     template <typename... pde_args>
-    Max_dt(const Basis& basis, bool is_local, bool use_filter, double safety_conv, double safety_diff, pde_args... args) :
-      _eq(args...),
-      max_cfl_c{basis.max_cfl()*safety_conv},
-      max_cfl_d{-2/basis.min_eig_diffusion()*safety_diff},
-      _is_local{is_local}
+    Max_dt(const Basis& basis, bool is_local, bool use_filter, double safety_conv, double safety_diff, pde_args... args)
+    : _eq(args...)
+    , max_cfl_c{basis.max_cfl()*safety_conv}
+    , max_cfl_d{-2/basis.min_eig_diffusion()*safety_diff}
+    , _is_local{is_local}
     {
       for (int i_node = 0; i_node < row_size; ++i_node) nodes(i_node) = basis.node(i_node);
     }
 
-    virtual double operator()(Sequence<Kernel_element&>& elements)
-    {
+    virtual double operator()(Sequence<Kernel_element&>& elements) {
       constexpr int n_qpoint = math::pow(row_size, n_dim);
       // compute the maximum stable time step for all elements and take the minimum
       double dt = std::numeric_limits<double>::max();
