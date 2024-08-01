@@ -3,13 +3,13 @@
 
 TEST_CASE("Iges_parser") {
   for (std::string file_name : {"default_delims", "custom_param", "custom_record", "custom_both"}) {
-    hexed::Iges_parser file(file_name + ".iges");
+    hexed::Iges_parser file("../test_assets/" + file_name + ".iges");
     auto start_sec = file.section(hexed::Iges_parser::start);
     REQUIRE(start_sec.size() == 2);
     REQUIRE(start_sec[0].size() == 1);
     REQUIRE(start_sec[1].size() == 1);
-    REQUIRE(start_sec[0][0] == "first start entry                                                        ");
-    REQUIRE(start_sec[0][0] == "second start entry                                                       ");
+    REQUIRE(start_sec[0][0] == "first start entry                                                       ");
+    REQUIRE(start_sec[1][0] == "second start entry                                                      ");
     REQUIRE(&file.entry(hexed::Iges_parser::start, 1) == &start_sec[0]);
     REQUIRE(&file.entry(hexed::Iges_parser::start, 2) == &start_sec[1]);
     REQUIRE(file.section(hexed::Iges_parser::global).size() == 1);

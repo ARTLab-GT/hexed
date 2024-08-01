@@ -10,7 +10,7 @@ namespace hexed {
 
 class Iges_parser {
   public:
-  enum Section_id {flag, start, global, directory, parameter, terminate};
+  enum Section_id {start, global, directory, parameter, terminate};
 
   static Int read_int(std::string);
   static double read_float(std::string);
