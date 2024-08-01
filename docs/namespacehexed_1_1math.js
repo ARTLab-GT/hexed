@@ -1,0 +1,27 @@
+var namespacehexed_1_1math =
+[
+    [ "Approx_equal", "classhexed_1_1math_1_1Approx__equal.html", null ],
+    [ "Ball", "structhexed_1_1math_1_1Ball.html", "structhexed_1_1math_1_1Ball" ],
+    [ "Root_options", "structhexed_1_1math_1_1Root__options.html", "structhexed_1_1math_1_1Root__options" ],
+    [ "bisection", "namespacehexed_1_1math.html#a702bd5864dd0568294432c085f035337", null ],
+    [ "bounding_ball", "namespacehexed_1_1math.html#af0f6208be1d549d15ee614056e916214", null ],
+    [ "broyden", "namespacehexed_1_1math.html#a2ba0a7bea6c28705e6ab177bb53c3877", null ],
+    [ "chebyshev_step", "namespacehexed_1_1math.html#a81f8bcb9e8396f60c01ca532eeb30826", null ],
+    [ "correct_values", "namespacehexed_1_1math.html#a4577ab973af36ffe9e7d96f7a4c5e4e1", null ],
+    [ "dimension_matvec", "namespacehexed_1_1math.html#a28c7da706451856851677559bce29b4c", null ],
+    [ "direction", "namespacehexed_1_1math.html#a809296c0317a57071e35813db50959f7", null ],
+    [ "direction", "namespacehexed_1_1math.html#ab71ed172f6f016f04a01e7345c40e0f9", null ],
+    [ "hypercube_matvec", "namespacehexed_1_1math.html#a3371a6107241fd2908252ebcfeb02225", null ],
+    [ "interp", "namespacehexed_1_1math.html#ae73b97c8d3b263c117c7d2a1e2f8e2fb", null ],
+    [ "intersects", "namespacehexed_1_1math.html#aab61b99c0a3058cc2879e88f46cf657d", null ],
+    [ "log", "namespacehexed_1_1math.html#aa22c33a8526443106a5fb9755fd74f3e", null ],
+    [ "newton", "namespacehexed_1_1math.html#a58a6c48c109b4cef5f46c1e53231913e", null ],
+    [ "orthonormal", "namespacehexed_1_1math.html#a19016179805d80da700a1923c7f1bcbf", null ],
+    [ "pow", "namespacehexed_1_1math.html#a841a924102372fe68edc21dd924d3e02", null ],
+    [ "pow_outer", "namespacehexed_1_1math.html#ae093e25f5d43435d62ba74ea4ffa6266", null ],
+    [ "proj_to_segment", "namespacehexed_1_1math.html#af16de794dd3a25bfc072c97d490ed2d8", null ],
+    [ "sign", "namespacehexed_1_1math.html#a0cf1f9dee834e4293708192a939f2482", null ],
+    [ "stretched_ind", "namespacehexed_1_1math.html#afddebf6a5bedaf20071ced4babb8a4ad", null ],
+    [ "to_mat", "namespacehexed_1_1math.html#acb1291dc0d9913aa56296df84ff9969d", null ],
+    [ "to_mat", "namespacehexed_1_1math.html#a87c821fbc50ed9c599ed57f21ba47fe2", null ]
+];

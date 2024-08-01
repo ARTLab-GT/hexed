@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['eat_0',['eat',['../classhexed_1_1Vertex.html#a8cb95887bd601d3c4191e7c1c5b3dbb4',1,'hexed::Vertex']]],
+  ['edges_1',['edges',['../classhexed_1_1Vis__data.html#a6e5a6532cd26f433ecf02ae494dfabe7',1,'hexed::Vis_data']]],
+  ['eigvals_2',['eigvals',['../classhexed_1_1pde_1_1Navier__stokes_1_1Pde_1_1Characteristics.html#ade6181e58ad3397d102e7800e8f76253',1,'hexed::pde::Navier_stokes::Pde::Characteristics']]],
+  ['elem_5faverage_3',['Elem_average',['../classhexed_1_1Elem__average.html#a4a726fe0dbc4f46ae1b6426f1bbc8060',1,'hexed::Elem_average::Elem_average(const Qpoint_func &amp;func)'],['../classhexed_1_1Elem__average.html#a7ac76903b4160075ddd33316c16f09cd',1,'hexed::Elem_average::Elem_average(Qpoint_func &amp;&amp;)=delete']]],
+  ['elem_5fhandles_4',['elem_handles',['../classhexed_1_1Accessible__mesh.html#afe3611a801b0fe441cd8a9e2494aae00',1,'hexed::Accessible_mesh::elem_handles()'],['../classhexed_1_1Element__container.html#a92312a6c7ec6452aac6cfc9e52f3caa5',1,'hexed::Element_container::elem_handles()'],['../classhexed_1_1Complete__element__container.html#ae3a44c6060d4353381815c2c3834a4eb',1,'hexed::Complete_element_container::elem_handles()'],['../classhexed_1_1Mesh.html#ae6c3a0385bafc39c6e19714ccd1253fc',1,'hexed::Mesh::elem_handles()']]],
+  ['elem_5fl2_5',['Elem_l2',['../classhexed_1_1Elem__l2.html#ac06b8a490f8308188d2fbb79fc856fce',1,'hexed::Elem_l2']]],
+  ['elem_5fnonsmooth_6',['Elem_nonsmooth',['../classhexed_1_1Elem__nonsmooth.html#a072353eba52ff842189cb3dc7f122164',1,'hexed::Elem_nonsmooth']]],
+  ['element_7',['Element',['../classhexed_1_1Element.html#abd975b691563fca7a1501bbde2bb5c61',1,'hexed::Element::Element(Storage_params, std::vector&lt; int &gt; pos={}, double mesh_size=1., int ref_level=0, Mat&lt;&gt; origin_arg=Mat&lt;&gt;::Zero(3), int aniso_ref_level=0)'],['../classhexed_1_1Element.html#abbc78223ead28309e9fd4c5c0cb9fc18',1,'hexed::Element::Element(const Element &amp;)=delete']]],
+  ['element_8',['element',['../classhexed_1_1Accessible__mesh.html#a6390156bbfbca027484f61e76faeb61e',1,'hexed::Accessible_mesh::element()'],['../namespacehexed_1_1hil__properties.html#a523b3ce4706bddd336b023d9f38b878c',1,'hexed::hil_properties::element()']]],
+  ['element_5fconnections_9',['element_connections',['../classhexed_1_1Accessible__mesh.html#ab1699a3f5ad1e6a668a71bca9e413956',1,'hexed::Accessible_mesh']]],
+  ['element_5fface_5fconnection_10',['Element_face_connection',['../classhexed_1_1Element__face__connection.html#aa6246c8c6d0dbdc4233ae6a36a95619d',1,'hexed::Element_face_connection']]],
+  ['element_5fview_11',['element_view',['../classhexed_1_1Complete__element__container.html#ac4631f7674fe1875ce0f613618e0cf20',1,'hexed::Complete_element_container']]],
+  ['elements_12',['elements',['../classhexed_1_1Accessible__mesh.html#a8bf6b1a1ce4c48f1006b4c88a4411639',1,'hexed::Accessible_mesh::elements()'],['../classhexed_1_1Complete__element__container.html#a0d8ac83bf60ac5929f0c2325f2e47db6',1,'hexed::Complete_element_container::elements()']]],
+  ['emplace_13',['emplace',['../classhexed_1_1Element__container.html#a9232df20d1681205570f422f226ef938',1,'hexed::Element_container::emplace()'],['../classhexed_1_1Complete__element__container.html#a9b93b2b8dc08cfacd4f56705cba73f1b',1,'hexed::Complete_element_container::emplace()'],['../classhexed_1_1Stopwatch__tree.html#a17bd7c1153175603e9a937da532f4589',1,'hexed::Stopwatch_tree::emplace()']]],
+  ['empty_14',['empty',['../classhexed_1_1Nearest__point.html#a1970167f17eb444a7373250a9f768039',1,'hexed::Nearest_point::empty()'],['../classhexed_1_1next_1_1Sequence.html#a9585c037806f5443fe6ab69d5ddf43d1',1,'hexed::next::Sequence::empty()']]],
+  ['end_15',['end',['../classhexed_1_1Array.html#abceb1f9ca33d5d1c16157153b977418d',1,'hexed::Array::end()'],['../classhexed_1_1Array.html#a225f664a3dd3b1d52eda2c6f536a1371',1,'hexed::Array::end() const'],['../classhexed_1_1next_1_1Sequence.html#a0c5b5f0f3790f23defa18fb48fb75435',1,'hexed::next::Sequence::end()']]],
+  ['equidistant_16',['Equidistant',['../classhexed_1_1Equidistant.html#aae6054d10ecc4e6b7cfe14d0205c85bb',1,'hexed::Equidistant']]],
+  ['erase_5fif_17',['erase_if',['../namespacehexed.html#ab124f7ee9691cfcad95abb8882f064e9',1,'hexed']]],
+  ['eval_18',['eval',['../classhexed_1_1Struct__expr.html#a9eddb2f4954e576456377a3129ebe35b',1,'hexed::Struct_expr']]],
+  ['exec_19',['exec',['../classhexed_1_1Interpreter.html#a0ef4451e5cbc4ed001238699570729e4',1,'hexed::Interpreter']]],
+  ['export_5fpolymesh_20',['export_polymesh',['../classhexed_1_1Accessible__mesh.html#af34404cb79aa9ee7dc0b91f6586b087d',1,'hexed::Accessible_mesh::export_polymesh()'],['../classhexed_1_1Mesh.html#a174c88acb7afe18c7b732e18d7fa3fa6',1,'hexed::Mesh::export_polymesh()']]],
+  ['extrude_21',['extrude',['../classhexed_1_1Accessible__mesh.html#a472153bc396bbbc2ae6b50818dc87615',1,'hexed::Accessible_mesh::extrude()'],['../classhexed_1_1Mesh.html#a370e64cb387b9e5d64d0faff056a10f2',1,'hexed::Mesh::extrude(bool collapse=false, double offset=0, bool force=false)=0'],['../classhexed_1_1Mesh.html#a125f26f5c68c35eb6ed8bb22a3431741',1,'hexed::Mesh::extrude(Layer_sequence layers)']]],
+  ['extruded_5fconnections_22',['extruded_connections',['../classhexed_1_1Accessible__mesh.html#aa0a221e476106d7175c8168dd4b89bbe',1,'hexed::Accessible_mesh']]]
+];
