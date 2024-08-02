@@ -5,12 +5,10 @@
 #include "Array.hpp"
 #include "Output_data.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 //! \brief General interface for writing visualization data in different file formats.
-class Visualizer
-{
+class Visualizer {
   public:
   //! \brief `enum` used to indicate the type of elements to visualize
   enum elem_type {

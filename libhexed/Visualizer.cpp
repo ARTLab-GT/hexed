@@ -3,8 +3,7 @@
 #include <Tecplot_file.hpp>
 #include <Csv.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
 const std::string Visualizer::default_format =
   #if HEXED_USE_XDMF
@@ -17,8 +16,7 @@ const std::string Visualizer::default_format =
 ;
 
 std::unique_ptr<Visualizer> Visualizer::create(std::string format, int n_dim_geom, int n_dim_topo, std::string file_name,
-                                               std::vector<std::string> variable_names, double time, elem_type elem_t)
-{
+                                               std::vector<std::string> variable_names, double time, elem_type elem_t) {
   std::unique_ptr<Visualizer> visualizer;
   if (format == "default") format = default_format;
   if (format == "xdmf") {
@@ -43,8 +41,7 @@ std::unique_ptr<Visualizer> Visualizer::create(std::string format, int n_dim_geo
 }
 
 std::unique_ptr<Visualizer> Visualizer::create(std::string format, int n_dim_geom, int n_dim_topo,
-                                               std::string file_name, const Output_data& dat, double time, elem_type elem_t)
-{
+                                               std::string file_name, const Output_data& dat, double time, elem_type elem_t) {
   int n_var = dat.n_var(n_dim_geom);
   std::vector<std::string> variable_names;
   for (int i_var = 0; i_var < n_var; ++i_var) variable_names.push_back(dat.variable_name(n_dim_geom, i_var));

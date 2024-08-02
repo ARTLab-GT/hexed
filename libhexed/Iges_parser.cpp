@@ -113,7 +113,7 @@ next::Sequence<const std::vector<std::string>&> Iges_parser::section(Section_id 
 const std::vector<std::string>& Iges_parser::entry(Section_id sec, Int line) {
   HEXED_ASSERT(line > 0 && line <= Int(_line_map[sec].size()), "line number out of bounds");
   int entry = _line_map[sec][line - 1];
-  HEXED_ASSERT(entry < Int(_entries.size()), "error mapping lines to entries");
+  HEXED_ASSERT(entry < Int(_entries[sec].size()), "error mapping lines to entries");
   return _entries[sec][entry];
 }
 
