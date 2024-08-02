@@ -27,7 +27,7 @@ Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim
     {'G', global},
     {'D', directory},
     {'P', parameter},
-    {'T', terminate}
+    {'T', terminate},
   };
   while (!file.eof()) {
     char line [81];
@@ -85,6 +85,15 @@ Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim
           }
         }
       } else if (sec == directory || sec == terminate) {
+        for (int i_block = 0; i_block < 9; ++i_block) {
+          int start = 8*i_block;
+          while (line[start] == ' ' && start < 8*(i_block + 1)) ++start;
+          rec.emplace_back(line + start, line + 8*(i_block + 1));
+        }
+        if (sec == terminate || rec.size() == 18) {
+          _entries[sec].push_back(rec);
+          rec.clear();
+        }
       }
     }
   }
