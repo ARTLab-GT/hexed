@@ -20,7 +20,7 @@ Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim
   HEXED_ASSERT(std::filesystem::exists(file_name),
                format_str(1000, "`%s` is not an existing file", file_name.c_str()));
   std::ifstream file(file_name);
-  std::vector<std::string> rec;
+  std::vector<std::string> ent;
   std::string field;
   std::map<char, Section_id> _section_chars {
     {'S', start},
@@ -54,6 +54,7 @@ Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim
               _param_delim = line[i + 2];
               i += 4;
             }
+            ent.emplace_back(1, _param_delim);
           }
           if (!_record_delim) {
             if (line[i] == _param_delim) {
@@ -65,16 +66,17 @@ Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim
               HEXED_ASSERT(line[i + 3] == _param_delim, "no parameter delimiter after record delimiter specification");
               i += 4;
             }
+            ent.emplace_back(1, _record_delim);
           }
         } else HEXED_ASSERT(_param_delim && _record_delim, "parameter section before delimiter specification");
         int h_count = 0;
         for (; i < 64 + 8*(sec == global); ++i) {
           if ((line[i] == _param_delim || line[i] == _record_delim) && !h_count) {
-            rec.push_back(field);
+            ent.push_back(field);
             field.clear();
             if (line[i] == _record_delim) {
-              _entries[sec].push_back(rec);
-              rec.clear();
+              _entries[sec].push_back(ent);
+              ent.clear();
             }
           } else {
             h_count = std::max(0, h_count - 1);
@@ -88,11 +90,11 @@ Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim
         for (int i_block = 0; i_block < 9; ++i_block) {
           int start = 8*i_block;
           while (line[start] == ' ' && start < 8*(i_block + 1)) ++start;
-          rec.emplace_back(line + start, line + 8*(i_block + 1));
+          ent.emplace_back(line + start, line + 8*(i_block + 1));
         }
-        if (sec == terminate || rec.size() == 18) {
-          _entries[sec].push_back(rec);
-          rec.clear();
+        if (sec == terminate || ent.size() == 18) {
+          _entries[sec].push_back(ent);
+          ent.clear();
         }
       }
     }

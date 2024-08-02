@@ -2,8 +2,10 @@
 #include <hexed/Iges_parser.hpp>
 
 TEST_CASE("Iges_parser") {
-  for (std::string file_name : {"default_delims", "custom_param", "custom_record", "custom_both"}) {
-    hexed::Iges_parser file("../test_assets/" + file_name + ".iges");
+  std::vector<std::string> file_names {"default_delims", "custom_param", "custom_record", "custom_both"};
+  std::vector<std::array<std::string, 2>> delims {{",", ";"}, {"_", ";"}, {",", "_"}, {"_", "\\"}};
+  for (int i = 0; i < 4; ++i) {
+    hexed::Iges_parser file("../test_assets/" + file_names[i] + ".iges");
     auto start_sec = file.section(hexed::Iges_parser::start);
     REQUIRE(start_sec.size() == 2);
     REQUIRE(start_sec[0].size() == 1);
@@ -14,6 +16,8 @@ TEST_CASE("Iges_parser") {
     REQUIRE(&file.entry(hexed::Iges_parser::start, 2) == &start_sec[1]);
     REQUIRE(file.section(hexed::Iges_parser::global).size() == 1);
     REQUIRE_THAT(file.entry(hexed::Iges_parser::global, 1), Catch::Matchers::RangeEquals(std::vector<std::string> {
+      delims[i][0],
+      delims[i][1],
       "12Hfirst,_entry",
       "12Hsecond entry",
       "5Hthird",
@@ -21,7 +25,7 @@ TEST_CASE("Iges_parser") {
       "",
       "9.8",
     }));
-    if (file_name == "default_delims") {
+    if (file_names[i] == "default_delims") {
       auto dir_sec = file.section(hexed::Iges_parser::directory);
       REQUIRE(dir_sec.size() == 2);
       REQUIRE_THAT(dir_sec[0], Catch::Matchers::RangeEquals(std::vector<std::string> {
