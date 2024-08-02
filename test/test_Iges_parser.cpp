@@ -46,4 +46,12 @@ TEST_CASE("Iges_parser") {
       }));
     }
   }
+  REQUIRE(hexed::Iges_parser::read_int("0300") == 300);
+  REQUIRE(hexed::Iges_parser::read_float("-1.1e2") == Catch::Approx(-110.));
+  REQUIRE(hexed::Iges_parser::read_float("-1.1E2") == Catch::Approx(-110.));
+  REQUIRE(hexed::Iges_parser::read_float("-1.1d2") == Catch::Approx(-110.));
+  REQUIRE(hexed::Iges_parser::read_float("-1.1D2") == Catch::Approx(-110.));
+  REQUIRE(hexed::Iges_parser::read_string("6HARTLab") == "ARTLab");
+  REQUIRE(hexed::Iges_parser::read_string("1H ") == " ");
+  REQUIRE_THROWS(hexed::Iges_parser::read_string("2H..."));
 }

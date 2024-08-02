@@ -4,16 +4,21 @@
 
 namespace hexed {
 
-Int Iges_parser::read_int(std::string) {
-  return 0;
+Int Iges_parser::read_int(std::string s) {return stoll(s);}
+
+double Iges_parser::read_float(std::string s) {
+  for (unsigned i = 0; i < s.size(); ++i) {
+    if (std::tolower(s[i]) == 'd') s[i] = 'e';
+  }
+  return stod(s);
 }
 
-double Iges_parser::read_float(std::string) {
-  return 0;
-}
-
-std::string Iges_parser::read_string(std::string) {
-  return "";
+std::string Iges_parser::read_string(std::string s) {
+  std::size_t delim = s.find('H');
+  HEXED_ASSERT(delim != s.npos, "string does not contain Hollerith delimiter 'H'");
+  HEXED_ASSERT(s.size() - delim == stoull(std::string(s.begin(), s.begin() + delim)) + 1,
+               "actual size of string does not match size specified as per Hollerith format");
+  return {s.begin() + delim + 1, s.end()};
 }
 
 Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim{0}, _entries(5), _line_map(5) {
