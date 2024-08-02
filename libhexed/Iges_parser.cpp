@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <map>
 #include <hexed/Iges_parser.hpp>
 
 namespace hexed {
@@ -15,28 +16,35 @@ std::string Iges_parser::read_string(std::string) {
   return "";
 }
 
-Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim{0}, _entries(5) {
+Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim{0}, _entries(5), _line_map(5) {
   HEXED_ASSERT(std::filesystem::exists(file_name),
                format_str(1000, "`%s` is not an existing file", file_name.c_str()));
   std::ifstream file(file_name);
   std::vector<std::string> rec;
   std::string field;
+  std::map<char, Section_id> _section_chars {
+    {'S', start},
+    {'G', global},
+    {'D', directory},
+    {'P', parameter},
+    {'T', terminate}
+  };
   while (!file.eof()) {
     char line [81];
     file.getline(line, 81);
     int len = std::strlen(line);
     if (len != 0) {
       HEXED_ASSERT(len == 80, "line is shorter than 80 characters");
-      char sec = line[72];
-      HEXED_ASSERT(sec != 'C' && sec != 'B', "Only uncompressed ASCII IGES format is supported",
+      HEXED_ASSERT(line[72] != 'C' && line[72] != 'B', "Only uncompressed ASCII IGES format is supported",
                    assert::Not_implemented_error)
-      if (sec == 'S') {
+      HEXED_ASSERT(_section_chars.count(line[72]), format_str(100, "section character '%c' not recognized", line[72]));
+      Section_id sec = _section_chars[line[72]];
+      _line_map[sec].push_back(_entries[sec].size());
+      if (sec == start) {
         _entries[start].push_back({std::string(line, 72)});
-      } else if (sec == 'G' || sec == 'P') {
+      } else if (sec == global || sec == parameter) {
         int i = 0;
-        Section_id id;
-        if (sec == 'G') {
-          id = global;
+        if (sec == global) {
           if (!_param_delim) {
             if (line[0] == ',') {
               _param_delim = ',';
@@ -58,17 +66,14 @@ Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim
               i += 4;
             }
           }
-        } else {
-          id = parameter;
-          HEXED_ASSERT(_param_delim && _record_delim, "parameter section before delimiter specification");
-        }
+        } else HEXED_ASSERT(_param_delim && _record_delim, "parameter section before delimiter specification");
         int h_count = 0;
-        for (; i < 72; ++i) {
+        for (; i < 64 + 8*(sec == global); ++i) {
           if ((line[i] == _param_delim || line[i] == _record_delim) && !h_count) {
             rec.push_back(field);
             field.clear();
             if (line[i] == _record_delim) {
-              _entries[id].push_back(rec);
+              _entries[sec].push_back(rec);
               rec.clear();
             }
           } else {
@@ -79,8 +84,8 @@ Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim
             if (!field.empty() || line[i] != ' ') field.insert(field.size(), 1, line[i]);
           }
         }
-      } else if (sec == 'D' || sec == 'T') {
-      } else HEXED_THROW(format_str(100, "section character '%c' not recognized", sec));
+      } else if (sec == directory || sec == terminate) {
+      }
     }
   }
 }
@@ -90,8 +95,10 @@ next::Sequence<const std::vector<std::string>&> Iges_parser::section(Section_id 
 }
 
 const std::vector<std::string>& Iges_parser::entry(Section_id sec, Int line) {
-  HEXED_ASSERT(line > 0 && line <= Int(_entries[sec].size()), "line number out of bounds");
-  return _entries[sec][line - 1];
+  HEXED_ASSERT(line > 0 && line <= Int(_line_map[sec].size()), "line number out of bounds");
+  int entry = _line_map[sec][line - 1];
+  HEXED_ASSERT(entry < Int(_entries.size()), "error mapping lines to entries");
+  return _entries[sec][entry];
 }
 
 }

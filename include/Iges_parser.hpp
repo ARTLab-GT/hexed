@@ -24,6 +24,7 @@ class Iges_parser {
   char _param_delim;
   char _record_delim;
   std::vector<std::vector<std::vector<std::string>>> _entries;
+  std::vector<std::vector<Int>> _line_map;
 };
 
 }

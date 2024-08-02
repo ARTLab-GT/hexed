@@ -21,5 +21,13 @@ TEST_CASE("Iges_parser") {
       "",
       "9.8",
     }));
+    if (file_name == "default_delims") {
+      auto param_sec = file.section(hexed::Iges_parser::parameter);
+      REQUIRE(param_sec.size() == 2);
+      REQUIRE(&file.entry(hexed::Iges_parser::parameter, 1) == &param_sec[0]);
+      REQUIRE(&file.entry(hexed::Iges_parser::parameter, 3) == &param_sec[1]);
+      REQUIRE_THAT(param_sec[0], Catch::Matchers::RangeEquals(std::vector<std::string> {"0", "1.2"}));
+      REQUIRE_THAT(param_sec[1], Catch::Matchers::RangeEquals(std::vector<std::string> {"0"}));
+    }
   }
 }
