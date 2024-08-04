@@ -33,6 +33,13 @@ class Circular_arc : public Entity<1> {
   double end_angle;
 };
 
+class Line_segment : public Entity<1> {
+  public:
+  inline Line_segment(Mat<3, 2> endpts) : endpoints{endpts} {}
+  Mat<3> temp_point(Mat<1> params) const override {return endpoints*Mat<2>{1. - params(0), params(0)};}
+  Mat<3, 2> endpoints;
+};
+
 class Geom {
   public:
   Geom(std::string file_name);

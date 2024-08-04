@@ -34,8 +34,8 @@ Geom::Geom(std::string file_name) {
   auto dir = parser.section(Iges_parser::directory);
   for (auto& entry : dir) {
     Int ent_num = parser.read_int(entry[0]);
+    auto& par = parser.entry(Iges_parser::parameter, parser.read_int(entry[1]));
     if (ent_num == 100) {
-      auto& par = parser.entry(Iges_parser::parameter, parser.read_int(entry[1]));
       std::vector<double> values;
       for (std::string s : par) values.push_back(parser.read_float(s));
       Circular_arc arc {
@@ -48,6 +48,12 @@ Geom::Geom(std::string file_name) {
       if (arc.start_angle < arc.end_angle + 1e-10) arc.start_angle += 2*constants::pi;
       arc.trans_mat = read_trans_mat(parser, parser.read_int(entry[6]));
       _curves.emplace_back(new Circular_arc {arc});
+    } else if (ent_num == 110) {
+      Mat<3, 2> endpts;
+      for (int i = 0; i < 6; ++i) endpts(i) = parser.read_float(par[1 + i]);
+      Line_segment seg(endpts);
+      seg.trans_mat = read_trans_mat(parser, parser.read_int(entry[6]));
+      _curves.emplace_back(new Line_segment{seg});
     } else if (ent_num == 124) {
     } else {
       std::cout << ent_num << "\n";
