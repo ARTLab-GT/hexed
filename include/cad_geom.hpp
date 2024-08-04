@@ -6,15 +6,21 @@
 
 namespace hexed::cad_geom {
 
+struct Trans_mat {
+  Mat<3, 3> transform = Mat<3, 3>::Identity();
+  Mat<3> translate = Mat<3>::Zero();
+};
+
 template <int n_param>
 class Entity {
   public:
   virtual ~Entity() = default;
   virtual Mat<3> temp_point(Mat<n_param>) const = 0;
-  Mat<3> point(Mat<n_param> params) const {return scale*(translate + transform*temp_point(params));}
-  double scale = 1;
-  Mat<3, 3> transform = Mat<3, 3>::Identity();
-  Mat<3> translate = Mat<3>::Zero();
+  Mat<3> point(Mat<n_param> params) const {
+    return scale*(trans_mat.translate + trans_mat.transform*temp_point(params));
+  }
+  double scale = 1.;
+  Trans_mat trans_mat;
 };
 
 class Circular_arc : public Entity<1> {

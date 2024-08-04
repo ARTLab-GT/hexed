@@ -11,6 +11,22 @@ Mat<3> Circular_arc::temp_point(Mat<1> params) const {
   return center + radius*Mat<3>{std::cos(angle), std::sin(angle), 0.};
 }
 
+Trans_mat read_trans_mat(const Iges_parser& parser, Int line) {
+  Trans_mat tm;
+  if (line > 0) {
+    const auto& dir_entry = parser.entry(Iges_parser::directory, line);
+    HEXED_ASSERT(parser.read_int(dir_entry[6]) == 0, "chaining transformation matrices is not yet implemented");
+    auto& par_entry = parser.entry(Iges_parser::parameter, parser.read_int(dir_entry[1]));
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      for (int j_dim = 0; j_dim < 3; ++j_dim) {
+        tm.transform(i_dim, j_dim) = parser.read_float(par_entry[4*i_dim + j_dim + 1]);
+      }
+      tm.translate(i_dim) = parser.read_float(par_entry[4*i_dim + 3 + 1]);
+    }
+  }
+  return tm;
+}
+
 Geom::Geom(std::string file_name) {
   std::string ext = file_extension(file_name);
   HEXED_ASSERT(ext == "igs" || ext == "iges", "can only read IGES files");
@@ -19,20 +35,20 @@ Geom::Geom(std::string file_name) {
   for (auto& entry : dir) {
     Int ent_num = parser.read_int(entry[0]);
     if (ent_num == 100) {
-      std::cout << parser.read_int(entry[1]) << " " << std::flush;
       auto& par = parser.entry(Iges_parser::parameter, parser.read_int(entry[1]));
       std::vector<double> values;
       for (std::string s : par) values.push_back(parser.read_float(s));
       Circular_arc arc {
-        {values[1], values[2], values[0]},
-        std::sqrt(.5*(values[3]*values[3] + values[4]*values[4]
-                      + values[5]*values[5] + values[6]*values[6])),
-        std::atan2(values[4], values[3]),
-        std::atan2(values[6], values[5])
+        {values[2], values[3], values[1]},
+        std::sqrt(.5*(values[4]*values[4] + values[5]*values[5]
+                      + values[6]*values[6] + values[7]*values[7])),
+        std::atan2(values[5], values[4]),
+        std::atan2(values[7], values[6]),
       };
       if (arc.start_angle < arc.end_angle + 1e-10) arc.start_angle += 2*constants::pi;
+      arc.trans_mat = read_trans_mat(parser, parser.read_int(entry[6]));
       _curves.emplace_back(new Circular_arc {arc});
-      std::cout << "\n";
+    } else if (ent_num == 124) {
     } else {
       std::cout << ent_num << "\n";
     }

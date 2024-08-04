@@ -18,7 +18,7 @@ class Iges_parser {
 
   Iges_parser(std::string file_name);
   next::Sequence<const std::vector<std::string>&> section(Section_id);
-  const std::vector<std::string>& entry(Section_id, Int line);
+  const std::vector<std::string>& entry(Section_id, Int line) const;
 
   private:
   char _param_delim;
