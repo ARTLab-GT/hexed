@@ -151,8 +151,8 @@ TopoDS_Shape Occt::read(std::string file_name) {
   std::string ext = file_extension(file_name);
   if      (ext == "igs" || ext == "iges") return execute_reader<IGESControl_Reader>(file_name);
   else if (ext == "stp" || ext == "step") return execute_reader<STEPControl_Reader>(file_name);
-  HEXED_THROW(format_str(1000, "`hexed::Occt::read` failed to recognize file exteinsion `.%s`.",
-                         case_sensitive.c_str()));
+  HEXED_THROW(format_str(1000, "`hexed::Occt::read` failed to recognize file exteinsion `.%s` (case insensitive).",
+                         ext.c_str()));
   throw; // just to shut up the `-Wreturn-type`---the above statement throws the actual exception
 }
 
