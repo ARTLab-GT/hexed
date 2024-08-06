@@ -78,6 +78,28 @@ class Read_entity {
   void read_curve() {
     read_circular_arc();
     read_line_segment();
+    //HEXED_ASSERT(_ptr, format_str(200, "could not read entity type `%i` as curve", int(_ent_num)));
+  }
+
+  void read_revolution_surface() {
+    if (_ptr || _ent_num != 120) return;
+    Read_entity<Line_segment> read_axis(_parser, _parser.read_int(_par[1]));
+    read_axis.read_line_segment();
+    Read_entity<Entity<1>> read_generatrix(_parser, _parser.read_int(_par[2]));
+    read_generatrix.read_curve();
+    auto surf = new Revolution_surface {
+      read_generatrix.get().release(),
+      *read_axis.get(),
+      _parser.read_float(_par[3]),
+      _parser.read_float(_par[4]),
+    };
+    surf->generatrix->scale = 1.;
+    surf->axis.scale = 1.;
+    _ptr.reset(surf);
+  }
+
+  void read_surface() {
+    read_revolution_surface();
   }
 
   std::unique_ptr<T> get() {
@@ -119,24 +141,47 @@ Geom::Geom(std::string file_name) {
   Iges_parser parser(file_name);
   auto dir = parser.section(Iges_parser::directory);
   for (auto& entry : dir) {
-    Read_entity<Entity<1>> read(parser, entry);
-    read.read_curve();
-    std::unique_ptr<Entity<1>> ptr = read.get();
-    if (ptr) _curves.emplace_back(ptr.release());
-    else std::cout << read.entity_number() << "\n";
+    {
+      Read_entity<Entity<1>> read(parser, entry);
+      read.read_curve();
+      std::unique_ptr<Entity<1>> ptr = read.get();
+      if (ptr) _curves.emplace_back(ptr.release());
+      else std::cout << read.entity_number() << "\n";
+    }
+    {
+      Read_entity<Entity<2>> read(parser, entry);
+      read.read_surface();
+      std::unique_ptr<Entity<2>> ptr = read.get();
+      if (ptr) _surfaces.emplace_back(ptr.release());
+    }
   }
 }
 
 void Geom::visualize(std::string file_name) const {
-  auto vis = Visualizer::create("default", 3, 1, "edges", {}, 0., Visualizer::block);
   int n = 101;
-  for (auto& c : _curves) {
-    Array<double> discrete({3, n});
-    for (int i = 0; i < n; ++i) {
-      Mat<3> p = c->point(Mat<1>{i/(n - 1.)});
-      for (int i_dim = 0; i_dim < 3; ++i_dim) discrete(i_dim)[i] = p(i_dim);
+  {
+    auto vis = Visualizer::create("default", 3, 1, "edges", {}, 0., Visualizer::block);
+    for (auto& c : _curves) {
+      Array<double> discrete({3, n});
+      for (int i = 0; i < n; ++i) {
+        Mat<3> p = c->point(Mat<1>{i/(n - 1.)});
+        for (int i_dim = 0; i_dim < 3; ++i_dim) discrete(i_dim)[i] = p(i_dim);
+      }
+      vis->write_block(discrete, Array<double>({0, n}));
     }
-    vis->write_block(discrete, Array<double>({0, n}));
+  }
+  {
+    auto vis = Visualizer::create("default", 3, 2, "surfaces", {}, 0., Visualizer::block);
+    for (auto& s : _surfaces) {
+      Array<double> discrete({3, n, n});
+      for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+          Mat<3> p = s->point(Mat<2>{i/(n - 1.), j/(n - 1.)});
+          for (int i_dim = 0; i_dim < 3; ++i_dim) discrete(i_dim)(i)[j] = p(i_dim);
+        }
+      }
+      vis->write_block(discrete, Array<double>({0, n, n}));
+    }
   }
 }
 

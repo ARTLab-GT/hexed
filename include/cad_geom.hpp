@@ -57,6 +57,7 @@ class Geom {
 
   private:
   std::vector<std::unique_ptr<Entity<1>>> _curves;
+  std::vector<std::unique_ptr<Entity<2>>> _surfaces;
 };
 
 }
