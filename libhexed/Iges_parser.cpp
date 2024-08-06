@@ -106,7 +106,7 @@ Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim
   }
 }
 
-next::Sequence<const std::vector<std::string>&> Iges_parser::section(Section_id sec) {
+const next::Sequence<const std::vector<std::string>&> Iges_parser::section(Section_id sec) const {
   return next::Sequence<const std::vector<std::string>&>::vector_view(_entries[sec]);
 }
 

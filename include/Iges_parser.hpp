@@ -17,7 +17,7 @@ class Iges_parser {
   static std::string read_string(std::string);
 
   Iges_parser(std::string file_name);
-  next::Sequence<const std::vector<std::string>&> section(Section_id);
+  const next::Sequence<const std::vector<std::string>&> section(Section_id) const;
   const std::vector<std::string>& entry(Section_id, Int line) const;
 
   private:

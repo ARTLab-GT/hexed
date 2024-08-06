@@ -106,6 +106,10 @@ public:
   static Sequence vector_view(std::vector<storage_t>& vec) {
     return {[&vec](std::size_t index)->T{return vec[index];}, [&vec](){return vec.size();}};
   }
+  template <typename storage_t = std::remove_reference<T>::type>
+  static Sequence vector_view(const std::vector<storage_t>& vec) {
+    return {[&vec](std::size_t index)->const T{return vec[index];}, [&vec](){return vec.size();}};
+  }
 
   //! \brief concatenates
   Sequence<T> operator+(Sequence<T> that) {

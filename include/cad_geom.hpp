@@ -40,6 +40,16 @@ class Line_segment : public Entity<1> {
   Mat<3, 2> endpoints;
 };
 
+class Revolution_surface : public Entity<2> {
+  public:
+  Revolution_surface(Entity<1>*, Line_segment, double start_angle, double end_angle);
+  Mat<3> temp_point(Mat<2> params) const override;
+  std::unique_ptr<Entity<1>> generatrix;
+  Line_segment axis;
+  double start_angle;
+  double end_angle;
+};
+
 class Geom {
   public:
   Geom(std::string file_name);
