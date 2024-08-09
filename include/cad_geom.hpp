@@ -50,6 +50,13 @@ class Revolution_surface : public Entity<2> {
   double end_angle;
 };
 
+class Trimmed_surface : public Entity<2> {
+  public:
+  inline Mat<3> temp_point(Mat<2> p) const override {return surface->temp_point(p);}
+  std::unique_ptr<Entity<2>> surface;
+  std::vector<std::unique_ptr<Entity<1>>> curves;
+};
+
 class Geom {
   public:
   Geom(std::string file_name);

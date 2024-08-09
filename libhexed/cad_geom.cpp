@@ -102,6 +102,19 @@ class Read_entity {
     read_revolution_surface();
   }
 
+  void read_trimmed_surface() {
+    if (_ptr || _ent_num != 144) return;
+    Read_entity<Entity<2>> read_surf(_parser, _parser.read_int(_par[1]));
+    read_surf.read_surface();
+    _ptr.reset(new Trimmed_surface);
+    _ptr->surface.reset(read_surf.get().release());
+    if (!_ptr->surface) {
+      std::cout << format_str(100, "couldn't read surface from entity # %lli\n", read_surf.entity_number());
+    }
+    HEXED_ASSERT(_parser.read_int(_par[2]) == 1, "using outer boundary as boundary curve is not implemented",
+                 assert::Not_implemented_error);
+  }
+
   std::unique_ptr<T> get() {
     if (_ptr) {
       _ptr->trans_mat = read_trans_mat(_parser, _parser.read_int(_dir[6]));
@@ -141,18 +154,12 @@ Geom::Geom(std::string file_name) {
   Iges_parser parser(file_name);
   auto dir = parser.section(Iges_parser::directory);
   for (auto& entry : dir) {
-    {
-      Read_entity<Entity<1>> read(parser, entry);
-      read.read_curve();
-      std::unique_ptr<Entity<1>> ptr = read.get();
-      if (ptr) _curves.emplace_back(ptr.release());
-      else std::cout << read.entity_number() << "\n";
-    }
-    {
-      Read_entity<Entity<2>> read(parser, entry);
-      read.read_surface();
-      std::unique_ptr<Entity<2>> ptr = read.get();
-      if (ptr) _surfaces.emplace_back(ptr.release());
+    Read_entity<Trimmed_surface> read(parser, entry);
+    read.read_trimmed_surface();
+    std::unique_ptr<Trimmed_surface> ts(read.get());
+    if (ts) {
+      if (ts->surface) _surfaces.emplace_back(ts->surface.release());
+      for (auto& c : ts->curves) if (c) _curves.emplace_back(c.release());
     }
   }
 }
