@@ -13,24 +13,25 @@ Mat<3> Circular_arc::temp_point(Mat<1> params) const {
 
 Revolution_surface::Revolution_surface(Entity<1>* g, Line_segment ax, double sa, double ea)
 : generatrix{g}, axis{ax}, start_angle{sa}, end_angle{ea}
-{}
+{
+  HEXED_ASSERT(end_angle - start_angle > 0, "end angle must be greater than start angle");
+}
 
 Mat<3> Revolution_surface::temp_nearest_point(Mat<3> p) const {
   Mat<3> unit_axis = (axis.endpoints(all, 1) - axis.endpoints(all, 0)).normalized();
   Mat<3> from_start = p - axis.endpoints(all, 0);
-  Mat<3> radius = from_start - from_start.dot(unit_axis)*unit_axis;
+  Mat<3> radius = (from_start - from_start.dot(unit_axis)*unit_axis).normalized();
   double dist = huge;
   Mat<3> nearest {std::nan(""), std::nan(""), std::nan("")};
   for (int i = 0; i < n_div + 1; ++i) {
     double param = i/double(n_div);
     Mat<3> arc_point = generatrix->point(Mat<1>{param}) - axis.endpoints(all, 0);
-    Mat<3> arc_radius = arc_point - arc_point.dot(unit_axis)*unit_axis;
-    double norm_prod = radius.norm()*arc_radius.norm();
-    double angle = std::atan2(arc_radius.cross(radius).dot(unit_axis)/norm_prod, arc_radius.dot(radius)/norm_prod);
-    if (math::angle_diff(angle, start_angle) > math::angle_diff(end_angle, start_angle)) {
+    Mat<3> arc_radius = (arc_point - arc_point.dot(unit_axis)*unit_axis).normalized();
+    double angle = std::atan2(arc_radius.cross(radius).dot(unit_axis), arc_radius.dot(radius));
+    if (math::angle_diff(angle, start_angle) > end_angle - start_angle) {
       angle = (math::angle_diff(angle, end_angle) > math::angle_diff(start_angle, angle)) ? start_angle : end_angle;
     }
-    Mat<3> candidate = temp_point({param, angle});
+    Mat<3> candidate = temp_point({param, math::angle_diff(angle, start_angle)/(end_angle - start_angle)});
     double d = (candidate - p).norm();
     if (d < dist) {
       dist = d;
@@ -46,7 +47,7 @@ Mat<3> Revolution_surface::temp_point(Mat<2> params) const {
   Mat<3> ax_vec = (axis.endpoints(all, 1) - axis.endpoints(all, 0)).normalized();
   Mat<3> axial_component = unrotated.dot(ax_vec)*ax_vec;
   Mat<3> radial_component = unrotated - axial_component;
-  return axial_component + std::cos(angle)*radial_component + std::sin(angle)*ax_vec.cross(radial_component);
+  return axial_component + std::cos(angle)*radial_component + std::sin(angle)*radial_component.cross(ax_vec);
 }
 
 Trans_mat read_trans_mat(const Iges_parser& parser, Int line) {
@@ -209,7 +210,7 @@ Geom::Geom(std::string file_name) {
 }
 
 void Geom::visualize(std::string file_name) const {
-  int n = 31;
+  int n = 61;
   {
     auto vis = Visualizer::create("default", 3, 1, "edges", {}, 0., Visualizer::block);
     for (auto& c : _curves) {

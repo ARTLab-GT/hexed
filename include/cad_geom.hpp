@@ -3,6 +3,7 @@
 
 #include <memory>
 #include "math.hpp"
+#include "constants.hpp"
 
 namespace hexed::cad_geom {
 
@@ -63,7 +64,7 @@ class Plane : public Entity<2> {
 
 class Revolution_surface : public Entity<2> {
   public:
-  Revolution_surface(Entity<1>*, Line_segment, double start_angle, double end_angle);
+  Revolution_surface(Entity<1>*, Line_segment, double start_angle = 0, double end_angle = 2*constants::pi);
   Mat<3> temp_nearest_point(Mat<3> p) const override;
   Mat<3> temp_point(Mat<2> params) const override;
   std::unique_ptr<Entity<1>> generatrix;

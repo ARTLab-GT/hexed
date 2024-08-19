@@ -20,17 +20,20 @@ static_assert (hexed::math::log(3, 27) == 3);
 static_assert (hexed::math::log(1, 27) == -1);
 static_assert (hexed::math::log(-1, 27) == -1);
 
-double lin_func(double x)
-{
+TEST_CASE("angle_diff") {
+  REQUIRE(hexed::math::angle_diff(1.1, 1.) == Catch::Approx(0.1));
+  REQUIRE(hexed::math::angle_diff(.9, 1.) == Catch::Approx(2*M_PI - 0.1));
+  REQUIRE(hexed::math::angle_diff(1.1 + 100*M_PI, 1.) == Catch::Approx(0.1));
+}
+
+double lin_func(double x) {
   return 2.*x - 1.;
 }
-double quad_func(double x)
-{
+double quad_func(double x) {
   return (x + .6)*(4.*x - 8.);
 }
 
-TEST_CASE("broyden root finder")
-{
+TEST_CASE("broyden root finder") {
   REQUIRE(hexed::math::broyden(lin_func, -1e7, {.xtol = 1e-10}) == Catch::Approx(0.5));
   REQUIRE(hexed::math::broyden(quad_func, -0.8, {.xtol = 1e-10}) == Catch::Approx(-.6));
   REQUIRE(hexed::math::broyden(quad_func, 2.3, {.xtol = 1e-10}) == Catch::Approx(2.));
@@ -38,8 +41,7 @@ TEST_CASE("broyden root finder")
           == Catch::Approx(std::log(2.)));
 }
 
-TEST_CASE("bisection root finder")
-{
+TEST_CASE("bisection root finder") {
   REQUIRE(hexed::math::bisection(lin_func , {  0,   2}, {.xtol = 1e-10}) == Catch::Approx(0.5));
   REQUIRE(hexed::math::bisection(quad_func, { -1,   0}, {.xtol = 1e-10}) == Catch::Approx(-.6));
   REQUIRE(hexed::math::bisection(quad_func, {0.1, 3.4}, {.xtol = 1e-10}) == Catch::Approx(2.));
@@ -47,8 +49,7 @@ TEST_CASE("bisection root finder")
           == Catch::Approx(std::log(2.)));
 }
 
-TEST_CASE("newton root finder")
-{
+TEST_CASE("newton root finder") {
   auto error_jacobian = [](hexed::Mat<> x) {
     hexed::Mat<hexed::dyn, hexed::dyn> err_jac(3, 4);
     err_jac(hexed::all, 0) << std::pow(2., x(0)) - 8., 1.5 - x(0)*x(1), .3*x(0) + .4*x(1) + .5*x(2);
@@ -61,12 +62,10 @@ TEST_CASE("newton root finder")
   REQUIRE_THAT(soln, Catch::Matchers::RangeEquals(hexed::Mat<3>{3., .5, -2.2}, hexed::math::Approx_equal(0, 1e-10)));
 }
 
-TEST_CASE("hypercube_matvec")
-{
+TEST_CASE("hypercube_matvec") {
   auto hcmv {hexed::math::hypercube_matvec};
   #ifdef DEBUG
-  SECTION("multiplying incompatible shapes throws")
-  {
+  SECTION("multiplying incompatible shapes throws") {
     {
       Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(6, 5)};
       Eigen::VectorXd vec {Eigen::VectorXd::Ones(4)};
@@ -84,8 +83,7 @@ TEST_CASE("hypercube_matvec")
     }
   }
   #endif
-  SECTION("correct values")
-  {
+  SECTION("correct values") {
     Eigen::MatrixXd mat {{0.5, 0.5, 0.}, {0., 0.5, 0.5}};
     Eigen::VectorXd vec {Eigen::VectorXd::LinSpaced(27, 0, 26)};
     auto prod = hcmv(mat, vec);
@@ -95,12 +93,10 @@ TEST_CASE("hypercube_matvec")
   }
 }
 
-TEST_CASE("dimension matvec")
-{
+TEST_CASE("dimension matvec") {
   auto dmv {hexed::math::dimension_matvec};
   #ifdef DEBUG
-  SECTION("multiplying incompatible shapes throws")
-  {
+  SECTION("multiplying incompatible shapes throws") {
     {
       Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(7, 7)};
       Eigen::VectorXd vec {Eigen::VectorXd::Zero(10)};
@@ -122,17 +118,14 @@ TEST_CASE("dimension matvec")
   REQUIRE(prod == correct);
 }
 
-TEST_CASE("orthonormal")
-{
-  SECTION("1D")
-  {
+TEST_CASE("orthonormal") {
+  SECTION("1D") {
     Eigen::Matrix<double, 1, 1> basis {-1.2};
     REQUIRE(hexed::math::orthonormal(basis, 0)(0, 0) == Catch::Approx(-1.));
     basis(0, 0) = 0.1;
     REQUIRE(hexed::math::orthonormal(basis, 0)(0, 0) == Catch::Approx(1.));
   }
-  SECTION("2D")
-  {
+  SECTION("2D") {
     Eigen::Matrix2d basis;
     basis << -2., 0.3,
               0., 0.4;
@@ -146,8 +139,7 @@ TEST_CASE("orthonormal")
                 0.6, 0.8;
     REQUIRE((hexed::math::orthonormal(basis, 0) - correct).norm() == Catch::Approx(0.).scale(1.));
   }
-  SECTION("3D")
-  {
+  SECTION("3D") {
     Eigen::Matrix3d basis;
     Eigen::Vector3d correct;
 
@@ -183,15 +175,13 @@ TEST_CASE("orthonormal")
   }
 }
 
-TEST_CASE("interp")
-{
+TEST_CASE("interp") {
   hexed::Mat<4> values {0., 1., .4, 1.4};
   hexed::Mat<2> coords {.01, .02};
   REQUIRE(hexed::math::interp(values, coords) == Catch::Approx(.024));
 }
 
-TEST_CASE("proj_to_segment")
-{
+TEST_CASE("proj_to_segment") {
   std::array<Eigen::Vector2d, 2> endpoints{Eigen::Vector2d{1., 1.}, Eigen::Vector2d{2., 2.}};
   auto proj = hexed::math::proj_to_segment(endpoints, Eigen::Vector2d{1., 0.});
   REQUIRE((proj - endpoints[0]).norm() == Catch::Approx(0.).scale(1.));
@@ -201,14 +191,12 @@ TEST_CASE("proj_to_segment")
   REQUIRE((proj - Eigen::Vector2d{1.5, 1.5}).norm() == Catch::Approx(0.).scale(1.));
 }
 
-TEST_CASE("to_mat")
-{
+TEST_CASE("to_mat") {
   std::vector<double> vec {.1, -.3, .2};
   REQUIRE_THAT(hexed::math::to_mat(vec), Catch::Matchers::RangeEquals(vec, hexed::math::Approx_equal()));
 }
 
-TEST_CASE("bounding_ball")
-{
+TEST_CASE("bounding_ball") {
   SECTION("2*2") {
     Eigen::MatrixXd points(2, 2);
     points <<
@@ -240,8 +228,7 @@ TEST_CASE("bounding_ball")
   }
 }
 
-TEST_CASE("intersects")
-{
+TEST_CASE("intersects") {
   hexed::math::Ball<2> b{{1., 1.}, .5};
   Eigen::Vector2d point0{2., 0.};
   Eigen::Vector2d point1{2., -1.};
@@ -250,8 +237,7 @@ TEST_CASE("intersects")
   REQUIRE(hexed::math::intersects(b, point0, point1));
 }
 
-TEST_CASE("chebyshev_step")
-{
+TEST_CASE("chebyshev_step") {
   Eigen::ArrayXd arg = Eigen::ArrayXd::LinSpaced(100, -2., 0.);
   Eigen::ArrayXd result = Eigen::ArrayXd::Ones(100);
   int n_step = 7;
@@ -262,8 +248,7 @@ TEST_CASE("chebyshev_step")
   REQUIRE(result.minCoeff() == Catch::Approx(-1.));
 }
 
-TEST_CASE("correct_values")
-{
+TEST_CASE("correct_values") {
   std::vector<double> estimates {.3, -.55, -.6};
   SECTION("too few values")
   {

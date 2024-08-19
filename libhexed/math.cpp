@@ -1,4 +1,4 @@
-#include <math.hpp>
+#include <hexed/math.hpp>
 
 namespace hexed::math {
 
