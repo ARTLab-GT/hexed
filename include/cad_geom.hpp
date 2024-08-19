@@ -15,12 +15,20 @@ template <int n_param>
 class Entity {
   public:
   virtual ~Entity() = default;
+  virtual Mat<3> temp_nearest_point(Mat<3>) const {return Mat<3>::Zero();};
   virtual Mat<3> temp_point(Mat<n_param>) const = 0;
+  Mat<3> nearest_point(Mat<3> p) const {
+    return _convert(temp_nearest_point(trans_mat.transform.colPivHouseholderQr().solve(p/scale - trans_mat.translate)));
+  }
   Mat<3> point(Mat<n_param> params) const {
-    return scale*(trans_mat.translate + trans_mat.transform*temp_point(params));
+    return _convert(temp_point(params));
   }
   double scale = 1.;
   Trans_mat trans_mat;
+  private:
+  Mat<3> _convert(Mat<3> p) const {
+    return scale*(trans_mat.translate + trans_mat.transform*p);
+  }
 };
 
 class Circular_arc : public Entity<1> {
@@ -43,6 +51,9 @@ class Line_segment : public Entity<1> {
 class Plane : public Entity<2> {
   public:
   inline Plane(Mat<3> origin, Mat<3, 2> coord_vectors) : _origin{origin}, _vecs{coord_vectors} {}
+  Mat<3> temp_nearest_point(Mat<3> p) const override {
+    return _origin + _vecs*_vecs.colPivHouseholderQr().solve(p - _origin);
+  }
   inline Mat<3> temp_point(Mat<2> params) const override {return _origin + _vecs*params;}
   private:
   Mat<3> _origin;
@@ -61,6 +72,7 @@ class Revolution_surface : public Entity<2> {
 
 class Trimmed_surface : public Entity<2> {
   public:
+  inline Mat<3> temp_nearest_point(Mat<3> p) const override{return surface->nearest_point(p);};
   inline Mat<3> temp_point(Mat<2> p) const override {return surface->point(p);}
   std::unique_ptr<Entity<2>> surface;
   std::vector<std::unique_ptr<Entity<1>>> curves;

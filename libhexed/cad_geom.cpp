@@ -113,7 +113,6 @@ class Read_entity {
       vecs(vec_inds[i_vec], i_vec) = 1;
       vecs(i_dependent, i_vec) = -coefs[vec_inds[i_vec]]/coefs[i_dependent];
     }
-    std::cout << origin << "\n" << vecs << "\n\n";
     _ptr.reset(new Plane(origin, vecs*1000));
   }
 
@@ -178,14 +177,14 @@ Geom::Geom(std::string file_name) {
     read.read_trimmed_surface();
     std::unique_ptr<Trimmed_surface> ts(read.get());
     if (ts) {
-      if (ts->surface) _surfaces.emplace_back(ts->surface.release());
       for (auto& c : ts->curves) if (c) _curves.emplace_back(c.release());
+      if (ts->surface) _surfaces.emplace_back(ts.release());
     }
   }
 }
 
 void Geom::visualize(std::string file_name) const {
-  int n = 101;
+  int n = 31;
   {
     auto vis = Visualizer::create("default", 3, 1, "edges", {}, 0., Visualizer::block);
     for (auto& c : _curves) {
@@ -209,6 +208,19 @@ void Geom::visualize(std::string file_name) const {
       }
       vis->write_block(discrete, Array<double>({0, n, n}));
     }
+  }
+  {
+    auto vis = Visualizer::create("default", 3, 3, "distance", {"distance"}, 0., Visualizer::block);
+    Array<double> coords({3, n, n, n});
+    Array<double> dist({1, n, n, n});
+    for (int i = 0; i < math::pow(n, 3); ++i) {
+      Mat<3> p;
+      for (int i_dim = 0; i_dim < 3; ++i_dim) p(i_dim) = coords(i_dim)[i] = 1./n*(i/math::pow(n, 2 - i_dim)%n);
+      double min_dist = huge;
+      for (auto& s : _surfaces) min_dist = std::min(min_dist, (p - s->nearest_point(p)).norm());
+      dist[i] = min_dist;
+    }
+    vis->write_block(coords, dist);
   }
 }
 
