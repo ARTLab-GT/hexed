@@ -2,6 +2,11 @@
 
 namespace hexed::math {
 
+double angle_diff(double angle0, double angle1) {
+  double diff = angle0 - angle1;
+  return diff - 2*M_PI*floor(diff/(2*M_PI));
+}
+
 Eigen::VectorXi direction(int n_dim, int i_dim, bool is_positive) {
   Eigen::VectorXi dir(n_dim);
   dir.setZero();

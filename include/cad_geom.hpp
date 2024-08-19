@@ -23,6 +23,7 @@ class Entity {
   Mat<3> point(Mat<n_param> params) const {
     return _convert(temp_point(params));
   }
+  int n_div = math::pow(10, 2);
   double scale = 1.;
   Trans_mat trans_mat;
   private:
@@ -63,6 +64,7 @@ class Plane : public Entity<2> {
 class Revolution_surface : public Entity<2> {
   public:
   Revolution_surface(Entity<1>*, Line_segment, double start_angle, double end_angle);
+  Mat<3> temp_nearest_point(Mat<3> p) const override;
   Mat<3> temp_point(Mat<2> params) const override;
   std::unique_ptr<Entity<1>> generatrix;
   Line_segment axis;

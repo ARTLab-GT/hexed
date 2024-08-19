@@ -15,6 +15,31 @@ Revolution_surface::Revolution_surface(Entity<1>* g, Line_segment ax, double sa,
 : generatrix{g}, axis{ax}, start_angle{sa}, end_angle{ea}
 {}
 
+Mat<3> Revolution_surface::temp_nearest_point(Mat<3> p) const {
+  Mat<3> unit_axis = (axis.endpoints(all, 1) - axis.endpoints(all, 0)).normalized();
+  Mat<3> from_start = p - axis.endpoints(all, 0);
+  Mat<3> radius = from_start - from_start.dot(unit_axis)*unit_axis;
+  double dist = huge;
+  Mat<3> nearest {std::nan(""), std::nan(""), std::nan("")};
+  for (int i = 0; i < n_div + 1; ++i) {
+    double param = i/double(n_div);
+    Mat<3> arc_point = generatrix->point(Mat<1>{param}) - axis.endpoints(all, 0);
+    Mat<3> arc_radius = arc_point - arc_point.dot(unit_axis)*unit_axis;
+    double norm_prod = radius.norm()*arc_radius.norm();
+    double angle = std::atan2(arc_radius.cross(radius).dot(unit_axis)/norm_prod, arc_radius.dot(radius)/norm_prod);
+    if (math::angle_diff(angle, start_angle) > math::angle_diff(end_angle, start_angle)) {
+      angle = (math::angle_diff(angle, end_angle) > math::angle_diff(start_angle, angle)) ? start_angle : end_angle;
+    }
+    Mat<3> candidate = temp_point({param, angle});
+    double d = (candidate - p).norm();
+    if (d < dist) {
+      dist = d;
+      nearest = candidate;
+    }
+  }
+  return nearest;
+}
+
 Mat<3> Revolution_surface::temp_point(Mat<2> params) const {
   Mat<3> unrotated = generatrix->point(params(Eigen::seqN(0, 1))) - axis.endpoints(all, 0);
   double angle = start_angle + params(1)*(start_angle - end_angle);
@@ -81,23 +106,6 @@ class Read_entity {
     //HEXED_ASSERT(_ptr, format_str(200, "could not read entity type `%i` as curve", int(_ent_num)));
   }
 
-  void read_revolution_surface() {
-    if (_ptr || _ent_num != 120) return;
-    Read_entity<Line_segment> read_axis(_parser, _parser.read_int(_par[1]));
-    read_axis.read_line_segment();
-    Read_entity<Entity<1>> read_generatrix(_parser, _parser.read_int(_par[2]));
-    read_generatrix.read_curve();
-    auto surf = new Revolution_surface {
-      read_generatrix.get().release(),
-      *read_axis.get(),
-      _parser.read_float(_par[3]),
-      _parser.read_float(_par[4]),
-    };
-    surf->generatrix->scale = 1.;
-    surf->axis.scale = 1.;
-    _ptr.reset(surf);
-  }
-
   void read_plane() {
     if (_ptr || _ent_num != 108) return;
     HEXED_ASSERT(_parser.read_int(_par[5]) == 0, "bounded planes are not implemented", assert::Not_implemented_error);
@@ -116,9 +124,26 @@ class Read_entity {
     _ptr.reset(new Plane(origin, vecs*1000));
   }
 
+  void read_revolution_surface() {
+    if (_ptr || _ent_num != 120) return;
+    Read_entity<Line_segment> read_axis(_parser, _parser.read_int(_par[1]));
+    read_axis.read_line_segment();
+    Read_entity<Entity<1>> read_generatrix(_parser, _parser.read_int(_par[2]));
+    read_generatrix.read_curve();
+    auto surf = new Revolution_surface {
+      read_generatrix.get().release(),
+      *read_axis.get(),
+      _parser.read_float(_par[3]),
+      _parser.read_float(_par[4]),
+    };
+    surf->generatrix->scale = 1.;
+    surf->axis.scale = 1.;
+    _ptr.reset(surf);
+  }
+
   void read_surface() {
-    read_revolution_surface();
     read_plane();
+    read_revolution_surface();
   }
 
   void read_trimmed_surface() {

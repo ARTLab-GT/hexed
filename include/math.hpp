@@ -47,10 +47,13 @@ constexpr int log(int base, int arg) {
   return result;
 }
 
-//! returns 1 if `condition` is true, otherwise -1
+//! \brief returns 1 if `condition` is true, otherwise -1
 constexpr int sign(bool condition) {
   return 2*condition - 1;
 }
+
+//! \brief returns `angle0 - angle1`, where the difference is in \f$ [0, 2\pi) \f$
+double angle_diff(double angle0, double angle1);
 
 //! the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element to the face described by `i_dim` and `sign`
 Eigen::VectorXi direction(int n_dim, int i_dim, bool is_positive);
