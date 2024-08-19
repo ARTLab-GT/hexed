@@ -98,8 +98,28 @@ class Read_entity {
     _ptr.reset(surf);
   }
 
+  void read_plane() {
+    if (_ptr || _ent_num != 108) return;
+    HEXED_ASSERT(_parser.read_int(_par[5]) == 0, "bounded planes are not implemented", assert::Not_implemented_error);
+    double coefs [4];
+    for (int i_coef = 0; i_coef < 4; ++i_coef) coefs[i_coef] = _parser.read_float(_par[i_coef + 1]);
+    auto comp = [](double x, double y){return std::abs(x) < std::abs(y);};
+    int i_dependent = std::max_element(coefs, coefs + 3, comp) - coefs;
+    int vec_inds [2] {(i_dependent + 1)%3, (i_dependent + 2)%3};
+    Mat<3> origin = Mat<3>::Zero();
+    origin(i_dependent) = coefs[3]/coefs[i_dependent];
+    Mat<3, 2> vecs = Mat<3, 2>::Zero();
+    for (int i_vec = 0; i_vec < 2; ++i_vec) {
+      vecs(vec_inds[i_vec], i_vec) = 1;
+      vecs(i_dependent, i_vec) = -coefs[vec_inds[i_vec]]/coefs[i_dependent];
+    }
+    std::cout << origin << "\n" << vecs << "\n\n";
+    _ptr.reset(new Plane(origin, vecs*1000));
+  }
+
   void read_surface() {
     read_revolution_surface();
+    read_plane();
   }
 
   void read_trimmed_surface() {
@@ -109,8 +129,8 @@ class Read_entity {
     _ptr.reset(new Trimmed_surface);
     _ptr->surface.reset(read_surf.get().release());
     if (!_ptr->surface) {
-      std::cout << format_str(100, "couldn't read surface from entity # %lli\n", read_surf.entity_number());
-    }
+      std::cout << format_str(100, "failed to read surface from entity # %lli\n", read_surf.entity_number());
+    } else _ptr->surface->scale = 1.;
     HEXED_ASSERT(_parser.read_int(_par[2]) == 1, "using outer boundary as boundary curve is not implemented",
                  assert::Not_implemented_error);
   }

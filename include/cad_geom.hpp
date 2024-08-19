@@ -40,6 +40,15 @@ class Line_segment : public Entity<1> {
   Mat<3, 2> endpoints;
 };
 
+class Plane : public Entity<2> {
+  public:
+  inline Plane(Mat<3> origin, Mat<3, 2> coord_vectors) : _origin{origin}, _vecs{coord_vectors} {}
+  inline Mat<3> temp_point(Mat<2> params) const override {return _origin + _vecs*params;}
+  private:
+  Mat<3> _origin;
+  Mat<3, 2> _vecs;
+};
+
 class Revolution_surface : public Entity<2> {
   public:
   Revolution_surface(Entity<1>*, Line_segment, double start_angle, double end_angle);
@@ -52,7 +61,7 @@ class Revolution_surface : public Entity<2> {
 
 class Trimmed_surface : public Entity<2> {
   public:
-  inline Mat<3> temp_point(Mat<2> p) const override {return surface->temp_point(p);}
+  inline Mat<3> temp_point(Mat<2> p) const override {return surface->point(p);}
   std::unique_ptr<Entity<2>> surface;
   std::vector<std::unique_ptr<Entity<1>>> curves;
 };
