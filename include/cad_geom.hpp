@@ -25,7 +25,7 @@ class Entity {
   Mat<3> point(Mat<n_param> params) const {
     return _convert(temp_point(params));
   }
-  int n_div = math::pow(10, 2);
+  int n_div = math::pow(10, 1);
   double scale = 1.;
   Trans_mat trans_mat;
   protected:
