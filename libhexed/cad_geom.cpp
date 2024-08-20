@@ -177,7 +177,8 @@ class Read_entity {
     Read_entity<T> on_surf(_parser, _parser.read_int(_par[4]));
     HEXED_ASSERT(on_surf.entity_number() == 142, "boundary must be a curve on a surface");
     int model_curve = _parser.read_int(on_surf._par[4]);
-    double abscissa = std::nan("");
+    int prev_div = -1;
+    double prev_ordinate;
     if ((_parser.read_int(on_surf._par[5]) == 1 || model_curve == 0) && _parser.read_int(on_surf._par[3]) != 0) {
       HEXED_THROW("parameter-space curves are not implemented", assert::Not_implemented_error);
     } else {
@@ -186,6 +187,28 @@ class Read_entity {
       Read_entity<Composite_curve> curve(_parser, model_curve);
       curve.read_disc_curve();
       _ptr->curves.emplace_back(curve.get().release());
+      double sz = 1./n_div;
+      for (int i_div = 0; i_div < n_div; ++i_div) {
+        Mat<2, 2> node_params;
+        for (int endpoint = 0; endpoint < 2; ++endpoint) {
+           node_params(all, endpoint) = _ptr->surface->nearest_params(
+             _ptr->curves.back()(Mat<1>{(i_div + endpoint)*sz})
+           );
+        }
+        if (prev_div < 0);
+          prev_div = 
+          prev_param = node_param(0, 1);
+        }
+        while (std::abs(node_params(0, 1) - prev_params(0)) >= sz
+               && std::abs(node_params(0, 1) - node_params(0, 0)) > 1e-12) {
+          bool sign = node_params(0, 1) > prev_params(0);
+          prev_params(0) += math::sign(sign)*sz;
+          prev_params(1) = node_params(1, 0) + (prev_params(0) - node_params(0, 0))
+                                                *(node_params(1, 1) - node_params(1, 0))
+                                                /(node_params(0, 1) - node_params(0, 0));
+          node_params(all, 0) = prev_params;
+        }
+      }
     }
   }
 
