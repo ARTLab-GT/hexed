@@ -17,12 +17,12 @@ Revolution_surface::Revolution_surface(Entity<1>* g, Line_segment ax, double sa,
   HEXED_ASSERT(end_angle - start_angle > 0, "end angle must be greater than start angle");
 }
 
-Mat<3> Revolution_surface::temp_nearest_point(Mat<3> p) const {
+Mat<2> Revolution_surface::temp_nearest_params(Mat<3> p) const {
   Mat<3> unit_axis = (axis.endpoints(all, 1) - axis.endpoints(all, 0)).normalized();
   Mat<3> from_start = p - axis.endpoints(all, 0);
   Mat<3> radius = (from_start - from_start.dot(unit_axis)*unit_axis).normalized();
   double dist = huge;
-  Mat<3> nearest {std::nan(""), std::nan(""), std::nan("")};
+  Mat<2> nearest {std::nan(""), std::nan("")};
   for (int i = 0; i < n_div + 1; ++i) {
     double param = i/double(n_div);
     Mat<3> arc_point = generatrix->point(Mat<1>{param}) - axis.endpoints(all, 0);
@@ -31,8 +31,8 @@ Mat<3> Revolution_surface::temp_nearest_point(Mat<3> p) const {
     if (math::angle_diff(angle, start_angle) > end_angle - start_angle) {
       angle = (math::angle_diff(angle, end_angle) > math::angle_diff(start_angle, angle)) ? start_angle : end_angle;
     }
-    Mat<3> candidate = temp_point({param, math::angle_diff(angle, start_angle)/(end_angle - start_angle)});
-    double d = (candidate - p).norm();
+    Mat<2> candidate {param, math::angle_diff(angle, start_angle)/(end_angle - start_angle)};
+    double d = (temp_point(candidate) - p).norm();
     if (d < dist) {
       dist = d;
       nearest = candidate;
@@ -167,7 +167,7 @@ class Read_entity {
     if (_ptr || _ent_num != 144) return;
     Read_entity<Entity<2>> read_surf(_parser, _parser.read_int(_par[1]));
     read_surf.read_surface();
-    _ptr.reset(new Trimmed_surface);
+    _ptr.reset(new Trimmed_surface());
     _ptr->surface.reset(read_surf.get().release());
     if (!_ptr->surface) {
       std::cout << format_str(100, "failed to read surface from entity # %lli\n", read_surf.entity_number());
@@ -177,6 +177,7 @@ class Read_entity {
     Read_entity<T> on_surf(_parser, _parser.read_int(_par[4]));
     HEXED_ASSERT(on_surf.entity_number() == 142, "boundary must be a curve on a surface");
     int model_curve = _parser.read_int(on_surf._par[4]);
+    double abscissa = std::nan("");
     if ((_parser.read_int(on_surf._par[5]) == 1 || model_curve == 0) && _parser.read_int(on_surf._par[3]) != 0) {
       HEXED_THROW("parameter-space curves are not implemented", assert::Not_implemented_error);
     } else {

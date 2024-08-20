@@ -16,10 +16,11 @@ template <int n_param>
 class Entity {
   public:
   virtual ~Entity() = default;
-  virtual Mat<3> temp_nearest_point(Mat<3>) const {return Mat<3>::Zero();};
-  virtual Mat<3> temp_point(Mat<n_param>) const = 0;
+  Mat<n_param> nearest_params(Mat<3> p) const {
+    return temp_nearest_params(trans_mat.transform.colPivHouseholderQr().solve(p/scale - trans_mat.translate));
+  }
   Mat<3> nearest_point(Mat<3> p) const {
-    return _convert(temp_nearest_point(trans_mat.transform.colPivHouseholderQr().solve(p/scale - trans_mat.translate)));
+    return point(nearest_params(p));
   }
   Mat<3> point(Mat<n_param> params) const {
     return _convert(temp_point(params));
@@ -27,6 +28,9 @@ class Entity {
   int n_div = math::pow(10, 2);
   double scale = 1.;
   Trans_mat trans_mat;
+  protected:
+  virtual Mat<n_param> temp_nearest_params(Mat<3>) const {return Mat<n_param>::Zero();};
+  virtual Mat<3> temp_point(Mat<n_param>) const = 0;
   private:
   Mat<3> _convert(Mat<3> p) const {
     return scale*(trans_mat.translate + trans_mat.transform*p);
@@ -36,25 +40,28 @@ class Entity {
 class Circular_arc : public Entity<1> {
   public:
   inline Circular_arc(Mat<3> c, double r, double s, double e) : center{c}, radius{r}, start_angle{s}, end_angle{e} {}
-  Mat<3> temp_point(Mat<1>) const override;
   Mat<3> center;
   double radius;
   double start_angle;
   double end_angle;
+  protected:
+  Mat<3> temp_point(Mat<1>) const override;
 };
 
 class Line_segment : public Entity<1> {
   public:
   inline Line_segment(Mat<3, 2> endpts) : endpoints{endpts} {}
-  Mat<3> temp_point(Mat<1> params) const override {return endpoints*Mat<2>{1. - params(0), params(0)};}
   Mat<3, 2> endpoints;
+  protected:
+  Mat<3> temp_point(Mat<1> params) const override {return endpoints*Mat<2>{1. - params(0), params(0)};}
 };
 
 class Plane : public Entity<2> {
   public:
   inline Plane(Mat<3> origin, Mat<3, 2> coord_vectors) : _origin{origin}, _vecs{coord_vectors} {}
-  Mat<3> temp_nearest_point(Mat<3> p) const override {
-    return _origin + _vecs*_vecs.colPivHouseholderQr().solve(p - _origin);
+  protected:
+  Mat<2> temp_nearest_params(Mat<3> p) const override {
+    return _vecs.colPivHouseholderQr().solve(p - _origin);
   }
   inline Mat<3> temp_point(Mat<2> params) const override {return _origin + _vecs*params;}
   private:
@@ -65,22 +72,26 @@ class Plane : public Entity<2> {
 class Revolution_surface : public Entity<2> {
   public:
   Revolution_surface(Entity<1>*, Line_segment, double start_angle = 0, double end_angle = 2*constants::pi);
-  Mat<3> temp_nearest_point(Mat<3> p) const override;
-  Mat<3> temp_point(Mat<2> params) const override;
   std::unique_ptr<Entity<1>> generatrix;
   Line_segment axis;
   double start_angle;
   double end_angle;
+  protected:
+  Mat<2> temp_nearest_params(Mat<3> p) const override;
+  Mat<3> temp_point(Mat<2> params) const override;
 };
 
 typedef std::vector<std::unique_ptr<Entity<1>>> Composite_curve;
 
 class Trimmed_surface : public Entity<2> {
   public:
-  inline Mat<3> temp_nearest_point(Mat<3> p) const override{return surface->nearest_point(p);};
-  inline Mat<3> temp_point(Mat<2> p) const override {return surface->point(p);}
+  Trimmed_surface() : parametric_segments(n_div) {}
   std::unique_ptr<Entity<2>> surface;
   std::vector<std::unique_ptr<Composite_curve>> curves;
+  std::vector<std::vector<Mat<2>>> parametric_segments;
+  protected:
+  inline Mat<2> temp_nearest_params(Mat<3> p) const override {return surface->nearest_params(p);};
+  inline Mat<3> temp_point(Mat<2> p) const override {return surface->point(p);}
 };
 
 class Geom {
