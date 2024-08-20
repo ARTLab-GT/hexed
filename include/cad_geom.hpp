@@ -73,12 +73,14 @@ class Revolution_surface : public Entity<2> {
   double end_angle;
 };
 
+typedef std::vector<std::unique_ptr<Entity<1>>> Composite_curve;
+
 class Trimmed_surface : public Entity<2> {
   public:
   inline Mat<3> temp_nearest_point(Mat<3> p) const override{return surface->nearest_point(p);};
   inline Mat<3> temp_point(Mat<2> p) const override {return surface->point(p);}
   std::unique_ptr<Entity<2>> surface;
-  std::vector<std::unique_ptr<Entity<1>>> curves;
+  std::vector<std::unique_ptr<Composite_curve>> curves;
 };
 
 class Geom {
@@ -87,8 +89,7 @@ class Geom {
   void visualize(std::string file_name) const;
 
   private:
-  std::vector<std::unique_ptr<Entity<1>>> _curves;
-  std::vector<std::unique_ptr<Entity<2>>> _surfaces;
+  std::vector<std::unique_ptr<Trimmed_surface>> _surfaces;
 };
 
 }

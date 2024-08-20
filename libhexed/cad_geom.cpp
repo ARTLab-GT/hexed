@@ -147,6 +147,22 @@ class Read_entity {
     read_revolution_surface();
   }
 
+  void read_disc_curve() {
+    Read_entity<Entity<1>> curve(_parser, _dir);
+    curve.read_curve();
+    auto ptr = curve.get();
+    _ptr.reset(new Composite_curve);
+    if (ptr) _ptr->emplace_back(ptr.release());
+    else if (curve.entity_number() == 116 || curve.entity_number() == 132) {}
+    else if (curve.entity_number() == 102) {
+      for (int i_curve = 0; i_curve < _parser.read_int(_par[1]); ++i_curve) {
+        Read_entity<T> sub_curve(_parser, _parser.read_int(_par[2 + i_curve]));
+        sub_curve.read_disc_curve();
+        for (auto& c : *sub_curve._ptr) _ptr->emplace_back(c.release());
+      }
+    } else HEXED_THROW(format_str(200, "could not read entity type `%i` as a curve", int(curve.entity_number())));
+  }
+
   void read_trimmed_surface() {
     if (_ptr || _ent_num != 144) return;
     Read_entity<Entity<2>> read_surf(_parser, _parser.read_int(_par[1]));
@@ -158,6 +174,18 @@ class Read_entity {
     } else _ptr->surface->scale = 1.;
     HEXED_ASSERT(_parser.read_int(_par[2]) == 1, "using outer boundary as boundary curve is not implemented",
                  assert::Not_implemented_error);
+    Read_entity<T> on_surf(_parser, _parser.read_int(_par[4]));
+    HEXED_ASSERT(on_surf.entity_number() == 142, "boundary must be a curve on a surface");
+    int model_curve = _parser.read_int(on_surf._par[4]);
+    if ((_parser.read_int(on_surf._par[5]) == 1 || model_curve == 0) && _parser.read_int(on_surf._par[3]) != 0) {
+      HEXED_THROW("parameter-space curves are not implemented", assert::Not_implemented_error);
+    } else {
+      HEXED_ASSERT(model_curve != 0,
+                   "at least one of parameter-space and model-space curve pointers must be defined");
+      Read_entity<Composite_curve> curve(_parser, model_curve);
+      curve.read_disc_curve();
+      _ptr->curves.emplace_back(curve.get().release());
+    }
   }
 
   std::unique_ptr<T> get() {
@@ -193,6 +221,10 @@ class Read_entity {
   std::unique_ptr<T> _ptr;
 };
 
+template <> std::unique_ptr<Composite_curve> Read_entity<Composite_curve>::get() {
+  return std::unique_ptr<Composite_curve>{_ptr.release()};
+}
+
 Geom::Geom(std::string file_name) {
   std::string ext = file_extension(file_name);
   HEXED_ASSERT(ext == "igs" || ext == "iges", "can only read IGES files");
@@ -202,10 +234,7 @@ Geom::Geom(std::string file_name) {
     Read_entity<Trimmed_surface> read(parser, entry);
     read.read_trimmed_surface();
     std::unique_ptr<Trimmed_surface> ts(read.get());
-    if (ts) {
-      for (auto& c : ts->curves) if (c) _curves.emplace_back(c.release());
-      if (ts->surface) _surfaces.emplace_back(ts.release());
-    }
+    if (ts) _surfaces.emplace_back(ts.release());
   }
 }
 
@@ -213,13 +242,17 @@ void Geom::visualize(std::string file_name) const {
   int n = 61;
   {
     auto vis = Visualizer::create("default", 3, 1, "edges", {}, 0., Visualizer::block);
-    for (auto& c : _curves) {
-      Array<double> discrete({3, n});
-      for (int i = 0; i < n; ++i) {
-        Mat<3> p = c->point(Mat<1>{i/(n - 1.)});
-        for (int i_dim = 0; i_dim < 3; ++i_dim) discrete(i_dim)[i] = p(i_dim);
+    for (auto& s : _surfaces) {
+      for (auto& c : s->curves) {
+        for (auto& curve : *c) {
+          Array<double> discrete({3, n});
+          for (int i = 0; i < n; ++i) {
+            Mat<3> p = curve->point(Mat<1>{i/(n - 1.)});
+            for (int i_dim = 0; i_dim < 3; ++i_dim) discrete(i_dim)[i] = p(i_dim);
+          }
+          vis->write_block(discrete, Array<double>({0, n}));
+        }
       }
-      vis->write_block(discrete, Array<double>({0, n}));
     }
   }
   {
