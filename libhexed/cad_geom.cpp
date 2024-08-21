@@ -199,7 +199,15 @@ class Read_entity {
       }
     }
     if (!nodes.empty()) {
-      nodes.push_back(nodes[0]);
+      Mat<2, 2> bounds;
+      bounds << huge, -huge, huge, -huge;
+      for (Mat<2> node : nodes) {
+        bounds(all, 0) = bounds(all, 0).cwiseMin(node);
+        bounds(all, 1) = bounds(all, 1).cwiseMax(node);
+      }
+      bounds(all, 1) = bounds(all, 1).cwiseMax(bounds(all, 0) + Mat<2>{sz, sz});
+      for (Mat<2>& node : nodes) node = (node - bounds(all, 0)).cwiseQuotient(bounds(all, 1) - bounds(all, 0));
+      _ptr->surface->reparameterize(bounds);
       std::vector<Int> abscissa;
       std::vector<double> ordinate;
       Mat<2> prev_params {-1., 0.};
