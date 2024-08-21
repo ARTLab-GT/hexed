@@ -145,7 +145,6 @@ class Read_entity {
   void read_surface() {
     read_plane();
     read_revolution_surface();
-    std::cout << "== " << _ent_num << " ==" << std::endl;
   }
 
   void read_disc_curve() {
@@ -170,9 +169,7 @@ class Read_entity {
     read_surf.read_surface();
     _ptr.reset(new Trimmed_surface());
     _ptr->surface.reset(read_surf.get().release());
-    if (!_ptr->surface) {
-      std::cout << format_str(100, "failed to read surface from entity # %lli\n", read_surf.entity_number());
-    }
+    HEXED_ASSERT(_ptr->surface, format_str(100, "failed to read surface from entity # %lli\n", read_surf.entity_number()));
     HEXED_ASSERT(_parser.read_int(_par[2]) == 1, "using outer boundary as boundary curve is not implemented",
                  assert::Not_implemented_error);
     Read_entity<T> on_surf(_parser, _parser.read_int(_par[4]));
@@ -192,10 +189,8 @@ class Read_entity {
         for (Int i_div = 0; i_div < _ptr->n_div + 1; ++i_div) {
           Mat<3> pt = c->point(Mat<1>{i_div*sz});
           Mat<2> params = _ptr->surface->nearest_params(pt);
-          printf("% .8f % .8f % .8f | % .8f % .8f\n", pt(0), pt(1), pt(2), params(0), params(1));
           nodes.push_back(params);
         }
-        std::cout << std::endl;
       }
     }
     if (!nodes.empty()) {
@@ -206,16 +201,39 @@ class Read_entity {
         bounds(all, 1) = bounds(all, 1).cwiseMax(node);
       }
       bounds(all, 1) = bounds(all, 1).cwiseMax(bounds(all, 0) + Mat<2>{sz, sz});
-      for (Mat<2>& node : nodes) node = (node - bounds(all, 0)).cwiseQuotient(bounds(all, 1) - bounds(all, 0));
+      for (int i_node = 0; i_node < Int(nodes.size()); ++i_node) {
+        nodes[i_node] = (nodes[i_node] - bounds(all, 0)).cwiseQuotient(bounds(all, 1) - bounds(all, 0));
+      }
+      Int n_nodes = nodes.size();
+      for (Int i_node = n_nodes, changed = false; (i_node < 2*n_nodes) || changed; ++i_node, changed = false) {
+        for (int i_dim = 0; i_dim < 2; ++i_dim) {
+          for (int sign : {-1, 1}) {
+            if (std::abs(nodes[i_node%n_nodes](i_dim) + sign - nodes[(i_node - 1)%n_nodes](i_dim)) <
+                std::abs(nodes[i_node%n_nodes](i_dim)        - nodes[(i_node - 1)%n_nodes](i_dim))) {
+              nodes[i_node%nodes.size()](i_dim) += sign;
+              changed = true;
+            }
+          }
+        }
+      }
+      for (int i_dim = 0; i_dim < 2; ++i_dim) {
+        Int n_less = 0;
+        Int n_greater = 0;
+        for (Mat<2> node : nodes) {
+          n_less += node(i_dim) < 0;
+          n_greater += node(i_dim) > 1;
+        }
+        int sign = (n_less > n_nodes/2) - (n_greater > n_nodes/2);
+        for (Mat<2>& node : nodes) node(i_dim) += sign;
+      }
       _ptr->surface->reparameterize(bounds);
       std::vector<Int> abscissa;
       std::vector<double> ordinate;
       Mat<2> prev_params {-1., 0.};
       Int prev_absc = -1;
-      Int n_nodes = nodes.size() + 1;
-      for (int i_node = 0; i_node < n_nodes; ++i_node) {
+      for (Int i_node = 0; i_node < n_nodes + 1; ++i_node) {
         Mat<2> params;
-        if (i_node == n_nodes - 1) params << abscissa.front(), ordinate.front();
+        if (i_node == n_nodes) params << abscissa.front(), ordinate.front();
         else {
           params = nodes[i_node];
           params(0) = std::max(0., std::min(1., params(0)))*_ptr->n_div;
@@ -230,7 +248,6 @@ class Read_entity {
           prev_params(0) = prev_absc;
           abscissa.push_back(prev_absc);
           ordinate.push_back(prev_params(1));
-          std::cout << abscissa.back() << " " << ordinate.back() << std::endl;
         }
       }
       HEXED_ASSERT(abscissa.front() == abscissa.back(), "parametric representation is not closed");
@@ -325,7 +342,6 @@ void Geom::visualize(std::string file_name) const {
             params(0) = (i_div + i_node)/double(s->n_div);
             params(1) = seg(i_node);
             Mat<3> point = s->point(params);
-            std::cout << point.transpose() << std::endl;
             for (int i_dim = 0; i_dim < 3; ++i_dim) coords(i_dim)[i_node] = point(i_dim);
           }
           vis->write_block(coords, Array<double>({0, 2}));
