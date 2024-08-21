@@ -178,24 +178,8 @@ class Read_entity {
     Read_entity<T> on_surf(_parser, _parser.read_int(_par[4]));
     HEXED_ASSERT(on_surf.entity_number() == 142, "boundary must be a curve on a surface");
     int model_curve = _parser.read_int(on_surf._par[4]);
-    std::vector<Int> abscissa;
-    std::vector<double> ordinate;
-    Mat<2> prev_params {-1., 0.};
-    Int prev_absc = -1;
     double sz = 1./_ptr->n_div;
-    auto add_node = [&](Mat<2> params) {
-      if (prev_params(0) < -.1) prev_params = params;
-      while (floor(params(0)) > floor(prev_params(0)) || ceil(params(0)) < ceil(prev_params(0))) {
-        prev_absc = floor(params(0)) > floor(prev_params(0)) ? floor(prev_params(0)) + 1
-                                                             : ceil (prev_params(0)) - 1;
-        double denom = params(0) - prev_params(0);
-        if (std::abs(denom) < sz) prev_params(1) = params(1);
-        else prev_params(1) += (prev_absc - prev_params(0))*(params(1) - prev_params(1))/denom;
-        prev_params(0) = prev_absc;
-        abscissa.push_back(prev_absc);
-        ordinate.push_back(prev_params(1));
-      }
-    };
+    std::vector<Mat<2>> nodes;
     if ((_parser.read_int(on_surf._par[5]) == 1 || model_curve == 0) && _parser.read_int(on_surf._par[3]) != 0) {
       HEXED_THROW("parameter-space curves are not implemented", assert::Not_implemented_error);
     } else {
@@ -209,24 +193,46 @@ class Read_entity {
           Mat<3> pt = c->point(Mat<1>{i_div*sz});
           Mat<2> params = _ptr->surface->nearest_params(pt);
           printf("% .8f % .8f % .8f | % .8f % .8f\n", pt(0), pt(1), pt(2), params(0), params(1));
-          params(0) *= _ptr->n_div;
-          add_node(params);
+          nodes.push_back(params);
         }
         std::cout << std::endl;
       }
     }
-    if (prev_absc >= 0) {
-      add_node({abscissa[0]*1., ordinate[0]});
+    if (!nodes.empty()) {
+      nodes.push_back(nodes[0]);
+      std::vector<Int> abscissa;
+      std::vector<double> ordinate;
+      Mat<2> prev_params {-1., 0.};
+      Int prev_absc = -1;
+      Int n_nodes = nodes.size() + 1;
+      for (int i_node = 0; i_node < n_nodes; ++i_node) {
+        Mat<2> params;
+        if (i_node == n_nodes - 1) params << abscissa.front(), ordinate.front();
+        else {
+          params = nodes[i_node];
+          params(0) = std::max(0., std::min(1., params(0)))*_ptr->n_div;
+        }
+        if (prev_params(0) < -.1) prev_params = params;
+        while (floor(params(0)) > floor(prev_params(0)) || ceil(params(0)) < ceil(prev_params(0))) {
+          prev_absc = floor(params(0)) > floor(prev_params(0)) ? floor(prev_params(0)) + 1
+                                                               : ceil (prev_params(0)) - 1;
+          double denom = params(0) - prev_params(0);
+          if (std::abs(denom) < sz) prev_params(1) = params(1);
+          else prev_params(1) += (prev_absc - prev_params(0))*(params(1) - prev_params(1))/denom;
+          prev_params(0) = prev_absc;
+          abscissa.push_back(prev_absc);
+          ordinate.push_back(prev_params(1));
+          std::cout << abscissa.back() << " " << ordinate.back() << std::endl;
+        }
+      }
       HEXED_ASSERT(abscissa.front() == abscissa.back(), "parametric representation is not closed");
       for (Int i_segment = 0; i_segment < Int(abscissa.size()) - 1; ++i_segment) {
         HEXED_ASSERT(std::abs(abscissa[i_segment] - abscissa[i_segment + 1]) == 1, "invalid step size");
         bool reverse = abscissa[i_segment] > abscissa[i_segment + 1];
-        HEXED_ASSERT(0 < abscissa[i_segment + reverse] && abscissa[i_segment + reverse] < _ptr->n_div,
-                     "segment index out of bounds");
-        std::cout << "foo" << std::endl;
+        HEXED_ASSERT(0 <= abscissa[i_segment + reverse] && abscissa[i_segment + reverse] < _ptr->n_div,
+                     format_str(200, "segment index %i out of bounds", abscissa[i_segment + reverse]));
         _ptr->parametric_segments[abscissa[i_segment + reverse]].push_back({ordinate[i_segment +  reverse],
                                                                             ordinate[i_segment + !reverse]});
-        std::cout << "bar" << std::endl;
       }
     }
   }

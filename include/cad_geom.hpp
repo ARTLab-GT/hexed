@@ -25,6 +25,7 @@ class Entity {
   Mat<3> point(Mat<n_param> params) const {
     return _convert(temp_point(params));
   }
+  virtual void reparameterize(Mat<n_param, 2> bounds) {}
   int n_div = math::pow(10, 1);
   double scale = 1.;
   Trans_mat trans_mat;
@@ -60,6 +61,10 @@ class Plane : public Entity<2> {
   public:
   inline Plane(Mat<3> origin, Mat<3, 2> coord_vectors) : _origin{origin}, _vecs{coord_vectors} {}
   protected:
+  void reparameterize(Mat<2, 2> bounds) override {
+    _origin = temp_point(bounds(all, 0));
+    _vecs = _vecs*(bounds(all, 1) - bounds(all, 0)).asDiagonal();
+  }
   Mat<2> temp_nearest_params(Mat<3> p) const override {
     return _vecs.colPivHouseholderQr().solve(p - _origin);
   }
