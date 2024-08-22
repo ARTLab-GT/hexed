@@ -371,6 +371,12 @@ Geom::Geom(std::string file_name) {
   }
 }
 
+Nearest_point<dyn> Geom::nearest_point(Mat<> point, double max_distance, double distance_guess) {
+  Nearest_point<dyn> nearest(point, max_distance);
+  for (auto& surf : _surfaces) nearest.merge(Mat<>{surf->nearest_point(point)});
+  return nearest;
+}
+
 void Geom::visualize(std::string file_name) const {
   int n = 101;
   {

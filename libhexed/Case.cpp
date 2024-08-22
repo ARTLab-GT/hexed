@@ -7,6 +7,7 @@
 #include <hexed/Occt.hpp>
 #include <hexed/hil_properties.hpp>
 #include <hexed/Csv.hpp>
+#include <hexed/brep.hpp>
 
 namespace hexed {
 
@@ -112,6 +113,9 @@ Surface_geom* Case::_make_geom() {
       auto data = read_csv(*geom);
       HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns", assert::User_error);
       geoms.emplace_back(new Simplex_geom<2>(segments(data.transpose())));
+    } else if ((ext == "igs" || ext == "iges") && !(HEXED_USE_OCCT && _vari("prefer_occt"))) {
+      if (nd == 3) geoms.emplace_back(new brep::Geom(geom.value()));
+      else HEXED_THROW("2D BRep geometry is not implemented", assert::Not_implemented_error);
     #if HEXED_USE_OCCT
     } else if (ext == "igs" || ext == "iges" || ext == "stp" || ext == "step") {
       auto shape = Occt::read(*geom);

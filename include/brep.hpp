@@ -5,6 +5,7 @@
 #include <functional>
 #include "math.hpp"
 #include "constants.hpp"
+#include "Surface_geom.hpp"
 
 namespace hexed::brep {
 
@@ -113,11 +114,12 @@ class Trimmed_surface : public Entity<2> {
   inline Mat<3> temp_point(Mat<2> p) const override {return surface->point(p);}
 };
 
-class Geom {
+class Geom : public Surface_geom {
   public:
   Geom(std::string file_name);
+  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
+  inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
   void visualize(std::string file_name) const;
-
   private:
   std::vector<std::unique_ptr<Trimmed_surface>> _surfaces;
 };
