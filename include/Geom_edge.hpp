@@ -11,7 +11,7 @@ class Geom_edge {
   public:
   struct Node {
     Mat<3> pos;
-    int index;
+    Int index;
     double arc_len;
   };
 
@@ -21,14 +21,14 @@ class Geom_edge {
   Geom_edge(Array<double> points);
   inline const Array<double> points() const {return _points();}
   inline const Array<double> arc_len() const {return _arc_len();}
-  inline int n_points() const {return _n_points;}
+  inline Int n_points() const {return _n_points;}
   inline double len() const {return _arc_len[_arc_len.size()];}
   void visualize(std::string format, std::string name) const;
   Node nearest(Mat<3> to, double start = 0, double stop = huge) const;
 
   private:
   Array<double> _points;
-  int _n_points;
+  Int _n_points;
   Array<double> _arc_len;
 };
 

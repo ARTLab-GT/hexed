@@ -8,7 +8,7 @@ int vstride(int n_dim, int i_dim) {return math::pow(2, n_dim - 1 - i_dim);}
 
 Array<double> Block::points() const {
   // construct an Array with the correct shape
-  std::vector<int> shape {3};
+  std::vector<Int> shape {3};
   for (int i_dim = 0; i_dim < _n_dim; ++i_dim) shape.push_back(_row_size);
   Array<double> pts(shape);
   // populate array
@@ -179,8 +179,8 @@ Mat<3> Vertex::_desired_pos() const {
   return des_pos;
 }
 
-std::vector<int> interior_dims(int n_dim, int row_size) {
-  std::vector<int> dims(n_dim, row_size - 2);
+std::vector<Int> interior_dims(int n_dim, int row_size) {
+  std::vector<Int> dims(n_dim, row_size - 2);
   dims.push_back(3);
   return dims;
 }

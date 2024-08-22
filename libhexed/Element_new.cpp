@@ -3,9 +3,9 @@
 namespace hexed
 {
 
-std::vector<int> get_shape(Storage_params params)
+std::vector<Int> get_shape(Storage_params params)
 {
-  std::vector<int> shape(params.n_dim + 1, params.row_size);
+  std::vector<Int> shape(params.n_dim + 1, params.row_size);
   shape[0] = params.n_var_numeric();
   return shape;
 }
@@ -19,7 +19,7 @@ Element_new::Element_new(Storage_params params, bool def, int ref_level, Array<i
   _root_sz{root_sz},
   _origin{og},
   _basis{b},
-  _vertices(std::vector<int>(_params.n_dim, 2), [this](int i) {
+  _vertices(std::vector<Int>(_params.n_dim, 2), [this](Int i) {
     Mat<> pos = Mat<>::Zero(3);
     auto np = nominal_position();
     for (int i_dim = 0; i_dim < _params.n_dim; ++i_dim) {
@@ -27,8 +27,8 @@ Element_new::Element_new(Storage_params params, bool def, int ref_level, Array<i
     }
     return Vertex::Transferable_ptr(pos, deformed());
   }),
-  _vtss(std::vector<int>(_params.n_dim, 2), [](int i){return 0.;}),
-  _faces(std::vector<int>({_params.n_dim, 2}), [this](int i) {
+  _vtss(std::vector<Int>(_params.n_dim, 2), [](int i){return 0.;}),
+  _faces(std::vector<Int>({_params.n_dim, 2}), [this](int i) {
     return Face(*this, i/2, i%2);
   }),
   _full_state(get_shape(_params)),

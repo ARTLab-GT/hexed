@@ -1272,9 +1272,9 @@ void Solver::visualize_field(std::string format, std::string name, const Qpoint_
   int nv = output_variables.n_var(params.n_dim);
   int n_edges = math::pow(2, params.n_dim - 1)*params.n_dim;
   auto& elems = acc_mesh->elements();
-  std::vector<int> pos_shape(params.n_dim + 1, n_sample);
+  std::vector<Int> pos_shape(params.n_dim + 1, n_sample);
   pos_shape[0] = params.n_dim;
-  std::vector<int> out_shape(params.n_dim + 1, n_sample);
+  std::vector<Int> out_shape(params.n_dim + 1, n_sample);
   out_shape[0] = nv;
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     Vis_data pos_dat(elems[i_elem], pos_func, basis, _namespace->get<double>("flow_time"));
@@ -1310,9 +1310,9 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   Mat<dyn, dyn> boundary = basis.boundary();
   // iterate through boundary connections and visualize a zone for each
   auto& bc_cons {acc_mesh->boundary_connections()};
-  std::vector<int> pos_shape(params.n_dim, n_sample);
+  std::vector<Int> pos_shape(params.n_dim, n_sample);
   pos_shape[0] = params.n_dim;
-  std::vector<int> out_shape(params.n_dim, n_sample);
+  std::vector<Int> out_shape(params.n_dim, n_sample);
   out_shape[0] = nv;
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
   {
