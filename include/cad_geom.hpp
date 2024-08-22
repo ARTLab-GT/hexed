@@ -13,7 +13,6 @@ struct Trans_mat {
   Mat<3> translate = Mat<3>::Zero();
 };
 
-
 template <int n_param>
 class Entity {
   public:
@@ -57,6 +56,7 @@ class Circular_arc : public Entity<1> {
   double start_angle;
   double end_angle;
   protected:
+  Nearest_params temp_nearest_params(Mat<3>, Constraint is_feasible) const override;
   Mat<3> temp_point(Mat<1>) const override;
 };
 

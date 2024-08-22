@@ -8,13 +8,25 @@ namespace hexed::cad_geom {
 
 Entity<1>::Nearest_params Line_segment::temp_nearest_params(Mat<3> p, Entity<1>::Constraint is_feasible) const {
   Mat<3> diff = endpoints(all, 1) - endpoints(all, 0);
-  Mat<1> params {(p - endpoints(all, 0)).dot(diff)/diff.squaredNorm()};
-  params(0) = std::max(0., std::min(1., params(0)));
+  Mat<1> params {std::max(0., std::min(1., (p - endpoints(all, 0)).dot(diff)/diff.squaredNorm()))};
+  return {params, is_feasible(params)};
+}
+
+double limited_angle(double angle, double start, double end) {
+  if (math::angle_diff(angle, start) > end - start) {
+    return (math::angle_diff(angle, end) > math::angle_diff(start, angle)) ? start : end;
+  }
+  return angle;
+}
+
+Entity<1>::Nearest_params Circular_arc::temp_nearest_params(Mat<3> p, Entity<1>::Constraint is_feasible) const {
+  double angle = limited_angle(std::atan2(p(1) - center(1), p(0) - center(0)), start_angle, end_angle);
+  Mat<1> params {math::angle_diff(angle, start_angle)/(end_angle - start_angle)};
   return {params, is_feasible(params)};
 }
 
 Mat<3> Circular_arc::temp_point(Mat<1> params) const {
-  double angle = start_angle + params(0)*(start_angle - end_angle);
+  double angle = start_angle + params(0)*(end_angle - start_angle);
   return center + radius*Mat<3>{std::cos(angle), std::sin(angle), 0.};
 }
 
@@ -35,9 +47,7 @@ Entity<2>::Nearest_params Revolution_surface::temp_nearest_params(Mat<3> p, Enti
     Mat<3> arc_point = generatrix->point(Mat<1>{param}) - axis.endpoints(all, 0);
     Mat<3> arc_radius = (arc_point - arc_point.dot(unit_axis)*unit_axis).normalized();
     double angle = std::atan2(arc_radius.cross(radius).dot(unit_axis), arc_radius.dot(radius));
-    if (math::angle_diff(angle, start_angle) > end_angle - start_angle) {
-      angle = (math::angle_diff(angle, end_angle) > math::angle_diff(start_angle, angle)) ? start_angle : end_angle;
-    }
+    angle = limited_angle(angle, start_angle, end_angle);
     Mat<2> candidate {param, math::angle_diff(angle, start_angle)/(end_angle - start_angle)};
     double d = (temp_point(candidate) - p).norm();
     if (d < dist && is_feasible(candidate)) {
@@ -69,7 +79,26 @@ bool Trimmed_surface::inside(Mat<2> params) const {
 }
 
 Entity<2>::Nearest_params Trimmed_surface::temp_nearest_params(Mat<3> p, Entity<2>::Constraint is_feasible) const {
-  return surface->nearest_params(p, [this, is_feasible](Mat<2> params){return inside(params) && is_feasible(params);});
+  auto f = [this, is_feasible](Mat<2> params){return inside(params) && is_feasible(params);};
+  Nearest_params nearest = surface->nearest_params(p, f);
+  double dist = (temp_point(nearest.params) - p).norm();
+  for (auto& composite : curves) {
+    for (auto& curve : *composite) {
+      Mat<3> candidate = curve->nearest_point(p);
+      double d = (candidate - p).norm();
+      if (d < dist || !nearest.is_feasible) {
+        Nearest_params par = surface->nearest_params(candidate, is_feasible);
+        // note we use `is_feasible` instead of `f` because a point on the boundary is guaranteed to be inside,
+        // even if (especially if) the parametric boundary segments mark it as outside
+        if (par.is_feasible) {
+          nearest.params = par.params;
+          nearest.is_feasible = true;
+          dist = d;
+        }
+      }
+    }
+  }
+  return nearest;
 };
 
 Trans_mat read_trans_mat(const Iges_parser& parser, Int line) {
@@ -343,7 +372,7 @@ Geom::Geom(std::string file_name) {
 }
 
 void Geom::visualize(std::string file_name) const {
-  int n = 61;
+  int n = 101;
   {
     auto vis = Visualizer::create("default", 3, 1, "edges", {}, 0., Visualizer::block);
     for (auto& s : _surfaces) {
@@ -399,7 +428,7 @@ void Geom::visualize(std::string file_name) const {
     Array<double> dist({1, n, n, n});
     for (int i = 0; i < math::pow(n, 3); ++i) {
       Mat<3> p;
-      for (int i_dim = 0; i_dim < 3; ++i_dim) p(i_dim) = coords(i_dim)[i] = 1./n*(i/math::pow(n, 2 - i_dim)%n);
+      for (int i_dim = 0; i_dim < 3; ++i_dim) p(i_dim) = coords(i_dim)[i] = 1./n*(i/math::pow(n, 2 - i_dim)%n) - .1;
       double min_dist = huge;
       for (auto& s : _surfaces) min_dist = std::min(min_dist, (p - s->nearest_point(p)).norm());
       dist[i] = min_dist;

@@ -17,6 +17,30 @@ TEST_CASE("Line_segment") {
                Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 1., 1.}, hexed::math::Approx_equal(0., 1e-12)));
 }
 
+TEST_CASE("Circular_arc") {
+  hexed::cad_geom::Circular_arc arc({.1, .1, .1}, 10., hexed::constants::pi/2, hexed::constants::pi);
+  REQUIRE_THAT(
+    arc.point(hexed::Mat<1>{.5}),
+    Catch::Matchers::RangeEquals(hexed::Mat<3>{.1 - 10*std::sqrt(.5), .1 + 10*std::sqrt(.5), .1},
+    hexed::math::Approx_equal())
+  );
+  REQUIRE_THAT(
+    arc.nearest_point(hexed::Mat<3>{-9.9, 10.1, 5.}),
+    Catch::Matchers::RangeEquals(hexed::Mat<3>{.1 - 10*std::sqrt(.5), .1 + 10*std::sqrt(.5), .1},
+    hexed::math::Approx_equal())
+  );
+  REQUIRE_THAT(
+    arc.nearest_point(hexed::Mat<3>{10.1, 10.1, 5.}),
+    Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, 10.1, .1},
+    hexed::math::Approx_equal())
+  );
+  REQUIRE_THAT(
+    arc.nearest_point(hexed::Mat<3>{-9.9, -10.1, 5.}),
+    Catch::Matchers::RangeEquals(hexed::Mat<3>{-9.9, .1, .1},
+    hexed::math::Approx_equal())
+  );
+}
+
 TEST_CASE("Revolution_surface") {
   hexed::Mat<3, 2> axis_endpoints;
   axis_endpoints <<
