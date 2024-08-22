@@ -6,6 +6,13 @@
 
 namespace hexed::cad_geom {
 
+Entity<1>::Nearest_params Line_segment::temp_nearest_params(Mat<3> p, Entity<1>::Constraint is_feasible) const {
+  Mat<3> diff = endpoints(all, 1) - endpoints(all, 0);
+  Mat<1> params {(p - endpoints(all, 0)).dot(diff)/diff.squaredNorm()};
+  params(0) = std::max(0., std::min(1., params(0)));
+  return {params, is_feasible(params)};
+}
+
 Mat<3> Circular_arc::temp_point(Mat<1> params) const {
   double angle = start_angle + params(0)*(start_angle - end_angle);
   return center + radius*Mat<3>{std::cos(angle), std::sin(angle), 0.};
@@ -17,9 +24,7 @@ Revolution_surface::Revolution_surface(Entity<1>* g, Line_segment ax, double sa,
   HEXED_ASSERT(end_angle - start_angle > 0, "end angle must be greater than start angle");
 }
 
-Entity<2>::Nearest_params Revolution_surface::temp_nearest_params(
-  Mat<3> p, std::function<bool(Mat<2>)> is_feasible
-) const {
+Entity<2>::Nearest_params Revolution_surface::temp_nearest_params(Mat<3> p, Entity<2>::Constraint is_feasible) const {
   Mat<3> unit_axis = (axis.endpoints(all, 1) - axis.endpoints(all, 0)).normalized();
   Mat<3> from_start = p - axis.endpoints(all, 0);
   Mat<3> radius = (from_start - from_start.dot(unit_axis)*unit_axis).normalized();
@@ -63,7 +68,7 @@ bool Trimmed_surface::inside(Mat<2> params) const {
   return n_intersections%2;
 }
 
-Entity<2>::Nearest_params Trimmed_surface::temp_nearest_params(Mat<3> p, std::function<bool(Mat<2>)> is_feasible) const {
+Entity<2>::Nearest_params Trimmed_surface::temp_nearest_params(Mat<3> p, Entity<2>::Constraint is_feasible) const {
   return surface->nearest_params(p, [this, is_feasible](Mat<2> params){return inside(params) && is_feasible(params);});
 };
 

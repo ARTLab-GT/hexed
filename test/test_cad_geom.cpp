@@ -1,6 +1,22 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/cad_geom.hpp>
 
+TEST_CASE("Line_segment") {
+  hexed::Mat<3, 2> endpoints;
+  endpoints << 0, 1,
+               0, 1,
+               1, 1;
+  hexed::cad_geom::Line_segment seg(endpoints);
+  REQUIRE_THAT(seg.point(hexed::Mat<1>{.1}),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{0.1, 0.1, 1.}, hexed::math::Approx_equal(0., 1e-12)));
+  REQUIRE_THAT(seg.nearest_point(hexed::Mat<3>{1., 0., 0.}),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{0.5, 0.5, 1.}, hexed::math::Approx_equal(0., 1e-12)));
+  REQUIRE_THAT(seg.nearest_point(hexed::Mat<3>{-1., 0., 1.}),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., 1.}, hexed::math::Approx_equal(0., 1e-12)));
+  REQUIRE_THAT(seg.nearest_point(hexed::Mat<3>{2., 1., 1.}),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 1., 1.}, hexed::math::Approx_equal(0., 1e-12)));
+}
+
 TEST_CASE("Revolution_surface") {
   hexed::Mat<3, 2> axis_endpoints;
   axis_endpoints <<
