@@ -26,7 +26,7 @@ class Entity {
     return _convert(temp_point(params));
   }
   virtual void reparameterize(Mat<n_param, 2> bounds) {}
-  int n_div = 2*math::pow(10, 1);
+  Int n_div = math::pow(10, 2);
   double scale = 1.;
   Trans_mat trans_mat;
   protected:
@@ -91,6 +91,7 @@ typedef std::vector<std::unique_ptr<Entity<1>>> Composite_curve;
 class Trimmed_surface : public Entity<2> {
   public:
   Trimmed_surface() : parametric_segments(n_div) {}
+  bool inside(Mat<2> params) const;
   std::unique_ptr<Entity<2>> surface;
   std::vector<std::unique_ptr<Composite_curve>> curves;
   std::vector<std::vector<Mat<2>>> parametric_segments;

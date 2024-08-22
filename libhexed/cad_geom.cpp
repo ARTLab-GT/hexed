@@ -50,6 +50,15 @@ Mat<3> Revolution_surface::temp_point(Mat<2> params) const {
   return axial_component + std::cos(angle)*radial_component + std::sin(angle)*radial_component.cross(ax_vec);
 }
 
+bool Trimmed_surface::inside(Mat<2> params) const {
+  Int i_seg = floor(params(0)*n_div);
+  i_seg = std::max<Int>(0, std::min(n_div - 1, i_seg));
+  auto& segments = parametric_segments[i_seg];
+  Int n_intersections = 0;
+  for (Mat<2> seg : segments) n_intersections += params(1) < seg(0) + (params(0)*n_div - i_seg)*(seg(1) - seg(0));
+  return n_intersections%2;
+}
+
 Trans_mat read_trans_mat(const Iges_parser& parser, Int line) {
   Trans_mat tm;
   if (line > 0) {
@@ -220,8 +229,8 @@ class Read_entity {
         Int n_less = 0;
         Int n_greater = 0;
         for (Mat<2> node : nodes) {
-          n_less += node(i_dim) < 0;
-          n_greater += node(i_dim) > 1;
+          n_less += node(i_dim) < -sz;
+          n_greater += node(i_dim) > 1 + sz;
         }
         int sign = (n_less > n_nodes/2) - (n_greater > n_nodes/2);
         for (Mat<2>& node : nodes) node(i_dim) += sign;
@@ -350,16 +359,19 @@ void Geom::visualize(std::string file_name) const {
     }
   }
   {
-    auto vis = Visualizer::create("default", 3, 2, "surfaces", {}, 0., Visualizer::block);
+    auto vis = Visualizer::create("default", 3, 2, "surfaces", {"inside"}, 0., Visualizer::block);
     for (auto& s : _surfaces) {
       Array<double> discrete({3, n, n});
+      Array<double> inside({1, n, n});
       for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-          Mat<3> p = s->point(Mat<2>{i/(n - 1.), j/(n - 1.)});
+          Mat<2> params {i/(n - 1.), j/(n - 1.)};
+          Mat<3> p = s->point(params);
           for (int i_dim = 0; i_dim < 3; ++i_dim) discrete(i_dim)(i)[j] = p(i_dim);
+          inside(0)(i)[j] = s->inside(params);
         }
       }
-      vis->write_block(discrete, Array<double>({0, n, n}));
+      vis->write_block(discrete, inside);
     }
   }
   {
