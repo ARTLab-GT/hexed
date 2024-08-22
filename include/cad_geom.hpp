@@ -20,7 +20,7 @@ class Entity {
     bool is_feasible;
   };
   virtual ~Entity() = default;
-  Nearest_params nearest_params(Mat<3> p, std::function<bool(Mat<2>)> is_feasible) const {
+  Nearest_params nearest_params(Mat<3> p, std::function<bool(Mat<n_param>)> is_feasible) const {
     return temp_nearest_params(trans_mat.transform.colPivHouseholderQr().solve(p/scale - trans_mat.translate), is_feasible);
   }
   Mat<3> nearest_point(Mat<3> p) const {
@@ -37,7 +37,7 @@ class Entity {
   double scale = 1.;
   Trans_mat trans_mat;
   protected:
-  virtual Nearest_params temp_nearest_params(Mat<3>, std::function<bool(Mat<2>)> is_feasible) const {
+  virtual Nearest_params temp_nearest_params(Mat<3>, std::function<bool(Mat<n_param>)> is_feasible) const {
     return {Mat<n_param>::Zero(), false};
   };
   virtual Mat<3> temp_point(Mat<n_param>) const = 0;

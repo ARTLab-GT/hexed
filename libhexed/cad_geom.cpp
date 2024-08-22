@@ -189,35 +189,42 @@ class Read_entity {
     HEXED_ASSERT(_ptr->surface, format_str(100, "failed to read surface from entity # %lli\n", read_surf.entity_number()));
     HEXED_ASSERT(_parser.read_int(_par[2]) == 1, "using outer boundary as boundary curve is not implemented",
                  assert::Not_implemented_error);
-    Read_entity<T> on_surf(_parser, _parser.read_int(_par[4]));
-    HEXED_ASSERT(on_surf.entity_number() == 142, "boundary must be a curve on a surface");
-    int model_curve = _parser.read_int(on_surf._par[4]);
     double sz = 1./_ptr->n_div;
-    std::vector<Mat<2>> nodes;
-    if ((_parser.read_int(on_surf._par[5]) == 1 || model_curve == 0) && _parser.read_int(on_surf._par[3]) != 0) {
-      HEXED_THROW("parameter-space curves are not implemented", assert::Not_implemented_error);
-    } else {
-      HEXED_ASSERT(model_curve != 0,
-                   "at least one of parameter-space and model-space curve pointers must be defined");
-      Read_entity<Composite_curve> curve(_parser, model_curve);
-      curve.read_disc_curve();
-      _ptr->curves.emplace_back(curve.get().release());
-      for (auto& c : *_ptr->curves.back()) {
-        for (Int i_div = 0; i_div < _ptr->n_div + 1; ++i_div) {
-          Mat<3> pt = c->point(Mat<1>{i_div*sz});
-          Mat<2> params = _ptr->surface->nearest_params(pt, [](Mat<2>){return true;}).params;
-          nodes.push_back(params);
+    std::vector<std::vector<Mat<2>>> curves;
+    Mat<2, 2> bounds;
+    bounds << huge, -huge, huge, -huge;
+    for (Int i_curve = 0; i_curve < 1 + _parser.read_int(_par[3]); ++i_curve) {
+      Read_entity<T> on_surf(_parser, _parser.read_int(_par[4 + i_curve]));
+      HEXED_ASSERT(on_surf.entity_number() == 142, "boundary must be a curve on a surface");
+      int model_curve = _parser.read_int(on_surf._par[4]);
+      std::vector<Mat<2>> nodes;
+      if ((_parser.read_int(on_surf._par[5]) == 1 || model_curve == 0) && _parser.read_int(on_surf._par[3]) != 0) {
+        HEXED_THROW("parameter-space curves are not implemented", assert::Not_implemented_error);
+      } else {
+        HEXED_ASSERT(model_curve != 0,
+                     "at least one of parameter-space and model-space curve pointers must be defined");
+        Read_entity<Composite_curve> curve(_parser, model_curve);
+        curve.read_disc_curve();
+        _ptr->curves.emplace_back(curve.get().release());
+        for (auto& c : *_ptr->curves.back()) {
+          for (Int i_div = 0; i_div < _ptr->n_div + 1; ++i_div) {
+            Mat<3> pt = c->point(Mat<1>{i_div*sz});
+            Mat<2> params = _ptr->surface->nearest_params(pt, [](Mat<2>){return true;}).params;
+            nodes.push_back(params);
+          }
         }
       }
-    }
-    if (!nodes.empty()) {
-      Mat<2, 2> bounds;
-      bounds << huge, -huge, huge, -huge;
-      for (Mat<2> node : nodes) {
-        bounds(all, 0) = bounds(all, 0).cwiseMin(node);
-        bounds(all, 1) = bounds(all, 1).cwiseMax(node);
+      if (!nodes.empty()) {
+        for (Mat<2> node : nodes) {
+          bounds(all, 0) = bounds(all, 0).cwiseMin(node);
+          bounds(all, 1) = bounds(all, 1).cwiseMax(node);
+        }
       }
-      bounds(all, 1) = bounds(all, 1).cwiseMax(bounds(all, 0) + Mat<2>{sz, sz});
+      curves.push_back(std::move(nodes));
+    }
+    bounds(all, 1) = bounds(all, 1).cwiseMax(bounds(all, 0) + Mat<2>{sz, sz});
+    _ptr->surface->reparameterize(bounds);
+    for (auto& nodes : curves) if (!nodes.empty()) {
       for (int i_node = 0; i_node < Int(nodes.size()); ++i_node) {
         nodes[i_node] = (nodes[i_node] - bounds(all, 0)).cwiseQuotient(bounds(all, 1) - bounds(all, 0));
       }
@@ -243,7 +250,6 @@ class Read_entity {
         int sign = (n_less > n_nodes/2) - (n_greater > n_nodes/2);
         for (Mat<2>& node : nodes) node(i_dim) += sign;
       }
-      _ptr->surface->reparameterize(bounds);
       std::vector<Int> abscissa;
       std::vector<double> ordinate;
       Mat<2> prev_params {-1., 0.};
