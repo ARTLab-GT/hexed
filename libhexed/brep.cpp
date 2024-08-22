@@ -1,10 +1,10 @@
-#include <hexed/cad_geom.hpp>
+#include <hexed/brep.hpp>
 #include <hexed/Iges_parser.hpp>
 #include <hexed/Visualizer.hpp>
 #include <hexed/utils.hpp>
 #include <hexed/constants.hpp>
 
-namespace hexed::cad_geom {
+namespace hexed::brep {
 
 Entity<1>::Nearest_params Line_segment::temp_nearest_params(Mat<3> p, Entity<1>::Constraint is_feasible) const {
   Mat<3> diff = endpoints(all, 1) - endpoints(all, 0);
@@ -426,6 +426,7 @@ void Geom::visualize(std::string file_name) const {
     auto vis = Visualizer::create("default", 3, 3, "distance", {"distance"}, 0., Visualizer::block);
     Array<double> coords({3, n, n, n});
     Array<double> dist({1, n, n, n});
+    #pragma omp parallel for
     for (int i = 0; i < math::pow(n, 3); ++i) {
       Mat<3> p;
       for (int i_dim = 0; i_dim < 3; ++i_dim) p(i_dim) = coords(i_dim)[i] = 1./n*(i/math::pow(n, 2 - i_dim)%n) - .1;

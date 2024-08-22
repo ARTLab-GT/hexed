@@ -1,12 +1,12 @@
-#ifndef HEXED_CAD_GEOM_HPP_
-#define HEXED_CAD_GEOM_HPP_
+#ifndef HEXED_BREP_HPP_
+#define HEXED_BREP_HPP_
 
 #include <memory>
 #include <functional>
 #include "math.hpp"
 #include "constants.hpp"
 
-namespace hexed::cad_geom {
+namespace hexed::brep {
 
 struct Trans_mat {
   Mat<3, 3> transform = Mat<3, 3>::Identity();

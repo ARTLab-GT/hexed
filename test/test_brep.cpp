@@ -1,12 +1,12 @@
 #include <catch2/catch_all.hpp>
-#include <hexed/cad_geom.hpp>
+#include <hexed/brep.hpp>
 
 TEST_CASE("Line_segment") {
   hexed::Mat<3, 2> endpoints;
   endpoints << 0, 1,
                0, 1,
                1, 1;
-  hexed::cad_geom::Line_segment seg(endpoints);
+  hexed::brep::Line_segment seg(endpoints);
   REQUIRE_THAT(seg.point(hexed::Mat<1>{.1}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{0.1, 0.1, 1.}, hexed::math::Approx_equal(0., 1e-12)));
   REQUIRE_THAT(seg.nearest_point(hexed::Mat<3>{1., 0., 0.}),
@@ -18,7 +18,7 @@ TEST_CASE("Line_segment") {
 }
 
 TEST_CASE("Circular_arc") {
-  hexed::cad_geom::Circular_arc arc({.1, .1, .1}, 10., hexed::constants::pi/2, hexed::constants::pi);
+  hexed::brep::Circular_arc arc({.1, .1, .1}, 10., hexed::constants::pi/2, hexed::constants::pi);
   REQUIRE_THAT(
     arc.point(hexed::Mat<1>{.5}),
     Catch::Matchers::RangeEquals(hexed::Mat<3>{.1 - 10*std::sqrt(.5), .1 + 10*std::sqrt(.5), .1},
@@ -52,8 +52,8 @@ TEST_CASE("Revolution_surface") {
     1., 1.,
     0., 0.,
     0., 1.;
-  hexed::cad_geom::Revolution_surface surf(new hexed::cad_geom::Line_segment(generatrix_endpoints),
-                                           hexed::cad_geom::Line_segment(axis_endpoints), 0., hexed::constants::pi);
+  hexed::brep::Revolution_surface surf(new hexed::brep::Line_segment(generatrix_endpoints),
+                                           hexed::brep::Line_segment(axis_endpoints), 0., hexed::constants::pi);
   REQUIRE_THAT(
     surf.nearest_point(hexed::Mat<3>{0., 1., .5}),
     Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 1., .5}, hexed::math::Approx_equal(0, 1e-3))
@@ -81,6 +81,6 @@ TEST_CASE("Revolution_surface") {
 }
 
 TEST_CASE("Geom") {
-  hexed::cad_geom::Geom geom("../test_assets/cylinder_extruded.iges");
+  hexed::brep::Geom geom("../test_assets/cylinder_extruded.iges");
   geom.visualize("cylinder_extruded");
 }
