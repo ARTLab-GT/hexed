@@ -35,18 +35,18 @@ class Entity {
     return _convert(temp_point(params));
   }
   virtual void reparameterize(Mat<n_param, 2> bounds) {}
-  Int n_div = math::pow(10, 3);
+  Int n_div = math::pow(10, 4);
   double scale = 1.;
   Trans_mat trans_mat;
+  Mat<3> _convert(Mat<3> p) const {
+    return scale*(trans_mat.translate + trans_mat.transform*p);
+  }
   protected:
   virtual Nearest_params temp_nearest_params(Mat<3>, Constraint is_feasible) const {
     return {Mat<n_param>::Zero(), false};
   };
   virtual Mat<3> temp_point(Mat<n_param>) const = 0;
   private:
-  Mat<3> _convert(Mat<3> p) const {
-    return scale*(trans_mat.translate + trans_mat.transform*p);
-  }
 };
 
 class Circular_arc : public Entity<1> {
@@ -119,9 +119,11 @@ class Geom : public Surface_geom {
   Geom(std::string file_name);
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
+  inline next::Sequence<Geom_edge&> edges() override {return next::Sequence<Geom_edge&>::vector_view(_edges);}
   void visualize(std::string file_name) const;
   private:
   std::vector<std::unique_ptr<Trimmed_surface>> _surfaces;
+  std::vector<Geom_edge> _edges;
 };
 
 }

@@ -367,7 +367,18 @@ Geom::Geom(std::string file_name) {
     Read_entity<Trimmed_surface> read(parser, entry);
     read.read_trimmed_surface();
     std::unique_ptr<Trimmed_surface> ts(read.get());
-    if (ts) _surfaces.emplace_back(ts.release());
+    if (ts) {
+      for (auto& composite : ts->curves) {
+        for (auto& curve : *composite) {
+          Array<double> nodes({ts->n_div + 1, 3});
+          for (Int i_node = 0; i_node < ts->n_div + 1; ++i_node) {
+            nodes(i_node).vector() = ts->_convert(curve->point(Mat<1>{i_node/double(ts->n_div)}));
+          }
+          _edges.emplace_back(nodes);
+        }
+      }
+      _surfaces.emplace_back(ts.release());
+    }
   }
 }
 
