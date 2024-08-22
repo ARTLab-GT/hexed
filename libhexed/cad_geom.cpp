@@ -17,12 +17,14 @@ Revolution_surface::Revolution_surface(Entity<1>* g, Line_segment ax, double sa,
   HEXED_ASSERT(end_angle - start_angle > 0, "end angle must be greater than start angle");
 }
 
-Mat<2> Revolution_surface::temp_nearest_params(Mat<3> p) const {
+Entity<2>::Nearest_params Revolution_surface::temp_nearest_params(
+  Mat<3> p, std::function<bool(Mat<2>)> is_feasible
+) const {
   Mat<3> unit_axis = (axis.endpoints(all, 1) - axis.endpoints(all, 0)).normalized();
   Mat<3> from_start = p - axis.endpoints(all, 0);
   Mat<3> radius = (from_start - from_start.dot(unit_axis)*unit_axis).normalized();
   double dist = huge;
-  Mat<2> nearest {std::nan(""), std::nan("")};
+  Nearest_params nearest {Mat<2>{std::nan(""), std::nan("")}, false};
   for (int i = 0; i < n_div + 1; ++i) {
     double param = i/double(n_div);
     Mat<3> arc_point = generatrix->point(Mat<1>{param}) - axis.endpoints(all, 0);
@@ -33,9 +35,10 @@ Mat<2> Revolution_surface::temp_nearest_params(Mat<3> p) const {
     }
     Mat<2> candidate {param, math::angle_diff(angle, start_angle)/(end_angle - start_angle)};
     double d = (temp_point(candidate) - p).norm();
-    if (d < dist) {
+    if (d < dist && is_feasible(candidate)) {
       dist = d;
-      nearest = candidate;
+      nearest.params = candidate;
+      nearest.is_feasible = true;
     }
   }
   return nearest;
@@ -52,12 +55,17 @@ Mat<3> Revolution_surface::temp_point(Mat<2> params) const {
 
 bool Trimmed_surface::inside(Mat<2> params) const {
   Int i_seg = floor(params(0)*n_div);
-  i_seg = std::max<Int>(0, std::min(n_div - 1, i_seg));
+  if (i_seg < 0 || i_seg > n_div) return false;
+  if (i_seg == n_div) i_seg = n_div - 1;
   auto& segments = parametric_segments[i_seg];
   Int n_intersections = 0;
   for (Mat<2> seg : segments) n_intersections += params(1) < seg(0) + (params(0)*n_div - i_seg)*(seg(1) - seg(0));
   return n_intersections%2;
 }
+
+Entity<2>::Nearest_params Trimmed_surface::temp_nearest_params(Mat<3> p, std::function<bool(Mat<2>)> is_feasible) const {
+  return surface->nearest_params(p, [this, is_feasible](Mat<2> params){return inside(params) && is_feasible(params);});
+};
 
 Trans_mat read_trans_mat(const Iges_parser& parser, Int line) {
   Trans_mat tm;
@@ -197,7 +205,7 @@ class Read_entity {
       for (auto& c : *_ptr->curves.back()) {
         for (Int i_div = 0; i_div < _ptr->n_div + 1; ++i_div) {
           Mat<3> pt = c->point(Mat<1>{i_div*sz});
-          Mat<2> params = _ptr->surface->nearest_params(pt);
+          Mat<2> params = _ptr->surface->nearest_params(pt, [](Mat<2>){return true;}).params;
           nodes.push_back(params);
         }
       }

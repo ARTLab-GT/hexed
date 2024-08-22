@@ -15,12 +15,19 @@ struct Trans_mat {
 template <int n_param>
 class Entity {
   public:
+  struct Nearest_params {
+    Mat<n_param> params;
+    bool is_feasible;
+  };
   virtual ~Entity() = default;
-  Mat<n_param> nearest_params(Mat<3> p) const {
-    return temp_nearest_params(trans_mat.transform.colPivHouseholderQr().solve(p/scale - trans_mat.translate));
+  Nearest_params nearest_params(Mat<3> p, std::function<bool(Mat<2>)> is_feasible) const {
+    return temp_nearest_params(trans_mat.transform.colPivHouseholderQr().solve(p/scale - trans_mat.translate), is_feasible);
   }
   Mat<3> nearest_point(Mat<3> p) const {
-    return point(nearest_params(p));
+    Nearest_params params = nearest_params(p, [](Mat<n_param>){return true;});
+    //HEXED_ASSERT(params.is_feasible, "no feasible nearest point found");
+    if (!params.is_feasible) return {1e6, 1e6, 1e6};
+    return point(params.params);
   }
   Mat<3> point(Mat<n_param> params) const {
     return _convert(temp_point(params));
@@ -30,7 +37,9 @@ class Entity {
   double scale = 1.;
   Trans_mat trans_mat;
   protected:
-  virtual Mat<n_param> temp_nearest_params(Mat<3>) const {return Mat<n_param>::Zero();};
+  virtual Nearest_params temp_nearest_params(Mat<3>, std::function<bool(Mat<2>)> is_feasible) const {
+    return {Mat<n_param>::Zero(), false};
+  };
   virtual Mat<3> temp_point(Mat<n_param>) const = 0;
   private:
   Mat<3> _convert(Mat<3> p) const {
@@ -65,8 +74,9 @@ class Plane : public Entity<2> {
     _origin = temp_point(bounds(all, 0));
     _vecs = _vecs*(bounds(all, 1) - bounds(all, 0)).asDiagonal();
   }
-  Mat<2> temp_nearest_params(Mat<3> p) const override {
-    return _vecs.colPivHouseholderQr().solve(p - _origin);
+  Nearest_params temp_nearest_params(Mat<3> p, std::function<bool(Mat<2>)> is_feasible) const override {
+    Mat<2> params = _vecs.colPivHouseholderQr().solve(p - _origin);
+    return {params, is_feasible(params)};
   }
   inline Mat<3> temp_point(Mat<2> params) const override {return _origin + _vecs*params;}
   private:
@@ -82,7 +92,7 @@ class Revolution_surface : public Entity<2> {
   double start_angle;
   double end_angle;
   protected:
-  Mat<2> temp_nearest_params(Mat<3> p) const override;
+  Nearest_params temp_nearest_params(Mat<3> p, std::function<bool(Mat<2>)> is_feasible) const override;
   Mat<3> temp_point(Mat<2> params) const override;
 };
 
@@ -96,7 +106,7 @@ class Trimmed_surface : public Entity<2> {
   std::vector<std::unique_ptr<Composite_curve>> curves;
   std::vector<std::vector<Mat<2>>> parametric_segments;
   protected:
-  inline Mat<2> temp_nearest_params(Mat<3> p) const override {return surface->nearest_params(p);};
+  Nearest_params temp_nearest_params(Mat<3> p, std::function<bool(Mat<2>)> is_feasible) const override;
   inline Mat<3> temp_point(Mat<2> p) const override {return surface->point(p);}
 };
 
