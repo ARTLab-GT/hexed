@@ -34,7 +34,7 @@ class Entity {
     return _convert(temp_point(params));
   }
   virtual void reparameterize(Mat<n_param, 2> bounds) {}
-  Int n_div = math::pow(10, 2);
+  Int n_div = math::pow(10, 3);
   double scale = 1.;
   Trans_mat trans_mat;
   protected:
