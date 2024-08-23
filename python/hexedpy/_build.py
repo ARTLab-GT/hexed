@@ -19,7 +19,7 @@ class Hexed(bu.C_project):
             "profile": bu.Option(False, convert=bu.as_bool),
             "use_xdmf": bu.Option(True, convert=bu.as_bool),
             "use_tecio": bu.Option(False, convert=bu.as_bool),
-            "use_occt": bu.Option(True, convert=bu.as_bool),
+            "use_occt": bu.Option(False, convert=bu.as_bool),
             "build_tests": bu.Option(True, convert=bu.as_bool),
             "build_docs": bu.Option(False, convert=bu.as_bool),
             "obsessive_timing": bu.Option(False, convert=bu.as_bool),
@@ -145,7 +145,7 @@ class Hexed(bu.C_project):
             ).do
         translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
         translate(package_dir + "hexedpy/constants.py",
-            r"## \namespace hexed.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
+            r"## \namespace hexedpy.constants \brief Ports `hexed::constants` into Python. \see `constants.hpp`", "py")
         if self.builder.options["build_wheel"]:
             package = self[bu.Python_package](package_dir).find()
             assert package, "Failed to build Hexed Python package"
