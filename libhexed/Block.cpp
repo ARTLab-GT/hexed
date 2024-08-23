@@ -119,6 +119,7 @@ void Vertex::glue(Element_shape& to, std::vector<double> coords) {
 
 void Vertex::calc_relax() {
   _update = _desired_pos() - pos;
+  if (!(_update.norm() < 2*nominal_size())) _update = pos;
 }
 
 void Vertex::apply_relax() {

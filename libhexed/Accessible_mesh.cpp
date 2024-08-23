@@ -54,7 +54,7 @@ void Accessible_mesh::id_boundary_verts() {
 }
 
 void Accessible_mesh::snap_vertices() {
-  // this is a terrible way to find the max ref level. future self please fix
+  //! \todo this is a terrible way to find the max ref level. future self please fix
   double min_sz = huge;
   #pragma omp parallel for reduction(min : min_sz)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1480,7 +1480,7 @@ void Accessible_mesh::relax(double factor) {
   _stopwatch["relax"]["legacy"].stopwatch.pause();
   _stopwatch["relax"]["legacy"].work_units_completed += smooth_verts.size();
   _stopwatch["relax"]["optimization"].stopwatch.start();
-  //// update `next::Vertex`s
+  //   update `next::Vertex`s
   _blocks.relax_vertices();
   _stopwatch["relax"]["optimization"].stopwatch.pause();
   _stopwatch["relax"]["optimization"].work_units_completed += _n_verts;
@@ -1519,11 +1519,11 @@ void Accessible_mesh::relax(double factor) {
     }
     // snap vertices to geometry edges
     for (auto& geom_edge : surf_geom->edges()) {
-      if (!geom_edge.matched_vertices.empty()) {
+      if (geom_edge.matched_vertices.size() >= 2 && geom_edge.n_points()) {
         geom_edge.matched_vertices.front().value().pos = geom_edge.points()(0).vector();
         geom_edge.matched_vertices.back().value().pos = geom_edge.points()(geom_edge.n_points() - 1).vector();
       }
-      for (long long i_vert = 1; i_vert < (long long)geom_edge.matched_vertices.size() - 1; ++i_vert) {
+      for (Int i_vert = 1; i_vert < (Int)geom_edge.matched_vertices.size() - 1; ++i_vert) {
         auto& pos = geom_edge.matched_vertices[i_vert].value().pos;
         pos = geom_edge.nearest(pos).pos;
       }
