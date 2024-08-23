@@ -14,6 +14,7 @@ TEST_CASE("Tree_curve") {
   REQUIRE(curve.segments(3)[7].nodes.shape()[0] == 9);
   REQUIRE(curve.segments(3)[0].nodes(0).data() == curve.root().nodes(0).data());
   REQUIRE(curve.segments(3)[7].nodes(8).data() == curve.root().nodes(64).data());
+  REQUIRE(curve.root().segments[0].segments[1].nodes(0).data() == nodes(16).data());
   for (int level = 0; level < 4; ++level) {
     for (int i_segment = 0; i_segment < hexed::math::pow(2, level); ++i_segment) {
       auto& seg = curve.segments(level)[i_segment];
@@ -22,4 +23,5 @@ TEST_CASE("Tree_curve") {
       }
     }
   }
+  REQUIRE(curve.segments(3)[0].segments.size() == 0);
 }

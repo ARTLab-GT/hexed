@@ -8,7 +8,6 @@ namespace hexed {
 class Tree_curve {
   public:
   struct Segment {
-    Segment() : center{Mat<3>::Zero()}, radius{0}, segments({}), nodes({}) {}
     Mat<3> center;
     double radius;
     const Array<Segment> segments;
@@ -18,11 +17,12 @@ class Tree_curve {
   inline int skip_levels() const {return _skip;}
   inline const Array<double> nodes() const {return _nodes();}
   const Array<Segment> segments(int level) const;
-  inline const Segment& root() const {return segments(0)[0];}
+  inline const Segment& root() const {return _segments[0];}
 
   private:
   Array<double> _nodes;
   int _skip;
+  Int _levels;
   Array<Segment> _segments;
 };
 

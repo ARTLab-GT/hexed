@@ -40,7 +40,7 @@ constexpr number_t pow(number_t base, int exponent) {
  * Otherwise, if `arg` < 1, returns 0. In the usual case where neither
  * of the above are true, returns \f$\lceil\log_{\mathtt{base}}(\mathtt{arg})\rceil\f$.
  */
-constexpr int log(int base, int arg) {
+constexpr Int log(Int base, Int arg) {
   if (base <= 1) return -1;
   int result = 0;
   for (int compare = 1; compare < arg; compare *= base) ++result;

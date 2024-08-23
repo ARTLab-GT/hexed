@@ -105,7 +105,7 @@ class Array {
     _strides = _stride_storage.data();
     _strides[_order] = 1;
     for (Int i = _order - 1; i >= 0; --i) _strides[i] = _strides[i + 1]*_shape[i];
-    if (data_arg) {
+    if (data_arg || size() == 0) {
       _data = data_arg;
       _owns = false;
     } else {
@@ -355,12 +355,6 @@ class Array {
 
   private:
   Array(Int o, T* d, bool own, Int* sh, Int* st) : _order{o}, _data{d}, _owns{own}, _shape{sh}, _strides{st} {}
-  void _deallocate() {
-    if (_owns) {
-      delete [] _data;
-      _owns = false;
-    }
-  }
   Int _order;
   std::vector<Int> _shape_storage;
   std::vector<Int> _stride_storage;
