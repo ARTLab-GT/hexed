@@ -1459,6 +1459,10 @@ void Accessible_mesh::set_all_smooth() {
   id_boundary_verts();
 }
 
+void update_pos(next::Vertex& vert, Mat<3> pos) {
+  if ((pos - vert.pos).norm() < vert.nominal_size()) vert.pos = pos;
+}
+
 void Accessible_mesh::relax(double factor) {
   _stopwatch["relax"].stopwatch.start();
   _stopwatch["relax"]["legacy"].stopwatch.start();
@@ -1520,12 +1524,12 @@ void Accessible_mesh::relax(double factor) {
     // snap vertices to geometry edges
     for (auto& geom_edge : surf_geom->edges()) {
       if (geom_edge.matched_vertices.size() >= 2 && geom_edge.n_points()) {
-        geom_edge.matched_vertices.front().value().pos = geom_edge.points()(0).vector();
-        geom_edge.matched_vertices.back().value().pos = geom_edge.points()(geom_edge.n_points() - 1).vector();
+        update_pos(geom_edge.matched_vertices.front().value(), geom_edge.points()(0).vector());
+        update_pos(geom_edge.matched_vertices.back().value(), geom_edge.points()(geom_edge.n_points() - 1).vector());
       }
       for (Int i_vert = 1; i_vert < (Int)geom_edge.matched_vertices.size() - 1; ++i_vert) {
-        auto& pos = geom_edge.matched_vertices[i_vert].value().pos;
-        pos = geom_edge.nearest(pos).pos;
+        auto& vert = geom_edge.matched_vertices[i_vert].value();
+        update_pos(vert, geom_edge.nearest(vert.pos).pos);
       }
     }
     // snaps a `Boundary_block` to the geometry surface
