@@ -556,7 +556,7 @@ Case::Case(std::string input_script)
     return _solver().mesh().n_elements();
   }));
   _inter.variables->create<std::string>("performance_report", new Namespace::Heisenberg<std::string>([this]() {
-    return _solver().stopwatch_tree().report();
+    return _solver().stopwatch_tree().report() + _solver().mesh().stopwatch_tree().report();
   }));
 
   _inter.variables->create<std::string>("integrate_field", new Namespace::Heisenberg<std::string>([this]() {

@@ -80,7 +80,7 @@ TEST_CASE("Revolution_surface") {
   REQUIRE(n(2) == Catch::Approx(.1));
 }
 
-TEST_CASE("Geom") {
+TEST_CASE("Geom", "[.slow]") {
   hexed::brep::Geom geom("../test_assets/cylinder_extruded.iges");
   geom.visualize("cylinder_extruded");
 }

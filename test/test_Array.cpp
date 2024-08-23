@@ -17,12 +17,13 @@ TEST_CASE("Array") {
   REQUIRE(arr0.stride(0) == 12);
   REQUIRE(arr0.stride(1) == 4);
   REQUIRE(arr0.stride(2) == 1);
+  arr0 = 0.;
+  REQUIRE(arr0.data()[0] == 0.);
+  REQUIRE(arr0[23] == 0.);
 
   hexed::Array<double> zero_size({});
   REQUIRE(zero_size.shape().empty());
   REQUIRE(zero_size.size() == 0);
-  REQUIRE(arr0.data()[0] == 0.);
-  REQUIRE(arr0[23] == 0.);
 
   // indexing
   auto view = arr0();
