@@ -29,7 +29,8 @@ Tree_curve::Tree_curve(Array<double> nodes, int skip)
       }
       Int inds [2] {2*(n_segs + i_segment) - 1, 2*(n_segs + i_segment) + 1};
       if (level == _levels - 1) inds[0] = inds[1] = 0;
-      _segments.initialize(n_segs - 1 + i_segment, center, std::sqrt(rsq), _segments(inds[0], inds[1]), n);
+      _segments.initialize(n_segs - 1 + i_segment, center, std::sqrt(rsq),
+                           _segments(inds[0], inds[1]), n, n_div*i_segment);
     }
   }
 }

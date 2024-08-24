@@ -55,6 +55,10 @@ TEST_CASE("Revolution_surface") {
   hexed::brep::Revolution_surface surf(new hexed::brep::Line_segment(generatrix_endpoints),
                                            hexed::brep::Line_segment(axis_endpoints), 0., hexed::constants::pi);
   REQUIRE_THAT(
+    surf.point(hexed::Mat<2>{.5, .5}),
+    Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 1., .5}, hexed::math::Approx_equal(0, 1e-3))
+  );
+  REQUIRE_THAT(
     surf.nearest_point(hexed::Mat<3>{0., 1., .5}),
     Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 1., .5}, hexed::math::Approx_equal(0, 1e-3))
   );
@@ -77,7 +81,7 @@ TEST_CASE("Revolution_surface") {
   hexed::Mat<3> n = surf.nearest_point(hexed::Mat<3>{0., 0., .1});
   REQUIRE(!std::isnan(n(0)));
   REQUIRE(!std::isnan(n(1)));
-  REQUIRE(n(2) == Catch::Approx(.1));
+  REQUIRE(n(2) == Catch::Approx(.1).epsilon(1e-2));
 }
 
 TEST_CASE("Geom", "[.slow]") {

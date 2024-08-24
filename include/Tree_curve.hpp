@@ -12,6 +12,7 @@ class Tree_curve {
     double radius;
     const Array<Segment> segments;
     const Array<double> nodes;
+    Int nodes_start;
   };
   Tree_curve(Array<double> nodes, int skip_levels = 0);
   inline int skip_levels() const {return _skip;}

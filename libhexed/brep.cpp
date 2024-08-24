@@ -6,7 +6,9 @@
 
 namespace hexed::brep {
 
-Entity<1>::Nearest_params Line_segment::temp_nearest_params(Mat<3> p, Entity<1>::Constraint is_feasible) const {
+Entity<1>::Nearest_params Line_segment::temp_nearest_params(
+  Mat<3> p, Entity<1>::Constraint is_feasible, double max_distance
+) const {
   Mat<3> diff = endpoints(all, 1) - endpoints(all, 0);
   Mat<1> params {std::max(0., std::min(1., (p - endpoints(all, 0)).dot(diff)/diff.squaredNorm()))};
   return {params, is_feasible(params)};
@@ -19,7 +21,9 @@ double limited_angle(double angle, double start, double end) {
   return angle;
 }
 
-Entity<1>::Nearest_params Circular_arc::temp_nearest_params(Mat<3> p, Entity<1>::Constraint is_feasible) const {
+Entity<1>::Nearest_params Circular_arc::temp_nearest_params(
+  Mat<3> p, Entity<1>::Constraint is_feasible, double max_distance
+) const {
   double angle = limited_angle(std::atan2(p(1) - center(1), p(0) - center(0)), start_angle, end_angle);
   Mat<1> params {math::angle_diff(angle, start_angle)/(end_angle - start_angle)};
   return {params, is_feasible(params)};
@@ -30,42 +34,100 @@ Mat<3> Circular_arc::temp_point(Mat<1> params) const {
   return center + radius*Mat<3>{std::cos(angle), std::sin(angle), 0.};
 }
 
+Array<double> discretize(Entity<1>& curve, Int n_div) {
+  Array<double> nodes({n_div + 1, 3});
+  for (Int i_node = 0; i_node < n_div + 1; ++i_node) nodes(i_node).vector() = curve.point(Mat<1>{i_node/double(n_div)});
+  return nodes;
+}
+
 Revolution_surface::Revolution_surface(Entity<1>* g, Line_segment ax, double sa, double ea)
-: generatrix{g}, axis{ax}, start_angle{sa}, end_angle{ea}
+: generatrix{g}, axis{ax}, start_angle{sa}, end_angle{ea}, _tree(discretize(*generatrix, n_div), 4)
 {
   HEXED_ASSERT(end_angle - start_angle > 0, "end angle must be greater than start angle");
 }
 
-Entity<2>::Nearest_params Revolution_surface::temp_nearest_params(Mat<3> p, Entity<2>::Constraint is_feasible) const {
-  Mat<3> unit_axis = (axis.endpoints(all, 1) - axis.endpoints(all, 0)).normalized();
-  Mat<3> from_start = p - axis.endpoints(all, 0);
-  Mat<3> radius = (from_start - from_start.dot(unit_axis)*unit_axis).normalized();
-  double dist = huge;
-  Nearest_params nearest {Mat<2>{std::nan(""), std::nan("")}, false};
-  for (int i = 0; i < n_div + 1; ++i) {
-    double param = i/double(n_div);
-    Mat<3> arc_point = generatrix->point(Mat<1>{param}) - axis.endpoints(all, 0);
+Mat<3> Revolution_surface::rotate(Mat<3> p, double angle) const {
+  p -= axis.endpoints(all, 0);
+  Mat<3> ax_vec = (axis.endpoints(all, 1) - axis.endpoints(all, 0)).normalized();
+  Mat<3> axial_component = p.dot(ax_vec)*ax_vec;
+  Mat<3> radial_component = p - axial_component;
+  return std::cos(angle)*radial_component + std::sin(angle)*radial_component.cross(ax_vec)
+         + axial_component + axis.endpoints(all, 0);
+};
+
+class Revo_surf_tnp {
+  public:
+  struct Candidate {
+    Entity<2>::Nearest_params np;
+    double dist;
+  };
+  Revo_surf_tnp(const Revolution_surface& s, Mat<3> p, Entity<2>::Constraint is_f, double max_distance)
+  : surf{s}
+  , is_feasible{is_f}
+  , point{p}
+  , unit_axis{(surf.axis.endpoints(all, 1) - surf.axis.endpoints(all, 0)).normalized()}
+  , from_start{p - surf.axis.endpoints(all, 0)}
+  , radius{(from_start - from_start.dot(unit_axis)*unit_axis).normalized()}
+  , cand{{Mat<2>{std::nan(""), std::nan("")}, false}, max_distance}
+  {}
+  double best_angle(Mat<3> arc_point) {
     Mat<3> arc_radius = (arc_point - arc_point.dot(unit_axis)*unit_axis).normalized();
     double angle = std::atan2(arc_radius.cross(radius).dot(unit_axis), arc_radius.dot(radius));
-    angle = limited_angle(angle, start_angle, end_angle);
-    Mat<2> candidate {param, math::angle_diff(angle, start_angle)/(end_angle - start_angle)};
-    double d = (temp_point(candidate) - p).norm();
-    if (d < dist && is_feasible(candidate)) {
-      dist = d;
-      nearest.params = candidate;
-      nearest.is_feasible = true;
-    }
+    return limited_angle(angle, surf.start_angle, surf.end_angle);
   }
-  return nearest;
+  Mat<3> best_point(Mat<3> arc_point) {
+    double angle = best_angle(arc_point);
+    return surf.rotate(arc_point, angle);
+  }
+  Candidate merge(Candidate c0, Candidate c1) {
+    if (c1.dist < c0.dist && c1.np.is_feasible) return c1;
+    return c0;
+  }
+  void find(const Tree_curve::Segment& segment) {
+    #if 0
+    if ((best_point(segment.center) - point).norm() - segment.radius < cand.dist) {
+      if (segment.segments.size()) {
+        for (auto& seg : segment.segments) find(seg);
+      } else {
+    #endif
+        Int n_nodes = segment.nodes.shape()[0];
+        for (Int i_node = 0; i_node < n_nodes; ++i_node) {
+          Candidate c;
+          Mat<3> node = segment.nodes(i_node).vector();
+          c.np.params(0) = double(segment.nodes_start + i_node)/surf.n_div;
+          double angle = best_angle(node);
+          c.np.params(1) = math::angle_diff(angle, surf.start_angle)/(surf.end_angle - surf.start_angle);
+          //c.np.is_feasible = is_feasible(c.np.params);
+          c.np.is_feasible = true;
+          c.dist = (surf.rotate(node, angle) - point).norm();
+          cand = merge(cand, c);
+        }
+    #if 0
+      }
+    }
+    #endif
+  }
+  const Revolution_surface& surf;
+  Entity<2>::Constraint is_feasible;
+  Mat<3> point;
+  Mat<3> unit_axis;
+  Mat<3> from_start;
+  Mat<3> radius;
+  Candidate cand;
+};
+
+Entity<2>::Nearest_params Revolution_surface::temp_nearest_params(
+  Mat<3> p, Entity<2>::Constraint is_feasible, double max_distance
+) const {
+  Revo_surf_tnp tnp(*this, p, is_feasible, max_distance);
+  tnp.find(_tree.root());
+  return tnp.cand.np;
 }
 
 Mat<3> Revolution_surface::temp_point(Mat<2> params) const {
-  Mat<3> unrotated = generatrix->point(params(Eigen::seqN(0, 1))) - axis.endpoints(all, 0);
+  Mat<3> p = generatrix->point(params(Eigen::seqN(0, 1)));
   double angle = start_angle + params(1)*(start_angle - end_angle);
-  Mat<3> ax_vec = (axis.endpoints(all, 1) - axis.endpoints(all, 0)).normalized();
-  Mat<3> axial_component = unrotated.dot(ax_vec)*ax_vec;
-  Mat<3> radial_component = unrotated - axial_component;
-  return axial_component + std::cos(angle)*radial_component + std::sin(angle)*radial_component.cross(ax_vec);
+  return rotate(p, angle);
 }
 
 bool Trimmed_surface::inside(Mat<2> params) const {
@@ -78,16 +140,18 @@ bool Trimmed_surface::inside(Mat<2> params) const {
   return n_intersections%2;
 }
 
-Entity<2>::Nearest_params Trimmed_surface::temp_nearest_params(Mat<3> p, Entity<2>::Constraint is_feasible) const {
+Entity<2>::Nearest_params Trimmed_surface::temp_nearest_params(
+  Mat<3> p, Entity<2>::Constraint is_feasible, double max_distance
+) const {
   auto f = [this, is_feasible](Mat<2> params){return inside(params) && is_feasible(params);};
-  Nearest_params nearest = surface->nearest_params(p, f);
+  Nearest_params nearest = surface->nearest_params(p, f, max_distance);
   double dist = (temp_point(nearest.params) - p).norm();
   for (auto& composite : curves) {
     for (auto& curve : *composite) {
-      Mat<3> candidate = curve->nearest_point(p);
+      Mat<3> candidate = curve->nearest_point(p, max_distance);
       double d = (candidate - p).norm();
       if (d < dist || !nearest.is_feasible) {
-        Nearest_params par = surface->nearest_params(candidate, is_feasible);
+        Nearest_params par = surface->nearest_params(candidate, is_feasible, max_distance);
         // note we use `is_feasible` instead of `f` because a point on the boundary is guaranteed to be inside,
         // even if (especially if) the parametric boundary segments mark it as outside
         if (par.is_feasible) {
@@ -243,7 +307,7 @@ class Read_entity {
         for (auto& c : *_ptr->curves.back()) {
           for (Int i_div = 0; i_div < _ptr->n_div + 1; ++i_div) {
             Mat<3> pt = c->point(Mat<1>{i_div*sz});
-            Mat<2> params = _ptr->surface->nearest_params(pt, [](Mat<2>){return true;}).params;
+            Mat<2> params = _ptr->surface->nearest_params(pt, [](Mat<2>){return true;}, huge).params;
             nodes.push_back(params);
           }
         }
@@ -384,8 +448,15 @@ Geom::Geom(std::string file_name) {
 
 Nearest_point<dyn> Geom::nearest_point(Mat<> point, double max_distance, double distance_guess) {
   Nearest_point<dyn> nearest(point, max_distance);
-  for (auto& surf : _surfaces) nearest.merge(Mat<>{surf->nearest_point(point)});
+  for (auto& surf : _surfaces) nearest.merge(Mat<>{surf->nearest_point(point, max_distance)});
+  #if 0
+  if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < max_distance) || distance_guess >= max_distance) {
+    return nearest;
+  }
+  return nearest_point(point, max_distance, distance_guess*2);
+  #else
   return nearest;
+  #endif
 }
 
 void Geom::visualize(std::string file_name) const {
@@ -448,7 +519,7 @@ void Geom::visualize(std::string file_name) const {
       Mat<3> p;
       for (int i_dim = 0; i_dim < 3; ++i_dim) p(i_dim) = coords(i_dim)[i] = 1./n*(i/math::pow(n, 2 - i_dim)%n) - .1;
       double min_dist = huge;
-      for (auto& s : _surfaces) min_dist = std::min(min_dist, (p - s->nearest_point(p)).norm());
+      for (auto& s : _surfaces) min_dist = std::min(min_dist, (p - s->nearest_point(p, huge)).norm());
       dist[i] = min_dist;
     }
     vis->write_block(coords, dist);
