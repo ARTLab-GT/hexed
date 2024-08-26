@@ -140,29 +140,31 @@ bool Trimmed_surface::inside(Mat<2> params) const {
   return n_intersections%2;
 }
 
-Entity<2>::Nearest_params Trimmed_surface::temp_nearest_params(
-  Mat<3> p, Entity<2>::Constraint is_feasible, double max_distance
-) const {
-  auto f = [this, is_feasible](Mat<2> params){return inside(params) && is_feasible(params);};
-  Nearest_params nearest = surface->nearest_params(p, f, max_distance);
-  double dist = (temp_point(nearest.params) - p).norm();
+Mat<3> Trimmed_surface::nearest_point(Mat<3> p, double max_distance) const {
+  p = inv_convert(p);
+  max_distance /= scale;
+  auto f = [this](Mat<2> params){return true;};
+  Nearest_params temp_nearest = temp_nearest_params(p, f, max_distance);
+  Mat<3> nearest = surface->point(temp_nearest.params);
+  double dist = temp_nearest.is_feasible ? (nearest - p).norm() : max_distance;
   for (auto& composite : curves) {
     for (auto& curve : *composite) {
       Mat<3> candidate = curve->nearest_point(p, max_distance);
       double d = (candidate - p).norm();
-      if (d < dist || !nearest.is_feasible) {
-        Nearest_params par = surface->nearest_params(candidate, is_feasible);
-        // note we use `is_feasible` instead of `f` because a point on the boundary is guaranteed to be inside,
-        // even if (especially if) the parametric boundary segments mark it as outside
-        if (par.is_feasible) {
-          nearest.params = par.params;
-          nearest.is_feasible = true;
-          dist = d;
-        }
+      if (d < dist) {
+        dist = d;
+        nearest = candidate;
       }
     }
   }
-  return nearest;
+  return _convert(nearest);
+}
+
+Entity<2>::Nearest_params Trimmed_surface::temp_nearest_params(
+  Mat<3> p, Entity<2>::Constraint is_feasible, double max_distance
+) const {
+  auto f = [this, is_feasible](Mat<2> params){return inside(params) && is_feasible(params);};
+  return surface->nearest_params(p, f, max_distance);
 };
 
 Trans_mat read_trans_mat(const Iges_parser& parser, Int line) {
@@ -286,7 +288,6 @@ class Read_entity {
     if (_ptr || _ent_num != 144) return;
     Read_entity<Entity<2>> read_surf(_parser, _parser.read_int(_par[1]));
     read_surf.read_surface();
-    if (read_surf.entity_number() == 108) return;
     _ptr.reset(new Trimmed_surface());
     _ptr->surface.reset(read_surf.get().release());
     _ptr->surface->scale = 1.;
@@ -452,14 +453,30 @@ Geom::Geom(std::string file_name) {
   }
 }
 
+double default_bound = std::sqrt(huge);
+double component_bound = default_bound/2;
+
+double limit(double dist) {
+  return (dist > 0 && dist < default_bound) ? dist : default_bound;
+}
+
+void check_point(Mat<3> point) {
+  for (int i = 0; i < 3; ++i) {
+    HEXED_ASSERT(-component_bound < point(i) && point(i) < component_bound,
+                 format_str(200, "point(%i) == %e is not in bounds", i, point(i)), assert::Numerical_exception);
+  }
+}
+
 Nearest_point<dyn> Geom::nearest_point(Mat<> point, double max_distance, double distance_guess) {
+  max_distance = limit(max_distance);
+  distance_guess = limit(distance_guess);
+  check_point(point);
   Nearest_point<dyn> nearest(point, distance_guess);
   for (auto& surf : _surfaces) nearest.merge(Mat<>{surf->nearest_point(point, distance_guess)});
   if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
-    std::cout << "| " << nearest.dist_squared() << std::endl;
+    HEXED_ASSERT(!nearest.empty(), format_str(200, "%e %e %e | %e %e %e", point(0), point(1), point(2), std::sqrt(nearest.dist_squared()), max_distance, distance_guess));
     return nearest;
   }
-  std::cout << distance_guess << " ";
   return nearest_point(point, max_distance, distance_guess*2);
 }
 

@@ -25,10 +25,9 @@ class Entity {
   typedef std::function<bool(Mat<n_param>)> Constraint;
   virtual ~Entity() = default;
   Nearest_params nearest_params(Mat<3> p, Constraint is_feasible, double max_distance = default_max_dist) const {
-    return temp_nearest_params(trans_mat.transform.colPivHouseholderQr().solve(p/scale - trans_mat.translate),
-                               is_feasible, max_distance);
+    return temp_nearest_params(inv_convert(p), is_feasible, max_distance);
   }
-  Mat<3> nearest_point(Mat<3> p, double max_distance = default_max_dist) const {
+  virtual Mat<3> nearest_point(Mat<3> p, double max_distance = default_max_dist) const {
     Nearest_params params = nearest_params(p, [](Mat<n_param>){return true;}, max_distance);
     HEXED_ASSERT(params.is_feasible, "no feasible nearest point found");
     return point(params.params);
@@ -43,6 +42,9 @@ class Entity {
   Trans_mat trans_mat;
   Mat<3> _convert(Mat<3> p) const {
     return scale*(trans_mat.translate + trans_mat.transform*p);
+  }
+  Mat<3> inv_convert(Mat<3> p) const {
+    return trans_mat.transform.colPivHouseholderQr().solve(p/scale - trans_mat.translate);
   }
   protected:
   virtual Nearest_params temp_nearest_params(Mat<3>, Constraint is_feasible, double max_distance) const {
@@ -115,6 +117,7 @@ class Trimmed_surface : public Entity<2> {
   std::unique_ptr<Entity<2>> surface;
   std::vector<std::unique_ptr<Composite_curve>> curves;
   std::vector<std::vector<Mat<2>>> parametric_segments;
+  Mat<3> nearest_point(Mat<3> p, double max_distance = default_max_dist) const override;
   protected:
   Nearest_params temp_nearest_params(Mat<3> p, Constraint is_feasible, double max_distance) const override;
   inline Mat<3> temp_point(Mat<2> p) const override {return surface->point(p);}
@@ -123,7 +126,7 @@ class Trimmed_surface : public Entity<2> {
 class Geom : public Surface_geom {
   public:
   Geom(std::string file_name);
-  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = Entity<2>::default_max_dist, double distance_guess = Entity<2>::default_max_dist) override;
+  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
   inline next::Sequence<Geom_edge&> edges() override {return next::Sequence<Geom_edge&>::vector_view(_edges);}
   void visualize(std::string file_name) const;
