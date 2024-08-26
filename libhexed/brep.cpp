@@ -51,7 +51,7 @@ Mat<3> Revolution_surface::rotate(Mat<3> p, double angle) const {
   Mat<3> ax_vec = (axis.point(Mat<1>{1.}) - axis.point(Mat<1>{0.})).normalized();
   Mat<3> axial_component = p.dot(ax_vec)*ax_vec;
   Mat<3> radial_component = p - axial_component;
-  return std::cos(angle)*radial_component + std::sin(angle)*radial_component.cross(ax_vec)
+  return std::cos(angle)*radial_component + std::sin(angle)*ax_vec.cross(radial_component)
          + axial_component + axis.point(Mat<1>{0.});
 };
 
@@ -100,6 +100,10 @@ class Revo_surf_tnp {
           c.np.params(1) = math::angle_diff(angle, surf.start_angle)/(surf.end_angle - surf.start_angle);
           c.np.is_feasible = is_feasible(c.np.params);
           c.dist = (surf.rotate(node, angle) - point).norm();
+          if (!(std::abs(c.dist - (surf.temp_point(c.np.params) - point).norm()) < 1e-5)) {
+            std::cout << c.np.params(1) << " " << angle << " " << surf.start_angle << " " << surf.end_angle << "\n" << c.dist << "\n" << (surf.temp_point(c.np.params) - point).norm() << "\n" << point.transpose() << "\n" << surf.rotate(node, angle).transpose() << "\n" << surf.temp_point(c.np.params).transpose() << "\n" << surf.point(c.np.params).transpose() << std::endl;
+            throw;
+          }
           cand = merge(cand, c);
         }
     #if 0
@@ -126,7 +130,7 @@ Entity<2>::Nearest_params Revolution_surface::temp_nearest_params(
 
 Mat<3> Revolution_surface::temp_point(Mat<2> params) const {
   Mat<3> p = generatrix->point(params(Eigen::seqN(0, 1)));
-  double angle = start_angle + params(1)*(start_angle - end_angle);
+  double angle = start_angle + params(1)*(end_angle - start_angle);
   return rotate(p, angle);
 }
 
@@ -146,18 +150,23 @@ Mat<3> Trimmed_surface::nearest_point(Mat<3> p, double max_distance) const {
   auto f = [this](Mat<2> params){return true;};
   Nearest_params temp_nearest = temp_nearest_params(p, f, max_distance);
   Mat<3> nearest = surface->point(temp_nearest.params);
-  double dist = temp_nearest.is_feasible ? (nearest - p).norm() : max_distance;
+  double dist = (nearest - p).norm();
+  bool found = temp_nearest.is_feasible;
+  #if 0
   for (auto& composite : curves) {
     for (auto& curve : *composite) {
       Mat<3> candidate = curve->nearest_point(p, max_distance);
       double d = (candidate - p).norm();
-      if (d < dist) {
+      if (d < dist || !found) {
         dist = d;
         nearest = candidate;
+        found = true;
       }
     }
   }
-  return _convert(nearest);
+  #endif
+  if (found) return _convert(nearest);
+  else return Mat<3>{std::nan(""), std::nan(""), std::nan("")};
 }
 
 Entity<2>::Nearest_params Trimmed_surface::temp_nearest_params(
@@ -473,14 +482,18 @@ Nearest_point<dyn> Geom::nearest_point(Mat<> point, double max_distance, double 
   check_point(point);
   Nearest_point<dyn> nearest(point, distance_guess);
   for (auto& surf : _surfaces) nearest.merge(Mat<>{surf->nearest_point(point, distance_guess)});
+  #if 0
   if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
     HEXED_ASSERT(!nearest.empty(), format_str(200, "%e %e %e | %e %e %e", point(0), point(1), point(2), std::sqrt(nearest.dist_squared()), max_distance, distance_guess));
     return nearest;
   }
   return nearest_point(point, max_distance, distance_guess*2);
+  #else
+  return nearest;
+  #endif
 }
 
-void Geom::visualize(std::string file_name) const {
+void Geom::visualize(std::string file_name) {
   int n = 101;
   for (Int i_edge = 0; i_edge < Int(_edges.size()); ++i_edge) {
     _edges[i_edge].visualize("default", file_name + "edge" + std::to_string(i_edge));
@@ -527,9 +540,8 @@ void Geom::visualize(std::string file_name) const {
     for (int i = 0; i < math::pow(n, 3); ++i) {
       Mat<3> p;
       for (int i_dim = 0; i_dim < 3; ++i_dim) p(i_dim) = coords(i_dim)[i] = 1./n*(i/math::pow(n, 2 - i_dim)%n) - .1;
-      double min_dist = huge;
-      for (auto& s : _surfaces) min_dist = std::min(min_dist, (p - s->nearest_point(p, huge)).norm());
-      dist[i] = min_dist;
+      Nearest_point np = nearest_point(p, huge, .2);
+      dist[i] = np.empty() ? 10 : (p - np.point()).norm();
     }
     vis->write_block(coords, dist);
   }

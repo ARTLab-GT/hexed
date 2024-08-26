@@ -46,7 +46,6 @@ class Entity {
   Mat<3> inv_convert(Mat<3> p) const {
     return trans_mat.transform.colPivHouseholderQr().solve(p/scale - trans_mat.translate);
   }
-  protected:
   virtual Nearest_params temp_nearest_params(Mat<3>, Constraint is_feasible, double max_distance) const {
     return {Mat<n_param>::Zero(), false};
   };
@@ -70,7 +69,6 @@ class Line_segment : public Entity<1> {
   public:
   inline Line_segment(Mat<3, 2> endpts) : endpoints{endpts} {}
   Mat<3, 2> endpoints;
-  protected:
   Nearest_params temp_nearest_params(Mat<3>, Constraint is_feasible, double max_distance) const override;
   Mat<3> temp_point(Mat<1> params) const override {return endpoints*Mat<2>{1. - params(0), params(0)};}
 };
@@ -78,7 +76,6 @@ class Line_segment : public Entity<1> {
 class Plane : public Entity<2> {
   public:
   inline Plane(Mat<3> origin, Mat<3, 2> coord_vectors) : _origin{origin}, _vecs{coord_vectors} {}
-  protected:
   void reparameterize(Mat<2, 2> bounds) override {
     _origin = temp_point(bounds(all, 0));
     _vecs = _vecs*(bounds(all, 1) - bounds(all, 0)).asDiagonal();
@@ -101,7 +98,6 @@ class Revolution_surface : public Entity<2> {
   Line_segment axis;
   double start_angle;
   double end_angle;
-  protected:
   Nearest_params temp_nearest_params(Mat<3> p, Constraint is_feasible, double max_distance) const override;
   Mat<3> temp_point(Mat<2> params) const override;
   private:
@@ -118,7 +114,6 @@ class Trimmed_surface : public Entity<2> {
   std::vector<std::unique_ptr<Composite_curve>> curves;
   std::vector<std::vector<Mat<2>>> parametric_segments;
   Mat<3> nearest_point(Mat<3> p, double max_distance = default_max_dist) const override;
-  protected:
   Nearest_params temp_nearest_params(Mat<3> p, Constraint is_feasible, double max_distance) const override;
   inline Mat<3> temp_point(Mat<2> p) const override {return surface->point(p);}
 };
@@ -129,7 +124,7 @@ class Geom : public Surface_geom {
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
   inline next::Sequence<Geom_edge&> edges() override {return next::Sequence<Geom_edge&>::vector_view(_edges);}
-  void visualize(std::string file_name) const;
+  void visualize(std::string file_name);
   private:
   std::vector<std::unique_ptr<Trimmed_surface>> _surfaces;
   std::vector<Geom_edge> _edges;
