@@ -47,12 +47,12 @@ Revolution_surface::Revolution_surface(Entity<1>* g, Line_segment ax, double sa,
 }
 
 Mat<3> Revolution_surface::rotate(Mat<3> p, double angle) const {
-  p -= axis.endpoints(all, 0);
-  Mat<3> ax_vec = (axis.endpoints(all, 1) - axis.endpoints(all, 0)).normalized();
+  p -= axis.point(Mat<1>{0.});
+  Mat<3> ax_vec = (axis.point(Mat<1>{1.}) - axis.point(Mat<1>{0.})).normalized();
   Mat<3> axial_component = p.dot(ax_vec)*ax_vec;
   Mat<3> radial_component = p - axial_component;
   return std::cos(angle)*radial_component + std::sin(angle)*radial_component.cross(ax_vec)
-         + axial_component + axis.endpoints(all, 0);
+         + axial_component + axis.point(Mat<1>{0.});
 };
 
 class Revo_surf_tnp {
@@ -65,12 +65,13 @@ class Revo_surf_tnp {
   : surf{s}
   , is_feasible{is_f}
   , point{p}
-  , unit_axis{(surf.axis.endpoints(all, 1) - surf.axis.endpoints(all, 0)).normalized()}
-  , from_start{p - surf.axis.endpoints(all, 0)}
+  , unit_axis{(surf.axis.point(Mat<1>{1.}) - surf.axis.point(Mat<1>{0.})).normalized()}
+  , from_start{p - surf.axis.point(Mat<1>{0.})}
   , radius{(from_start - from_start.dot(unit_axis)*unit_axis).normalized()}
   , cand{{Mat<2>{std::nan(""), std::nan("")}, false}, max_distance}
   {}
   double best_angle(Mat<3> arc_point) {
+    arc_point -= surf.axis.point(Mat<1>{0.});
     Mat<3> arc_radius = (arc_point - arc_point.dot(unit_axis)*unit_axis).normalized();
     double angle = std::atan2(arc_radius.cross(radius).dot(unit_axis), arc_radius.dot(radius));
     return limited_angle(angle, surf.start_angle, surf.end_angle);
@@ -97,8 +98,7 @@ class Revo_surf_tnp {
           c.np.params(0) = double(segment.nodes_start + i_node)/surf.n_div;
           double angle = best_angle(node);
           c.np.params(1) = math::angle_diff(angle, surf.start_angle)/(surf.end_angle - surf.start_angle);
-          //c.np.is_feasible = is_feasible(c.np.params);
-          c.np.is_feasible = true;
+          c.np.is_feasible = is_feasible(c.np.params);
           c.dist = (surf.rotate(node, angle) - point).norm();
           cand = merge(cand, c);
         }
@@ -219,7 +219,6 @@ class Read_entity {
   void read_curve() {
     read_circular_arc();
     read_line_segment();
-    //HEXED_ASSERT(_ptr, format_str(200, "could not read entity type `%i` as curve", int(_ent_num)));
   }
 
   void read_plane() {
@@ -237,7 +236,7 @@ class Read_entity {
       vecs(vec_inds[i_vec], i_vec) = 1;
       vecs(i_dependent, i_vec) = -coefs[vec_inds[i_vec]]/coefs[i_dependent];
     }
-    _ptr.reset(new Plane(origin, vecs*1000));
+    _ptr.reset(new Plane(origin, vecs));
   }
 
   void read_revolution_surface() {
@@ -246,20 +245,23 @@ class Read_entity {
     read_axis.read_line_segment();
     Read_entity<Entity<1>> read_generatrix(_parser, _parser.read_int(_par[2]));
     read_generatrix.read_curve();
+    Entity<1>* generatrix = read_generatrix.get().release();
+    generatrix->scale = 1.;
+    Line_segment axis = *read_axis.get();
+    axis.scale = 1.;
     auto surf = new Revolution_surface {
-      read_generatrix.get().release(),
-      *read_axis.get(),
+      generatrix,
+      axis,
       _parser.read_float(_par[3]),
       _parser.read_float(_par[4]),
     };
-    surf->generatrix->scale = 1.;
-    surf->axis.scale = 1.;
     _ptr.reset(surf);
   }
 
   void read_surface() {
-    read_plane();
+    //read_plane();
     read_revolution_surface();
+    HEXED_ASSERT(_ptr, "failed to read surface from entity #" + std::to_string(_ent_num));
   }
 
   void read_disc_curve() {
@@ -267,15 +269,17 @@ class Read_entity {
     curve.read_curve();
     auto ptr = curve.get();
     _ptr.reset(new Composite_curve);
-    if (ptr) _ptr->emplace_back(ptr.release());
-    else if (curve.entity_number() == 116 || curve.entity_number() == 132) {}
-    else if (curve.entity_number() == 102) {
+    if (ptr) {
+      _ptr->emplace_back(ptr.release());
+      _ptr->back()->scale = 1.;
+    } else if (curve.entity_number() == 116 || curve.entity_number() == 132) {
+    } else if (curve.entity_number() == 102) {
       for (int i_curve = 0; i_curve < _parser.read_int(_par[1]); ++i_curve) {
         Read_entity<T> sub_curve(_parser, _parser.read_int(_par[2 + i_curve]));
         sub_curve.read_disc_curve();
         for (auto& c : *sub_curve._ptr) _ptr->emplace_back(c.release());
       }
-    } else HEXED_THROW(format_str(200, "could not read entity type `%i` as a curve", int(curve.entity_number())));
+    } else HEXED_THROW("failed to read curve from entity #" + std::to_string(curve.entity_number()));
   }
 
   void read_trimmed_surface() {
@@ -284,7 +288,7 @@ class Read_entity {
     read_surf.read_surface();
     _ptr.reset(new Trimmed_surface());
     _ptr->surface.reset(read_surf.get().release());
-    HEXED_ASSERT(_ptr->surface, format_str(100, "failed to read surface from entity # %lli\n", read_surf.entity_number()));
+    _ptr->surface->scale = 1.;
     HEXED_ASSERT(_parser.read_int(_par[2]) == 1, "using outer boundary as boundary curve is not implemented",
                  assert::Not_implemented_error);
     double sz = 1./_ptr->n_div;
@@ -352,9 +356,9 @@ class Read_entity {
       std::vector<double> ordinate;
       Mat<2> prev_params {-1., 0.};
       Int prev_absc = -1;
-      for (Int i_node = 0; i_node < n_nodes + 1; ++i_node) {
+      if (n_nodes) for (Int i_node = 0; i_node < n_nodes + 1; ++i_node) {
         Mat<2> params;
-        if (i_node == n_nodes) params << abscissa.front(), ordinate.front();
+        if (i_node == n_nodes && !abscissa.empty()) params << abscissa.front(), ordinate.front();
         else {
           params = nodes[i_node];
           params(0) = std::max(0., std::min(1., params(0)))*_ptr->n_div;
@@ -371,14 +375,16 @@ class Read_entity {
           ordinate.push_back(prev_params(1));
         }
       }
-      HEXED_ASSERT(abscissa.front() == abscissa.back(), "parametric representation is not closed");
-      for (Int i_segment = 0; i_segment < Int(abscissa.size()) - 1; ++i_segment) {
-        HEXED_ASSERT(std::abs(abscissa[i_segment] - abscissa[i_segment + 1]) == 1, "invalid step size");
-        bool reverse = abscissa[i_segment] > abscissa[i_segment + 1];
-        HEXED_ASSERT(0 <= abscissa[i_segment + reverse] && abscissa[i_segment + reverse] < _ptr->n_div,
-                     format_str(200, "segment index %i out of bounds", abscissa[i_segment + reverse]));
-        _ptr->parametric_segments[abscissa[i_segment + reverse]].push_back({ordinate[i_segment +  reverse],
-                                                                            ordinate[i_segment + !reverse]});
+      if (!abscissa.empty()) {
+        HEXED_ASSERT(abscissa.front() == abscissa.back(), "parametric representation is not closed");
+        for (Int i_segment = 0; i_segment < Int(abscissa.size()) - 1; ++i_segment) {
+          HEXED_ASSERT(std::abs(abscissa[i_segment] - abscissa[i_segment + 1]) == 1, "invalid step size");
+          bool reverse = abscissa[i_segment] > abscissa[i_segment + 1];
+          HEXED_ASSERT(0 <= abscissa[i_segment + reverse] && abscissa[i_segment + reverse] < _ptr->n_div,
+                       format_str(200, "segment index %i out of bounds", abscissa[i_segment + reverse]));
+          _ptr->parametric_segments[abscissa[i_segment + reverse]].push_back({ordinate[i_segment +  reverse],
+                                                                              ordinate[i_segment + !reverse]});
+        }
       }
     }
   }
@@ -420,7 +426,6 @@ class Read_entity {
 template <> std::unique_ptr<Composite_curve> Read_entity<Composite_curve>::get() {
   return std::unique_ptr<Composite_curve>{_ptr.release()};
 }
-template <> double Read_entity<Trimmed_surface>::_unit(double unit) const {return 1;}
 
 Geom::Geom(std::string file_name) {
   std::string ext = file_extension(file_name);
@@ -461,20 +466,8 @@ Nearest_point<dyn> Geom::nearest_point(Mat<> point, double max_distance, double 
 
 void Geom::visualize(std::string file_name) const {
   int n = 101;
-  {
-    auto vis = Visualizer::create("default", 3, 1, "edges", {}, 0., Visualizer::block);
-    for (auto& s : _surfaces) {
-      for (auto& c : s->curves) {
-        for (auto& curve : *c) {
-          Array<double> discrete({3, n});
-          for (int i = 0; i < n; ++i) {
-            Mat<3> p = curve->point(Mat<1>{i/(n - 1.)});
-            for (int i_dim = 0; i_dim < 3; ++i_dim) discrete(i_dim)[i] = p(i_dim);
-          }
-          vis->write_block(discrete, Array<double>({0, n}));
-        }
-      }
-    }
+  for (Int i_edge = 0; i_edge < Int(_edges.size()); ++i_edge) {
+    _edges[i_edge].visualize("default", file_name + "edge" + std::to_string(i_edge));
   }
   {
     auto vis = Visualizer::create("default", 3, 1, "parametric_edges", {}, 0., Visualizer::block);

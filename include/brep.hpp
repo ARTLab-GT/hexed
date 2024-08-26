@@ -25,8 +25,9 @@ class Entity {
   typedef std::function<bool(Mat<n_param>)> Constraint;
   virtual ~Entity() = default;
   Nearest_params nearest_params(Mat<3> p, Constraint is_feasible, double max_distance = huge) const {
+    max_distance = std::min(huge, max_distance/scale);
     return temp_nearest_params(trans_mat.transform.colPivHouseholderQr().solve(p/scale - trans_mat.translate),
-                               is_feasible, max_distance/scale);
+                               is_feasible, max_distance);
   }
   Mat<3> nearest_point(Mat<3> p, double max_distance = huge) const {
     Nearest_params params = nearest_params(p, [](Mat<n_param>){return true;}, max_distance);
@@ -122,7 +123,7 @@ class Trimmed_surface : public Entity<2> {
 class Geom : public Surface_geom {
   public:
   Geom(std::string file_name);
-  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge/10000, double distance_guess = huge/10000) override;
+  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = std::sqrt(huge), double distance_guess = std::sqrt(huge)) override;
   inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
   inline next::Sequence<Geom_edge&> edges() override {return next::Sequence<Geom_edge&>::vector_view(_edges);}
   void visualize(std::string file_name) const;
