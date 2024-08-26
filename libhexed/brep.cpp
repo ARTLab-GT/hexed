@@ -151,7 +151,7 @@ Entity<2>::Nearest_params Trimmed_surface::temp_nearest_params(
       Mat<3> candidate = curve->nearest_point(p, max_distance);
       double d = (candidate - p).norm();
       if (d < dist || !nearest.is_feasible) {
-        Nearest_params par = surface->nearest_params(candidate, is_feasible, max_distance);
+        Nearest_params par = surface->nearest_params(candidate, is_feasible);
         // note we use `is_feasible` instead of `f` because a point on the boundary is guaranteed to be inside,
         // even if (especially if) the parametric boundary segments mark it as outside
         if (par.is_feasible) {
@@ -259,7 +259,7 @@ class Read_entity {
   }
 
   void read_surface() {
-    //read_plane();
+    read_plane();
     read_revolution_surface();
     HEXED_ASSERT(_ptr, "failed to read surface from entity #" + std::to_string(_ent_num));
   }
@@ -286,6 +286,7 @@ class Read_entity {
     if (_ptr || _ent_num != 144) return;
     Read_entity<Entity<2>> read_surf(_parser, _parser.read_int(_par[1]));
     read_surf.read_surface();
+    if (read_surf.entity_number() == 108) return;
     _ptr.reset(new Trimmed_surface());
     _ptr->surface.reset(read_surf.get().release());
     _ptr->surface->scale = 1.;
@@ -311,7 +312,7 @@ class Read_entity {
         for (auto& c : *_ptr->curves.back()) {
           for (Int i_div = 0; i_div < _ptr->n_div + 1; ++i_div) {
             Mat<3> pt = c->point(Mat<1>{i_div*sz});
-            Mat<2> params = _ptr->surface->nearest_params(pt, [](Mat<2>){return true;}, huge).params;
+            Mat<2> params = _ptr->surface->nearest_params(pt, [](Mat<2>){return true;}).params;
             nodes.push_back(params);
           }
         }
@@ -452,16 +453,14 @@ Geom::Geom(std::string file_name) {
 }
 
 Nearest_point<dyn> Geom::nearest_point(Mat<> point, double max_distance, double distance_guess) {
-  Nearest_point<dyn> nearest(point, max_distance);
-  for (auto& surf : _surfaces) nearest.merge(Mat<>{surf->nearest_point(point, max_distance)});
-  #if 0
-  if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < max_distance) || distance_guess >= max_distance) {
+  Nearest_point<dyn> nearest(point, distance_guess);
+  for (auto& surf : _surfaces) nearest.merge(Mat<>{surf->nearest_point(point, distance_guess)});
+  if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
+    std::cout << "| " << nearest.dist_squared() << std::endl;
     return nearest;
   }
+  std::cout << distance_guess << " ";
   return nearest_point(point, max_distance, distance_guess*2);
-  #else
-  return nearest;
-  #endif
 }
 
 void Geom::visualize(std::string file_name) const {
