@@ -12,6 +12,20 @@ namespace hexed::brep {
 
 constexpr double default_max_dist = std::sqrt(huge);
 
+class Coordinate_change {
+  public:
+  Coordinate_change(Mat<3> translate = Mat<3>::Zero(), Mat<3, 3> transform = Mat<3, 3>::Identity());
+  inline Mat<3> to_model(Mat<3> definition) const {return _translate + _transform*definition;}
+  inline Mat<3> to_definition(Mat<3> model) const {return _inv*(model - _translate);}
+  inline Mat<3, 3> transform() const {return _transform;}
+  inline Mat<3> translate() const {return _translate;}
+  Coordinate_change operator()(Coordinate_change that) const;
+  private:
+  Mat<3> _translate;
+  Mat<3, 3> _transform;
+  Mat<3, 3> _inv;
+};
+
 template <int n_param>
 class Parametric {
   public:
@@ -79,36 +93,6 @@ class Revolution_surface : public Parametric<2> {
   double _start_angle;
   double _end_angle;
   Tree_curve _tree;
-};
-
-class Coordinate_change {
-  public:
-  Coordinate_change(Mat<3> translate = Mat<3>::Zero(), Mat<3, 3> transform = Mat<3, 3>::Identity());
-  inline Mat<3> to_model(Mat<3> definition) const {return _translate + _transform*definition;}
-  inline Mat<3> to_definition(Mat<3> model) const {return _inv*(model - _translate);}
-  Coordinate_change compose(Coordinate_change that) const;
-  private:
-  Mat<3> _translate;
-  Mat<3, 3> _transform;
-  Mat<3, 3> _inv;
-};
-
-template <int n_param>
-class Transformed : public Parametric<n_param> {
-  public:
-  Transformed(Parametric<n_param>* param, Coordinate_change coord) : _param{param}, _coord{coord} {}
-  Mat<3> point(Mat<n_param> params) const override {return _coord.to_model(_param->point(params));}
-  Parametric<n_param>::Nearest_parameters nearest_params(
-    Mat<3> p, Parametric<n_param>::Constraint is_feasible, double max_distance
-  ) const override {
-    return _param->nearest_params(_coord.to_definition(p), is_feasible, max_distance);
-  }
-  void change_coords(Coordinate_change coord) {
-    _coord = coord.compose(_coord);
-  }
-  private:
-  std::unique_ptr<Parametric<n_param>> _param;
-  Coordinate_change _coord;
 };
 
 typedef std::vector<std::unique_ptr<Parametric<1>>> Composite_curve;

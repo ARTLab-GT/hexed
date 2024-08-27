@@ -148,7 +148,7 @@ Coordinate_change::Coordinate_change(Mat<3> translate, Mat<3, 3> transform)
 : _translate{translate}, _transform{transform}, _inv{transform.inverse()}
 {}
 
-Coordinate_change Coordinate_change::compose(Coordinate_change that) const {
+Coordinate_change Coordinate_change::operator()(Coordinate_change that) const {
   return {_translate + _transform*that._translate, _transform*that._transform};
 }
 
@@ -168,16 +168,23 @@ bool Trimmed_surface::inside(Mat<2> parameters) const {
 
 class Read_entity {
   public:
-  Read_entity(const Iges_parser& parser, Int line, Int n_div)
-  : Read_entity{parser, parser.entry(Iges_parser::directory, line), n_div}
+  Read_entity(const Iges_parser& parser, Int line, Int n_div, Coordinate_change change_to = {})
+  : Read_entity{parser, parser.entry(Iges_parser::directory, line), n_div, change_to}
   {}
-  Read_entity(const Iges_parser& parser, const std::vector<std::string>& dir, Int n_div)
+  Read_entity(const Iges_parser& parser, const std::vector<std::string>& dir, Int n_div, Coordinate_change change_to = {})
   : _parser{parser}
   , _dir{dir}
   , _par{_parser.entry(Iges_parser::parameter, _parser.read_int(_dir[1]))}
   , _ent_num{_parser.read_int(_dir[0])}
   , _n_div{n_div}
   {
+    Int line = _parser.read_int(_dir[6]);
+    if (!line) _coords = change_to;
+    else {
+      Read_entity reader(_parser, line, _n_div);
+      _coords = change_to(reader._read_coord());
+    }
+
     Int unit_flag = _parser.read_int(_parser.section(Iges_parser::global)[0][13]);
     HEXED_ASSERT(unit_flag > 0 && unit_flag <= 11, "invalid unit flag");
     double units [] {
@@ -196,28 +203,6 @@ class Read_entity {
     _unit = units[unit_flag - 1];
   }
 
-  Coordinate_change read_this_coord() const {
-    HEXED_ASSERT(_ent_num == 124, "entity is not a Transformation Matrix");
-    Mat<3> translate;
-    Mat<3, 3> transform;
-    HEXED_ASSERT(_parser.read_int(_dir[6]) == 0, "chaining transformation matrices is not yet implemented");
-    auto& par_entry = _parser.entry(Iges_parser::parameter, _parser.read_int(_dir[1]));
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      for (int j_dim = 0; j_dim < 3; ++j_dim) {
-        transform(i_dim, j_dim) = _parser.read_float(par_entry[4*i_dim + j_dim + 1]);
-      }
-      translate(i_dim) = _unit*_parser.read_float(par_entry[4*i_dim + 3 + 1]);
-    }
-    return {translate, transform};
-  }
-
-  Coordinate_change read_coord() const {
-    Int line = _parser.read_int(_dir[6]);
-    if (!line) return {};
-    Read_entity reader(_parser, line, _n_div);
-    return reader.read_this_coord();
-  }
-
   void read_plane(std::unique_ptr<Parametric<2>>& ptr) const {
     if (ptr || _ent_num != 108) return;
     HEXED_ASSERT(_parser.read_int(_par[5]) == 0, "bounded planes are not implemented", assert::Not_implemented_error);
@@ -234,12 +219,12 @@ class Read_entity {
       vecs(vec_inds[i_vec], i_vec) = 1;
       vecs(i_dependent, i_vec) = -coefs[vec_inds[i_vec]]/coefs[i_dependent];
     }
-    ptr.reset(new Plane(origin, vecs));
+    ptr.reset(new Plane(_coords.to_model(origin), _coords.transform()*vecs));
   }
 
   void read_revolution_surface(std::unique_ptr<Parametric<2>>& ptr) const {
     if (ptr || _ent_num != 120) return;
-    ptr.reset(new Plane(Mat<3>::Zero(), Mat<3, 2>::Identity()));
+    ptr.reset(new Plane(_coords.to_model(Mat<3>::Zero()), _coords.transform()*Mat<3, 2>::Identity()));
   }
 
   #if 0
@@ -262,30 +247,43 @@ class Read_entity {
   }
   #endif
 
-  Transformed<2> read_surface() const {
+  std::unique_ptr<Parametric<2>> read_surface() const {
     std::unique_ptr<Parametric<2>> ptr;
     read_plane(ptr);
     read_revolution_surface(ptr);
     HEXED_ASSERT(ptr, "Surface entity #" + std::to_string(_ent_num) + " is not implemented.",
                  assert::Not_implemented_error);
-    return {ptr.release(), read_coord()};
+    return ptr;
   }
 
   std::optional<Trimmed_surface> read_trimmed_surface() const {
     if (_ent_num != 144) return {};
-    Coordinate_change coord = read_coord();
     Read_entity reader(_parser, _parser.read_int(_par[1]), _n_div);
-    std::unique_ptr<Transformed<2>> surf{new Transformed<2>{reader.read_surface()}};
-    surf->change_coords(coord);
-    return {Trimmed_surface(surf.release(), {})};
+    return {Trimmed_surface(reader.read_surface().release(), {})};
   }
 
   private:
+  Coordinate_change _read_coord() const {
+    HEXED_ASSERT(_ent_num == 124, "entity is not a Transformation Matrix");
+    Mat<3> translate;
+    Mat<3, 3> transform;
+    HEXED_ASSERT(_parser.read_int(_dir[6]) == 0, "chaining transformation matrices is not yet implemented");
+    auto& par_entry = _parser.entry(Iges_parser::parameter, _parser.read_int(_dir[1]));
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      for (int j_dim = 0; j_dim < 3; ++j_dim) {
+        transform(i_dim, j_dim) = _parser.read_float(par_entry[4*i_dim + j_dim + 1]);
+      }
+      translate(i_dim) = _unit*_parser.read_float(par_entry[4*i_dim + 3 + 1]);
+    }
+    return {translate, transform};
+  }
+
   const Iges_parser& _parser;
   const std::vector<std::string>& _dir;
   const std::vector<std::string>& _par;
   Int _ent_num;
   Int _n_div;
+  Coordinate_change _coords;
   double _unit;
 };
 
