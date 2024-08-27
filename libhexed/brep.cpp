@@ -203,6 +203,50 @@ class Read_entity {
     _unit = units[unit_flag - 1];
   }
 
+  template <typename T, typename U>
+  static void merge(std::unique_ptr<T>& ptr0, std::unique_ptr<U>&& ptr1) {
+    if (!ptr0 && ptr1) ptr0.reset(ptr1.release());
+  }
+
+  std::unique_ptr<Line_segment> read_line_segment() {
+    if (_ent_num != 110) return {};
+    Mat<3, 2> endpts;
+    for (int i = 0; i < 6; ++i) endpts(i) = _parser.read_float(_par[1 + i]);
+    for (int i = 0; i < 2; ++i) endpts(all, i) = _unit*_coords.to_model(endpts(all, i));
+    return std::make_unique<Line_segment>(endpts);
+  }
+
+  std::unique_ptr<Parametric<1>> read_circular_arc() {
+    if (_ent_num != 100) return {};
+    std::vector<double> values;
+    for (std::string s : _par) values.push_back(_parser.read_float(s));
+    Mat<3> center {values[2], values[3], values[1]};
+    center *= _unit;
+    double radius = _unit*std::sqrt(.5*(values[4]*values[4] + values[5]*values[5]
+                                    + values[6]*values[6] + values[7]*values[7]));
+    double start_angle = std::atan2(values[5], values[4]);
+    double end_angle = std::atan2(values[7], values[6]);
+    while (end_angle < start_angle + 1e-10) end_angle += 2*constants::pi;
+    std::unique_ptr<Parametric<1>> arc (new Circular_arc {
+      center, radius,
+      start_angle,
+      end_angle,
+    });
+    return std::unique_ptr<Parametric<1>>(new Transformed<1>(arc.release(), _coords));
+  }
+
+  std::unique_ptr<Parametric<1>> read_curve(bool required = true) {
+    std::unique_ptr<Parametric<1>> ptr;
+    merge(ptr, read_line_segment());
+    merge(ptr, read_circular_arc());
+    HEXED_ASSERT(
+      !required || ptr,
+      "Curve entity #" + std::to_string(_ent_num) + " is not implemented.",
+      assert::Not_implemented_error
+    );
+    return ptr;
+  }
+
   void read_plane(std::unique_ptr<Parametric<2>>& ptr) const {
     if (ptr || _ent_num != 108) return;
     HEXED_ASSERT(_parser.read_int(_par[5]) == 0, "bounded planes are not implemented", assert::Not_implemented_error);
@@ -224,12 +268,9 @@ class Read_entity {
 
   void read_revolution_surface(std::unique_ptr<Parametric<2>>& ptr) const {
     if (ptr || _ent_num != 120) return;
-    ptr.reset(new Plane(_coords.to_model(Mat<3>::Zero()), _coords.transform()*Mat<3, 2>::Identity()));
-  }
-
-  #if 0
-  void read_revolution_surface() {
-    Read_entity<Line_segment> read_axis(_parser, _parser.read_int(_par[1]));
+    #if 0
+    Read_entity read_axis(_parser, _parser.read_int(_par[1]));;
+    std::
     read_axis.read_line_segment();
     Read_entity<Entity<1>> read_generatrix(_parser, _parser.read_int(_par[2]));
     read_generatrix.read_curve();
@@ -244,22 +285,31 @@ class Read_entity {
       _parser.read_float(_par[4]),
     };
     ptr.reset(surf);
+    #endif
+  }
+
+  #if 0
+  void read_revolution_surface() {
   }
   #endif
 
-  std::unique_ptr<Parametric<2>> read_surface() const {
+  std::unique_ptr<Parametric<2>> read_surface(bool required = true) const {
     std::unique_ptr<Parametric<2>> ptr;
     read_plane(ptr);
     read_revolution_surface(ptr);
-    HEXED_ASSERT(ptr, "Surface entity #" + std::to_string(_ent_num) + " is not implemented.",
-                 assert::Not_implemented_error);
+    HEXED_ASSERT(
+      !required || ptr,
+      "Surface entity #" + std::to_string(_ent_num) + " is not implemented.",
+      assert::Not_implemented_error
+    );
     return ptr;
   }
 
   std::optional<Trimmed_surface> read_trimmed_surface() const {
     if (_ent_num != 144) return {};
-    Read_entity reader(_parser, _parser.read_int(_par[1]), _n_div);
-    return {Trimmed_surface(reader.read_surface().release(), {})};
+    Read_entity surf_reader(_parser, _parser.read_int(_par[1]), _n_div);
+    auto surf = surf_reader.read_surface();
+    return {Trimmed_surface(surf.release(), {})};
   }
 
   private:

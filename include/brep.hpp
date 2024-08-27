@@ -43,6 +43,21 @@ class Parametric {
   virtual void reparameterize(Mat<n_param, 2> bounds) {}
 };
 
+template <int n_param>
+class Transformed : public Parametric<n_param> {
+  public:
+  Transformed(Parametric<n_param>* param, Coordinate_change coord) : _param{param}, _coord{coord} {}
+  Mat<3> point(Mat<n_param> params) const override {return _coord.to_model(_param->point(params));}
+  Parametric<n_param>::Nearest_parameters nearest_params(
+    Mat<3> p, Parametric<n_param>::Constraint is_feasible, double max_distance
+  ) const override {
+    return _param->nearest_params(_coord.to_definition(p), is_feasible, max_distance);
+  }
+  private:
+  std::unique_ptr<Parametric<n_param>> _param;
+  Coordinate_change _coord;
+};
+
 class Line_segment : public Parametric<1> {
   public:
   inline Line_segment(Mat<3, 2> endpoints) : _endpoints{endpoints} {}
