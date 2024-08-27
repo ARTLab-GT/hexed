@@ -105,9 +105,14 @@ TEST_CASE("Revolution_surface") {
   REQUIRE(n(2) == Catch::Approx(.11).epsilon(1e-2));
 }
 
-#if 0
-TEST_CASE("Geom", "[.slow]") {
-  hexed::brep::Geom geom("../test_assets/cylinder_extruded.iges");
-  geom.visualize("cylinder_extruded");
+TEST_CASE("Trimmed_surface") {
+  hexed::brep::Trimmed_surface(
+    new hexed::brep::Plane(hexed::Mat<3>{.1, .1, .1}, hexed::Mat<3, 2>::Identity()),
+    {}
+  );
 }
-#endif
+
+TEST_CASE("Geom_3d", "[.slow]") {
+  hexed::brep::Geom_3d geom("../test_assets/cylinder_extruded.iges", 1024);
+  geom.visualize("default", "cylinder_extruded");
+}

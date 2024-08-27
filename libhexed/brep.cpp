@@ -1,3 +1,4 @@
+#include <optional>
 #include <hexed/brep.hpp>
 #include <hexed/Iges_parser.hpp>
 #include <hexed/Visualizer.hpp>
@@ -147,6 +148,180 @@ Coordinate_change::Coordinate_change(Mat<3> translate, Mat<3, 3> transform)
 : _translate{translate}, _transform{transform}, _inv{transform.inverse()}
 {}
 
+Coordinate_change Coordinate_change::compose(Coordinate_change that) const {
+  return {_translate + _transform*that._translate, _transform*that._transform};
+}
+
+Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<std::unique_ptr<Composite_curve>>&& curves)
+: _surf{surface}
+{
+  for (auto& ptr : curves) _curves.emplace_back(ptr.release());
+}
+
+next::Sequence<const Composite_curve&> Trimmed_surface::curves() const {
+  return next::Sequence<const std::unique_ptr<Composite_curve>&>::vector_view(_curves).dereference<const Composite_curve&>();
+}
+
+bool Trimmed_surface::inside(Mat<2> parameters) const {
+  return true;
+}
+
+class Read_entity {
+  public:
+  Read_entity(const Iges_parser& parser, Int line, Int n_div)
+  : Read_entity{parser, parser.entry(Iges_parser::directory, line), n_div}
+  {}
+  Read_entity(const Iges_parser& parser, const std::vector<std::string>& dir, Int n_div)
+  : _parser{parser}
+  , _dir{dir}
+  , _par{_parser.entry(Iges_parser::parameter, _parser.read_int(_dir[1]))}
+  , _ent_num{_parser.read_int(_dir[0])}
+  , _n_div{n_div}
+  {
+    Int unit_flag = _parser.read_int(_parser.section(Iges_parser::global)[0][13]);
+    HEXED_ASSERT(unit_flag > 0 && unit_flag <= 11, "invalid unit flag");
+    double units [] {
+      constants::inch,
+      1e-3*constants::meter,
+      1.,
+      constants::foot,
+      constants::mile,
+      constants::meter,
+      1e3*constants::meter,
+      1e-3*constants::inch,
+      1e-6*constants::meter,
+      1e-2*constants::meter,
+      1e-6*constants::inch,
+    };
+    _unit = units[unit_flag - 1];
+  }
+
+  Coordinate_change read_this_coord() const {
+    HEXED_ASSERT(_ent_num == 124, "entity is not a Transformation Matrix");
+    Mat<3> translate;
+    Mat<3, 3> transform;
+    HEXED_ASSERT(_parser.read_int(_dir[6]) == 0, "chaining transformation matrices is not yet implemented");
+    auto& par_entry = _parser.entry(Iges_parser::parameter, _parser.read_int(_dir[1]));
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      for (int j_dim = 0; j_dim < 3; ++j_dim) {
+        transform(i_dim, j_dim) = _parser.read_float(par_entry[4*i_dim + j_dim + 1]);
+      }
+      translate(i_dim) = _unit*_parser.read_float(par_entry[4*i_dim + 3 + 1]);
+    }
+    return {translate, transform};
+  }
+
+  Coordinate_change read_coord() const {
+    Int line = _parser.read_int(_dir[6]);
+    if (!line) return {};
+    Read_entity reader(_parser, line, _n_div);
+    return reader.read_this_coord();
+  }
+
+  void read_plane(std::unique_ptr<Parametric<2>>& ptr) const {
+    if (ptr || _ent_num != 108) return;
+    HEXED_ASSERT(_parser.read_int(_par[5]) == 0, "bounded planes are not implemented", assert::Not_implemented_error);
+    double coefs [4];
+    for (int i_coef = 0; i_coef < 4; ++i_coef) coefs[i_coef] = _parser.read_float(_par[i_coef + 1]);
+    coefs[3] *= _unit;
+    auto comp = [](double x, double y){return std::abs(x) < std::abs(y);};
+    int i_dependent = std::max_element(coefs, coefs + 3, comp) - coefs;
+    int vec_inds [2] {(i_dependent + 1)%3, (i_dependent + 2)%3};
+    Mat<3> origin = Mat<3>::Zero();
+    origin(i_dependent) = coefs[3]/coefs[i_dependent];
+    Mat<3, 2> vecs = Mat<3, 2>::Zero();
+    for (int i_vec = 0; i_vec < 2; ++i_vec) {
+      vecs(vec_inds[i_vec], i_vec) = 1;
+      vecs(i_dependent, i_vec) = -coefs[vec_inds[i_vec]]/coefs[i_dependent];
+    }
+    ptr.reset(new Plane(origin, vecs));
+  }
+
+  void read_revolution_surface(std::unique_ptr<Parametric<2>>& ptr) const {
+    if (ptr || _ent_num != 120) return;
+    ptr.reset(new Plane(Mat<3>::Zero(), Mat<3, 2>::Identity()));
+  }
+
+  #if 0
+  void read_revolution_surface() {
+    Read_entity<Line_segment> read_axis(_parser, _parser.read_int(_par[1]));
+    read_axis.read_line_segment();
+    Read_entity<Entity<1>> read_generatrix(_parser, _parser.read_int(_par[2]));
+    read_generatrix.read_curve();
+    Entity<1>* generatrix = read_generatrix.get().release();
+    generatrix->scale = 1.;
+    Line_segment axis = *read_axis.get();
+    axis.scale = 1.;
+    auto surf = new Revolution_surface {
+      generatrix,
+      axis,
+      _parser.read_float(_par[3]),
+      _parser.read_float(_par[4]),
+    };
+    ptr.reset(surf);
+  }
+  #endif
+
+  Transformed<2> read_surface() const {
+    std::unique_ptr<Parametric<2>> ptr;
+    read_plane(ptr);
+    read_revolution_surface(ptr);
+    HEXED_ASSERT(ptr, "Surface entity #" + std::to_string(_ent_num) + " is not implemented.",
+                 assert::Not_implemented_error);
+    return {ptr.release(), read_coord()};
+  }
+
+  std::optional<Trimmed_surface> read_trimmed_surface() const {
+    if (_ent_num != 144) return {};
+    Coordinate_change coord = read_coord();
+    Read_entity reader(_parser, _parser.read_int(_par[1]), _n_div);
+    std::unique_ptr<Transformed<2>> surf{new Transformed<2>{reader.read_surface()}};
+    surf->change_coords(coord);
+    return {Trimmed_surface(surf.release(), {})};
+  }
+
+  private:
+  const Iges_parser& _parser;
+  const std::vector<std::string>& _dir;
+  const std::vector<std::string>& _par;
+  Int _ent_num;
+  Int _n_div;
+  double _unit;
+};
+
+Geom_3d::Geom_3d(std::string file_name, Int n_div) {
+  std::string ext = file_extension(file_name);
+  HEXED_ASSERT(ext == "igs" || ext == "iges", "can only read IGES files");
+  Iges_parser parser(file_name);
+  auto dir = parser.section(Iges_parser::directory);
+  for (auto& entry : dir) {
+    Read_entity read(parser, entry, n_div);
+    auto surf = read.read_trimmed_surface();
+    if (surf) _surfaces.emplace_back(std::move(*surf));
+  }
+}
+
+void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bool vis_volume, Mat<3, 2> bounds) const {
+  Int n_nodes = n_div + 1;
+  double sz = 1./n_div;
+  {
+    auto vis = Visualizer::create(format, 3, 2, file_name + "_surfaces", {"inside"}, 0., Visualizer::block);
+    for (auto& s : _surfaces) {
+      Array<double> discrete({3, n_nodes, n_nodes});
+      Array<double> inside({1, n_nodes, n_nodes});
+      for (int i = 0; i < n_nodes; ++i) {
+        for (int j = 0; j < n_nodes; ++j) {
+          Mat<2> params {i*sz, j*sz};
+          Mat<3> p = s.surface().point(params);
+          for (int i_dim = 0; i_dim < 3; ++i_dim) discrete(i_dim)(i)[j] = p(i_dim);
+          inside(0)(i)[j] = s.inside(params);
+        }
+      }
+      vis->write_block(discrete, inside);
+    }
+  }
+}
+
 #if 0
 bool Trimmed_surface::inside(Mat<2> params) const {
   Int i_seg = floor(params(0)*n_div);
@@ -188,22 +363,6 @@ Entity<2>::Nearest_params Trimmed_surface::temp_nearest_params(
   return surface->nearest_params(p, f, max_distance);
 };
 
-Trans_mat read_trans_mat(const Iges_parser& parser, Int line) {
-  Trans_mat tm;
-  if (line > 0) {
-    const auto& dir_entry = parser.entry(Iges_parser::directory, line);
-    HEXED_ASSERT(parser.read_int(dir_entry[6]) == 0, "chaining transformation matrices is not yet implemented");
-    auto& par_entry = parser.entry(Iges_parser::parameter, parser.read_int(dir_entry[1]));
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      for (int j_dim = 0; j_dim < 3; ++j_dim) {
-        tm.transform(i_dim, j_dim) = parser.read_float(par_entry[4*i_dim + j_dim + 1]);
-      }
-      tm.translate(i_dim) = parser.read_float(par_entry[4*i_dim + 3 + 1]);
-    }
-  }
-  return tm;
-}
-
 template <typename T>
 class Read_entity {
   public:
@@ -242,43 +401,6 @@ class Read_entity {
   void read_curve() {
     read_circular_arc();
     read_line_segment();
-  }
-
-  void read_plane() {
-    if (_ptr || _ent_num != 108) return;
-    HEXED_ASSERT(_parser.read_int(_par[5]) == 0, "bounded planes are not implemented", assert::Not_implemented_error);
-    double coefs [4];
-    for (int i_coef = 0; i_coef < 4; ++i_coef) coefs[i_coef] = _parser.read_float(_par[i_coef + 1]);
-    auto comp = [](double x, double y){return std::abs(x) < std::abs(y);};
-    int i_dependent = std::max_element(coefs, coefs + 3, comp) - coefs;
-    int vec_inds [2] {(i_dependent + 1)%3, (i_dependent + 2)%3};
-    Mat<3> origin = Mat<3>::Zero();
-    origin(i_dependent) = coefs[3]/coefs[i_dependent];
-    Mat<3, 2> vecs = Mat<3, 2>::Zero();
-    for (int i_vec = 0; i_vec < 2; ++i_vec) {
-      vecs(vec_inds[i_vec], i_vec) = 1;
-      vecs(i_dependent, i_vec) = -coefs[vec_inds[i_vec]]/coefs[i_dependent];
-    }
-    _ptr.reset(new Plane(origin, vecs));
-  }
-
-  void read_revolution_surface() {
-    if (_ptr || _ent_num != 120) return;
-    Read_entity<Line_segment> read_axis(_parser, _parser.read_int(_par[1]));
-    read_axis.read_line_segment();
-    Read_entity<Entity<1>> read_generatrix(_parser, _parser.read_int(_par[2]));
-    read_generatrix.read_curve();
-    Entity<1>* generatrix = read_generatrix.get().release();
-    generatrix->scale = 1.;
-    Line_segment axis = *read_axis.get();
-    axis.scale = 1.;
-    auto surf = new Revolution_surface {
-      generatrix,
-      axis,
-      _parser.read_float(_par[3]),
-      _parser.read_float(_par[4]),
-    };
-    _ptr.reset(surf);
   }
 
   void read_surface() {

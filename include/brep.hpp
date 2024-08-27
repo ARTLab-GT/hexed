@@ -83,9 +83,10 @@ class Revolution_surface : public Parametric<2> {
 
 class Coordinate_change {
   public:
-  Coordinate_change(Mat<3> translate, Mat<3, 3> transform);
+  Coordinate_change(Mat<3> translate = Mat<3>::Zero(), Mat<3, 3> transform = Mat<3, 3>::Identity());
   inline Mat<3> to_model(Mat<3> definition) const {return _translate + _transform*definition;}
   inline Mat<3> to_definition(Mat<3> model) const {return _inv*(model - _translate);}
+  Coordinate_change compose(Coordinate_change that) const;
   private:
   Mat<3> _translate;
   Mat<3, 3> _transform;
@@ -95,20 +96,44 @@ class Coordinate_change {
 template <int n_param>
 class Transformed : public Parametric<n_param> {
   public:
-  Transformed(Parametric<n_param>*, Coordinate_change);
-  inline Mat<3> point(Mat<1> params) const override {return _coord.to_model(_param.point(params));}
+  Transformed(Parametric<n_param>* param, Coordinate_change coord) : _param{param}, _coord{coord} {}
+  Mat<3> point(Mat<n_param> params) const override {return _coord.to_model(_param->point(params));}
   Parametric<n_param>::Nearest_parameters nearest_params(
     Mat<3> p, Parametric<n_param>::Constraint is_feasible, double max_distance
   ) const override {
-    return _param.nearest_params(_coord.to_definition(p), is_feasible, max_distance);
+    return _param->nearest_params(_coord.to_definition(p), is_feasible, max_distance);
+  }
+  void change_coords(Coordinate_change coord) {
+    _coord = coord.compose(_coord);
   }
   private:
   std::unique_ptr<Parametric<n_param>> _param;
   Coordinate_change _coord;
 };
 
+typedef std::vector<std::unique_ptr<Parametric<1>>> Composite_curve;
+
+class Trimmed_surface {
+  public:
+  Trimmed_surface(Parametric<2>* surface, std::vector<std::unique_ptr<Composite_curve>>&& curves);
+  inline const Parametric<2>& surface() const {return *_surf;}
+  next::Sequence<const Composite_curve&> curves() const;
+  bool inside(Mat<2> parameters) const;
+  private:
+  std::unique_ptr<Parametric<2>> _surf;
+  std::vector<std::unique_ptr<Composite_curve>> _curves;
+};
+
+class Geom_3d {
+  public:
+  Geom_3d(std::string file_name, Int n_div);
+  void visualize(std::string format, std::string file_name,
+                 Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose()) const;
+  private:
+  std::vector<Trimmed_surface> _surfaces;
+};
+
 #if 0
-typedef std::vector<std::unique_ptr<Entity<1>>> Composite_curve;
 
 class Trimmed_surface : public Entity<2> {
   public:
