@@ -60,7 +60,6 @@ TEST_CASE("Plane") {
                Catch::Matchers::RangeEquals(hexed::Mat<3>{.7, .8, .8}, hexed::math::Approx_equal()));
 }
 
-#if 0
 TEST_CASE("Revolution_surface") {
   hexed::Mat<3, 2> axis_endpoints;
   axis_endpoints <<
@@ -73,11 +72,14 @@ TEST_CASE("Revolution_surface") {
     0.01, 0.01,
     0.01, 1.01;
   hexed::brep::Revolution_surface surf(new hexed::brep::Line_segment(generatrix_endpoints),
-                                           hexed::brep::Line_segment(axis_endpoints), 0., hexed::constants::pi);
+                                       hexed::brep::Line_segment(axis_endpoints), 1024, 0., hexed::constants::pi);
+  REQUIRE_THAT(surf.rotate(hexed::Mat<3>{.01 + std::sqrt(.5), .01 + std::sqrt(.5), .9}, 1.25*hexed::constants::pi),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{0.01, -.99, .9}, hexed::math::Approx_equal()));
   REQUIRE_THAT(
     surf.point(hexed::Mat<2>{.5, .5}),
     Catch::Matchers::RangeEquals(hexed::Mat<3>{0.01, 1.01, .51}, hexed::math::Approx_equal(0, 1e-3))
   );
+  #if 0
   REQUIRE_THAT(
     surf.nearest_point(hexed::Mat<3>{0.01, 1.01, .51}),
     Catch::Matchers::RangeEquals(hexed::Mat<3>{0.01, 1.01, .51}, hexed::math::Approx_equal(0, 1e-3))
@@ -102,8 +104,10 @@ TEST_CASE("Revolution_surface") {
   REQUIRE(!std::isnan(n(0)));
   REQUIRE(!std::isnan(n(1)));
   REQUIRE(n(2) == Catch::Approx(.11).epsilon(1e-2));
+  #endif
 }
 
+#if 0
 TEST_CASE("Geom", "[.slow]") {
   hexed::brep::Geom geom("../test_assets/cylinder_extruded.iges");
   geom.visualize("cylinder_extruded");

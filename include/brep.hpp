@@ -20,9 +20,9 @@ class Parametric {
     bool is_feasible;
   };
   typedef std::function<bool(Mat<n_param>)> Constraint;
+  virtual ~Parametric() = default;
   virtual Mat<3> point(Mat<n_param> params) const = 0;
-  virtual Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
-                                            double max_distance) const = 0;
+  virtual Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const = 0;
   Mat<3> nearest_point(Mat<3> p) const {
     return point(nearest_params(p, [](Mat<n_param>){return true;}, default_max_dist).params);
   }
@@ -33,8 +33,7 @@ class Line_segment : public Parametric<1> {
   public:
   inline Line_segment(Mat<3, 2> endpoints) : _endpoints{endpoints} {}
   inline Mat<3> point(Mat<1> params) const override {return _endpoints*Mat<2>{1. - params(0), params(0)};}
-  Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
-                                    double max_distance) const override;
+  Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
   private:
   Mat<3, 2> _endpoints;
 };
@@ -43,8 +42,7 @@ class Circular_arc : public Parametric<1> {
   public:
   Circular_arc(Mat<3> center, double radius, double start_angle, double end_angle);
   Mat<3> point(Mat<1> params) const override;
-  Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
-                                    double max_distance) const override;
+  Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
   private:
   Mat<3> _center;
   double _radius;
@@ -65,6 +63,21 @@ class Plane : public Parametric<2> {
   private:
   Mat<3> _origin;
   Mat<3, 2> _vecs;
+};
+
+class Revolution_surface : public Parametric<2> {
+  public:
+  Revolution_surface(Parametric<1>* generatrix, Line_segment, Int n_div, double start_angle = 0, double end_angle = 2*constants::pi);
+  Mat<3> rotate(Mat<3>, double angle) const;
+  Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
+  inline Mat<3> point(Mat<2> params) const override;
+  private:
+  std::unique_ptr<Parametric<1>> _generatrix;
+  Line_segment _axis;
+  Int _n_div;
+  double _start_angle;
+  double _end_angle;
+  Tree_curve _tree;
 };
 
 #if 0
@@ -109,20 +122,6 @@ class Entity {
   };
   virtual Mat<3> temp_point(Mat<n_param>) const = 0;
   private:
-};
-
-class Revolution_surface : public Entity<2> {
-  public:
-  Revolution_surface(Entity<1>*, Line_segment, double start_angle = 0, double end_angle = 2*constants::pi);
-  Mat<3> rotate(Mat<3>, double angle) const;
-  std::unique_ptr<Entity<1>> generatrix;
-  Line_segment axis;
-  double start_angle;
-  double end_angle;
-  Nearest_params temp_nearest_params(Mat<3> p, Constraint is_feasible, double max_distance) const override;
-  Mat<3> temp_point(Mat<2> params) const override;
-  private:
-  Tree_curve _tree;
 };
 
 typedef std::vector<std::unique_ptr<Entity<1>>> Composite_curve;

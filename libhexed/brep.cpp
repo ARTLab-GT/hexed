@@ -18,7 +18,9 @@ Circular_arc::Circular_arc(Mat<3> center, double radius, double start_angle, dou
 , _radius{radius}
 , _start_angle{start_angle}
 , _end_angle{end_angle}
-{}
+{
+  HEXED_ASSERT(_end_angle - _start_angle > 0, "end angle must be greater than start angle");
+}
 
 double limited_angle(double angle, double start, double end) {
   if (math::angle_diff(angle, start) > end - start) {
@@ -44,28 +46,45 @@ Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_
   return {params, is_feasible(params)};
 }
 
-#if 0
-Array<double> discretize(Entity<1>& curve, Int n_div) {
+Array<double> discretize(Parametric<1>& curve, Int n_div) {
   Array<double> nodes({n_div + 1, 3});
   for (Int i_node = 0; i_node < n_div + 1; ++i_node) nodes(i_node).vector() = curve.point(Mat<1>{i_node/double(n_div)});
   return nodes;
 }
 
-Revolution_surface::Revolution_surface(Entity<1>* g, Line_segment ax, double sa, double ea)
-: generatrix{g}, axis{ax}, start_angle{sa}, end_angle{ea}, _tree(discretize(*generatrix, n_div), 4)
+Revolution_surface::Revolution_surface(Parametric<1>* g, Line_segment ax, Int n_div, double sa, double ea)
+: _generatrix{g}
+, _axis{ax}
+, _n_div{n_div}
+, _start_angle{sa}
+, _end_angle{ea}
+, _tree(discretize(*_generatrix, _n_div), 4)
 {
-  HEXED_ASSERT(end_angle - start_angle > 0, "end angle must be greater than start angle");
+  HEXED_ASSERT(_end_angle - _start_angle > 0, "end angle must be greater than start angle");
 }
 
 Mat<3> Revolution_surface::rotate(Mat<3> p, double angle) const {
-  p -= axis.point(Mat<1>{0.});
-  Mat<3> ax_vec = (axis.point(Mat<1>{1.}) - axis.point(Mat<1>{0.})).normalized();
+  Mat<3> origin = _axis.point(Mat<1>{0.});
+  p -= origin;
+  Mat<3> ax_vec = (_axis.point(Mat<1>{1.}) - origin).normalized();
   Mat<3> axial_component = p.dot(ax_vec)*ax_vec;
   Mat<3> radial_component = p - axial_component;
   return std::cos(angle)*radial_component + std::sin(angle)*ax_vec.cross(radial_component)
-         + axial_component + axis.point(Mat<1>{0.});
+         + axial_component + origin;
 };
 
+Parametric<2>::Nearest_parameters Revolution_surface::nearest_params(Mat<3> point, Constraint is_feasible,
+                                                                     double max_distance) const {
+  return {Mat<2>::Zero(), false};
+}
+
+Mat<3> Revolution_surface::point(Mat<2> params) const {
+  Mat<3> p = _generatrix->point(Mat<1>{params(0)});
+  double angle = _start_angle + params(1)*(_end_angle - _start_angle);
+  return rotate(p, angle);
+}
+
+#if 0
 class Revo_surf_tnp {
   public:
   struct Candidate {
