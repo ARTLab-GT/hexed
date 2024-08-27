@@ -85,12 +85,10 @@ class Revo_surf_tnp {
     return c0;
   }
   void find(const Tree_curve::Segment& segment) {
-    #if 0
     if ((best_point(segment.center) - point).norm() - segment.radius < cand.dist) {
       if (segment.segments.size()) {
         for (auto& seg : segment.segments) find(seg);
       } else {
-    #endif
         Int n_nodes = segment.nodes.shape()[0];
         for (Int i_node = 0; i_node < n_nodes; ++i_node) {
           Candidate c;
@@ -102,10 +100,8 @@ class Revo_surf_tnp {
           c.dist = (surf.rotate(node, angle) - point).norm();
           cand = merge(cand, c);
         }
-    #if 0
       }
     }
-    #endif
   }
   const Revolution_surface& surf;
   Entity<2>::Constraint is_feasible;

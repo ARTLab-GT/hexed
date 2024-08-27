@@ -36,7 +36,7 @@ class Entity {
     return _convert(temp_point(params));
   }
   virtual void reparameterize(Mat<n_param, 2> bounds) {}
-  Int n_div = math::pow(2, 10);
+  Int n_div = math::pow(2, 13);
   double scale = 1.;
   constexpr static double default_max_dist = std::sqrt(huge);
   Trans_mat trans_mat;

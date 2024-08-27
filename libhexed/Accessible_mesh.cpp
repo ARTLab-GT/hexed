@@ -1519,7 +1519,7 @@ void Accessible_mesh::relax(double factor) {
     for (auto& vert : bverts) {
       HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
       auto seq = Eigen::seqN(0, params.n_dim);
-      vert.pos(seq) = surf_geom->nearest_point(vert.pos(seq), huge, vert.nominal_size()).point();
+      vert.pos(seq) = surf_geom->nearest_point(vert.pos(seq), huge, vert.nominal_size()/2).point();
     }
     // snap vertices to geometry edges
     for (auto& geom_edge : surf_geom->edges()) {
@@ -1538,7 +1538,7 @@ void Accessible_mesh::relax(double factor) {
       Array<double> interior = block.interior().reshaped({whatever, 3});
       for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
         auto p = interior(i_point)(0, params.n_dim).vector();
-        p = surf_geom->nearest_point(p, huge, block.element()->nominal_size()).point();
+        p = surf_geom->nearest_point(p, huge, block.element()->nominal_size()/params.row_size).point();
       }
     };
     // snap edges to the surface (regardless of dimensionality)
