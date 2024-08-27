@@ -73,38 +73,32 @@ Mat<3> Revolution_surface::rotate(Mat<3> p, double angle) const {
          + axial_component + origin;
 };
 
-Parametric<2>::Nearest_parameters Revolution_surface::nearest_params(Mat<3> point, Constraint is_feasible,
-                                                                     double max_distance) const {
-  return {Mat<2>::Zero(), false};
-}
-
 Mat<3> Revolution_surface::point(Mat<2> params) const {
   Mat<3> p = _generatrix->point(Mat<1>{params(0)});
   double angle = _start_angle + params(1)*(_end_angle - _start_angle);
   return rotate(p, angle);
 }
 
-#if 0
-class Revo_surf_tnp {
+class Revolution_surface::_Find_nearest {
   public:
   struct Candidate {
-    Entity<2>::Nearest_params np;
+    Nearest_parameters np;
     double dist;
   };
-  Revo_surf_tnp(const Revolution_surface& s, Mat<3> p, Entity<2>::Constraint is_f, double max_distance)
+  _Find_nearest(const Revolution_surface& s, Mat<3> p, Parametric<2>::Constraint is_f, double max_distance)
   : surf{s}
   , is_feasible{is_f}
   , point{p}
-  , unit_axis{(surf.axis.point(Mat<1>{1.}) - surf.axis.point(Mat<1>{0.})).normalized()}
-  , from_start{p - surf.axis.point(Mat<1>{0.})}
+  , unit_axis{(surf._axis.point(Mat<1>{1.}) - surf._axis.point(Mat<1>{0.})).normalized()}
+  , from_start{p - surf._axis.point(Mat<1>{0.})}
   , radius{(from_start - from_start.dot(unit_axis)*unit_axis).normalized()}
   , cand{{Mat<2>{std::nan(""), std::nan("")}, false}, max_distance}
   {}
   double best_angle(Mat<3> arc_point) {
-    arc_point -= surf.axis.point(Mat<1>{0.});
+    arc_point -= surf._axis.point(Mat<1>{0.});
     Mat<3> arc_radius = (arc_point - arc_point.dot(unit_axis)*unit_axis).normalized();
     double angle = std::atan2(arc_radius.cross(radius).dot(unit_axis), arc_radius.dot(radius));
-    return limited_angle(angle, surf.start_angle, surf.end_angle);
+    return limited_angle(angle, surf._start_angle, surf._end_angle);
   }
   Mat<3> best_point(Mat<3> arc_point) {
     double angle = best_angle(arc_point);
@@ -123,9 +117,9 @@ class Revo_surf_tnp {
         for (Int i_node = 0; i_node < n_nodes; ++i_node) {
           Candidate c;
           Mat<3> node = segment.nodes(i_node).vector();
-          c.np.params(0) = double(segment.nodes_start + i_node)/surf.n_div;
+          c.np.params(0) = double(segment.nodes_start + i_node)/surf._n_div;
           double angle = best_angle(node);
-          c.np.params(1) = math::angle_diff(angle, surf.start_angle)/(surf.end_angle - surf.start_angle);
+          c.np.params(1) = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
           c.np.is_feasible = is_feasible(c.np.params);
           c.dist = (surf.rotate(node, angle) - point).norm();
           cand = merge(cand, c);
@@ -134,7 +128,7 @@ class Revo_surf_tnp {
     }
   }
   const Revolution_surface& surf;
-  Entity<2>::Constraint is_feasible;
+  Constraint is_feasible;
   Mat<3> point;
   Mat<3> unit_axis;
   Mat<3> from_start;
@@ -142,20 +136,14 @@ class Revo_surf_tnp {
   Candidate cand;
 };
 
-Entity<2>::Nearest_params Revolution_surface::temp_nearest_params(
-  Mat<3> p, Entity<2>::Constraint is_feasible, double max_distance
-) const {
-  Revo_surf_tnp tnp(*this, p, is_feasible, max_distance);
-  tnp.find(_tree.root());
-  return tnp.cand.np;
+Parametric<2>::Nearest_parameters Revolution_surface::nearest_params(Mat<3> p, Constraint is_feasible,
+                                                                     double max_distance) const {
+  _Find_nearest finder(*this, p, is_feasible, max_distance);
+  finder.find(_tree.root());
+  return finder.cand.np;
 }
 
-Mat<3> Revolution_surface::temp_point(Mat<2> params) const {
-  Mat<3> p = generatrix->point(params(Eigen::seqN(0, 1)));
-  double angle = start_angle + params(1)*(end_angle - start_angle);
-  return rotate(p, angle);
-}
-
+#if 0
 bool Trimmed_surface::inside(Mat<2> params) const {
   Int i_seg = floor(params(0)*n_div);
   if (i_seg < 0 || i_seg > n_div) return false;

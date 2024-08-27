@@ -72,6 +72,7 @@ class Revolution_surface : public Parametric<2> {
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
   inline Mat<3> point(Mat<2> params) const override;
   private:
+  class _Find_nearest;
   std::unique_ptr<Parametric<1>> _generatrix;
   Line_segment _axis;
   Int _n_div;

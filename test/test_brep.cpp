@@ -79,7 +79,6 @@ TEST_CASE("Revolution_surface") {
     surf.point(hexed::Mat<2>{.5, .5}),
     Catch::Matchers::RangeEquals(hexed::Mat<3>{0.01, 1.01, .51}, hexed::math::Approx_equal(0, 1e-3))
   );
-  #if 0
   REQUIRE_THAT(
     surf.nearest_point(hexed::Mat<3>{0.01, 1.01, .51}),
     Catch::Matchers::RangeEquals(hexed::Mat<3>{0.01, 1.01, .51}, hexed::math::Approx_equal(0, 1e-3))
@@ -104,7 +103,6 @@ TEST_CASE("Revolution_surface") {
   REQUIRE(!std::isnan(n(0)));
   REQUIRE(!std::isnan(n(1)));
   REQUIRE(n(2) == Catch::Approx(.11).epsilon(1e-2));
-  #endif
 }
 
 #if 0
