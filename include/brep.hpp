@@ -10,6 +10,7 @@
 
 namespace hexed::brep {
 
+constexpr double default_max_dist = std::sqrt(huge);
 
 template <int n_param>
 class Parametric {
@@ -22,6 +23,9 @@ class Parametric {
   virtual Mat<3> point(Mat<n_param> params) const = 0;
   virtual Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
                                             double max_distance) const = 0;
+  Mat<3> nearest_point(Mat<3> p) const {
+    return point(nearest_params(p, [](Mat<n_param>){return true;}, default_max_dist).params);
+  }
 };
 
 class Line_segment : public Parametric<1> {
@@ -32,6 +36,19 @@ class Line_segment : public Parametric<1> {
                                     double max_distance) const override;
   private:
   Mat<3, 2> _endpoints;
+};
+
+class Circular_arc : public Parametric<1> {
+  public:
+  Circular_arc(Mat<3> center, double radius, double start_angle, double end_angle);
+  Mat<3> point(Mat<1> params) const override;
+  Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
+                                    double max_distance) const override;
+  private:
+  Mat<3> _center;
+  double _radius;
+  double _start_angle;
+  double _end_angle;
 };
 
 #if 0
@@ -76,18 +93,6 @@ class Entity {
   };
   virtual Mat<3> temp_point(Mat<n_param>) const = 0;
   private:
-};
-
-class Circular_arc : public Entity<1> {
-  public:
-  inline Circular_arc(Mat<3> c, double r, double s, double e) : center{c}, radius{r}, start_angle{s}, end_angle{e} {}
-  Mat<3> center;
-  double radius;
-  double start_angle;
-  double end_angle;
-  protected:
-  Nearest_params temp_nearest_params(Mat<3>, Constraint is_feasible, double max_distance) const override;
-  Mat<3> temp_point(Mat<1>) const override;
 };
 
 class Line_segment : public Entity<1> {

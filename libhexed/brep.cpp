@@ -6,14 +6,20 @@
 
 namespace hexed::brep {
 
-Parametric<1>::Nearest_parameters Line_segment::nearest_params(Mat<3> p, Parametric<1>::Constraint is_feasible,
+Parametric<1>::Nearest_parameters Line_segment::nearest_params(Mat<3> p, Constraint is_feasible,
                                                                double max_distance) const {
   Mat<3> diff = _endpoints(all, 1) - _endpoints(all, 0);
   Mat<1> params {std::max(0., std::min(1., (p - _endpoints(all, 0)).dot(diff)/diff.squaredNorm()))};
   return {params, is_feasible(params)};
 }
 
-#if 0
+Circular_arc::Circular_arc(Mat<3> center, double radius, double start_angle, double end_angle)
+: _center{center}
+, _radius{radius}
+, _start_angle{start_angle}
+, _end_angle{end_angle}
+{}
+
 double limited_angle(double angle, double start, double end) {
   if (math::angle_diff(angle, start) > end - start) {
     return (math::angle_diff(angle, end) > math::angle_diff(start, angle)) ? start : end;
@@ -21,19 +27,19 @@ double limited_angle(double angle, double start, double end) {
   return angle;
 }
 
-Entity<1>::Nearest_params Circular_arc::temp_nearest_params(
-  Mat<3> p, Entity<1>::Constraint is_feasible, double max_distance
-) const {
-  double angle = limited_angle(std::atan2(p(1) - center(1), p(0) - center(0)), start_angle, end_angle);
-  Mat<1> params {math::angle_diff(angle, start_angle)/(end_angle - start_angle)};
+Mat<3> Circular_arc::point(Mat<1> params) const {
+  double angle = _start_angle + params(0)*(_end_angle - _start_angle);
+  return _center + _radius*Mat<3>{std::cos(angle), std::sin(angle), 0.};
+}
+
+Parametric<1>::Nearest_parameters Circular_arc::nearest_params(Mat<3> p, Constraint is_feasible,
+                                                               double max_distance) const {
+  double angle = limited_angle(std::atan2(p(1) - _center(1), p(0) - _center(0)), _start_angle, _end_angle);
+  Mat<1> params {math::angle_diff(angle, _start_angle)/(_end_angle - _start_angle)};
   return {params, is_feasible(params)};
 }
 
-Mat<3> Circular_arc::temp_point(Mat<1> params) const {
-  double angle = start_angle + params(0)*(end_angle - start_angle);
-  return center + radius*Mat<3>{std::cos(angle), std::sin(angle), 0.};
-}
-
+#if 0
 Array<double> discretize(Entity<1>& curve, Int n_div) {
   Array<double> nodes({n_div + 1, 3});
   for (Int i_node = 0; i_node < n_div + 1; ++i_node) nodes(i_node).vector() = curve.point(Mat<1>{i_node/double(n_div)});

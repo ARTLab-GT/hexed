@@ -9,15 +9,14 @@ TEST_CASE("Line_segment") {
   hexed::brep::Line_segment seg(endpoints);
   REQUIRE_THAT(seg.point(hexed::Mat<1>{.1}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{0.1, 0.1, 1.}, hexed::math::Approx_equal(0., 1e-12)));
-  REQUIRE_THAT(seg.point(seg.nearest_params(hexed::Mat<3>{1., 0., 0.}, [](hexed::Mat<1>){return true;}, 0.).params),
+  REQUIRE_THAT(seg.nearest_point(hexed::Mat<3>{1., 0., 0.}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{0.5, 0.5, 1.}, hexed::math::Approx_equal(0., 1e-12)));
-  REQUIRE_THAT(seg.point(seg.nearest_params(hexed::Mat<3>{-1., 0., 1.}, [](hexed::Mat<1>){return true;}, 0.).params),
+  REQUIRE_THAT(seg.nearest_point(hexed::Mat<3>{-1., 0., 1.}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., 1.}, hexed::math::Approx_equal(0., 1e-12)));
-  REQUIRE_THAT(seg.point(seg.nearest_params(hexed::Mat<3>{2., 1., 1.}, [](hexed::Mat<1>){return true;}, 0.).params),
+  REQUIRE_THAT(seg.nearest_point(hexed::Mat<3>{2., 1., 1.}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 1., 1.}, hexed::math::Approx_equal(0., 1e-12)));
 }
 
-#if 0
 TEST_CASE("Circular_arc") {
   hexed::brep::Circular_arc arc({.1, .1, .1}, 10., hexed::constants::pi/2, hexed::constants::pi);
   REQUIRE_THAT(
@@ -42,6 +41,7 @@ TEST_CASE("Circular_arc") {
   );
 }
 
+#if 0
 TEST_CASE("Revolution_surface") {
   hexed::Mat<3, 2> axis_endpoints;
   axis_endpoints <<
