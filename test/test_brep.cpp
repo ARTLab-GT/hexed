@@ -1,6 +1,7 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/brep.hpp>
 
+#if 0
 TEST_CASE("Line_segment") {
   hexed::Mat<3, 2> endpoints;
   endpoints << 0, 1,
@@ -88,3 +89,4 @@ TEST_CASE("Geom", "[.slow]") {
   hexed::brep::Geom geom("../test_assets/cylinder_extruded.iges");
   geom.visualize("cylinder_extruded");
 }
+#endif

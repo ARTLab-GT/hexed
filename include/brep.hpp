@@ -10,6 +10,7 @@
 
 namespace hexed::brep {
 
+#if 0
 struct Trans_mat {
   Mat<3, 3> transform = Mat<3, 3>::Identity();
   Mat<3> translate = Mat<3>::Zero();
@@ -129,6 +130,7 @@ class Geom : public Surface_geom {
   std::vector<std::unique_ptr<Trimmed_surface>> _surfaces;
   std::vector<Geom_edge> _edges;
 };
+#endif
 
 }
 #endif

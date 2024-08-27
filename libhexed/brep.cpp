@@ -6,6 +6,7 @@
 
 namespace hexed::brep {
 
+#if 0
 Entity<1>::Nearest_params Line_segment::temp_nearest_params(
   Mat<3> p, Entity<1>::Constraint is_feasible, double max_distance
 ) const {
@@ -532,5 +533,6 @@ void Geom::visualize(std::string file_name) {
     vis->write_block(coords, dist);
   }
 }
+#endif
 
 }
