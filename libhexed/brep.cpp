@@ -100,10 +100,6 @@ class Revo_surf_tnp {
           c.np.params(1) = math::angle_diff(angle, surf.start_angle)/(surf.end_angle - surf.start_angle);
           c.np.is_feasible = is_feasible(c.np.params);
           c.dist = (surf.rotate(node, angle) - point).norm();
-          if (!(std::abs(c.dist - (surf.temp_point(c.np.params) - point).norm()) < 1e-5)) {
-            std::cout << c.np.params(1) << " " << angle << " " << surf.start_angle << " " << surf.end_angle << "\n" << c.dist << "\n" << (surf.temp_point(c.np.params) - point).norm() << "\n" << point.transpose() << "\n" << surf.rotate(node, angle).transpose() << "\n" << surf.temp_point(c.np.params).transpose() << "\n" << surf.point(c.np.params).transpose() << std::endl;
-            throw;
-          }
           cand = merge(cand, c);
         }
     #if 0
@@ -152,7 +148,6 @@ Mat<3> Trimmed_surface::nearest_point(Mat<3> p, double max_distance) const {
   Mat<3> nearest = surface->point(temp_nearest.params);
   double dist = (nearest - p).norm();
   bool found = temp_nearest.is_feasible;
-  #if 0
   for (auto& composite : curves) {
     for (auto& curve : *composite) {
       Mat<3> candidate = curve->nearest_point(p, max_distance);
@@ -164,7 +159,6 @@ Mat<3> Trimmed_surface::nearest_point(Mat<3> p, double max_distance) const {
       }
     }
   }
-  #endif
   if (found) return _convert(nearest);
   else return Mat<3>{std::nan(""), std::nan(""), std::nan("")};
 }
@@ -482,15 +476,11 @@ Nearest_point<dyn> Geom::nearest_point(Mat<> point, double max_distance, double 
   check_point(point);
   Nearest_point<dyn> nearest(point, distance_guess);
   for (auto& surf : _surfaces) nearest.merge(Mat<>{surf->nearest_point(point, distance_guess)});
-  #if 0
   if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
     HEXED_ASSERT(!nearest.empty(), format_str(200, "%e %e %e | %e %e %e", point(0), point(1), point(2), std::sqrt(nearest.dist_squared()), max_distance, distance_guess));
     return nearest;
   }
   return nearest_point(point, max_distance, distance_guess*2);
-  #else
-  return nearest;
-  #endif
 }
 
 void Geom::visualize(std::string file_name) {
@@ -540,7 +530,7 @@ void Geom::visualize(std::string file_name) {
     for (int i = 0; i < math::pow(n, 3); ++i) {
       Mat<3> p;
       for (int i_dim = 0; i_dim < 3; ++i_dim) p(i_dim) = coords(i_dim)[i] = 1./n*(i/math::pow(n, 2 - i_dim)%n) - .1;
-      Nearest_point np = nearest_point(p, huge, .2);
+      Nearest_point np = nearest_point(p, huge, .1);
       dist[i] = np.empty() ? 10 : (p - np.point()).norm();
     }
     vis->write_block(coords, dist);
