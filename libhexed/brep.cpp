@@ -143,6 +143,10 @@ Parametric<2>::Nearest_parameters Revolution_surface::nearest_params(Mat<3> p, C
   return finder.cand.np;
 }
 
+Coordinate_change::Coordinate_change(Mat<3> translate, Mat<3, 3> transform)
+: _translate{translate}, _transform{transform}, _inv{transform.inverse()}
+{}
+
 #if 0
 bool Trimmed_surface::inside(Mat<2> params) const {
   Int i_seg = floor(params(0)*n_div);

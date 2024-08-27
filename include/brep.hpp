@@ -81,50 +81,33 @@ class Revolution_surface : public Parametric<2> {
   Tree_curve _tree;
 };
 
-#if 0
-struct Trans_mat {
-  Mat<3, 3> transform = Mat<3, 3>::Identity();
-  Mat<3> translate = Mat<3>::Zero();
+class Coordinate_change {
+  public:
+  Coordinate_change(Mat<3> translate, Mat<3, 3> transform);
+  inline Mat<3> to_model(Mat<3> definition) const {return _translate + _transform*definition;}
+  inline Mat<3> to_definition(Mat<3> model) const {return _inv*(model - _translate);}
+  private:
+  Mat<3> _translate;
+  Mat<3, 3> _transform;
+  Mat<3, 3> _inv;
 };
 
 template <int n_param>
-class Entity {
+class Transformed : public Parametric<n_param> {
   public:
-  struct Nearest_params {
-    Mat<n_param> params;
-    bool is_feasible;
-  };
-  typedef std::function<bool(Mat<n_param>)> Constraint;
-  virtual ~Entity() = default;
-  Nearest_params nearest_params(Mat<3> p, Constraint is_feasible, double max_distance = default_max_dist) const {
-    return temp_nearest_params(inv_convert(p), is_feasible, max_distance);
+  Transformed(Parametric<n_param>*, Coordinate_change);
+  inline Mat<3> point(Mat<1> params) const override {return _coord.to_model(_param.point(params));}
+  Parametric<n_param>::Nearest_parameters nearest_params(
+    Mat<3> p, Parametric<n_param>::Constraint is_feasible, double max_distance
+  ) const override {
+    return _param.nearest_params(_coord.to_definition(p), is_feasible, max_distance);
   }
-  virtual Mat<3> nearest_point(Mat<3> p, double max_distance = default_max_dist) const {
-    Nearest_params params = nearest_params(p, [](Mat<n_param>){return true;}, max_distance);
-    HEXED_ASSERT(params.is_feasible, "no feasible nearest point found");
-    return point(params.params);
-  }
-  Mat<3> point(Mat<n_param> params) const {
-    return _convert(temp_point(params));
-  }
-  virtual void reparameterize(Mat<n_param, 2> bounds) {}
-  Int n_div = math::pow(2, 13);
-  double scale = 1.;
-  constexpr static double default_max_dist = std::sqrt(huge);
-  Trans_mat trans_mat;
-  Mat<3> _convert(Mat<3> p) const {
-    return scale*(trans_mat.translate + trans_mat.transform*p);
-  }
-  Mat<3> inv_convert(Mat<3> p) const {
-    return trans_mat.transform.colPivHouseholderQr().solve(p/scale - trans_mat.translate);
-  }
-  virtual Nearest_params temp_nearest_params(Mat<3>, Constraint is_feasible, double max_distance) const {
-    return {Mat<n_param>::Zero(), false};
-  };
-  virtual Mat<3> temp_point(Mat<n_param>) const = 0;
   private:
+  std::unique_ptr<Parametric<n_param>> _param;
+  Coordinate_change _coord;
 };
 
+#if 0
 typedef std::vector<std::unique_ptr<Entity<1>>> Composite_curve;
 
 class Trimmed_surface : public Entity<2> {
