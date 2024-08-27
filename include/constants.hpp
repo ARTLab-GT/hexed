@@ -11,8 +11,7 @@
  * - the doc descriptions with the mathematical symbols for the variables are mostly just
  *   so the variables can be linked to in Doxygen but maybe they will be useful to someone...
  */
-namespace hexed::constants
-{
+namespace hexed::constants {
 
 //! \name mathematical constants
 //!\{
@@ -53,7 +52,8 @@ const double stefan_boltzmann = 2*math::pow(pi, 5)*math::pow(boltzmann, 4)/(15*m
 //!\}
 
 /*! \name unit definitions
- * Conversion factors from various units to standard SI units. Since hexed works \ref units "exclusively in SI units",
+ * \brief Conversion factors from various units to standard SI units.
+ * \details Since hexed works \ref units "exclusively in SI units",
  * these are the values of each of these units in [m, kg, s, K].
  * E.g. If you have a wing with a chord of 3 feet, then you should tell hexed it's chord is `3*foot`.
  * If hexed told you your drag force is 10 (implying newtons) and your (ill advised) chief engineer wants it in pounds,
@@ -88,8 +88,41 @@ const double zero_celsius = 273.15; //!< \brief 0 \f$ ^{\circ} \f$ [C](https://e
 const double atmosphere = 101325; //!< \brief [atm](https://en.wikipedia.org/wiki/Standard_atmosphere_(unit))
 const double calorie = 4.184; //!< \brief ISO thermochemical [calorie](https://en.wikipedia.org/wiki/Calorie#Definitions)
 const double btu = calorie*rankine*pound_mass/1e-3; //!< \brief British Thermal Unit obtained by converting the calorimetric definition of calorie to imperial units
-const double gallon = 4.54609e-3; //!< \brief [Imperial gallon](https://en.wikipedia.org/wiki/Gallon#Imperial_gallon)
-const double fluid_ounce = gallon/160.; //!< \brief [Imperial fluid ounce](https://en.wikipedia.org/wiki/Imperial_units#Volume)
+const double bar = 1e5; //!< \brief deprecated unit of pressure
+const double mmhg = 133.322387415; //!< \brief [millimiter of mercury](https://en.wikipedia.org/wiki/Millimetre_of_mercury)
+const double torr = atmosphere/760; //!< \brief [Torr](https://en.wikipedia.org/wiki/Torr)
+
+/*! \brief [US customary volume measurements](https://en.wikipedia.org/wiki/United_States_customary_units#Volume)
+ * \details These differ significantly from the \ref imperial units of the same name.
+ * Ideally, avoid all such volume units.
+ * If you need to use them, be sure to choose the right one.
+ */
+namespace us_customary {
+  const double gallon = 231*math::pow(inch, 3); //!< \brief [US gallon](https://en.wikipedia.org/wiki/Gallon#US_liquid_gallon)
+  const double pottle = gallon/2; //!< \brief yes, this is [a thing](https://en.wikipedia.org/wiki/United_States_customary_units#Fluid_volume)
+  const double quart = pottle/2; //!< \brief qt
+  const double pint = quart/2; //!< \brief pt
+  const double cup = pint/2; //!< \brief c
+  //! \brief fl oz
+  //! \details Note that this definition is completely different from `imperial::fluid_ounce`
+  const double fluid_ounce = cup/8; //!< \brief fl oz
+  const double gallon_dry = 4.40488377086e-3; //!< \brief [US dry gallon](https://en.wikipedia.org/wiki/Gallon#US_dry_gallon)
+}
+
+/*! \brief [Imperial volume measurements](https://en.wikipedia.org/wiki/Imperial_units#Volume)
+ * \details These differ significantly from the \ref us_customary units of the same name.
+ * Ideally, avoid all such volume units.
+ * If you need to use them, be sure to choose the right one.
+ */
+namespace imperial {
+  const double gallon = 4.54609e-3; //!< \brief [Imperial gallon](https://en.wikipedia.org/wiki/Gallon#Imperial_gallon)
+  const double quart = gallon/4; //!< \brief qt
+  const double pint = quart/2; //!< \brief pt
+  //! \brief fl oz
+  //! \details Note that this definition is completely different from `us_customary::fluid_ounce`
+  const double fluid_ounce = pint/20;
+}
+
 //!\}
 
 }
