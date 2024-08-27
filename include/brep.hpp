@@ -10,6 +10,30 @@
 
 namespace hexed::brep {
 
+
+template <int n_param>
+class Parametric {
+  public:
+  struct Nearest_parameters {
+    Mat<n_param> params;
+    bool is_feasible;
+  };
+  typedef std::function<bool(Mat<n_param>)> Constraint;
+  virtual Mat<3> point(Mat<n_param> params) const = 0;
+  virtual Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
+                                            double max_distance) const = 0;
+};
+
+class Line_segment : public Parametric<1> {
+  public:
+  inline Line_segment(Mat<3, 2> endpoints) : _endpoints{endpoints} {}
+  inline Mat<3> point(Mat<1> params) const override {return _endpoints*Mat<2>{1. - params(0), params(0)};}
+  Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
+                                    double max_distance) const override;
+  private:
+  Mat<3, 2> _endpoints;
+};
+
 #if 0
 struct Trans_mat {
   Mat<3, 3> transform = Mat<3, 3>::Identity();

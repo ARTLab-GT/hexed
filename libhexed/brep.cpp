@@ -6,15 +6,14 @@
 
 namespace hexed::brep {
 
-#if 0
-Entity<1>::Nearest_params Line_segment::temp_nearest_params(
-  Mat<3> p, Entity<1>::Constraint is_feasible, double max_distance
-) const {
-  Mat<3> diff = endpoints(all, 1) - endpoints(all, 0);
-  Mat<1> params {std::max(0., std::min(1., (p - endpoints(all, 0)).dot(diff)/diff.squaredNorm()))};
+Parametric<1>::Nearest_parameters Line_segment::nearest_params(Mat<3> p, Parametric<1>::Constraint is_feasible,
+                                                               double max_distance) const {
+  Mat<3> diff = _endpoints(all, 1) - _endpoints(all, 0);
+  Mat<1> params {std::max(0., std::min(1., (p - _endpoints(all, 0)).dot(diff)/diff.squaredNorm()))};
   return {params, is_feasible(params)};
 }
 
+#if 0
 double limited_angle(double angle, double start, double end) {
   if (math::angle_diff(angle, start) > end - start) {
     return (math::angle_diff(angle, end) > math::angle_diff(start, angle)) ? start : end;
