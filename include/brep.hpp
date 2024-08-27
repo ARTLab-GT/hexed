@@ -26,6 +26,7 @@ class Parametric {
   Mat<3> nearest_point(Mat<3> p) const {
     return point(nearest_params(p, [](Mat<n_param>){return true;}, default_max_dist).params);
   }
+  virtual void reparameterize(Mat<n_param, 2> bounds) {}
 };
 
 class Line_segment : public Parametric<1> {
@@ -49,6 +50,21 @@ class Circular_arc : public Parametric<1> {
   double _radius;
   double _start_angle;
   double _end_angle;
+};
+
+class Plane : public Parametric<2> {
+  public:
+  inline Plane(Mat<3> origin, Mat<3, 2> coord_vectors) : _origin{origin}, _vecs{coord_vectors} {}
+  void reparameterize(Mat<2, 2> bounds) override {
+    _origin = point(bounds(all, 0));
+    _vecs = _vecs*(bounds(all, 1) - bounds(all, 0)).asDiagonal();
+  }
+  Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
+                                    double max_distance) const override;
+  inline Mat<3> point(Mat<2> params) const override {return _origin + _vecs*params;}
+  private:
+  Mat<3> _origin;
+  Mat<3, 2> _vecs;
 };
 
 #if 0
@@ -93,31 +109,6 @@ class Entity {
   };
   virtual Mat<3> temp_point(Mat<n_param>) const = 0;
   private:
-};
-
-class Line_segment : public Entity<1> {
-  public:
-  inline Line_segment(Mat<3, 2> endpts) : endpoints{endpts} {}
-  Mat<3, 2> endpoints;
-  Nearest_params temp_nearest_params(Mat<3>, Constraint is_feasible, double max_distance) const override;
-  Mat<3> temp_point(Mat<1> params) const override {return endpoints*Mat<2>{1. - params(0), params(0)};}
-};
-
-class Plane : public Entity<2> {
-  public:
-  inline Plane(Mat<3> origin, Mat<3, 2> coord_vectors) : _origin{origin}, _vecs{coord_vectors} {}
-  void reparameterize(Mat<2, 2> bounds) override {
-    _origin = temp_point(bounds(all, 0));
-    _vecs = _vecs*(bounds(all, 1) - bounds(all, 0)).asDiagonal();
-  }
-  Nearest_params temp_nearest_params(Mat<3> p, Constraint is_feasible, double max_distance) const override {
-    Mat<2> params = _vecs.colPivHouseholderQr().solve(p - _origin);
-    return {params, is_feasible(params)};
-  }
-  inline Mat<3> temp_point(Mat<2> params) const override {return _origin + _vecs*params;}
-  private:
-  Mat<3> _origin;
-  Mat<3, 2> _vecs;
 };
 
 class Revolution_surface : public Entity<2> {

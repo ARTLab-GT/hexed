@@ -39,6 +39,11 @@ Parametric<1>::Nearest_parameters Circular_arc::nearest_params(Mat<3> p, Constra
   return {params, is_feasible(params)};
 }
 
+Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_feasible, double max_distance) const {
+  Mat<2> params = _vecs.colPivHouseholderQr().solve(p - _origin);
+  return {params, is_feasible(params)};
+}
+
 #if 0
 Array<double> discretize(Entity<1>& curve, Int n_div) {
   Array<double> nodes({n_div + 1, 3});

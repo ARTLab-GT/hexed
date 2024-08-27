@@ -41,6 +41,25 @@ TEST_CASE("Circular_arc") {
   );
 }
 
+TEST_CASE("Plane") {
+  hexed::Mat<3> origin {.1, .1, .1};
+  hexed::Mat<3, 2> coords;
+  coords << 1., 0.,
+            0., 1.,
+            0., 1.;
+  hexed::brep::Plane plane(origin, coords);
+  REQUIRE_THAT(plane.point(hexed::Mat<2>{.1, .2}),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{.2, .3, .3}, hexed::math::Approx_equal()));
+  REQUIRE_THAT(plane.nearest_point(hexed::Mat<3>{.5, 0.1, 1.1}),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, .6, .6}, hexed::math::Approx_equal()));
+  hexed::Mat<2, 2> bounds;
+  bounds << .4, .8,
+            .4, 1.;
+  plane.reparameterize(bounds);
+  REQUIRE_THAT(plane.point(hexed::Mat<2>{.5, .5}),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{.7, .8, .8}, hexed::math::Approx_equal()));
+}
+
 #if 0
 TEST_CASE("Revolution_surface") {
   hexed::Mat<3, 2> axis_endpoints;
