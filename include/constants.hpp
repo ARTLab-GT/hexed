@@ -84,7 +84,10 @@ const double hour = 60*minute; //!< \brief hr
 const double rankine = 5./9.; //!< \brief \f$ ^{\circ} \f$ R
 const double pound_force = std_grav*pound_mass; //!< \brief \f$ lb_f \f$
 const double knot = nautical_mile/hour; //!< \brief kn
-const double zero_celsius = 273.15; //!< \brief 0 \f$ ^{\circ} \f$ [C](https://en.wikipedia.org/wiki/Celsius) (not technically a unit but still important)
+//! \brief 0 \f$^{\circ}\f$ [C](https://en.wikipedia.org/wiki/Celsius) (not technically a unit but still important)
+const double zero_celsius = 273.15;
+//! \brief 0 \f$^{\circ}\f$ [F](https://en.wikipedia.org/wiki/Fahrenheit) (not technically a unit but still important)
+const double zero_fahrenheit = zero_celsius - 32*rankine;
 const double atmosphere = 101325; //!< \brief [atm](https://en.wikipedia.org/wiki/Standard_atmosphere_(unit))
 const double calorie = 4.184; //!< \brief ISO thermochemical [calorie](https://en.wikipedia.org/wiki/Calorie#Definitions)
 const double btu = calorie*rankine*pound_mass/1e-3; //!< \brief British Thermal Unit obtained by converting the calorimetric definition of calorie to imperial units
