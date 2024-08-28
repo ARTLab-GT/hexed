@@ -211,8 +211,8 @@ class Read_entity {
   std::unique_ptr<Line_segment> read_line_segment() {
     if (_ent_num != 110) return {};
     Mat<3, 2> endpts;
-    for (int i = 0; i < 6; ++i) endpts(i) = _parser.read_float(_par[1 + i]);
-    for (int i = 0; i < 2; ++i) endpts(all, i) = _unit*_coords.to_model(endpts(all, i));
+    for (int i = 0; i < 6; ++i) endpts(i) = _unit*_parser.read_float(_par[1 + i]);
+    for (int i = 0; i < 2; ++i) endpts(all, i) = _coords.to_model(endpts(all, i));
     return std::make_unique<Line_segment>(endpts);
   }
 
@@ -247,8 +247,8 @@ class Read_entity {
     return ptr;
   }
 
-  void read_plane(std::unique_ptr<Parametric<2>>& ptr) const {
-    if (ptr || _ent_num != 108) return;
+  std::unique_ptr<Plane> read_plane() const {
+    if (_ent_num != 108) return {};
     HEXED_ASSERT(_parser.read_int(_par[5]) == 0, "bounded planes are not implemented", assert::Not_implemented_error);
     double coefs [4];
     for (int i_coef = 0; i_coef < 4; ++i_coef) coefs[i_coef] = _parser.read_float(_par[i_coef + 1]);
@@ -263,40 +263,24 @@ class Read_entity {
       vecs(vec_inds[i_vec], i_vec) = 1;
       vecs(i_dependent, i_vec) = -coefs[vec_inds[i_vec]]/coefs[i_dependent];
     }
-    ptr.reset(new Plane(_coords.to_model(origin), _coords.transform()*vecs));
+    return std::make_unique<Plane>(_coords.to_model(origin), _coords.transform()*vecs);
   }
 
-  void read_revolution_surface(std::unique_ptr<Parametric<2>>& ptr) const {
-    if (ptr || _ent_num != 120) return;
-    #if 0
-    Read_entity read_axis(_parser, _parser.read_int(_par[1]));;
-    std::
-    read_axis.read_line_segment();
-    Read_entity<Entity<1>> read_generatrix(_parser, _parser.read_int(_par[2]));
-    read_generatrix.read_curve();
-    Entity<1>* generatrix = read_generatrix.get().release();
-    generatrix->scale = 1.;
-    Line_segment axis = *read_axis.get();
-    axis.scale = 1.;
-    auto surf = new Revolution_surface {
-      generatrix,
-      axis,
-      _parser.read_float(_par[3]),
-      _parser.read_float(_par[4]),
-    };
-    ptr.reset(surf);
-    #endif
+  std::unique_ptr<Revolution_surface> read_revolution_surface() const {
+    if (_ent_num != 120) return {};
+    std::cout << _n_div << std::endl;
+    Read_entity read_axis(_parser, _parser.read_int(_par[1]), _n_div, _coords);;
+    auto axis = read_axis.read_line_segment();
+    Read_entity read_generatrix(_parser, _parser.read_int(_par[2]), _n_div, _coords);
+    auto generatrix = read_generatrix.read_curve();
+    return std::make_unique<Revolution_surface>(generatrix.release(), *axis.release(), _n_div,
+                                                _parser.read_float(_par[3]), _parser.read_float(_par[4]));
   }
-
-  #if 0
-  void read_revolution_surface() {
-  }
-  #endif
 
   std::unique_ptr<Parametric<2>> read_surface(bool required = true) const {
     std::unique_ptr<Parametric<2>> ptr;
-    read_plane(ptr);
-    read_revolution_surface(ptr);
+    merge(ptr, read_plane());
+    merge(ptr, read_revolution_surface());
     HEXED_ASSERT(
       !required || ptr,
       "Surface entity #" + std::to_string(_ent_num) + " is not implemented.",
@@ -307,7 +291,7 @@ class Read_entity {
 
   std::optional<Trimmed_surface> read_trimmed_surface() const {
     if (_ent_num != 144) return {};
-    Read_entity surf_reader(_parser, _parser.read_int(_par[1]), _n_div);
+    Read_entity surf_reader(_parser, _parser.read_int(_par[1]), _n_div, _coords);
     auto surf = surf_reader.read_surface();
     return {Trimmed_surface(surf.release(), {})};
   }
