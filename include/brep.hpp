@@ -114,13 +114,13 @@ typedef std::vector<std::unique_ptr<Parametric<1>>> Composite_curve;
 
 class Trimmed_surface {
   public:
-  Trimmed_surface(Parametric<2>* surface, std::vector<std::unique_ptr<Composite_curve>>&& curves);
+  Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves);
   inline const Parametric<2>& surface() const {return *_surf;}
   next::Sequence<const Composite_curve&> curves() const;
-  bool inside(Mat<2> parameters) const;
+  bool is_inside(Mat<2> parameters) const;
   private:
   std::unique_ptr<Parametric<2>> _surf;
-  std::vector<std::unique_ptr<Composite_curve>> _curves;
+  std::vector<Composite_curve> _curves;
 };
 
 class Geom_3d {

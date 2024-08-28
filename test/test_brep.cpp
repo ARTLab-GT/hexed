@@ -106,10 +106,50 @@ TEST_CASE("Revolution_surface") {
 }
 
 TEST_CASE("Trimmed_surface") {
-  hexed::brep::Trimmed_surface(
-    new hexed::brep::Plane(hexed::Mat<3>{.1, .1, .1}, hexed::Mat<3, 2>::Identity()),
-    {}
-  );
+  auto plane = std::make_unique<hexed::brep::Plane>(hexed::Mat<3>{4., 4., .1}, hexed::Mat<3, 2>::Identity());
+  hexed::Mat<3, 2> endpoints;
+  std::vector<hexed::brep::Composite_curve> curves;
+  curves.emplace_back();
+  endpoints << 0., 3.,
+               0., 0.,
+               0., 0.;
+  curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
+  endpoints << 3., 0.,
+               0., 3.,
+               0., 0.;
+  curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
+  endpoints << 0., 0.,
+               3., 0.,
+               0., 0.;
+  curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
+  curves.emplace_back();
+  endpoints << 1., 2.,
+               1., 1.,
+               0., 0.;
+  curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
+  endpoints << 2., 1.,
+               1., 2.,
+               0., 0.;
+  curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
+  endpoints << 1., 1.,
+               2., 1.,
+               0., 0.;
+  curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
+  hexed::brep::Trimmed_surface trim(plane.release(), std::move(curves));
+  // test reparameterization
+  REQUIRE_THAT(trim.surface().point(hexed::Mat<2>{0., 0.}),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., .1}, hexed::math::Approx_equal(0, 1e-6)));
+  REQUIRE_THAT(trim.surface().point(hexed::Mat<2>{1., 1.}),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{3., 3., .1}, hexed::math::Approx_equal(0, 1e-6)));
+  // test is_inside
+  REQUIRE( trim.is_inside(hexed::Mat<2>{.10, .10}));
+  REQUIRE(!trim.is_inside(hexed::Mat<2>{.35, .35}));
+  REQUIRE( trim.is_inside(hexed::Mat<2>{.49, .49}));
+  REQUIRE( trim.is_inside(hexed::Mat<2>{.50, .10}));
+  REQUIRE( trim.is_inside(hexed::Mat<2>{.10, .50}));
+  REQUIRE(!trim.is_inside(hexed::Mat<2>{.55, .55}));
+  REQUIRE(!trim.is_inside(hexed::Mat<2>{-.1, .50}));
+  REQUIRE(!trim.is_inside(hexed::Mat<2>{.50, -.1}));
 }
 
 TEST_CASE("Geom_3d", "[.slow]") {

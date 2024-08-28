@@ -152,17 +152,15 @@ Coordinate_change Coordinate_change::operator()(Coordinate_change that) const {
   return {_translate + _transform*that._translate, _transform*that._transform};
 }
 
-Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<std::unique_ptr<Composite_curve>>&& curves)
-: _surf{surface}
-{
-  for (auto& ptr : curves) _curves.emplace_back(ptr.release());
-}
+Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves)
+: _surf{surface}, _curves{std::move(curves)}
+{}
 
 next::Sequence<const Composite_curve&> Trimmed_surface::curves() const {
-  return next::Sequence<const std::unique_ptr<Composite_curve>&>::vector_view(_curves).dereference<const Composite_curve&>();
+  return next::Sequence<const Composite_curve&>::vector_view(_curves);
 }
 
-bool Trimmed_surface::inside(Mat<2> parameters) const {
+bool Trimmed_surface::is_inside(Mat<2> parameters) const {
   return true;
 }
 
@@ -268,12 +266,11 @@ class Read_entity {
 
   std::unique_ptr<Revolution_surface> read_revolution_surface() const {
     if (_ent_num != 120) return {};
-    std::cout << _n_div << std::endl;
     Read_entity read_axis(_parser, _parser.read_int(_par[1]), _n_div, _coords);;
     auto axis = read_axis.read_line_segment();
     Read_entity read_generatrix(_parser, _parser.read_int(_par[2]), _n_div, _coords);
     auto generatrix = read_generatrix.read_curve();
-    return std::make_unique<Revolution_surface>(generatrix.release(), *axis.release(), _n_div,
+    return std::make_unique<Revolution_surface>(generatrix.release(), *axis, _n_div,
                                                 _parser.read_float(_par[3]), _parser.read_float(_par[4]));
   }
 
@@ -346,7 +343,7 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
           Mat<2> params {i*sz, j*sz};
           Mat<3> p = s.surface().point(params);
           for (int i_dim = 0; i_dim < 3; ++i_dim) discrete(i_dim)(i)[j] = p(i_dim);
-          inside(0)(i)[j] = s.inside(params);
+          inside(0)(i)[j] = s.is_inside(params);
         }
       }
       vis->write_block(discrete, inside);
@@ -407,39 +404,6 @@ class Read_entity {
   , _par{_parser.entry(Iges_parser::parameter, _parser.read_int(_dir[1]))}
   , _ent_num{_parser.read_int(_dir[0])}
   {}
-
-  void read_circular_arc() {
-    if (_ptr || _ent_num != 100) return;
-    std::vector<double> values;
-    for (std::string s : _par) values.push_back(_parser.read_float(s));
-    auto arc = new Circular_arc {
-      {values[2], values[3], values[1]},
-      std::sqrt(.5*(values[4]*values[4] + values[5]*values[5]
-                    + values[6]*values[6] + values[7]*values[7])),
-      std::atan2(values[5], values[4]),
-      std::atan2(values[7], values[6]),
-    };
-    if (arc->start_angle < arc->end_angle + 1e-10) arc->start_angle += 2*constants::pi;
-    _ptr.reset(arc);
-  }
-
-  void read_line_segment() {
-    if (_ptr || _ent_num != 110) return;
-    Mat<3, 2> endpts;
-    for (int i = 0; i < 6; ++i) endpts(i) = _parser.read_float(_par[1 + i]);
-    _ptr.reset(new Line_segment(endpts));
-  }
-
-  void read_curve() {
-    read_circular_arc();
-    read_line_segment();
-  }
-
-  void read_surface() {
-    read_plane();
-    read_revolution_surface();
-    HEXED_ASSERT(_ptr, "failed to read surface from entity #" + std::to_string(_ent_num));
-  }
 
   void read_disc_curve() {
     Read_entity<Entity<1>> curve(_parser, _dir);
