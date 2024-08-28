@@ -152,12 +152,36 @@ Coordinate_change Coordinate_change::operator()(Coordinate_change that) const {
   return {_translate + _transform*that._translate, _transform*that._transform};
 }
 
-Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves)
-: _surf{surface}, _curves{std::move(curves)}
-{}
+Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves, Int n_div)
+: _n_div{n_div}, _sz{1./_n_div}, _surf{surface}
+{
+  std::vector<std::vector<Mat<2>>> discrete_curves;
+  for (auto& composite : curves) {
+    discrete_curves.emplace_back();
+    auto& nodes = discrete_curves.back();
+    for (auto& curve : composite) {
+      for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
+        Mat<3> pt = curve->point(Mat<1>{i_node*_sz});
+        Mat<2> params = _surf->nearest_params(pt, [](Mat<2>){return true;}, default_max_dist).params;
+        nodes.push_back(params);
+      }
+    }
+    if (!nodes.empty()) nodes.push_back(nodes.front());
+  }
+  initialize(discrete_curves);
+}
 
-next::Sequence<const Composite_curve&> Trimmed_surface::curves() const {
-  return next::Sequence<const Composite_curve&>::vector_view(_curves);
+void Trimmed_surface::initialize(std::vector<std::vector<Mat<2>>>& curves) {
+  Mat<2, 2> bounds;
+  bounds << huge, -huge, huge, -huge;
+  for (auto& curve : curves) {
+    for (Mat<2> node : curve) {
+      bounds(all, 0) = bounds(all, 0).cwiseMin(node);
+      bounds(all, 1) = bounds(all, 1).cwiseMax(node);
+    }
+  }
+  bounds(all, 1) = bounds(all, 1).cwiseMax(bounds(all, 0) + Mat<2>{_sz, _sz});
+  _surf->reparameterize(bounds);
 }
 
 bool Trimmed_surface::is_inside(Mat<2> parameters) const {
@@ -290,7 +314,7 @@ class Read_entity {
     if (_ent_num != 144) return {};
     Read_entity surf_reader(_parser, _parser.read_int(_par[1]), _n_div, _coords);
     auto surf = surf_reader.read_surface();
-    return {Trimmed_surface(surf.release(), {})};
+    return {Trimmed_surface(surf.release(), {}, _n_div)};
   }
 
   private:

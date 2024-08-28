@@ -135,7 +135,7 @@ TEST_CASE("Trimmed_surface") {
                2., 1.,
                0., 0.;
   curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
-  hexed::brep::Trimmed_surface trim(plane.release(), std::move(curves));
+  hexed::brep::Trimmed_surface trim(plane.release(), std::move(curves), 1024);
   // test reparameterization
   REQUIRE_THAT(trim.surface().point(hexed::Mat<2>{0., 0.}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., .1}, hexed::math::Approx_equal(0, 1e-6)));

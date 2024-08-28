@@ -114,13 +114,15 @@ typedef std::vector<std::unique_ptr<Parametric<1>>> Composite_curve;
 
 class Trimmed_surface {
   public:
-  Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves);
+  Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves, Int n_div);
   inline const Parametric<2>& surface() const {return *_surf;}
-  next::Sequence<const Composite_curve&> curves() const;
   bool is_inside(Mat<2> parameters) const;
   private:
+  void initialize(std::vector<std::vector<Mat<2>>>& curves);
+  Int _n_div;
+  double _sz;
   std::unique_ptr<Parametric<2>> _surf;
-  std::vector<Composite_curve> _curves;
+  std::vector<Tree_curve> _curves;
 };
 
 class Geom_3d {
@@ -130,6 +132,7 @@ class Geom_3d {
                  Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose()) const;
   private:
   std::vector<Trimmed_surface> _surfaces;
+  std::vector<std::vector<Mat<2>>> _param_segments;
 };
 
 #if 0
