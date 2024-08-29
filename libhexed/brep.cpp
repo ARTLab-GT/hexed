@@ -268,6 +268,11 @@ next::Sequence<const Tree_curve&> Trimmed_surface::curves() const {
   return next::Sequence<const Tree_curve&>::vector_view(_curves);
 }
 
+Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) const {
+  Nearest_point<3> nearest(point, max_dist);
+  return nearest;
+}
+
 class Read_entity {
   public:
   Read_entity(const Iges_parser& parser, Int line, Int n_div, Coordinate_change change_to = {})

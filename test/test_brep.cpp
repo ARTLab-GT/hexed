@@ -150,6 +150,15 @@ TEST_CASE("Trimmed_surface") {
   REQUIRE(!trim.is_inside(hexed::Mat<2>{.55, .55}));
   REQUIRE(!trim.is_inside(hexed::Mat<2>{-.1, .50}));
   REQUIRE(!trim.is_inside(hexed::Mat<2>{.50, -.1}));
+
+  // test nearest_point
+  REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{.1, .1, .2}, .2).point(),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 1., .1}, hexed::math::Approx_equal(0, 1e-6)));
+  REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{1.1, 1.2, .2}, 1.).point(),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 1.2, .1}, hexed::math::Approx_equal(0, 1e-6)));
+  REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{-.1, -.1, .2}, .2).point(),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., .1}, hexed::math::Approx_equal(0, 1e-6)));
+  REQUIRE(trim.nearest_point(hexed::Mat<3>{.1, .1, .2}, .01).empty());
 }
 
 TEST_CASE("Geom_3d", "[.slow]") {

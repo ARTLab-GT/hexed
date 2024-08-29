@@ -118,6 +118,7 @@ class Trimmed_surface {
   inline const Parametric<2>& surface() const {return *_surf;}
   bool is_inside(Mat<2> parameters) const;
   next::Sequence<const Tree_curve&> curves() const;
+  Nearest_point<3> nearest_point(Mat<3> point, double max_dist) const;
   private:
   void initialize(std::vector<std::vector<Mat<2>>>& curves);
   Int _n_div;
