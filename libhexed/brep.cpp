@@ -272,7 +272,10 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
   Nearest_point<3> nearest(point, max_dist);
   auto params = _surf->nearest_params(point, [this](Mat<2> params){return is_inside(params);}, max_dist);
   if (params.is_feasible) nearest.merge(_surf->point(params.params));
-  for (auto& curve : _curves) nearest.merge(curve.nearest_point(point, max_dist));
+  for (auto& curve : _curves) {
+    auto index = curve.nearest_point(point, max_dist);
+    if (index.index >= -1) nearest.merge(curve.nodes()(index.index).vector());
+  }
   return nearest;
 }
 

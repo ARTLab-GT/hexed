@@ -15,15 +15,19 @@ class Tree_curve {
     const Array<double> nodes;
     Int nodes_start;
   };
+  struct Nearest_index {
+    Int index;
+    double distance;
+  };
   Tree_curve(Array<double> nodes, int skip_levels = 0);
   inline int skip_levels() const {return _skip;}
   inline const Array<double> nodes() const {return _nodes();}
   const Array<Segment> segments(int level) const;
   inline const Segment& root() const {return _segments[0];}
-  Nearest_point<3> nearest_point(Mat<3> point, double max_dist = std::sqrt(huge)) const;
+  Nearest_index nearest_point(Mat<3> point, double max_dist = std::sqrt(huge)) const;
 
   private:
-  void _recursive_nearest(Nearest_point<3>&, const Segment&) const;
+  void _recursive_nearest(Mat<3> point, Nearest_index&, const Segment&) const;
   Array<double> _nodes;
   int _skip;
   Int _levels;
