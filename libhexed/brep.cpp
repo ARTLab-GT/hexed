@@ -476,7 +476,35 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div) {
   }
 }
 
-void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bool vis_volume, Mat<3, 2> bounds) const {
+double default_bound = std::sqrt(huge);
+double component_bound = default_bound/2;
+
+double limit(double dist) {
+  return (dist > 0 && dist < default_bound) ? dist : default_bound;
+}
+
+void check_point(Mat<3> point) {
+  for (int i = 0; i < 3; ++i) {
+    HEXED_ASSERT(-component_bound < point(i) && point(i) < component_bound,
+                 format_str(200, "point(%i) == %e is not in bounds", i, point(i)), assert::Numerical_exception);
+  }
+}
+
+Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
+  max_distance = limit(max_distance);
+  distance_guess = limit(distance_guess);
+  check_point(point);
+  Nearest_point<dyn> nearest(point, distance_guess);
+  for (auto& surf : _surfaces) nearest.merge(surf.nearest_point(point, distance_guess));
+  if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
+    HEXED_ASSERT(!nearest.empty(), format_str(200, "%e %e %e | %e %e %e", point(0), point(1), point(2), std::sqrt(nearest.dist_squared()), max_distance, distance_guess));
+    return nearest;
+  }
+  return nearest_point(point, max_distance, distance_guess*2);
+}
+
+
+void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bool vis_volume, Mat<3, 2> bounds) {
   Int n_nodes = n_div + 1;
   double sz = 1./n_div;
   {
@@ -510,329 +538,23 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
       }
     }
   }
-}
-
-#if 0
-bool Trimmed_surface::inside(Mat<2> params) const {
-  Int i_seg = floor(params(0)*n_div);
-  if (i_seg < 0 || i_seg > n_div) return false;
-  if (i_seg == n_div) i_seg = n_div - 1;
-  auto& segments = parametric_segments[i_seg];
-  Int n_intersections = 0;
-  for (Mat<2> seg : segments) n_intersections += params(1) < seg(0) + (params(0)*n_div - i_seg)*(seg(1) - seg(0));
-  return n_intersections%2;
-}
-
-Mat<3> Trimmed_surface::nearest_point(Mat<3> p, double max_distance) const {
-  p = inv_convert(p);
-  max_distance /= scale;
-  auto f = [this](Mat<2> params){return true;};
-  Nearest_params temp_nearest = temp_nearest_params(p, f, max_distance);
-  Mat<3> nearest = surface->point(temp_nearest.params);
-  double dist = (nearest - p).norm();
-  bool found = temp_nearest.is_feasible;
-  for (auto& composite : curves) {
-    for (auto& curve : *composite) {
-      Mat<3> candidate = curve->nearest_point(p, max_distance);
-      double d = (candidate - p).norm();
-      if (d < dist || !found) {
-        dist = d;
-        nearest = candidate;
-        found = true;
-      }
-    }
-  }
-  if (found) return _convert(nearest);
-  else return Mat<3>{std::nan(""), std::nan(""), std::nan("")};
-}
-
-Entity<2>::Nearest_params Trimmed_surface::temp_nearest_params(
-  Mat<3> p, Entity<2>::Constraint is_feasible, double max_distance
-) const {
-  auto f = [this, is_feasible](Mat<2> params){return inside(params) && is_feasible(params);};
-  return surface->nearest_params(p, f, max_distance);
-};
-
-template <typename T>
-class Read_entity {
-  public:
-  Read_entity(const Iges_parser& parser, Int line)
-  : Read_entity{parser, parser.entry(Iges_parser::directory, line)}
-  {}
-  Read_entity(const Iges_parser& parser, const std::vector<std::string>& dir)
-  : _parser{parser}
-  , _dir{dir}
-  , _par{_parser.entry(Iges_parser::parameter, _parser.read_int(_dir[1]))}
-  , _ent_num{_parser.read_int(_dir[0])}
-  {}
-
-  void read_disc_curve() {
-    Read_entity<Entity<1>> curve(_parser, _dir);
-    curve.read_curve();
-    auto ptr = curve.get();
-    _ptr.reset(new Composite_curve);
-    if (ptr) {
-      _ptr->emplace_back(ptr.release());
-      _ptr->back()->scale = 1.;
-    } else if (curve.entity_number() == 116 || curve.entity_number() == 132) {
-    } else if (curve.entity_number() == 102) {
-      for (int i_curve = 0; i_curve < _parser.read_int(_par[1]); ++i_curve) {
-        Read_entity<T> sub_curve(_parser, _parser.read_int(_par[2 + i_curve]));
-        sub_curve.read_disc_curve();
-        for (auto& c : *sub_curve._ptr) _ptr->emplace_back(c.release());
-      }
-    } else HEXED_THROW("failed to read curve from entity #" + std::to_string(curve.entity_number()));
-  }
-
-  void read_trimmed_surface() {
-    if (_ptr || _ent_num != 144) return;
-    Read_entity<Entity<2>> read_surf(_parser, _parser.read_int(_par[1]));
-    read_surf.read_surface();
-    _ptr.reset(new Trimmed_surface());
-    _ptr->surface.reset(read_surf.get().release());
-    _ptr->surface->scale = 1.;
-    HEXED_ASSERT(_parser.read_int(_par[2]) == 1, "using outer boundary as boundary curve is not implemented",
-                 assert::Not_implemented_error);
-    double sz = 1./_ptr->n_div;
-    std::vector<std::vector<Mat<2>>> curves;
-    Mat<2, 2> bounds;
-    bounds << huge, -huge, huge, -huge;
-    for (Int i_curve = 0; i_curve < 1 + _parser.read_int(_par[3]); ++i_curve) {
-      Read_entity<T> on_surf(_parser, _parser.read_int(_par[4 + i_curve]));
-      HEXED_ASSERT(on_surf.entity_number() == 142, "boundary must be a curve on a surface");
-      int model_curve = _parser.read_int(on_surf._par[4]);
-      std::vector<Mat<2>> nodes;
-      if ((_parser.read_int(on_surf._par[5]) == 1 || model_curve == 0) && _parser.read_int(on_surf._par[3]) != 0) {
-        HEXED_THROW("parameter-space curves are not implemented", assert::Not_implemented_error);
-      } else {
-        HEXED_ASSERT(model_curve != 0,
-                     "at least one of parameter-space and model-space curve pointers must be defined");
-        Read_entity<Composite_curve> curve(_parser, model_curve);
-        curve.read_disc_curve();
-        _ptr->curves.emplace_back(curve.get().release());
-        for (auto& c : *_ptr->curves.back()) {
-          for (Int i_div = 0; i_div < _ptr->n_div + 1; ++i_div) {
-            Mat<3> pt = c->point(Mat<1>{i_div*sz});
-            Mat<2> params = _ptr->surface->nearest_params(pt, [](Mat<2>){return true;}).params;
-            nodes.push_back(params);
-          }
-        }
-      }
-      if (!nodes.empty()) {
-        for (Mat<2> node : nodes) {
-          bounds(all, 0) = bounds(all, 0).cwiseMin(node);
-          bounds(all, 1) = bounds(all, 1).cwiseMax(node);
-        }
-      }
-      curves.push_back(std::move(nodes));
-    }
-    bounds(all, 1) = bounds(all, 1).cwiseMax(bounds(all, 0) + Mat<2>{sz, sz});
-    _ptr->surface->reparameterize(bounds);
-    for (auto& nodes : curves) if (!nodes.empty()) {
-      for (int i_node = 0; i_node < Int(nodes.size()); ++i_node) {
-        nodes[i_node] = (nodes[i_node] - bounds(all, 0)).cwiseQuotient(bounds(all, 1) - bounds(all, 0));
-      }
-      Int n_nodes = nodes.size();
-      for (Int i_node = n_nodes, changed = false; (i_node < 2*n_nodes) || changed; ++i_node, changed = false) {
-        for (int i_dim = 0; i_dim < 2; ++i_dim) {
-          for (int sign : {-1, 1}) {
-            if (std::abs(nodes[i_node%n_nodes](i_dim) + sign - nodes[(i_node - 1)%n_nodes](i_dim)) <
-                std::abs(nodes[i_node%n_nodes](i_dim)        - nodes[(i_node - 1)%n_nodes](i_dim))) {
-              nodes[i_node%nodes.size()](i_dim) += sign;
-              changed = true;
-            }
-          }
-        }
-      }
-      for (int i_dim = 0; i_dim < 2; ++i_dim) {
-        Int n_less = 0;
-        Int n_greater = 0;
-        for (Mat<2> node : nodes) {
-          n_less += node(i_dim) < -sz;
-          n_greater += node(i_dim) > 1 + sz;
-        }
-        int sign = (n_less > n_nodes/2) - (n_greater > n_nodes/2);
-        for (Mat<2>& node : nodes) node(i_dim) += sign;
-      }
-      std::vector<Int> abscissa;
-      std::vector<double> ordinate;
-      Mat<2> prev_params {-1., 0.};
-      Int prev_absc = -1;
-      if (n_nodes) for (Int i_node = 0; i_node < n_nodes + 1; ++i_node) {
-        Mat<2> params;
-        if (i_node == n_nodes && !abscissa.empty()) params << abscissa.front(), ordinate.front();
-        else {
-          params = nodes[i_node];
-          params(0) = std::max(0., std::min(1., params(0)))*_ptr->n_div;
-        }
-        if (prev_params(0) < -.1) prev_params = params;
-        while (floor(params(0)) > floor(prev_params(0)) || ceil(params(0)) < ceil(prev_params(0))) {
-          prev_absc = floor(params(0)) > floor(prev_params(0)) ? floor(prev_params(0)) + 1
-                                                               : ceil (prev_params(0)) - 1;
-          double denom = params(0) - prev_params(0);
-          if (std::abs(denom) < sz) prev_params(1) = params(1);
-          else prev_params(1) += (prev_absc - prev_params(0))*(params(1) - prev_params(1))/denom;
-          prev_params(0) = prev_absc;
-          abscissa.push_back(prev_absc);
-          ordinate.push_back(prev_params(1));
-        }
-      }
-      if (!abscissa.empty()) {
-        HEXED_ASSERT(abscissa.front() == abscissa.back(), "parametric representation is not closed");
-        for (Int i_segment = 0; i_segment < Int(abscissa.size()) - 1; ++i_segment) {
-          HEXED_ASSERT(std::abs(abscissa[i_segment] - abscissa[i_segment + 1]) == 1, "invalid step size");
-          bool reverse = abscissa[i_segment] > abscissa[i_segment + 1];
-          HEXED_ASSERT(0 <= abscissa[i_segment + reverse] && abscissa[i_segment + reverse] < _ptr->n_div,
-                       format_str(200, "segment index %i out of bounds", abscissa[i_segment + reverse]));
-          _ptr->parametric_segments[abscissa[i_segment + reverse]].push_back({ordinate[i_segment +  reverse],
-                                                                              ordinate[i_segment + !reverse]});
-        }
-      }
-    }
-  }
-
-  std::unique_ptr<T> get() {
-    if (_ptr) {
-      _ptr->trans_mat = read_trans_mat(_parser, _parser.read_int(_dir[6]));
-      Int unit_flag = _parser.read_int(_parser.section(Iges_parser::global)[0][13]);
-      HEXED_ASSERT(unit_flag > 0 && unit_flag <= 11, "invalid unit flag");
-      double units [] {
-        constants::inch,
-        1e-3*constants::meter,
-        1.,
-        constants::foot,
-        constants::mile,
-        constants::meter,
-        1e3*constants::meter,
-        1e-3*constants::inch,
-        1e-6*constants::meter,
-        1e-2*constants::meter,
-        1e-6*constants::inch,
-      };
-      _ptr->scale = _unit(units[unit_flag - 1]);
-    }
-    return std::unique_ptr<T>{_ptr.release()};
-  }
-
-  Int entity_number() const {return _ent_num;}
-
-  private:
-  double _unit(double unit) const {return unit;}
-  const Iges_parser& _parser;
-  const std::vector<std::string>& _dir;
-  const std::vector<std::string>& _par;
-  Int _ent_num;
-  std::unique_ptr<T> _ptr;
-};
-
-template <> std::unique_ptr<Composite_curve> Read_entity<Composite_curve>::get() {
-  return std::unique_ptr<Composite_curve>{_ptr.release()};
-}
-
-Geom::Geom(std::string file_name) {
-  std::string ext = file_extension(file_name);
-  HEXED_ASSERT(ext == "igs" || ext == "iges", "can only read IGES files");
-  Iges_parser parser(file_name);
-  auto dir = parser.section(Iges_parser::directory);
-  for (auto& entry : dir) {
-    Read_entity<Trimmed_surface> read(parser, entry);
-    read.read_trimmed_surface();
-    std::unique_ptr<Trimmed_surface> ts(read.get());
-    if (ts) {
-      for (auto& composite : ts->curves) {
-        for (auto& curve : *composite) {
-          Array<double> nodes({ts->n_div + 1, 3});
-          for (Int i_node = 0; i_node < ts->n_div + 1; ++i_node) {
-            nodes(i_node).vector() = ts->_convert(curve->point(Mat<1>{i_node/double(ts->n_div)}));
-          }
-          _edges.emplace_back(nodes);
-        }
-      }
-      _surfaces.emplace_back(ts.release());
-    }
-  }
-}
-
-double default_bound = std::sqrt(huge);
-double component_bound = default_bound/2;
-
-double limit(double dist) {
-  return (dist > 0 && dist < default_bound) ? dist : default_bound;
-}
-
-void check_point(Mat<3> point) {
-  for (int i = 0; i < 3; ++i) {
-    HEXED_ASSERT(-component_bound < point(i) && point(i) < component_bound,
-                 format_str(200, "point(%i) == %e is not in bounds", i, point(i)), assert::Numerical_exception);
-  }
-}
-
-Nearest_point<dyn> Geom::nearest_point(Mat<> point, double max_distance, double distance_guess) {
-  max_distance = limit(max_distance);
-  distance_guess = limit(distance_guess);
-  check_point(point);
-  Nearest_point<dyn> nearest(point, distance_guess);
-  for (auto& surf : _surfaces) nearest.merge(Mat<>{surf->nearest_point(point, distance_guess)});
-  if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
-    HEXED_ASSERT(!nearest.empty(), format_str(200, "%e %e %e | %e %e %e", point(0), point(1), point(2), std::sqrt(nearest.dist_squared()), max_distance, distance_guess));
-    return nearest;
-  }
-  return nearest_point(point, max_distance, distance_guess*2);
-}
-
-void Geom::visualize(std::string file_name) {
-  int n = 101;
-  for (Int i_edge = 0; i_edge < Int(_edges.size()); ++i_edge) {
-    _edges[i_edge].visualize("default", file_name + "edge" + std::to_string(i_edge));
-  }
-  {
-    auto vis = Visualizer::create("default", 3, 1, "parametric_edges", {}, 0., Visualizer::block);
-    for (auto& s : _surfaces) {
-      for (Int i_div = 0; i_div < s->n_div; ++i_div) {
-        for (auto& seg : s->parametric_segments[i_div]) {
-          Array<double> coords({3, 2});
-          for (int i_node = 0; i_node < 2; ++i_node) {
-            Mat<2> params;
-            params(0) = (i_div + i_node)/double(s->n_div);
-            params(1) = seg(i_node);
-            Mat<3> point = s->point(params);
-            for (int i_dim = 0; i_dim < 3; ++i_dim) coords(i_dim)[i_node] = point(i_dim);
-          }
-          vis->write_block(coords, Array<double>({0, 2}));
-        }
-      }
-    }
-  }
-  {
-    auto vis = Visualizer::create("default", 3, 2, "surfaces", {"inside"}, 0., Visualizer::block);
-    for (auto& s : _surfaces) {
-      Array<double> discrete({3, n, n});
-      Array<double> inside({1, n, n});
-      for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-          Mat<2> params {i/(n - 1.), j/(n - 1.)};
-          Mat<3> p = s->point(params);
-          for (int i_dim = 0; i_dim < 3; ++i_dim) discrete(i_dim)(i)[j] = p(i_dim);
-          inside(0)(i)[j] = s->inside(params);
-        }
-      }
-      vis->write_block(discrete, inside);
-    }
-  }
-  {
-    auto vis = Visualizer::create("default", 3, 3, "distance", {"distance"}, 0., Visualizer::block);
-    Array<double> coords({3, n, n, n});
-    Array<double> dist({1, n, n, n});
+  if (vis_volume) {
+    auto vis = Visualizer::create("default", 3, 3, file_name + "_distance", {"distance"}, 0., Visualizer::block);
+    Array<double> coords({3, n_nodes, n_nodes, n_nodes});
+    Array<double> dist({1, n_nodes, n_nodes, n_nodes});
+    double dist_guess = .1*(bounds(all, 1) - bounds(all, 0)).norm();
     #pragma omp parallel for
-    for (int i = 0; i < math::pow(n, 3); ++i) {
+    for (int i = 0; i < math::pow(n_nodes, 3); ++i) {
       Mat<3> p;
-      for (int i_dim = 0; i_dim < 3; ++i_dim) p(i_dim) = coords(i_dim)[i] = 1./n*(i/math::pow(n, 2 - i_dim)%n) - .1;
-      Nearest_point np = nearest_point(p, huge, .1);
-      dist[i] = np.empty() ? 10 : (p - np.point()).norm();
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        double interp = (i/math::pow(n_nodes, 2 - i_dim)%n_nodes)*sz;
+        p(i_dim) = coords(i_dim)[i] = bounds(i_dim, 0) + interp*(bounds(i_dim, 1) - bounds(i_dim, 0));
+      }
+      Nearest_point np = nearest_point(p, huge, dist_guess);
+      dist[i] = (p - np.point()).norm();
     }
     vis->write_block(coords, dist);
   }
 }
-#endif
 
 }

@@ -128,41 +128,16 @@ class Trimmed_surface {
   std::vector<std::vector<Mat<2>>> _param_segments;
 };
 
-class Geom_3d {
+class Geom_3d : public Surface_geom {
   public:
   Geom_3d(std::string file_name, Int n_div);
   void visualize(std::string format, std::string file_name,
-                 Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose()) const;
+                 Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose());
+  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
+  inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
   private:
   std::vector<Trimmed_surface> _surfaces;
 };
-
-#if 0
-
-class Trimmed_surface : public Entity<2> {
-  public:
-  Trimmed_surface() : parametric_segments(n_div) {}
-  bool inside(Mat<2> params) const;
-  std::unique_ptr<Entity<2>> surface;
-  std::vector<std::unique_ptr<Composite_curve>> curves;
-  std::vector<std::vector<Mat<2>>> parametric_segments;
-  Mat<3> nearest_point(Mat<3> p, double max_distance = default_max_dist) const override;
-  Nearest_params temp_nearest_params(Mat<3> p, Constraint is_feasible, double max_distance) const override;
-  inline Mat<3> temp_point(Mat<2> p) const override {return surface->point(p);}
-};
-
-class Geom : public Surface_geom {
-  public:
-  Geom(std::string file_name);
-  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-  inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
-  inline next::Sequence<Geom_edge&> edges() override {return next::Sequence<Geom_edge&>::vector_view(_edges);}
-  void visualize(std::string file_name);
-  private:
-  std::vector<std::unique_ptr<Trimmed_surface>> _surfaces;
-  std::vector<Geom_edge> _edges;
-};
-#endif
 
 }
 #endif
