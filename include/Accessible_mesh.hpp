@@ -43,8 +43,9 @@ class Accessible_mesh : public Mesh {
   Gauss_lobatto _basis;
   next::Mesh_blocks _blocks;
   int _n_verts;
-  std::vector<Geom_edge> _geom_edges;
   Stopwatch_tree _stopwatch;
+  std::vector<std::vector<Mortal_ptr<next::Edge>>> matched_edges;
+  std::vector<std::vector<Mortal_ptr<next::Vertex>>> matched_vertices;
 
   // masked sequences
   template <typename view_t, typename storage_t>

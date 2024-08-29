@@ -135,6 +135,7 @@ class Geom_3d : public Surface_geom {
                  Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose());
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
+  next::Sequence<const Tree_curve&> edges() override;
   private:
   std::vector<Trimmed_surface> _surfaces;
 };

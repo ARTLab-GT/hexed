@@ -4,6 +4,7 @@
 #include "Surface_geom.hpp"
 #include "Stopwatch_tree.hpp"
 #include "Tree.hpp"
+#include "Geom_edge.hpp"
 
 namespace hexed {
 
@@ -124,7 +125,6 @@ class Simplex_geom : public Simplex_geom_nd {
 
   void visualize(std::string format, std::string file_name) override;
 
-  next::Sequence<Geom_edge&> edges() override {return next::Sequence<Geom_edge&>::vector_view(_geom_edges);}
   void add_edge(Array<double> points) {_geom_edges.emplace_back(points);}
 
   private:

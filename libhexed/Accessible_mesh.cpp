@@ -126,60 +126,63 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
   for (auto& vert : verts) vert.unshadow();
   for (int i_relax = 0; i_relax < n_relax/2; ++i_relax) relax(factor);
   if (surf_geom) {
-    for (auto& geom_edge : surf_geom->edges()) {
+    auto edges = surf_geom->edges();
+    for (Int i_edge = 0; i_edge < (Int)edges.size(); ++i_edge) {
+      auto& geom_edge = edges[i_edge];
+      Array<double> nodes = geom_edge.nodes();
+      Array<double> arc_length = geom_edge.arc_length();
       next::Vertex* best_vert = nullptr;
       double badness = huge;
-      double arc_len = 0;
       for (auto& vert : verts) {
         if (!vert.glued()) {
           Mat<3> p = vert.point({});
-          auto node = geom_edge.nearest(p);
-          double b = (p - node.pos).norm() + node.arc_len;
-          if (b < badness) {
-            best_vert = &vert;
-            badness = b;
-            arc_len = node.arc_len;
+          auto node = geom_edge.nearest_point(p, vert.nominal_size()*2).index;
+          if (node >= 0) {
+            double b = (p - nodes(node).vector()).norm() + arc_length[node];
+            if (b < badness) {
+              best_vert = &vert;
+              badness = b;
+            }
           }
         }
       }
-      geom_edge.matched_edges.clear();
-      geom_edge.matched_vertices.clear();
-      geom_edge.matched_vertices.emplace_back(best_vert);
+      matched_edges[i_edge].clear();
+      matched_vertices[i_edge].clear();
+      matched_vertices[i_edge].emplace_back(best_vert);
       next::Vertex* curr = best_vert;
       while (true) {
         next::Edge* best_edge = nullptr;
-        double temp_arc_len = 0;
         double progress = -huge;
         for (auto& edge : curr->edges()) if (!edge.glued()) {
           next::Vertex* vert = &edge.vertex(0) == curr ? &edge.vertex(1) : &edge.vertex(0);
           Mat<3> p = vert->point({});
           double d = 2*edge.element()->nominal_size();
-          auto node = geom_edge.nearest(p, arc_len - d, arc_len + d);
-          double prog = node.arc_len - (p - node.pos).norm();
-          if (prog > progress) {
-            best_edge = &edge;
-            best_vert = vert;
-            progress = prog;
-            temp_arc_len = node.arc_len;
+          auto node = geom_edge.nearest_point(p, d).index;
+          if (node >= 0) {
+            double prog = arc_length[node] - (p - nodes(node).vector()).norm();
+            if (prog > progress) {
+              best_edge = &edge;
+              best_vert = vert;
+              progress = prog;
+            }
           }
         }
         if (!best_edge) break;
-        if (!geom_edge.matched_edges.empty()) if (best_edge == geom_edge.matched_edges.back().get()) {
-          geom_edge.matched_edges.erase(geom_edge.matched_edges.end());
-          geom_edge.matched_vertices.erase(geom_edge.matched_vertices.end());
+        if (!matched_edges[i_edge].empty()) if (best_edge == matched_edges[i_edge].back().get()) {
+          matched_edges[i_edge].erase(matched_edges[i_edge].end());
+          matched_vertices[i_edge].erase(matched_vertices[i_edge].end());
           break;
         }
-        geom_edge.matched_edges.emplace_back(best_edge);
+        matched_edges[i_edge].emplace_back(best_edge);
         curr = best_vert;
-        geom_edge.matched_vertices.emplace_back(best_vert);
-        arc_len = temp_arc_len;
+        matched_vertices[i_edge].emplace_back(best_vert);
       }
     }
-    for (auto& geom_edge : surf_geom->edges()) {
-      for (std::size_t i_edge = 1; i_edge < geom_edge.matched_edges.size(); ++i_edge) {
+    for (Int i_edge = 0; i_edge < (Int)edges.size(); ++i_edge) {
+      for (std::size_t i_edge = 1; i_edge < matched_edges[i_edge].size(); ++i_edge) {
         std::array<next::Edge*, 2> edges {
-          geom_edge.matched_edges[i_edge - 1].get(),
-          geom_edge.matched_edges[i_edge].get(),
+          matched_edges[i_edge][i_edge - 1].get(),
+          matched_edges[i_edge][i_edge].get(),
         };
         bool collapsed = false;
         for (int i = 0; i < 2; ++i) collapsed = collapsed || edges[i]->vertex(0).are_shadows(edges[i]->vertex(1));
@@ -810,6 +813,11 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   // take ownership of the surface geometries (do this first to avoid memory leak)
   surf_bc_sn = add_boundary_condition(surface_bc, new Geom_mbc(geometry));
   surf_geom = geometry;
+  Int n_edges = surf_geom->edges().size();
+  matched_vertices.clear();
+  matched_vertices.resize(n_edges);
+  matched_edges.clear();
+  matched_edges.resize(n_edges);
   if (!tree) return;
   // identify surface elements
   auto& elems = elements();
@@ -1440,9 +1448,9 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   snap_vertices();
   id_smooth_verts();
   _n_verts = _blocks.verts().size();
-  if (surf_geom) for (auto& edge : surf_geom->edges()) {
-    edge.matched_vertices.clear();
-    edge.matched_edges.clear();
+  if (surf_geom) for (Int i_edge = 0; i_edge < (Int)surf_geom->edges().size(); ++i_edge) {
+    matched_vertices[i_edge].clear();
+    matched_edges[i_edge].clear();
   }
   _stopwatch["update"].stopwatch.pause();
   _stopwatch["update"].work_units_completed += 1;
@@ -1522,14 +1530,19 @@ void Accessible_mesh::relax(double factor) {
       vert.pos(seq) = surf_geom->nearest_point(vert.pos(seq), huge, vert.nominal_size()/2).point();
     }
     // snap vertices to geometry edges
-    for (auto& geom_edge : surf_geom->edges()) {
-      if (geom_edge.matched_vertices.size() >= 2 && geom_edge.n_points()) {
-        update_pos(geom_edge.matched_vertices.front().value(), geom_edge.points()(0).vector());
-        update_pos(geom_edge.matched_vertices.back().value(), geom_edge.points()(geom_edge.n_points() - 1).vector());
+    auto edges = surf_geom->edges();
+    for (Int i_edge = 0; i_edge < (Int)edges.size(); ++i_edge) {
+      auto& geom_edge = edges[i_edge];
+      Array<double> nodes{geom_edge.nodes()};
+      Int n_points = nodes.shape()[0];
+      if (matched_vertices[i_edge].size() >= 2 && n_points) {
+        update_pos(matched_vertices[i_edge].front().value(), nodes(0).vector());
+        update_pos(matched_vertices[i_edge].back().value(), nodes(n_points - 1).vector());
       }
-      for (Int i_vert = 1; i_vert < (Int)geom_edge.matched_vertices.size() - 1; ++i_vert) {
-        auto& vert = geom_edge.matched_vertices[i_vert].value();
-        update_pos(vert, geom_edge.nearest(vert.pos).pos);
+      for (Int i_vert = 1; i_vert < (Int)matched_vertices[i_edge].size() - 1; ++i_vert) {
+        auto& vert = matched_vertices[i_edge][i_vert].value();
+        Int nearest = geom_edge.nearest_point(vert.pos, 3*vert.nominal_size()).index;
+        if (nearest >= 0) update_pos(vert, nodes(nearest).vector());
       }
     }
     // snaps a `Boundary_block` to the geometry surface
@@ -1554,12 +1567,16 @@ void Accessible_mesh::relax(double factor) {
     // This has to happen after snapping edges to the surface (which would undo this)
     // but before snapping faces to the surface
     // (or else the `reset()` function would be called with incorrect edge data)
-    for (auto& geom_edge : surf_geom->edges()) {
-      for (auto& edge : geom_edge.matched_edges) {
+    for (Int i_edge = 0; i_edge < (Int)edges.size(); ++i_edge) {
+      auto& geom_edge = edges[i_edge];
+      Array<double> nodes {geom_edge.nodes()};
+      for (auto& edge : matched_edges[i_edge]) {
         edge.value().reset();
         Array<double> interior = edge.value().interior();
+        double max_dist = .5*edge.value().element()->nominal_size();
         for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
-          interior(i_point).vector() = geom_edge.nearest(interior(i_point).vector()).pos;
+          Int nearest = geom_edge.nearest_point(interior(i_point).vector(), max_dist).index;
+          if (nearest >= 0) interior(i_point) = nodes(nearest);
         }
       }
     }

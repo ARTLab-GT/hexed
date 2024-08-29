@@ -4,7 +4,8 @@
 #include <memory>
 #include "math.hpp"
 #include "Nearest_point.hpp"
-#include "Geom_edge.hpp"
+#include "Sequence.hpp"
+#include "Tree_curve.hpp"
 
 namespace hexed {
 
@@ -41,7 +42,7 @@ class Surface_geom {
    * \details Only used in 3D.
    * Default implementation returns an empty sequence, but derived classes may override.
    */
-  inline virtual next::Sequence<Geom_edge&> edges() {return {};}
+  inline virtual next::Sequence<const Tree_curve&> edges() {return {};}
 };
 
 /*! \brief Combines multiple `Surface_geom`s into one.
@@ -55,7 +56,7 @@ class Compound_geom : public Surface_geom {
   Compound_geom(std::vector<Surface_geom*>); //!< acquires ownership
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
-  next::Sequence<Geom_edge&> edges() override;
+  next::Sequence<const Tree_curve&> edges() override;
 };
 
 /*! \brief Represents hypersphere in any dimensionality.

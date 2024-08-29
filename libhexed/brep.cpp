@@ -505,6 +505,11 @@ Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, doub
   return nearest_point(point, max_distance, distance_guess*2);
 }
 
+next::Sequence<const Tree_curve&> Geom_3d::edges() {
+  next::Sequence<const Tree_curve&> e;
+  for (auto& surf : _surfaces) e = e + surf.curves();
+  return e;
+}
 
 void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bool vis_volume, Mat<3, 2> bounds) {
   Int n_nodes = n_div + 1;
