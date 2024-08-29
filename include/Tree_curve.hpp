@@ -2,6 +2,7 @@
 #define HEXED_TREE_CURVE_HPP_
 
 #include "Array.hpp"
+#include "Nearest_point.hpp"
 
 namespace hexed {
 
@@ -19,8 +20,10 @@ class Tree_curve {
   inline const Array<double> nodes() const {return _nodes();}
   const Array<Segment> segments(int level) const;
   inline const Segment& root() const {return _segments[0];}
+  Nearest_point<3> nearest_point(Mat<3> point, double max_dist = std::sqrt(huge)) const;
 
   private:
+  void _recursive_nearest(Nearest_point<3>&, const Segment&) const;
   Array<double> _nodes;
   int _skip;
   Int _levels;

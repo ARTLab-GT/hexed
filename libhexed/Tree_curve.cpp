@@ -40,4 +40,22 @@ const Array<Tree_curve::Segment> Tree_curve::segments(int level) const {
   return _segments(p - 1, 2*p - 1);
 }
 
+Nearest_point<3> Tree_curve::nearest_point(Mat<3> point, double max_dist) const {
+  Nearest_point<3> nearest(point, max_dist);
+  _recursive_nearest(nearest, root());
+  return nearest;
+}
+
+void Tree_curve::_recursive_nearest(Nearest_point<3>& p, const Segment& s) const {
+  if (math::pow(std::max((s.center - p.reference()).norm() - s.radius, 0.), 2) <= p.dist_squared()) {
+    if (s.segments.size()) {
+      for (int i_segment = 0; i_segment < 2; ++i_segment) _recursive_nearest(p, s.segments[i_segment]);
+    } else {
+      for (Int i_node = 0; i_node < s.nodes.shape()[0]; ++i_node) {
+        p.merge(s.nodes(i_node).vector());
+      }
+    }
+  }
+}
+
 }

@@ -24,4 +24,18 @@ TEST_CASE("Tree_curve") {
     }
   }
   REQUIRE(curve.segments(3)[0].segments.size() == 0);
+
+  hexed::Array<double> circle_nodes({1025, 3});
+  for (int i = 0; i < 1025; ++i) {
+    double angle = i*2.*M_PI/1025;
+    circle_nodes(i)[0] = std::cos(angle);
+    circle_nodes(i)[1] = std::sin(angle);
+    circle_nodes(i)[2] = 1.;
+  }
+  hexed::Tree_curve circle(circle_nodes);
+  hexed::Mat<3> point {std::sqrt(.5) + .1, std::sqrt(.5) + .1, 1.1};
+  REQUIRE_THAT(circle.nearest_point(point, .3).point(),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{std::sqrt(.5), std::sqrt(.5), 1.},
+                                            hexed::math::Approx_equal(0., 2e-3)));
+  REQUIRE(circle.nearest_point(point, .1).empty());
 }
