@@ -25,10 +25,11 @@ class Tree_curve {
   inline const Array<double> arc_length() const {return _arc_length();}
   const Array<Segment> segments(int level) const;
   inline const Segment& root() const {return _segments[0];}
-  Nearest_index nearest_point(Mat<3> point, double max_dist = std::sqrt(huge)) const;
+  Nearest_index nearest_point(Mat<3> point, double max_dist = std::sqrt(huge),
+                              std::array<double, 2> arc_len_bounds = {-huge, huge}) const;
 
   private:
-  void _recursive_nearest(Mat<3> point, Nearest_index&, const Segment&) const;
+  void _recursive_nearest(Mat<3> point, Nearest_index&, const Segment&, std::array<double, 2> arc_len_bounds) const;
   Array<double> _nodes;
   Array<double> _arc_length;
   int _skip;

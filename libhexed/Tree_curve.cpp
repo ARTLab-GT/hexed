@@ -45,20 +45,23 @@ const Array<Tree_curve::Segment> Tree_curve::segments(int level) const {
   return _segments(p - 1, 2*p - 1);
 }
 
-Tree_curve::Nearest_index Tree_curve::nearest_point(Mat<3> point, double max_dist) const {
+Tree_curve::Nearest_index Tree_curve::nearest_point(Mat<3> point, double max_dist, std::array<double, 2> bounds) const {
   Nearest_index nearest(-1, max_dist);
-  _recursive_nearest(point, nearest, root());
+  _recursive_nearest(point, nearest, root(), bounds);
   return nearest;
 }
 
-void Tree_curve::_recursive_nearest(Mat<3> point, Nearest_index& nearest, const Segment& s) const {
+void Tree_curve::_recursive_nearest(Mat<3> point, Nearest_index& nearest, const Segment& s, std::array<double, 2> bounds) const {
   if ((s.center - point).norm() - s.radius <= nearest.distance) {
     if (s.segments.size()) {
-      for (int i_segment = 0; i_segment < 2; ++i_segment) _recursive_nearest(point, nearest, s.segments[i_segment]);
+      for (int i_segment = 0; i_segment < 2; ++i_segment) {
+        _recursive_nearest(point, nearest, s.segments[i_segment], bounds);
+      }
     } else {
       for (Int i_node = 0; i_node < s.nodes.shape()[0]; ++i_node) {
         double d = (point - s.nodes(i_node).vector()).norm();
-        if (d < nearest.distance) {
+        if ((d < nearest.distance) && bounds[0] <= _arc_length[s.nodes_start + i_node]
+                                   && _arc_length[s.nodes_start + i_node] <= bounds[1]) {
           nearest.index = s.nodes_start + i_node;
           nearest.distance = d;
         }

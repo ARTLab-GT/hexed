@@ -133,15 +133,18 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
       Array<double> arc_length {geom_edge.arc_length()};
       next::Vertex* best_vert = nullptr;
       double badness = huge;
+      double arc_len = 0;
       for (auto& vert : verts) {
         if (!vert.glued()) {
           Mat<3> p = vert.point({});
-          auto node = geom_edge.nearest_point(p, vert.nominal_size()*4).index;
+          double d = vert.nominal_size()*4;
+          auto node = geom_edge.nearest_point(p, d, {-huge, d}).index;
           if (node >= 0) {
             double b = (p - nodes(node).vector()).norm() + arc_length[node];
             if (b < badness) {
               best_vert = &vert;
               badness = b;
+              arc_len = arc_length[node];
             }
           }
         }
@@ -152,20 +155,22 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
       next::Vertex* curr = best_vert;
       while (true) {
         next::Edge* best_edge = nullptr;
+        double temp_arc_len = 0;
         double progress = -huge;
         for (auto& edge : curr->edges()) if (!edge.glued()) {
           next::Vertex* vert = &edge.vertex(0) == curr ? &edge.vertex(1) : &edge.vertex(0);
           Mat<3> p = vert->point({});
           double d = 4*edge.element()->nominal_size();
-          auto node = geom_edge.nearest_point(p, d).index;
+          auto node = geom_edge.nearest_point(p, d, {arc_len - d, arc_len + d}).index;
           if (node >= 0) {
             double prog = arc_length[node] - (p - nodes(node).vector()).norm();
             if (prog > progress) {
               best_edge = &edge;
               best_vert = vert;
               progress = prog;
+              temp_arc_len = arc_length[node];
             }
-          } else std::cout << "not found" << std::endl;
+          }
         }
         if (!best_edge) break;
         if (!matched_edges[i_geom_edge].empty()) if (best_edge == matched_edges[i_geom_edge].back().get()) {
@@ -176,6 +181,7 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
         matched_edges[i_geom_edge].emplace_back(best_edge);
         curr = best_vert;
         matched_vertices[i_geom_edge].emplace_back(best_vert);
+        arc_len = temp_arc_len;
       }
     }
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
@@ -1543,7 +1549,6 @@ void Accessible_mesh::relax(double factor) {
         auto& vert = matched_vertices[i_geom_edge][i_vert].value();
         Int nearest = geom_edge.nearest_point(vert.pos, 2*vert.nominal_size()).index;
         if (nearest >= 0) update_pos(vert, nodes(nearest).vector());
-        else std::cout << "not found" << std::endl;
       }
     }
     // snaps a `Boundary_block` to the geometry surface
