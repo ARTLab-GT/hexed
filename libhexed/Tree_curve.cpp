@@ -52,7 +52,7 @@ Tree_curve::Nearest_index Tree_curve::nearest_point(Mat<3> point, double max_dis
 }
 
 void Tree_curve::_recursive_nearest(Mat<3> point, Nearest_index& nearest, const Segment& s) const {
-  if (math::pow(std::max((s.center - point).norm() - s.radius, 0.), 2) <= nearest.distance) {
+  if ((s.center - point).norm() - s.radius <= nearest.distance) {
     if (s.segments.size()) {
       for (int i_segment = 0; i_segment < 2; ++i_segment) _recursive_nearest(point, nearest, s.segments[i_segment]);
     } else {

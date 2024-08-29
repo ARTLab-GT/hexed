@@ -127,16 +127,16 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
   for (int i_relax = 0; i_relax < n_relax/2; ++i_relax) relax(factor);
   if (surf_geom) {
     auto edges = surf_geom->edges();
-    for (Int i_edge = 0; i_edge < (Int)edges.size(); ++i_edge) {
-      auto& geom_edge = edges[i_edge];
-      Array<double> nodes = geom_edge.nodes();
-      Array<double> arc_length = geom_edge.arc_length();
+    for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+      auto& geom_edge = edges[i_geom_edge];
+      Array<double> nodes {geom_edge.nodes()};
+      Array<double> arc_length {geom_edge.arc_length()};
       next::Vertex* best_vert = nullptr;
       double badness = huge;
       for (auto& vert : verts) {
         if (!vert.glued()) {
           Mat<3> p = vert.point({});
-          auto node = geom_edge.nearest_point(p, vert.nominal_size()*2).index;
+          auto node = geom_edge.nearest_point(p, vert.nominal_size()*4).index;
           if (node >= 0) {
             double b = (p - nodes(node).vector()).norm() + arc_length[node];
             if (b < badness) {
@@ -146,9 +146,9 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
           }
         }
       }
-      matched_edges[i_edge].clear();
-      matched_vertices[i_edge].clear();
-      matched_vertices[i_edge].emplace_back(best_vert);
+      matched_edges[i_geom_edge].clear();
+      matched_vertices[i_geom_edge].clear();
+      matched_vertices[i_geom_edge].emplace_back(best_vert);
       next::Vertex* curr = best_vert;
       while (true) {
         next::Edge* best_edge = nullptr;
@@ -156,7 +156,7 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
         for (auto& edge : curr->edges()) if (!edge.glued()) {
           next::Vertex* vert = &edge.vertex(0) == curr ? &edge.vertex(1) : &edge.vertex(0);
           Mat<3> p = vert->point({});
-          double d = 2*edge.element()->nominal_size();
+          double d = 4*edge.element()->nominal_size();
           auto node = geom_edge.nearest_point(p, d).index;
           if (node >= 0) {
             double prog = arc_length[node] - (p - nodes(node).vector()).norm();
@@ -165,24 +165,24 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
               best_vert = vert;
               progress = prog;
             }
-          }
+          } else std::cout << "not found" << std::endl;
         }
         if (!best_edge) break;
-        if (!matched_edges[i_edge].empty()) if (best_edge == matched_edges[i_edge].back().get()) {
-          matched_edges[i_edge].erase(matched_edges[i_edge].end());
-          matched_vertices[i_edge].erase(matched_vertices[i_edge].end());
+        if (!matched_edges[i_geom_edge].empty()) if (best_edge == matched_edges[i_geom_edge].back().get()) {
+          matched_edges[i_geom_edge].erase(matched_edges[i_geom_edge].end());
+          matched_vertices[i_geom_edge].erase(matched_vertices[i_geom_edge].end());
           break;
         }
-        matched_edges[i_edge].emplace_back(best_edge);
+        matched_edges[i_geom_edge].emplace_back(best_edge);
         curr = best_vert;
-        matched_vertices[i_edge].emplace_back(best_vert);
+        matched_vertices[i_geom_edge].emplace_back(best_vert);
       }
     }
-    for (Int i_edge = 0; i_edge < (Int)edges.size(); ++i_edge) {
-      for (std::size_t i_edge = 1; i_edge < matched_edges[i_edge].size(); ++i_edge) {
+    for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+      for (std::size_t i_edge = 1; i_edge < matched_edges[i_geom_edge].size(); ++i_edge) {
         std::array<next::Edge*, 2> edges {
-          matched_edges[i_edge][i_edge - 1].get(),
-          matched_edges[i_edge][i_edge].get(),
+          matched_edges[i_geom_edge][i_edge - 1].get(),
+          matched_edges[i_geom_edge][i_edge].get(),
         };
         bool collapsed = false;
         for (int i = 0; i < 2; ++i) collapsed = collapsed || edges[i]->vertex(0).are_shadows(edges[i]->vertex(1));
@@ -1531,18 +1531,19 @@ void Accessible_mesh::relax(double factor) {
     }
     // snap vertices to geometry edges
     auto edges = surf_geom->edges();
-    for (Int i_edge = 0; i_edge < (Int)edges.size(); ++i_edge) {
-      auto& geom_edge = edges[i_edge];
+    for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+      auto& geom_edge = edges[i_geom_edge];
       Array<double> nodes{geom_edge.nodes()};
       Int n_points = nodes.shape()[0];
-      if (matched_vertices[i_edge].size() >= 2 && n_points) {
-        update_pos(matched_vertices[i_edge].front().value(), nodes(0).vector());
-        update_pos(matched_vertices[i_edge].back().value(), nodes(n_points - 1).vector());
+      if (matched_vertices[i_geom_edge].size() >= 2 && n_points) {
+        update_pos(matched_vertices[i_geom_edge].front().value(), nodes(0).vector());
+        update_pos(matched_vertices[i_geom_edge].back().value(), nodes(n_points - 1).vector());
       }
-      for (Int i_vert = 1; i_vert < (Int)matched_vertices[i_edge].size() - 1; ++i_vert) {
-        auto& vert = matched_vertices[i_edge][i_vert].value();
-        Int nearest = geom_edge.nearest_point(vert.pos, 3*vert.nominal_size()).index;
+      for (Int i_vert = 1; i_vert < (Int)matched_vertices[i_geom_edge].size() - 1; ++i_vert) {
+        auto& vert = matched_vertices[i_geom_edge][i_vert].value();
+        Int nearest = geom_edge.nearest_point(vert.pos, 2*vert.nominal_size()).index;
         if (nearest >= 0) update_pos(vert, nodes(nearest).vector());
+        else std::cout << "not found" << std::endl;
       }
     }
     // snaps a `Boundary_block` to the geometry surface
@@ -1567,12 +1568,12 @@ void Accessible_mesh::relax(double factor) {
     // This has to happen after snapping edges to the surface (which would undo this)
     // but before snapping faces to the surface
     // (or else the `reset()` function would be called with incorrect edge data)
-    for (Int i_edge = 0; i_edge < (Int)edges.size(); ++i_edge) {
-      auto& geom_edge = edges[i_edge];
+    for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+      auto& geom_edge = edges[i_geom_edge];
       Array<double> nodes {geom_edge.nodes()};
-      for (auto& edge : matched_edges[i_edge]) {
+      for (auto& edge : matched_edges[i_geom_edge]) {
         edge.value().reset();
-        Array<double> interior = edge.value().interior();
+        Array<double> interior {edge.value().interior()};
         double max_dist = .5*edge.value().element()->nominal_size();
         for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
           Int nearest = geom_edge.nearest_point(interior(i_point).vector(), max_dist).index;
