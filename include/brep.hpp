@@ -140,5 +140,15 @@ class Geom_3d : public Surface_geom {
   std::vector<Trimmed_surface> _surfaces;
 };
 
+class Geom_2d : public Surface_geom {
+  public:
+  Geom_2d(std::string file_name, Int n_div);
+  void visualize(std::string format, std::string file_name, Int n_div = 100);
+  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
+  inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
+  private:
+  std::vector<std::unique_ptr<Parametric<1>>> _curves;
+};
+
 }
 #endif

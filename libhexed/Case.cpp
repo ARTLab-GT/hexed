@@ -98,6 +98,7 @@ std::vector<Flow_bc*> Case::_make_extremal_bcs() {
 
 Surface_geom* Case::_make_geom() {
   int nd = _vari("n_dim");
+  Int n_div = math::pow(Int(2), _vari("geom_subdivision_levels"));
   std::vector<Surface_geom*> geoms;
   for (int i_geom = 0;; ++i_geom) {
     auto geom = _inter.variables->lookup<std::string>("geom" + std::to_string(i_geom));
@@ -114,7 +115,6 @@ Surface_geom* Case::_make_geom() {
       HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns", assert::User_error);
       geoms.emplace_back(new Simplex_geom<2>(segments(data.transpose())));
     } else if ((ext == "igs" || ext == "iges") && !(HEXED_USE_OCCT && _vari("prefer_occt"))) {
-      Int n_div = math::pow(Int(2), _vari("geom_subdivision_levels"));
       if (nd == 3) {
         auto ptr = std::make_unique<brep::Geom_3d>(geom.value(), n_div);
         if (_vari("vis_geom")) {
@@ -128,7 +128,13 @@ Surface_geom* Case::_make_geom() {
                          _vari("geom_vis_subdivisions"), _vari("vis_geom_distance"), bounds);
         }
         geoms.emplace_back(ptr.release());
-      } else HEXED_THROW("2D BRep geometry is not implemented", assert::Not_implemented_error);
+      } else if (nd == 2) {
+        auto ptr = std::make_unique<brep::Geom_2d>(geom.value(), n_div);
+        if (_vari("vis_geom")) {
+          ptr->visualize("default", _vars("working_dir") + geom.value(), _vari("geom_vis_subdivisions"));
+        }
+        geoms.emplace_back(ptr.release());
+      } else HEXED_THROW("BRep geometry must be 2 or 3D", assert::User_error);
     #if HEXED_USE_OCCT
     } else if (ext == "igs" || ext == "iges" || ext == "stp" || ext == "step") {
       auto shape = Occt::read(*geom);

@@ -24,6 +24,8 @@ std::string Iges_parser::read_string(std::string s) {
 Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim{0}, _entries(5), _line_map(5) {
   HEXED_ASSERT(std::filesystem::exists(file_name),
                format_str(1000, "`%s` is not an existing file", file_name.c_str()));
+  std::string ext = file_extension(file_name);
+  HEXED_ASSERT(ext == "igs" || ext == "iges", "can only read IGES files");
   std::ifstream file(file_name);
   std::vector<std::string> ent;
   std::string field;
