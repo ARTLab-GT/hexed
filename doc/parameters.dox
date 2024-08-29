@@ -331,6 +331,35 @@ Each of the contours will be written to a separate file.
 For details on the algorithm to compute contours, see the source code for `hexed::Vis_data::compute_contour`.
 
 <hr>
+\subsubsection vis_geom
+__type:__ integer \n
+__default:__ \ref true \n
+If \ref true, after loading any CAD geometry, write diagnostic visualization files that show the geometry as-loaded.
+
+<hr>
+\subsubsection vis_geom_distance
+__type:__ integer \n
+__default:__ \ref false \n
+If \ref vis_geom and `vis_geom_distance` are both \ref true,
+diagnostic visualization files will include a field with the distance from each point to the geometry surface
+in the block bounded by \ref geom_vis_bound .
+This will be substantially more expensive than the other visualization files (which are curves and surfaces)
+but is the most reliable way to diagnose whether the geometry was loaded correctly.
+
+\subsubsection geom_vis_bound geom_vis_bound00, geom_vis_bound01, geom_vis_bound10, geom_vis_bound11, geom_vis_bound20, geom_vis_bound21
+__type:__ float \n
+__default:__ 0., 1., 0., 1., 0., 1.
+Bounding box within which to visualize distance from the surface.
+
+\subsubsection geom_vis_subdivisions
+__type:__ integer \n
+__default:__ 100 \n
+Number of subdivisions with which to discretize the geometry
+when writing diagnostic visualizations with \ref vis_geom .
+This is completely different from the number of subdivisions to use when actually generating the mesh,
+which is controlled by \ref geom_subdivision_levels .
+
+<hr>
 \subsubsection vis_tecplot
 __type:__ integer \n
 __default:__ \ref false \n
@@ -541,6 +570,20 @@ Number of physical flow iterations to run per nominal iteration
 Increasing this number can help balance the amount of CPU time spent in the physical flow relative to the artificial viscosity iteration.
 The disadvantage is it can cause the \ref iteration count to be misleading.
 \note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection geom_subdivision_levels
+__type:__ integer \n
+__default:__ 13 \n
+When performing numerical operations on the surface geometry,
+sometimes it is necessary to discretize curves into polygonal segments.
+In such cases, they will be divided into \f$ 2^\verb|geom_subdivision_levels| \f$ segments.
+This requires \f$ O(2^\verb|geom_subdivision_levels|) \f$ memory but, in principle,
+only \f$ O(\verb|geom_subdivision_levels|) \f$ time.
+The default value gives 8192 subdivisions,
+which is generally enough for any practical purpose while still being pretty fast.
+If you reduce this number, keep in mind that high-order DG requires much more precision in the geometry
+than lower-order methods.
 
 
 \subsection esoteric_inputs Esoteric Input Parameters

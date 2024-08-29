@@ -497,7 +497,6 @@ Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, doub
   Nearest_point<dyn> nearest(point, distance_guess);
   for (auto& surf : _surfaces) nearest.merge(surf.nearest_point(point, distance_guess));
   if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
-    HEXED_ASSERT(!nearest.empty(), format_str(200, "%e %e %e | %e %e %e", point(0), point(1), point(2), std::sqrt(nearest.dist_squared()), max_distance, distance_guess));
     return nearest;
   }
   return nearest_point(point, max_distance, distance_guess*2);

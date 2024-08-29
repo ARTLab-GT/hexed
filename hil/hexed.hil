@@ -211,6 +211,8 @@ $({vis_} + vis_default_format) = true
 vis_skew = false
 vis_lts_constraints = false
 vis_edges = true
+vis_geom = true
+vis_geom_distance = false
 vis_field_vars = state_vars + art_visc_expr
 vis_contour_vars = vis_field_vars
 vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr
@@ -230,6 +232,8 @@ heat_flux_coercion = 2.
 min_elem_size = 0.
 elementwise_art_visc_pde = false
 prefer_occt = false
+geom_subdivision_levels = 13
+geom_vis_subdivisions = 100
 
 {array parameters}
 i_dim = 0
@@ -239,6 +243,7 @@ do = {
         mesh_index = {} + i_dim + sign
         $({mesh_extreme} + mesh_index) = 0. + sign
         $({extremal_bc} + mesh_index) = {characteristic}
+        $({geom_vis_bound} + mesh_index) = 0. + sign
     }
     sign = 0; $mesh_code
     sign = 1; $mesh_code
