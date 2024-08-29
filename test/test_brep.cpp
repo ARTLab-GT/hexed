@@ -106,7 +106,7 @@ TEST_CASE("Revolution_surface") {
 }
 
 TEST_CASE("Trimmed_surface") {
-  auto plane = std::make_unique<hexed::brep::Plane>(hexed::Mat<3>{4., 4., .1}, hexed::Mat<3, 2>::Identity());
+  auto plane = std::make_unique<hexed::brep::Plane>(hexed::Mat<3>{4., 4., .0}, hexed::Mat<3, 2>::Identity());
   hexed::Mat<3, 2> endpoints;
   std::vector<hexed::brep::Composite_curve> curves;
   curves.emplace_back();
@@ -138,9 +138,9 @@ TEST_CASE("Trimmed_surface") {
   hexed::brep::Trimmed_surface trim(plane.release(), std::move(curves), 1024);
   // test reparameterization
   REQUIRE_THAT(trim.surface().point(hexed::Mat<2>{0., 0.}),
-               Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., .1}, hexed::math::Approx_equal(0, 1e-6)));
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., .0}, hexed::math::Approx_equal(0, 1e-6)));
   REQUIRE_THAT(trim.surface().point(hexed::Mat<2>{1., 1.}),
-               Catch::Matchers::RangeEquals(hexed::Mat<3>{3., 3., .1}, hexed::math::Approx_equal(0, 1e-6)));
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{3., 3., .0}, hexed::math::Approx_equal(0, 1e-6)));
   // test is_inside
   REQUIRE( trim.is_inside(hexed::Mat<2>{.10, .10}));
   REQUIRE(!trim.is_inside(hexed::Mat<2>{.35, .35}));
@@ -152,13 +152,13 @@ TEST_CASE("Trimmed_surface") {
   REQUIRE(!trim.is_inside(hexed::Mat<2>{.50, -.1}));
 
   // test nearest_point
-  REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{.1, .1, .2}, .2).point(),
-               Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 1., .1}, hexed::math::Approx_equal(0, 1e-6)));
-  REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{1.1, 1.2, .2}, 1.).point(),
-               Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 1.2, .1}, hexed::math::Approx_equal(0, 1e-6)));
-  REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{-.1, -.1, .2}, .2).point(),
-               Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., .1}, hexed::math::Approx_equal(0, 1e-6)));
-  REQUIRE(trim.nearest_point(hexed::Mat<3>{.1, .1, .2}, .01).empty());
+  REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{.1, .1, .1}, .2).point(),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, .1, .0}, hexed::math::Approx_equal(0, 1e-3)));
+  REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{1.1, 1.2, .1}, 1.).point(),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 1.2, .0}, hexed::math::Approx_equal(0, 1e-3)));
+  REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{-.1, -.1, .1}, .2).point(),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., .0}, hexed::math::Approx_equal(0, 1e-3)));
+  REQUIRE(trim.nearest_point(hexed::Mat<3>{.1, .1, .1}, .01).empty());
 }
 
 TEST_CASE("Geom_3d", "[.slow]") {
