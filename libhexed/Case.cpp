@@ -601,6 +601,9 @@ Case::Case(std::string input_script)
   } catch (const assert::User_error& except) {
     if (_printers) _printers->error("User error: ", true);
     throw except;
+  } catch (const assert::Not_implemented_error& except) {
+    if (_printers) _printers->error("Error: feature not yet implemented. ", true);
+    throw except;
   } catch (const assert::Numerical_exception& except) {
     _printers->error("Numerical exception: ", true);
     _printers->error(except.what());
