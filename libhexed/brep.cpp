@@ -174,13 +174,16 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
 void Trimmed_surface::initialize(std::vector<std::vector<Mat<2>>>& curves) {
   Mat<2, 2> bounds;
   bounds << huge, -huge, huge, -huge;
+  bool set = false;
   for (auto& curve : curves) {
+    set = set || !curve.empty();
     for (Mat<2> node : curve) {
       bounds(all, 0) = bounds(all, 0).cwiseMin(node);
       bounds(all, 1) = bounds(all, 1).cwiseMax(node);
     }
   }
-  bounds(all, 1) = bounds(all, 1).cwiseMax(bounds(all, 0) + Mat<2>{_sz, _sz});
+  if (set) bounds(all, 1) = bounds(all, 1).cwiseMax(bounds(all, 0) + Mat<2>{_sz, _sz});
+  else bounds << 0, 1, 0, 1;
   _surf->reparameterize(bounds);
   _param_segments.resize(_n_div);
   for (auto& nodes : curves) if (!nodes.empty()) {
@@ -339,6 +342,22 @@ class Read_entity {
     return ptr;
   }
 
+  Composite_curve read_composite_curve() {
+    auto ptr = read_curve(false);
+    Composite_curve comp;
+    if (ptr) {
+      comp.emplace_back(ptr.release());
+    } else if (_ent_num == 116 || _ent_num == 132) { // Point and Connect Point entities are irrelevant
+    } else if (_ent_num == 102) {
+      for (int i_curve = 0; i_curve < _parser.read_int(_par[1]); ++i_curve) {
+        Read_entity sub_reader(_parser, _parser.read_int(_par[2 + i_curve]), _n_div, _coords);
+        Composite_curve sub_curve = sub_reader.read_composite_curve();
+        for (auto& c : sub_curve) comp.emplace_back(c.release());
+      }
+    } else HEXED_THROW("failed to read curve from entity #" + std::to_string(_ent_num));
+    return comp;
+  }
+
   std::unique_ptr<Plane> read_plane() const {
     if (_ent_num != 108) return {};
     HEXED_ASSERT(_parser.read_int(_par[5]) == 0, "bounded planes are not implemented", assert::Not_implemented_error);
@@ -382,9 +401,27 @@ class Read_entity {
 
   std::optional<Trimmed_surface> read_trimmed_surface() const {
     if (_ent_num != 144) return {};
+    // get surface
     Read_entity surf_reader(_parser, _parser.read_int(_par[1]), _n_div, _coords);
     auto surf = surf_reader.read_surface();
-    return {Trimmed_surface(surf.release(), {}, _n_div)};
+    HEXED_ASSERT(_parser.read_int(_par[2]) == 1, "using outer boundary as boundary curve is not implemented",
+                 assert::Not_implemented_error);
+    // get trimming curves
+    std::vector<Composite_curve> curves;
+    for (Int i_curve = 0; i_curve < 1 + _parser.read_int(_par[3]); ++i_curve) {
+      Read_entity on_surf(_parser, _parser.read_int(_par[4 + i_curve]), _n_div, _coords);
+      HEXED_ASSERT(on_surf._ent_num == 142, "boundary must be a curve on a surface");
+      int model_curve = _parser.read_int(on_surf._par[4]);
+      if ((_parser.read_int(on_surf._par[5]) == 1 || model_curve == 0) && _parser.read_int(on_surf._par[3]) != 0) {
+        HEXED_THROW("parameter-space curves are not implemented", assert::Not_implemented_error);
+      } else {
+        HEXED_ASSERT(model_curve != 0,
+                     "at least one of parameter-space and model-space curve pointers must be defined");
+        curves.push_back(Read_entity(_parser, model_curve, _n_div, _coords).read_composite_curve());
+      }
+    }
+    // construct Trimmed_surface
+    return {Trimmed_surface(surf.release(), std::move(curves), _n_div)};
   }
 
   private:
