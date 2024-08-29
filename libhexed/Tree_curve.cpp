@@ -11,10 +11,15 @@ Array<double>& check(Array<double>& nodes) {
 
 Tree_curve::Tree_curve(Array<double> nodes, int skip)
 : _nodes(std::move(check(nodes)))
+, _arc_length({_nodes.shape()[0]})
 , _skip{skip}
 , _levels{math::log(2, _nodes.shape()[0] - 1) - skip}
 , _segments({math::pow(2, _levels) - 1})
 {
+  _arc_length[0] = 0.;
+  for (int i_node = 1; i_node < _arc_length.size(); ++i_node) {
+    _arc_length[i_node] = _arc_length[i_node - 1] + (_nodes(i_node).vector() - _nodes(i_node - 1).vector()).norm();
+  }
   for (int level = _levels - 1; level >= 0; --level) {
     Int n_segs = math::pow(2, level);
     Int n_div = (_nodes.shape()[0] - 1)/n_segs;

@@ -33,6 +33,8 @@ TEST_CASE("Tree_curve") {
     circle_nodes(i)[2] = 1.;
   }
   hexed::Tree_curve circle(circle_nodes);
+  REQUIRE(circle.arc_length()[0] == Catch::Approx(0.).margin(1e-2));
+  REQUIRE(circle.arc_length()[1024] == Catch::Approx(2*M_PI).margin(1e-2));
   hexed::Mat<3> point {std::sqrt(.5) + .1, std::sqrt(.5) + .1, 1.1};
   auto n = circle.nearest_point(point, .3);
   REQUIRE(n.index >= 0);
