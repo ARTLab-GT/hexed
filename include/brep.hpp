@@ -117,6 +117,7 @@ class Trimmed_surface {
   Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves, Int n_div);
   inline const Parametric<2>& surface() const {return *_surf;}
   bool is_inside(Mat<2> parameters) const;
+  next::Sequence<const Tree_curve&> curves() const;
   private:
   void initialize(std::vector<std::vector<Mat<2>>>& curves);
   Int _n_div;

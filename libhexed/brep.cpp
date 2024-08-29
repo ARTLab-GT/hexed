@@ -158,15 +158,18 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
   std::vector<std::vector<Mat<2>>> discrete_curves;
   for (auto& composite : curves) {
     discrete_curves.emplace_back();
-    auto& nodes = discrete_curves.back();
+    auto& param_nodes = discrete_curves.back();
     for (auto& curve : composite) {
+      Array<double> phys_nodes({_n_div + 1, 3});
       for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
         Mat<3> pt = curve->point(Mat<1>{i_node*_sz});
+        phys_nodes(i_node).vector() = pt;
         Mat<2> params = _surf->nearest_params(pt, [](Mat<2>){return true;}, default_max_dist).params;
-        nodes.push_back(params);
+        param_nodes.push_back(params);
       }
+      _curves.emplace_back(phys_nodes.copy(), 4);
     }
-    if (!nodes.empty()) nodes.push_back(nodes.front());
+    if (!param_nodes.empty()) param_nodes.push_back(param_nodes.front());
   }
   initialize(discrete_curves);
 }
@@ -259,6 +262,10 @@ bool Trimmed_surface::is_inside(Mat<2> params) const {
   Int n_intersections = 0;
   for (Mat<2> seg : _param_segments[i_seg]) n_intersections += params(1) < seg(0) + (params(0)*_n_div - i_seg)*(seg(1) - seg(0));
   return n_intersections%2;
+}
+
+next::Sequence<const Tree_curve&> Trimmed_surface::curves() const {
+  return next::Sequence<const Tree_curve&>::vector_view(_curves);
 }
 
 class Read_entity {
@@ -478,6 +485,21 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
         }
       }
       vis->write_block(discrete, inside);
+    }
+  }
+  {
+    auto vis = Visualizer::create(format, 3, 1, file_name + "_curves", {}, 0., Visualizer::block);
+    for (auto& s : _surfaces) {
+      for (auto& curve : s.curves()) {
+        Array<double> nodes = curve.nodes();
+        Array<double> transposed({3, nodes.shape()[0]});
+        for (int i = 0; i < nodes.shape()[0]; ++i) {
+          for (int i_dim = 0; i_dim < 3; ++i_dim) {
+            transposed(i_dim)[i] = nodes(i)[i_dim];
+          }
+        }
+        vis->write_block(transposed, Array<double>({0, n_nodes}));
+      }
     }
   }
 }

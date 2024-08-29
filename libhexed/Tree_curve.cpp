@@ -17,9 +17,9 @@ Tree_curve::Tree_curve(Array<double> nodes, int skip)
 {
   for (int level = _levels - 1; level >= 0; --level) {
     Int n_segs = math::pow(2, level);
-    Int n_div = (nodes.shape()[0] - 1)/n_segs;
+    Int n_div = (_nodes.shape()[0] - 1)/n_segs;
     for (Int i_segment = 0; i_segment < n_segs; ++i_segment) {
-      Array<double> n(nodes(n_div*i_segment, n_div*(i_segment + 1) + 1));
+      Array<double> n(_nodes(n_div*i_segment, n_div*(i_segment + 1) + 1));
       Mat<3> center = Mat<3>::Zero();
       for (Int i_node = 0; i_node < n_div + 1; ++i_node) center += n(i_node).vector();
       center /= n_div + 1;
