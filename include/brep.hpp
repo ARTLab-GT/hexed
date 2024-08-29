@@ -123,6 +123,7 @@ class Trimmed_surface {
   double _sz;
   std::unique_ptr<Parametric<2>> _surf;
   std::vector<Tree_curve> _curves;
+  std::vector<std::vector<Mat<2>>> _param_segments;
 };
 
 class Geom_3d {
@@ -132,7 +133,6 @@ class Geom_3d {
                  Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose()) const;
   private:
   std::vector<Trimmed_surface> _surfaces;
-  std::vector<std::vector<Mat<2>>> _param_segments;
 };
 
 #if 0

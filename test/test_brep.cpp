@@ -123,16 +123,16 @@ TEST_CASE("Trimmed_surface") {
                0., 0.;
   curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
   curves.emplace_back();
-  endpoints << 1., 2.,
+  endpoints << 1., 1.5,
                1., 1.,
                0., 0.;
   curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
-  endpoints << 2., 1.,
-               1., 2.,
+  endpoints << 1.5, 1.,
+               1., 1.5,
                0., 0.;
   curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
   endpoints << 1., 1.,
-               2., 1.,
+               1.5, 1.,
                0., 0.;
   curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
   hexed::brep::Trimmed_surface trim(plane.release(), std::move(curves), 1024);

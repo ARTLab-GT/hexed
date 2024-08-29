@@ -182,10 +182,80 @@ void Trimmed_surface::initialize(std::vector<std::vector<Mat<2>>>& curves) {
   }
   bounds(all, 1) = bounds(all, 1).cwiseMax(bounds(all, 0) + Mat<2>{_sz, _sz});
   _surf->reparameterize(bounds);
+  _param_segments.resize(_n_div);
+  for (auto& nodes : curves) if (!nodes.empty()) {
+    Int n_nodes = nodes.size();
+    // apply reparameterization to nodes
+    for (int i_node = 0; i_node < Int(nodes.size()); ++i_node) {
+      nodes[i_node] = (nodes[i_node] - bounds(all, 0)).cwiseQuotient(bounds(all, 1) - bounds(all, 0));
+    }
+    // correct periodic seam errors
+    for (Int i_node = n_nodes, changed = false; (i_node < 2*n_nodes) || changed; ++i_node, changed = false) {
+      for (int i_dim = 0; i_dim < 2; ++i_dim) {
+        for (int sign : {-1, 1}) {
+          if (std::abs(nodes[i_node%n_nodes](i_dim) + sign - nodes[(i_node - 1)%n_nodes](i_dim)) <
+              std::abs(nodes[i_node%n_nodes](i_dim)        - nodes[(i_node - 1)%n_nodes](i_dim))) {
+            nodes[i_node%nodes.size()](i_dim) += sign;
+            changed = true;
+          }
+        }
+      }
+    }
+    for (int i_dim = 0; i_dim < 2; ++i_dim) {
+      Int n_less = 0;
+      Int n_greater = 0;
+      for (Mat<2> node : nodes) {
+        n_less += node(i_dim) < -_sz;
+        n_greater += node(i_dim) > 1 + _sz;
+      }
+      int sign = (n_less > n_nodes/2) - (n_greater > n_nodes/2);
+      for (Mat<2>& node : nodes) node(i_dim) += sign;
+    }
+    // compute parametric segments
+    std::vector<Int> abscissa;
+    std::vector<double> ordinate;
+    Mat<2> prev_params {-1., 0.};
+    Int prev_absc = -1;
+    if (n_nodes) for (Int i_node = 0; i_node <= n_nodes; ++i_node) {
+      Mat<2> params;
+      if (i_node == n_nodes && !abscissa.empty()) params << abscissa.front(), ordinate.front();
+      else {
+        params = nodes[i_node];
+        params(0) = std::max(0., std::min(1., params(0)))*_n_div;
+      }
+      if (prev_params(0) < -.1) prev_params = params;
+      while (floor(params(0)) > floor(prev_params(0)) || ceil(params(0)) < ceil(prev_params(0))) {
+        prev_absc = floor(params(0)) > floor(prev_params(0)) ? floor(prev_params(0)) + 1
+                                                             : ceil (prev_params(0)) - 1;
+        double denom = params(0) - prev_params(0);
+        if (std::abs(denom) < _sz) prev_params(1) = params(1);
+        else prev_params(1) += (prev_absc - prev_params(0))*(params(1) - prev_params(1))/denom;
+        prev_params(0) = prev_absc;
+        abscissa.push_back(prev_absc);
+        ordinate.push_back(prev_params(1));
+      }
+    }
+    if (!abscissa.empty()) {
+      HEXED_ASSERT(abscissa.front() == abscissa.back(), "parametric representation is not closed");
+      for (Int i_segment = 0; i_segment < Int(abscissa.size()) - 1; ++i_segment) {
+        HEXED_ASSERT(std::abs(abscissa[i_segment] - abscissa[i_segment + 1]) == 1, "invalid step size");
+        bool reverse = abscissa[i_segment] > abscissa[i_segment + 1];
+        HEXED_ASSERT(0 <= abscissa[i_segment + reverse] && abscissa[i_segment + reverse] < _n_div,
+                     format_str(200, "segment index %i out of bounds", abscissa[i_segment + reverse]));
+        _param_segments[abscissa[i_segment + reverse]].push_back({ordinate[i_segment +  reverse],
+                                                                  ordinate[i_segment + !reverse]});
+      }
+    }
+  }
 }
 
-bool Trimmed_surface::is_inside(Mat<2> parameters) const {
-  return true;
+bool Trimmed_surface::is_inside(Mat<2> params) const {
+  Int i_seg = floor(params(0)*_n_div);
+  if (i_seg < 0 || i_seg > _n_div) return false;
+  if (i_seg == _n_div) i_seg = _n_div - 1;
+  Int n_intersections = 0;
+  for (Mat<2> seg : _param_segments[i_seg]) n_intersections += params(1) < seg(0) + (params(0)*_n_div - i_seg)*(seg(1) - seg(0));
+  return n_intersections%2;
 }
 
 class Read_entity {
