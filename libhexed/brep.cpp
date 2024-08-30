@@ -484,8 +484,9 @@ double limit(double dist) {
   return (dist > 0 && dist < default_bound) ? dist : default_bound;
 }
 
-void check_point(Mat<3> point) {
-  for (int i = 0; i < 3; ++i) {
+template <int sz>
+void check_point(Mat<sz> point) {
+  for (int i = 0; i < point.size(); ++i) {
     HEXED_ASSERT(-component_bound < point(i) && point(i) < component_bound,
                  format_str(200, "point(%i) == %e is not in bounds", i, point(i)), assert::Numerical_exception);
   }
@@ -494,7 +495,7 @@ void check_point(Mat<3> point) {
 Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
   max_distance = limit(max_distance);
   distance_guess = limit(distance_guess);
-  check_point(point);
+  check_point<3>(point);
   Nearest_point<dyn> nearest(point, distance_guess);
   for (auto& surf : _surfaces) nearest.merge(surf.nearest_point(point, distance_guess));
   if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
@@ -575,7 +576,7 @@ Geom_2d::Geom_2d(std::string file_name, Int n_div) {
 Nearest_point<dyn> Geom_2d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
   max_distance = limit(max_distance);
   distance_guess = limit(distance_guess);
-  check_point(point);
+  check_point<2>(point);
   Nearest_point<dyn> nearest(point, distance_guess);
   for (auto& curve : _curves) {
     auto param = curve->nearest_params(point, [](Mat<1>){return true;}, distance_guess);
