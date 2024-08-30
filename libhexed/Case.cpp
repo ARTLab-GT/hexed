@@ -103,11 +103,9 @@ Surface_geom* Case::_make_geom() {
   for (int i_geom = 0;; ++i_geom) {
     auto geom = _inter.variables->lookup<std::string>("geom" + std::to_string(i_geom));
     if (!geom) break;
-    unsigned dot = geom->rfind('.');
-    HEXED_ASSERT(dot < geom->size(), "file name must contain extension to infer format", assert::User_error);
     HEXED_ASSERT(std::filesystem::exists(geom.value()), format_str(1000, "geometry file `%s` not found", geom->c_str()), assert::User_error);
-    std::string case_sensitive(geom->begin() + dot + 1, geom->end());
-    std::string ext = case_sensitive;
+    std::string ext = file_extension(geom.value());
+    std::string without_ext(geom->begin(), geom->end() - ext.size() - 1);
     for (char& c : ext) c = tolower(c);
     if (ext == "csv") {
       HEXED_ASSERT(nd == 2, "3D geometry in CSV format is not supported", assert::User_error);
@@ -124,14 +122,14 @@ Surface_geom* Case::_make_geom() {
               bounds(i_dim, sign) = _vard("geom_vis_bound" + std::to_string(i_dim) + std::to_string(sign));
             }
           }
-          ptr->visualize("default", _vars("working_dir") + geom.value(),
+          ptr->visualize("default", _vars("working_dir") + without_ext,
                          _vari("geom_vis_subdivisions"), _vari("vis_geom_distance"), bounds);
         }
         geoms.emplace_back(ptr.release());
       } else if (nd == 2) {
         auto ptr = std::make_unique<brep::Geom_2d>(geom.value(), n_div);
         if (_vari("vis_geom")) {
-          ptr->visualize("default", _vars("working_dir") + geom.value(), _vari("geom_vis_subdivisions"));
+          ptr->visualize("default", _vars("working_dir") + without_ext, _vari("geom_vis_subdivisions"));
         }
         geoms.emplace_back(ptr.release());
       } else HEXED_THROW("BRep geometry must be 2 or 3D", assert::User_error);
@@ -153,7 +151,7 @@ Surface_geom* Case::_make_geom() {
       geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(Occt::read_stl(geom.value()))));
     #endif
     } else {
-      HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", case_sensitive.c_str()), assert::User_error);
+      HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", ext.c_str()), assert::User_error);
     }
   }
   return geoms.empty() ? nullptr : new Compound_geom(geoms);
