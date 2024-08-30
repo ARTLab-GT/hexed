@@ -126,6 +126,20 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
   for (auto& vert : verts) vert.unshadow();
   for (int i_relax = 0; i_relax < n_relax/2; ++i_relax) relax(factor);
   if (surf_geom) {
+    auto points = surf_geom->points();
+    for (int i_point = 0; i_point < (Int)points.size(); ++i_point) {
+      Mat<3> point = points[i_point];
+      next::Vertex* nearest = nullptr; // if no nearest point is found, the matched vertex is set to null
+      double dist_sq = huge;
+      for (auto& vert : verts) {
+        double d = (vert.point({}) - point).squaredNorm();
+        if (d < dist_sq && vert.independent()) {
+          dist_sq = d;
+          nearest = &vert;
+        }
+      }
+      point_matched_vertices[i_point].set(nearest);
+    }
     auto edges = surf_geom->edges();
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
       auto& geom_edge = edges[i_geom_edge];
@@ -824,6 +838,8 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   matched_vertices.resize(n_edges);
   matched_edges.clear();
   matched_edges.resize(n_edges);
+  point_matched_vertices.clear();
+  point_matched_vertices.resize(surf_geom->points().size());
   if (!tree) return;
   // identify surface elements
   auto& elems = elements();
@@ -1454,9 +1470,12 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   snap_vertices();
   id_smooth_verts();
   _n_verts = _blocks.verts().size();
-  if (surf_geom) for (Int i_edge = 0; i_edge < (Int)surf_geom->edges().size(); ++i_edge) {
-    matched_vertices[i_edge].clear();
-    matched_edges[i_edge].clear();
+  if (surf_geom) {
+    for (auto& ptr : point_matched_vertices) ptr.set();
+    for (Int i_edge = 0; i_edge < (Int)surf_geom->edges().size(); ++i_edge) {
+      matched_vertices[i_edge].clear();
+      matched_edges[i_edge].clear();
+    }
   }
   _stopwatch["update"].stopwatch.pause();
   _stopwatch["update"].work_units_completed += 1;
@@ -1537,6 +1556,10 @@ void Accessible_mesh::relax(double factor) {
     }
     // snap vertices to geometry edges
     auto edges = surf_geom->edges();
+    auto points = surf_geom->points();
+    for (Int i_point = 0; i_point < (Int)points.size(); ++i_point) {
+      if (point_matched_vertices[i_point]) point_matched_vertices[i_point]->pos = points[i_point];
+    }
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
       auto& geom_edge = edges[i_geom_edge];
       Array<double> nodes{geom_edge.nodes()};

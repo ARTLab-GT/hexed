@@ -43,6 +43,7 @@ class Surface_geom {
    * Default implementation returns an empty sequence, but derived classes may override.
    */
   inline virtual next::Sequence<const Tree_curve&> edges() {return {};}
+  inline virtual next::Sequence<Mat<3>> points() {return {};}
 };
 
 /*! \brief Combines multiple `Surface_geom`s into one.
@@ -57,6 +58,7 @@ class Compound_geom : public Surface_geom {
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
   next::Sequence<const Tree_curve&> edges() override;
+  next::Sequence<Mat<3>> points() override;
 };
 
 /*! \brief Represents hypersphere in any dimensionality.
