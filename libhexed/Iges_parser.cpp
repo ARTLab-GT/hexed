@@ -4,13 +4,24 @@
 
 namespace hexed {
 
-Int Iges_parser::read_int(std::string s) {return stoll(s);}
+Int Iges_parser::read_int(std::string s) {
+  if (s.empty()) return 0;
+  try {
+    return stoll(s);
+  } catch (const std::invalid_argument& e) {
+    HEXED_THROW("could not convert \"" + s + "\" to an integer"); throw;
+  }
+}
 
 double Iges_parser::read_float(std::string s) {
   for (unsigned i = 0; i < s.size(); ++i) {
     if (std::tolower(s[i]) == 'd') s[i] = 'e';
   }
-  return stod(s);
+  try {
+    return stod(s);
+  } catch (const std::invalid_argument& e) {
+    HEXED_THROW("could not convert \"" + s + "\" to floating-point"); throw;
+  }
 }
 
 std::string Iges_parser::read_string(std::string s) {
