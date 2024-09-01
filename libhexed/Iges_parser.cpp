@@ -32,12 +32,16 @@ std::string Iges_parser::read_string(std::string s) {
   return {s.begin() + delim + 1, s.end()};
 }
 
+bool is_eol(char c) {
+  return c == '\r' || c == '\n';
+}
+
 Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim{0}, _entries(5), _line_map(5) {
   HEXED_ASSERT(std::filesystem::exists(file_name),
                format_str(1000, "`%s` is not an existing file", file_name.c_str()));
   std::string ext = file_extension(file_name);
   HEXED_ASSERT(ext == "igs" || ext == "iges", "can only read IGES files");
-  std::ifstream file(file_name);
+  std::ifstream file(file_name, std::iostream::binary);
   std::vector<std::string> ent;
   std::string field;
   std::map<char, Section_id> _section_chars {
@@ -48,11 +52,15 @@ Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim
     {'T', terminate},
   };
   while (!file.eof()) {
+    HEXED_ASSERT(!file.fail() && !file.bad(), format_str(200, "error reading characters from IGES file: %lli %lli", (Int)file.get(), (Int)file.peek()));
     char line [81];
-    file.getline(line, 81);
-    int len = std::strlen(line);
-    if (len != 0) {
-      HEXED_ASSERT(len == 80, "line is shorter than 80 characters");
+    Int i_char = 0;
+    do line[i_char] = file.get();
+    while (!is_eol(line[i_char]) && i_char++ < 80);
+    while (is_eol(file.peek())) file.get();
+    line[i_char] = '\0';
+    if (i_char != 0) {
+      HEXED_ASSERT(i_char == 80, "line is shorter than 80 characters");
       HEXED_ASSERT(line[72] != 'C' && line[72] != 'B', "Only uncompressed ASCII IGES format is supported",
                    assert::Not_implemented_error)
       HEXED_ASSERT(_section_chars.count(line[72]), format_str(100, "section character '%c' not recognized", line[72]));
