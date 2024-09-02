@@ -810,13 +810,20 @@ The following extension/format combinations are supported:
 - `.csv`: Comma Separated Value format (2D only).
   A comma-delimited table with at least 2 columns, which are interpreted as \f$ x_0 \f$ and \f$ x_1 \f$ coordinates of the nodes of a polygonal curve,
   in \ref units "standard units".
-  Curve is treated as open -- if you are trying to model a closed shape, simply make the first point (approximately) equal to the last.
+  Curve is treated as open---if you are trying to model a closed shape, simply make the first point (approximately) equal to the last.
 - `.igs`, `.iges`: [IGES](https://en.wikipedia.org/wiki/IGES) CAD
-  [format](https://www.govinfo.gov/content/pkg/GOVPUB-C13-7b81ba8b0f709555f162cb496aa63b3b/pdf/GOVPUB-C13-7b81ba8b0f709555f162cb496aa63b3b.pdf) (2D or 3D).
-  For 2D simulations, the model edges will be extracted and projected onto the \f$ (x_0, x_1) \f$ plane.
+  [format](https://filemonger.com/specs/igs/devdept.com/version6.pdf) (2D or 3D).
+  For 2D simulations, the model curves/edges will be extracted. All curves must (approximately) lie in the \f$ (x_0, x_1) \f$ plane,
+  and any deviation from said plane will be a source of numerical error.
   For 3D simulations, the model surfaces will be used.
   Units are read from the file and converted.
+  Files must be in ASCII format (there is also a binary format, although this is less common).
+  Both GNU/Linux and Windows line endings are accepted.
 - `.stp`, `.step`: [STEP](https://en.wikipedia.org/wiki/ISO_10303-21) CAD format. As above.
+  Currently, IGES is preferred over STEP for Hexed simulations.
+  This is because IGES will be translated to a precise analytic representation
+  with the \ref hexed::Iges_parser "native parser",
+  whereas STEP will be discretized imprecisely with \ref hexed::Occt "OpenCASCADE".
 - `.stl`: [STL](https://en.wikipedia.org/wiki/STL_(file_format)) 3D geometry format (3D only).
   ASCII or binary formats accepted.
   Units are assumed to be \ref units "standard".
