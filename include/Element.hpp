@@ -75,9 +75,8 @@ class Element : public Kernel_element {
   ~Element() = default;
 
   Storage_params storage_params();
-  virtual std::vector<double> position(const Basis&, int i_qpoint); //! \note ignores vertex positions
-  //! obtains face position based on interior qpoint positions (as defined by `position()`)
-  std::vector<double> face_position(const Basis&, int i_face, int i_face_qpoint);
+  Array<double> position(const Basis&) const;
+  Array<double> face_position(const Basis&) const;
   virtual void set_jacobian(const Basis& basis);
   inline double nominal_size() const override {return _nom_sz;}
   inline int refinement_level() {return _r_level;} //!< \brief indicates how many times this element has been isotropically refined

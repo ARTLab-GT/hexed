@@ -518,17 +518,13 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
   Eigen::Map<Mat<>> adjustments(con.element().node_adjustments() + (2*con.i_dim() + con.inside_face_sign())*nfq, nfq);
   adjustments = Mat<>::Zero(nfq);
   Mat<> face_adj = Mat<>::Zero(nlq);
-  Mat<dyn, dyn> face_pos [2] {{nfq, nd}, {nfq, nd}};
   // get position on this and opposite face
-  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-    for (int face_sign = 0; face_sign < 2; ++face_sign) {
-      face_pos[face_sign](i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + face_sign, i_qpoint));
-    }
-  }
+  Array<double> orig_face_pos {con.element().face_position(basis)(con.i_dim()).copy()};
+  Array<double> face_pos {orig_face_pos.copy()};
   Mat<dyn, dyn> lob_pos [2] {{nlq, nd}, {nlq, nd}};
   for (int face_sign = 0; face_sign < 2; ++face_sign) {
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, face_pos[face_sign](all, i_dim));
+      lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, face_pos(face_sign)(i_dim).vector());
     }
   }
   bool& snapping_problem = con.element().snapping_problem;
@@ -559,11 +555,7 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
   for (Mat<>& derivative : derivatives) snapping_problem = snapping_problem || derivative.lpNorm<Eigen::Infinity>() > 1.;
   if (snapping_problem) adjustments.setZero();
   if (snapping_problem && basis.row_size > 3) {
-    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-      for (int face_sign = 0; face_sign < 2; ++face_sign) {
-        face_pos[face_sign](i_qpoint, all) = math::to_mat(con.element().face_position(basis, 2*con.i_dim() + face_sign, i_qpoint));
-      }
-    }
+    face_pos = orig_face_pos;
     Gauss_lobatto lob1(3);
     int nlq1 = math::pow(3, nd - 1);
     Mat<dyn, dyn> to_lob1 = basis.interpolate(lob1.nodes());
@@ -571,7 +563,7 @@ void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
     Mat<dyn, dyn> pos [2] {{nlq1, nd}, {nlq1, nd}};
     for (int i_sign = 0; i_sign < 2; ++i_sign) {
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        pos[i_sign](all, i_dim) = math::hypercube_matvec(to_lob1, face_pos[i_sign](all, i_dim));
+        pos[i_sign](all, i_dim) = math::hypercube_matvec(to_lob1, face_pos(i_sign)(i_dim).vector());
       }
     }
     Mat<> adj1(nlq1);

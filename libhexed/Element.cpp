@@ -61,38 +61,30 @@ Storage_params Element::storage_params() {
   return params;
 }
 
-std::vector<double> Element::position(const Basis& basis, int i_qpoint) {
-  std::vector<double> pos;
+Array<double> Element::position(const Basis& basis) const {
+  Array<double> shape_pos = _shape->points();
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    const int stride = math::pow(params.row_size, params.n_dim - i_dim - 1);
-    pos.push_back((basis.node((i_qpoint/stride)%params.row_size) + _nom_pos[i_dim])*_nom_sz + origin(i_dim));
+    auto vec = shape_pos(i_dim).vector();
+    vec = math::hypercube_matvec(_shape->basis().interpolate(basis.nodes()), vec);
   }
-  return pos;
+  return shape_pos;
 }
 
-std::vector<double> Element::face_position(const Basis& basis, int i_face, int i_face_qpoint) {
-  const int i_dim = i_face/2;
-  const int face_positive = i_face%2;
-  // extract a row of quadrature points
-  const int stride = math::pow(params.row_size, params.n_dim - 1 - i_dim);
-  int i_row_start = 0;
-  for (int j_dim = params.n_dim - 1, face_stride = 1; j_dim >= 0; --j_dim) {
-    int interior_stride = math::pow(params.row_size, params.n_dim - 1 - j_dim);
-    if (i_dim != j_dim) {
-      i_row_start += ((i_face_qpoint/face_stride)%params.row_size)*interior_stride;
-      face_stride *= params.row_size;
+Array<double> Element::face_position(const Basis& basis) const {
+  Array<double> shape_pos = _shape->points();
+  int nd = params.n_dim;
+  std::vector<Int> shape {nd, 2, nd};
+  for (int i_dim = 0; i_dim < nd - 1; ++i_dim) shape.push_back(params.row_size);
+  Array<double> face_pos(shape);
+  Mat<dyn, dyn> extrap = basis.interpolate(Mat<2>{0., 1.});
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+    for (int sign = 0; sign < 2; ++sign) {
+      for (int j_dim = 0; j_dim < nd; ++j_dim) {
+        face_pos(i_dim)(sign)(j_dim).vector() = math::dimension_matvec(extrap(sign, all), shape_pos(j_dim).vector(), i_dim);
+      }
     }
   }
-  Eigen::MatrixXd row (params.row_size, params.n_dim);
-  for (int i_qpoint = 0; i_qpoint < params.row_size; ++i_qpoint) {
-    auto qpoint_pos = position(basis, i_row_start + stride*i_qpoint);
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) row(i_qpoint, i_dim) = qpoint_pos[i_dim];
-  }
-  // extrapolate to get the position of the face quadrature point
-  std::vector<double> pos;
-  Eigen::VectorXd face_qpoint_pos = basis.boundary().row(face_positive)*row;
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) pos.push_back(face_qpoint_pos(i_dim));
-  return pos;
+  return face_pos;
 }
 
 void Element::set_jacobian(const Basis& basis) {

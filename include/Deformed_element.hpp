@@ -25,7 +25,6 @@ class Deformed_element : public Element
   Deformed_element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0,
                    Mat<> origin_arg = Mat<>::Zero(3), int aniso_ref_level = 0);
   virtual inline bool get_is_deformed() {return is_deformed;} //!< \brief for determining whether a pointer is deformed
-  std::vector<double> position(const Basis&, int i_qpoint) override; //!< \brief override that actually accounts for vertex positions and face warping
   //! \brief sets the Jacobian based on the current vertex locations and face node adjustments
   virtual void set_jacobian(const Basis& basis);
 

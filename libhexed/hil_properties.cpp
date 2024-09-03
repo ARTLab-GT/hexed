@@ -26,9 +26,9 @@ void element(Namespace& space, Element& elem)
 
 void position(Namespace& space, Element& elem, const Basis& basis, int i_qpoint)
 {
-  auto pos = elem.position(basis, i_qpoint);
+  auto pos = elem.position(basis);
   for (unsigned i_dim = 0; i_dim < pos.size(); ++i_dim) {
-    space.assign("pos" + std::to_string(i_dim), pos[i_dim]);
+    space.assign("pos" + std::to_string(i_dim), pos(i_dim)[i_qpoint]);
   }
   for (int i_dim = pos.size(); i_dim < 3; ++i_dim) {
     space.assign("pos" + std::to_string(i_dim), 0.);

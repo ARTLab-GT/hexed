@@ -45,42 +45,47 @@ TEST_CASE("Deformed_element")
     elem.vertex(3).pos[0] = 0.63;
     elem.node_adjustments()[2*3 + 1] =  0.2;
     elem.node_adjustments()[3*3 + 1] = -0.1;
-    REQUIRE(elem.position(basis, 0)[0] == Catch::Approx(0.03));
-    REQUIRE(elem.position(basis, 7)[0] == Catch::Approx(0.83));
-    REQUIRE(elem.position(basis, 8)[0] == Catch::Approx(0.63));
-    REQUIRE(elem.position(basis, 7)[1] == Catch::Approx(0.52));
+    auto pos = elem.position(basis);
+    REQUIRE(pos(0)[0] == Catch::Approx(0.03));
+    REQUIRE(pos(0)[7] == Catch::Approx(0.83));
+    REQUIRE(pos(0)[8] == Catch::Approx(0.63));
+    REQUIRE(pos(1)[7] == Catch::Approx(0.52));
 
-    REQUIRE(elem.position(basis, 3)[0] == Catch::Approx(0.53 - 0.2*0.2));
-    REQUIRE(elem.position(basis, 4)[0] == Catch::Approx(0.43 - 0.2*(0.2 - 0.1)/2));
-    REQUIRE(elem.position(basis, 5)[0] == Catch::Approx(0.33 + 0.2*0.1));
-    REQUIRE(elem.position(basis, 3)[1] == Catch::Approx(0.02 + 0.2));
-    REQUIRE(elem.position(basis, 4)[1] == Catch::Approx(0.52 + (0.2 - 0.1)/2));
-    REQUIRE(elem.position(basis, 5)[1] == Catch::Approx(1.02 - 0.1));
+    REQUIRE(pos(0)[3] == Catch::Approx(0.53 - 0.2*0.2));
+    REQUIRE(pos(0)[4] == Catch::Approx(0.43 - 0.2*(0.2 - 0.1)/2));
+    REQUIRE(pos(0)[5] == Catch::Approx(0.33 + 0.2*0.1));
+    REQUIRE(pos(1)[3] == Catch::Approx(0.02 + 0.2));
+    REQUIRE(pos(1)[4] == Catch::Approx(0.52 + (0.2 - 0.1)/2));
+    REQUIRE(pos(1)[5] == Catch::Approx(1.02 - 0.1));
     // check that the face quadrature points are the same as the interior quadrature points
     // that happen to lie on the faces (true for equidistant and Lobatto bases but not Legendre)
-    REQUIRE(elem.face_position(basis, 0, 2)[1] == elem.position(basis, 2)[1]);
-    REQUIRE(elem.face_position(basis, 2, 1)[0] == elem.position(basis, 3)[0]);
-    REQUIRE(elem.face_position(basis, 3, 1)[1] == elem.position(basis, 5)[1]);
+    auto face_pos = elem.face_position(basis);
+    REQUIRE(face_pos(0)(0)(1)[2] == pos(1)[2]);
+    REQUIRE(face_pos(1)(0)(0)[1] == pos(0)[3]);
+    REQUIRE(face_pos(1)(1)(1)[1] == pos(1)[5]);
 
     hexed::Deformed_element elem1 {params2};
     elem1.node_adjustments()[1] = 0.1;
-    REQUIRE(elem1.position(basis, 0)[0] == Catch::Approx(0.0));
-    REQUIRE(elem1.position(basis, 6)[0] == Catch::Approx(1.0));
-    REQUIRE(elem1.position(basis, 4)[0] == Catch::Approx(0.55));
+    auto pos1 = elem.position(basis);
+    REQUIRE(pos1(0)[0] == Catch::Approx(0.0));
+    REQUIRE(pos1(0)[6] == Catch::Approx(1.0));
+    REQUIRE(pos1(0)[4] == Catch::Approx(0.55));
 
     hexed::Storage_params params3 {2, 5, 3, row_size};
     hexed::Deformed_element elem2 {params3, {}, 0.2};
     elem2.node_adjustments()[4] = 0.01;
-    REQUIRE(elem2.position(basis, 13)[0] == Catch::Approx(0.101));
-    REQUIRE(elem2.position(basis, 13)[1] == Catch::Approx(.1));
-    REQUIRE(elem2.position(basis, 13)[2] == Catch::Approx(.1));
+    auto pos2 = elem.position(basis);
+    REQUIRE(pos2(0)[13] == Catch::Approx(0.101));
+    REQUIRE(pos2(1)[13] == Catch::Approx(.1));
+    REQUIRE(pos2(2)[13] == Catch::Approx(.1));
 
     hexed::Gauss_legendre leg_basis {row_size};
     hexed::Deformed_element elem3 {params2, {}, 0.2};
     elem3.node_adjustments()[1] = 0.1;
     elem3.node_adjustments()[3] = -0.2;
-    REQUIRE(elem3.position(leg_basis, 3)[0] == Catch::Approx(0.08));
-    REQUIRE(elem3.position(leg_basis, 4)[0] == Catch::Approx(0.11));
+    auto pos3 = elem.position(leg_basis);
+    REQUIRE(pos3(0)[3] == Catch::Approx(0.08));
+    REQUIRE(pos3(0)[4] == Catch::Approx(0.11));
   }
 
   SECTION("jacobian calculation")

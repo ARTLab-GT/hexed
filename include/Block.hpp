@@ -30,6 +30,8 @@ class Block : public Mortal {
   //! \brief Obtains the node with array indices specified by `node_coords`.
   //! \details `node_coords` must have `n_dim()` entries and each entry must be in [0, `row_size()`).
   Mat<3> point(const std::vector<int>& node_coords) const;
+  //! \brief Obtains the node with flat index `i_point`
+  Mat<3> point(int i_point) const;
   /*! \brief Obtains all the nodes as a multidimensional array
    * \details This is not a reference.
    * Calling this function allocates memory for the points

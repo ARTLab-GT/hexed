@@ -13,7 +13,10 @@ std::vector<double> Domain_func::operator()(Element& element, const Basis& basis
   for (int i_var = 0; i_var < params.n_var; ++i_var) {
     qpoint_state.push_back(element.state()[i_var*params.n_qpoint() + i_qpoint]);
   }
-  return operator()(element.position(basis, i_qpoint), time, qpoint_state);
+  std::vector<double> pos(params.n_dim);
+  auto p = element.position(basis);
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) pos[i_dim] = p(i_dim)[i_qpoint];
+  return operator()(pos, time, qpoint_state);
 }
 
 std::vector<double> Domain_func::operator()(std::vector<double> pos, double time,

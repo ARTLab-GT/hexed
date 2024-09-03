@@ -105,34 +105,36 @@ TEST_CASE("Element")
     hexed::Element elem {params, {1, 2}, 0.31, 0, hexed::Mat<2>{.001, .002}};
     hexed::Equidistant basis {row_size};
     // test first and last qpoints
-    REQUIRE(elem.position(basis, 0).size() == 2);
-    REQUIRE(elem.position(basis, 0)[0] == Catch::Approx(1*0.31 + .001).scale(1.));
-    REQUIRE(elem.position(basis, 0)[1] == Catch::Approx(2*0.31 + .002).scale(1.));
-    REQUIRE(elem.position(basis, params.n_qpoint() - 1)[0] == Catch::Approx(2*0.31 + .001).scale(1.));
-    REQUIRE(elem.position(basis, params.n_qpoint() - 1)[1] == Catch::Approx(3*0.31 + .002).scale(1.));
+    auto pos = elem.position(basis);
+    REQUIRE(pos(0)[0] == Catch::Approx(1*0.31 + .001).scale(1.));
+    REQUIRE(pos(1)[0] == Catch::Approx(2*0.31 + .002).scale(1.));
+    REQUIRE(pos(0)[params.n_qpoint() - 1] == Catch::Approx(2*0.31 + .001).scale(1.));
+    REQUIRE(pos(1)[params.n_qpoint() - 1] == Catch::Approx(3*0.31 + .002).scale(1.));
     static_assert (row_size%2 == 1); // `row_size` must be odd for the following tests to work
     // test the qpoint at the midpoint of the positive-dimension0 face (the right-hand face)
-    REQUIRE(elem.position(basis, row_size*(row_size - 1) + row_size/2)[0] == Catch::Approx(  2*0.31 + .001).scale(1.));
-    REQUIRE(elem.position(basis, row_size*(row_size - 1) + row_size/2)[1] == Catch::Approx(2.5*0.31 + .002).scale(1.));
+    REQUIRE(pos(0)[row_size*(row_size - 1) + row_size/2] == Catch::Approx(  2*0.31 + .001).scale(1.));
+    REQUIRE(pos(1)[row_size*(row_size - 1) + row_size/2] == Catch::Approx(2.5*0.31 + .002).scale(1.));
     // test the qpoint at the middle of the element (the mean of the vertex positions)
-    REQUIRE(elem.position(basis, params.n_qpoint()/2)[0] == Catch::Approx(1.5*0.31 + .001).scale(1.));
-    REQUIRE(elem.position(basis, params.n_qpoint()/2)[1] == Catch::Approx(2.5*0.31 + .002).scale(1.));
+    REQUIRE(pos(0)[params.n_qpoint()/2] == Catch::Approx(1.5*0.31 + .001).scale(1.));
+    REQUIRE(pos(1)[params.n_qpoint()/2] == Catch::Approx(2.5*0.31 + .002).scale(1.));
     // test face position
-    REQUIRE(elem.face_position(basis, 1, 3)[0] == Catch::Approx(0.31*(1. + 1.)   + .001));
-    REQUIRE(elem.face_position(basis, 1, 3)[1] == Catch::Approx(0.31*(0.75 + 2.) + .002));
+    auto face_pos = elem.face_position(basis);
+    REQUIRE(face_pos(0)(1)(0)[3] == Catch::Approx(0.31*(1. + 1.)   + .001));
+    REQUIRE(face_pos(0)(1)(1)[3] == Catch::Approx(0.31*(0.75 + 2.) + .002));
 
     // make sure that face position works in 3d
     hexed::Storage_params params3 {2, 5, 3, row_size};
     hexed::Element elem3 {params3, {0, 0}, 1., 0, hexed::Mat<3>{.003, .003, .003}};
-    REQUIRE(elem3.face_position(basis, 0, 7)[0] == Catch::Approx(0.003));
-    REQUIRE(elem3.face_position(basis, 0, 7)[1] == Catch::Approx(0.253));
-    REQUIRE(elem3.face_position(basis, 0, 7)[2] == Catch::Approx(0.503));
-    REQUIRE(elem3.face_position(basis, 3, 7)[0] == Catch::Approx(0.253));
-    REQUIRE(elem3.face_position(basis, 3, 7)[1] == Catch::Approx(1.003));
-    REQUIRE(elem3.face_position(basis, 3, 7)[2] == Catch::Approx(0.503));
-    REQUIRE(elem3.face_position(basis, 4, 7)[0] == Catch::Approx(0.253));
-    REQUIRE(elem3.face_position(basis, 4, 7)[1] == Catch::Approx(0.503));
-    REQUIRE(elem3.face_position(basis, 4, 7)[2] == Catch::Approx(0.003));
+    auto face_pos3 = elem3.face_position(basis);
+    REQUIRE(face_pos3(0)(0)(0)[7] == Catch::Approx(0.003));
+    REQUIRE(face_pos3(0)(0)(1)[7] == Catch::Approx(0.253));
+    REQUIRE(face_pos3(0)(0)(2)[7] == Catch::Approx(0.503));
+    REQUIRE(face_pos3(1)(1)(0)[7] == Catch::Approx(0.253));
+    REQUIRE(face_pos3(1)(1)(1)[7] == Catch::Approx(1.003));
+    REQUIRE(face_pos3(1)(1)(2)[7] == Catch::Approx(0.503));
+    REQUIRE(face_pos3(2)(0)(0)[7] == Catch::Approx(0.253));
+    REQUIRE(face_pos3(2)(0)(1)[7] == Catch::Approx(0.503));
+    REQUIRE(face_pos3(2)(0)(2)[7] == Catch::Approx(0.003));
   }
 
   SECTION("set_jacobian")

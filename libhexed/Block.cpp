@@ -46,6 +46,18 @@ Mat<3> Block::point(const std::vector<int>& node_coords) const {
   return _point(node_coords);
 }
 
+Mat<3> Block::point(int i_point) const {
+  #ifdef DEBUG
+  HEXED_ASSERT(0 <= i_point && i_point < math::pow(_row_size, _n_dim),
+               format_str(1000, "node index %i is out of bounds", i_point));
+  #endif
+  std::vector<int> node_coords(_n_dim);
+  for (int i_dim = _n_dim - 1, stride = 1; i_dim >= 0; --i_dim, stride *= _row_size) {
+    node_coords[i_dim] = (i_point/stride)%_row_size;
+  }
+  return point(node_coords);
+}
+
 Mat<3> Vertex::_point(const std::vector<int>&) const {
   // usually, the vertex will not be glued or a shadow and we can just return the `pos`
   if (_shadowed) return _shadowed->point({});

@@ -406,10 +406,10 @@ void Solver::calc_jacobian(bool snap) {
     Element& elem = bc_cons[i_con].element();
     double* surf_pos = bc_cons[i_con].surface_position();
     int i_face = bc_cons[i_con].direction().i_face(0);
-    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-      auto pos = elem.face_position(basis, i_face, i_qpoint);
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        surf_pos[i_dim*nfq + i_qpoint] = pos[i_dim];
+    Array<double> pos {elem.face_position(basis)(i_face/2)(i_face%2).copy()};
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        surf_pos[i_dim*nfq + i_qpoint] = pos(i_dim)[i_qpoint];
       }
     }
   }
@@ -425,9 +425,11 @@ void Solver::initialize(const Spacetime_func& func) {
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    Array<double> pos {elements[i_elem].position(basis)};
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      std::vector<double> pos_vec {};
-      auto state = func(elements[i_elem].position(basis, i_qpoint), _namespace->get<double>("flow_time"));
+      std::vector<double> pos_vec(params.n_dim);
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) pos_vec[i_dim] = pos(i_dim)[i_qpoint];
+      auto state = func(pos_vec, _namespace->get<double>("flow_time"));
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         elements[i_elem].state()[i_var*params.n_qpoint() + i_qpoint] = state[i_var];
       }
@@ -1314,19 +1316,13 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   pos_shape[0] = params.n_dim;
   std::vector<Int> out_shape(params.n_dim, n_sample);
   out_shape[0] = nv;
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
-  {
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     auto& con {bc_cons[i_con]};
-    if (con.bound_cond_serial_n() == bc_sn)
-    {
+    if (con.bound_cond_serial_n() == bc_sn) {
       auto& elem = con.element();
       // fetch the position
       const int i_face = con.direction().i_face(0);
-      Mat<dyn, dyn> qpoint_pos (nfq, nd);
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        auto pos = elem.face_position(basis, i_face, i_qpoint);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) qpoint_pos(i_qpoint, i_dim) = pos[i_dim];
-      }
+      Array<double> qpoint_pos {elem.face_position(basis)(i_face/2)(i_face%2).copy()};
       // fetch the output variables
       Mat<dyn, dyn> qpoint_vars (nfq, nv);
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
@@ -1341,7 +1337,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
             Mat<dyn, dyn> interp_pos (n_edge, nd);
             for (int j_dim = 0; j_dim < nd; ++j_dim) {
               // extrapolate from faces to edges
-              Mat<> uniform = math::dimension_matvec(boundary(i_sign, all), qpoint_pos.col(j_dim), i_dim);
+              Mat<> uniform = math::dimension_matvec(boundary(i_sign, all), qpoint_pos(j_dim).vector(), i_dim);
               // interpolate from edge qpoints to uniformly-spaced sample points
               interp_pos.col(j_dim) = math::hypercube_matvec(interp, uniform);
             }
@@ -1358,7 +1354,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
         // interpolate from quadrature points to sample points
         Mat<dyn, dyn> interp_pos (n_block, nd);
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          interp_pos.col(i_dim) = math::hypercube_matvec(interp, qpoint_pos.col(i_dim));
+          interp_pos.col(i_dim) = math::hypercube_matvec(interp, qpoint_pos(i_dim).vector());
         }
         Mat<dyn, dyn> interp_vars (n_block, nv);
         for (int i_var = 0; i_var < nv; ++i_var) {
