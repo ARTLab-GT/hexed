@@ -19,7 +19,7 @@ class Tree_curve {
     Int index;
     double distance;
   };
-  Tree_curve(Array<double> nodes, int skip_levels = 0);
+  Tree_curve(Array<double>&& nodes, int skip_levels = 0);
   inline int skip_levels() const {return _skip;}
   inline const Array<double> nodes() const {return _nodes();}
   inline const Array<double> arc_length() const {return _arc_length();}

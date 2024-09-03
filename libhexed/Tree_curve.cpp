@@ -9,7 +9,7 @@ Array<double>& check(Array<double>& nodes) {
   return nodes;
 }
 
-Tree_curve::Tree_curve(Array<double> nodes, int skip)
+Tree_curve::Tree_curve(Array<double>&& nodes, int skip)
 : _nodes(std::move(check(nodes)))
 , _arc_length({_nodes.shape()[0]})
 , _skip{skip}

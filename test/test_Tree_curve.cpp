@@ -5,7 +5,7 @@ TEST_CASE("Tree_curve") {
   REQUIRE_THROWS(hexed::Tree_curve(hexed::Array<double>({66, 3})));
   hexed::Array<double> nodes({65, 3});
   for (int i = 0; i < 65; ++i) nodes(i).vector() << i/64., i*i/64./64., 3.;
-  hexed::Tree_curve curve(nodes, 2);
+  hexed::Tree_curve curve(nodes(), 2);
   REQUIRE(curve.skip_levels() == 2);
   REQUIRE(curve.nodes().shape()[0] == 65);
   REQUIRE(curve.nodes().shape()[1] == 3);
@@ -32,7 +32,7 @@ TEST_CASE("Tree_curve") {
     circle_nodes(i)[1] = std::sin(angle);
     circle_nodes(i)[2] = 1.;
   }
-  hexed::Tree_curve circle(circle_nodes);
+  hexed::Tree_curve circle(circle_nodes.copy());
   REQUIRE(circle.arc_length()[0] == Catch::Approx(0.).margin(1e-2));
   REQUIRE(circle.arc_length()[1024] == Catch::Approx(2*M_PI).margin(1e-2));
   hexed::Mat<3> point {std::sqrt(.5) + .1, std::sqrt(.5) + .1, 1.1};
