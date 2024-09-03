@@ -47,6 +47,12 @@ Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_
   return {params, is_feasible(params)};
 }
 
+Mat<2, 2> Plane::reparameterize(Mat<2, 2> bounds) {
+  _origin = point(bounds(all, 0));
+  _vecs = _vecs*(bounds(all, 1) - bounds(all, 0)).asDiagonal();
+  return bounds;
+}
+
 Array<double> discretize(Parametric<1>& curve, Int n_div) {
   Array<double> nodes({n_div + 1, 3});
   for (Int i_node = 0; i_node < n_div + 1; ++i_node) nodes(i_node).vector() = curve.point(Mat<1>{i_node/double(n_div)});
@@ -187,7 +193,7 @@ void Trimmed_surface::initialize(std::vector<std::vector<Mat<2>>>& curves) {
   }
   if (set) bounds(all, 1) = bounds(all, 1).cwiseMax(bounds(all, 0) + Mat<2>{_sz, _sz});
   else bounds << 0, 1, 0, 1;
-  _surf->reparameterize(bounds);
+  bounds = _surf->reparameterize(bounds);
   _param_segments.resize(_n_div);
   for (auto& nodes : curves) if (!nodes.empty()) {
     Int n_nodes = nodes.size();
