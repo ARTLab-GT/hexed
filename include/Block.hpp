@@ -83,6 +83,9 @@ class Vertex : public Block {
   void shadow(Vertex& that);
   inline void unshadow() {_shadowed.unpair();}
   inline bool are_shadows(Vertex& that) const {return _shadowed.get() == &that || that._shadowed.get() == this;}
+  inline bool is_shadow() const {return _shadowed;} //!< \brief Returns `true` is `this` is shadowing another vertex.
+  //! \brief Returns `true` if `this` is in control of its own position (i.e. is neither glued nor shadowing).
+  inline bool independent() const {return !glued() && !is_shadow();}
 
   /*! \brief Combines this vertex with `that` and steals its resources.
    * \details All `Edge`s and `Element_shape`s that currently have pointers to `that`

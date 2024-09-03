@@ -1,0 +1,141 @@
+#include <filesystem>
+#include <map>
+#include <hexed/Iges_parser.hpp>
+
+namespace hexed {
+
+Int Iges_parser::read_int(std::string s) {
+  if (s.empty()) return 0;
+  try {
+    return stoll(s);
+  } catch (const std::invalid_argument& e) {
+    HEXED_THROW("could not convert \"" + s + "\" to an integer"); throw;
+  }
+}
+
+double Iges_parser::read_float(std::string s) {
+  for (unsigned i = 0; i < s.size(); ++i) {
+    if (std::tolower(s[i]) == 'd') s[i] = 'e';
+  }
+  try {
+    return stod(s);
+  } catch (const std::invalid_argument& e) {
+    HEXED_THROW("could not convert \"" + s + "\" to floating-point"); throw;
+  }
+}
+
+std::string Iges_parser::read_string(std::string s) {
+  std::size_t delim = s.find('H');
+  HEXED_ASSERT(delim != s.npos, "string does not contain Hollerith delimiter 'H'");
+  HEXED_ASSERT(s.size() - delim == stoull(std::string(s.begin(), s.begin() + delim)) + 1,
+               "actual size of string does not match size specified as per Hollerith format");
+  return {s.begin() + delim + 1, s.end()};
+}
+
+bool is_eol(char c) {
+  return c == '\r' || c == '\n';
+}
+
+Iges_parser::Iges_parser(std::string file_name) : _param_delim{0}, _record_delim{0}, _entries(5), _line_map(5) {
+  HEXED_ASSERT(std::filesystem::exists(file_name),
+               format_str(1000, "`%s` is not an existing file", file_name.c_str()));
+  std::string ext = file_extension(file_name);
+  HEXED_ASSERT(ext == "igs" || ext == "iges", "can only read IGES files");
+  std::ifstream file(file_name, std::iostream::binary);
+  std::vector<std::string> ent;
+  std::string field;
+  std::map<char, Section_id> _section_chars {
+    {'S', start},
+    {'G', global},
+    {'D', directory},
+    {'P', parameter},
+    {'T', terminate},
+  };
+  while (!file.eof()) {
+    HEXED_ASSERT(!file.fail() && !file.bad(), format_str(200, "error reading characters from IGES file: %lli %lli", (Int)file.get(), (Int)file.peek()));
+    char line [81];
+    Int i_char = 0;
+    do line[i_char] = file.get();
+    while (!is_eol(line[i_char]) && i_char++ < 80);
+    while (is_eol(file.peek())) file.get();
+    line[i_char] = '\0';
+    if (i_char != 0) {
+      HEXED_ASSERT(i_char == 80, "line is shorter than 80 characters");
+      HEXED_ASSERT(line[72] != 'C' && line[72] != 'B', "Only uncompressed ASCII IGES format is supported",
+                   assert::Not_implemented_error)
+      HEXED_ASSERT(_section_chars.count(line[72]), format_str(100, "section character '%c' not recognized", line[72]));
+      Section_id sec = _section_chars[line[72]];
+      _line_map[sec].push_back(_entries[sec].size());
+      if (sec == start) {
+        _entries[start].push_back({std::string(line, 72)});
+      } else if (sec == global || sec == parameter) {
+        int i = 0;
+        if (sec == global) {
+          if (!_param_delim) {
+            if (line[0] == ',') {
+              _param_delim = ',';
+              ++i;
+            } else {
+              HEXED_ASSERT(line[0] == '1' && line[1] == 'H', "failed to identify parameter delimiter");
+              _param_delim = line[i + 2];
+              i += 4;
+            }
+            ent.emplace_back(1, _param_delim);
+          }
+          if (!_record_delim) {
+            if (line[i] == _param_delim) {
+              _record_delim = ';';
+              ++i;
+            } else {
+              HEXED_ASSERT(line[i] == '1' && line[i + 1] == 'H', "failed to identify record delimiter");
+              _record_delim = line[i + 2];
+              HEXED_ASSERT(line[i + 3] == _param_delim, "no parameter delimiter after record delimiter specification");
+              i += 4;
+            }
+            ent.emplace_back(1, _record_delim);
+          }
+        } else HEXED_ASSERT(_param_delim && _record_delim, "parameter section before delimiter specification");
+        int h_count = 0;
+        for (; i < 64 + 8*(sec == global); ++i) {
+          if ((line[i] == _param_delim || line[i] == _record_delim) && !h_count) {
+            ent.push_back(field);
+            field.clear();
+            if (line[i] == _record_delim) {
+              _entries[sec].push_back(ent);
+              ent.clear();
+            }
+          } else {
+            h_count = std::max(0, h_count - 1);
+            if (line[i] == 'H' && std::all_of(field.begin(), field.end(), [](char c){return std::isdigit(c);})) {
+              h_count = std::stoi(field);
+            }
+            if (!field.empty() || line[i] != ' ') field.insert(field.size(), 1, line[i]);
+          }
+        }
+      } else if (sec == directory || sec == terminate) {
+        for (int i_block = 0; i_block < 9; ++i_block) {
+          int start = 8*i_block;
+          while (line[start] == ' ' && start < 8*(i_block + 1)) ++start;
+          ent.emplace_back(line + start, line + 8*(i_block + 1));
+        }
+        if (sec == terminate || ent.size() == 18) {
+          _entries[sec].push_back(ent);
+          ent.clear();
+        }
+      }
+    }
+  }
+}
+
+const next::Sequence<const std::vector<std::string>&> Iges_parser::section(Section_id sec) const {
+  return next::Sequence<const std::vector<std::string>&>::vector_view(_entries[sec]);
+}
+
+const std::vector<std::string>& Iges_parser::entry(Section_id sec, Int line) const {
+  HEXED_ASSERT(line > 0 && line <= Int(_line_map[sec].size()), "line number out of bounds");
+  int entry = _line_map[sec][line - 1];
+  HEXED_ASSERT(entry < Int(_entries[sec].size()), "error mapping lines to entries");
+  return _entries[sec][entry];
+}
+
+}

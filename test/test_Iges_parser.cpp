@@ -1,0 +1,57 @@
+#include <catch2/catch_all.hpp>
+#include <hexed/Iges_parser.hpp>
+
+TEST_CASE("Iges_parser") {
+  std::vector<std::string> file_names {"default_delims", "custom_param", "custom_record", "custom_both"};
+  std::vector<std::array<std::string, 2>> delims {{",", ";"}, {"_", ";"}, {",", "_"}, {"_", "\\"}};
+  for (int i = 0; i < 4; ++i) {
+    hexed::Iges_parser file("../test_assets/" + file_names[i] + ".iges");
+    auto start_sec = file.section(hexed::Iges_parser::start);
+    REQUIRE(start_sec.size() == 2);
+    REQUIRE(start_sec[0].size() == 1);
+    REQUIRE(start_sec[1].size() == 1);
+    REQUIRE(start_sec[0][0] == "first start entry                                                       ");
+    REQUIRE(start_sec[1][0] == "second start entry                                                      ");
+    REQUIRE(&file.entry(hexed::Iges_parser::start, 1) == &start_sec[0]);
+    REQUIRE(&file.entry(hexed::Iges_parser::start, 2) == &start_sec[1]);
+    REQUIRE(file.section(hexed::Iges_parser::global).size() == 1);
+    REQUIRE_THAT(file.entry(hexed::Iges_parser::global, 1), Catch::Matchers::RangeEquals(std::vector<std::string> {
+      delims[i][0],
+      delims[i][1],
+      "12Hfirst,_entry",
+      "12Hsecond entry",
+      "5Hthird",
+      "25",
+      "",
+      "9.8",
+    }));
+    if (file_names[i] == "default_delims") {
+      auto dir_sec = file.section(hexed::Iges_parser::directory);
+      REQUIRE(dir_sec.size() == 2);
+      REQUIRE_THAT(dir_sec[0], Catch::Matchers::RangeEquals(std::vector<std::string> {
+        "1000", "5Hfirst", "", "", "", "", "", "", "",
+        "000000.1", "00000000", "", "", "", "", "", "", "1Hx",
+      }));
+      REQUIRE_THAT(dir_sec[1], Catch::Matchers::RangeEquals(std::vector<std::string>(18)));
+      auto param_sec = file.section(hexed::Iges_parser::parameter);
+      REQUIRE(param_sec.size() == 2);
+      REQUIRE(&file.entry(hexed::Iges_parser::parameter, 1) == &param_sec[0]);
+      REQUIRE(&file.entry(hexed::Iges_parser::parameter, 3) == &param_sec[1]);
+      REQUIRE_THAT(param_sec[0], Catch::Matchers::RangeEquals(std::vector<std::string> {"0", "1.2"}));
+      REQUIRE_THAT(param_sec[1], Catch::Matchers::RangeEquals(std::vector<std::string> {"0"}));
+      auto term_sec = file.section(hexed::Iges_parser::terminate);
+      REQUIRE(term_sec.size() == 1);
+      REQUIRE_THAT(term_sec[0], Catch::Matchers::RangeEquals(std::vector<std::string> {
+        "", "", "", "", "", "", "", "1", "",
+      }));
+    }
+  }
+  REQUIRE(hexed::Iges_parser::read_int("0300") == 300);
+  REQUIRE(hexed::Iges_parser::read_float("-1.1e2") == Catch::Approx(-110.));
+  REQUIRE(hexed::Iges_parser::read_float("-1.1E2") == Catch::Approx(-110.));
+  REQUIRE(hexed::Iges_parser::read_float("-1.1d2") == Catch::Approx(-110.));
+  REQUIRE(hexed::Iges_parser::read_float("-1.1D2") == Catch::Approx(-110.));
+  REQUIRE(hexed::Iges_parser::read_string("6HARTLab") == "ARTLab");
+  REQUIRE(hexed::Iges_parser::read_string("1H ") == " ");
+  REQUIRE_THROWS(hexed::Iges_parser::read_string("2H..."));
+}

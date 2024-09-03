@@ -45,7 +45,8 @@ public:
   //! \brief constructs a `Mortal_ptr` that points to `data`
   Mortal_ptr(T* data = nullptr) {set(data);}
 
-  //! \brief constructs a `Mortal_ptr` that points to `data`
+  //! \brief sets `this` to point to `data`
+  //! \details If `this` is already pointing to something, it will be unpaired.
   void set(T* data = nullptr) {
     if (data) pair(*data);
     else unpair();

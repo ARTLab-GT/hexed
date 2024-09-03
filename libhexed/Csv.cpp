@@ -1,21 +1,18 @@
 #include <Csv.hpp>
 #include <utils.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
 Csv::Csv(std::string name, int n_columns) : _row{0}, _cols{n_columns}, _file(name + ".csv") {}
 
-Csv::Csv(std::string name, std::vector<std::string> columns) : Csv(name, columns.size())
-{
+Csv::Csv(std::string name, std::vector<std::string> columns) : Csv(name, columns.size()) {
   std::string text;
   for (auto col : columns) text += col + ",";
   text.pop_back();
   _file << text << "\n";
 }
 
-void Csv::write(Array<double> data)
-{
+void Csv::write(Array<double> data) {
   HEXED_ASSERT(data.order() == 2, "CSV data must be 2D");
   auto shape = data.shape();
   HEXED_ASSERT(shape[1] == _cols, "CSV data has wrong number of columns");
@@ -28,8 +25,7 @@ void Csv::write(Array<double> data)
   }
 }
 
-void Csv::write_block(Array<double> pos, Array<double> vars)
-{
+void Csv::write_block(Array<double> pos, Array<double> vars) {
   HEXED_ASSERT(pos.order() > 1, "input arrays have wrong order");
   HEXED_ASSERT(pos(0).same_shape(vars(0)), "`pos` and `vars` must have compatible shape");
   HEXED_ASSERT(pos.shape()[0] + vars.shape()[0] == _cols, "total number of position and state variables must equal number of columns");
@@ -44,8 +40,7 @@ void Csv::write_block(Array<double> pos, Array<double> vars)
   }
 }
 
-void Csv::write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars)
-{
+void Csv::write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars) {
   write_block(pos, vars);
 }
 

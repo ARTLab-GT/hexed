@@ -58,7 +58,9 @@ class Nearest_point {
     if (other._dist_sq < this->_dist_sq) *this = other;
   }
   //! updates `*this` to point to `new_pnt` if `new_pnt` is closer
-  void merge(Mat<n_dim> new_pnt) {merge(Nearest_point(_r, new_pnt));}
+  void merge(Mat<n_dim> new_pnt) {
+    if (!std::isnan(new_pnt.squaredNorm())) merge(Nearest_point(_r, new_pnt));
+  }
 
   //! \brief Current best estimate for nearest point.
   //! \details Throws an exception if `empty()`.

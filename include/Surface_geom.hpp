@@ -4,7 +4,8 @@
 #include <memory>
 #include "math.hpp"
 #include "Nearest_point.hpp"
-#include "Geom_edge.hpp"
+#include "Sequence.hpp"
+#include "Tree_curve.hpp"
 
 namespace hexed {
 
@@ -35,13 +36,15 @@ class Surface_geom {
    * \details The line is defined parametrically to be the set of points
    * \f$ [\text{point0}] + t [\text{point1}] \f$ for all \f$ t \in \mathbb{R} \f$.
    * Returns the (potentially empty) set of \f$ t \f$ values where the line intersects the surface.
+   * \deprecated Newer methods should be based purely on nearest point projections.
    */
   virtual std::vector<double> intersections(Mat<> point0, Mat<> point1) = 0;
   /*! \brief Returns a list of any geometry edges that require mesh edges to be snapped to them.
    * \details Only used in 3D.
    * Default implementation returns an empty sequence, but derived classes may override.
    */
-  inline virtual next::Sequence<Geom_edge&> edges() {return {};}
+  inline virtual next::Sequence<const Tree_curve&> edges() {return {};}
+  inline virtual next::Sequence<Mat<3>> points() {return {};}
 };
 
 /*! \brief Combines multiple `Surface_geom`s into one.
@@ -55,7 +58,8 @@ class Compound_geom : public Surface_geom {
   Compound_geom(std::vector<Surface_geom*>); //!< acquires ownership
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
-  next::Sequence<Geom_edge&> edges() override;
+  next::Sequence<const Tree_curve&> edges() override;
+  next::Sequence<Mat<3>> points() override;
 };
 
 /*! \brief Represents hypersphere in any dimensionality.

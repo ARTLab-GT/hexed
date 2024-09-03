@@ -58,7 +58,7 @@ public:
   : _get{get}, _size{size}
   {}
   Sequence()
-  : _get{[](std::size_t index)->T {HEXED_THROW("call to the `get()` of an empty `Sequence`");}},
+  : _get{[](std::size_t index)->T {HEXED_THROW("call to the `get()` of an empty `Sequence`"); throw;}},
     _size{[]()->std::size_t {return 0;}}
   {}
   std::size_t size() const {return _size();} //!< \brief size of the sequence
@@ -105,6 +105,10 @@ public:
   template <typename storage_t = std::remove_reference<T>::type>
   static Sequence vector_view(std::vector<storage_t>& vec) {
     return {[&vec](std::size_t index)->T{return vec[index];}, [&vec](){return vec.size();}};
+  }
+  template <typename storage_t = std::remove_reference<T>::type>
+  static Sequence vector_view(const std::vector<storage_t>& vec) {
+    return {[&vec](std::size_t index)->const T{return vec[index];}, [&vec](){return vec.size();}};
   }
 
   //! \brief concatenates

@@ -7,6 +7,7 @@
 #include <hexed/Occt.hpp>
 #include <hexed/hil_properties.hpp>
 #include <hexed/Csv.hpp>
+#include <hexed/brep.hpp>
 
 namespace hexed {
 
@@ -97,21 +98,41 @@ std::vector<Flow_bc*> Case::_make_extremal_bcs() {
 
 Surface_geom* Case::_make_geom() {
   int nd = _vari("n_dim");
+  Int n_div = math::pow(Int(2), _vari("geom_subdivision_levels"));
   std::vector<Surface_geom*> geoms;
   for (int i_geom = 0;; ++i_geom) {
     auto geom = _inter.variables->lookup<std::string>("geom" + std::to_string(i_geom));
     if (!geom) break;
-    unsigned dot = geom->rfind('.');
-    HEXED_ASSERT(dot < geom->size(), "file name must contain extension to infer format", assert::User_error);
     HEXED_ASSERT(std::filesystem::exists(geom.value()), format_str(1000, "geometry file `%s` not found", geom->c_str()), assert::User_error);
-    std::string case_sensitive(geom->begin() + dot + 1, geom->end());
-    std::string ext = case_sensitive;
+    std::string ext = file_extension(geom.value());
+    std::string without_ext(geom->begin(), geom->end() - ext.size() - 1);
     for (char& c : ext) c = tolower(c);
     if (ext == "csv") {
       HEXED_ASSERT(nd == 2, "3D geometry in CSV format is not supported", assert::User_error);
       auto data = read_csv(*geom);
       HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns", assert::User_error);
       geoms.emplace_back(new Simplex_geom<2>(segments(data.transpose())));
+    } else if ((ext == "igs" || ext == "iges") && !(HEXED_USE_OCCT && _vari("prefer_occt"))) {
+      if (nd == 3) {
+        auto ptr = std::make_unique<brep::Geom_3d>(geom.value(), n_div);
+        if (_vari("vis_geom")) {
+          Mat<3, 2> bounds;
+          for (int i_dim = 0; i_dim < 3; ++i_dim) {
+            for (int sign = 0; sign < 2; ++sign) {
+              bounds(i_dim, sign) = _vard("geom_vis_bound" + std::to_string(i_dim) + std::to_string(sign));
+            }
+          }
+          ptr->visualize("default", _vars("working_dir") + without_ext,
+                         _vari("geom_vis_subdivisions"), _vari("vis_geom_distance"), bounds);
+        }
+        geoms.emplace_back(ptr.release());
+      } else if (nd == 2) {
+        auto ptr = std::make_unique<brep::Geom_2d>(geom.value(), n_div);
+        if (_vari("vis_geom")) {
+          ptr->visualize("default", _vars("working_dir") + without_ext, _vari("geom_vis_subdivisions"));
+        }
+        geoms.emplace_back(ptr.release());
+      } else HEXED_THROW("BRep geometry must be 2 or 3D", assert::User_error);
     #if HEXED_USE_OCCT
     } else if (ext == "igs" || ext == "iges" || ext == "stp" || ext == "step") {
       auto shape = Occt::read(*geom);
@@ -130,7 +151,7 @@ Surface_geom* Case::_make_geom() {
       geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(Occt::read_stl(geom.value()))));
     #endif
     } else {
-      HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", case_sensitive.c_str()), assert::User_error);
+      HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", ext.c_str()), assert::User_error);
     }
   }
   return geoms.empty() ? nullptr : new Compound_geom(geoms);
@@ -552,7 +573,7 @@ Case::Case(std::string input_script)
     return _solver().mesh().n_elements();
   }));
   _inter.variables->create<std::string>("performance_report", new Namespace::Heisenberg<std::string>([this]() {
-    return _solver().stopwatch_tree().report();
+    return _solver().stopwatch_tree().report() + _solver().mesh().stopwatch_tree().report();
   }));
 
   _inter.variables->create<std::string>("integrate_field", new Namespace::Heisenberg<std::string>([this]() {
@@ -583,6 +604,9 @@ Case::Case(std::string input_script)
     _inter.exec(format_str(1000, "$read {%s}", input_script.c_str()));
   } catch (const assert::User_error& except) {
     if (_printers) _printers->error("User error: ", true);
+    throw except;
+  } catch (const assert::Not_implemented_error& except) {
+    if (_printers) _printers->error("Error: feature not yet implemented. ", true);
     throw except;
   } catch (const assert::Numerical_exception& except) {
     _printers->error("Numerical exception: ", true);

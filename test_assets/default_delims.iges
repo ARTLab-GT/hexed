@@ -1,0 +1,12 @@
+first start entry                                                       S0000001
+second start entry                                                      S0000002
+,,12Hfirst,_entry,12Hsecond entry,   5Hthird, 25,,                      G0000001
+9.8;                                                                    G0000002
+    1000 5Hfirst                                                        D0000001
+000000.100000000                                                     1HxD0000002
+                                                                        D0000003
+                                                                        D0000004
+0,                                                           1.200000001P0000001
+;                                                               00000001P0000001
+0;                                                              00000002P0000001
+                                                               1        T0000001
