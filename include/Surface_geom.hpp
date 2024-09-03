@@ -36,6 +36,7 @@ class Surface_geom {
    * \details The line is defined parametrically to be the set of points
    * \f$ [\text{point0}] + t [\text{point1}] \f$ for all \f$ t \in \mathbb{R} \f$.
    * Returns the (potentially empty) set of \f$ t \f$ values where the line intersects the surface.
+   * \deprecated Newer methods should be based purely on nearest point projections.
    */
   virtual std::vector<double> intersections(Mat<> point0, Mat<> point1) = 0;
   /*! \brief Returns a list of any geometry edges that require mesh edges to be snapped to them.

@@ -498,6 +498,52 @@ void check_point(Mat<sz> point) {
   }
 }
 
+Geom_2d::Geom_2d(std::string file_name, Int n_div) {
+  Iges_parser parser(file_name);
+  auto dir = parser.section(Iges_parser::directory);
+  for (auto& entry : dir) {
+    Read_entity read(parser, entry, n_div);
+    auto curve = read.read_curve(false);
+    if (curve) _curves.emplace_back(curve.release());
+  }
+}
+
+void Geom_2d::visualize(std::string format, std::string file_name, Int n_div) {
+  Int n_nodes = n_div + 1;
+  double sz = 1./n_div;
+  auto vis = Visualizer::create(format, 3, 1, file_name + "_curves", {}, 0., Visualizer::block);
+  for (auto& curve : _curves) {
+    Array<double> coords({3, n_nodes});
+    for (int i_node = 0; i_node < n_nodes; ++i_node) {
+      Mat<3> point = curve->point(Mat<1>{i_node*sz});
+      for (int i_dim = 0; i_dim < 3; ++i_dim) coords(i_dim)[i_node] = point(i_dim);
+    }
+    vis->write_block(coords, Array<double>({0, n_nodes}));
+  }
+}
+
+Nearest_point<dyn> Geom_2d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
+  max_distance = limit(max_distance);
+  distance_guess = limit(distance_guess);
+  check_point<2>(point);
+  Nearest_point<dyn> nearest(point, distance_guess);
+  for (auto& curve : _curves) {
+    auto param = curve->nearest_params(point, [](Mat<1>){return true;}, distance_guess);
+    if (param.is_feasible) nearest.merge(curve->point(param.params)(Eigen::seqN(0, 2)));
+  }
+  if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
+    return nearest;
+  }
+  return nearest_point(point, max_distance, distance_guess*2);
+}
+
+next::Sequence<Mat<3>> Geom_2d::points() {
+  return {
+    [this](std::size_t i) {return _curves[i/2]->point(Mat<1>::Constant(i%2));},
+    [this]() {return 2*_curves.size();},
+  };
+}
+
 Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
   max_distance = limit(max_distance);
   distance_guess = limit(distance_guess);
@@ -567,52 +613,6 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
     }
     vis->write_block(coords, dist);
   }
-}
-
-Geom_2d::Geom_2d(std::string file_name, Int n_div) {
-  Iges_parser parser(file_name);
-  auto dir = parser.section(Iges_parser::directory);
-  for (auto& entry : dir) {
-    Read_entity read(parser, entry, n_div);
-    auto curve = read.read_curve(false);
-    if (curve) _curves.emplace_back(curve.release());
-  }
-}
-
-void Geom_2d::visualize(std::string format, std::string file_name, Int n_div) {
-  Int n_nodes = n_div + 1;
-  double sz = 1./n_div;
-  auto vis = Visualizer::create(format, 3, 1, file_name + "_curves", {}, 0., Visualizer::block);
-  for (auto& curve : _curves) {
-    Array<double> coords({3, n_nodes});
-    for (int i_node = 0; i_node < n_nodes; ++i_node) {
-      Mat<3> point = curve->point(Mat<1>{i_node*sz});
-      for (int i_dim = 0; i_dim < 3; ++i_dim) coords(i_dim)[i_node] = point(i_dim);
-    }
-    vis->write_block(coords, Array<double>({0, n_nodes}));
-  }
-}
-
-Nearest_point<dyn> Geom_2d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
-  max_distance = limit(max_distance);
-  distance_guess = limit(distance_guess);
-  check_point<2>(point);
-  Nearest_point<dyn> nearest(point, distance_guess);
-  for (auto& curve : _curves) {
-    auto param = curve->nearest_params(point, [](Mat<1>){return true;}, distance_guess);
-    if (param.is_feasible) nearest.merge(curve->point(param.params)(Eigen::seqN(0, 2)));
-  }
-  if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
-    return nearest;
-  }
-  return nearest_point(point, max_distance, distance_guess*2);
-}
-
-next::Sequence<Mat<3>> Geom_2d::points() {
-  return {
-    [this](std::size_t i) {return _curves[i/2]->point(Mat<1>::Constant(i%2));},
-    [this]() {return 2*_curves.size();},
-  };
 }
 
 }

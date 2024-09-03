@@ -179,11 +179,12 @@ class Circular_arc : public Parametric<1> {
   double _end_angle;
 };
 
-//! \brief A plane represented parametrically by an origin and coordinate vectors.
+//! \brief a plane represented parametrically by an origin and coordinate vectors
 class Plane : public Parametric<2> {
   public:
   //! \brief Specify `origin` and `coord_vectors` such that `point(p)` will yield `origin + coord_vectors*p`.
   inline Plane(Mat<3> origin, Mat<3, 2> coord_vectors) : _origin{origin}, _vecs{coord_vectors} {}
+  //! \note Does not include boundary points in search.
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
                                     double max_distance) const override;
   inline Mat<3> point(Mat<2> params) const override {return _origin + _vecs*params;}
@@ -198,12 +199,34 @@ class Plane : public Parametric<2> {
   Mat<3, 2> _vecs;
 };
 
+//! \brief surface constructed by revolving a 3D curve about an arbitrary axis
 class Revolution_surface : public Parametric<2> {
   public:
-  Revolution_surface(Parametric<1>* generatrix, Line_segment, Int n_div, double start_angle = 0, double end_angle = 2*constants::pi);
-  Mat<3> rotate(Mat<3>, double angle) const;
+  /*!
+   * \param generatrix Curve to be revolved. Acquires ownership of `generatrix`. Need not be coplanar with `axis`.
+   * \param axis Axis about which to revolve `generatrix`.
+   *             The length does not matter, but the direction does,
+   *             because it determines the direction of rotation by the right hand rule.
+   *             Thus swapping the endpoints reverses the sense of rotation.
+   * \param n_div For the purpose of nearest point calculations,
+   *              `generatrix` shall be discretized into a polygonal curve with `n_div` segments,
+   *              with uniform spacing in parameter space.
+   *              Must be a power of 2.
+   * \param start_angle Same behavior and requirements as for `Circular_arc::Circular_arc()`
+   * \param end_angle Same behavior and requirements as for `Circular_arc::Circular_arc()`
+   */
+  Revolution_surface(Parametric<1>* generatrix, Line_segment axis, Int n_div,
+                     double start_angle = 0, double end_angle = 2*constants::pi);
+  //! \brief Rotates `p` about the axis by `angle`.
+  //! \details Helper function made available to you cause why not?
+  Mat<3> rotate(Mat<3> p, double angle) const;
+  /*! \details `param(0)` specifies the point on the generatrix.
+   * param(1) specifies the angle of rotation such that `param(1) = 0.` yields `start_angle`
+   * and `param(1) = 1.` yields `end_angle`.
+   */
+  Mat<3> point(Mat<2> params) const override;
+  //! \note Includes boundary points in search.
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
-  inline Mat<3> point(Mat<2> params) const override;
   private:
   class _Find_nearest;
   std::unique_ptr<Parametric<1>> _generatrix;
@@ -214,45 +237,117 @@ class Revolution_surface : public Parametric<2> {
   Tree_curve _tree;
 };
 
+//! \brief A list of curves, where the end point of each should coincide with start of the next.
 typedef std::vector<std::unique_ptr<Parametric<1>>> Composite_curve;
 
+/*! \brief A surface created by trimming a parametric surface with closed curves.
+ * \details Specifically, given a parametric surface and a set of closed curves on that surface,
+ * the resulting trimmed surface is the set of points on the surface such a ray originating from that point
+ * in parameter space intersects the set of closed curves an odd number of times.
+ * In other words, the set of points which are inside the curves in parameter space.
+ * Usually, the bounding curves are non-intersecting
+ * and include one outer boundary in addition to zero or more inner boundaries,
+ * but this implementation does not require that.
+ * There are also no orientation requirements.
+ */
 class Trimmed_surface {
   public:
+  /*!
+   * \param surface Parametric surface to be trimmed. Acquires ownership of `surface`.
+   * \param curves Bounding curves _in model space_, not parameter space.
+   *               These curves should (approximately) lie on the surface.
+   *               Any deviation from the surface will be a source of numerical error.
+   *               \todo Implement another constructor that accepts curves in parameter space.
+   * \param n_div For some calculations, the bounding curves will be discretized
+   *              into polygonal curves with O(`n_div`) segments.
+   *              Must be a power of 2.
+   */
   Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves, Int n_div);
+  //! \brief Access the parametric surface.
   inline const Parametric<2>& surface() const {return *_surf;}
+  //! \brief Test whether a point `parameters` is inside the bounding curves in parameter space.
   bool is_inside(Mat<2> parameters) const;
+  //! \brief Access the bounding curves.
   next::Sequence<const Tree_curve&> curves() const;
+  /*! \brief Compute the point on the trimmed surface (including the boundary) nearest to `point`.
+   * \details If the nearest point would be further than `max_dist` from `point`,
+   * the empty `Nearest_point` is returned.
+   */
   Nearest_point<3> nearest_point(Mat<3> point, double max_dist) const;
   private:
+  // Performs the real initialization work once the curves have been discretized.
+  // Discretization is performed by the constructor.
   void initialize(std::vector<std::vector<Mat<2>>>& curves);
   Int _n_div;
   double _sz;
   std::unique_ptr<Parametric<2>> _surf;
   std::vector<Tree_curve> _curves;
+  // No simple way to explain this.
+  // Need to write a dedicated article about distinguishing inside/outside points, which _param_segmetns is a part of.
   std::vector<std::vector<Mat<2>>> _param_segments;
 };
 
-class Geom_3d : public Surface_geom {
-  public:
-  Geom_3d(std::string file_name, Int n_div);
-  void visualize(std::string format, std::string file_name,
-                 Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose());
-  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-  inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
-  next::Sequence<const Tree_curve&> edges() override;
-  private:
-  std::vector<Trimmed_surface> _surfaces;
-};
-
+//! \brief a `Surface_geom` consisting of a set of `Parametric<1>` curves
 class Geom_2d : public Surface_geom {
   public:
+  //! \param file_name Name of file containing geometry. Must be in IGES format.
+  //! \param n_div Any entities that need to be discretized will be so with `n_div` subdivisions. Must be a power of 2.
   Geom_2d(std::string file_name, Int n_div);
+  /*! \brief Writes visualization files of the geometry to help diagnose import/translation bugs.
+   * \details For visualization purposes, entities will be discretized with `n_div` segments.
+   * This is not the same as the `n_div` passed to the constructor, and need not be a power of 2.
+   * It should usually be much less than the `n_div` passed to the constructor,
+   * because visualization is more expensive than nearest-point calculations and requires less precision.
+   * If the input file is named `INPUT_FILE`
+   * and the file extension of the specified visualization format is `EXT`, this function
+   * will write a file `INPUT_FILE_curves.EXT` with all curves in the geometry.
+   * Even though `Geom_2d` is supposed to represent a 2D geometry, the curves will be 3D.
+   * This is because the underlying representation is 3D,
+   * and if this turns out not to lie in the \f$ x_0, x_1 \f$ plane,
+   * this is a potential source of problems and important information to convey in the visualization file.
+   */
   void visualize(std::string format, std::string file_name, Int n_div = 100);
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
+  //! \brief Dummy implementation that returns an empty vector.
   inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
   next::Sequence<Mat<3>> points() override;
   private:
   std::vector<std::unique_ptr<Parametric<1>>> _curves;
+};
+
+//! \brief a `Surface_geom` consisting of a set of 3D `Trimmed_surface`s
+class Geom_3d : public Surface_geom {
+  public:
+  //! \param file_name Name of file containing geometry. Must be in IGES format.
+  //! \param n_div Any entities that need to be discretized will be so with `n_div` subdivisions. Must be a power of 2.
+  Geom_3d(std::string file_name, Int n_div);
+  /*! \brief Writes visualization files of the geometry to help diagnose import/translation bugs.
+   * \details For visualization purposes, entities will be discretized with `n_div` segments.
+   * This is not the same as the `n_div` passed to the constructor, and need not be a power of 2.
+   * It should usually be much less than the `n_div` passed to the constructor,
+   * because visualization is more expensive than nearest-point calculations and requires less precision.
+   *
+   * If the input file is named `INPUT_FILE`
+   * and the file extension of the specified visualization format is `EXT`, the visualization files are:
+   * - `FILE_NAME_curves.EXT`: Contains all bounding curves of all surfaces.
+   * - `FILE_NAME_surfaces.EXT`: Contains all parametric surfaces
+   *   (for all parameters in \f$ [0, 1] \times [0, 1] \f$).
+   *   The surfaces have a field variable "inside"
+   *   which is set to 1 for all points that are inside the bounding curves and 0 for all that are outside.
+   *   Pro tip: In Paraview, you can get a sense of the actual geometry by enabling opacity mapping
+   *   so that the trimmed regions are transparent.
+   * - `FILE_NAME_distance.EXT` (only if `vis_volume = true`): A 3D block with corners given by the columns of `bounds`
+   *   and a field variable indicating the distance from the nearest point on the surface.
+   *   This can be a good way to debug the distance calculations, assuming the geometry is correct.
+   */
+  void visualize(std::string format, std::string file_name,
+                 Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose());
+  Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
+  //! \brief Dummy implementation that returns an empty vector.
+  inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
+  next::Sequence<const Tree_curve&> edges() override;
+  private:
+  std::vector<Trimmed_surface> _surfaces;
 };
 
 }
