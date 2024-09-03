@@ -540,22 +540,6 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div) {
   }
 }
 
-double default_bound = std::sqrt(huge);
-double component_bound = default_bound/2;
-
-double limit(double dist) {
-  return (dist > 0 && dist < default_bound) ? dist : default_bound;
-}
-
-// basically asserts that `point` is a valid finite value
-template <int sz>
-void check_point(Mat<sz> point) {
-  for (int i = 0; i < point.size(); ++i) {
-    HEXED_ASSERT(-component_bound < point(i) && point(i) < component_bound,
-                 format_str(200, "point(%i) == %e is not in bounds", i, point(i)), assert::Numerical_exception);
-  }
-}
-
 Geom_2d::Geom_2d(std::string file_name, Int n_div) {
   Iges_parser parser(file_name);
   auto dir = parser.section(Iges_parser::directory);
@@ -581,21 +565,45 @@ void Geom_2d::visualize(std::string format, std::string file_name, Int n_div) {
   }
 }
 
-Nearest_point<dyn> Geom_2d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
+double component_bound = default_max_dist/2;
+
+double limit(double dist) {
+  return (dist > 0 && dist < default_max_dist) ? dist : default_max_dist;
+}
+
+Nearest_point<dyn> recursive_guess_nearest(Mat<> point, double max_distance, double distance_guess,
+                                           std::function<Nearest_point<dyn>(Mat<>, double)> bounded_nearest) {
+  Nearest_point<dyn> nearest = bounded_nearest(point, distance_guess);
+  if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
+    return nearest;
+  }
+  return recursive_guess_nearest(point, max_distance, distance_guess*2, bounded_nearest);
+}
+
+Nearest_point<dyn> guess_nearest(Mat<> point, double max_distance, double distance_guess,
+                                 std::function<Nearest_point<dyn>(Mat<> p, double max_dist)> bounded_nearest) {
   // search for the nearest point with `distance_guess` as the maximum distance,
   // and if none are found, recursively double `distance_guess` until `max_distance` is exceeded
   max_distance = limit(max_distance);
   distance_guess = limit(distance_guess);
-  check_point<2>(point);
-  Nearest_point<dyn> nearest(point, distance_guess);
-  for (auto& curve : _curves) {
-    auto param = curve->nearest_params(point, [](Mat<1>){return true;}, distance_guess);
-    if (param.is_feasible) nearest.merge(curve->point(param.params)(Eigen::seqN(0, 2)));
+  for (int i = 0; i < point.size(); ++i) {
+    HEXED_ASSERT(-component_bound < point(i) && point(i) < component_bound,
+                 format_str(200, "point(%i) == %e is not in bounds", i, point(i)), assert::Numerical_exception);
   }
-  if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
+  return recursive_guess_nearest(point, max_distance, distance_guess, bounded_nearest);
+}
+
+Nearest_point<dyn> Geom_2d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
+  return guess_nearest(point, max_distance, distance_guess, [this](Mat<> p, double max_dist) {
+    Mat<3> p3d = Mat<3>::Zero();
+    p3d(Eigen::seqN(0, 2)) = p(Eigen::seqN(0, 2));
+    Nearest_point<dyn> nearest(p(Eigen::seqN(0, 2)), max_dist);
+    for (auto& curve : _curves) {
+      auto param = curve->nearest_params(p3d, [](Mat<1>){return true;}, max_dist);
+      if (param.is_feasible) nearest.merge(curve->point(param.params)(Eigen::seqN(0, 2)));
+    }
     return nearest;
-  }
-  return nearest_point(point, max_distance, distance_guess*2);
+  });
 }
 
 next::Sequence<Mat<3>> Geom_2d::points() {
@@ -607,17 +615,11 @@ next::Sequence<Mat<3>> Geom_2d::points() {
 }
 
 Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
-  // search for the nearest point with `distance_guess` as the maximum distance,
-  // and if none are found, recursively double `distance_guess` until `max_distance` is exceeded
-  max_distance = limit(max_distance);
-  distance_guess = limit(distance_guess);
-  check_point<3>(point);
-  Nearest_point<dyn> nearest(point, distance_guess);
-  for (auto& surf : _surfaces) nearest.merge(surf.nearest_point(point, distance_guess));
-  if ((!nearest.empty() && std::sqrt(nearest.dist_squared()) < distance_guess) || distance_guess >= max_distance) {
+  return guess_nearest(point, max_distance, distance_guess, [this](Mat<> p, double max_dist) {
+    Nearest_point<dyn> nearest(p, max_dist);
+    for (auto& surf : _surfaces) nearest.merge(surf.nearest_point(p, max_dist));
     return nearest;
-  }
-  return nearest_point(point, max_distance, distance_guess*2);
+  });
 }
 
 next::Sequence<const Tree_curve&> Geom_3d::edges() {
