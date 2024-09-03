@@ -7,6 +7,8 @@
 
 namespace hexed::brep {
 
+//! \cond
+
 Parametric<1>::Nearest_parameters Line_segment::nearest_params(Mat<3> p, Constraint is_feasible,
                                                                double max_distance) const {
   Mat<3> diff = _endpoints(all, 1) - _endpoints(all, 0);
@@ -53,6 +55,7 @@ Mat<2, 2> Plane::reparameterize(Mat<2, 2> bounds) {
   return bounds;
 }
 
+// discretizes a curve into `n_div` polygonal segments and returns their `n_div + 1` endpoints
 Array<double> discretize(Parametric<1>& curve, Int n_div) {
   Array<double> nodes({n_div + 1, 3});
   for (Int i_node = 0; i_node < n_div + 1; ++i_node) nodes(i_node).vector() = curve.point(Mat<1>{i_node/double(n_div)});
@@ -71,11 +74,14 @@ Revolution_surface::Revolution_surface(Parametric<1>* g, Line_segment ax, Int n_
 }
 
 Mat<3> Revolution_surface::rotate(Mat<3> p, double angle) const {
+  // compute the displacement relative to the first endpoint
   Mat<3> origin = _axis.point(Mat<1>{0.});
   p -= origin;
+  // separate into components parallel and orthogonal to the axis
   Mat<3> ax_vec = (_axis.point(Mat<1>{1.}) - origin).normalized();
   Mat<3> axial_component = p.dot(ax_vec)*ax_vec;
   Mat<3> radial_component = p - axial_component;
+  // rotate the radial (orthogonal to axis) component and recombine
   return std::cos(angle)*radial_component + std::sin(angle)*ax_vec.cross(radial_component)
          + axial_component + origin;
 };
@@ -86,12 +92,20 @@ Mat<3> Revolution_surface::point(Mat<2> params) const {
   return rotate(p, angle);
 }
 
+// helper class that does the real work of nearest point calculations
 class Revolution_surface::_Find_nearest {
   public:
   struct Candidate {
     Nearest_parameters np;
     double dist;
   };
+  const Revolution_surface& surf;
+  Constraint is_feasible;
+  Mat<3> point; // point we want to compute the nearest point to
+  Mat<3> unit_axis; // normalized rotation axis
+  Mat<3> from_start; // displacement of `point` relative to first axis endpoint
+  Mat<3> radius; // component of `from_start` orthogonal to axis
+  Candidate cand;
   _Find_nearest(const Revolution_surface& s, Mat<3> p, Parametric<2>::Constraint is_f, double max_distance)
   : surf{s}
   , is_feasible{is_f}
@@ -99,48 +113,58 @@ class Revolution_surface::_Find_nearest {
   , unit_axis{(surf._axis.point(Mat<1>{1.}) - surf._axis.point(Mat<1>{0.})).normalized()}
   , from_start{p - surf._axis.point(Mat<1>{0.})}
   , radius{(from_start - from_start.dot(unit_axis)*unit_axis).normalized()}
+  // initialize `cand` to a non-point but set the distance to `max_distance`
+  // so that any farther candidates will be ignored
   , cand{{Mat<2>{std::nan(""), std::nan("")}, false}, max_distance}
   {}
+  // given a point `arc_point` which is nominally on the genratrix, compute the rotation angle of the nearest point
+  // on the arc of points on the surface obtained by rotating `arc_point`
   double best_angle(Mat<3> arc_point) {
     arc_point -= surf._axis.point(Mat<1>{0.});
     Mat<3> arc_radius = (arc_point - arc_point.dot(unit_axis)*unit_axis).normalized();
     double angle = std::atan2(arc_radius.cross(radius).dot(unit_axis), arc_radius.dot(radius));
     return limited_angle(angle, surf._start_angle, surf._end_angle);
   }
+  // given a point `arc_point` which is nominally on the genratrix, compute the nearst point
+  // on the arc of points on the surface obtained by rotating `arc_point`
   Mat<3> best_point(Mat<3> arc_point) {
     double angle = best_angle(arc_point);
     return surf.rotate(arc_point, angle);
   }
+  // return whichever of `c0` and `c1` is a better candidate
   Candidate merge(Candidate c0, Candidate c1) {
     if (c1.dist < c0.dist && c1.np.is_feasible) return c1;
     return c0;
   }
+  // search the part of the surface subtended by the segment of the generatrix covered by the nodes of `segment`
+  // for the nearest point.
+  // Any candidates for the nearest point in this area will be `merge`d with `cand`.
   void find(const Tree_curve::Segment& segment) {
+    // if the entire bounding sphere of `segment` exceeds the current best distance,
+    // ignore the entire segment
     if ((best_point(segment.center) - point).norm() - segment.radius < cand.dist) {
       if (segment.segments.size()) {
+        // if this segment is not a leaf, recursively search its child segments
         for (auto& seg : segment.segments) find(seg);
       } else {
+        // this segment is a leaf, so search its nodes
         Int n_nodes = segment.nodes.shape()[0];
         for (Int i_node = 0; i_node < n_nodes; ++i_node) {
+          // find the parameters of the neares point on the arc subtended by this node
           Candidate c;
           Mat<3> node = segment.nodes(i_node).vector();
           c.np.params(0) = double(segment.nodes_start + i_node)/surf._n_div;
           double angle = best_angle(node);
           c.np.params(1) = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
+          // check if the computed nearest parameters are feasible
           c.np.is_feasible = is_feasible(c.np.params);
           c.dist = (surf.rotate(node, angle) - point).norm();
+          // merge candidates
           cand = merge(cand, c);
         }
       }
     }
   }
-  const Revolution_surface& surf;
-  Constraint is_feasible;
-  Mat<3> point;
-  Mat<3> unit_axis;
-  Mat<3> from_start;
-  Mat<3> radius;
-  Candidate cand;
 };
 
 Parametric<2>::Nearest_parameters Revolution_surface::nearest_params(Mat<3> p, Constraint is_feasible,
@@ -161,6 +185,7 @@ Coordinate_change Coordinate_change::operator()(Coordinate_change that) const {
 Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves, Int n_div)
 : _n_div{n_div}, _sz{1./_n_div}, _surf{surface}
 {
+  // discretize curves into polygonal segments in parameter space
   std::vector<std::vector<Mat<2>>> discrete_curves;
   for (auto& composite : curves) {
     discrete_curves.emplace_back();
@@ -177,10 +202,12 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
     }
     if (!param_nodes.empty()) param_nodes.push_back(param_nodes.front());
   }
+  // initialize parameter-space curves with discretiation
   initialize(discrete_curves);
 }
 
 void Trimmed_surface::initialize(std::vector<std::vector<Mat<2>>>& curves) {
+  // compute bounds of discrete nodes in parameter space
   Mat<2, 2> bounds;
   bounds << huge, -huge, huge, -huge;
   bool set = false;
@@ -193,6 +220,7 @@ void Trimmed_surface::initialize(std::vector<std::vector<Mat<2>>>& curves) {
   }
   if (set) bounds(all, 1) = bounds(all, 1).cwiseMax(bounds(all, 0) + Mat<2>{_sz, _sz});
   else bounds << 0, 1, 0, 1;
+  // reparameterize surface to contain bounds
   bounds = _surf->reparameterize(bounds);
   _param_segments.resize(_n_div);
   for (auto& nodes : curves) if (!nodes.empty()) {
@@ -213,6 +241,8 @@ void Trimmed_surface::initialize(std::vector<std::vector<Mat<2>>>& curves) {
         }
       }
     }
+    // the seam correction process can end up shifting the entire curve loop to [-1, 0] or [1, 2],
+    // so this loop shifts it again to keep the largest possible number of nodes in [0, 1]
     for (int i_dim = 0; i_dim < 2; ++i_dim) {
       Int n_less = 0;
       Int n_greater = 0;
@@ -247,6 +277,7 @@ void Trimmed_surface::initialize(std::vector<std::vector<Mat<2>>>& curves) {
         ordinate.push_back(prev_params(1));
       }
     }
+    // sort segments into bins of specified `param(0)`
     if (!abscissa.empty()) {
       HEXED_ASSERT(abscissa.front() == abscissa.back(), "parametric representation is not closed");
       for (Int i_segment = 0; i_segment < Int(abscissa.size()) - 1; ++i_segment) {
@@ -262,11 +293,13 @@ void Trimmed_surface::initialize(std::vector<std::vector<Mat<2>>>& curves) {
 }
 
 bool Trimmed_surface::is_inside(Mat<2> params) const {
+  // count the number of segmements intersected by a ray in the positive `params(1)` direction
   Int i_seg = floor(params(0)*_n_div);
   if (i_seg < 0 || i_seg > _n_div) return false;
   if (i_seg == _n_div) i_seg = _n_div - 1;
   Int n_intersections = 0;
   for (Mat<2> seg : _param_segments[i_seg]) n_intersections += params(1) < seg(0) + (params(0)*_n_div - i_seg)*(seg(1) - seg(0));
+  // the point is inside iff the number of intesections is odd
   return n_intersections%2;
 }
 
@@ -276,8 +309,10 @@ next::Sequence<const Tree_curve&> Trimmed_surface::curves() const {
 
 Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) const {
   Nearest_point<3> nearest(point, max_dist);
+  // first find the nearest point in the surface interior, if any
   auto params = _surf->nearest_params(point, [this](Mat<2> params){return is_inside(params);}, max_dist);
   if (params.is_feasible) nearest.merge(_surf->point(params.params));
+  // then check the nearest point on all the boundary curves
   for (auto& curve : _curves) {
     auto index = curve.nearest_point(point, max_dist);
     if (index.index >= -1) nearest.merge(curve.nodes()(index.index).vector());
@@ -285,25 +320,31 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
   return nearest;
 }
 
+// helper class to read an entity from an IGES file
 class Read_entity {
   public:
+  // Initializes the to read the entity whose directory entry starts on line `line`.
+  // If `change_to` is provided, it will be postcomposed with any coordinate transformation specified by the entity.
   Read_entity(const Iges_parser& parser, Int line, Int n_div, Coordinate_change change_to = {})
   : Read_entity{parser, parser.entry(Iges_parser::directory, line), n_div, change_to}
   {}
-  Read_entity(const Iges_parser& parser, const std::vector<std::string>& dir, Int n_div, Coordinate_change change_to = {})
+  // initializes the reader to read the entity whose directory entry is given literally by `dir`
+  Read_entity(const Iges_parser& parser, const std::vector<std::string>& dir, Int n_div,
+              Coordinate_change change_to = {})
   : _parser{parser}
   , _dir{dir}
   , _par{_parser.entry(Iges_parser::parameter, _parser.read_int(_dir[1]))}
   , _ent_num{_parser.read_int(_dir[0])}
   , _n_div{n_div}
   {
+    // compute the coordinate transformation of this entity
     Int line = _parser.read_int(_dir[6]);
-    if (!line) _coords = change_to;
+    if (!line) _coords = change_to; // IGES entities can have a null pointer for indicating the identity transformation
     else {
       Read_entity reader(_parser, line, _n_div);
       _coords = change_to(reader._read_coord());
     }
-
+    // determine the units of the file
     Int unit_flag = _parser.read_int(_parser.section(Iges_parser::global)[0][13]);
     HEXED_ASSERT(unit_flag > 0 && unit_flag <= 11, "invalid unit flag");
     double units [] {
@@ -326,6 +367,14 @@ class Read_entity {
   static void merge(std::unique_ptr<T>& ptr0, std::unique_ptr<U>&& ptr1) {
     if (!ptr0 && ptr1) ptr0.reset(ptr1.release());
   }
+
+  /* The following `read_` functions all attempt to read a specific entity type.
+   * If the entry `this` is reading is indeed that entity type, the corresponding `hexed::brep` object
+   * will be constructed and a `unique_ptr` to it will be returned.
+   * Otherwise, an empty `unique_ptr` will be returned.
+   * Thus, if you don't know what type of entity you're trying to read, you can just spam all the `read_` functions
+   * and see which one gives you a non-empty value.
+   */
 
   std::unique_ptr<Line_segment> read_line_segment() {
     if (_ent_num != 110) return {};
@@ -352,34 +401,6 @@ class Read_entity {
       end_angle,
     });
     return std::unique_ptr<Parametric<1>>(new Transformed<1>(arc.release(), _coords));
-  }
-
-  std::unique_ptr<Parametric<1>> read_curve(bool required = true) {
-    std::unique_ptr<Parametric<1>> ptr;
-    merge(ptr, read_line_segment());
-    merge(ptr, read_circular_arc());
-    HEXED_ASSERT(
-      !required || ptr,
-      "Curve entity #" + std::to_string(_ent_num) + " is not implemented.",
-      assert::Not_implemented_error
-    );
-    return ptr;
-  }
-
-  Composite_curve read_composite_curve() {
-    auto ptr = read_curve(false);
-    Composite_curve comp;
-    if (ptr) {
-      comp.emplace_back(ptr.release());
-    } else if (_ent_num == 116 || _ent_num == 132) { // Point and Connect Point entities are irrelevant
-    } else if (_ent_num == 102) {
-      for (int i_curve = 0; i_curve < _parser.read_int(_par[1]); ++i_curve) {
-        Read_entity sub_reader(_parser, _parser.read_int(_par[2 + i_curve]), _n_div, _coords);
-        Composite_curve sub_curve = sub_reader.read_composite_curve();
-        for (auto& c : sub_curve) comp.emplace_back(c.release());
-      }
-    } else HEXED_THROW("failed to read curve from entity #" + std::to_string(_ent_num));
-    return comp;
   }
 
   std::unique_ptr<Plane> read_plane() const {
@@ -411,6 +432,39 @@ class Read_entity {
                                                 _parser.read_float(_par[3]), _parser.read_float(_par[4]));
   }
 
+  // Attempts to read any of the entities that derive from `Parametric<1>`.
+  // Iff `required == true`, throws on failure.
+  std::unique_ptr<Parametric<1>> read_curve(bool required = true) {
+    std::unique_ptr<Parametric<1>> ptr;
+    merge(ptr, read_line_segment());
+    merge(ptr, read_circular_arc());
+    HEXED_ASSERT(
+      !required || ptr,
+      "Curve entity #" + std::to_string(_ent_num) + " is not implemented.",
+      assert::Not_implemented_error
+    );
+    return ptr;
+  }
+
+  // attempts to read a composite curve (collection of curves that share endpoints) and throws on failure
+  Composite_curve read_composite_curve() {
+    auto ptr = read_curve(false);
+    Composite_curve comp;
+    if (ptr) {
+      comp.emplace_back(ptr.release());
+    } else if (_ent_num == 116 || _ent_num == 132) { // Point and Connect Point entities are irrelevant
+    } else if (_ent_num == 102) {
+      for (int i_curve = 0; i_curve < _parser.read_int(_par[1]); ++i_curve) {
+        Read_entity sub_reader(_parser, _parser.read_int(_par[2 + i_curve]), _n_div, _coords);
+        Composite_curve sub_curve = sub_reader.read_composite_curve();
+        for (auto& c : sub_curve) comp.emplace_back(c.release());
+      }
+    } else HEXED_THROW("failed to read curve from entity #" + std::to_string(_ent_num));
+    return comp;
+  }
+
+  // attempts to read any of the entities that derive from `Parametric<2>`
+  // Iff `required == true`, throws on failure.
   std::unique_ptr<Parametric<2>> read_surface(bool required = true) const {
     std::unique_ptr<Parametric<2>> ptr;
     merge(ptr, read_plane());
@@ -423,6 +477,7 @@ class Read_entity {
     return ptr;
   }
 
+  // attempts to read a `Trimmed surface` and returns an empty `optional` on failure
   std::optional<Trimmed_surface> read_trimmed_surface() const {
     if (_ent_num != 144) return {};
     // get surface
@@ -449,6 +504,7 @@ class Read_entity {
   }
 
   private:
+  // assumes that `this` is reading a Transformation Matrix entity and reads it as a coordinate transformation
   Coordinate_change _read_coord() const {
     HEXED_ASSERT(_ent_num == 124, "entity is not a Transformation Matrix");
     Mat<3> translate;
@@ -476,6 +532,7 @@ class Read_entity {
 Geom_3d::Geom_3d(std::string file_name, Int n_div) {
   Iges_parser parser(file_name);
   auto dir = parser.section(Iges_parser::directory);
+  // read all the trimmed surface entities and ignore everything else
   for (auto& entry : dir) {
     Read_entity read(parser, entry, n_div);
     auto surf = read.read_trimmed_surface();
@@ -490,6 +547,7 @@ double limit(double dist) {
   return (dist > 0 && dist < default_bound) ? dist : default_bound;
 }
 
+// basically asserts that `point` is a valid finite value
 template <int sz>
 void check_point(Mat<sz> point) {
   for (int i = 0; i < point.size(); ++i) {
@@ -501,6 +559,7 @@ void check_point(Mat<sz> point) {
 Geom_2d::Geom_2d(std::string file_name, Int n_div) {
   Iges_parser parser(file_name);
   auto dir = parser.section(Iges_parser::directory);
+  // read all the curve (not composite curve) entities and ignore everything else
   for (auto& entry : dir) {
     Read_entity read(parser, entry, n_div);
     auto curve = read.read_curve(false);
@@ -523,6 +582,8 @@ void Geom_2d::visualize(std::string format, std::string file_name, Int n_div) {
 }
 
 Nearest_point<dyn> Geom_2d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
+  // search for the nearest point with `distance_guess` as the maximum distance,
+  // and if none are found, recursively double `distance_guess` until `max_distance` is exceeded
   max_distance = limit(max_distance);
   distance_guess = limit(distance_guess);
   check_point<2>(point);
@@ -538,6 +599,7 @@ Nearest_point<dyn> Geom_2d::nearest_point(Mat<> point, double max_distance, doub
 }
 
 next::Sequence<Mat<3>> Geom_2d::points() {
+  // return the endpoints of all curves
   return {
     [this](std::size_t i) {return _curves[i/2]->point(Mat<1>::Constant(i%2));},
     [this]() {return 2*_curves.size();},
@@ -545,6 +607,8 @@ next::Sequence<Mat<3>> Geom_2d::points() {
 }
 
 Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
+  // search for the nearest point with `distance_guess` as the maximum distance,
+  // and if none are found, recursively double `distance_guess` until `max_distance` is exceeded
   max_distance = limit(max_distance);
   distance_guess = limit(distance_guess);
   check_point<3>(point);
@@ -557,6 +621,7 @@ Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, doub
 }
 
 next::Sequence<const Tree_curve&> Geom_3d::edges() {
+  // concatenate the sequences of bounding curves of all trimmed surfaces
   next::Sequence<const Tree_curve&> e;
   for (auto& surf : _surfaces) e = e + surf.curves();
   return e;
@@ -614,5 +679,7 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
     vis->write_block(coords, dist);
   }
 }
+
+//! \endcond
 
 }
