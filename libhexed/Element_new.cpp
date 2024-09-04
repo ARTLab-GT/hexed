@@ -66,7 +66,7 @@ Mat<dyn, dyn> Element_new::reference_level_normals(int i_qpoint) const {return {
 Mat<dyn, dyn> Element_new::jacobian_mat(int i_qpoint) const {return {};}
 Array<double> Element_new::jacobian_det_arr() {return {{}};}
 double Element_new::jacobian_det(int i_qpoint) const {return 0.;}
-Array<Face> Element_new::faces() {return _faces;}
+Array<Face> Element_new::faces() {return _faces();}
 Vertex& Element_new::vertex(int i_vertex) {return *(_vertices[0]);}
 
 double* Element_new::state() {return nullptr;}
