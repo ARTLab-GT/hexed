@@ -35,7 +35,7 @@ class Namespace {
     public:
     Value(T v) : _val(v) {}
     void set(T v) override {_val = v;}
-    T get() override {return _val;}
+    T get() override;
   };
 
   template <typename T>
@@ -68,6 +68,9 @@ class Namespace {
   template<typename T> T get(std::string name);
   std::vector<std::string> names() const;
 };
+
+template <typename T> T Namespace::Value<T>::get() {return _val;}
+template <> inline Array<double> Namespace::Value<Array<double>>::get() {return _val();}
 
 template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>&           Namespace::_get_map() {return _ints;}
 template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<double>>>&        Namespace::_get_map() {return _doubles;}

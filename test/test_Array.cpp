@@ -55,7 +55,7 @@ TEST_CASE("Array") {
   REQUIRE_THAT(reshaped1.shape(), Catch::Matchers::RangeEquals(std::vector<int>{2, 12}));
   REQUIRE(&reshaped1(1)[11] == &arr0(1)(2)[3]);
 
-  hexed::Array<double> arr2(arr0);
+  hexed::Array<double> arr2(arr0());
   REQUIRE_THAT(arr0.shape(), Catch::Matchers::RangeEquals(std::vector<int>{2, 3, 4}));
   REQUIRE(arr2[1] == Catch::Approx(42));
   arr2[1] = 406;
