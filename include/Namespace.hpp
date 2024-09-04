@@ -83,7 +83,7 @@ template<> std::string inline Namespace::type_name<std::string>() {return "strin
 template<> std::string inline Namespace::type_name<Array<double>>() {return "array";}
 
 inline bool Namespace::exists(std::string name) {
-  return _ints.count(name) || _doubles.count(name) || _strings.count(name);
+  return _ints.count(name) || _doubles.count(name) || _strings.count(name) || _arrays.count(name);
 }
 
 inline bool Namespace::exists_recursive(std::string name) {

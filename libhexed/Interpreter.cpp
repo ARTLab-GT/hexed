@@ -113,6 +113,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence) {
           if (val.i) variables->assign(n, *val.i);
           if (val.d) variables->assign(n, *val.d);
           if (val.s) variables->assign(n, *val.s);
+          if (val.a) variables->assign(n, *val.a);
         } else {
           // variable lookup
           HEXED_ASSERT(variables->exists_recursive(n), format_str(1000, "undefined variable `%s`", n.c_str()), Hil_exception);
@@ -120,6 +121,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence) {
           val.i = variables->lookup<int>(n);
           if (!val.i) val.d = variables->lookup<double>(n);
           val.s = variables->lookup<std::string>(n);
+          val.a = variables->lookup<Array<double>>(n);
         }
       }
     } else if (_un_ops.count(std::string(1, _text.front()))) {
