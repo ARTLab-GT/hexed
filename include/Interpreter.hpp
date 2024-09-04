@@ -9,20 +9,26 @@
 #include "Printer.hpp"
 #include "Command_input.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
-class Interpreter
-{
+class Interpreter {
   struct _Dynamic_value {
     std::optional<int> i;
     std::optional<double> d;
     std::optional<std::string> s;
+    std::optional<Array<double>> a;
     _Dynamic_value() {}
-    _Dynamic_value(int         arg) : i{arg} {}
-    _Dynamic_value(double      arg) : d{arg} {}
-    _Dynamic_value(std::string arg) : s{arg} {}
-    bool has_value() const {return i || d || s;}
+    _Dynamic_value(int           arg) : i{arg} {}
+    _Dynamic_value(double        arg) : d{arg} {}
+    _Dynamic_value(std::string   arg) : s{arg} {}
+    _Dynamic_value(Array<double> arg) : a{arg} {}
+    bool has_value() const {return i || d || s || a;}
+    void assign(_Dynamic_value&& that) {
+      i = std::move(that.i);
+      d = std::move(that.d);
+      s = std::move(that.s);
+      a = std::move(that.a);
+    }
   };
 
   bool _more();
@@ -50,25 +56,25 @@ class Interpreter
   template <typename T> static bool _and(T op0, T op1) {return op0 && op1;}
   template <typename T> static bool _or(T op0, T op1) {return op0 || op1;}
 
-  static _Dynamic_value _mod(_Dynamic_value, _Dynamic_value);
+  static _Dynamic_value _mod(const _Dynamic_value&, const _Dynamic_value&);
   template<double (*)(double, double), int (*)(int, int)>
-  static _Dynamic_value _arithmetic_op(_Dynamic_value, _Dynamic_value);
+  static _Dynamic_value _arithmetic_op(const _Dynamic_value&, const _Dynamic_value&);
 
   template<bool (*)(double, double), bool (*)(int, int)>
-  static _Dynamic_value _comparison_op(_Dynamic_value, _Dynamic_value);
+  static _Dynamic_value _comparison_op(const _Dynamic_value&, const _Dynamic_value&);
 
-  static _Dynamic_value _print_str(_Dynamic_value);
-  static _Dynamic_value _general_eq(_Dynamic_value, _Dynamic_value);
-  _Dynamic_value _general_add(_Dynamic_value, _Dynamic_value);
+  static _Dynamic_value _print_str(const _Dynamic_value&);
+  static _Dynamic_value _general_eq(const _Dynamic_value&, const _Dynamic_value&);
+  _Dynamic_value _general_add(const _Dynamic_value&, const _Dynamic_value&);
 
   struct _Binary_op {
     int precedence;
-    std::function<_Dynamic_value(_Dynamic_value, _Dynamic_value)> func;
+    std::function<_Dynamic_value(const _Dynamic_value&, const _Dynamic_value&)> func;
   };
-  static std::function<_Dynamic_value(_Dynamic_value)> _numeric_unary(double (*f)(double), std::string name);
+  static std::function<_Dynamic_value(const _Dynamic_value&)> _numeric_unary(double (*f)(double), std::string name);
 
   std::list<char> _text;
-  std::map<std::string, std::function<_Dynamic_value(_Dynamic_value)>> _un_ops;
+  std::map<std::string, std::function<_Dynamic_value(const _Dynamic_value&)>> _un_ops;
   std::map<std::string, _Binary_op> _bin_ops;
   Lock _lock;
   Command_input _input;
@@ -89,8 +95,7 @@ class Interpreter
    */
   Interpreter make_sub() const;
 
-  class Hil_unhandled_exception : public assert::Exception
-  {
+  class Hil_unhandled_exception : public assert::Exception {
     public:
     Hil_unhandled_exception(std::string message) : Exception(message) {}
   };
