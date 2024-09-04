@@ -62,6 +62,7 @@ Storage_params Element::storage_params() {
 }
 
 Array<double> Element::position(const Basis& basis) const {
+  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
   Array<double> shape_pos = _shape->points();
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
     auto vec = shape_pos(i_dim).vector();
@@ -71,6 +72,7 @@ Array<double> Element::position(const Basis& basis) const {
 }
 
 Array<double> Element::face_position(const Basis& basis) const {
+  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
   Array<double> shape_pos = _shape->points();
   int nd = params.n_dim;
   std::vector<Int> shape {nd, 2, nd};

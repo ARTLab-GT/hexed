@@ -7,8 +7,7 @@
 #include <hexed/Gauss_legendre.hpp>
 #include "testing_utils.hpp"
 
-TEST_CASE("Deformed_element")
-{
+TEST_CASE("Deformed_element") {
   hexed::Storage_params params {2, 2, 2, 4};
   hexed::Deformed_element element {params};
 
@@ -35,8 +34,7 @@ TEST_CASE("Deformed_element")
   hexed::Storage_params params3d {1, 1, 3, 2};
   hexed::Deformed_element element3d {params3d};
 
-  SECTION("position calculation")
-  {
+  SECTION("position calculation") {
     const int row_size = 3;
     static_assert (row_size <= hexed::config::max_row_size);
     hexed::Equidistant basis {row_size};
@@ -88,8 +86,7 @@ TEST_CASE("Deformed_element")
     REQUIRE(pos3(0)[4] == Catch::Approx(0.11));
   }
 
-  SECTION("jacobian calculation")
-  {
+  SECTION("jacobian calculation") {
     const int row_size = 3;
     double faces [6][5*row_size*row_size];
     static_assert (row_size <= hexed::config::max_row_size);

@@ -1,8 +1,7 @@
 #include <Deformed_element.hpp>
 #include <math.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
 Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level) :
   Element{params, pos, mesh_size, ref_level, origin_arg, true, aniso_r_level},
@@ -88,23 +87,19 @@ void Deformed_element::set_jacobian(const Basis& basis) {
   }
 }
 
-double* Deformed_element::reference_level_normals()
-{
+double* Deformed_element::reference_level_normals() {
   return jac_dat.data();
 }
 
-double* Deformed_element::jacobian_determinant()
-{
+double* Deformed_element::jacobian_determinant() {
   return jac_dat.data() + n_dim*n_dim*n_qpoint;
 }
 
-double*& Deformed_element::face_normal(int i_face)
-{
+double*& Deformed_element::face_normal(int i_face) {
   return f_nrml[i_face];
 }
 
-double Deformed_element::jacobian(int i_dim, int j_dim, int i_qpoint)
-{
+double Deformed_element::jacobian(int i_dim, int j_dim, int i_qpoint) {
   Eigen::MatrixXd inv(n_dim, n_dim);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
@@ -114,13 +109,11 @@ double Deformed_element::jacobian(int i_dim, int j_dim, int i_qpoint)
   return inv.inverse()(i_dim, j_dim)*jac_dat(n_dim*n_dim*n_qpoint + i_qpoint);
 }
 
-double Deformed_element::jacobian_determinant(int i_qpoint)
-{
+double Deformed_element::jacobian_determinant(int i_qpoint) {
   return jac_dat(n_dim*n_dim*n_qpoint + i_qpoint);
 }
 
-double* Deformed_element::node_adjustments()
-{
+double* Deformed_element::node_adjustments() {
   return node_adj.data();
 }
 

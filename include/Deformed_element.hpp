@@ -3,14 +3,12 @@
 
 #include "Element.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Represents an Element which is not a perfect axis-aligned square/cube.
  * \note Jacobian matrix is nontrivial.
  */
-class Deformed_element : public Element
-{
+class Deformed_element : public Element {
   int n_qpoint;
   // jacobian data (first `n_dim*n_dim*n_qpoints` are `reference_level_normals`
   // and rest is `jacobian_determinant`)
