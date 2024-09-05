@@ -16,7 +16,7 @@ namespace hexed {
 
 class Hil_exception : public assert::Exception {
   public:
-  Hil_exception(std::string message) : Exception(message) {}
+  inline Hil_exception(std::string message) : Exception(message) {}
 };
 
 class Namespace {
@@ -67,6 +67,7 @@ class Namespace {
   template<typename T> std::optional<T> lookup(std::string name);
   template<typename T> T get(std::string name);
   std::vector<std::string> names() const;
+  void assign_array(Array<double>, std::string name);
 };
 
 template <typename T> T Namespace::Value<T>::get() {return _val;}
@@ -81,19 +82,6 @@ template<> std::string inline Namespace::type_name<int>() {return "int";}
 template<> std::string inline Namespace::type_name<double>() {return "double";}
 template<> std::string inline Namespace::type_name<std::string>() {return "string";}
 template<> std::string inline Namespace::type_name<Array<double>>() {return "array";}
-
-inline bool Namespace::exists(std::string name) {
-  return _ints.count(name) || _doubles.count(name) || _strings.count(name) || _arrays.count(name);
-}
-
-inline bool Namespace::exists_recursive(std::string name) {
-  if (exists(name)) return true;
-  if (!supers.empty()) {
-    auto predicate = [name](std::shared_ptr<Namespace>& space) {return space->exists_recursive(name);};
-    return std::all_of(supers.begin(), supers.end(), predicate);
-  }
-  return false;
-}
 
 template<typename T>
 void Namespace::create(std::string name, Namespace::Variable<T>* value) {
@@ -142,14 +130,6 @@ T Namespace::get(std::string name) {
   auto val = lookup<T>(name);
   HEXED_ASSERT(val, format_str(1000, "failed to obtain variable `%s` as type `%s`", name.c_str(), typeid(T).name()));
   return *val;
-}
-
-inline std::vector<std::string> Namespace::names() const {
-  std::vector<std::string> n;
-  for (auto& pair : _ints)    n.push_back(pair.first);
-  for (auto& pair : _doubles) n.push_back(pair.first);
-  for (auto& pair : _strings) n.push_back(pair.first);
-  return n;
 }
 
 }

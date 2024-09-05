@@ -13,6 +13,7 @@
 #include <hexed/Row_index.hpp>
 #include <hexed/stabilizing_art_visc.hpp>
 #include <hexed/Array.hpp>
+#include <hexed/vis_variables.hpp>
 
 namespace hexed {
 
@@ -444,21 +445,18 @@ void Solver::initialize(Interpreter& inter, std::string(expr)) {
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) state_vars.push_back("momentum" + std::to_string(i_dim));
   state_vars.push_back("density");
   state_vars.push_back("energy");
+  int n_var = state_vars.size();
   int nq = params.n_qpoint();
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     auto& elem = elements[i_elem];
-    Array<double> pos = elem.position(basis);
     auto sub = inter.make_sub();
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-      sub.variables->assign("pos" + std::to_string(i_dim), pos(i_dim));
-    }
+    vis_variables::position(*sub.variables, elem, basis);
     sub.exec(expr);
-    for (int i_var = 0; i_var < (int)state_vars.size(); ++i_var) {
-      auto var = sub.variables->lookup<Array<double>>(state_vars[i_var]);
-      HEXED_ASSERT(var, "Expression failed to assign variable `" + state_vars[i_var] + "`.");
-      Array<double>({nq}, elem.state() + i_var*nq) = *var;
+    Array<double> state({n_var, nq}, elem.state());
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      sub.variables->assign_array(state(i_var), state_vars[i_var]);
     }
   }
   _init_face_state();
@@ -1359,17 +1357,13 @@ Array<double> extrap_edges(const Basis& basis, Array<double> data, Mat<dyn, dyn>
 void Solver::visualize_field(std::string format, std::string name, Interpreter& inter, std::string expression,
                              int n_sample, bool wireframe) {
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
+  auto& elems = acc_mesh->elements();
+  if (!elems.size()) return;
   std::vector<std::string> var_names;
   {
     auto sub = inter.make_sub();
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      sub.variables->assign("pos" + std::to_string(i_dim), std::nan(""));
-      sub.variables->assign("momentum" + std::to_string(i_dim), std::nan(""));
-    }
-    sub.variables->assign("density", std::nan(""));
-    sub.variables->assign("energy", std::nan(""));
-    sub.variables->assign("laplacian_art_visc", std::nan(""));
-    sub.variables->assign("bulk_art_visc", std::nan(""));
+    vis_variables::position(*sub.variables, elems[0], basis);
+    vis_variables::state(*sub.variables, elems[0]);
     sub.subspace();
     sub.exec(expression);
     var_names = sub.variables->names();
@@ -1383,30 +1377,22 @@ void Solver::visualize_field(std::string format, std::string name, Interpreter& 
   std::vector<Int> qpoint_shape(params.n_dim + 1, params.row_size);
   qpoint_shape[0] = params.n_dim + nv;
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  auto& elems = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     Array<double> state({params.n_var, nq}, elem.state());
-    Array<double> qpoints(qpoint_shape);
-    Array<double> pos {qpoints(0, params.n_dim)};
-    pos = elem.position(basis);
     Array<double> zero {Array<double>::make_uniform({nq}, 0.)};
     auto sub = inter.make_sub();
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      sub.variables->assign("pos" + std::to_string(i_dim), i_dim < params.n_dim ? pos(i_dim) : zero());
-      sub.variables->assign("momentum" + std::to_string(i_dim), i_dim < params.n_dim ? state(i_dim).copy() : zero());
-    }
-    sub.variables->assign("density", state(params.n_dim).copy());
-    sub.variables->assign("energy", state(params.n_dim + 1).copy());
-    sub.variables->assign("laplacian_art_visc", Array<double>({nq}, elem.laplacian_av_coef()).copy());
-    sub.variables->assign("bulk_art_visc", Array<double>({nq}, elem.bulk_av_coef()).copy());
+    vis_variables::position(*sub.variables, elem, basis);
+    vis_variables::state(*sub.variables, elem);
     sub.subspace();
     sub.exec(expression);
+    Array<double> qpoints(qpoint_shape);
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      qpoints(i_dim) = sub.variables->lookup<Array<double>>("pos" + std::to_string(i_dim)).value();
+    }
     for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
-      auto var = sub.variables->lookup<Array<double>>(var_names[i_var]);
-      HEXED_ASSERT(var, format_str(1000, "Expression failed to assign variable `%s`.", var_names[i_var]));
-      qpoints(params.n_dim + i_var) = *var;
+      sub.variables->assign_array(qpoints(params.n_dim + i_var), var_names[i_var]);
     }
     if (wireframe) {
       Array<double> edges {extrap_edges(basis, qpoints, interp)};
