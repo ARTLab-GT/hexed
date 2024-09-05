@@ -1323,6 +1323,39 @@ void Solver::visualize_field(std::string format, std::string name, const Qpoint_
   }
 }
 
+Array<double> extrap_edges(const Basis& basis, Array<double> data, Mat<dyn, dyn> interp) {
+  int n_dim = data.order() - 1;
+  int row_size = data.shape()[1];
+  int n_var = data.shape()[0];
+  int n_qpoint = data(0).size();
+  int n_fqpoint = n_qpoint/row_size;
+  Array<double> edges({n_dim, math::pow(2, n_dim - 1), n_var, interp.rows()});
+  Mat<dyn, dyn> boundary {basis.boundary()};
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    // interpolate qpoint vars to edges
+    // interpolate all edges which point in direction `i_dim`
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      const int stride {math::pow(row_size, n_dim - 1 - i_dim)};
+      const int n_outer {n_qpoint/stride/row_size};
+      Mat<dyn, dyn> edge_qpoints(row_size, math::pow(2, n_dim - 1)); // quadrature points interpolated to the edge
+      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+        Mat<> qpoint_slab {n_fqpoint};
+        for (int i_outer = 0; i_outer < n_outer; ++i_outer) {
+          for (int i_inner = 0; i_inner < stride; ++i_inner) {
+            qpoint_slab[i_outer*stride + i_inner] = data(i_var)[i_qpoint*stride + i_outer*stride*row_size + i_inner];
+          }
+        }
+        // interpolate edge quadrature points to edge visualization points
+        edge_qpoints(i_qpoint, all) = math::hypercube_matvec(boundary, qpoint_slab);
+        for (int i_edge = 0; i_edge < math::pow(2, n_dim - 1); ++i_edge) {
+          edges(i_dim)(i_edge)(i_var).vector() = interp*edge_qpoints(all, i_edge);
+        }
+      }
+    }
+  }
+  return edges;
+}
+
 void Solver::visualize_field(std::string format, std::string name, Interpreter& inter, std::string expression,
                              int n_sample, bool wireframe) {
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
@@ -1341,23 +1374,23 @@ void Solver::visualize_field(std::string format, std::string name, Interpreter& 
     sub.exec(expression);
     var_names = sub.variables->names();
   }
-  if (wireframe) return;
   auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim, name, var_names,
                                        _namespace->get<double>("flow_time"), Visualizer::block);
   int nv = var_names.size();
   int nq = params.n_qpoint();
-  int n_edges = math::pow(2, params.n_dim - 1)*params.n_dim;
-  std::vector<Int> pos_shape(params.n_dim + 1, n_sample);
-  pos_shape[0] = params.n_dim;
   std::vector<Int> out_shape(params.n_dim + 1, n_sample);
-  out_shape[0] = nv;
+  out_shape[0] = params.n_dim + nv;
+  std::vector<Int> qpoint_shape(params.n_dim + 1, params.row_size);
+  qpoint_shape[0] = params.n_dim + nv;
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   auto& elems = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     Array<double> state({params.n_var, nq}, elem.state());
-    Array<double> pos {elem.position(basis)};
+    Array<double> qpoints(qpoint_shape);
+    Array<double> pos {qpoints(0, params.n_dim)};
+    pos = elem.position(basis);
     Array<double> zero {Array<double>::make_uniform({nq}, 0.)};
     auto sub = inter.make_sub();
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
@@ -1370,43 +1403,29 @@ void Solver::visualize_field(std::string format, std::string name, Interpreter& 
     sub.variables->assign("bulk_art_visc", Array<double>({nq}, elem.bulk_av_coef()).copy());
     sub.subspace();
     sub.exec(expression);
-    Array<double> vis_out(out_shape);
-    Array<double> vis_pos(pos_shape);
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-      vis_pos(i_dim).vector() = math::hypercube_matvec(interp, pos(i_dim).vector());
-    }
     for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
       auto var = sub.variables->lookup<Array<double>>(var_names[i_var]);
       HEXED_ASSERT(var, format_str(1000, "Expression failed to assign variable `%s`.", var_names[i_var]));
-      vis_out(i_var).vector() = math::hypercube_matvec(interp, var->vector());
+      qpoints(params.n_dim + i_var) = *var;
     }
-    #pragma omp critical
-    visualizer->write_block(vis_pos(), vis_out());
-  }
-  #if 0
-  int nv = output_variables.n_var(params.n_dim);
-  std::vector<Int> pos_shape(params.n_dim + 1, n_sample);
-  pos_shape[0] = params.n_dim;
-  std::vector<Int> out_shape(params.n_dim + 1, n_sample);
-  out_shape[0] = nv;
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Vis_data pos_dat(elems[i_elem], pos_func, basis, _namespace->get<double>("flow_time"));
-    Vis_data out_dat(elems[i_elem], output_variables, basis, _namespace->get<double>("flow_time"));
     if (wireframe) {
-      Mat<> pos = pos_dat.edges(n_sample);
-      Mat<> out = out_dat.edges(n_sample);
-      Array<double> pos_arr({n_edges, params.n_dim, n_sample}, pos.data());
-      Array<double> out_arr({n_edges,           nv, n_sample}, out.data());
-      for (int i_edge = 0; i_edge < n_edges; ++i_edge) {
-        visualizer->write_block(pos_arr(i_edge), out_arr(i_edge));
+      Array<double> edges {extrap_edges(basis, qpoints, interp)};
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        for (int i_edge = 0; i_edge < edges(i_dim).shape()[0]; ++i_edge) {
+          #pragma omp critical
+          visualizer->write_block(edges(i_dim)(i_edge)(0, params.n_dim),
+                                  edges(i_dim)(i_edge)(params.n_dim, params.n_dim + nv));
+        }
       }
     } else {
-      Mat<> pos = pos_dat.interior(n_sample);
-      Mat<> out = out_dat.interior(n_sample);
-      visualizer->write_block(Array<double>(pos_shape, pos.data()), Array<double>(out_shape, out.data()));
+      Array<double> out(out_shape);
+      for (int i_var = 0; i_var < params.n_dim + nv; ++i_var) {
+        out(i_var).vector() = math::hypercube_matvec(interp, qpoints(i_var).vector());
+      }
+      #pragma omp critical
+      visualizer->write_block(out(0, params.n_dim), out(params.n_dim, params.n_dim + nv));
     }
   }
-  #endif
 }
 
 void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample, bool wireframe) {

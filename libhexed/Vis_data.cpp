@@ -1,11 +1,9 @@
 #include <Vis_data.hpp>
 #include <math.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
-Eigen::MatrixXd Vis_data::sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen::MatrixXd ref_coords)
-{
+Eigen::MatrixXd Vis_data::sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen::MatrixXd ref_coords) {
   int nv = qpoint_data.size()/n_qpoint;
   const int n_sample = ref_coords.rows();
   Eigen::MatrixXd result(n_sample, nv);
@@ -26,15 +24,15 @@ Eigen::MatrixXd Vis_data::sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen:
   return result;
 }
 
-Vis_data::Vis_data(Element& elem, const Qpoint_func& func, const Basis& basis, double time) :
-  n_dim{elem.storage_params().n_dim},
-  n_edge{math::pow(2, n_dim - 1)*n_dim},
-  row_size{elem.storage_params().row_size},
-  n_qpoint{elem.storage_params().n_qpoint()},
-  n_var{func.n_var(n_dim)},
-  el{elem},
-  bas{basis},
-  vars(n_qpoint*n_var)
+Vis_data::Vis_data(Element& elem, const Qpoint_func& func, const Basis& basis, double time)
+: n_dim{elem.storage_params().n_dim}
+, n_edge{math::pow(2, n_dim - 1)*n_dim}
+, row_size{elem.storage_params().row_size}
+, n_qpoint{elem.storage_params().n_qpoint()}
+, n_var{func.n_var(n_dim)}
+, el{elem}
+, bas{basis}
+, vars(n_qpoint*n_var)
 {
   // fetch data at quadrature points
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
@@ -43,8 +41,7 @@ Vis_data::Vis_data(Element& elem, const Qpoint_func& func, const Basis& basis, d
   }
 }
 
-Eigen::VectorXd Vis_data::edges(int n_sample)
-{
+Eigen::VectorXd Vis_data::edges(int n_sample) {
   Eigen::MatrixXd interp {bas.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   const int nfqpoint = n_qpoint/row_size;
   Eigen::MatrixXd result(n_var*n_sample, n_edge);
@@ -77,8 +74,7 @@ Eigen::VectorXd Vis_data::edges(int n_sample)
   return result;
 }
 
-Eigen::VectorXd Vis_data::interior(int n_sample)
-{
+Eigen::VectorXd Vis_data::interior(int n_sample) {
   Eigen::MatrixXd interp {bas.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   const int n_block = math::pow(n_sample, n_dim);
   Eigen::VectorXd result(n_block*n_var);
@@ -88,8 +84,7 @@ Eigen::VectorXd Vis_data::interior(int n_sample)
   return result;
 }
 
-Eigen::VectorXd Vis_data::face(int i_dim, bool is_positive, int n_sample)
-{
+Eigen::VectorXd Vis_data::face(int i_dim, bool is_positive, int n_sample) {
   Eigen::MatrixXd interp {bas.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
   Eigen::MatrixXd bound = bas.boundary()(is_positive, Eigen::all);
   const int n_block = math::pow(n_sample, n_dim - 1);
@@ -104,13 +99,11 @@ Eigen::VectorXd Vis_data::face(int i_dim, bool is_positive, int n_sample)
   return result;
 }
 
-Eigen::MatrixXd Vis_data::sample(Eigen::MatrixXd ref_coords)
-{
+Eigen::MatrixXd Vis_data::sample(Eigen::MatrixXd ref_coords) {
   return sample_qpoint_data(vars, ref_coords);
 }
 
-Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newton, double tol)
-{
+Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newton, double tol) {
   Contour con;
   // sample points used for identifying the contour vertices
   const int n_sample = math::pow(n_div + 1, n_dim);

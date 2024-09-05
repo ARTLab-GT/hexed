@@ -4,17 +4,16 @@
 #include "Element.hpp"
 #include "Qpoint_func.hpp"
 #include "Basis.hpp"
+#include "Array.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*!
  * Computes data to be visualized for a single element
  * (e.g. edge positions, non-conserved variables, values at uniformly-spaced sample points)
  * without knowing anything about the choice of visualization software.
  */
-class Vis_data
-{
+class Vis_data {
   int n_dim;
   int n_edge;
   int row_size;
@@ -47,8 +46,7 @@ class Vis_data
   inline const Eigen::VectorXd& qpoints() {return vars;}
 
   //! \brief stores data representing a contour line/surface
-  struct Contour
-  {
+  struct Contour {
     Eigen::MatrixXd vert_ref_coords; //!< coordinates of contour vertices in reference coordinates. layout: [n_vertex][n_dim]
     //! unit normal vectors to the contour surface in physical space (not reference) located at vertices. layout: [n_vertex][n_dim]
     Eigen::MatrixXd normals;
