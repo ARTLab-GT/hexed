@@ -212,21 +212,24 @@ Interpreter::_Dynamic_value Interpreter::_general_eq(const Interpreter::_Dynamic
   }
 }
 
+std::string Interpreter::_Dynamic_value::to_string(std::string fd) const {
+  if (s) return *s;
+  if (i) return std::to_string(*i);
+  if (d) return format_str(100, fd, *d);
+  if (a) {
+    std::string result;
+    for (Int i = 0; i < a->size(); ++i) {
+      result += format_str(100, fd, (*a)[i]);
+    }
+    return result;
+  }
+  HEXED_THROW("empty_variable");
+}
+
 Interpreter::_Dynamic_value Interpreter::_general_add(const Interpreter::_Dynamic_value& o0, const Interpreter::_Dynamic_value& o1) {
   if (!o0.s && !o1.s) return _arithmetic_op<_add<double>, _add<int>>(o0, o1);
-  _Dynamic_value val;
   std::string fd = variables->lookup<std::string>("format_double").value();
-  if (o0.s) {
-    val.s.emplace(*o0.s);
-    if (o1.i) *val.s += std::to_string(*o1.i);
-    if (o1.d) *val.s += format_str(300, fd, *o1.d);
-    if (o1.s) *val.s += *o1.s;
-  } else {
-    val.s.emplace(*o1.s);
-    if (o0.i) *val.s = std::to_string(*o0.i) + *val.s;
-    if (o0.d) *val.s = format_str(300, fd, *o0.d) + *val.s;
-  }
-  return val;
+  return _Dynamic_value(o0.to_string(fd) + o1.to_string(fd));
 }
 
 std::function<Interpreter::_Dynamic_value(const Interpreter::_Dynamic_value&)> Interpreter::_numeric_unary(double (*f)(double), std::string name) {
@@ -360,7 +363,7 @@ Interpreter::Interpreter(std::vector<std::string> preload)
   variables->assign<std::string>("exception", "");
   variables->assign<std::string>("except", "");
   // string conversion format
-  variables->assign<std::string>("format_double", "%g");
+  variables->assign<std::string>("format_double", "% .8e");
   // load standard library
   for (auto file : preload) {
     exec(format_str(1000, "$read {%s}", file.c_str()));

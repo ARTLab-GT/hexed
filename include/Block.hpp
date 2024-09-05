@@ -165,7 +165,7 @@ class Boundary_block : public Block {
    * [i_dim \f$\in\f$ [0, 3)]
    * \attention The layout is transposed with respect to `Block::points`!
    */
-  inline Array<double> interior() {return _interior;};
+  inline Array<double> interior() {return _interior();};
 
   protected:
   Array<double> _interior; //!< \brief storage for the interior points

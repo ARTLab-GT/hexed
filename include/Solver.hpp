@@ -156,6 +156,9 @@ class Solver {
   void calc_jacobian(bool snap_faces = true);
   //! set the flow state
   void initialize(const Spacetime_func&);
+  //! \brief set the flow state from an HIL expression
+  //! \details `espression` must set the variables `momentum0`, ..., `momentum[n_dim - 1]`, `density`, `energy`
+  void initialize(Interpreter& inter, std::string expression);
   bool using_art_visc(); //!< \brief returns `true` if artificial viscosity is currently turned on
   void set_art_visc_off(); //!< \brief turns off artificial viscosity
   //! \brief turns on artificial viscosity and initializes coefficient to a uniform value

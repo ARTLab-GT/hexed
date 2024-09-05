@@ -1577,10 +1577,11 @@ void Accessible_mesh::relax(double factor) {
     // snaps a `Boundary_block` to the geometry surface
     auto snap_block = [this](next::Boundary_block& block) {
       block.reset();
-      Array<double> interior = block.interior().reshaped({whatever, 3});
+      Array<double> interior {block.interior().reshaped({whatever, 3})};
       for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
         auto p = interior(i_point)(0, params.n_dim).vector();
-        p = surf_geom->nearest_point(p, huge, block.element()->nominal_size()/params.row_size).point();
+        Mat<> p_mat {p};
+        p = surf_geom->nearest_point(p_mat, huge, block.element()->nominal_size()/params.row_size).point();
       }
     };
     // snap edges to the surface (regardless of dimensionality)

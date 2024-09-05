@@ -255,11 +255,16 @@ Case::Case(std::string input_script)
         }
         veloc = _vard("freestream_speed")*direction;
         _set_vector("freestream_velocity", veloc);
+        for (int i_dim = *n_dim; i_dim < 3; ++i_dim) {
+          _inter.variables->assign("freestream_velocity" + std::to_string(i_dim), 0.);
+        }
       }
       _set_vector("freestream_direction", full_direction);
+      double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*_vard("freestream_density")*veloc.squaredNorm();
+      _inter.variables->assign("freestream_energy", ener);
       freestream(Eigen::seqN(0, *n_dim)) = _vard("freestream_density")*veloc;
       freestream(*n_dim) = _vard("freestream_density");
-      freestream(*n_dim + 1) = _vard("freestream_pressure")/(heat_rat - 1) + .5*_vard("freestream_density")*veloc.squaredNorm();
+      freestream(*n_dim + 1) = ener;
       freestream.conservativeResize(5);
       freestream(Eigen::seqN(*n_dim + 2, 5 - (*n_dim + 2))).setZero();
       _set_vector("freestream", freestream);
@@ -360,12 +365,7 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
-    #if HEXED_OBSESSIVE_TIMING
-    int nd = _inter.variables->lookup<int>("n_dim").value();
-    if (nd == 2) _inter.printer->print(Simplex_geom<2>::performance_report());
-    if (nd == 3) _inter.printer->print(Simplex_geom<3>::performance_report());
-    #endif
-    _solver().initialize(Spacetime_expr(Struct_expr(_vars("init_cond")), _inter));
+    _solver().initialize(_inter, _vars("init_cond"));
     return "";
   }));
 

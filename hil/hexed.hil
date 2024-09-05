@@ -251,14 +251,14 @@ do = {
     i_dim = i_dim + 1
 }
 $loop
-init_cond = {}
-i_var = 0
-while = {i_var < 5}
-do = {
-    init_cond = init_cond + {state} + i_var + { = freestream} + i_var + newline
-    i_var = i_var + 1
+
+init_cond = {
+    momentum0 = freestream_density*freestream_velocity0 + 0*pos0
+    momentum1 = freestream_density*freestream_velocity1 + 0*pos0
+    momentum2 = freestream_density*freestream_velocity2 + 0*pos0
+    density = freestream_density + 0*pos0
+    energy = freestream_energy + 0*pos0
 }
-$loop
 
 {overrideable macros}
 write_init = {write_mesh}

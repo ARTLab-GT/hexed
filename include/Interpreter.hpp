@@ -29,6 +29,7 @@ class Interpreter {
       s = std::move(that.s);
       a = std::move(that.a);
     }
+    std::string to_string(std::string format_double) const;
   };
 
   bool _more();

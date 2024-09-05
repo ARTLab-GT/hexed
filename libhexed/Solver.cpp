@@ -438,6 +438,32 @@ void Solver::initialize(const Spacetime_func& func) {
   _init_face_state();
 }
 
+void Solver::initialize(Interpreter& inter, std::string(expr)) {
+  acc_mesh->valid().assert_valid();
+  std::vector<std::string> state_vars;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) state_vars.push_back("momentum" + std::to_string(i_dim));
+  state_vars.push_back("density");
+  state_vars.push_back("energy");
+  int nq = params.n_qpoint();
+  auto& elements = acc_mesh->elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    auto& elem = elements[i_elem];
+    Array<double> pos = elem.position(basis);
+    auto sub = inter.make_sub();
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      sub.variables->assign("pos" + std::to_string(i_dim), pos(i_dim));
+    }
+    sub.exec(expr);
+    for (int i_var = 0; i_var < (int)state_vars.size(); ++i_var) {
+      auto var = sub.variables->lookup<Array<double>>(state_vars[i_var]);
+      HEXED_ASSERT(var, "Expression failed to assign variable `" + state_vars[i_var] + "`.");
+      Array<double>({nq}, elem.state() + i_var*nq) = *var;
+    }
+  }
+  _init_face_state();
+}
+
 bool Solver::using_art_visc() {
   return use_art_visc;
 }
