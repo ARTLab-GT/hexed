@@ -157,6 +157,12 @@ void Solver::_init_face_state() {
   }
 }
 
+Interpreter Solver::_interpreter() {
+  Interpreter inter(std::vector<std::string>{});
+  inter.variables = _namespace;
+  return inter;
+}
+
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
                std::shared_ptr<Namespace> space, std::shared_ptr<Printer_set> printer, bool implicit)
@@ -1071,6 +1077,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
   auto& sw_fix = stopwatch["fix admis."];
   sw_fix.stopwatch.start();
   std::string wd = _namespace->lookup<std::string>("working_dir").value();
+  std::string vis_expr = _namespace->lookup<std::string>("vis_field_vars").value();
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
@@ -1079,14 +1086,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
   int n_iters = std::numeric_limits<int>::max();
   for (iter = 0; iter < n_iters; ++iter) {
     HEXED_ASSERT(iter < 1e5, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
-    #if HEXED_USE_XDMF
-    if (iter == 100) {
-      State_variables sv;
-      Record rec;
-      std::vector<const Qpoint_func*> to_vis {&sv, &rec};
-      visualize_field("xdmf", wd + "severe_indamis" + std::to_string(status.iteration), Qf_concat(to_vis));
-    }
-    #endif
+    visualize_field("default", wd + "severe_indamis" + std::to_string(status.iteration), vis_expr);
     if (is_admissible()) {
       if (iter) n_iters = std::min(n_iters, 2*iter);
       else {
@@ -1137,16 +1137,10 @@ bool Solver::fix_admissibility(double stability_ratio) {
       }
       Eigen::Map<Mat<>>(elem.laplacian_av_coef(), nq) = math::hypercube_matvec(interp, vert_fac);
     }
-    #if HEXED_USE_XDMF
     if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
       last_fix_vis_iter = status.iteration;
-      State_variables sv;
-      Record rec;
-      Fix_admis_coef fac;
-      std::vector<const Qpoint_func*> to_vis {&sv, &rec, &fac};
-      visualize_field("xdmf", wd + "inadmis" + std::to_string(status.iteration), Qf_concat(to_vis));
+      visualize_field("default", wd + "inadmis" + std::to_string(status.iteration), vis_expr);
     }
-    #endif
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
@@ -1289,38 +1283,6 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
   return bounds;
 }
 
-void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables,
-                             int n_sample, bool wireframe) {
-  auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim, name, output_variables,
-                                       _namespace->get<double>("flow_time"), Visualizer::block);
-  HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
-  Position_func pos_func;
-  int nv = output_variables.n_var(params.n_dim);
-  int n_edges = math::pow(2, params.n_dim - 1)*params.n_dim;
-  auto& elems = acc_mesh->elements();
-  std::vector<Int> pos_shape(params.n_dim + 1, n_sample);
-  pos_shape[0] = params.n_dim;
-  std::vector<Int> out_shape(params.n_dim + 1, n_sample);
-  out_shape[0] = nv;
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Vis_data pos_dat(elems[i_elem], pos_func, basis, _namespace->get<double>("flow_time"));
-    Vis_data out_dat(elems[i_elem], output_variables, basis, _namespace->get<double>("flow_time"));
-    if (wireframe) {
-      Mat<> pos = pos_dat.edges(n_sample);
-      Mat<> out = out_dat.edges(n_sample);
-      Array<double> pos_arr({n_edges, params.n_dim, n_sample}, pos.data());
-      Array<double> out_arr({n_edges,           nv, n_sample}, out.data());
-      for (int i_edge = 0; i_edge < n_edges; ++i_edge) {
-        visualizer->write_block(pos_arr(i_edge), out_arr(i_edge));
-      }
-    } else {
-      Mat<> pos = pos_dat.interior(n_sample);
-      Mat<> out = out_dat.interior(n_sample);
-      visualizer->write_block(Array<double>(pos_shape, pos.data()), Array<double>(out_shape, out.data()));
-    }
-  }
-}
-
 Array<double> extrap_edges(const Basis& basis, Array<double> data, Mat<dyn, dyn> interp) {
   int n_dim = data.order() - 1;
   int row_size = data.shape()[1];
@@ -1354,18 +1316,18 @@ Array<double> extrap_edges(const Basis& basis, Array<double> data, Mat<dyn, dyn>
   return edges;
 }
 
-void Solver::visualize_field(std::string format, std::string name, Interpreter& inter, std::string expression,
-                             int n_sample, bool wireframe) {
+void Solver::visualize_field(std::string format, std::string name, std::string expr, int n_sample, bool wireframe) {
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
   auto& elems = acc_mesh->elements();
   if (!elems.size()) return;
+  Interpreter inter {_interpreter()};
   std::vector<std::string> var_names;
   {
     auto sub = inter.make_sub();
     vis_variables::position(*sub.variables, elems[0], basis);
     vis_variables::state(*sub.variables, elems[0]);
     sub.subspace();
-    sub.exec(expression);
+    sub.exec(expr);
     var_names = sub.variables->names();
   }
   auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim, name, var_names,
@@ -1386,7 +1348,7 @@ void Solver::visualize_field(std::string format, std::string name, Interpreter& 
     vis_variables::position(*sub.variables, elem, basis);
     vis_variables::state(*sub.variables, elem);
     sub.subspace();
-    sub.exec(expression);
+    sub.exec(expr);
     Array<double> qpoints(qpoint_shape);
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
       qpoints(i_dim) = sub.variables->lookup<Array<double>>("pos" + std::to_string(i_dim)).value();
@@ -1534,9 +1496,8 @@ void Solver::vis_lts_constraints(std::string format, std::string name, int n_sam
     state = temp;
   }
   // visualize. Note that visualizing straight from the reference state would require implementing another `Qpoint_func` which would be ugly
-  Interpreter inter(std::vector<std::string>{});
-  Struct_expr expr("lts_convective = density; lts_diffusive = energy; lts_ratio = lts_diffusive/lts_convective;");
-  visualize_field(format, name, Qpoint_expr(expr, inter), n_sample);
+  std::string expr {"lts_convective = density; lts_diffusive = energy; lts_ratio = lts_diffusive/lts_convective;"};
+  visualize_field(format, name, expr, n_sample);
   // restore the current state from the reference state
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {

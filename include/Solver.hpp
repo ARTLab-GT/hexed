@@ -63,6 +63,7 @@ class Solver {
   bool use_ldg();
   double max_dt(double max_safety_conv, double max_safety_diff);
   void _init_face_state();
+  Interpreter _interpreter();
 
   //! \brief linearizes the steady state equations by finite difference
   class Linearized : public Linear_equation {
@@ -252,13 +253,12 @@ class Solver {
   /*! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
    * \param format Which format to write the visualization file in. Accepted values are `"xdmf"` and `"tecplot"`
    * \param name name of file to write (not including extension)
-   * \param output_variables what variables to write
+   * \param expression HIL expression specifying variables to visualize.
+   *                   Each variable assigned to in `expression` will be visualized.
    * \param n_sample each element will contain an `n_sample` by `n_sample` array of uniformly-spaced sample points
    * \param wireframe if `true`, visualize the mesh edges as a wireframe instead of the filled surface/solid
    */
-  void visualize_field(std::string format, std::string name, const Qpoint_func& output_variables,
-                       int n_sample = 10, bool wireframe = false);
-  void visualize_field(std::string format, std::string name, Interpreter&, std::string expression,
+  void visualize_field(std::string format, std::string name, std::string expression,
                        int n_sample = 10, bool wireframe = false);
   //! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
   void visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func&,

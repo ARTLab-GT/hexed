@@ -447,8 +447,7 @@ Case::Case(std::string input_script)
             if (v == "surface") {
               _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(), Boundary_expr(vis_vars, _inter), n_sample, edges);
             } else if (v == "field") {
-              _solver().visualize_field(format, file_name, _inter, vis_expr, n_sample, edges);
-              if (_vari("vis_skew")) _solver().visualize_field(format, wd + "skew" + suffix, Equiangle_skewness(), n_sample, edges);
+              _solver().visualize_field(format, file_name, vis_expr, n_sample, edges);
               if (_vari("vis_lts_constraints")) _solver().vis_lts_constraints(format, wd + "lts_constraints" + suffix, n_sample);
             } else if (!edges) { // vis_type == contour0, contour1, etc
               std::string contour_expr = _vars("vis_contour_vars") + v + "_var = " + _vars(v) + ";";
