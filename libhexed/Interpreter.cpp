@@ -234,13 +234,14 @@ Interpreter::_Dynamic_value Interpreter::_general_add(const Interpreter::_Dynami
 
 std::function<Interpreter::_Dynamic_value(const Interpreter::_Dynamic_value&)> Interpreter::_numeric_unary(double (*f)(double), std::string name) {
   return [f, name](const _Dynamic_value& val) {
-    double operand;
-    if (val.i) operand = *val.i;
-    else if (val.d) operand = *val.d;
-    else HEXED_ASSERT(false, "unary operator `" + name + "` requires numeric argument", Hil_exception);
-    _Dynamic_value r;
-    r.d.emplace(f(operand));
-    return r;
+    if (val.i) return _Dynamic_value(f(*val.i));
+    if (val.d) return _Dynamic_value(f(*val.d));
+    if (val.a) {
+      _Dynamic_value r(Array<double>(val.a->shape()));
+      for (Int i = 0; i < val.a->size(); ++i) (*r.a)[i] = (*val.a)[i];
+      return r;
+    }
+    HEXED_THROW("unary operator `" + name + "` requires numeric argument", Hil_exception); throw;
   };
 }
 
@@ -398,6 +399,12 @@ Interpreter Interpreter::make_sub() const {
   #pragma omp critical
   inter.variables->supers.push_back(variables);
   return inter;
+}
+
+void Interpreter::subspace() {
+  auto sub = std::make_shared<Namespace>();
+  sub->supers.push_back(variables);
+  variables = sub;
 }
 
 }

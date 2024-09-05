@@ -1323,6 +1323,92 @@ void Solver::visualize_field(std::string format, std::string name, const Qpoint_
   }
 }
 
+void Solver::visualize_field(std::string format, std::string name, Interpreter& inter, std::string expression,
+                             int n_sample, bool wireframe) {
+  HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
+  std::vector<std::string> var_names;
+  {
+    auto sub = inter.make_sub();
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      sub.variables->assign("pos" + std::to_string(i_dim), std::nan(""));
+      sub.variables->assign("momentum" + std::to_string(i_dim), std::nan(""));
+    }
+    sub.variables->assign("density", std::nan(""));
+    sub.variables->assign("energy", std::nan(""));
+    sub.variables->assign("laplacian_art_visc", std::nan(""));
+    sub.variables->assign("bulk_art_visc", std::nan(""));
+    sub.subspace();
+    sub.exec(expression);
+    var_names = sub.variables->names();
+  }
+  if (wireframe) return;
+  auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim, name, var_names,
+                                       _namespace->get<double>("flow_time"), Visualizer::block);
+  int nv = var_names.size();
+  int nq = params.n_qpoint();
+  int n_edges = math::pow(2, params.n_dim - 1)*params.n_dim;
+  std::vector<Int> pos_shape(params.n_dim + 1, n_sample);
+  pos_shape[0] = params.n_dim;
+  std::vector<Int> out_shape(params.n_dim + 1, n_sample);
+  out_shape[0] = nv;
+  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
+  auto& elems = acc_mesh->elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    Array<double> state({params.n_var, nq}, elem.state());
+    Array<double> pos {elem.position(basis)};
+    Array<double> zero {Array<double>::make_uniform({nq}, 0.)};
+    auto sub = inter.make_sub();
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      sub.variables->assign("pos" + std::to_string(i_dim), i_dim < params.n_dim ? pos(i_dim) : zero());
+      sub.variables->assign("momentum" + std::to_string(i_dim), i_dim < params.n_dim ? state(i_dim).copy() : zero());
+    }
+    sub.variables->assign("density", state(params.n_dim).copy());
+    sub.variables->assign("energy", state(params.n_dim + 1).copy());
+    sub.variables->assign("laplacian_art_visc", Array<double>({nq}, elem.laplacian_av_coef()).copy());
+    sub.variables->assign("bulk_art_visc", Array<double>({nq}, elem.bulk_av_coef()).copy());
+    sub.subspace();
+    sub.exec(expression);
+    Array<double> vis_out(out_shape);
+    Array<double> vis_pos(pos_shape);
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      vis_pos(i_dim).vector() = math::hypercube_matvec(interp, pos(i_dim).vector());
+    }
+    for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
+      auto var = sub.variables->lookup<Array<double>>(var_names[i_var]);
+      HEXED_ASSERT(var, format_str(1000, "Expression failed to assign variable `%s`.", var_names[i_var]));
+      vis_out(i_var).vector() = math::hypercube_matvec(interp, var->vector());
+    }
+    #pragma omp critical
+    visualizer->write_block(vis_pos(), vis_out());
+  }
+  #if 0
+  int nv = output_variables.n_var(params.n_dim);
+  std::vector<Int> pos_shape(params.n_dim + 1, n_sample);
+  pos_shape[0] = params.n_dim;
+  std::vector<Int> out_shape(params.n_dim + 1, n_sample);
+  out_shape[0] = nv;
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Vis_data pos_dat(elems[i_elem], pos_func, basis, _namespace->get<double>("flow_time"));
+    Vis_data out_dat(elems[i_elem], output_variables, basis, _namespace->get<double>("flow_time"));
+    if (wireframe) {
+      Mat<> pos = pos_dat.edges(n_sample);
+      Mat<> out = out_dat.edges(n_sample);
+      Array<double> pos_arr({n_edges, params.n_dim, n_sample}, pos.data());
+      Array<double> out_arr({n_edges,           nv, n_sample}, out.data());
+      for (int i_edge = 0; i_edge < n_edges; ++i_edge) {
+        visualizer->write_block(pos_arr(i_edge), out_arr(i_edge));
+      }
+    } else {
+      Mat<> pos = pos_dat.interior(n_sample);
+      Mat<> out = out_dat.interior(n_sample);
+      visualizer->write_block(Array<double>(pos_shape, pos.data()), Array<double>(out_shape, out.data()));
+    }
+  }
+  #endif
+}
+
 void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample, bool wireframe) {
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
   HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");

@@ -258,6 +258,8 @@ class Solver {
    */
   void visualize_field(std::string format, std::string name, const Qpoint_func& output_variables,
                        int n_sample = 10, bool wireframe = false);
+  void visualize_field(std::string format, std::string name, Interpreter&, std::string expression,
+                       int n_sample = 10, bool wireframe = false);
   //! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
   void visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func&,
                          int n_sample = 10, bool wireframe = false);

@@ -27,7 +27,8 @@ class Interpreter {
       i = std::move(that.i);
       d = std::move(that.d);
       s = std::move(that.s);
-      a = std::move(that.a);
+      a.reset();
+      if (that.a) a.emplace(std::move(*that.a));
     }
     std::string to_string(std::string format_double) const;
   };
@@ -95,6 +96,7 @@ class Interpreter {
    * but that wasn't _quite_ funny enough to be worth compromising readability.
    */
   Interpreter make_sub() const;
+  void subspace();
 
   class Hil_unhandled_exception : public assert::Exception {
     public:
