@@ -8,6 +8,19 @@
 //! \brief functions that assign visualization data to HIL variables
 namespace hexed::vis_variables {
 
+/*! \details Assigns the follwing variables:
+ * - `is_extruded`: 1 if element is extruded, else 0
+ * - `n_dim`: number of dimensions
+ * - `is_def = elem.get_is_deformed()`
+ * - `ref_level = elem.refinement_level()`
+ * - `aniso_ref_level = elem.aniso_ref_level()`
+ * - `mask = elem.mask()`
+ * - `nom_sz` = elem.nominal_size()`
+ * - `uncertainty` = elem.uncertainty`
+ * - `center0`, `center1`, `center2`: center of mass of vertices (not necessarily of the element itself)
+ */
+void element(Namespace&, Element& elem);
+
 /*! \brief Assigns the variables `pos0`, `pos1`, `pos2`
  * \details to the position of the `i_qpoint`th quadrature point.
  * Trailing dimensions are set to 0.

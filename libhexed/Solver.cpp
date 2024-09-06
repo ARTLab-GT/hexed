@@ -458,6 +458,7 @@ void Solver::initialize(Interpreter& inter, std::string(expr)) {
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     auto& elem = elements[i_elem];
     auto sub = inter.make_sub();
+    vis_variables::element(*sub.variables, elem);
     vis_variables::position(*sub.variables, elem, basis);
     sub.exec(expr);
     Array<double> state({n_var, nq}, elem.state());
@@ -1324,6 +1325,7 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
   std::vector<std::string> var_names;
   {
     auto sub = inter.make_sub();
+    vis_variables::element(*sub.variables, elems[0]);
     vis_variables::position(*sub.variables, elems[0], basis);
     vis_variables::state(*sub.variables, elems[0]);
     sub.subspace();
@@ -1345,6 +1347,7 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
     Array<double> state({params.n_var, nq}, elem.state());
     Array<double> zero {Array<double>::make_uniform({nq}, 0.)};
     auto sub = inter.make_sub();
+    vis_variables::element(*sub.variables, elem);
     vis_variables::position(*sub.variables, elem, basis);
     vis_variables::state(*sub.variables, elem);
     sub.subspace();
