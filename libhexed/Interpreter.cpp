@@ -364,7 +364,7 @@ Interpreter::Interpreter(std::vector<std::string> preload)
   variables->assign<std::string>("exception", "");
   variables->assign<std::string>("except", "");
   // string conversion format
-  variables->assign<std::string>("format_double", "% .8e");
+  variables->assign<std::string>("format_double", "%g");
   // load standard library
   for (auto file : preload) {
     exec(format_str(1000, "$read {%s}", file.c_str()));
