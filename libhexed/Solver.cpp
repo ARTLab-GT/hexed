@@ -239,6 +239,11 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
     }
   }
   stopwatch.emplace("boundary conditions", "(boundary connection)*(time integration stage)");
+  stopwatch.emplace("visualization", "file");
+  stopwatch["visualization"].emplace("field", "element");
+  stopwatch["visualization"].emplace("field wireframe", "element");
+  stopwatch["visualization"].emplace("surface", "surface face");
+  stopwatch["visualization"].emplace("surface wireframe", "surface face");
   // initialize advection state to 1
   auto& elements = acc_mesh->elements();
   const int nq = params.n_qpoint();
@@ -1318,6 +1323,9 @@ Array<double> extrap_edges(const Basis& basis, Array<double> data, Mat<dyn, dyn>
 }
 
 void Solver::visualize_field(std::string format, std::string name, std::string expr, int n_sample, bool wireframe) {
+  std::string sw_name = "field";
+  if (wireframe) sw_name = sw_name + " wireframe";
+  Stopwatch_tree::Starter sw_starter(stopwatch["visualization"][sw_name]);
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
   auto& elems = acc_mesh->elements();
   if (!elems.size()) return;
@@ -1377,9 +1385,14 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
       visualizer->write_block(out(0, params.n_dim), out(params.n_dim, params.n_dim + nv));
     }
   }
+  ++stopwatch["visualization"].work_units_completed;
+  stopwatch["visualization"][sw_name].work_units_completed += elems.size();
 }
 
 void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample, bool wireframe) {
+  std::string sw_name = "surface";
+  if (wireframe) sw_name = sw_name + " wireframe";
+  Stopwatch_tree::Starter sw_starter(stopwatch["visualization"][sw_name]);
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
   HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");
   auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim - 1, name, func, _namespace->get<double>("flow_time"), Visualizer::block);
@@ -1448,6 +1461,8 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
     }
   }
   visualizer.reset();
+  ++stopwatch["visualization"].work_units_completed;
+  stopwatch["visualization"][sw_name].work_units_completed += bc_cons.size();
 }
 
 void Solver::visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by, const Qpoint_func& output_variables, int n_sample) {

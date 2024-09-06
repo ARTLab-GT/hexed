@@ -261,9 +261,9 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 {
   def.face_con_v = def_face_cons;
   _stopwatch.emplace("relax", "vertex update");
-  _stopwatch["relax"].children.emplace("optimization", "vertex update");
-  _stopwatch["relax"].children.emplace("extremal snapping", "vertex update");
-  _stopwatch["relax"].children.emplace("surface snapping", "vertex update");
+  _stopwatch["relax"].emplace("optimization", "vertex update");
+  _stopwatch["relax"].emplace("extremal snapping", "vertex update");
+  _stopwatch["relax"].emplace("surface snapping", "vertex update");
   _stopwatch["relax"].emplace("legacy", "vertex update");
   _stopwatch.emplace("update", "update");
   _stopwatch.work_units_completed = 1;
@@ -1267,7 +1267,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
    * 3 => toggle deformity
    */
   HEXED_ASSERT(tree, "need a tree to refine");
-  _stopwatch["update"].stopwatch.start();
+  Stopwatch_tree::Starter sw_update(_stopwatch["update"]);
   int nd = params.n_dim;
   auto& elems = elements();
   // decide which elements to (un)refine
@@ -1477,7 +1477,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       matched_edges[i_edge].clear();
     }
   }
-  _stopwatch["update"].stopwatch.pause();
   _stopwatch["update"].work_units_completed += 1;
   return n_before > n_after; // any change to the element structure (including adding elements!) will cause `purge` to reduce the size of `elems`
 }
@@ -1497,33 +1496,33 @@ void update_pos(next::Vertex& vert, Mat<3> pos) {
 }
 
 void Accessible_mesh::relax(double factor) {
-  _stopwatch["relax"].stopwatch.start();
-  _stopwatch["relax"]["legacy"].stopwatch.start();
-  id_boundary_verts();
-  // calculate average neighbor position
-  #pragma omp parallel for
-  for (auto& vert : smooth_verts) {
-    vert->temp_vector.setZero();
-    auto neighbs = vert->get_neighbors();
-    for (auto& neighb : neighbs) vert->temp_vector += neighb.pos;
-    vert->temp_vector /= neighbs.size();
+  {
+    Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["legacy"]);
+    id_boundary_verts();
+    // calculate average neighbor position
+    #pragma omp parallel for
+    for (auto& vert : smooth_verts) {
+      vert->temp_vector.setZero();
+      auto neighbs = vert->get_neighbors();
+      for (auto& neighb : neighbs) vert->temp_vector += neighb.pos;
+      vert->temp_vector /= neighbs.size();
+    }
+    // update position
+    #pragma omp parallel for
+    for (auto& vert : smooth_verts) {
+      if (vert->is_mobile()) vert->pos = factor*vert->temp_vector + (1 - factor)*vert->pos;
+    }
+    snap_vertices();
+    _stopwatch["relax"]["legacy"].work_units_completed += smooth_verts.size();
+  }{
+    // update `next::Vertex`s
+    Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["optimization"]);
+    _blocks.relax_vertices();
+    _stopwatch["relax"]["optimization"].work_units_completed += _n_verts;
   }
-  // update position
-  #pragma omp parallel for
-  for (auto& vert : smooth_verts) {
-    if (vert->is_mobile()) vert->pos = factor*vert->temp_vector + (1 - factor)*vert->pos;
-  }
-  snap_vertices();
-  _stopwatch["relax"]["legacy"].stopwatch.pause();
-  _stopwatch["relax"]["legacy"].work_units_completed += smooth_verts.size();
-  _stopwatch["relax"]["optimization"].stopwatch.start();
-  //   update `next::Vertex`s
-  _blocks.relax_vertices();
-  _stopwatch["relax"]["optimization"].stopwatch.pause();
-  _stopwatch["relax"]["optimization"].work_units_completed += _n_verts;
   // snap vertices to extremal boundaries
   if (tree) {
-    _stopwatch["relax"]["extremal snapping"].stopwatch.start();
+    Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);
     #pragma omp parallel for
     for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
       auto& con = bound_cons[i_con];
@@ -1541,11 +1540,10 @@ void Accessible_mesh::relax(double factor) {
         }
       }
     }
-    _stopwatch["relax"]["extremal snapping"].stopwatch.pause();
     _stopwatch["relax"]["extremal snapping"].work_units_completed += _n_verts;
   }
   if (surf_geom) {
-    _stopwatch["relax"]["surface snapping"].stopwatch.start();
+    Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
     // snap vertices to surface boundary
     auto bverts = _blocks.boundary_verts();
     #pragma omp parallel for
@@ -1613,10 +1611,8 @@ void Accessible_mesh::relax(double factor) {
     // snap face interiors (if 3D) to surface
     #pragma omp parallel for
     for (auto& face : faces_3d) snap_block(face);
-    _stopwatch["relax"]["surface snapping"].stopwatch.pause();
     _stopwatch["relax"]["surface snapping"].work_units_completed += bverts.size();
   }
-  _stopwatch["relax"].stopwatch.pause();
   _stopwatch["relax"].work_units_completed += _n_verts;
 }
 

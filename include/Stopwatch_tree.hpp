@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include <memory>
 #include "Stopwatch.hpp"
 
 namespace hexed {
@@ -13,10 +14,18 @@ namespace hexed {
  */
 class Stopwatch_tree {
   public:
+  class Starter {
+    public:
+    Starter(Stopwatch_tree&);
+    Starter(const Starter&) = delete;
+    Starter(Starter&&) = default;
+    inline ~Starter() {_tree.stopwatch.pause();}
+    private:
+    Stopwatch_tree& _tree;
+    std::unique_ptr<Starter> _parent;
+  };
+
   Stopwatch stopwatch;
-  //! \deprecated Direct access to `children` is deprecated.
-  //! Prefer insertion with `Stopwatch_tree::emplace` and access with `Stopwatch_tree::operator[]`.
-  std::map<std::string, Stopwatch_tree> children;
   int work_units_completed = 0;
   std::string work_unit_name;
   Stopwatch_tree(std::string work_unit_name_arg, std::map<std::string, Stopwatch_tree> init_children = {});
@@ -31,6 +40,8 @@ class Stopwatch_tree {
   Stopwatch_tree& emplace(std::string name, std::string work_unit);
 
   private:
+  std::map<std::string, Stopwatch_tree> _children;
+  Stopwatch_tree* _parent;
   std::string _indented_report(std::string indent) const;
 };
 
