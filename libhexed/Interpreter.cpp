@@ -238,7 +238,7 @@ std::function<Interpreter::_Dynamic_value(const Interpreter::_Dynamic_value&)> I
     if (val.d) return _Dynamic_value(f(*val.d));
     if (val.a) {
       _Dynamic_value r(Array<double>(val.a->shape()));
-      for (Int i = 0; i < val.a->size(); ++i) (*r.a)[i] = (*val.a)[i];
+      for (Int i = 0; i < val.a->size(); ++i) (*r.a)[i] = f((*val.a)[i]);
       return r;
     }
     HEXED_THROW("unary operator `" + name + "` requires numeric argument", Hil_exception); throw;
