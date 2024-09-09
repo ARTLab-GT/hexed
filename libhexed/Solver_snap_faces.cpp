@@ -18,6 +18,7 @@ void hexed::Solver::snap_faces()
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh->boundary_condition(bc_sn).mesh_bc->snap_node_adj(bc_cons[i_con], basis);
   }
+  #if 0
   // ...and that almost works by itself, but in 3D the presence of hanging nodes and ill-behaved warping correction
   // can result in faces matching up imperfectly.
   // So now, we have to coerce neighboring faces to match exactly, which is more of a pain than you would think
@@ -127,5 +128,6 @@ void hexed::Solver::snap_faces()
   }
   // clean up
   _get_cache();
+  #endif
 }
 

@@ -578,23 +578,6 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
       }
     }
     if (offset > 0) {
-      // readjust face node adjustments to account for offset
-      double* node_adj [] {face.elem.node_adjustments(), elem.node_adjustments()};
-      int nfq = params.n_qpoint()/params.row_size;
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        double* na [2][2];
-        for (int i = 0; i < 2; ++i) {
-          for (int face_sign = 0; face_sign < 2; ++face_sign) {
-            na[i][face_sign] = node_adj[i] + (2*face.i_dim + (face_sign == face.face_sign))*nfq + i_qpoint;
-          }
-        }
-        *na[1][1] = *na[0][1];
-        *na[0][1] = *na[1][0] = offset**na[0][0] + (1 - offset)**na[0][1];
-        for (int sign = 0; sign < 2; ++sign) {
-          *na[0][sign] /= 1 - offset;
-          *na[1][sign] /= offset;
-        }
-      }
       double* state [] {face.elem.state(), elem.state()};
       // interpolate data from original element to new ones
       for (int i_elem : {1, 0}) { // iterate in reverse order since new states for both elements depend on element 0
@@ -1937,19 +1920,6 @@ void Accessible_mesh::write(std::string name) {
     };
     write_tree(tree.get());
   }
-  // write face warping
-  file.createGroup("/elements/face_warping");
-  auto& def_elems = def.elements();
-  dims[0] = def_elems.size();
-  dims[1] = 1;
-  auto ind_dset = file.createDataSet("/elements/face_warping/element_indices", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
-  dims[1] = 2*params.n_dim*params.n_face_qpoint();
-  auto adj_dset = file.createDataSet("/elements/face_warping/node_adjustments", H5::PredType::NATIVE_DOUBLE, H5::DataSpace(2, dims));
-  for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
-    auto& elem = def_elems[i_elem];
-    h5_write_value(ind_dset, i_elem, elem.record);
-    h5_write_row(adj_dset, dims[1], i_elem, elem.node_adjustments());
-  }
 }
 
 void Accessible_mesh::read_file(std::string file_name) {
@@ -2058,15 +2028,6 @@ void Accessible_mesh::read_file(std::string file_name) {
     } else {
       car.bound_cons.emplace_back(new Typed_bound_connection<Element         >(    *elem_ptrs[data[0]], data[2], data[3], data[1]));
     }
-  }
-  // read face warping
-  auto ind_dset = file.openDataSet("/elements/face_warping/element_indices");
-  auto adj_dset = file.openDataSet("/elements/face_warping/node_adjustments");
-  adj_dset.getSpace().getSimpleExtentDims(dims);
-  for (unsigned row = 0; row < dims[0]; ++row) {
-    Deformed_element* elem = def_elem_ptrs[h5_read_value<int>(ind_dset, row)];
-    HEXED_ASSERT(elem, "file specifies face warping for a Cartesian element");
-    h5_read_row(adj_dset, dims[1], row, elem->node_adjustments());
   }
   cleanup();
 }

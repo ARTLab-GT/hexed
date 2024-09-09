@@ -32,8 +32,6 @@ class Deformed_element : public Element {
 
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
   virtual double jacobian_determinant(int i_qpoint);
-  //! \brief represents adjustments to face quadrature points to fit surfaces (details are complicated)
-  virtual double* node_adjustments(); //!< Layout: [i_dim][is_positive][i_face_qpoint]
 
   bool deformed() const override;
   double* kernel_face_normal(int i_face) override;

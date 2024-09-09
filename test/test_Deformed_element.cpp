@@ -22,13 +22,6 @@ TEST_CASE("Deformed_element") {
   element.face_normal(0) = &some_variable;
   element.face_normal(3) = &some_variable;
 
-  for (int i_adj = 0; i_adj < 16; ++i_adj) {
-    REQUIRE(element.node_adjustments()[i_adj] == 0.);
-  }
-  element.node_adjustments()[0] = 2.7;
-  element.node_adjustments()[4*2*2 - 1] = 0.04;
-  REQUIRE(element.node_adjustments()[0] == 2.7);
-  REQUIRE(element.node_adjustments()[4*2*2 - 1] == 0.04);
   REQUIRE(element.vertex(1).is_mobile());
 
   hexed::Storage_params params3d {1, 1, 3, 2};
@@ -41,8 +34,6 @@ TEST_CASE("Deformed_element") {
     hexed::Storage_params params2 {2, 4, 2, row_size};
     hexed::Deformed_element elem {params2, {0, 0}, 1., 0, hexed::Mat<2>{.03, .02}};
     elem.vertex(3).pos[0] = 0.63;
-    elem.node_adjustments()[2*3 + 1] =  0.2;
-    elem.node_adjustments()[3*3 + 1] = -0.1;
     auto pos = elem.position(basis);
     REQUIRE(pos(0)[0] == Catch::Approx(0.03));
     REQUIRE(pos(0)[7] == Catch::Approx(0.83));
@@ -63,7 +54,6 @@ TEST_CASE("Deformed_element") {
     REQUIRE(face_pos(1)(1)(1)[1] == pos(1)[5]);
 
     hexed::Deformed_element elem1 {params2};
-    elem1.node_adjustments()[1] = 0.1;
     auto pos1 = elem.position(basis);
     REQUIRE(pos1(0)[0] == Catch::Approx(0.0));
     REQUIRE(pos1(0)[6] == Catch::Approx(1.0));
@@ -71,7 +61,6 @@ TEST_CASE("Deformed_element") {
 
     hexed::Storage_params params3 {2, 5, 3, row_size};
     hexed::Deformed_element elem2 {params3, {}, 0.2};
-    elem2.node_adjustments()[4] = 0.01;
     auto pos2 = elem.position(basis);
     REQUIRE(pos2(0)[13] == Catch::Approx(0.101));
     REQUIRE(pos2(1)[13] == Catch::Approx(.1));
@@ -79,8 +68,6 @@ TEST_CASE("Deformed_element") {
 
     hexed::Gauss_legendre leg_basis {row_size};
     hexed::Deformed_element elem3 {params2, {}, 0.2};
-    elem3.node_adjustments()[1] = 0.1;
-    elem3.node_adjustments()[3] = -0.2;
     auto pos3 = elem.position(leg_basis);
     REQUIRE(pos3(0)[3] == Catch::Approx(0.08));
     REQUIRE(pos3(0)[4] == Catch::Approx(0.11));
@@ -95,7 +82,6 @@ TEST_CASE("Deformed_element") {
     hexed::Deformed_element elem0 {params2, {0, 0}, 0.2};
     hexed::Deformed_element elem1 {params2, {1, 1}, 0.2};
     elem0.vertex(3).pos = {0.8*0.2, 0.8*0.2, 0.};
-    elem1.node_adjustments()[6 + 1] = 0.1;
     // jacobian is correct
     for (int i_face = 0; i_face < 6; ++i_face) elem0.set_face(i_face, faces[i_face]);
     elem0.set_jacobian(basis);

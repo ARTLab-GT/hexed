@@ -224,12 +224,6 @@ class Boundary_perturbation : public hexed::Mesh_bc
   virtual void snap_vertices(hexed::Boundary_connection&) {}
   virtual void snap_node_adj(hexed::Boundary_connection& con, const hexed::Basis&)
   {
-    if (!con.element().node_adjustments()) return; // Cartesian elements don't have `node_adjustments()`, so in this case just exit
-    auto params {con.storage_params()};
-    const int nfq = params.n_qpoint()/params.row_size;
-    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-      con.element().node_adjustments()[(2*con.i_dim() + con.inside_face_sign())*nfq + i_qpoint] += 0.02*arbitrary[i_qpoint%12];
-    }
   }
 };
 

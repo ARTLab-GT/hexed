@@ -90,7 +90,6 @@ class Element : public Kernel_element {
   double* bulk_av_coef(); //!< layout: [i_qpoint]
   double* laplacian_av_coef(); //!< layout: [i_qpoint]
   double* art_visc_forcing(); //!< layout: [i_forcing][i_qpoint]
-  virtual double* node_adjustments() {return nullptr;} //!< \brief overriden by `Deformed_element`
   //! \brief returns whether the element is included in the masked mesh.
   //! \details value can be set with `Accessible_mesh::set_mask`
   int mask() const override {return _mask;}
