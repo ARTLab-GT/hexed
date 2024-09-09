@@ -8,7 +8,6 @@
 // for example, it invokes the Neighbor kernel direcly... honestly i should really just rewrite this function
 void hexed::Solver::snap_faces()
 {
-  #if 0
   // perform basic snapping
   const int nfq = params.n_qpoint()/params.row_size;
   auto& bc_cons {acc_mesh->boundary_connections()};
@@ -128,6 +127,5 @@ void hexed::Solver::snap_faces()
   }
   // clean up
   _get_cache();
-  #endif
 }
 

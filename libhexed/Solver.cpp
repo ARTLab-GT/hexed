@@ -1343,6 +1343,7 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
   auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim, name, var_names,
                                        _namespace->get<double>("flow_time"), Visualizer::block);
   int nv = var_names.size();
+  int nq = params.n_qpoint();
   std::vector<Int> out_shape(params.n_dim + 1, n_sample);
   out_shape[0] = params.n_dim + nv;
   std::vector<Int> qpoint_shape(params.n_dim + 1, params.row_size);
@@ -1351,10 +1352,13 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
+    Array<double> state({params.n_var, nq}, elem.state());
+    Array<double> zero {Array<double>::make_uniform({nq}, 0.)};
     auto sub = inter.make_sub();
     vis_variables::element(*sub.variables, elem);
     vis_variables::position(*sub.variables, elem, basis);
     vis_variables::state(*sub.variables, elem);
+    sub.subspace();
     sub.exec(expr);
     Array<double> qpoints(qpoint_shape);
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -1381,77 +1385,32 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
       visualizer->write_block(out(0, params.n_dim), out(params.n_dim, params.n_dim + nv));
     }
   }
-  visualizer.reset();
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"][sw_name].work_units_completed += elems.size();
 }
 
-void Solver::visualize_surface(std::string format, std::string name, int bc_sn, std::string expr,
-                               int n_sample, bool wireframe) {
+void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample, bool wireframe) {
   std::string sw_name = "surface";
   if (wireframe) sw_name = sw_name + " wireframe";
   Stopwatch_tree::Starter sw_starter(stopwatch["visualization"][sw_name]);
-  // compute variable names
-  auto& bc_cons {acc_mesh->boundary_connections()};
-  if (!bc_cons.size()) return;
-  Interpreter inter {_interpreter()};
-  std::vector<std::string> var_names;
-  {
-    auto sub = inter.make_sub();
-    vis_variables::surface(*sub.variables, bc_cons[0]);
-    sub.subspace();
-    sub.exec(expr);
-    var_names = sub.variables->names();
-  }
-  // setup
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
   HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");
+  auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim - 1, name, func, _namespace->get<double>("flow_time"), Visualizer::block);
   // convenience definitions
+  const int nfq = params.n_qpoint()/params.row_size;
   const int nd = params.n_dim;
-  const int nv = var_names.size();
-  auto visualizer = Visualizer::create(format, nd, wireframe ? 1 : nd - 1, name, var_names,
-                                       _namespace->get<double>("flow_time"), Visualizer::block);
+  const int nv = func.n_var(nd);
+  const int n_block {math::pow(n_sample, nd - 1)};
+  const int n_edge {math::pow(n_sample, nd - 2)};
+  // setup
   Mat<dyn, dyn> interp = basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.));
   Mat<dyn, dyn> boundary = basis.boundary();
-  std::vector<Int> out_shape(nd, n_sample);
-  out_shape[0] = nd + nv;
-  std::vector<Int> qpoint_shape(nd, params.row_size);
-  qpoint_shape[0] = nd + nv;
   // iterate through boundary connections and visualize a zone for each
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    auto& con {bc_cons[i_con]};
-    if (con.bound_cond_serial_n() == bc_sn) {
-      auto sub = inter.make_sub();
-      vis_variables::surface(*sub.variables, con);
-      sub.exec(expr);
-      Array<double> qpoints(qpoint_shape);
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        qpoints(i_dim) = sub.variables->lookup<Array<double>>("pos" + std::to_string(i_dim)).value();
-      }
-      for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
-        sub.variables->assign_array(qpoints(nd + i_var), var_names[i_var]);
-      }
-      if (wireframe) {
-        Array<double> edges {extrap_edges(basis, qpoints, interp)};
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          for (int i_edge = 0; i_edge < edges(i_dim).shape()[0]; ++i_edge) {
-            #pragma omp critical
-            visualizer->write_block(edges(i_dim)(i_edge)(0, nd),
-                                    edges(i_dim)(i_edge)(nd, nd + nv));
-          }
-        }
-      } else {
-        Array<double> out(out_shape);
-        for (int i_var = 0; i_var < nd + nv; ++i_var) {
-          out(i_var).vector() = math::hypercube_matvec(interp, qpoints(i_var).vector());
-        }
-        #pragma omp critical
-        visualizer->write_block(out(0, nd), out(nd, nd + nv));
-      }
-    }
-  }
-  #if 0
+  auto& bc_cons {acc_mesh->boundary_connections()};
+  std::vector<Int> pos_shape(params.n_dim, n_sample);
+  pos_shape[0] = params.n_dim;
+  std::vector<Int> out_shape(params.n_dim, n_sample);
+  out_shape[0] = nv;
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     auto& con {bc_cons[i_con]};
     if (con.bound_cond_serial_n() == bc_sn) {
@@ -1468,7 +1427,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
         }
       }
       if (wireframe) {
-        for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+        for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
           for (int i_sign = 0; i_sign < 2; ++i_sign) {
             Mat<dyn, dyn> interp_pos (n_edge, nd);
             for (int j_dim = 0; j_dim < nd; ++j_dim) {
@@ -1482,7 +1441,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
               Mat<> uniform = math::dimension_matvec(boundary(i_sign, all), qpoint_vars.col(i_var), i_dim);
               interp_vars.col(i_var) = math::hypercube_matvec(interp, uniform);
             }
-            visualizer->write_block(Array<double>({nd, n_sample}, interp_pos.data()),
+            visualizer->write_block(Array<double>({params.n_dim, n_sample}, interp_pos.data()),
                                     Array<double>({          nv, n_sample}, interp_vars.data()));
           }
         }
@@ -1501,7 +1460,6 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
       }
     }
   }
-  #endif
   visualizer.reset();
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"][sw_name].work_units_completed += bc_cons.size();
@@ -1527,9 +1485,9 @@ void Solver::visualize_contour(std::string format, std::string name, const Qpoin
   }
 }
 
-void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, std::string expr) {
+void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func) {
   Mesh::Reset_vertices reset(*acc_mesh);
-  visualize_surface(format, name, bc_sn, expr, 2);
+  visualize_surface(format, name, bc_sn, func, 2);
 }
 
 void Solver::vis_lts_constraints(std::string format, std::string name, int n_sample) {

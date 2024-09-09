@@ -445,8 +445,7 @@ Case::Case(std::string input_script)
           if (!edges || (_vari("vis_edges") && _vari("n_dim") + (v == "field") > 2)) {
             std::string file_name = wd + name + suffix;
             if (v == "surface") {
-              _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(),
-                                          vis_expr, n_sample, edges);
+              _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(), Boundary_expr(vis_vars, _inter), n_sample, edges);
             } else if (v == "field") {
               _solver().visualize_field(format, file_name, vis_expr, n_sample, edges);
               if (_vari("vis_lts_constraints")) _solver().vis_lts_constraints(format, wd + "lts_constraints" + suffix, n_sample);

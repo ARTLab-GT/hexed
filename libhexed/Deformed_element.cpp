@@ -7,6 +7,7 @@ Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, 
   Element{params, pos, mesh_size, ref_level, origin_arg, true, aniso_r_level},
   n_qpoint{params.n_qpoint()},
   jac_dat{(n_dim*n_dim + 1)*n_qpoint},
+  node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)},
   f_nrml{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}
 {}
 
@@ -110,6 +111,10 @@ double Deformed_element::jacobian(int i_dim, int j_dim, int i_qpoint) {
 
 double Deformed_element::jacobian_determinant(int i_qpoint) {
   return jac_dat(n_dim*n_dim*n_qpoint + i_qpoint);
+}
+
+double* Deformed_element::node_adjustments() {
+  return node_adj.data();
 }
 
 bool Deformed_element::deformed() const {return true;}
