@@ -53,4 +53,43 @@ void state(Namespace& space, Element& elem) {
   space.assign("tss", Array<double>({nq}, elem.time_step_scale()));
 }
 
+void surface(Namespace& space, Boundary_connection& con) {
+  auto params = con.storage_params();
+  int nfq = params.n_qpoint()/params.row_size;
+  // fetch surface data
+  int nrml_sign = 1 - 2*con.inside_face_sign();
+  Array<double> nrml {Array<double>({params.n_dim, nfq}, con.surface_normal()).copy()};
+  Array<double> pos({params.n_dim, nfq}, con.surface_position());
+  Array<double> state({params.n_var, nfq}, con.inside_face(false));
+  Array<double> flux({params.n_var, nfq});
+  double* ref_flux = con.flux_cache();
+  // compute normals and fluxes
+  for (int i_fqpoint = 0; i_fqpoint < nfq; ++i_fqpoint) {
+    double norm = 0;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) norm += math::pow(nrml(i_dim)[i_fqpoint], 2);
+    norm = std::sqrt(norm);
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) nrml(i_dim)[i_fqpoint] /= nrml_sign*norm;
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      flux(i_var)[i_fqpoint] = norm > 1e-3 ? -ref_flux[i_var*nfq + i_fqpoint]*nrml_sign/norm : 0;
+    }
+  }
+  // assign variables
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    space.assign(index("pos", i_dim), pos(i_dim).copy());
+    space.assign(index("normal", i_dim), nrml(i_dim).copy());
+    space.assign(index("visc_stress", i_dim), flux(i_dim).copy());
+    space.assign(index("momentum", i_dim), state(i_dim).copy());
+  }
+  for (int i_dim = params.n_dim; i_dim < 3; ++i_dim) {
+    space.assign(index("pos", i_dim), 0.);
+    space.assign(index("normal", i_dim), 0.);
+    space.assign(index("visc_stress", i_dim), 0.);
+    space.assign(index("momentum", i_dim), 0.);
+  }
+  space.assign("density", state(params.n_dim).copy());
+  space.assign("energy", state(params.n_dim + 1).copy());
+  space.assign("mass_flux", flux(params.n_dim).copy());
+  space.assign("heat_flux", flux(params.n_dim + 1).copy());
+}
+
 }

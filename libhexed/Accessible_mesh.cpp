@@ -53,72 +53,6 @@ void Accessible_mesh::id_boundary_verts() {
   }
 }
 
-void Accessible_mesh::snap_vertices() {
-  //! \todo this is a terrible way to find the max ref level. future self please fix
-  double min_sz = huge;
-  #pragma omp parallel for reduction(min : min_sz)
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    min_sz = std::max(min_sz, elems[i_elem].nominal_size());
-  }
-  if (tree) {
-    auto snap_extremes = [this]() {
-      for (int i_bc = 0; i_bc < 2*params.n_dim; ++i_bc) {
-        int bc_sn = tree_bcs[i_bc];
-        #pragma omp parallel for
-        for (auto& vert : boundary_verts[bc_sn]) {
-          int i_dim = i_bc/2;
-          int sign = i_bc%2;
-          vert->pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
-        }
-      }
-    };
-    // snap extremes before and after snapping to surface to ensure exact extreme snapping and accurate surface snapping
-    snap_extremes();
-    if (surf_geom) {
-      // if i just implement a better way to find the distance guess, we won't need all these atomics
-      #pragma omp parallel for
-      for (auto& vert : boundary_verts[surf_bc_sn]) {
-        Mat<> pos(params.n_dim);
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          #pragma omp atomic read
-          pos(i_dim) = vert->pos(i_dim);
-        }
-        double dist_guess = min_sz;
-        for (const Vertex& neighb : vert->get_neighbors()) {
-          Mat<> neighb_pos(params.n_dim);
-          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-            #pragma omp atomic read
-            neighb_pos(i_dim) = neighb.pos(i_dim);
-          }
-          dist_guess = std::max(dist_guess, (neighb_pos - pos).norm());
-        }
-        pos = surf_geom->nearest_point(pos, huge, dist_guess).point();
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          #pragma omp atomic write
-          vert->pos(i_dim) = pos(i_dim);
-        }
-      }
-    }
-    snap_extremes();
-  } else {
-    auto& bc_cons {boundary_connections()};
-    #pragma omp parallel for
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-      boundary_condition(bc_sn).mesh_bc->snap_vertices(bc_cons[i_con]);
-    }
-  }
-  // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with
-  // so now we put them back where they belong
-  auto& matchers = hanging_vertex_matchers();
-  #pragma omp parallel for
-  for (int i_match = 0; i_match < matchers.size(); ++i_match) {
-    matchers[i_match].match(&Element::vertex_position<0>);
-    matchers[i_match].match(&Element::vertex_position<1>);
-    matchers[i_match].match(&Element::vertex_position<2>);
-  }
-}
-
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
   _blocks.edges_2d();
   _blocks.faces_3d();
@@ -555,7 +489,6 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
     elem.record = sn;
-    elem.needs_snapping = !force;
     if (collapse) {
       int stride = math::pow(2, nd - 1 - face.i_dim);
       for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
@@ -579,22 +512,6 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     }
     if (offset > 0) {
       // readjust face node adjustments to account for offset
-      double* node_adj [] {face.elem.node_adjustments(), elem.node_adjustments()};
-      int nfq = params.n_qpoint()/params.row_size;
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        double* na [2][2];
-        for (int i = 0; i < 2; ++i) {
-          for (int face_sign = 0; face_sign < 2; ++face_sign) {
-            na[i][face_sign] = node_adj[i] + (2*face.i_dim + (face_sign == face.face_sign))*nfq + i_qpoint;
-          }
-        }
-        *na[1][1] = *na[0][1];
-        *na[0][1] = *na[1][0] = offset**na[0][0] + (1 - offset)**na[0][1];
-        for (int sign = 0; sign < 2; ++sign) {
-          *na[0][sign] /= 1 - offset;
-          *na[1][sign] /= offset;
-        }
-      }
       double* state [] {face.elem.state(), elem.state()};
       // interpolate data from original element to new ones
       for (int i_elem : {1, 0}) { // iterate in reverse order since new states for both elements depend on element 0
@@ -867,7 +784,6 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   extrude(true);
   connect_rest(surf_bc_sn);
   id_boundary_verts();
-  snap_vertices();
   id_smooth_verts();
   _n_verts = _blocks.verts().size();
 }
@@ -1467,7 +1383,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
     }
   }
   id_boundary_verts();
-  snap_vertices();
   id_smooth_verts();
   _n_verts = _blocks.verts().size();
   if (surf_geom) {
@@ -1497,24 +1412,6 @@ void update_pos(next::Vertex& vert, Mat<3> pos) {
 
 void Accessible_mesh::relax(double factor) {
   {
-    Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["legacy"]);
-    id_boundary_verts();
-    // calculate average neighbor position
-    #pragma omp parallel for
-    for (auto& vert : smooth_verts) {
-      vert->temp_vector.setZero();
-      auto neighbs = vert->get_neighbors();
-      for (auto& neighb : neighbs) vert->temp_vector += neighb.pos;
-      vert->temp_vector /= neighbs.size();
-    }
-    // update position
-    #pragma omp parallel for
-    for (auto& vert : smooth_verts) {
-      if (vert->is_mobile()) vert->pos = factor*vert->temp_vector + (1 - factor)*vert->pos;
-    }
-    snap_vertices();
-    _stopwatch["relax"]["legacy"].work_units_completed += smooth_verts.size();
-  }{
     // update `next::Vertex`s
     Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["optimization"]);
     _blocks.relax_vertices();
@@ -1937,19 +1834,6 @@ void Accessible_mesh::write(std::string name) {
     };
     write_tree(tree.get());
   }
-  // write face warping
-  file.createGroup("/elements/face_warping");
-  auto& def_elems = def.elements();
-  dims[0] = def_elems.size();
-  dims[1] = 1;
-  auto ind_dset = file.createDataSet("/elements/face_warping/element_indices", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
-  dims[1] = 2*params.n_dim*params.n_face_qpoint();
-  auto adj_dset = file.createDataSet("/elements/face_warping/node_adjustments", H5::PredType::NATIVE_DOUBLE, H5::DataSpace(2, dims));
-  for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
-    auto& elem = def_elems[i_elem];
-    h5_write_value(ind_dset, i_elem, elem.record);
-    h5_write_row(adj_dset, dims[1], i_elem, elem.node_adjustments());
-  }
 }
 
 void Accessible_mesh::read_file(std::string file_name) {
@@ -2061,13 +1945,6 @@ void Accessible_mesh::read_file(std::string file_name) {
   }
   // read face warping
   auto ind_dset = file.openDataSet("/elements/face_warping/element_indices");
-  auto adj_dset = file.openDataSet("/elements/face_warping/node_adjustments");
-  adj_dset.getSpace().getSimpleExtentDims(dims);
-  for (unsigned row = 0; row < dims[0]; ++row) {
-    Deformed_element* elem = def_elem_ptrs[h5_read_value<int>(ind_dset, row)];
-    HEXED_ASSERT(elem, "file specifies face warping for a Cartesian element");
-    h5_read_row(adj_dset, dims[1], row, elem->node_adjustments());
-  }
   cleanup();
 }
 

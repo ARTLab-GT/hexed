@@ -34,8 +34,7 @@ Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_si
   }
   first_pos(Eigen::seqN(0, n_dim)) += origin;
   // construct vertices
-  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert)
-  {
+  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
     // compute position of vertex
     Mat<3> vertex_pos = first_pos;
     int stride [3];
@@ -64,29 +63,12 @@ Storage_params Element::storage_params() {
 Array<double> Element::position(const Basis& basis) const {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
   Array<double> shape_pos = _shape->points();
+  Mat<dyn, dyn> interp = _shape->basis().interpolate(basis.nodes());
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
     auto vec = shape_pos(i_dim).vector();
-    vec = math::hypercube_matvec(_shape->basis().interpolate(basis.nodes()), vec);
+    vec = math::hypercube_matvec(interp, vec);
   }
   return shape_pos;
-}
-
-Array<double> Element::face_position(const Basis& basis) const {
-  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
-  Array<double> shape_pos = _shape->points();
-  int nd = params.n_dim;
-  std::vector<Int> shape {nd, 2, nd};
-  for (int i_dim = 0; i_dim < nd - 1; ++i_dim) shape.push_back(params.row_size);
-  Array<double> face_pos(shape);
-  Mat<dyn, dyn> extrap = basis.interpolate(Mat<2>{0., 1.});
-  for (int i_dim = 0; i_dim < nd; ++i_dim) {
-    for (int sign = 0; sign < 2; ++sign) {
-      for (int j_dim = 0; j_dim < nd; ++j_dim) {
-        face_pos(i_dim)(sign)(j_dim).vector() = math::dimension_matvec(extrap(sign, all), shape_pos(j_dim).vector(), i_dim);
-      }
-    }
-  }
-  return face_pos;
 }
 
 void Element::set_jacobian(const Basis& basis) {

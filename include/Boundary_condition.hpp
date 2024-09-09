@@ -31,26 +31,12 @@ class Flow_bc
   virtual ~Flow_bc() = default;
 };
 
-/*! \brief Abstract class representing a mesh boundary condition.
- * \details That is, a rule for snapping vertices and face node adjustments to the boundary.
- * This is the means for providing surface geometry to hexed.
- */
-class Mesh_bc
-{
-  public:
-  //! \note must set the `Vertex::lock` on all vertices it accesses
-  virtual void snap_vertices(Boundary_connection&) = 0;
-  virtual void snap_node_adj(Boundary_connection&, const Basis&) = 0;
-  virtual ~Mesh_bc() = default;
-};
-
 //! a complete boundary condition,
 //! which needs a boundary condition for both the mesh smoothing and the flow solution
 class Boundary_condition
 {
   public:
   std::unique_ptr<Flow_bc> flow_bc;
-  std::unique_ptr<Mesh_bc> mesh_bc;
 };
 
 /*! \brief Sets the ghost state to the provided freestream state.
@@ -221,36 +207,6 @@ class Outflow : public Flow_bc
   //! inverts flux (so that avg is zero)
   virtual void apply_state(Boundary_face&);
   virtual void apply_flux(Boundary_face&);
-};
-
-//! provides snapping functions that do nothing
-class Null_mbc : public Mesh_bc
-{
-  public:
-  virtual inline void snap_vertices(Boundary_connection&) {}
-  virtual inline void snap_node_adj(Boundary_connection&, const Basis&) {}
-};
-
-/*!
- * snaps to the nominal position along the `i_dim` of the boundary face.
- * You can think of this as snapping to a Cartesian plane.
- */
-class Nominal_pos : public Mesh_bc
-{
-  public:
-  virtual void snap_vertices(Boundary_connection&);
-  virtual inline void snap_node_adj(Boundary_connection&, const Basis&) {}
-};
-
-//! \brief snaps to a `Surface_geom`
-class Geom_mbc : public Mesh_bc
-{
-  std::unique_ptr<Surface_geom> geom;
-  public:
-  //! acquire ownership of `*surf_geom`, which faces/vertices will be snapped to
-  inline Geom_mbc(Surface_geom* surf_geom) : geom{surf_geom} {}
-  void snap_vertices(Boundary_connection&) override;
-  void snap_node_adj(Boundary_connection&, const Basis&) override;
 };
 
 }
