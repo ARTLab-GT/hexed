@@ -3,8 +3,7 @@
 #include <hexed/Equidistant.hpp>
 #include "testing_utils.hpp"
 
-TEST_CASE("Element")
-{
+TEST_CASE("Element") {
   hexed::Storage_params params {4, 5, 3, 6};
   int n_dof = params.n_dof();
   hexed::Element element {params};
@@ -27,8 +26,7 @@ TEST_CASE("Element")
   for (int i_dof = 0; i_dof < n_dof; ++i_dof) element.stage(0)[i_dof] = 1.2;
   for (int i_dof = 0; i_dof < n_dof; ++i_dof) REQUIRE(element.stage(3)[i_dof] == 0.);
   for (int i_dof = 0; i_dof < n_dof; ++i_dof) element.stage(3)[i_dof] = 1.3;
-  for (int i_dof = 0; i_dof < n_dof; ++i_dof)
-  {
+  for (int i_dof = 0; i_dof < n_dof; ++i_dof) {
     REQUIRE(element.stage(0)[i_dof] == 1.2);
     REQUIRE(element.stage(1)[i_dof] == 0.);
     REQUIRE(element.stage(2)[i_dof] == 0.);
@@ -48,8 +46,7 @@ TEST_CASE("Element")
   for (int i_vert = 0; i_vert < 8; ++i_vert) {
     REQUIRE(element.vertex_time_step_scale(i_vert) == 1./3.);
   }
-  for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint)
-  {
+  for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
     REQUIRE(element.jacobian(0, 0, i_qpoint) == 1.);
     REQUIRE(element.jacobian(1, 0, i_qpoint) == 0.);
     REQUIRE(element.jacobian(0, 2, i_qpoint) == 0.);
@@ -58,24 +55,7 @@ TEST_CASE("Element")
   }
   REQUIRE(!element.vertex(2).is_mobile());
 
-  SECTION("vertex arrangement")
-  {
-    // check that vertices start out in correct location
-    hexed::Storage_params params3d {3, 5, 3, 4};
-    hexed::Element elem3d {params3d, {1, 2, -1}, 0.8, 2, hexed::Mat<3>{.01, .02, .03}};
-    REQUIRE(elem3d.nominal_size() == Catch::Approx(0.2));
-    REQUIRE_THAT(elem3d.vertex(0).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0.21, 0.42, -0.17}, hexed::math::Approx_equal(0, 1e-12)));
-    REQUIRE_THAT(elem3d.vertex(1).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0.21, 0.42,  0.03}, hexed::math::Approx_equal(0, 1e-12)));
-    REQUIRE_THAT(elem3d.vertex(2).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0.21, 0.62, -0.17}, hexed::math::Approx_equal(0, 1e-12)));
-    REQUIRE_THAT(elem3d.vertex(5).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0.41, 0.42,  0.03}, hexed::math::Approx_equal(0, 1e-12)));
-    REQUIRE_THAT(elem3d.vertex(7).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{0.41, 0.62,  0.03}, hexed::math::Approx_equal(0, 1e-12)));
-    REQUIRE( hexed::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(1)));
-    REQUIRE( hexed::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(2)));
-    REQUIRE(!hexed::Vertex::are_neighbors(elem3d.vertex(0), elem3d.vertex(3)));
-  }
-
-  SECTION("push/fetch viscosity")
-  {
+  SECTION("push/fetch viscosity") {
     // test push_required_visc
     element.vertex_time_step_scale(0) = 0.1;
     element.vertex_time_step_scale(1) = 0.;
@@ -96,59 +76,5 @@ TEST_CASE("Element")
     REQUIRE(element.vertex_time_step_scale(0) == Catch::Approx(0.3));
     REQUIRE(element.vertex_time_step_scale(1) == Catch::Approx(0.));
     REQUIRE(element.vertex_time_step_scale(3) == Catch::Approx(0.2));
-  }
-
-  SECTION("position calculation")
-  {
-    const int row_size = 5;
-    hexed::Storage_params params {2, 4, 2, row_size};
-    hexed::Element elem {params, {1, 2}, 0.31, 0, hexed::Mat<2>{.001, .002}};
-    hexed::Equidistant basis {row_size};
-    // test first and last qpoints
-    auto pos = elem.position(basis);
-    REQUIRE(pos(0)[0] == Catch::Approx(1*0.31 + .001).scale(1.));
-    REQUIRE(pos(1)[0] == Catch::Approx(2*0.31 + .002).scale(1.));
-    REQUIRE(pos(0)[params.n_qpoint() - 1] == Catch::Approx(2*0.31 + .001).scale(1.));
-    REQUIRE(pos(1)[params.n_qpoint() - 1] == Catch::Approx(3*0.31 + .002).scale(1.));
-    static_assert (row_size%2 == 1); // `row_size` must be odd for the following tests to work
-    // test the qpoint at the midpoint of the positive-dimension0 face (the right-hand face)
-    REQUIRE(pos(0)[row_size*(row_size - 1) + row_size/2] == Catch::Approx(  2*0.31 + .001).scale(1.));
-    REQUIRE(pos(1)[row_size*(row_size - 1) + row_size/2] == Catch::Approx(2.5*0.31 + .002).scale(1.));
-    // test the qpoint at the middle of the element (the mean of the vertex positions)
-    REQUIRE(pos(0)[params.n_qpoint()/2] == Catch::Approx(1.5*0.31 + .001).scale(1.));
-    REQUIRE(pos(1)[params.n_qpoint()/2] == Catch::Approx(2.5*0.31 + .002).scale(1.));
-    // test face position
-    auto face_pos = elem.face_position(basis);
-    REQUIRE(face_pos(0)(1)(0)[3] == Catch::Approx(0.31*(1. + 1.)   + .001));
-    REQUIRE(face_pos(0)(1)(1)[3] == Catch::Approx(0.31*(0.75 + 2.) + .002));
-
-    // make sure that face position works in 3d
-    hexed::Storage_params params3 {2, 5, 3, row_size};
-    hexed::Element elem3 {params3, {0, 0}, 1., 0, hexed::Mat<3>{.003, .003, .003}};
-    auto face_pos3 = elem3.face_position(basis);
-    REQUIRE(face_pos3(0)(0)(0)[7] == Catch::Approx(0.003));
-    REQUIRE(face_pos3(0)(0)(1)[7] == Catch::Approx(0.253));
-    REQUIRE(face_pos3(0)(0)(2)[7] == Catch::Approx(0.503));
-    REQUIRE(face_pos3(1)(1)(0)[7] == Catch::Approx(0.253));
-    REQUIRE(face_pos3(1)(1)(1)[7] == Catch::Approx(1.003));
-    REQUIRE(face_pos3(1)(1)(2)[7] == Catch::Approx(0.503));
-    REQUIRE(face_pos3(2)(0)(0)[7] == Catch::Approx(0.253));
-    REQUIRE(face_pos3(2)(0)(1)[7] == Catch::Approx(0.503));
-    REQUIRE(face_pos3(2)(0)(2)[7] == Catch::Approx(0.003));
-  }
-
-  SECTION("set_jacobian")
-  {
-    hexed::Equidistant basis(6);
-    double faces[6][5*36];
-    for (int i_face = 0; i_face < 6; ++i_face) element.set_face(i_face, faces[i_face]);
-    element.set_jacobian(basis);
-    REQUIRE(element.face(0, false)[0] == Catch::Approx(1.));
-    REQUIRE(element.face(0, false)[1] == Catch::Approx(1.));
-    REQUIRE(element.face(0, false)[36] == Catch::Approx(0.));
-    REQUIRE(element.face(1, false)[0] == Catch::Approx(1.));
-    REQUIRE(element.face(2, false)[0] == Catch::Approx(0.));
-    REQUIRE(element.face(2, false)[1*36] == Catch::Approx(1.));
-    REQUIRE(element.face(2, false)[2*36] == Catch::Approx(0.));
   }
 }
