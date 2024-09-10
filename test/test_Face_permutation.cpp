@@ -60,8 +60,7 @@ void test_mesh(hexed::Accessible_mesh& mesh) {
   }
 }
 
-TEST_CASE("Face_permutation")
-{
+TEST_CASE("Face_permutation") {
   SECTION("2d") {
     hexed::Accessible_mesh mesh {{1, 4, 2, hexed::config::max_row_size}, 1.};
     test_mesh(mesh);
