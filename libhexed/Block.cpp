@@ -66,7 +66,25 @@ Mat<3> Vertex::_point(const std::vector<int>&) const {
   #pragma omp atomic update
   ++global_hacks::numbers[0];
   // the rest is to compute the position in the special case that the vertex is glued
-  Array<double> points = _glued_to.value().points(); // fetch _all_ of the nodes of the element `this` is glued to
+  int nd = _glued_to.value().n_dim();
+  int rs = _glued_to.value().row_size();
+  std::vector<Int> shape(nd + 1, rs);
+  shape[0] = 3;
+  Array<double> points(shape);
+  points = 0.;
+  for (int i_point = 0; i_point < (int)points.size()/3; ++i_point) {
+    bool skip = false;
+    std::vector<int> coords(nd);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      coords[i_dim] = i_point/math::pow(rs, nd - 1 - i_dim)%rs;
+      skip = skip || (_glued_coords[i_dim] == 0 && coords[i_dim] != 0       );
+      skip = skip || (_glued_coords[i_dim] == 1 && coords[i_dim] != (rs - 1));
+    }
+    if (!skip) {
+      Mat<3> p = _glued_to->point(coords);
+      for (int i_dim = 0; i_dim < 3; ++i_dim) points(i_dim)[i_point] = p(i_dim);
+    }
+  }
   Mat<3> p; // this is where we will put the computed position
   // compute the interpolation matrix
   Eigen::Map<const Mat<>> sample(_glued_coords.data(), _glued_coords.size());
@@ -326,11 +344,13 @@ Mat<3> Element_shape::_vertex_point(const std::vector<int>& coords) const {
   Mat<3> point = Mat<3>::Zero();
   for (int i_vert = 0; i_vert < math::pow(2, n_dim()); ++i_vert) {
     double weight = 1;
+    bool skip = false;
     for (int i_dim = 0; i_dim < n_dim(); ++i_dim) {
       bool sign = i_vert/vstride(n_dim(), i_dim)%2;
+      skip = skip || (coords[i_dim] == (row_size() - 1)*!sign);
       weight *= !sign + math::sign(sign)*_basis->node(coords[i_dim]);
     }
-    point += weight*_verts[i_vert].value().point({});
+    if (!skip) point += weight*_verts[i_vert].value().point({});
   }
   return point;
 }

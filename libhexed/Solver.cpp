@@ -1338,7 +1338,6 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
   auto& elems = acc_mesh->elements();
   if (!elems.size()) return;
-  std::cout << "number of vertices: " << acc_mesh->n_block_verts() << " " << std::flush;
   Interpreter inter {_interpreter()};
   std::vector<std::string> var_names;
   {
@@ -1359,22 +1358,18 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
   std::vector<Int> qpoint_shape(params.n_dim + 1, params.row_size);
   qpoint_shape[0] = params.n_dim + nv;
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  //#pragma omp parallel for
+  global_hacks::numbers[0] = 0;
+  #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     Array<double> state({params.n_var, nq}, elem.state());
     Array<double> zero {Array<double>::make_uniform({nq}, 0.)};
     auto sub = inter.make_sub();
     vis_variables::element(*sub.variables, elem);
-    sw["assign"].stopwatch.start();
     vis_variables::position(*sub.variables, elem, basis);
-    sw["assign"].stopwatch.pause();
     vis_variables::state(*sub.variables, elem);
-    sw["compute"].stopwatch.start();
     sub.subspace();
     sub.exec(expr);
-    sw["compute"].stopwatch.pause();
-    sw["interpolate"].stopwatch.start();
     Array<double> qpoints(qpoint_shape);
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
       qpoints(i_dim) = sub.variables->lookup<Array<double>>("pos" + std::to_string(i_dim)).value();
@@ -1399,8 +1394,8 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
       #pragma omp critical
       visualizer->write_block(out(0, params.n_dim), out(params.n_dim, params.n_dim + nv));
     }
-    sw["interpolate"].stopwatch.pause();
   }
+  std::cout << "[glued vertex calls: " << global_hacks::numbers[0] << "]" << std::flush;
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"][sw_name].work_units_completed += elems.size();
 }
