@@ -82,23 +82,6 @@ Array<double> Element::vis_position(const Basis& basis) const {
 }
 
 Array<double> Element::face_position(const Basis& basis) const {
-  #if 0
-  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
-  Array<double> shape_pos = _shape->points();
-  int nd = params.n_dim;
-  std::vector<Int> shape {nd, 2, nd};
-  for (int i_dim = 0; i_dim < nd - 1; ++i_dim) shape.push_back(params.row_size);
-  Array<double> face_pos(shape);
-  Mat<dyn, dyn> extrap = basis.interpolate(Mat<2>{0., 1.});
-  for (int i_dim = 0; i_dim < nd; ++i_dim) {
-    for (int sign = 0; sign < 2; ++sign) {
-      for (int j_dim = 0; j_dim < nd; ++j_dim) {
-        face_pos(i_dim)(sign)(j_dim).vector() = math::dimension_matvec(extrap(sign, all), shape_pos(j_dim).vector(), i_dim);
-      }
-    }
-  }
-  return face_pos;
-  #else
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
   Array<double> shape_pos = _shape->points();
   int nd = params.n_dim;
@@ -106,8 +89,7 @@ Array<double> Element::face_position(const Basis& basis) const {
   for (int i_dim = 0; i_dim < nd - 1; ++i_dim) shape.push_back(params.row_size);
   Array<double> face_pos(shape);
   Mat<dyn, dyn> boundary = _shape->basis().boundary();
-  //Mat<dyn, dyn> interp = _shape->basis().interpolate(basis.nodes());
-  Mat<dyn, dyn> interp = Mat<dyn, dyn>::Identity(params.row_size, params.row_size);
+  Mat<dyn, dyn> interp = _shape->basis().interpolate(basis.nodes());
   for (int i_dim = 0; i_dim < nd; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       for (int j_dim = 0; j_dim < nd; ++j_dim) {
@@ -119,7 +101,6 @@ Array<double> Element::face_position(const Basis& basis) const {
     }
   }
   return face_pos;
-  #endif
 }
 
 void Element::set_jacobian(const Basis& basis) {

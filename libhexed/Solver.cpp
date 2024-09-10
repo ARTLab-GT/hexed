@@ -14,7 +14,6 @@
 #include <hexed/stabilizing_art_visc.hpp>
 #include <hexed/Array.hpp>
 #include <hexed/vis_variables.hpp>
-#include <hexed/global_hacks.hpp>
 
 namespace hexed {
 
@@ -181,7 +180,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
 , _implicit{implicit}
 , _preti_level{0}
 {
-  global_hacks::numbers.emplace_back(0);
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
   _namespace->assign_default("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
@@ -243,13 +241,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   stopwatch.emplace("boundary conditions", "(boundary connection)*(time integration stage)");
   stopwatch.emplace("visualization", "file");
   stopwatch["visualization"].emplace("field", "element");
-  stopwatch["visualization"]["field"].emplace("assign", "unit");
-  stopwatch["visualization"]["field"].emplace("compute", "unit");
-  stopwatch["visualization"]["field"].emplace("interpolate", "unit");
   stopwatch["visualization"].emplace("field wireframe", "element");
-  stopwatch["visualization"]["field wireframe"].emplace("assign", "unit");
-  stopwatch["visualization"]["field wireframe"].emplace("compute", "unit");
-  stopwatch["visualization"]["field wireframe"].emplace("interpolate", "unit");
   stopwatch["visualization"].emplace("surface", "surface face");
   stopwatch["visualization"].emplace("surface wireframe", "surface face");
   // initialize advection state to 1
@@ -1334,7 +1326,6 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
   std::string sw_name = "field";
   if (wireframe) sw_name = sw_name + " wireframe";
   Stopwatch_tree::Starter sw_starter(stopwatch["visualization"][sw_name]);
-  auto& sw = stopwatch["visualization"][sw_name];
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
   auto& elems = acc_mesh->elements();
   if (!elems.size()) return;
@@ -1352,18 +1343,14 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
   auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim, name, var_names,
                                        _namespace->get<double>("flow_time"), Visualizer::block);
   int nv = var_names.size();
-  int nq = params.n_qpoint();
   std::vector<Int> out_shape(params.n_dim + 1, n_sample);
   out_shape[0] = params.n_dim + nv;
   std::vector<Int> qpoint_shape(params.n_dim + 1, params.row_size);
   qpoint_shape[0] = params.n_dim + nv;
   Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  global_hacks::numbers[0] = 0;
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    Array<double> state({params.n_var, nq}, elem.state());
-    Array<double> zero {Array<double>::make_uniform({nq}, 0.)};
     auto sub = inter.make_sub();
     vis_variables::element(*sub.variables, elem);
     vis_variables::position(*sub.variables, elem, basis);
@@ -1395,7 +1382,6 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
       visualizer->write_block(out(0, params.n_dim), out(params.n_dim, params.n_dim + nv));
     }
   }
-  std::cout << "[glued vertex calls: " << global_hacks::numbers[0] << "]" << std::flush;
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"][sw_name].work_units_completed += elems.size();
 }

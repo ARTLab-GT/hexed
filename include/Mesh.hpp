@@ -215,7 +215,6 @@ class Mesh {
   };
   //! \brief Obtain performance data.
   virtual const Stopwatch_tree& stopwatch_tree() const = 0;
-  virtual Int n_block_verts() const = 0;
   //!\}
 
   //! \name I/O

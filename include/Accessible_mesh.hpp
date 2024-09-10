@@ -103,7 +103,6 @@ class Accessible_mesh : public Mesh {
   };
 
   public:
-  inline Int n_block_verts() const override {return _blocks.n_actual_verts();}
   //! \brief how far must the center of an element be from the geometry relative to the nominal size
   //! \details Defaults to \f$ \frac{\sqrt{n_d}}{2} \f$. You can modify it, but it cannot be less than this.
   double buffer_dist;
