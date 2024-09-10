@@ -147,8 +147,6 @@ class Solver {
   //! `.state.h5` will be appended to file name
   void read_state(std::string file_name);
   Storage_params storage_params();
-  //! warps the boundary elements such that the element faces coincide with the boundary at their quadrature points.
-  void snap_faces();
   /*! \brief compute the Jacobian of all elements based on the current position of the vertices
    * and value of any face warping.
    * \details Mesh topology must be valid (no duplicate or missing connections) before calling this function.

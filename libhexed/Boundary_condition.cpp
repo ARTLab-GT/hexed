@@ -507,49 +507,6 @@ void Geom_mbc::snap_vertices(Boundary_connection& con)
 
 void Geom_mbc::snap_node_adj(Boundary_connection& con, const Basis& basis)
 {
-  if (!con.element().get_is_deformed() || !con.element().needs_snapping) return; // Cartesian elements don't have `node_adjustments()`, so in this case just exit
-  Gauss_lobatto lob(std::max(2, basis.row_size - 1));
-  Mat<dyn, dyn> to_lob = basis.interpolate(lob.nodes());
-  Mat<dyn, dyn> from_lob = lob.interpolate(basis.nodes());
-  auto params {con.storage_params()};
-  const int nd = params.n_dim;
-  int nlq = math::pow(lob.row_size, nd - 1);
-  const int nfq = params.n_qpoint()/params.row_size;
-  //Eigen::Map<Mat<>> adjustments(con.element().node_adjustments() + (2*con.i_dim() + con.inside_face_sign())*nfq, nfq);
-  Mat<> adjustments(nfq);
-  #if 0
-  adjustments.setZero();
-  #else
-  adjustments = Mat<>::Zero(nfq);
-  Mat<> face_adj = Mat<>::Zero(nlq);
-  // get position on this and opposite face
-  Array<double> orig_face_pos {con.element().face_position(basis)(con.i_dim()).copy()};
-  Array<double> face_pos {orig_face_pos.copy()};
-  Mat<dyn, dyn> lob_pos [2] {{nlq, nd}, {nlq, nd}};
-  for (int face_sign = 0; face_sign < 2; ++face_sign) {
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      lob_pos[face_sign](all, i_dim) = math::hypercube_matvec(to_lob, face_pos(face_sign)(i_dim).vector());
-    }
-  }
-  bool& snapping_problem = con.element().snapping_problem;
-  snapping_problem = false;
-  //
-  for (int i_qpoint = 0; i_qpoint < nlq; ++i_qpoint) {
-    auto sects = geom->intersections(lob_pos[0](i_qpoint, all), lob_pos[1](i_qpoint, all));
-    // set the node adjustment to match the nearest intersection, if any of them are reasonably close
-    double best_adj = 0.;
-    double distance = 1.;
-    for (double sect : sects) {
-      double adj = sect - con.inside_face_sign();
-      if (std::abs(adj) < distance) {
-        best_adj = adj;
-        distance = std::abs(adj);
-      }
-    }
-    face_adj(i_qpoint) = best_adj;
-    snapping_problem = snapping_problem || distance > .999;
-  }
-  #endif
 }
 
 }

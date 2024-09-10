@@ -7,7 +7,6 @@ Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, 
   Element{params, pos, mesh_size, ref_level, origin_arg, true, aniso_r_level},
   n_qpoint{params.n_qpoint()},
   jac_dat{(n_dim*n_dim + 1)*n_qpoint},
-  node_adj{Eigen::VectorXd::Zero(n_qpoint/params.row_size*n_dim*2)},
   f_nrml{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}
 {}
 
