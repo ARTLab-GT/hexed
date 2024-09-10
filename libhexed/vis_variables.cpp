@@ -25,7 +25,7 @@ void element(Namespace& space, Element& elem) {
 }
 
 void position(Namespace& space, Element& elem, const Basis& basis) {
-  Array<double> pos {elem.position(basis)};
+  Array<double> pos {elem.vis_position(basis)};
   for (int i_dim = 0; i_dim < pos.shape()[0]; ++i_dim) {
     space.assign(index("pos", i_dim), pos(i_dim).copy());
   }

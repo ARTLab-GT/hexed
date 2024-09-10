@@ -351,6 +351,7 @@ class Mesh_blocks {
   static const int no_face;
   const int n_dim; //!< \brief number of dimensions (physical and topological)
   const Basis& basis; //!< \brief `Basis` used by all `Block`s in this mesh.
+  inline Int n_actual_verts() const {return _interior_verts.size() + _boundary_verts.size();}
 
   private:
   std::vector<Vertex> _interior_verts;

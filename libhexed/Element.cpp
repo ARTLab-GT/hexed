@@ -71,6 +71,16 @@ Array<double> Element::position(const Basis& basis) const {
   return shape_pos;
 }
 
+Array<double> Element::vis_position(const Basis& basis) const {
+  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
+  Array<double> shape_pos = _shape->points();
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    auto vec = shape_pos(i_dim).vector();
+    vec = math::hypercube_matvec(_shape->basis().interpolate(basis.nodes()), vec);
+  }
+  return shape_pos;
+}
+
 Array<double> Element::face_position(const Basis& basis) const {
   #if 0
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");

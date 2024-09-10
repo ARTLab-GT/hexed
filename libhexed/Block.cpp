@@ -1,6 +1,7 @@
 #include <hexed/Block.hpp>
 #include <hexed/Visualizer.hpp>
 #include <hexed/vertex_inds.hpp>
+#include <hexed/global_hacks.hpp>
 
 namespace hexed::next {
 
@@ -62,6 +63,8 @@ Mat<3> Vertex::_point(const std::vector<int>&) const {
   // usually, the vertex will not be glued or a shadow and we can just return the `pos`
   if (_shadowed) return _shadowed->point({});
   if (!_glued_to) return pos;
+  #pragma omp atomic update
+  ++global_hacks::numbers[0];
   // the rest is to compute the position in the special case that the vertex is glued
   Array<double> points = _glued_to.value().points(); // fetch _all_ of the nodes of the element `this` is glued to
   Mat<3> p; // this is where we will put the computed position
