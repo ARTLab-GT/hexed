@@ -71,16 +71,6 @@ Array<double> Element::position(const Basis& basis) const {
   return shape_pos;
 }
 
-Array<double> Element::vis_position(const Basis& basis) const {
-  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
-  Array<double> shape_pos = _shape->points();
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    auto vec = shape_pos(i_dim).vector();
-    vec = math::hypercube_matvec(_shape->basis().interpolate(basis.nodes()), vec);
-  }
-  return shape_pos;
-}
-
 Array<double> Element::face_position(const Basis& basis) const {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
   Array<double> shape_pos = _shape->points();
@@ -179,6 +169,7 @@ void Element::set_face(int i_face, double* data) {faces[i_face] = data;}
 bool Element::is_connected(int i_face) {return faces[i_face];}
 
 void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
+  HEXED_ASSERT(blocks.n_dim == params.n_dim, "Dimensionality of `this` and `blocks` does not match.");
   _shape.reset(new next::Element_shape{blocks.create_element(vertex(0).pos, nominal_size(), boundary_face)});
 }
 next::Element_shape& Element::shape() {

@@ -76,7 +76,6 @@ class Element : public Kernel_element {
 
   Storage_params storage_params();
   Array<double> position(const Basis&) const;
-  Array<double> vis_position(const Basis&) const;
   Array<double> face_position(const Basis&) const;
   virtual void set_jacobian(const Basis& basis);
   inline double nominal_size() const override {return _nom_sz;}
