@@ -24,6 +24,10 @@ TEST_CASE("Vis_data") {
                                                                        hexed::math::Approx_equal(1e-6)));
   REQUIRE_THAT(sample.column(1).vector(), Catch::Matchers::RangeEquals(std::vector<double>{.4, .2, .6, .4*.4 + .2*.2 + .6*.6},
                                                                        hexed::math::Approx_equal(1e-6)));
+  auto interior = vis.interior(21);
+  REQUIRE_THAT(interior.shape(), Catch::Matchers::RangeEquals(std::vector<int>{4, 21, 21, 21}));
+  REQUIRE(interior(1)(3)(7)[9] == Catch::Approx(7/20.));
+  REQUIRE(interior(3)(3)(7)[9] == Catch::Approx((3*3 + 7*7 + 9*9)/20./20.));
   #if 0
   // create some arbitrarily-shaped elements
   hexed::Deformed_element elem3({2, 5, 3, hexed::config::max_row_size});

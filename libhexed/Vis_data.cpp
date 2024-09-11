@@ -29,6 +29,15 @@ Array<double> Vis_data::sample(Array<double> coords) const {
   return s;
 }
 
+Array<double> Vis_data::interior(int n_sample) const {
+  Array<double> result(hypercubes(_n_var, _n_dim, n_sample));
+  Mat<dyn, dyn> interp = _basis.interpolate(Mat<>::LinSpaced(n_sample, 0., 1.));
+  for (int i_var = 0; i_var < _n_var; ++i_var) {
+    result(i_var).vector() = math::hypercube_matvec(interp, _data(i_var).vector());
+  }
+  return result;
+}
+
 Array<double> Vis_data::_sample(Array<double> data, Array<double> coords) const {
   Int n_sample = coords(0).size();
   Array<double> s({n_sample});

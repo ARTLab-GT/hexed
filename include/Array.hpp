@@ -28,6 +28,12 @@ namespace hexed {
 constexpr Int whatever = -1; //!< \brief used in `Array<T>::reshaped()`
 constexpr Int same = -2; //!< \brief used in `Array<T>::reshaped()`
 
+inline std::vector<Int> hypercubes(Int n_var, Int n_dim, Int row_size) {
+  std::vector<Int> shape(n_dim + 1, row_size);
+  shape[0] = n_var;
+  return shape;
+}
+
 /*! \brief Represents a dynamic-sized multidimensional array.
  * \details This is an array-style container designed to meet the following objectives:
  * - Data is contiguous in memory.

@@ -22,6 +22,7 @@ class Vis_data {
    * \return Array of data sampled at the specified points. Layout: [n_var][n_sample_point]
    */
   Array<double> sample(Array<double> coords) const;
+  Array<double> interior(int n_sample) const;
   #if 0
   /*! \brief interpolate function to `n_sample + 1` uniformly spaced points along element edges
    * \details layout: [number of edges in element][n_var (of Qpoint_func)][n_sample]
