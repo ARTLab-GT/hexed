@@ -225,7 +225,7 @@ class Array {
   }
   //! \brief Returns the total size of the array.
   //! \details This is the number of values you can access with the `[]` operator, or equivalently the product of the entries of `shape()`.
-  Int size() const {return bool(_order)*_strides[0];}
+  Int size() const {return bool(_order)*_strides[0]/_strides[_order];}
   //! \brief `true` iff `this` and `other` have the same `shape()`.
   //! \details It's okay to call this on arrays of different `order()`; naturally it will return `false`.
   bool same_shape(const Array<T>& other) {
@@ -251,7 +251,7 @@ class Array {
     CONST T& operator[](Int i) CONST { \
       HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `[]`"); \
       HEXED_ARRAY_ASSERT(i < size(), "indexing an `Array` out of bounds with `[]`"); \
-      return _data[i]; \
+      return _data[i*_strides[_order]]; \
     } \
     /*! \brief Creates an array as a reference to `this`'s data */ \
     CONST Array<T> operator()() CONST {return {_order, _data, false, _shape, _strides};} \
@@ -285,6 +285,9 @@ class Array {
       std::vector<Int> s = shape(); \
       s[0] = std::max(Int(0), std::min(stop, _shape[0]) - start); \
       return {s, _data + start*_strides[1]}; \
+    } \
+    CONST Array column(Int i) CONST { \
+      return {_order - 1, _data + i*_strides[_order], false, _shape, _strides}; \
     } \
     /*! \brief Returns an array referencing the same data as `this` but with a different shape.
      * \details The new size must be less than or equal to the old size, or else behavior is undefined.
