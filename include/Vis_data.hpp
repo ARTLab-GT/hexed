@@ -13,12 +13,15 @@ namespace hexed {
 class Vis_data {
   public:
   /*!
-   * \param elem Element for which visualization is to be performed
-   * \param func Computes variables to be visualized
+   * \param qpoint_data Data to be visualized, at the quadrature points.
    * \param basis Basis with which to perform interp/extrapolation
-   * \param time Flow time used to compute output variables
    */
-  Vis_data(Array<double> data, const Basis& basis);
+  Vis_data(Array<double> qpoint_data, const Basis& basis);
+  /*! \brief Samples the quadrature point data at a set of arbitrary reference coordinates.
+   * \param coords Array of reference coordinates to sample at. Layout: [n_dim][n_sample_point]
+   * \return Array of data sampled at the specified points. Layout: [n_var][n_sample_point]
+   */
+  Array<double> sample(Array<double> coords) const;
   #if 0
   /*! \brief interpolate function to `n_sample + 1` uniformly spaced points along element edges
    * \details layout: [number of edges in element][n_var (of Qpoint_func)][n_sample]
@@ -40,11 +43,6 @@ class Vis_data {
     Eigen::MatrixXd normals;
     Eigen::MatrixXi elem_vert_inds; //!< indices of contour elements (line segments/quads). layout: [i_element][math::pow(2, n_dim - 1)]
   };
-  /*! \brief sample the function at a set of points given in reference coordinates
-   * \param ref_coords: reference coordinates of sample points. layout: [n_sample][n_dim]
-   * \returns values of visualization variables at sample points. layout: [n_sample][n_var]
-   */
-  Eigen::MatrixXd sample(Eigen::MatrixXd ref_coords);
   /*! \brief compute a contour line/surface where the `i_var`th variable is equal to `value`
    * \details the number of sample points in each direction is `2*n_div + 1`
    */

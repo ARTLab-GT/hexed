@@ -21,7 +21,15 @@ Vis_data::Vis_data(Array<double> data, const Basis& basis)
 , _basis{basis}
 {}
 
+Array<double> Vis_data::sample(Array<double> coords) const {
+  HEXED_ASSERT(coords.order(), "`coords` must be order-2.");
+  HEXED_ASSERT(coords.shape()[0] == _n_dim, "`coords` must have one row for each reference coordinate.");
+  Array<double> s({_n_var, coords(0).size()});
+  return s;
+}
+
 Array<double> Vis_data::_sample(Array<double> data, Array<double> coords) const {
+  return Array<double>({});
 }
 
 #if 0
