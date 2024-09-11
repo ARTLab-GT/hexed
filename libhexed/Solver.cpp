@@ -1273,10 +1273,10 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
   for (int i_var = 0; i_var < n_var; ++i_var) {
     bounds[i_var] = {std::numeric_limits<double>::max(), -std::numeric_limits<double>::max()};
   }
+  #if 0
   const int n_block = math::pow(n_sample, params.n_dim);
   auto& elems = acc_mesh->elements();
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem)
-  {
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     Element& elem {elems[i_elem]};
     Eigen::VectorXd vars = Vis_data(elem, func, basis, _namespace->get<double>("flow_time")).interior(n_sample);
     for (int i_var = 0; i_var < n_var; ++i_var) {
@@ -1285,6 +1285,7 @@ std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func,
       bounds[i_var][1] = std::max(var.maxCoeff(), bounds[i_var][1]);
     }
   }
+  #endif
   return bounds;
 }
 
@@ -1462,6 +1463,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
 }
 
 void Solver::visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by, const Qpoint_func& output_variables, int n_sample) {
+  #if 0
   auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, output_variables,
                                        _namespace->get<double>("flow_time"), Visualizer::block);
   Position_func pos_func;
@@ -1479,6 +1481,7 @@ void Solver::visualize_contour(std::string format, std::string name, const Qpoin
     visualizer->write_unstruct(Array<int>({int(inds.cols()), int(inds.rows())}, inds.data()),
                                arr(0, params.n_dim), arr(params.n_dim, params.n_dim + nv));
   }
+  #endif
 }
 
 void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func) {

@@ -1,27 +1,24 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Vis_data.hpp>
-#include <hexed/Deformed_element.hpp>
-#include <hexed/Domain_func.hpp>
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/config.hpp>
-#include <hexed/Spacetime_func.hpp>
 
-class Rad_sq : public hexed::Spacetime_func
-{
-  Eigen::Vector3d center;
-  public:
-  Rad_sq(Eigen::Vector3d c) : center{c} {}
-  virtual int n_var(int n_dim) const {return 1;}
-  virtual std::vector<double> operator()(std::vector<double> pos, double time) const
-  {
-    Eigen::Map<Eigen::VectorXd> p(pos.data(), pos.size());
-    Eigen::Vector3d q = p - center;
-    return {(q.transpose()*q)[0]};
+TEST_CASE("Vis_data") {
+  const int row_size = hexed::config::max_row_size;
+  hexed::Array<double> data({4, row_size, row_size, row_size});
+  hexed::Gauss_legendre basis(row_size);
+  for (int i = 0; i < row_size; ++i) {
+    for (int j = 0; j < row_size; ++j) {
+      for (int k = 0; k < row_size; ++k) {
+        data(0)(i)(j)(k) = basis.node(i);
+        data(1)(i)(j)(k) = basis.node(j);
+        data(2)(i)(j)(k) = basis.node(k);
+      }
+    }
   }
-};
-
-TEST_CASE("Vis_data")
-{
+  data(3) = data(0)*data(0) + data(1)*data(1) + data(2)*data(2);
+  hexed::Vis_data vis(data, basis);
+  #if 0
   // create some arbitrarily-shaped elements
   hexed::Deformed_element elem3({2, 5, 3, hexed::config::max_row_size});
   hexed::Deformed_element elem2({2, 4, 2, hexed::config::max_row_size});
@@ -178,4 +175,5 @@ TEST_CASE("Vis_data")
       }
     }
   }
+  #endif
 }

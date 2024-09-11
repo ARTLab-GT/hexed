@@ -1,29 +1,16 @@
 #ifndef HEXED_VIS_DATA_HPP_
 #define HEXED_VIS_DATA_HPP_
 
-#include "Element.hpp"
-#include "Qpoint_func.hpp"
 #include "Basis.hpp"
 #include "Array.hpp"
 
 namespace hexed {
 
-/*!
- * Computes data to be visualized for a single element
- * (e.g. edge positions, non-conserved variables, values at uniformly-spaced sample points)
+/*! \brief Computes data to be visualized for a single element
+ * \details (e.g. edge positions, non-conserved variables, values at uniformly-spaced sample points)
  * without knowing anything about the choice of visualization software.
  */
 class Vis_data {
-  int n_dim;
-  int n_edge;
-  int row_size;
-  int n_qpoint;
-  int n_var;
-  Element& el;
-  const Basis& bas;
-  Eigen::VectorXd vars;
-  Eigen::MatrixXd sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen::MatrixXd ref_coords);
-
   public:
   /*!
    * \param elem Element for which visualization is to be performed
@@ -31,7 +18,8 @@ class Vis_data {
    * \param basis Basis with which to perform interp/extrapolation
    * \param time Flow time used to compute output variables
    */
-  Vis_data(Element& elem, const Qpoint_func& func, const Basis& basis, double time = 0.);
+  Vis_data(Array<double> data, const Basis& basis);
+  #if 0
   /*! \brief interpolate function to `n_sample + 1` uniformly spaced points along element edges
    * \details layout: [number of edges in element][n_var (of Qpoint_func)][n_sample]
    */
@@ -61,6 +49,17 @@ class Vis_data {
    * \details the number of sample points in each direction is `2*n_div + 1`
    */
   Contour compute_contour(double value, int n_div = 10, int n_newton = 4, double tol = 1e-3);
+  #endif
+
+  private:
+  Array<double> _sample(Array<double> data, Array<double> coords) const;
+  Array<double> _data;
+  Int _n_dim;
+  Int _n_edge;
+  Int _row_size;
+  Int _n_qpoint;
+  Int _n_var;
+  const Basis& _basis;
 };
 
 }

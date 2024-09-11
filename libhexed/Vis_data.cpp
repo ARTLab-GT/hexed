@@ -1,8 +1,30 @@
-#include <Vis_data.hpp>
-#include <math.hpp>
+#include <hexed/Vis_data.hpp>
 
 namespace hexed {
 
+Array<double> check(Array<double>&& data) {
+  HEXED_ASSERT(data.order() >= 2, "Order of `data` is too small.");
+  auto shape = data.shape();
+  for (int i_dim = 2; i_dim < data.order(); ++i_dim) {
+    HEXED_ASSERT(shape[i_dim] == shape[1], "All dimensions except the first must be the same.");
+  }
+  return data;
+}
+
+Vis_data::Vis_data(Array<double> data, const Basis& basis)
+: _data{check(std::move(data))}
+, _n_dim{_data.order() - 1}
+, _n_edge{math::pow(2, _n_dim - 1)*_n_dim}
+, _row_size{_data.shape()[1]}
+, _n_qpoint{_data(0).size()}
+, _n_var{_data.shape()[0]}
+, _basis{basis}
+{}
+
+Array<double> Vis_data::_sample(Array<double> data, Array<double> coords) const {
+}
+
+#if 0
 Eigen::MatrixXd Vis_data::sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen::MatrixXd ref_coords) {
   int nv = qpoint_data.size()/n_qpoint;
   const int n_sample = ref_coords.rows();
@@ -22,23 +44,6 @@ Eigen::MatrixXd Vis_data::sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen:
     }
   }
   return result;
-}
-
-Vis_data::Vis_data(Element& elem, const Qpoint_func& func, const Basis& basis, double time)
-: n_dim{elem.storage_params().n_dim}
-, n_edge{math::pow(2, n_dim - 1)*n_dim}
-, row_size{elem.storage_params().row_size}
-, n_qpoint{elem.storage_params().n_qpoint()}
-, n_var{func.n_var(n_dim)}
-, el{elem}
-, bas{basis}
-, vars(n_qpoint*n_var)
-{
-  // fetch data at quadrature points
-  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-    auto v = func(elem, bas, i_qpoint, time);
-    for (int i_var = 0; i_var < n_var; ++i_var) vars(n_qpoint*i_var + i_qpoint) = v[i_var];
-  }
 }
 
 Eigen::VectorXd Vis_data::edges(int n_sample) {
@@ -253,5 +258,6 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newto
   }
   return con;
 }
+#endif
 
 }
