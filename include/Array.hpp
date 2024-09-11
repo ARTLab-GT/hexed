@@ -336,7 +336,9 @@ class Array {
     CONST##iterator begin() CONST {return data();} /*!< \brief %Iterator to beginning of (flat) data. */ \
     CONST##iterator end() CONST {return data() + size();} /*!< \brief %Iterator 1 word past the end of (flat) data. */ \
     /*! \brief view of data as an `Eigen` vector object */ \
-    CONST Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector() CONST {return {_data, size()};} \
+    CONST Eigen::Map<Eigen::Matrix<T, dyn, 1>, Eigen::Unaligned, Eigen::InnerStride<>> vector() CONST { \
+      return {_data, size(), Eigen::InnerStride<>(_strides[_order])}; \
+    } \
 
   QUALIFIED()
   QUALIFIED(const)

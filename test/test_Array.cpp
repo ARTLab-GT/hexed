@@ -132,6 +132,7 @@ TEST_CASE("Array") {
     REQUIRE(col1.order() == 1);
     REQUIRE_THAT(col1.shape(), Catch::Matchers::RangeEquals(std::vector<int>{10}));
     REQUIRE(col1[6] == whole(6)(2)[4]);
+    REQUIRE(col1.vector()(6) == whole(6)(2)[4]);
     REQUIRE(whole.order() == 3);
     REQUIRE_THAT(whole.shape(), Catch::Matchers::RangeEquals(std::vector<int>{10, 10, 10}));
   }
