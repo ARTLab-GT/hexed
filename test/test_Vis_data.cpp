@@ -10,9 +10,9 @@ TEST_CASE("Vis_data") {
   for (int i = 0; i < row_size; ++i) {
     for (int j = 0; j < row_size; ++j) {
       for (int k = 0; k < row_size; ++k) {
-        data(0)(i)(j)(k) = basis.node(i);
-        data(1)(i)(j)(k) = basis.node(j);
-        data(2)(i)(j)(k) = basis.node(k);
+        data(0)(i)(j)[k] = basis.node(i);
+        data(1)(i)(j)[k] = basis.node(j);
+        data(2)(i)(j)[k] = basis.node(k);
       }
     }
   }
@@ -20,10 +20,10 @@ TEST_CASE("Vis_data") {
   hexed::Vis_data vis(data, basis);
   auto sample = vis.sample(hexed::Array<double>::make(.1, .4, .7, .2, .2, .6).reshaped({3, 2}));
   REQUIRE_THAT(sample.shape(), Catch::Matchers::RangeEquals(std::vector<int>{4, 2}));
-  REQUIRE_THAT(sample.column(0), Catch::Matchers::RangeEquals(std::vector<double>{.1, .7, .2, .1*.1 + .7*.7 + .2*.2},
-                                                              hexed::math::Approx_equal(1e-6)));
-  REQUIRE_THAT(sample.column(1), Catch::Matchers::RangeEquals(std::vector<double>{.4, .2, .6, .4*.4 + .2*.2 + .6*.6},
-                                                              hexed::math::Approx_equal(1e-6)));
+  REQUIRE_THAT(sample.column(0).vector(), Catch::Matchers::RangeEquals(std::vector<double>{.1, .7, .2, .1*.1 + .7*.7 + .2*.2},
+                                                                       hexed::math::Approx_equal(1e-6)));
+  REQUIRE_THAT(sample.column(1).vector(), Catch::Matchers::RangeEquals(std::vector<double>{.4, .2, .6, .4*.4 + .2*.2 + .6*.6},
+                                                                       hexed::math::Approx_equal(1e-6)));
   #if 0
   // create some arbitrarily-shaped elements
   hexed::Deformed_element elem3({2, 5, 3, hexed::config::max_row_size});

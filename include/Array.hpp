@@ -331,6 +331,7 @@ class Array {
      * [standard container](https://en.cppreference.com/w/cpp/container).
      * \details Iterators remain valid throughout the lifetime of the array,
      * since there is no mechanism that changes the address of its underlying data.
+     * \warning Only valid for `Array`s with inner stride 0.
      */ \
     typedef CONST T* CONST##iterator; \
     CONST##iterator begin() CONST {return data();} /*!< \brief %Iterator to beginning of (flat) data. */ \

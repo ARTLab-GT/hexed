@@ -22,14 +22,28 @@ Vis_data::Vis_data(Array<double> data, const Basis& basis)
 {}
 
 Array<double> Vis_data::sample(Array<double> coords) const {
-  HEXED_ASSERT(coords.order(), "`coords` must be order-2.");
+  HEXED_ASSERT(coords.order() >= 2, "`coords` must be order-2.");
   HEXED_ASSERT(coords.shape()[0] == _n_dim, "`coords` must have one row for each reference coordinate.");
   Array<double> s({_n_var, coords(0).size()});
+  for (int i_var = 0; i_var < _n_var; ++i_var) s(i_var) = _sample(_data(i_var), coords());
   return s;
 }
 
 Array<double> Vis_data::_sample(Array<double> data, Array<double> coords) const {
-  return Array<double>({});
+  Int n_sample = coords(0).size();
+  Array<double> s({n_sample});
+  for (int i_sample = 0; i_sample < n_sample; ++i_sample) {
+    // ith row is the interpolation matrix along the ith dimension
+    auto interp = _basis.interpolate(coords.column(i_sample).vector());
+    Eigen::VectorXd var = data.vector();
+    // interpolate one dimension at a time
+    for (int i_dim = _n_dim - 1; i_dim >= 0; --i_dim) {
+      var = math::dimension_matvec(interp(i_dim, Eigen::all), var, i_dim);
+    }
+    // ...until all you have left is a vector with one element
+    s[i_sample] = var(0);
+  }
+  return s;
 }
 
 #if 0
