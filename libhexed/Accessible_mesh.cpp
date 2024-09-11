@@ -1595,6 +1595,10 @@ void Accessible_mesh::relax(double factor) {
     #pragma omp parallel for
     for (auto& face : faces_3d) snap_block(face);
     _stopwatch["relax"]["surface snapping"].work_units_completed += bverts.size();
+  } else {
+    auto blocks = _blocks.boundary_sides();
+    #pragma omp parallel for
+    for (auto& block : blocks) block.reset();
   }
   _stopwatch["relax"].work_units_completed += _n_verts;
 }
