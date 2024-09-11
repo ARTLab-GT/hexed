@@ -85,7 +85,7 @@ Array<double> Element::face_position(const Basis& basis) const {
       for (int j_dim = 0; j_dim < nd; ++j_dim) {
         face_pos(i_dim)(sign)(j_dim).vector() = math::hypercube_matvec(
           interp,
-          interp*math::dimension_matvec(boundary(sign, all), shape_pos(j_dim).vector(), i_dim)
+          math::dimension_matvec(boundary(sign, all), shape_pos(j_dim).vector(), i_dim)
         );
       }
     }
