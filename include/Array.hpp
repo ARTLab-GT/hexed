@@ -296,21 +296,21 @@ class Array {
       return {_order - 1, _data + i*_strides[_order], false, _shape, _strides}; \
     } \
     /*! \brief Returns an array referencing the same data as `this` but with a different shape.
-     * \details The new size must be less than or equal to the old size, or else behavior is undefined.
-     * If any entries of `new_shape` are `hexed::same`,
-     * then they will be converted to the entry of the current shape at the same index.
-     * E.g., if `shape()` is `{2, 3, 4}` and you call `reshape({1, same, 4})`,
-     * the resulting shape will be `{1, 3, 4}`.
-     * Of course, the index of any `same` arguments must be less than `order()`.
-     * If exactly one of the entries of `new_shape` is `whatever`,
-     * it will be converted to whatever value is necessary to keep the size the same.
-     * Making more than 1 entry `whatever` is not allowed.
-     * Note that reshaping maintains the underlying (row-major) storage order of the values
-     * (unlike Eigen's [conservativeResize]
-     * (https://eigen.tuxfamily.org/dox/classEigen_1_1PlainObjectBase.html#a712c25be1652e5a64a00f28c8ed11462)),
-     * so it can't generally be used to select a block of an `Array`.
-     * It is more useful for adding or removing dimensions.
-     * E.g., `array.reshaped({whatever})` flattens `array`.
+       \details The new size must be less than or equal to the old size, or else behavior is undefined.
+       If any entries of `new_shape` are `hexed::same`,
+       then they will be converted to the entry of the current shape at the same index.
+       E.g., if `shape()` is `{2, 3, 4}` and you call `reshape({1, same, 4})`,
+       the resulting shape will be `{1, 3, 4}`.
+       Of course, the index of any `same` arguments must be less than `order()`.
+       If exactly one of the entries of `new_shape` is `hexed::whatever`,
+       it will be converted to whatever value is necessary to keep the size the same.
+       Making more than 1 entry `hexed::whatever` is not allowed.
+       Note that reshaping maintains the underlying (row-major) storage order of the values
+       (unlike Eigen's [conservativeResize]
+       (https://eigen.tuxfamily.org/dox/classEigen_1_1PlainObjectBase.html#a712c25be1652e5a64a00f28c8ed11462)),
+       so it can't generally be used to select a block of an `Array`.
+       It is more useful for adding or removing dimensions.
+       E.g., `array.reshaped({hexed::whatever})` flattens `array`.
      */ \
     CONST Array reshaped(std::vector<Int> new_shape) CONST { \
       std::vector<Int> s = new_shape; \
@@ -331,7 +331,9 @@ class Array {
         s[i_whatever] = size()/sz; \
       } \
       HEXED_ARRAY_ASSERT(sz <= size(), "`new_shape` is larger than current shape"); \
-      return {s, _data}; \
+      Array r(s, _data); \
+      for (int i_dim = 0; i_dim <= r._order; ++i_dim) r._strides[i_dim] *= _strides[_order]; \
+      return r; \
     } \
     /*! \brief %Iterator type to allow `Array` to function like a
      * [standard container](https://en.cppreference.com/w/cpp/container).

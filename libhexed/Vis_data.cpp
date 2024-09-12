@@ -29,7 +29,7 @@ Array<double> Vis_data::sample(Array<double> coords) const {
   return s;
 }
 
-Array<double> Vis_data::interior(int n_sample) const {
+Array<double> Vis_data::interior(Int n_sample) const {
   Array<double> result(hypercubes(_n_var, _n_dim, n_sample));
   Mat<dyn, dyn> interp = _basis.interpolate(Mat<>::LinSpaced(n_sample, 0., 1.));
   for (int i_var = 0; i_var < _n_var; ++i_var) {
@@ -55,7 +55,7 @@ Array<double> Vis_data::_sample(Array<double> data, Array<double> coords) const 
   return s;
 }
 
-Array<double> Vis_data::edges(int n_sample) const {
+Array<double> Vis_data::edges(Int n_sample) const {
   Mat<dyn, dyn> interp = _basis.interpolate(Mat<>::LinSpaced(n_sample, 0., 1.));
   int n_fqpoint = _n_qpoint/_row_size;
   Array<double> e({_n_dim, math::pow(2, _n_dim - 1), _n_var, interp.rows()});
@@ -85,118 +85,33 @@ Array<double> Vis_data::edges(int n_sample) const {
   return e;
 }
 
-#if 0
-Eigen::MatrixXd Vis_data::sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen::MatrixXd ref_coords) {
-  int nv = qpoint_data.size()/n_qpoint;
-  const int n_sample = ref_coords.rows();
-  Eigen::MatrixXd result(n_sample, nv);
-  for (int i_sample = 0; i_sample < n_sample; ++i_sample) {
-    // ith row is the interpolation matrix along the ith dimension
-    auto interp = bas.interpolate(ref_coords(i_sample, all));
-    for (int i_var = 0; i_var < nv; ++i_var) {
-      // start with all the data for this variable
-      Eigen::VectorXd var = qpoint_data(Eigen::seqN(i_var*n_qpoint, n_qpoint));
-      // interpolate one dimension at a time
-      for (int i_dim = n_dim - 1; i_dim >= 0; --i_dim) {
-        var = math::dimension_matvec(interp(i_dim, Eigen::all), var, i_dim);
-      }
-      // ...until all you have left is a vector with one element
-      result(i_sample, i_var) = var(0);
-    }
-  }
-  return result;
-}
-
-Eigen::VectorXd Vis_data::edges(int n_sample) {
-  Eigen::MatrixXd interp {bas.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  const int nfqpoint = n_qpoint/row_size;
-  Eigen::MatrixXd result(n_var*n_sample, n_edge);
-  // interpolate qpoint varsition to edges
-  Eigen::MatrixXd boundary {bas.boundary()};
-  // interpolate all edges which point in direction `i_dim`
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim)
-  {
-    const int stride {math::pow(row_size, n_dim - 1 - i_dim)};
-    const int n_outer {n_qpoint/stride/row_size};
-    // extract the `i_var`th variable
-    for (int i_var = 0; i_var < n_var; ++i_var)
-    {
-      Eigen::MatrixXd edge_qpoints {row_size, n_edge/n_dim}; // quadrature points interpolated to the edge
-      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-        Eigen::VectorXd qpoint_slab {nfqpoint};
-        for (int i_outer = 0; i_outer < n_outer; ++i_outer) {
-          for (int i_inner = 0; i_inner < stride; ++i_inner) {
-            qpoint_slab[i_outer*stride + i_inner] = vars(i_var*n_qpoint + i_qpoint*stride + i_outer*stride*row_size + i_inner);
-          }
-        }
-        // interpolate edge quadrature points to edge visualization points
-        edge_qpoints.row(i_qpoint) = math::hypercube_matvec(boundary, qpoint_slab);
-      }
-      result(Eigen::seqN(i_var*n_sample, n_sample),
-             Eigen::seqN(i_dim*n_edge/n_dim, n_edge/n_dim)) = interp*edge_qpoints; // note: rhs auto resized to fit lhs
-    }
-  }
-  result.resize(result.size(), 1);
-  return result;
-}
-
-Eigen::VectorXd Vis_data::interior(int n_sample) {
-  Eigen::MatrixXd interp {bas.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  const int n_block = math::pow(n_sample, n_dim);
-  Eigen::VectorXd result(n_block*n_var);
-  for (int i_var = 0; i_var < n_var; ++i_var) {
-    result(Eigen::seqN(i_var*n_block, n_block)) = math::hypercube_matvec(interp, vars(Eigen::seqN(i_var*n_qpoint, n_qpoint)));
-  }
-  return result;
-}
-
-Eigen::VectorXd Vis_data::face(int i_dim, bool is_positive, int n_sample) {
-  Eigen::MatrixXd interp {bas.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  Eigen::MatrixXd bound = bas.boundary()(is_positive, Eigen::all);
-  const int n_block = math::pow(n_sample, n_dim - 1);
-  Eigen::VectorXd result(n_block*n_var);
-  for (int i_var = 0; i_var < n_var; ++i_var) {
-    // interpolate quadrature points to face quadrature points
-    auto var = vars(Eigen::seqN(i_var*n_qpoint, n_qpoint));
-    Eigen::VectorXd face_qpoints = math::dimension_matvec(bound, var, i_dim);
-    // interpolate face quadrature points to uniformly spaced
-    result(Eigen::seqN(i_var*n_block, n_block)) = math::hypercube_matvec(interp, face_qpoints);
-  }
-  return result;
-}
-
-Eigen::MatrixXd Vis_data::sample(Eigen::MatrixXd ref_coords) {
-  return sample_qpoint_data(vars, ref_coords);
-}
-
-Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newton, double tol) {
-  Contour con;
+Vis_data::Contour Vis_data::compute_contour(int i_var, double value, Int n_div, int n_newton, double tol) {
   // sample points used for identifying the contour vertices
-  const int n_sample = math::pow(n_div + 1, n_dim);
-  Mat<> sample = interior(n_div + 1)(Eigen::seqN((n_var - 1)*n_sample, n_sample));
+  const int n_sample = math::pow(n_div + 1, _n_dim);
+  Array<double> contour_var {interior(n_div + 1)(i_var).copy()};
   // if the candidate vertices that could be in the contour were selected from a
   // uniformly spaced block, how many points would this block have?
-  const int n_block = math::pow(2*n_div + 1, n_dim);
+  const int n_block = math::pow(2*n_div + 1, _n_dim);
   // number of corners of a contour element
-  const int n_corner = math::pow(2, n_dim - 1);
+  const int n_corner = math::pow(2, _n_dim - 1);
   // list of vertices on the contour, by their index in the hypothetical candidate block
-  std::vector<int> i_block;
+  std::vector<Int> i_block;
   // for each vertex in the candidate block, what is its index in `i_block`?
   // e.g. the first vertex identified to be on the contour will be 0, the next will be 1, etc.
   // -1 indicates not on the contour (true for most of the vertices)
-  Eigen::VectorXi i_contour = Eigen::VectorXi::Constant(n_block, -1);
-  std::vector<Eigen::VectorXd> directions; // line search direction for projecting vertices onto contour surface
-  std::vector<int> faces; // layout [i_element][i_corner]
-  std::vector<int> strides_sample; // strides in the sample block
-  std::vector<int> strides_block; // strides in the candidate block
+  std::vector<Int> i_contour(n_block, -1);
+  std::vector<Mat<>> directions; // line search direction for projecting vertices onto contour surface
+  std::vector<Int> faces; // layout [i_element][i_corner] Should probably be an `Array<Int>` now...
+  std::vector<Int> strides_sample; // strides in the contour_var block
+  std::vector<Int> strides_block; // strides in the candidate block
   // compute strides
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    strides_sample.push_back(math::pow(n_div + 1, n_dim - 1 - i_dim));
-    strides_block.push_back(math::pow(2*n_div + 1, n_dim - 1 - i_dim));
+  for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
+    strides_sample.push_back(math::pow(n_div + 1, _n_dim - 1 - i_dim));
+    strides_block.push_back(math::pow(2*n_div + 1, _n_dim - 1 - i_dim));
   }
   // choose vertices to be on contour
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) { // identify all vertices which are on a face in direction +-`i_dim`
-    int stride = math::pow(n_div + 1, n_dim - i_dim - 1);
+  for (int i_dim = 0; i_dim < _n_dim; ++i_dim) { // identify all vertices which are on a face in direction +-`i_dim`
+    int stride = math::pow(n_div + 1, _n_dim - i_dim - 1);
     for (int i_outer = 0; i_outer < n_sample/stride/(n_div + 1); ++i_outer) {
       for (int i_inner = 0; i_inner < stride; ++i_inner) {
         for (int i_row = 0; i_row < n_div; ++i_row) { // don't do the last point
@@ -205,51 +120,51 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newto
           int sample0 = (i_outer*(n_div + 1) + i_row)*stride + i_inner;
           int sample1 = sample0 + stride;
           // if this is true, then the correct contour surface is between `sample0` and `sample1`
-          if (((sample[sample0] > value) != (sample[sample1] > value))
-              && (std::abs(sample[sample0] - sample[sample1]) > tol)) { // comparison with `tol` avoids spurious contours on constant data
+          if (((contour_var[sample0] > value) != (contour_var[sample1] > value))
+              && (std::abs(contour_var[sample0] - contour_var[sample1]) > tol)) { // comparison with `tol` avoids spurious contours on constant _data
             int block = strides_block[i_dim]; // index of candidate vertex (calculation isn't done yet)
             bool boundary [3][2]; // in a given direction, are we on the boundary? layout: [j_dim][face_positive]
             // evaluate `boundary` and finish calculating `block`
-            for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+            for (int j_dim = 0; j_dim < _n_dim; ++j_dim) {
               int row = (sample0/strides_sample[j_dim])%(n_div + 1);
               boundary[j_dim][0] = row == 0;
               boundary[j_dim][1] = row == n_div;
               block += row*2*strides_block[j_dim];
             }
             // there are `n_corner` possible surface elements that share vertex `block` with normal in direction `i_dim`
-            int n_vert = math::pow(3, n_dim - 1); // these elements collectively have `n_vert` vertices
-            std::vector<int> verts(n_vert); // `i_block` for each of said vertices
+            int n_vert = math::pow(3, _n_dim - 1); // these elements collectively have `n_vert` vertices
+            std::vector<Int> verts(n_vert); // `i_block` for each of said vertices
             // populate `verts` and compute search direction
             for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
               // compute block index
               int vert = block;
-              for (int j_dim = 0, k_dim = 0; j_dim < n_dim; ++j_dim) if (j_dim != i_dim) {
-                int row_incr = ((i_vert/math::pow(3, n_dim - 2 - k_dim))%3 - 1);
-                vert += (!boundary[j_dim][row_incr > 0])*((i_vert/math::pow(3, n_dim - 2 - k_dim))%3 - 1)*strides_block[j_dim];
+              for (int j_dim = 0, k_dim = 0; j_dim < _n_dim; ++j_dim) if (j_dim != i_dim) {
+                Int row_incr = ((i_vert/math::pow(3, _n_dim - 2 - k_dim))%3 - 1);
+                vert += (!boundary[j_dim][row_incr > 0])*((i_vert/math::pow(3, _n_dim - 2 - k_dim))%3 - 1)*strides_block[j_dim];
                 ++k_dim;
               }
               // find index of vertex in `i_contour`
               int i_con;
-              if (i_contour(vert) < 0) { // vertex isn't in contour yet, so add it
+              if (i_contour[vert] < 0) { // vertex isn't in contour yet, so add it
                 i_con = i_block.size();
                 i_block.push_back(vert);
-                directions.push_back(Eigen::VectorXd::Zero(n_dim));
-                i_contour(vert) = i_con;
-              } else i_con = i_contour(vert); // vertex is already in contour, so just fetch its index
+                directions.push_back(Mat<>::Zero(_n_dim));
+                i_contour[vert] = i_con;
+              } else i_con = i_contour[vert]; // vertex is already in contour, so just fetch its index
               verts[i_vert] = i_con;
               // update search direction so that it is not parallel to face
-              directions[i_con][i_dim] += (1 - 2*(sample[sample0] > value));;
+              directions[i_con][i_dim] += (1 - 2*(contour_var[sample0] > value));;
             }
             // does the orientation of this face need to be flipped to be consistent with the surface normal vector?
-            bool flip = (sample[sample0] > value) != (i_dim == 1);
+            bool flip = (contour_var[sample0] > value) != (i_dim == 1);
             // add faces
             for (int i_elem = 0; i_elem < n_corner; ++i_elem) {
               // add vertex indices
               for (int i_corner = 0; i_corner < n_corner; ++i_corner) {
                 int i_vert = 0;
-                for (int j_dim = 0; j_dim < n_dim - 1; ++j_dim) {
-                  int stride = math::pow(2, n_dim - 2 - j_dim);
-                  i_vert += ((i_elem/stride)%2 + (i_corner/stride)%2)*math::pow(3, n_dim - 2 - j_dim);
+                for (int j_dim = 0; j_dim < _n_dim - 1; ++j_dim) {
+                  int stride = math::pow(2, _n_dim - 2 - j_dim);
+                  i_vert += ((i_elem/stride)%2 + (i_corner/stride)%2)*math::pow(3, _n_dim - 2 - j_dim);
                 }
                 faces.push_back(verts[i_vert]);
               }
@@ -268,57 +183,63 @@ Vis_data::Contour Vis_data::compute_contour(double value, int n_div, int n_newto
   }
   // compute initial reference coordinates of contour vertices, straight from the candidate block
   // these will need to be adjusted to lie exactly on the contour surface
-  con.vert_ref_coords.resize(i_block.size(), n_dim);
-  for (unsigned i = 0; i < i_block.size(); ++i) {
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      con.vert_ref_coords(i, i_dim) = ((i_block[i]/strides_block[i_dim])%(2*n_div + 1))/(2.*n_div);
+  Int n_contour_vert = i_block.size();
+  Contour con {
+    .vert_ref_coords = {{_n_dim, n_contour_vert}},
+    .elem_vert_inds = {{Int(faces.size()/n_corner), n_corner}},
+  };
+  for (Int i = 0; i < n_contour_vert; ++i) {
+    for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
+      con.vert_ref_coords(i_dim)[i] = ((i_block[i]/strides_block[i_dim])%(2*n_div + 1))/(2.*n_div);
     }
   }
   // compute gradient at quadrature points (used for projection)
-  Eigen::VectorXd gradient(n_qpoint*n_dim);
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    gradient(Eigen::seqN(i_dim*n_qpoint, n_qpoint)) = math::dimension_matvec(bas.diff_mat(), vars(Eigen::seqN((n_var - 1)*n_qpoint, n_qpoint)), i_dim);
+  Array<double> gradient({_n_dim, _n_qpoint});
+  for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
+    gradient(i_dim).vector() = math::dimension_matvec(_basis.diff_mat(), _data(i_var).vector(), i_dim);
   }
+  Array<double> values({n_contour_vert});
+  Array<double> grads({_n_dim, n_contour_vert});
   // project points to contour surface
   // move in line search direction (computed above) and compute distance to move with newton's method
   for (int i_newton = 0; i_newton < n_newton; ++i_newton) {
-    for (int i_vert = 0; i_vert < con.vert_ref_coords.rows(); ++i_vert) {
-      auto coords = con.vert_ref_coords(i_vert, Eigen::all);
-      double curr_value = sample_qpoint_data(vars(Eigen::seqN((n_var - 1)*n_qpoint, n_qpoint)), coords)(0);
-      Eigen::VectorXd grad = sample_qpoint_data(gradient, coords).transpose(); // interpolate gradient to current coordinates
-      auto dir = directions[i_vert].transpose();
-      double diff = (value - curr_value)/(dir*grad + 1e-4*grad.norm());
+    values = _sample(_data(i_var), con.vert_ref_coords);
+    for (int i_dim = 0; i_dim < _n_dim; ++i_dim) grads(i_dim) = _sample(gradient(i_dim), con.vert_ref_coords);
+    for (int i_vert = 0; i_vert < n_contour_vert; ++i_vert) {
+      Mat<> grad = grads.column(i_vert).vector();
+      auto dir = directions[i_vert];
+      double diff = (value - values[i_vert])/(dir.dot(grad) + 1e-4*grad.norm()); // small stabilization term accounts for cases where both numerator and denominator -> 0
       diff = std::max(-.5/n_div, std::min(.5/n_div, diff)); // limit search distance to prevent crazy-looking contours
-      coords += dir*diff; // small stabilization term accounts for cases where both numerator and denominator -> 0
+      con.vert_ref_coords.column(i_vert).vector() += dir*diff;
     }
   }
+  #if 0
   // fetch jacobian (used for normal calculation)
-  Eigen::VectorXd qpoint_jac(n_dim*n_dim*n_qpoint);
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+  Eigen::VectorXd qpoint_jac(_n_dim*_n_dim*n_qpoint);
+  for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
+    for (int j_dim = 0; j_dim < _n_dim; ++j_dim) {
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-        qpoint_jac((i_dim*n_dim + j_dim)*n_qpoint + i_qpoint) = el.jacobian(i_dim, j_dim, i_qpoint);
+        qpoint_jac((i_dim*_n_dim + j_dim)*n_qpoint + i_qpoint) = el.jacobian(i_dim, j_dim, i_qpoint);
       }
     }
   }
   // compute normals
-  con.normals.resize(i_block.size(), n_dim);
+  con.normals.resize(i_block.size(), _n_dim);
   for (unsigned i_vert = 0; i_vert < i_block.size(); ++i_vert) {
     Eigen::MatrixXd coords = con.vert_ref_coords(i_vert, Eigen::all);
     Eigen::VectorXd grad = sample_qpoint_data(gradient, coords).transpose();
-    Eigen::MatrixXd jac_t = sample_qpoint_data(qpoint_jac, coords); // 1 by n_dim*n_dim
-    jac_t.resize(n_dim, n_dim); // automatically transposed bc of storage order
+    Eigen::MatrixXd jac_t = sample_qpoint_data(qpoint_jac, coords); // 1 by _n_dim*_n_dim
+    jac_t.resize(_n_dim, _n_dim); // automatically transposed bc of storage order
     con.normals(i_vert, Eigen::all) = (jac_t.householderQr().solve(grad)).normalized();
   }
-  // put face info into Eigen matrix
-  con.elem_vert_inds.resize(faces.size()/n_corner, n_corner);
+  #endif
+  // put face info into `con`
   for (int i_elem = 0; i_elem < int(faces.size())/n_corner; ++i_elem) {
     for (int i_corner = 0; i_corner < n_corner; ++i_corner) {
-      con.elem_vert_inds(i_elem, i_corner) = faces[i_elem*n_corner + i_corner];
+      con.elem_vert_inds(i_elem)[i_corner] = faces[i_elem*n_corner + i_corner];
     }
   }
   return con;
 }
-#endif
 
 }

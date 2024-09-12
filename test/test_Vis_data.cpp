@@ -39,6 +39,13 @@ TEST_CASE("Vis_data") {
   REQUIRE(edges(2)(1)(0)[2] == Catch::Approx(0.).scale(1.));
   REQUIRE(edges(2)(1)(1)[2] == Catch::Approx(1.).scale(1.));
   REQUIRE(edges(2)(1)(2)[2] == Catch::Approx(.1).scale(1.));
+
+  auto contour = vis.compute_contour(3, .7, 10, 4, 1e-6);
+  auto contour_sample = vis.sample(contour.vert_ref_coords);
+  REQUIRE(contour_sample.size());
+  for (int i_point = 0; i_point < data.shape()[1]; ++i_point) {
+    CHECK(contour_sample(3)[i_point] == Catch::Approx(.7).epsilon(1e-3));
+  }
   #if 0
   // create some arbitrarily-shaped elements
   hexed::Deformed_element elem3({2, 5, 3, hexed::config::max_row_size});
