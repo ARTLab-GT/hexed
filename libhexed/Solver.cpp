@@ -1382,78 +1382,18 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
   stopwatch["visualization"][sw_name].work_units_completed += elems.size();
 }
 
-void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample, bool wireframe) {
+void Solver::visualize_surface(std::string format, std::string name, int bc_sn, std::string expr,
+                               int n_sample, bool wireframe) {
   std::string sw_name = "surface";
   if (wireframe) sw_name = sw_name + " wireframe";
   Stopwatch_tree::Starter sw_starter(stopwatch["visualization"][sw_name]);
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
   HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");
-  auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim - 1, name, func, _namespace->get<double>("flow_time"), Visualizer::block);
-  // convenience definitions
-  const int nfq = params.n_qpoint()/params.row_size;
-  const int nd = params.n_dim;
-  const int nv = func.n_var(nd);
-  const int n_block {math::pow(n_sample, nd - 1)};
-  const int n_edge {math::pow(n_sample, nd - 2)};
-  // setup
-  Mat<dyn, dyn> interp = basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.));
-  Mat<dyn, dyn> boundary = basis.boundary();
-  // iterate through boundary connections and visualize a zone for each
   auto& bc_cons {acc_mesh->boundary_connections()};
-  std::vector<Int> pos_shape(params.n_dim, n_sample);
-  pos_shape[0] = params.n_dim;
-  std::vector<Int> out_shape(params.n_dim, n_sample);
-  out_shape[0] = nv;
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    auto& con {bc_cons[i_con]};
-    if (con.bound_cond_serial_n() == bc_sn) {
-      auto& elem = con.element();
-      // fetch the position
-      const int i_face = con.direction().i_face(0);
-      Array<double> qpoint_pos {elem.face_position(basis)(i_face/2)(i_face%2).copy()};
-      // fetch the output variables
-      Mat<dyn, dyn> qpoint_vars (nfq, nv);
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        auto vars = func(con, i_qpoint, _namespace->get<double>("flow_time"));
-        for (int i_var = 0; i_var < nv; ++i_var) {
-          qpoint_vars(i_qpoint, i_var) = vars[i_var];
-        }
-      }
-      if (wireframe) {
-        for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
-          for (int i_sign = 0; i_sign < 2; ++i_sign) {
-            Mat<dyn, dyn> interp_pos (n_edge, nd);
-            for (int j_dim = 0; j_dim < nd; ++j_dim) {
-              // extrapolate from faces to edges
-              Mat<> uniform = math::dimension_matvec(boundary(i_sign, all), qpoint_pos(j_dim).vector(), i_dim);
-              // interpolate from edge qpoints to uniformly-spaced sample points
-              interp_pos.col(j_dim) = math::hypercube_matvec(interp, uniform);
-            }
-            Mat<dyn, dyn> interp_vars (n_edge, nv);
-            for (int i_var = 0; i_var < nv; ++i_var) {
-              Mat<> uniform = math::dimension_matvec(boundary(i_sign, all), qpoint_vars.col(i_var), i_dim);
-              interp_vars.col(i_var) = math::hypercube_matvec(interp, uniform);
-            }
-            visualizer->write_block(Array<double>({params.n_dim, n_sample}, interp_pos.data()),
-                                    Array<double>({          nv, n_sample}, interp_vars.data()));
-          }
-        }
-      } else {
-        // interpolate from quadrature points to sample points
-        Mat<dyn, dyn> interp_pos (n_block, nd);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          interp_pos.col(i_dim) = math::hypercube_matvec(interp, qpoint_pos(i_dim).vector());
-        }
-        Mat<dyn, dyn> interp_vars (n_block, nv);
-        for (int i_var = 0; i_var < nv; ++i_var) {
-          interp_vars.col(i_var) = math::hypercube_matvec(interp, qpoint_vars.col(i_var));
-        }
-        // visualize
-        visualizer->write_block(Array<double>(pos_shape, interp_pos.data()), Array<double>(out_shape, interp_vars.data()));
-      }
-    }
-  }
-  visualizer.reset();
+  if (!bc_cons.size()) return;
+  Vis_evaluator<Boundary_connection> evaluator(_interpreter(), [&](Namespace& space, Boundary_connection& con) {
+    vis_variables::surface(space, con);
+  }, expr, bc_cons[0]);
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"][sw_name].work_units_completed += bc_cons.size();
 }
@@ -1480,9 +1420,9 @@ void Solver::visualize_contour(std::string format, std::string name, const Qpoin
   #endif
 }
 
-void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func) {
+void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, std::string expr) {
   Mesh::Reset_vertices reset(*acc_mesh);
-  visualize_surface(format, name, bc_sn, func, 2);
+  visualize_surface(format, name, bc_sn, expr, 2);
 }
 
 void Solver::vis_lts_constraints(std::string format, std::string name, int n_sample) {

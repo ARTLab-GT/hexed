@@ -34,10 +34,22 @@ void position(Namespace&, Element&, const Basis&);
  * - `tss`: time step scale
  * - `art_visc`: artificial viscosity coefficient
  * - `residual_xxx` for `xxx` in {`momentum0`, ..., `energy`}: residual of each of the conserved state variables
- * \attention If `Solver::update` or `Solver::update_art_visc_smoothness` have been called since the last call to `Solver::compute_residuals`
- * then the residual variables will be incorrect.
+ * \attention If `Solver::update` or `Solver::update_art_visc_smoothness` have been called
+ * since the last call to `Solver::compute_residuals` then the residual variables will be incorrect.
  */
 void state(Namespace&, Element&);
+
+/*! \details Assigns the follwing variables:
+ * - `pos0`, `pos`, `pos2`: position
+ * - `normal0`, `normal1`, `normal2`: unit surface normal (out of surface, into domain)
+ * - `momentum0`, `momentum1`, `momentum2` : momentum per volume
+ * - `mass`: mass per volume (aka density)
+ * - `energy`: total energy per volume
+ * - `visc_stress0`, `visc_stress1`, `visc_stress2` : viscous stress at surface
+ * - `mass_flux`: diffusive mass flux through surface
+ * - `heat_flux`: surface heat flux
+ */
+void surface(Namespace&, Boundary_connection&);
 
 }
 #endif
