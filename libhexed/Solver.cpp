@@ -1106,9 +1106,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
       _printer->warn(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
                                 _namespace->get<int>("iteration")));
     }
-    auto bounds = bounds_field(State_variables(), 2*rs);
-    _printer->warn(format_str(200, "    iteration %i: mass in [%e, %e]; energy in [%e, %e]\n",
-                              iter, bounds[nd][0], bounds[nd][1], bounds[nd + 1][0], bounds[nd + 1][1]));
+    _printer->warn(format_str(200, "    iteration %i\n", iter));
     auto& elems = acc_mesh->elements();
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1267,28 +1265,6 @@ std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int
   return integral;
 };
 
-std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func, int n_sample) {
-  const int n_var = func.n_var(params.n_dim);
-  std::vector<std::array<double, 2>> bounds(n_var);
-  for (int i_var = 0; i_var < n_var; ++i_var) {
-    bounds[i_var] = {std::numeric_limits<double>::max(), -std::numeric_limits<double>::max()};
-  }
-  #if 0
-  const int n_block = math::pow(n_sample, params.n_dim);
-  auto& elems = acc_mesh->elements();
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Element& elem {elems[i_elem]};
-    Eigen::VectorXd vars = Vis_data(elem, func, basis, _namespace->get<double>("flow_time")).interior(n_sample);
-    for (int i_var = 0; i_var < n_var; ++i_var) {
-      auto var = vars(Eigen::seqN(i_var*n_block, n_block));
-      bounds[i_var][0] = std::min(var.minCoeff(), bounds[i_var][0]);
-      bounds[i_var][1] = std::max(var.maxCoeff(), bounds[i_var][1]);
-    }
-  }
-  #endif
-  return bounds;
-}
-
 Array<double> extrap_edges(const Basis& basis, Array<double> data, Mat<dyn, dyn> interp) {
   int n_dim = data.order() - 1;
   int row_size = data.shape()[1];
@@ -1322,6 +1298,73 @@ Array<double> extrap_edges(const Basis& basis, Array<double> data, Mat<dyn, dyn>
   return edges;
 }
 
+template <typename T>
+class Vis_evaluator {
+  public:
+  Vis_evaluator(Interpreter&& inter, std::function<void(Namespace&, T&)> assign, std::string expr, T& t)
+  : _inter{inter}, _assign{assign}, _expr{expr}
+  {
+    auto sub = _inter.make_sub();
+    _assign(*sub.variables, t);
+    sub.subspace();
+    sub.exec(_expr);
+    _var_names = sub.variables->names();
+    _n_var = _var_names.size();
+    Storage_params params = t.storage_params();
+    _n_dim = params.n_dim;
+    _shape = hypercubes(params.n_dim + _n_var, params.n_dim, params.row_size);
+  }
+  Array<double> evaluate(T& t) {
+    auto sub = _inter.make_sub();
+    _assign(*sub.variables, t);
+    sub.subspace();
+    sub.exec(_expr);
+    Array<double> qpoints(_shape);
+    for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
+      qpoints(i_dim) = sub.variables->lookup<Array<double>>("pos" + std::to_string(i_dim)).value();
+    }
+    for (int i_var = 0; i_var < _n_var; ++i_var) {
+      sub.variables->assign_array(qpoints(_n_dim + i_var), _var_names[i_var]);
+    }
+    return qpoints;
+  }
+  std::vector<std::string> var_names() {return _var_names;}
+
+  void visualize(std::string format, std::string name, int n_sample, bool wireframe, Sequence<T&>& seq,
+                 double time, const Basis& basis) {
+    auto visualizer = Visualizer::create(format, _n_dim, wireframe ? 1 : _n_dim, name, _var_names,
+                                         time, Visualizer::block);
+    #pragma omp parallel for
+    for (Int i = 0; i < seq.size(); ++i) {
+      Array<double> qpoints {evaluate(seq[i])};
+      Vis_data vis_dat(qpoints, basis);
+      if (wireframe) {
+        Array<double> edges {vis_dat.edges(n_sample)};
+        for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
+          for (int i_edge = 0; i_edge < edges(i_dim).shape()[0]; ++i_edge) {
+            #pragma omp critical
+            visualizer->write_block(edges(i_dim)(i_edge)(0, _n_dim),
+                                    edges(i_dim)(i_edge)(_n_dim, _n_dim + _n_var));
+          }
+        }
+      } else {
+        Array<double> interior {vis_dat.interior(n_sample)};
+        #pragma omp critical
+        visualizer->write_block(interior(0, _n_dim), interior(_n_dim, _n_dim + _n_var));
+      }
+    }
+  }
+
+  private:
+  Interpreter _inter;
+  std::function<void(Namespace&, T&)> _assign;
+  std::string _expr;
+  Int _n_var;
+  Int _n_dim;
+  std::vector<Int> _shape;
+  std::vector<std::string> _var_names;
+};
+
 void Solver::visualize_field(std::string format, std::string name, std::string expr, int n_sample, bool wireframe) {
   std::string sw_name = "field";
   if (wireframe) sw_name = sw_name + " wireframe";
@@ -1329,59 +1372,12 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
   auto& elems = acc_mesh->elements();
   if (!elems.size()) return;
-  Interpreter inter {_interpreter()};
-  std::vector<std::string> var_names;
-  {
-    auto sub = inter.make_sub();
-    vis_variables::element(*sub.variables, elems[0]);
-    vis_variables::position(*sub.variables, elems[0], basis);
-    vis_variables::state(*sub.variables, elems[0]);
-    sub.subspace();
-    sub.exec(expr);
-    var_names = sub.variables->names();
-  }
-  auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim, name, var_names,
-                                       _namespace->get<double>("flow_time"), Visualizer::block);
-  int nv = var_names.size();
-  std::vector<Int> out_shape(params.n_dim + 1, n_sample);
-  out_shape[0] = params.n_dim + nv;
-  std::vector<Int> qpoint_shape(params.n_dim + 1, params.row_size);
-  qpoint_shape[0] = params.n_dim + nv;
-  Eigen::MatrixXd interp {basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.))};
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    auto sub = inter.make_sub();
-    vis_variables::element(*sub.variables, elem);
-    vis_variables::position(*sub.variables, elem, basis);
-    vis_variables::state(*sub.variables, elem);
-    sub.subspace();
-    sub.exec(expr);
-    Array<double> qpoints(qpoint_shape);
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-      qpoints(i_dim) = sub.variables->lookup<Array<double>>("pos" + std::to_string(i_dim)).value();
-    }
-    for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
-      sub.variables->assign_array(qpoints(params.n_dim + i_var), var_names[i_var]);
-    }
-    if (wireframe) {
-      Array<double> edges {extrap_edges(basis, qpoints, interp)};
-      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-        for (int i_edge = 0; i_edge < edges(i_dim).shape()[0]; ++i_edge) {
-          #pragma omp critical
-          visualizer->write_block(edges(i_dim)(i_edge)(0, params.n_dim),
-                                  edges(i_dim)(i_edge)(params.n_dim, params.n_dim + nv));
-        }
-      }
-    } else {
-      Array<double> out(out_shape);
-      for (int i_var = 0; i_var < params.n_dim + nv; ++i_var) {
-        out(i_var).vector() = math::hypercube_matvec(interp, qpoints(i_var).vector());
-      }
-      #pragma omp critical
-      visualizer->write_block(out(0, params.n_dim), out(params.n_dim, params.n_dim + nv));
-    }
-  }
+  Vis_evaluator<Element> evaluator(_interpreter(), [&](Namespace& space, Element& elem) {
+    vis_variables::element(space, elem);
+    vis_variables::position(space, elem, basis);
+    vis_variables::state(space, elem);
+  }, expr, elems[0]);
+  evaluator.visualize(format, name, n_sample, wireframe, elems, _namespace->get<double>("flow_time"), basis);
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"][sw_name].work_units_completed += elems.size();
 }

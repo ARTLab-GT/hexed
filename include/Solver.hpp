@@ -242,11 +242,6 @@ class Solver {
   std::vector<double> integral_field(const Qpoint_func& integrand);
   //! \brief compute an integral over all surfaces where a particular boundary condition has been enforced
   std::vector<double> integral_surface(const Boundary_func& integrand, int bc_sn);
-  /*! \brief compute the min and max of variables over entire flow field.
-   * \details Layout: `{{var0_min, var0_max}, {var1_min, var1_max}, ...}`.
-   * Bounds are approximated by uniformly sampling a block `n_sample`-on-a-side in each element.
-   */
-  std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);
 
   /*! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
    * \param format Which format to write the visualization file in. Accepted values are `"xdmf"` and `"tecplot"`
