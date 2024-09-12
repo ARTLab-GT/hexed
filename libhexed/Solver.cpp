@@ -1301,8 +1301,8 @@ Array<double> extrap_edges(const Basis& basis, Array<double> data, Mat<dyn, dyn>
 template <typename T>
 class Vis_evaluator {
   public:
-  Vis_evaluator(Interpreter&& inter, std::function<void(Namespace&, T&)> assign, std::string expr, T& t)
-  : _inter{inter}, _assign{assign}, _expr{expr}
+  Vis_evaluator(Interpreter&& inter, std::function<void(Namespace&, T&)> assign, std::string expr, T& t, int n_dim_topo)
+  : _inter{inter}, _assign{assign}, _expr{expr}, _n_dim_topo{n_dim_topo}
   {
     auto sub = _inter.make_sub();
     _assign(*sub.variables, t);
@@ -1312,7 +1312,7 @@ class Vis_evaluator {
     _n_var = _var_names.size();
     Storage_params params = t.storage_params();
     _n_dim = params.n_dim;
-    _shape = hypercubes(params.n_dim + _n_var, params.n_dim, params.row_size);
+    _shape = hypercubes(_n_dim + _n_var, _n_dim_topo, params.row_size);
   }
   Array<double> evaluate(T& t) {
     auto sub = _inter.make_sub();
@@ -1331,16 +1331,17 @@ class Vis_evaluator {
   std::vector<std::string> var_names() {return _var_names;}
 
   void visualize(std::string format, std::string name, int n_sample, bool wireframe, Sequence<T&>& seq,
-                 double time, const Basis& basis) {
-    auto visualizer = Visualizer::create(format, _n_dim, wireframe ? 1 : _n_dim, name, _var_names,
+                 double time, const Basis& basis, std::function<bool(T&)> mask) {
+    std::cout << name << std::endl;
+    auto visualizer = Visualizer::create(format, _n_dim, wireframe ? 1 : _n_dim_topo, name, _var_names,
                                          time, Visualizer::block);
     #pragma omp parallel for
-    for (Int i = 0; i < seq.size(); ++i) {
+    for (Int i = 0; i < seq.size(); ++i) if (mask(seq[i])) {
       Array<double> qpoints {evaluate(seq[i])};
       Vis_data vis_dat(qpoints, basis);
       if (wireframe) {
         Array<double> edges {vis_dat.edges(n_sample)};
-        for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
+        for (int i_dim = 0; i_dim < _n_dim_topo; ++i_dim) {
           for (int i_edge = 0; i_edge < edges(i_dim).shape()[0]; ++i_edge) {
             #pragma omp critical
             visualizer->write_block(edges(i_dim)(i_edge)(0, _n_dim),
@@ -1361,6 +1362,7 @@ class Vis_evaluator {
   std::string _expr;
   Int _n_var;
   Int _n_dim;
+  Int _n_dim_topo;
   std::vector<Int> _shape;
   std::vector<std::string> _var_names;
 };
@@ -1376,8 +1378,9 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
     vis_variables::element(space, elem);
     vis_variables::position(space, elem, basis);
     vis_variables::state(space, elem);
-  }, expr, elems[0]);
-  evaluator.visualize(format, name, n_sample, wireframe, elems, _namespace->get<double>("flow_time"), basis);
+  }, expr, elems[0], params.n_dim);
+  evaluator.visualize(format, name, n_sample, wireframe, elems,
+                      _namespace->get<double>("flow_time"), basis, [](Element&){return true;});
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"][sw_name].work_units_completed += elems.size();
 }
@@ -1393,7 +1396,10 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   if (!bc_cons.size()) return;
   Vis_evaluator<Boundary_connection> evaluator(_interpreter(), [&](Namespace& space, Boundary_connection& con) {
     vis_variables::surface(space, con);
-  }, expr, bc_cons[0]);
+  }, expr, bc_cons[0], params.n_dim - 1);
+  evaluator.visualize(format, name, n_sample, wireframe, bc_cons,
+                      _namespace->get<double>("flow_time"), basis,
+                      [bc_sn](Boundary_connection& con){return con.bound_cond_serial_n() == bc_sn;});
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"][sw_name].work_units_completed += bc_cons.size();
 }
