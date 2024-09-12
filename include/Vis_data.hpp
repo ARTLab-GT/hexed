@@ -23,19 +23,13 @@ class Vis_data {
    */
   Array<double> sample(Array<double> coords) const;
   Array<double> interior(int n_sample) const;
-  #if 0
   /*! \brief interpolate function to `n_sample + 1` uniformly spaced points along element edges
    * \details layout: [number of edges in element][n_var (of Qpoint_func)][n_sample]
    */
-  Eigen::VectorXd edges(int n_sample = 21);
-  /*! \brief interpolate function to a uniformly-spaced block of sample points `n_sample` on a side
-   * \details layout: [n_var][n_sample]([n_sample]([n_sample]))
-   */
-  Eigen::VectorXd interior(int n_sample = 21);
+  Array<double> edges(int n_sample) const;
+  #if 0
   //! \brief interpolate function to a uniformly-spaced block of sample points on a specified face
   Eigen::VectorXd face(int i_dim, bool is_positive, int n_sample = 21);
-  //! \brief return function evaluated at quadrature points. \details layout: [n_var][n_qpoint]
-  inline const Eigen::VectorXd& qpoints() {return vars;}
 
   //! \brief stores data representing a contour line/surface
   struct Contour {

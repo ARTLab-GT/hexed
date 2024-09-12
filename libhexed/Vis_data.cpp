@@ -55,6 +55,36 @@ Array<double> Vis_data::_sample(Array<double> data, Array<double> coords) const 
   return s;
 }
 
+Array<double> Vis_data::edges(int n_sample) const {
+  Mat<dyn, dyn> interp = _basis.interpolate(Mat<>::LinSpaced(n_sample, 0., 1.));
+  int n_fqpoint = _n_qpoint/_row_size;
+  Array<double> e({_n_dim, math::pow(2, _n_dim - 1), _n_var, interp.rows()});
+  Mat<dyn, dyn> boundary {_basis.boundary()};
+  for (int i_var = 0; i_var < _n_var; ++i_var) {
+    // interpolate qpoint vars to e
+    // interpolate all e which point in direction `i_dim`
+    for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
+      const Int stride {math::pow(_row_size, _n_dim - 1 - i_dim)};
+      const Int n_outer {_n_qpoint/stride/_row_size};
+      Mat<dyn, dyn> edge_qpoints(_row_size, math::pow(2, _n_dim - 1)); // quadrature points interpolated to the edge
+      for (Int i_qpoint = 0; i_qpoint < _row_size; ++i_qpoint) {
+        Mat<> qpoint_slab {n_fqpoint};
+        for (Int i_outer = 0; i_outer < n_outer; ++i_outer) {
+          for (Int i_inner = 0; i_inner < stride; ++i_inner) {
+            qpoint_slab[i_outer*stride + i_inner] = _data(i_var)[i_qpoint*stride + i_outer*stride*_row_size + i_inner];
+          }
+        }
+        // interpolate edge quadrature points to edge visualization points
+        edge_qpoints(i_qpoint, all) = math::hypercube_matvec(boundary, qpoint_slab);
+        for (int i_edge = 0; i_edge < math::pow(2, _n_dim - 1); ++i_edge) {
+          e(i_dim)(i_edge)(i_var).vector() = interp*edge_qpoints(all, i_edge);
+        }
+      }
+    }
+  }
+  return e;
+}
+
 #if 0
 Eigen::MatrixXd Vis_data::sample_qpoint_data(Eigen::VectorXd qpoint_data, Eigen::MatrixXd ref_coords) {
   int nv = qpoint_data.size()/n_qpoint;

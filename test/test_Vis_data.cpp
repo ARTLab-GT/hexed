@@ -18,16 +18,27 @@ TEST_CASE("Vis_data") {
   }
   data(3) = data(0)*data(0) + data(1)*data(1) + data(2)*data(2);
   hexed::Vis_data vis(data, basis);
+
   auto sample = vis.sample(hexed::Array<double>::make(.1, .4, .7, .2, .2, .6).reshaped({3, 2}));
   REQUIRE_THAT(sample.shape(), Catch::Matchers::RangeEquals(std::vector<int>{4, 2}));
   REQUIRE_THAT(sample.column(0).vector(), Catch::Matchers::RangeEquals(std::vector<double>{.1, .7, .2, .1*.1 + .7*.7 + .2*.2},
                                                                        hexed::math::Approx_equal(1e-6)));
   REQUIRE_THAT(sample.column(1).vector(), Catch::Matchers::RangeEquals(std::vector<double>{.4, .2, .6, .4*.4 + .2*.2 + .6*.6},
                                                                        hexed::math::Approx_equal(1e-6)));
+
   auto interior = vis.interior(21);
   REQUIRE_THAT(interior.shape(), Catch::Matchers::RangeEquals(std::vector<int>{4, 21, 21, 21}));
   REQUIRE(interior(1)(3)(7)[9] == Catch::Approx(7/20.));
   REQUIRE(interior(3)(3)(7)[9] == Catch::Approx((3*3 + 7*7 + 9*9)/20./20.));
+
+  auto edges = vis.edges(21);
+  REQUIRE_THAT(edges.shape(), Catch::Matchers::RangeEquals(std::vector<int>{3, 4, 4, 21}));
+  REQUIRE(edges(0)(1)(0)[2] == Catch::Approx(.1).scale(1.));
+  REQUIRE(edges(0)(1)(1)[2] == Catch::Approx(0.).scale(1.));
+  REQUIRE(edges(0)(1)(2)[2] == Catch::Approx(1.).scale(1.));
+  REQUIRE(edges(2)(1)(0)[2] == Catch::Approx(0.).scale(1.));
+  REQUIRE(edges(2)(1)(1)[2] == Catch::Approx(1.).scale(1.));
+  REQUIRE(edges(2)(1)(2)[2] == Catch::Approx(.1).scale(1.));
   #if 0
   // create some arbitrarily-shaped elements
   hexed::Deformed_element elem3({2, 5, 3, hexed::config::max_row_size});
