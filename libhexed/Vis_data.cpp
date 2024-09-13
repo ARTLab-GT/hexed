@@ -236,7 +236,7 @@ Vis_data::Contour Vis_data::compute_contour(int i_var, double value, Int n_div, 
   // put face info into `con`
   for (int i_elem = 0; i_elem < int(faces.size())/n_corner; ++i_elem) {
     for (int i_corner = 0; i_corner < n_corner; ++i_corner) {
-      con.elem_vert_inds(i_elem)[i_corner] = faces[i_elem*n_corner + i_corner];
+      con.elem_vert_inds(i_corner)[i_elem] = faces[i_elem*n_corner + i_corner];
     }
   }
   return con;

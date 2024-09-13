@@ -99,7 +99,7 @@ void Xdmf_wrapper::write_block(Array<double> pos, Array<double> vars)
   _n_verts += n_point;
 }
 
-void Xdmf_wrapper::write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars)
+void Xdmf_wrapper::write_unstruct(Array<Int> elements, Array<double> pos, Array<double> vars)
 {
   int n_elem_vert = _permutation.size();
   HEXED_ASSERT(elements.order() == 2, "`elements` must be 2D");

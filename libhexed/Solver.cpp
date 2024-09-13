@@ -244,6 +244,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   stopwatch["visualization"].emplace("field wireframe", "element");
   stopwatch["visualization"].emplace("surface", "surface face");
   stopwatch["visualization"].emplace("surface wireframe", "surface face");
+  stopwatch["visualization"].emplace("contour", "element");
   // initialize advection state to 1
   auto& elements = acc_mesh->elements();
   const int nq = params.n_qpoint();
@@ -1404,7 +1405,35 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   stopwatch["visualization"][sw_name].work_units_completed += bc_cons.size();
 }
 
-void Solver::visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by, const Qpoint_func& output_variables, int n_sample) {
+void Solver::visualize_contour(std::string format, std::string name, std::string contour_expr,
+                               std::string vis_expr, double const_tol, int n_sample) {
+  Stopwatch_tree::Starter sw_starter(stopwatch["visualization"]["contour"]);
+  HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
+  auto& elems = acc_mesh->elements();
+  if (!elems.size()) return;
+  vis_expr = vis_expr + ";hexed_contour = " + contour_expr + ";";
+  Vis_evaluator<Element> evaluator(_interpreter(), [&](Namespace& space, Element& elem) {
+    vis_variables::element(space, elem);
+    vis_variables::position(space, elem, basis);
+    vis_variables::state(space, elem);
+  }, vis_expr, elems[0], params.n_dim);
+  auto var_names = evaluator.var_names();
+  int i_contour = std::find(var_names.begin(), var_names.end(), "hexed_contour") - var_names.begin();
+  auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, var_names,
+                                       _namespace->get<double>("flow_time"), Visualizer::block);
+  Int n_write = 0;
+  #pragma omp parallel for reduction(+:n_write)
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Array<double> qpoints {evaluator.evaluate(elems[i_elem])};
+    Vis_data data(qpoints, basis);
+    auto contour = data.compute_contour(i_contour, 0., n_sample/2, 4, const_tol);
+    if (contour.elem_vert_inds.size()) {
+      ++n_write;
+      Array<double> values = data.sample(contour.vert_ref_coords);
+      #pragma omp critical
+      visualizer->write_unstruct(contour.elem_vert_inds, values(0, params.n_dim), values(params.n_dim, end));
+    }
+  }
   #if 0
   auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, output_variables,
                                        _namespace->get<double>("flow_time"), Visualizer::block);
@@ -1424,6 +1453,8 @@ void Solver::visualize_contour(std::string format, std::string name, const Qpoin
                                arr(0, params.n_dim), arr(params.n_dim, params.n_dim + nv));
   }
   #endif
+  ++stopwatch["visualization"].work_units_completed;
+  stopwatch["visualization"]["contour"].work_units_completed += n_write;
 }
 
 void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, std::string expr) {

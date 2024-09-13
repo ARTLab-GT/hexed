@@ -50,7 +50,7 @@ class Visualizer {
    * \param vars Values of field variables for all vertices. Layout [i_var][i_vertex].
    *   The number of columns must be the same as `pos`.
    */
-  virtual void write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars) = 0;
+  virtual void write_unstruct(Array<Int> elements, Array<double> pos, Array<double> vars) = 0;
 
   /*! \brief Creates a `Visualizer` object, selecting the appropriate backend based on the requested file format.
    * \param format File format to visualize in. Supported formats are:

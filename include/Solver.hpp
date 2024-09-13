@@ -256,8 +256,8 @@ class Solver {
   //! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
   void visualize_surface(std::string format, std::string name, int bc_sn, std::string expression,
                          int n_sample = 10, bool wireframe = false);
-  void visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by,
-                         const Qpoint_func& output_variables, int n_sample = 10);
+  void visualize_contour(std::string format, std::string name, std::string contour_expression,
+                         std::string vis_expression, double const_tol = 1e-10, int n_sample = 10);
   //! \brief visualize the Cartesian surface which theoretically exists after element deletion
   //! but before any vertex snapping
   void vis_cart_surf(std::string format, std::string name, int bc_sn, std::string expression = "");

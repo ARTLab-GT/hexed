@@ -9,13 +9,11 @@
 #include <Eigen/Dense>
 #include "Visualizer.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 //! \brief lightweight wrapper for [XDMF](https://www.xdmf.org/index.php/XDMF_Model_and_Format)
 //! [API](https://www.xdmf.org/index.php/Xdmf3_C%2B%2B_API) for block-structured data
-class Xdmf_wrapper : public Visualizer
-{
+class Xdmf_wrapper : public Visualizer {
   boost::shared_ptr<XdmfTopology> _topo;
   boost::shared_ptr<XdmfGeometry> _geom;
   std::vector<boost::shared_ptr<XdmfAttribute>> _attrs;
@@ -41,7 +39,7 @@ class Xdmf_wrapper : public Visualizer
    */
   Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, std::vector<std::string> var_names, double time, elem_type element_type = block);
   void write_block(Array<double> pos, Array<double> vars) override;
-  void write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars) override;
+  void write_unstruct(Array<Int> elements, Array<double> pos, Array<double> vars) override;
   ~Xdmf_wrapper(); //!< writes the data to the file(s)
 };
 

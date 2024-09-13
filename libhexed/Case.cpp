@@ -451,7 +451,9 @@ Case::Case(std::string input_script)
               if (_vari("vis_lts_constraints")) _solver().vis_lts_constraints(format, wd + "lts_constraints" + suffix, n_sample);
             } else if (!edges) { // vis_type == contour0, contour1, etc
               std::string contour_expr = _vars("vis_contour_vars") + v + "_var = " + _vars(v) + ";";
-              _solver().visualize_contour(format, file_name, Qpoint_expr(contour_expr, _inter), Qpoint_expr(vis_vars, _inter), n_sample);
+              auto tol = _inter.variables->lookup<double>(name + "_tol");
+              double const_tol = tol ? *tol : 1e-10;
+              _solver().visualize_contour(format, file_name, _vars(v), _vars("vis_contour_vars"), const_tol, n_sample);
             }
             if (format == "xdmf") {
               std::string latest = wd + name + "_latest1.xmf";

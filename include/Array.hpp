@@ -25,8 +25,9 @@
 
 namespace hexed {
 
-constexpr Int whatever = -1; //!< \brief used in `Array<T>::reshaped()`
-constexpr Int same = -2; //!< \brief used in `Array<T>::reshaped()`
+constexpr Int whatever = -1; //!< \brief used in `Array::reshaped()`
+constexpr Int same = -2; //!< \brief used in `Array::reshaped()`
+constexpr Int end = std::numeric_limits<Int>::max(); //! \brief can be passed to `Array::operator()`
 
 inline std::vector<Int> hypercubes(Int n_var, Int n_dim, Int row_size) {
   std::vector<Int> shape(n_dim + 1, row_size);
@@ -252,7 +253,7 @@ class Array {
   #define QUALIFIED(CONST) \
     CONST T* data() CONST {return _data;} /*!< \brief fetches pointer to data */ \
     /*! \brief Accesses elements by flat indexing.
-     * \details Equivalent to `data()[i]`, give or take bounds checking
+       \details Equivalent to `data()[i]`, give or take bounds checking
      */ \
     CONST T& operator[](Int i) CONST { \
       HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `[]`"); \
@@ -262,12 +263,12 @@ class Array {
     /*! \brief Creates an array as a reference to `this`'s data */ \
     CONST Array<T> operator()() CONST {return {_order, _data, false, _shape, _strides};} \
     /*! \brief Creates an array which is a view of the `i`th "row" of `this`.
-     * \details Resulting array will have 1 less `order()`
-     * and shape equal to the shape of `this` but with the first element removed.
-     * You can think of it as equivalent to the operator `[]` of multidimensional builtin arrays
-     * or [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
-     * For example, if you have an order 3 array `a` with shape {10, 4, 5}, you can access the element at (5, 2, 3)
-     * with either `a[113]` (5*4*5 + 2*5 + 3 = 113) or `a(5)(2)[3]`.
+       \details Resulting array will have 1 less `order()`
+       and shape equal to the shape of `this` but with the first element removed.
+       You can think of it as equivalent to the operator `[]` of multidimensional builtin arrays
+       or [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
+       For example, if you have an order 3 array `a` with shape {10, 4, 5}, you can access the element at (5, 2, 3)
+       with either `a[113]` (5*4*5 + 2*5 + 3 = 113) or `a(5)(2)[3]`.
      */ \
     CONST Array<T> operator()(Int i) CONST { \
       HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
@@ -275,16 +276,16 @@ class Array {
       return {_order - 1, _data + i*_strides[1], false, _shape + 1, _strides + 1}; \
     } \
     /*! \brief Creates an array which is a view of rows [`start`, `stop`) of this.
-     * \details As indicated by the interval notation, includes `start` but not `stop`.
-     * If `stop` is less than `start` or not less than `size()[0]`,
-     * this results in an array with 0 as the first entry of its `shape` (and consequently size 0).
-     * _This will not result in an exception nor undefined behavior_,
-     * unless of course you attempt to access data from this empty array.
-     * Equivalent to `array[start:stop]` for
-     * [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
-     * The resulting array will have the same order as `this`.
-     * The first entry of `shape()` will be `stop - start` and the rest will be the same as `this`
-     * (granted the above caveat about empty results).
+       \details As indicated by the interval notation, includes `start` but not `stop`.
+       If `stop` is less than `start` or not less than `size()[0]`,
+       this results in an array with 0 as the first entry of its `shape` (and consequently size 0).
+       _This will not result in an exception nor undefined behavior_,
+       unless of course you attempt to access data from this empty array.
+       Equivalent to `array[start:stop]` for
+       [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
+       The resulting array will have the same order as `this`.
+       The first entry of `shape()` will be `stop - start` and the rest will be the same as `this`
+       (granted the above caveat about empty results).
      */ \
     CONST Array operator()(Int start, Int stop) CONST { \
       HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
@@ -336,10 +337,10 @@ class Array {
       return r; \
     } \
     /*! \brief %Iterator type to allow `Array` to function like a
-     * [standard container](https://en.cppreference.com/w/cpp/container).
-     * \details Iterators remain valid throughout the lifetime of the array,
-     * since there is no mechanism that changes the address of its underlying data.
-     * \warning Only valid for `Array`s with inner stride 0.
+       [standard container](https://en.cppreference.com/w/cpp/container).
+       \details Iterators remain valid throughout the lifetime of the array,
+       since there is no mechanism that changes the address of its underlying data.
+       \warning Only valid for `Array`s with inner stride 0.
      */ \
     typedef CONST T* CONST##iterator; \
     CONST##iterator begin() CONST {return data();} /*!< \brief %Iterator to beginning of (flat) data. */ \

@@ -8,8 +8,7 @@
 #include "Visualizer.hpp"
 
 #if HEXED_USE_TECPLOT
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Wrapper for Tecplot API.
  * \details This class provides an object-oriented wrapper to [TecIO](https://www.tecplot.com/products/tecio-library/)
@@ -18,8 +17,7 @@ namespace hexed
  * at most one `Tecplot_file` and one `Tecplot_file::Zone` are allowed to exist at any given time.
  * \see [Tecplot Data Format Guide](https://tecplot.azureedge.net/products/360/current/360_data_format_guide.pdf)
  */
-class Tecplot_file : public Visualizer
-{
+class Tecplot_file : public Visualizer {
   int n_dim;
   int n_dim_topo;
   int n_var;
@@ -41,8 +39,7 @@ class Tecplot_file : public Visualizer
   /*! Manages a "zone", which essentially means a named chunk of data.
    * Create derived classes to write data for some object of physical  or mathematical significance.
    */
-  class Zone
-  {
+  class Zone {
     protected:
     Tecplot_file& file;
     std::string name;
@@ -69,8 +66,7 @@ class Tecplot_file : public Visualizer
   };
 
   //! Represents a single block of structured data. Call `write()` exactly once before destructing.
-  class Structured_block : public Zone
-  {
+  class Structured_block : public Zone {
     int n_dim;
     int row_size;
     public:
@@ -81,8 +77,7 @@ class Tecplot_file : public Visualizer
    * \details Each segment shall contain `row_size` nodes.
    * Call `write()` once for each line segment.
    */
-  class Line_segments : public Zone
-  {
+  class Line_segments : public Zone {
     int n_segs;
     int row_size;
     int i_seg;
@@ -101,16 +96,14 @@ class Tecplot_file : public Visualizer
    * Whether the order of the nodes within each element matters is between you and Tecplot
    * -- I just write them in the order you give them.
    */
-  class Triangles : public Zone
-  {
+  class Triangles : public Zone {
     int n_tri;
     public:
     Triangles(Tecplot_file&, int n_triangles, std::string name_arg = "triangles");
     ~Triangles();
   };
 
-  class Unstructured : public Zone
-  {
+  class Unstructured : public Zone {
     public:
     Unstructured(Tecplot_file&, Array<int> elements, Array<double> pos, Array<double> vars, std::string name_arg = "unstructured_zone");
     void write(const double* pos, const double* vars) override;
