@@ -1266,39 +1266,6 @@ std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int
   return integral;
 };
 
-Array<double> extrap_edges(const Basis& basis, Array<double> data, Mat<dyn, dyn> interp) {
-  int n_dim = data.order() - 1;
-  int row_size = data.shape()[1];
-  int n_var = data.shape()[0];
-  int n_qpoint = data(0).size();
-  int n_fqpoint = n_qpoint/row_size;
-  Array<double> edges({n_dim, math::pow(2, n_dim - 1), n_var, interp.rows()});
-  Mat<dyn, dyn> boundary {basis.boundary()};
-  for (int i_var = 0; i_var < n_var; ++i_var) {
-    // interpolate qpoint vars to edges
-    // interpolate all edges which point in direction `i_dim`
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      const int stride {math::pow(row_size, n_dim - 1 - i_dim)};
-      const int n_outer {n_qpoint/stride/row_size};
-      Mat<dyn, dyn> edge_qpoints(row_size, math::pow(2, n_dim - 1)); // quadrature points interpolated to the edge
-      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-        Mat<> qpoint_slab {n_fqpoint};
-        for (int i_outer = 0; i_outer < n_outer; ++i_outer) {
-          for (int i_inner = 0; i_inner < stride; ++i_inner) {
-            qpoint_slab[i_outer*stride + i_inner] = data(i_var)[i_qpoint*stride + i_outer*stride*row_size + i_inner];
-          }
-        }
-        // interpolate edge quadrature points to edge visualization points
-        edge_qpoints(i_qpoint, all) = math::hypercube_matvec(boundary, qpoint_slab);
-        for (int i_edge = 0; i_edge < math::pow(2, n_dim - 1); ++i_edge) {
-          edges(i_dim)(i_edge)(i_var).vector() = interp*edge_qpoints(all, i_edge);
-        }
-      }
-    }
-  }
-  return edges;
-}
-
 template <typename T>
 class Vis_evaluator {
   public:
@@ -1419,6 +1386,8 @@ void Solver::visualize_contour(std::string format, std::string name, std::string
   }, vis_expr, elems[0], params.n_dim);
   auto var_names = evaluator.var_names();
   int i_contour = std::find(var_names.begin(), var_names.end(), "hexed_contour") - var_names.begin();
+  for (auto var : var_names) std::cout << var + " ";
+  std::cout << i_contour << std::endl;
   auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, var_names,
                                        _namespace->get<double>("flow_time"), Visualizer::block);
   Int n_write = 0;
@@ -1426,7 +1395,7 @@ void Solver::visualize_contour(std::string format, std::string name, std::string
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     Array<double> qpoints {evaluator.evaluate(elems[i_elem])};
     Vis_data data(qpoints, basis);
-    auto contour = data.compute_contour(i_contour, 0., n_sample/2, 4, const_tol);
+    auto contour = data.compute_contour(params.n_dim + i_contour, 0., n_sample/2, 4, const_tol);
     if (contour.elem_vert_inds.size()) {
       ++n_write;
       Array<double> values = data.sample(contour.vert_ref_coords);

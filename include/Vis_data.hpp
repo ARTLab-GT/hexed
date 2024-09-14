@@ -31,7 +31,7 @@ class Vis_data {
   //! \brief stores data representing a contour line/surface
   struct Contour {
     Array<double> vert_ref_coords; //!< coordinates of contour vertices in reference coordinates. layout: [n_dim][n_vertex]
-    Array<Int> elem_vert_inds; //!< indices of contour elements (line segments/quads). layout: [math::pow(2, n_dim - 1)][i_element]
+    Array<Int> elem_vert_inds; //!< indices of contour elements (line segments/quads). layout: [i_element][math::pow(2, n_dim - 1)]
   };
   /*! \brief compute a contour line/surface where the `i_var`th variable is equal to `value`
    * \details the number of sample points in each direction is `2*n_div + 1`
