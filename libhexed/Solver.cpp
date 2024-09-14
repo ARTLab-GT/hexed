@@ -1300,7 +1300,6 @@ class Vis_evaluator {
 
   void visualize(std::string format, std::string name, int n_sample, bool wireframe, Sequence<T&>& seq,
                  double time, const Basis& basis, std::function<bool(T&)> mask) {
-    std::cout << name << std::endl;
     auto visualizer = Visualizer::create(format, _n_dim, wireframe ? 1 : _n_dim_topo, name, _var_names,
                                          time, Visualizer::block);
     #pragma omp parallel for
@@ -1386,8 +1385,6 @@ void Solver::visualize_contour(std::string format, std::string name, std::string
   }, vis_expr, elems[0], params.n_dim);
   auto var_names = evaluator.var_names();
   int i_contour = std::find(var_names.begin(), var_names.end(), "hexed_contour") - var_names.begin();
-  for (auto var : var_names) std::cout << var + " ";
-  std::cout << i_contour << std::endl;
   auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, var_names,
                                        _namespace->get<double>("flow_time"), Visualizer::block);
   Int n_write = 0;
@@ -1403,25 +1400,10 @@ void Solver::visualize_contour(std::string format, std::string name, std::string
       visualizer->write_unstruct(contour.elem_vert_inds, values(0, params.n_dim), values(params.n_dim, end));
     }
   }
-  #if 0
-  auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, output_variables,
-                                       _namespace->get<double>("flow_time"), Visualizer::block);
-  Position_func pos_func;
-  int nv = output_variables.n_var(params.n_dim);
-  auto& elems = acc_mesh->elements();
-  auto bounds = bounds_field(contour_by, n_sample);
-  double tol = 1e-9*(bounds[0][1] - bounds[0][0]); // tolerance to avoid detecting contours on constant data
-  Qf_concat vis_vars({&pos_func, &output_variables});
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto contour = Vis_data(elems[i_elem], contour_by, basis, _namespace->get<double>("flow_time")).compute_contour(0., n_sample/2, 4, tol);
-    Vis_data data(elems[i_elem], vis_vars, basis, _namespace->get<double>("flow_time"));
-    Mat<dyn, dyn> values = data.sample(contour.vert_ref_coords);
-    Eigen::MatrixXi inds = contour.elem_vert_inds.transpose();
-    Array<double> arr({params.n_dim + nv, int(values.rows())}, values.data());
-    visualizer->write_unstruct(Array<int>({int(inds.cols()), int(inds.rows())}, inds.data()),
-                               arr(0, params.n_dim), arr(params.n_dim, params.n_dim + nv));
+  if (!n_write) {
+    _printer->warn("Warning: ", true);
+    _printer->warn("Contour is empty. You won't be able to open it in Paraview. ");
   }
-  #endif
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"]["contour"].work_units_completed += n_write;
 }

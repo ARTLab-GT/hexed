@@ -110,15 +110,12 @@ void Xdmf_wrapper::write_unstruct(Array<Int> elements, Array<double> pos, Array<
   for (int i_elem = 0; i_elem < elements.shape()[0]; ++i_elem) {
     for (int i_vert = 0; i_vert < n_elem_vert; ++i_vert) _topo->pushBack(elements(i_elem)[_permutation[i_vert]] + _n_verts);
   }
-  std::cout << "\ngeom: \n";
   for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
-    for (int i_dim = 0; i_dim < _n_dim_geom; ++i_dim) {_geom->pushBack(pos(i_dim)[i_vert]); std::cout << pos(i_dim)[i_vert] << " ";}
+    for (int i_dim = 0; i_dim < _n_dim_geom; ++i_dim) _geom->pushBack(pos(i_dim)[i_vert]);
   }
-  std::cout << "\nvars: \n";
   for (int i_var = 0; i_var < _n_var; ++i_var) {
-    for (int i_vert = 0; i_vert < n_vert; ++i_vert) {_attrs[i_var]->pushBack(vars(i_var)[i_vert]); std::cout << vars(i_var)[i_vert] << " ";}
+    for (int i_vert = 0; i_vert < n_vert; ++i_vert) _attrs[i_var]->pushBack(vars(i_var)[i_vert]);
   }
-  std::cout << std::endl;
   _n_verts += pos.shape()[1];
 }
 
