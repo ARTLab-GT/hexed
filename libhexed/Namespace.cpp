@@ -21,6 +21,7 @@ std::vector<std::string> Namespace::names() const {
   for (auto& pair : _doubles) n.push_back(pair.first);
   for (auto& pair : _strings) n.push_back(pair.first);
   for (auto& pair : _arrays) n.push_back(pair.first);
+  std::sort(n.begin(), n.end());
   return n;
 }
 

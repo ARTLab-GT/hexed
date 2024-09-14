@@ -15,16 +15,31 @@ Xdmf_wrapper::Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name
 , _n_dim_topo{n_dim_topo}
 , _file_name{file_name}
 , _time{time}
-, _n_var{int(var_names.size())}
+, _n_scalar{(int)var_names.size()}
 , _n_verts{0}
 , _node_inds(math::pow(2, n_dim_topo), n_dim_topo)
 , _elem_t{elem_t}
 {
-  for (int i_var = 0; i_var < _n_var; ++i_var) {
+  for (int i_scalar = 0, i_var = 0; i_scalar < _n_scalar; ++i_scalar) {
+    std::string var = var_names[i_scalar];
+    auto attr_type = XdmfAttributeType::Scalar();
+    _start_inds.push_back(i_var);
+    if (var.back() == '0') {
+      std::string vec_name(var.begin(), var.end() - 1);
+      if (_n_scalar >= i_scalar + 3) {
+        if (var_names[i_scalar + 1] == vec_name + "1" && var_names[i_scalar + 2] == vec_name + "2") {
+          var = vec_name;
+          attr_type = XdmfAttributeType::Vector();
+          for (int i = 0; i < 2; ++i) _start_inds.push_back(i_var);
+          i_scalar += 2;
+        }
+      }
+    }
+    ++i_var;
     _attrs.push_back(XdmfAttribute::New());
-    _attrs.back()->setName(var_names[i_var]);
+    _attrs.back()->setName(var);
     _attrs.back()->setCenter(XdmfAttributeCenter::Node());
-    _attrs.back()->setType(XdmfAttributeType::Scalar());
+    _attrs.back()->setType(attr_type);
   }
   HEXED_ASSERT(_n_dim_topo > 0 && _n_dim_topo <= 3, "invalid topological dimensionality");
   if (_elem_t == block) {
@@ -67,8 +82,8 @@ Xdmf_wrapper::Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name
 
 void Xdmf_wrapper::write_block(Array<double> pos, Array<double> vars) {
   HEXED_ASSERT(pos.order() == _n_dim_topo + 1, "input arrays have wrong order");
-  if (_n_var) {
-    HEXED_ASSERT(vars.shape()[0] == _n_var, "`vars` has wrong number of rows");
+  if (_n_scalar) {
+    HEXED_ASSERT(vars.shape()[0] == _n_scalar, "`vars` has wrong number of rows");
     HEXED_ASSERT(pos(0).same_shape(vars(0)), "`pos` and `vars` must have compatible shape");
   }
   int row_size = pos.shape()[1];
@@ -85,14 +100,8 @@ void Xdmf_wrapper::write_block(Array<double> pos, Array<double> vars) {
     }
   }
   for (int i_point = 0; i_point < n_point; ++i_point) {
-    for (int i_dim = 0; i_dim < _n_dim_geom; ++i_dim) {
-      _geom->pushBack(pos(i_dim)[i_point]);
-    }
-  }
-  for (int i_var = 0; i_var < _n_var; ++i_var) {
-    for (int i_point = 0; i_point < n_point; ++i_point) {
-      _attrs[i_var]->pushBack(vars(i_var)[i_point]);
-    }
+    for (int i_dim = 0; i_dim < _n_dim_geom; ++i_dim) _geom->pushBack(pos(i_dim)[i_point]);
+    for (int i_var = 0; i_var < _n_scalar; ++i_var) _attrs[_start_inds[i_var]]->pushBack(vars(i_var)[i_point]);
   }
   _n_verts += n_point;
 }
@@ -105,16 +114,14 @@ void Xdmf_wrapper::write_unstruct(Array<Int> elements, Array<double> pos, Array<
   HEXED_ASSERT(pos.shape()[0] == _n_dim_geom, "`pos` must have `n_dim_geom` rows");
   int n_vert = pos.shape()[1];
   HEXED_ASSERT(vars.order() == 2, "`vars` must be 2D");
-  HEXED_ASSERT(vars.shape()[0] == _n_var, "`vars` must have `n_var` rows");
+  HEXED_ASSERT(vars.shape()[0] == _n_scalar, "`vars` must have `n_var` rows");
   HEXED_ASSERT(vars.shape()[1] == n_vert, "`vars` and `pos` must have the same number of columns (number of vertices)");
   for (int i_elem = 0; i_elem < elements.shape()[0]; ++i_elem) {
     for (int i_vert = 0; i_vert < n_elem_vert; ++i_vert) _topo->pushBack(elements(i_elem)[_permutation[i_vert]] + _n_verts);
   }
   for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
     for (int i_dim = 0; i_dim < _n_dim_geom; ++i_dim) _geom->pushBack(pos(i_dim)[i_vert]);
-  }
-  for (int i_var = 0; i_var < _n_var; ++i_var) {
-    for (int i_vert = 0; i_vert < n_vert; ++i_vert) _attrs[i_var]->pushBack(vars(i_var)[i_vert]);
+    for (int i_var = 0; i_var < _n_scalar; ++i_var) _attrs[_start_inds[i_var]]->pushBack(vars(i_var)[i_vert]);
   }
   _n_verts += pos.shape()[1];
 }

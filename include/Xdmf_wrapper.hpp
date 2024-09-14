@@ -21,7 +21,8 @@ class Xdmf_wrapper : public Visualizer {
   const int _n_dim_topo;
   const std::string _file_name;
   const double _time;
-  const int _n_var;
+  const int _n_scalar;
+  std::vector<int> _start_inds;
   int _n_verts;
   Eigen::MatrixXi _node_inds;
   elem_type _elem_t;
@@ -37,7 +38,8 @@ class Xdmf_wrapper : public Visualizer {
    * \param time flow time
    * \param element_type whether to visualize line/quad/hex (default) or line/tri/tet
    */
-  Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, std::vector<std::string> var_names, double time, elem_type element_type = block);
+  Xdmf_wrapper(int n_dim_geom, int n_dim_topo, std::string file_name, std::vector<std::string> var_names,
+               double time, elem_type element_type = block);
   void write_block(Array<double> pos, Array<double> vars) override;
   void write_unstruct(Array<Int> elements, Array<double> pos, Array<double> vars) override;
   ~Xdmf_wrapper(); //!< writes the data to the file(s)
