@@ -7,17 +7,9 @@
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/Simplex_geom.hpp>
 
-class Dummy : public hexed::Boundary_condition
-{
-  public:
-  virtual void apply_state(hexed::Boundary_face&) {}
-};
-
-TEST_CASE("Typed_boundary_connection")
-{
+TEST_CASE("Typed_boundary_connection") {
   hexed::Storage_params params {3, 4, 2, 4};
   hexed::Element element {params};
-  Dummy bc;
   hexed::Typed_bound_connection<hexed::Element> tbc0 {element, 1, false, 0};
   REQUIRE(element.face(2, false) == tbc0.state(0, false));
   REQUIRE(tbc0.ghost_face(false) == tbc0.state(1, false));
@@ -45,8 +37,7 @@ TEST_CASE("Typed_boundary_connection")
   REQUIRE(tbc1.direction().face_sign[1] == 0);
 }
 
-TEST_CASE("Freestream")
-{
+TEST_CASE("Freestream") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 5, 3, row_size};
   hexed::Element element {params};
@@ -72,8 +63,7 @@ TEST_CASE("Freestream")
   }
 }
 
-TEST_CASE("Riemann_invariants")
-{
+TEST_CASE("Riemann_invariants") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 5, 3, row_size};
   hexed::Element element {params};
@@ -116,8 +106,7 @@ TEST_CASE("Riemann_invariants")
   }
 }
 
-TEST_CASE("Function_bc")
-{
+TEST_CASE("Function_bc") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {2, 4, 2, row_size};
   hexed::Element element {params};
@@ -147,8 +136,7 @@ TEST_CASE("Function_bc")
   REQUIRE(tbc.ghost_face(false)[2*n_qpoint + 4] == Catch::Approx(3.4));
 }
 
-TEST_CASE("Nonpenetration")
-{
+TEST_CASE("Nonpenetration") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 4, 2, row_size};
   hexed::Deformed_element element {params};
@@ -162,8 +150,7 @@ TEST_CASE("Nonpenetration")
       for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face(i)[i_var*row_size + i_qpoint] = state[i_var];
     }
   }
-  SECTION("apply_state")
-  {
+  SECTION("apply_state") {
     nonpen.apply_state(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       // require tangential momentum unchanged
@@ -174,8 +161,7 @@ TEST_CASE("Nonpenetration")
               + 3*tbc.ghost_face(false)[1*row_size + i_qpoint] == Catch::Approx(1.));
     }
   }
-  SECTION("apply_flux")
-  {
+  SECTION("apply_flux") {
     nonpen.apply_flux(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       // require tangential momentum flux flipped
@@ -191,8 +177,7 @@ TEST_CASE("Nonpenetration")
   }
 }
 
-TEST_CASE("No_slip")
-{
+TEST_CASE("No_slip") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 4, 2, row_size};
   hexed::Deformed_element element {params};
@@ -249,8 +234,7 @@ TEST_CASE("No_slip")
       REQUIRE((tbc.ghost_face(true)[3*row_size + i_qpoint] + tbc.inside_face(true)[3*row_size + i_qpoint])/2 == Catch::Approx(-3.*.7));
     }
   }
-  SECTION("specified emissivity")
-  {
+  SECTION("specified emissivity") {
     state[3] = 1e5/.4;
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) {
@@ -275,8 +259,7 @@ TEST_CASE("No_slip")
   }
 }
 
-TEST_CASE("Copy")
-{
+TEST_CASE("Copy") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 5, 3, row_size};
   hexed::Element element {params};

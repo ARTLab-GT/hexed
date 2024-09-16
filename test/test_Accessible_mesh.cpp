@@ -114,14 +114,12 @@ TEST_CASE("Accessible_mesh") {
     REQUIRE(con.state(1, false) == mesh.element(3, true, sn2).face(0*2 + 1, false));
   }
 
-  SECTION("boundary conditions")
-  {
-    int freestream = mesh.add_boundary_condition(new hexed::Freestream(hexed::Mat<4>{0, 0, 1., 1e5}), new hexed::Null_mbc);
-    int nonpen = mesh.add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
+  SECTION("boundary conditions") {
+    int freestream = mesh.add_boundary_condition(new hexed::Freestream(hexed::Mat<4>{0, 0, 1., 1e5}));
+    int nonpen = mesh.add_boundary_condition(new hexed::Nonpenetration);
     // check that connecting to an invalid serial number throws
     REQUIRE_THROWS(mesh.connect_boundary(0, 0, sn0, 1, 0, nonpen + freestream + 1));
-    SECTION("cartesian")
-    {
+    SECTION("cartesian") {
       mesh.connect_boundary(0, 0, sn1, 1, 0, freestream);
       {
         // check that it got the right face
@@ -269,7 +267,7 @@ TEST_CASE("Accessible_mesh") {
       mesh1.connect_hanging(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {{0, 0}, {0, 1}}, false, {fine_def, fine_def});
     }
     // add boundary conditions
-    int bcsn = mesh1.add_boundary_condition(new hexed::Freestream {hexed::Mat<4>{0., 0., 1., 1.}}, new hexed::Null_mbc);
+    int bcsn = mesh1.add_boundary_condition(new hexed::Freestream {hexed::Mat<4>{0., 0., 1., 1.}});
     for (int i = 0; i < 2; ++i) {
       for (int kind = 0; kind < 2; ++kind) {
         mesh1.connect_boundary(1, kind, kinds[kind][i], 0, 0, bcsn); // left face
@@ -319,7 +317,7 @@ TEST_CASE("extruded BCs")
   hexed::Storage_params params {2, 4, 2, 2};
   hexed::Accessible_mesh mesh {params, 1.};
   int elem_sn = mesh.add_element(0, true, {0, 0});
-  int bc_sn = mesh.add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
+  int bc_sn = mesh.add_boundary_condition(new hexed::Nonpenetration);
   mesh.connect_boundary(0, true, elem_sn, 0, 1, bc_sn);
   mesh.connect_boundary(0, true, elem_sn, 1, 0, bc_sn);
   mesh.extrude();
@@ -421,7 +419,7 @@ TEST_CASE("Tree meshing") {
     mesh.valid().assert_valid();
     SECTION("neighbors with different ref levels") {
       hexed::Accessible_mesh mesh1({1, 5, 3, hexed::config::max_row_size}, .7);
-      mesh1.add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
+      mesh1.add_boundary_condition(new hexed::Copy);
       std::vector<hexed::Flow_bc*> bcs;
       for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Copy);
       mesh1.add_tree(bcs);

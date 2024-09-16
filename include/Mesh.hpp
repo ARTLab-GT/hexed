@@ -60,12 +60,11 @@ class Mesh {
   virtual void connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>,
                                bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
                                std::array<bool, 2> stretch = {false, false}) = 0;
-  /*!
-   * Acquires owenership of `*flow_bc` and `*mesh_bc` and constructs a `Boundary_condition` from them.
+  /*! \brief Acquires owenership of `*flow_bc` and adds it as a boundary condition.
    * Returns a serial number which uniquely identifies the new boundary condition among this `Mesh`'s boundary conditions.
    * It is recommended to use this with `new`, like the constructor for `std::unique_ptr`.
    */
-  virtual int add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc) = 0;
+  virtual int add_boundary_condition(Flow_bc* flow_bc) = 0;
   /*!
    * Connect a face of an element to a boundary condition. This BC will now be applied to that face. `i_dim` and `face_sign`
    * are used to identify which face of the element is participating in the boundary condition.

@@ -100,13 +100,6 @@ void Accessible_mesh::snap_vertices() {
       }
     }
     snap_extremes();
-  } else {
-    auto& bc_cons {boundary_connections()};
-    #pragma omp parallel for
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-      boundary_condition(bc_sn).mesh_bc->snap_vertices(bc_cons[i_con]);
-    }
   }
   // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with
   // so now we put them back where they belong
@@ -250,7 +243,6 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 , ref_face_v{car.refined_faces(), def.refined_faces()}
 , matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()}
 , surf_bc_sn{-1} // set to -1 to prevent uninitialized comparisons
-, surf_geom{nullptr}
 , verts_are_reset{false}
 , _mask_levels{0}
 , _basis(params.row_size)
@@ -375,9 +367,9 @@ void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, s
   }
 }
 
-int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc) {
+int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc) {
   boundary_verts.emplace_back();
-  bound_conds.push_back({std::unique_ptr<Flow_bc>{flow_bc}, std::unique_ptr<Mesh_bc>{mesh_bc}});
+  bound_conds.emplace_back(flow_bc);
   // no reason to delete boundary conditions, so the serial number can just be the index
   return bound_conds.size() - 1;
 }
@@ -782,7 +774,7 @@ void Accessible_mesh::create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> orig
   // take ownership of bcs (do this first to avoid memory leak)
   std::vector<int> new_tree_bcs;
   //! \todo this could, in theory, be a resource leak because these are never erased if an exception is thrown...
-  for (Flow_bc* fbc : extremal_bcs) new_tree_bcs.push_back(add_boundary_condition(fbc, new Nominal_pos));
+  for (Flow_bc* fbc : extremal_bcs) new_tree_bcs.push_back(add_boundary_condition(fbc));
   HEXED_ASSERT(int(extremal_bcs.size()) == 2*params.n_dim, "`extremal_bcs` has wrong number of elements");
   HEXED_ASSERT(!tree, "each `Mesh` may only contain one tree");
   // add the tree
@@ -814,8 +806,8 @@ bool Accessible_mesh::is_surface(Tree* t) {
 
 void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start) {
   // take ownership of the surface geometries (do this first to avoid memory leak)
-  surf_bc_sn = add_boundary_condition(surface_bc, new Geom_mbc(geometry));
-  surf_geom = geometry;
+  surf_bc_sn = add_boundary_condition(surface_bc);
+  surf_geom.reset(geometry);
   Int n_edges = surf_geom->edges().size();
   matched_vertices.clear();
   matched_vertices.resize(n_edges);
@@ -2036,11 +2028,11 @@ void Accessible_mesh::read_file(std::string file_name) {
   cleanup();
 }
 
-Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* geometry, Flow_bc* surface_bc)
+Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs,
+                                 Surface_geom* geometry, Flow_bc* surface_bc)
 : Accessible_mesh(read_params(file_name), read_root_sz(file_name)) {
   // take ownership of these to avoid memory leaks in case of exception
-  std::unique_ptr<Flow_bc> fbc;
-  if (surface_bc) fbc.reset(surface_bc);
+  std::unique_ptr<Flow_bc> fbc(surface_bc);
   std::unique_ptr<Surface_geom> g(geometry);
   // create the tree
   {
@@ -2053,18 +2045,15 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> ex
   }
   HEXED_ASSERT(bool(fbc) == bool(g), "must specify both surface geometry and surface boundary condition or neither");
   if (surface_bc) {
-    surf_bc_sn = add_boundary_condition(fbc.release(), new Geom_mbc(g.release()));
-    surf_geom = geometry;
+    surf_bc_sn = add_boundary_condition(fbc.release());
+    surf_geom.reset(g.release());
   }
   read_file(file_name);
 }
 
-Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> flow_bcs, std::vector<Mesh_bc*> mesh_bcs)
+Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> flow_bcs)
 : Accessible_mesh(read_params(file_name), read_root_sz(file_name)) {
-  HEXED_ASSERT(flow_bcs.size() == mesh_bcs.size(), "must supply same number of flow and mesh boundary conditions");
-  for (unsigned i_bc = 0; i_bc < flow_bcs.size(); ++i_bc) {
-    add_boundary_condition(flow_bcs[i_bc], mesh_bcs[i_bc]);
-  }
+  for (unsigned i_bc = 0; i_bc < flow_bcs.size(); ++i_bc) add_boundary_condition(flow_bcs[i_bc]);
   read_file(file_name);
 }
 

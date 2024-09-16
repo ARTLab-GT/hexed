@@ -80,7 +80,7 @@ void Solver::apply_state_bcs() {
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).apply_state(bc_cons[i_con]);
   }
   stopwatch["boundary conditions"].stopwatch.pause();
   stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
@@ -95,7 +95,7 @@ void Solver::apply_flux_bcs() {
     Eigen::Map<Mat<>>(bc_cons[i_con].flux_cache(), n_dof) = Eigen::Map<Mat<>>(bc_cons[i_con].inside_face(true), n_dof);
     // apply boundary conditions
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).apply_flux(bc_cons[i_con]);
   }
 }
 
@@ -104,7 +104,7 @@ void Solver::apply_avc_diff_bcs() {
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flow_bc->apply_diffusion(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).apply_diffusion(bc_cons[i_con]);
   }
 }
 
@@ -113,7 +113,7 @@ void Solver::apply_avc_diff_flux_bcs() {
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flow_bc->flux_diffusion(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).flux_diffusion(bc_cons[i_con]);
   }
 }
 
@@ -153,7 +153,7 @@ void Solver::_init_face_state() {
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flow_bc->init_cache(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).init_cache(bc_cons[i_con]);
   }
 }
 
@@ -558,7 +558,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       #pragma omp parallel for
       for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
         int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-        acc_mesh->boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
+        acc_mesh->boundary_condition(bc_sn).apply_advection(bc_cons[i_con]);
       }
       sw_adv["BCs"].stopwatch.pause();
       sw_adv["BCs"].work_units_completed += acc_mesh->elements().size();

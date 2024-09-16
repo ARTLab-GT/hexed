@@ -24,7 +24,7 @@ class Accessible_mesh : public Mesh {
   Concatenation<Element&> elems;
   Vector_view<Kernel_element&, Element&, &trivial_convert<Kernel_element&, Element&>, Sequence> kernel_elems;
   Concatenation<Element_connection&> elem_cons;
-  std::vector<Boundary_condition> bound_conds;
+  std::vector<std::unique_ptr<Flow_bc>> bound_conds;
   Concatenation<Face_connection<Deformed_element>&> bound_face_cons;
   Concatenation<Boundary_connection&> bound_cons;
   Concatenation<Face_connection<Deformed_element>&> def_face_cons;
@@ -32,7 +32,7 @@ class Accessible_mesh : public Mesh {
   Concatenation<Hanging_vertex_matcher&> matcher_v;
   std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
   int surf_bc_sn;
-  Surface_geom* surf_geom; // note: this pointer does not own its data (the corresponding `Mesh_bc` does) so don't `delete` it.
+  std::unique_ptr<Surface_geom> surf_geom;
   std::vector<Element_face_connection<Deformed_element>*> extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
   std::vector<int> tree_bcs;
@@ -121,7 +121,7 @@ class Accessible_mesh : public Mesh {
    * \details Acquires ownership of boundary condition pointers.
    * This variant is not for tree meshing.
    */
-  Accessible_mesh(std::string file_name, std::vector<Flow_bc*>, std::vector<Mesh_bc*>);
+  Accessible_mesh(std::string file_name, std::vector<Flow_bc*>);
   virtual ~Accessible_mesh();
   inline double root_size() override {return root_sz;}
   inline Storage_params storage_params() {return params;}
@@ -143,7 +143,7 @@ class Accessible_mesh : public Mesh {
                        std::array<bool, 2> stretch = {false, false}) override;
   //! \returns a view of all connections between elements, including one connection for every fine element in hanging node connections.
   Sequence<Element_connection&>& element_connections() {return elem_cons;}
-  int add_boundary_condition(Flow_bc*, Mesh_bc*) override;
+  int add_boundary_condition(Flow_bc*) override;
   void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) override;
   void disconnect_boundary(int bc_sn) override;
   void cleanup() override;
@@ -198,9 +198,10 @@ class Accessible_mesh : public Mesh {
   std::vector<std::unique_ptr<Masked_mesh>> preti_masks(const Basis&);
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
-  Vector_view<Boundary_condition&, Boundary_condition> boundary_conditions() {return bound_conds;}
+  Vector_view<Flow_bc&, std::unique_ptr<Flow_bc>, &ptr_convert<Flow_bc&, std::unique_ptr<Flow_bc>>>
+  boundary_conditions() {return bound_conds;}
   //! get a boundary condition owned by this mesh by its serial number
-  Boundary_condition& boundary_condition(int bc_sn) {return bound_conds[bc_sn];}
+  Flow_bc& boundary_condition(int bc_sn) {return *bound_conds[bc_sn];}
   //! \returns a view of all connections between an element and a boundary condition
   Sequence<Boundary_connection&>& boundary_connections() {return bound_cons;}
   //! \returns a view of all Refined_face objects owned by this mesh (there will be one for every hanging node connection)
