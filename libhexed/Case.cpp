@@ -365,7 +365,7 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
-    _solver().initialize(_inter, _vars("init_cond"));
+    _solver().initialize(_vars("init_cond"));
     return "";
   }));
 
