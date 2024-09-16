@@ -53,6 +53,12 @@ void state(Namespace& space, Element& elem) {
   space.assign("tss", Array<double>({nq}, elem.time_step_scale()));
 }
 
+void field(Namespace& space, Element& elem, const Basis& b) {
+  element(space, elem);
+  position(space, elem, b);
+  state(space, elem);
+}
+
 void surface(Namespace& space, Boundary_connection& con) {
   auto params = con.storage_params();
   int nfq = params.n_qpoint()/params.row_size;

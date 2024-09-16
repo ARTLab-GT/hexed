@@ -39,6 +39,9 @@ void position(Namespace&, Element&, const Basis&);
  */
 void state(Namespace&, Element&);
 
+//! \brief Assigns everything in `element()`, `position()`, and `state()`.
+void field(Namespace&, Element&, const Basis&);
+
 /*! \details Assigns the follwing variables:
  * - `pos0`, `pos`, `pos2`: position
  * - `normal0`, `normal1`, `normal2`: unit surface normal (out of surface, into domain)

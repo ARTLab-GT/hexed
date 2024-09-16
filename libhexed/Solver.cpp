@@ -1266,6 +1266,7 @@ std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int
   return integral;
 };
 
+//! \cond
 template <typename T>
 class Vis_evaluator {
   public:
@@ -1333,6 +1334,7 @@ class Vis_evaluator {
   std::vector<Int> _shape;
   std::vector<std::string> _var_names;
 };
+//! \endcond
 
 void Solver::visualize_field(std::string format, std::string name, std::string expr, int n_sample, bool wireframe) {
   std::string sw_name = "field";
@@ -1341,11 +1343,11 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
   auto& elems = acc_mesh->elements();
   if (!elems.size()) return;
-  Vis_evaluator<Element> evaluator(_interpreter(), [&](Namespace& space, Element& elem) {
-    vis_variables::element(space, elem);
-    vis_variables::position(space, elem, basis);
-    vis_variables::state(space, elem);
-  }, expr, elems[0], params.n_dim);
+  Vis_evaluator<Element> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Element& elem) {vis_variables::field(space, elem, basis);},
+    expr, elems[0], params.n_dim
+  );
   evaluator.visualize(format, name, n_sample, wireframe, elems,
                       _namespace->get<double>("flow_time"), basis, [](Element&){return true;});
   ++stopwatch["visualization"].work_units_completed;
@@ -1361,9 +1363,11 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");
   auto& bc_cons {acc_mesh->boundary_connections()};
   if (!bc_cons.size()) return;
-  Vis_evaluator<Boundary_connection> evaluator(_interpreter(), [&](Namespace& space, Boundary_connection& con) {
-    vis_variables::surface(space, con);
-  }, expr, bc_cons[0], params.n_dim - 1);
+  Vis_evaluator<Boundary_connection> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
+    expr, bc_cons[0], params.n_dim - 1
+  );
   evaluator.visualize(format, name, n_sample, wireframe, bc_cons,
                       _namespace->get<double>("flow_time"), basis,
                       [bc_sn](Boundary_connection& con){return con.bound_cond_serial_n() == bc_sn;});
@@ -1378,11 +1382,11 @@ void Solver::visualize_contour(std::string format, std::string name, std::string
   auto& elems = acc_mesh->elements();
   if (!elems.size()) return;
   vis_expr = vis_expr + ";hexed_contour = " + contour_expr + ";";
-  Vis_evaluator<Element> evaluator(_interpreter(), [&](Namespace& space, Element& elem) {
-    vis_variables::element(space, elem);
-    vis_variables::position(space, elem, basis);
-    vis_variables::state(space, elem);
-  }, vis_expr, elems[0], params.n_dim);
+  Vis_evaluator<Element> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Element& elem) {vis_variables::field(space, elem, basis);},
+    vis_expr, elems[0], params.n_dim
+  );
   auto var_names = evaluator.var_names();
   int i_contour = std::find(var_names.begin(), var_names.end(), "hexed_contour") - var_names.begin();
   auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, var_names,

@@ -153,8 +153,6 @@ class Solver {
    * \param snap_faces if `true`, this function will go ahead and perform face snapping for you
    */
   void calc_jacobian(bool snap_faces = true);
-  //! set the flow state
-  void initialize(const Spacetime_func&);
   //! \brief set the flow state from an HIL expression
   //! \details `espression` must set the variables `momentum0`, ..., `momentum[n_dim - 1]`, `density`, `energy`
   void initialize(Interpreter& inter, std::string expression);
