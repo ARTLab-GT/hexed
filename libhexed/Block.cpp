@@ -62,40 +62,7 @@ Mat<3> Vertex::_point(const std::vector<int>&) const {
   // usually, the vertex will not be glued or a shadow and we can just return the `pos`
   if (_shadowed) return _shadowed->point({});
   if (!_glued_to) return pos;
-  // the rest is to compute the position in the special case that the vertex is glued
-  int nd = _glued_to.value().n_dim();
-  int rs = _glued_to.value().row_size();
-  std::vector<Int> shape(nd + 1, rs);
-  shape[0] = 3;
-  Array<double> points(shape);
-  points = 0.;
-  for (int i_point = 0; i_point < (int)points.size()/3; ++i_point) {
-    bool skip = false;
-    std::vector<int> coords(nd);
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      coords[i_dim] = i_point/math::pow(rs, nd - 1 - i_dim)%rs;
-      skip = skip || (_glued_coords[i_dim] == 0 && coords[i_dim] != 0       );
-      skip = skip || (_glued_coords[i_dim] == 1 && coords[i_dim] != (rs - 1));
-    }
-    if (!skip) {
-      Mat<3> p = _glued_to->point(coords);
-      for (int i_dim = 0; i_dim < 3; ++i_dim) points(i_dim)[i_point] = p(i_dim);
-    }
-  }
-  Mat<3> p; // this is where we will put the computed position
-  // compute the interpolation matrix
-  Eigen::Map<const Mat<>> sample(_glued_coords.data(), _glued_coords.size());
-  Mat<dyn, dyn> interp = _glued_to.value().basis().interpolate(sample);
-  // apply the interpolation matrix along each dimension to compute the desired point
-  for (int i_dim = 0; i_dim < 3; ++i_dim) {
-    Mat<> vec = points(i_dim).vector();
-    for (int j_dim = _glued_coords.size() - 1; j_dim >= 0; --j_dim) {
-      Mat<> new_vec = math::dimension_matvec(interp(j_dim, all), vec, j_dim);
-      vec = new_vec;
-    }
-    p(i_dim) = vec(0);
-  }
-  return p;
+  return _glued_to->interpolate(_glued_coords);
 }
 
 Vertex::Vertex(Mat<3> pos, int row_size)
@@ -353,6 +320,15 @@ Mat<3> Element_shape::_vertex_point(const std::vector<int>& coords) const {
 }
 
 Mat<3> Element_shape::_point(const std::vector<int>& coords) const {
+  if (glued()) {
+    Int nc = coords.size();
+    std::vector<double> new_coords(nc);
+    for (int i_dim = 0; i_dim < nc; ++i_dim) {
+      double diff = _glued_corners[1][i_dim] - _glued_corners[0][i_dim];
+      new_coords[i_dim] = _glued_corners[0][i_dim] + _basis->node(coords[i_dim])*diff;
+    }
+    return _glued_to->interpolate(new_coords);
+  }
   // first compute point by interpolating between vertices
   Mat<3> point = _vertex_point(coords);
   // then, if `this` has a side on the boundary, adjust it to account for the actual position of the boundary nodes
@@ -378,6 +354,41 @@ Element_shape::Element_shape(int nd, const Basis& b)
 , _glued_verts(this)
 {
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
+}
+
+Mat<3> Element_shape::interpolate(std::vector<double> ref_coords) const {
+  int nd = n_dim();
+  int rs = row_size();
+  std::vector<Int> shape(nd + 1, rs);
+  shape[0] = 3;
+  Array<double> points(shape);
+  points = 0.;
+  for (int i_point = 0; i_point < (int)points.size()/3; ++i_point) {
+    bool skip = false;
+    std::vector<int> coords(nd);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      coords[i_dim] = i_point/math::pow(rs, nd - 1 - i_dim)%rs;
+      skip = skip || (ref_coords[i_dim] == 0 && coords[i_dim] != 0       );
+      skip = skip || (ref_coords[i_dim] == 1 && coords[i_dim] != (rs - 1));
+    }
+    if (!skip) {
+      points.reshaped({3, whatever}).column(i_point).vector() = point(coords);
+    }
+  }
+  Mat<3> p; // this is where we will put the computed position
+  // compute the interpolation matrix
+  Eigen::Map<const Mat<>> sample(ref_coords.data(), ref_coords.size());
+  Mat<dyn, dyn> interp = _basis->interpolate(sample);
+  // apply the interpolation matrix along each dimension to compute the desired point
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    Mat<> vec = points(i_dim).vector();
+    for (int j_dim = nd - 1; j_dim >= 0; --j_dim) {
+      Mat<> new_vec = math::dimension_matvec(interp(j_dim, all), vec, j_dim);
+      vec = new_vec;
+    }
+    p(i_dim) = vec(0);
+  }
+  return p;
 }
 
 Mat<3> Element_shape::nominal_position(int i_vert) const {

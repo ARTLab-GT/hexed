@@ -279,6 +279,7 @@ class Element_shape : public Block {
   inline const Vertex& vertex(int i_vert) const {return *_verts[i_vert];}
   inline const Basis& basis() const {return *_basis;}
   inline bool glued() const {return _glued_to;}
+  Mat<3> interpolate(std::vector<double> coords) const;
 
   /*! \brief Stipulates that 1 face of `this` is conformally connected to 1 face of `that`.
    * \details Which faces are involved is determined by the `Connection_direction`.

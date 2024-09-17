@@ -471,5 +471,18 @@ TEST_CASE("Block") {
   }
 
   SECTION("element gluing") {
+    auto elem0 = blocks2.create_element(hexed::Mat<3>::Zero(), 1.);
+    auto elem1 = blocks2.create_element(hexed::Mat<3>::Zero(), 1.);
+    REQUIRE_THAT(elem1.point({0, 0}), Catch::Matchers::RangeEquals(std::vector<double>{0., 0., 0.}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem1.point({4, 2}), Catch::Matchers::RangeEquals(std::vector<double>{1., .5, 0.}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem1.point({4, 4}), Catch::Matchers::RangeEquals(std::vector<double>{1., 1., 0.}, hexed::math::Approx_equal(0., 1e-6)));
+    elem1.glue(elem0, {std::vector<double>{.1, .2}, std::vector<double>{.7, .6}});
+    REQUIRE_THAT(elem1.point({0, 0}), Catch::Matchers::RangeEquals(std::vector<double>{.1, .2, 0.}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem1.point({4, 2}), Catch::Matchers::RangeEquals(std::vector<double>{.7, .4, 0.}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem1.point({4, 4}), Catch::Matchers::RangeEquals(std::vector<double>{.7, .6, 0.}, hexed::math::Approx_equal(0., 1e-6)));
+    elem1.set_glued_corners({std::vector<double>{.3, .3}, std::vector<double>{.7, .7}});
+    REQUIRE_THAT(elem1.point({0, 0}), Catch::Matchers::RangeEquals(std::vector<double>{.3, .3, 0.}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem1.point({4, 2}), Catch::Matchers::RangeEquals(std::vector<double>{.7, .5, 0.}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem1.point({4, 4}), Catch::Matchers::RangeEquals(std::vector<double>{.7, .7, 0.}, hexed::math::Approx_equal(0., 1e-6)));
   }
 }
