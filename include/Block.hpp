@@ -278,6 +278,7 @@ class Element_shape : public Block {
   inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
   inline const Vertex& vertex(int i_vert) const {return *_verts[i_vert];}
   inline const Basis& basis() const {return *_basis;}
+  inline bool glued() const {return _glued_to;}
 
   /*! \brief Stipulates that 1 face of `this` is conformally connected to 1 face of `that`.
    * \details Which faces are involved is determined by the `Connection_direction`.
@@ -294,6 +295,10 @@ class Element_shape : public Block {
    */
   void connect(std::vector<Element_shape*> those, Connection_direction);
 
+  void glue(Element_shape& that, std::array<std::vector<double>, 2> corners);
+  inline void set_glued_corners(std::array<std::vector<double>, 2> corners) {_glued_corners = corners;}
+  inline void unglue() {_glued_to.set();}
+
   private:
   Element_shape(int nd, const Basis&);
   Mat<3> _vertex_point(const std::vector<int>&) const;
@@ -307,6 +312,8 @@ class Element_shape : public Block {
   Reciprocal_list<Element_shape, Boundary_block> _boundary_edges;
   Mortal_ptr<Face> _sf;
   Reciprocal_list<Element_shape, Vertex> _glued_verts;
+  Mortal_ptr<Element_shape> _glued_to;
+  std::array<std::vector<double>, 2> _glued_corners;
 };
 
 /*! \brief Stores all the `Block`s for an entire mesh.

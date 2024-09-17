@@ -19,125 +19,127 @@ TEST_CASE("Block") {
   hexed::next::Mesh_blocks blocks3(3, basis5);
   hexed::next::Mesh_blocks blocks2(2, basis5);
 
-  // vertex construction
-  hexed::next::Vertex vert0({.1, -.3, .2}, 4);
-  REQUIRE(vert0.n_dim() == 0);
-  REQUIRE(vert0.row_size() == 4);
-  REQUIRE(!vert0.alive());
-  hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr0(nullptr);
-  vert0.pair(ptr0);
-  REQUIRE(vert0.alive());
-  REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2}, hexed::math::Approx_equal()));
-  vert0.apply_relax(); // before first call to `calc_relax`, `apply_update` should do nothing
-  REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2}, hexed::math::Approx_equal()));
-  hexed::next::Vertex vert1({.3, -.1, .4}, 4);
-  hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr1(nullptr);
-  vert1.pair(ptr1);
+  SECTION("`Vertex`s and `Edge`s") {
+    // vertex construction
+    hexed::next::Vertex vert0({.1, -.3, .2}, 4);
+    REQUIRE(vert0.n_dim() == 0);
+    REQUIRE(vert0.row_size() == 4);
+    REQUIRE(!vert0.alive());
+    hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr0(nullptr);
+    vert0.pair(ptr0);
+    REQUIRE(vert0.alive());
+    REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2}, hexed::math::Approx_equal()));
+    vert0.apply_relax(); // before first call to `calc_relax`, `apply_update` should do nothing
+    REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2}, hexed::math::Approx_equal()));
+    hexed::next::Vertex vert1({.3, -.1, .4}, 4);
+    hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr1(nullptr);
+    vert1.pair(ptr1);
 
-  // edge construction
-  hexed::Equidistant basis(4);
-  hexed::next::Edge edge0(vert0, vert1, basis);
-  REQUIRE(edge0.n_dim() == 1);
-  REQUIRE(edge0.row_size() == 4);
-  REQUIRE(!edge0.alive());
-  auto test_interp = [&](hexed::next::Edge& edge){
-    for (int i = 0; i < 4; ++i) {
-      REQUIRE_THAT(edge.point({i}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2} + i*hexed::Mat<3>::Constant(.2/3.), hexed::math::Approx_equal()));
-    }
-  };
-  test_interp(edge0);
-
-  // edge modification
-  REQUIRE_THAT(edge0.interior().shape(), Catch::Matchers::RangeEquals(std::vector<int>{2, 3}));
-  edge0.interior()(0)[2] = 2.3;
-  REQUIRE(edge0.point({1})(2) == Catch::Approx(2.3));
-  edge0.reset();
-  test_interp(edge0);
-  hexed::Array<double> points = edge0.points();
-  REQUIRE_THAT(points.shape(), Catch::Matchers::RangeEquals(std::vector<int>{3, 4}));
-  for (int i_dim = 0; i_dim < 3; ++i_dim) {
-    for (int row = 0; row < 4; ++row) {
-      REQUIRE(points(i_dim)[row] == Catch::Approx(edge0.point({row})(i_dim)));
-    }
-  }
-
-  SECTION("vertex `eat`ing") {
-    hexed::next::Vertex vert2({3., 3., 3.}, 4);
-    hexed::next::Vertex vert3({0., 0., 0.}, 4);
-    SECTION("vertices must be alive before eating") {
-      REQUIRE_THROWS(vert2.eat(vert3));
-    }
-    hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr2(nullptr);
-    hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr3(nullptr);
-    vert2.pair(ptr2);
-    vert3.pair(ptr3);
-    hexed::next::Edge edge1(vert0, vert2, basis);
-    hexed::next::Edge edge2(vert0, vert3, basis);
-    REQUIRE_THAT(edge1.point({3}), Catch::Matchers::RangeEquals(hexed::Mat<3>{3., 3., 3.}));
-    vert2.eat(vert1);
-    REQUIRE(!vert1.alive());
-    REQUIRE(vert2.alive());
-    vert3.eat(vert2);
-    REQUIRE(!vert2.alive());
-    vert3.eat(vert3);
-    REQUIRE(vert3.alive());
-    for (auto edge : {&edge0, &edge1, &edge2}) {
-      REQUIRE_THAT(edge->point({3}), Catch::Matchers::RangeEquals(hexed::Mat<3>{3.3, 2.9, 3.4}/3.));
-    }
-  }
-
-  SECTION("vertex shadowing") {
-    hexed::next::Vertex vert2({2., 2., 2.}, 4);
-    hexed::next::Vertex vert3({0., 0., 0.}, 4);
-    REQUIRE(!vert2.are_shadows(vert3));
-    REQUIRE(!vert3.are_shadows(vert2));
-    vert2.shadow(vert3);
-    REQUIRE(vert2.are_shadows(vert3));
-    REQUIRE(vert3.are_shadows(vert2));
-    REQ_VEC_EQ(vert2.point({}), hexed::Mat<3>{1., 1., 1.});
-    REQ_VEC_EQ(vert3.point({}), hexed::Mat<3>{1., 1., 1.});
-    vert2.pos(0) = 4;
-    vert3.pos(1) = 5;
-    REQ_VEC_EQ(vert2.point({}), hexed::Mat<3>{1., 5., 1.});
-    REQ_VEC_EQ(vert3.point({}), hexed::Mat<3>{1., 5., 1.});
-  }
-
-  SECTION("edge `glue`ing") {
-    hexed::next::Vertex vert4({1., 1., 1.}, 4);
-    hexed::next::Vertex vert5({2., 1., 1.}, 4);
-    std::unique_ptr<hexed::next::Edge> edge3(new hexed::next::Edge(vert4, vert5, basis));
-    hexed::next::Edge edge4(vert4, vert5, basis);
+    // edge construction
+    hexed::Equidistant basis(4);
+    hexed::next::Edge edge0(vert0, vert1, basis);
+    REQUIRE(edge0.n_dim() == 1);
+    REQUIRE(edge0.row_size() == 4);
+    REQUIRE(!edge0.alive());
+    auto test_interp = [&](hexed::next::Edge& edge){
+      for (int i = 0; i < 4; ++i) {
+        REQUIRE_THAT(edge.point({i}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2} + i*hexed::Mat<3>::Constant(.2/3.), hexed::math::Approx_equal()));
+      }
+    };
     test_interp(edge0);
-    REQUIRE(!edge0.glued());
-    edge0.glue(*edge3);
-    REQUIRE(!edge0.glued());
-    auto elem = blocks3.create_element({0., 0., 0.}, 1.);
-    hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Boundary_block> ptr(&elem);
-    edge3->pair(ptr);
-    REQUIRE(edge0.glued());
-    edge4.glue(*edge3, 0);
-    REQUIRE(edge4.glued());
-    REQUIRE(!edge3->glued());
-    REQUIRE(edge3->point({1})(0) == Catch::Approx(4./3.));
-    REQUIRE(edge0.point({0})(0) == Catch::Approx(1.));
-    REQUIRE(edge0.point({1})(0) == Catch::Approx(4./3.));
-    REQUIRE(edge0.point({2})(1) == Catch::Approx(1.));
-    SECTION("unglue") {
-      edge0.unglue();
-      REQUIRE(!edge0.glued());
-      test_interp(edge0);
+
+    // edge modification
+    REQUIRE_THAT(edge0.interior().shape(), Catch::Matchers::RangeEquals(std::vector<int>{2, 3}));
+    edge0.interior()(0)[2] = 2.3;
+    REQUIRE(edge0.point({1})(2) == Catch::Approx(2.3));
+    edge0.reset();
+    test_interp(edge0);
+    hexed::Array<double> points = edge0.points();
+    REQUIRE_THAT(points.shape(), Catch::Matchers::RangeEquals(std::vector<int>{3, 4}));
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      for (int row = 0; row < 4; ++row) {
+        REQUIRE(points(i_dim)[row] == Catch::Approx(edge0.point({row})(i_dim)));
+      }
     }
-    REQUIRE(edge4.point({0})(0) == Catch::Approx(1.));
-    REQUIRE(edge4.point({1})(0) == Catch::Approx(1. + .5/3.));
-    edge4.unglue();
-    edge4.glue(*edge3, 1);
-    REQUIRE(edge4.point({0})(0) == Catch::Approx(1.5));
-    REQUIRE(edge4.point({0})(2) == Catch::Approx(1.));
-    REQUIRE(edge4.point({1})(0) == Catch::Approx(1.5 + .5/3.));
-    SECTION("delete") {
-      edge3.reset();
-      REQUIRE(!edge0.glued());
+
+    SECTION("vertex `eat`ing") {
+      hexed::next::Vertex vert2({3., 3., 3.}, 4);
+      hexed::next::Vertex vert3({0., 0., 0.}, 4);
+      SECTION("vertices must be alive before eating") {
+        REQUIRE_THROWS(vert2.eat(vert3));
+      }
+      hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr2(nullptr);
+      hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr3(nullptr);
+      vert2.pair(ptr2);
+      vert3.pair(ptr3);
+      hexed::next::Edge edge1(vert0, vert2, basis);
+      hexed::next::Edge edge2(vert0, vert3, basis);
+      REQUIRE_THAT(edge1.point({3}), Catch::Matchers::RangeEquals(hexed::Mat<3>{3., 3., 3.}));
+      vert2.eat(vert1);
+      REQUIRE(!vert1.alive());
+      REQUIRE(vert2.alive());
+      vert3.eat(vert2);
+      REQUIRE(!vert2.alive());
+      vert3.eat(vert3);
+      REQUIRE(vert3.alive());
+      for (auto edge : {&edge0, &edge1, &edge2}) {
+        REQUIRE_THAT(edge->point({3}), Catch::Matchers::RangeEquals(hexed::Mat<3>{3.3, 2.9, 3.4}/3.));
+      }
+    }
+
+    SECTION("vertex shadowing") {
+      hexed::next::Vertex vert2({2., 2., 2.}, 4);
+      hexed::next::Vertex vert3({0., 0., 0.}, 4);
+      REQUIRE(!vert2.are_shadows(vert3));
+      REQUIRE(!vert3.are_shadows(vert2));
+      vert2.shadow(vert3);
+      REQUIRE(vert2.are_shadows(vert3));
+      REQUIRE(vert3.are_shadows(vert2));
+      REQ_VEC_EQ(vert2.point({}), hexed::Mat<3>{1., 1., 1.});
+      REQ_VEC_EQ(vert3.point({}), hexed::Mat<3>{1., 1., 1.});
+      vert2.pos(0) = 4;
+      vert3.pos(1) = 5;
+      REQ_VEC_EQ(vert2.point({}), hexed::Mat<3>{1., 5., 1.});
+      REQ_VEC_EQ(vert3.point({}), hexed::Mat<3>{1., 5., 1.});
+    }
+
+    SECTION("edge `glue`ing") {
+      hexed::next::Vertex vert4({1., 1., 1.}, 4);
+      hexed::next::Vertex vert5({2., 1., 1.}, 4);
+      std::unique_ptr<hexed::next::Edge> edge3(new hexed::next::Edge(vert4, vert5, basis));
+      hexed::next::Edge edge4(vert4, vert5, basis);
       test_interp(edge0);
+      REQUIRE(!edge0.glued());
+      edge0.glue(*edge3);
+      REQUIRE(!edge0.glued());
+      auto elem = blocks3.create_element({0., 0., 0.}, 1.);
+      hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Boundary_block> ptr(&elem);
+      edge3->pair(ptr);
+      REQUIRE(edge0.glued());
+      edge4.glue(*edge3, 0);
+      REQUIRE(edge4.glued());
+      REQUIRE(!edge3->glued());
+      REQUIRE(edge3->point({1})(0) == Catch::Approx(4./3.));
+      REQUIRE(edge0.point({0})(0) == Catch::Approx(1.));
+      REQUIRE(edge0.point({1})(0) == Catch::Approx(4./3.));
+      REQUIRE(edge0.point({2})(1) == Catch::Approx(1.));
+      SECTION("unglue") {
+        edge0.unglue();
+        REQUIRE(!edge0.glued());
+        test_interp(edge0);
+      }
+      REQUIRE(edge4.point({0})(0) == Catch::Approx(1.));
+      REQUIRE(edge4.point({1})(0) == Catch::Approx(1. + .5/3.));
+      edge4.unglue();
+      edge4.glue(*edge3, 1);
+      REQUIRE(edge4.point({0})(0) == Catch::Approx(1.5));
+      REQUIRE(edge4.point({0})(2) == Catch::Approx(1.));
+      REQUIRE(edge4.point({1})(0) == Catch::Approx(1.5 + .5/3.));
+      SECTION("delete") {
+        edge3.reset();
+        REQUIRE(!edge0.glued());
+        test_interp(edge0);
+      }
     }
   }
 
@@ -466,5 +468,8 @@ TEST_CASE("Block") {
         REQUIRE(blocks3.faces_3d()[1].edge(2).point({2})(2) == Catch::Approx(1.54));
       }
     }
+  }
+
+  SECTION("element gluing") {
   }
 }

@@ -463,10 +463,17 @@ void Element_shape::connect(std::vector<Element_shape*> others, Connection_direc
   }
 }
 
+void Element_shape::glue(Element_shape& that, std::array<std::vector<double>, 2> corners) {
+  if (that.glued()) {
+    HEXED_ASSERT(that._glued_to.get() != this, "Mutually gluing 2 elements, which would create infinite recursion.");
+  }
+  _glued_to.set(&that);
+  _glued_corners = corners;
+}
+
 const int Mesh_blocks::no_face = -1;
 
-Mesh_blocks::Mesh_blocks(int nd, const Basis& b): n_dim{nd}, basis{b} {
-}
+Mesh_blocks::Mesh_blocks(int nd, const Basis& b): n_dim{nd}, basis{b} {}
 
 template <typename T>
 Sequence<T&> purge_fetch(std::vector<T>& vec) {
