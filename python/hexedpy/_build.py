@@ -26,6 +26,7 @@ class Hexed(bu.C_project):
             "install_wheel": bu.Option(True, convert=bu.as_bool),
             "test_args": bu.Option(""),
             "gdb": bu.Option(False, convert=bu.as_bool),
+            "valgrind": bu.Option(False, convert=bu.as_bool),
         })
         is_release = self.builder.options["build_mode"] == "release"
         self.builder.add_options({
@@ -187,6 +188,8 @@ class Hexed(bu.C_project):
         args = ["time", self.bdir + "bin/hexed_test", self.builder.options["test_args"]]
         if self.builder.options["gdb"]:
             args = ["gdb", "--args"] + args
+        if self.builder.options["valgrind"]:
+            args = ["valgrind"] + args
         self.builder.env["HEXED_PATH"] = self.bdir + "python_package/hexedpy/lib/hexed/"
         return self.builder.subproc(args)
 
