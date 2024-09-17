@@ -62,7 +62,7 @@ class Hexed(bu.C_project):
                 "ModelingData",
             ], use_graphics=False))
         if self.builder.options["build_tests"]:
-            deps.append(self[bu.Catch2]())
+            deps.append(self[bu.Catch2](self.builder.options["sanitize"]))
         if self.builder.options["build_docs"]:
             deps.append(self[bu.Doxygen]())
         return deps
