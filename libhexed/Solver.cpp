@@ -1072,7 +1072,6 @@ bool Solver::fix_admissibility(double stability_ratio) {
   int n_iters = std::numeric_limits<int>::max();
   for (iter = 0; iter < n_iters; ++iter) {
     HEXED_ASSERT(iter < 1e5, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
-    visualize_field("default", wd + "severe_indamis" + std::to_string(status.iteration), vis_expr);
     if (is_admissible()) {
       if (iter) n_iters = std::min(n_iters, 2*iter);
       else {
@@ -1082,6 +1081,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
     } else {
       n_iters = std::numeric_limits<int>::max();
     }
+    if (iter == 100) visualize_field("default", wd + "severe_indamis" + std::to_string(status.iteration), vis_expr);
     if (iter == 0) {
       _printer->warn("Warning: ", true);
       _printer->warn(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
