@@ -141,6 +141,7 @@ Mat<3> Vertex::_desired_pos() const {
   double tot_sz = 0;
   for (auto elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
+    if (elem->glued()) continue;
     double nom_sz = elem->nominal_size();
     int i_this = -1;
     Mat<3, dyn> verts(3, nv);
@@ -172,6 +173,7 @@ Mat<3> Vertex::_desired_pos() const {
       }
     }
   }
+  if (tot_sz == 0) return pos;
   des_pos = .9*des_pos/tot_sz + .1*pos;
   return des_pos;
 }
@@ -416,6 +418,7 @@ int i_edge(Connection_direction dir, int side, int i_bf) {
 void Element_shape::connect(Element_shape& other, Connection_direction dir) {
   HEXED_ASSERT(other.n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
   HEXED_ASSERT(other._basis == _basis, "attempt to connect elements with different basis");
+  if (&other == this) return;
   // eat vertices
   auto inds = vertex_inds(n_dim(), dir);
   for (int i_vert = 0; i_vert < math::pow(2, n_dim() - 1); ++i_vert) {
