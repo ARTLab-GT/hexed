@@ -168,21 +168,21 @@ void Element::set_needs_smooth(bool value) {
 void Element::set_face(int i_face, double* data) {faces[i_face] = data;}
 bool Element::is_connected(int i_face) {return faces[i_face];}
 
-void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face, bool fake) {
+void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
   HEXED_ASSERT(blocks.n_dim == params.n_dim, "Dimensionality of `this` and `blocks` does not match.");
   _fake_shape.reset();
   _shape = std::make_unique<next::Element_shape>(blocks.create_element(vertex(0).pos, nominal_size(), boundary_face));
-  if (fake) {
-    _fake_shape.reset(_shape.release());
-    _shape = std::make_unique<next::Element_shape>(blocks.create_element(vertex(0).pos, nominal_size()));
-    _shape->glue(*_fake_shape, {std::vector<double>(params.n_dim, 0.), std::vector<double>(params.n_dim, 1.)});
-  }
 }
 
+void Element::create_fake(next::Mesh_blocks& blocks) {
+  _fake_shape.reset(_shape.release());
+  _shape = std::make_unique<next::Element_shape>(blocks.create_element(vertex(0).pos, nominal_size()));
+  _shape->glue(*_fake_shape, {std::vector<double>(params.n_dim, 0.), std::vector<double>(params.n_dim, 1.)});
+}
 
 void Element::split_shape(next::Mesh_blocks& blocks, Element& split_from, double at, int from_face) {
   HEXED_ASSERT(split_from._fake_shape, "Can only create a split shape from an element that already has a fake shape.");
-  create_shape(blocks);
+  HEXED_ASSERT(_shape, "Must `create_shape` before `split_shape`.");
   _fake_shape = split_from._fake_shape;
   auto corners = split_from.shape().glued_corners();
   auto split_corners = corners;

@@ -285,28 +285,48 @@ Element& Accessible_mesh::element(int ref_level, bool is_deformed, int serial_n)
   return container(is_deformed).at(ref_level, serial_n);
 }
 
+void Accessible_mesh::_connect_shapes(Element& elem0, Element& elem1, Connection_direction dir) {
+  next::Element_shape* shapes [2] {&elem0.shape(), &elem1.shape()};
+  shapes[0]->connect(*shapes[1], dir);
+  next::Element_shape* fake_shapes [2] {elem0.fake_shape(), elem1.fake_shape()};
+  if (fake_shapes[0] || fake_shapes[1]) {
+    for (int i = 0; i < 2; ++i) shapes[i] = fake_shapes[i] ? fake_shapes[i] : shapes[i];
+    shapes[0]->connect(*shapes[1], dir);
+  }
+}
+
 void Accessible_mesh::_connect(std::array<Element*, 2> el_ar, Con_dir<Element> direction) {
   car.cons.emplace_back(new Element_face_connection<Element>(el_ar, direction));
-  el_ar[0]->shape().connect(el_ar[1]->shape(), direction);
+  _connect_shapes(*el_ar[0], *el_ar[1], direction);
 }
 
 void Accessible_mesh::_connect(std::array<Deformed_element*, 2> el_ar, Con_dir<Deformed_element> direction) {
   def.cons.emplace_back(new Element_face_connection<Deformed_element>(el_ar, direction));
-  el_ar[0]->shape().connect(el_ar[1]->shape(), direction);
+  _connect_shapes(*el_ar[0], *el_ar[1], direction);
 }
 
 template <typename Elem_t>
 void Accessible_mesh::_connect_shapes(Elem_t* coarse, std::vector<Elem_t*> fine, Con_dir<Deformed_element> dir,
               std::array<bool, 2> stretch) {
   std::vector<next::Element_shape*> fine_shapes;
+  std::vector<next::Element_shape*> fake_fine_shapes;
   for (int i = 0; i < 1 + stretch[0]; ++i) {
     for (Elem_t* elem : fine) {
       for (int i = 0; i < 1 + stretch[1]; ++i) {
         fine_shapes.push_back(&elem->shape());
+        fake_fine_shapes.push_back(elem->fake_shape());
       }
     }
   }
   coarse->shape().connect(fine_shapes, dir);
+  HEXED_ASSERT(   std::all_of(fine_shapes.begin(), fine_shapes.end(), [](void* p)->bool{return  p;})
+               || std::all_of(fine_shapes.begin(), fine_shapes.end(), [](void* p)->bool{return !p;}),
+               "All of the fine elements must have fake shapes or none.");
+  next::Element_shape* coarse_fake = coarse->fake_shape();
+  if (coarse_fake || fake_fine_shapes[0]) {
+    next::Element_shape* shape = coarse_fake ? coarse_fake : &coarse->shape();
+    shape->connect(fake_fine_shapes[0] ? fake_fine_shapes : fine_shapes, dir);
+  }
 }
 
 void Accessible_mesh::_connect(Element* coarse, std::vector<Element*> fine, Con_dir<Deformed_element> dir) {
@@ -547,6 +567,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     int sn = add_element(ref_level, true, nom_pos, face.elem.origin, face.elem.aniso_ref_level() + 1, 2*face.i_dim + face.face_sign);
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
+    elem.create_fake(_blocks);
     elem.record = sn;
     elem.needs_snapping = !force;
     if (collapse) {

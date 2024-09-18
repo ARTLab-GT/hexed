@@ -67,7 +67,9 @@ TEST_CASE("Deformed_element") {
   SECTION("splitting") {
     hexed::Deformed_element elem0(params2, {0, 0}, 1., 0, hexed::Mat<2>{.01, .02});
     hexed::Deformed_element elem1(params2, {0, 0}, 1., 0, hexed::Mat<2>{.01, .02});
-    elem0.create_shape(blocks2d, hexed::next::Mesh_blocks::no_face, true);
+    elem0.create_shape(blocks2d, hexed::next::Mesh_blocks::no_face);
+    elem1.create_shape(blocks2d, hexed::next::Mesh_blocks::no_face);
+    elem0.create_fake(blocks2d);
     elem1.split_shape(blocks2d, elem0, .1, 3);
     auto pos0 {elem0.position(basis)};
     auto pos1 {elem1.position(basis)};

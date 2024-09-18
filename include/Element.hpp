@@ -35,7 +35,8 @@ class Element : public Kernel_element {
   std::vector<Vertex::Transferable_ptr> vertices;
   std::unique_ptr<next::Element_shape> _shape;
   // constructor that allows the vertices to be created as mobile, for the  benefit of `Deformed_element`
-  Element(Storage_params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, bool mobile_vertices, int aniso_r_level);
+  Element(Storage_params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
+          bool mobile_vertices, int aniso_r_level);
 
   private:
   int n_dof;
@@ -56,13 +57,15 @@ class Element : public Kernel_element {
   static constexpr bool is_deformed = false; //!< \brief is this `Element` subclass deformed?
   Mutual_ptr<Element, Tree> tree; //!< \brief `Tree` this element was created from
   bool unrefinement_locked = false; //!< \brief if this is set to `true`, `Mesh_interface::update()` won't unrefine it
-  bool snapping_problem = false; //!< \brief if `true`, this element has a face on the surface which was not properly snapped
-  bool needs_snapping = true; //!< \brief once any faces of this element have been snapped to the surface, set this to `false`
+  //! \brief if `true`, this element has a face on the surface which was not properly snapped
+  bool snapping_problem = false;
+  //! \brief once any faces of this element have been snapped to the surface, set this to `false`
+  bool needs_snapping = true;
   const Mat<> origin; //!< \brief origin which integer coordinates are relative to
   Lock lock; //!< \brief for any tasks where multiple threads might access an element simultaneously
 
   /*!
-   * The `Storage_params` defines the amount of storage that must be allocated.
+   * \details The `Storage_params` defines the amount of storage that must be allocated.
    * `pos` specifies the position of vertex 0 relative to `origin_arg` in intervals of the nominal size.
    * The nominal size is defined to be `mesh_size`/(2^`ref_level`).
    * The vertices will be spaced at intervals of the nominal size.
@@ -71,7 +74,8 @@ class Element : public Kernel_element {
   Element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0,
           Mat<> origin_arg = Mat<>::Zero(3), int aniso_ref_level = 0);
   virtual inline bool get_is_deformed() {return is_deformed;} //!< for determining whether a pointer is deformed
-  //! Can't copy an Element. Doing so would have to either duplicate or break vertex connections, both of which seem error prone.
+  //! \details Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
+  //! both of which seem error prone.
   Element(const Element&) = delete;
   Element& operator=(const Element&) = delete;
   ~Element() = default;
@@ -119,9 +123,11 @@ class Element : public Kernel_element {
   void set_face(int i_face, double* data);
   bool is_connected(int i_face);
 
-  void create_shape(next::Mesh_blocks&, int boundary_face = next::Mesh_blocks::no_face, bool fake = false);
+  void create_shape(next::Mesh_blocks&, int boundary_face = next::Mesh_blocks::no_face);
+  void create_fake(next::Mesh_blocks&);
   void split_shape(next::Mesh_blocks&, Element& split_from, double at, int from_face);
   next::Element_shape& shape();
+  inline next::Element_shape* fake_shape() {return _fake_shape.get();}
 
   double* state() override;
   double* residual_cache() override;

@@ -88,6 +88,7 @@ class Accessible_mesh : public Mesh {
   void snap_vertices();
   void create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
   void read_file(std::string file_name);
+  void _connect_shapes(Element&, Element&, Connection_direction);
   void _connect(std::array<Element*, 2>, Con_dir<Element>);
   void _connect(std::array<Deformed_element*, 2>, Con_dir<Deformed_element>);
   void _connect(Element*, std::vector<Element*>, Con_dir<Deformed_element>);
