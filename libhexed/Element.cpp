@@ -168,10 +168,31 @@ void Element::set_needs_smooth(bool value) {
 void Element::set_face(int i_face, double* data) {faces[i_face] = data;}
 bool Element::is_connected(int i_face) {return faces[i_face];}
 
-void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
+void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face, bool fake) {
   HEXED_ASSERT(blocks.n_dim == params.n_dim, "Dimensionality of `this` and `blocks` does not match.");
-  _shape.reset(new next::Element_shape{blocks.create_element(vertex(0).pos, nominal_size(), boundary_face)});
+  _fake_shape.reset();
+  _shape = std::make_unique<next::Element_shape>(blocks.create_element(vertex(0).pos, nominal_size(), boundary_face));
+  if (fake) {
+    _fake_shape.reset(_shape.release());
+    _shape = std::make_unique<next::Element_shape>(blocks.create_element(vertex(0).pos, nominal_size()));
+    _shape->glue(*_fake_shape, {std::vector<double>(params.n_dim, 0.), std::vector<double>(params.n_dim, 1.)});
+  }
 }
+
+
+void Element::split_shape(next::Mesh_blocks& blocks, Element& split_from, double at, int from_face) {
+  HEXED_ASSERT(split_from._fake_shape, "Can only create a split shape from an element that already has a fake shape.");
+  create_shape(blocks);
+  _fake_shape = split_from._fake_shape;
+  auto corners = split_from.shape().glued_corners();
+  auto split_corners = corners;
+  double diff = corners[1 - from_face%2][from_face/2] - corners[from_face%2][from_face/2];
+  corners[from_face%2][from_face/2] += at*diff;
+  split_corners[1 - from_face%2][from_face/2] = corners[from_face%2][from_face/2];
+  split_from.shape().set_glued_corners(corners);
+  _shape->glue(*_fake_shape, split_corners);
+}
+
 next::Element_shape& Element::shape() {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
   return *_shape;

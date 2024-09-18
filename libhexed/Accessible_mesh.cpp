@@ -27,7 +27,8 @@ void Accessible_mesh::id_boundary_verts() {
   for (auto& b_verts : boundary_verts) {
     erase_if(b_verts, [](Vertex::Non_transferable_ptr& ptr) {
       if (!ptr) return true;
-      return !ptr->needs_smooth();});
+      return !ptr->needs_smooth();
+    });
   }
   for (unsigned bc_sn = 0; bc_sn < boundary_verts.size(); ++bc_sn) {
     #pragma omp parallel for

@@ -45,6 +45,8 @@ class Element : public Kernel_element {
   Eigen::VectorXd vertex_data;
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
   int _mask;
+  // may contain a fake element that `this` is a subset of
+  std::shared_ptr<next::Element_shape> _fake_shape;
   friend Accessible_mesh; // necessary for `Accessible_mesh::set_mask`... need a better way to do this
 
   public:
@@ -117,7 +119,8 @@ class Element : public Kernel_element {
   void set_face(int i_face, double* data);
   bool is_connected(int i_face);
 
-  void create_shape(next::Mesh_blocks&, int boundary_face = next::Mesh_blocks::no_face);
+  void create_shape(next::Mesh_blocks&, int boundary_face = next::Mesh_blocks::no_face, bool fake = false);
+  void split_shape(next::Mesh_blocks&, Element& split_from, double at, int from_face);
   next::Element_shape& shape();
 
   double* state() override;

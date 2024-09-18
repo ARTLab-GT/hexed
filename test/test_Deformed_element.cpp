@@ -64,6 +64,23 @@ TEST_CASE("Deformed_element") {
     REQUIRE(pos1(1)[3] == Catch::Approx(.1));
   }
 
+  SECTION("splitting") {
+    hexed::Deformed_element elem0(params2, {0, 0}, 1., 0, hexed::Mat<2>{.01, .02});
+    hexed::Deformed_element elem1(params2, {0, 0}, 1., 0, hexed::Mat<2>{.01, .02});
+    elem0.create_shape(blocks2d, hexed::next::Mesh_blocks::no_face, true);
+    elem1.split_shape(blocks2d, elem0, .1, 3);
+    auto pos0 {elem0.position(basis)};
+    auto pos1 {elem1.position(basis)};
+    REQUIRE(pos0(0)[0] == Catch::Approx(0.01));
+    REQUIRE(pos0(0)[8] == Catch::Approx(1.01));
+    REQUIRE(pos0(1)[0] == Catch::Approx(0.02));
+    REQUIRE(pos0(1)[8] == Catch::Approx(0.92));
+    REQUIRE(pos1(0)[0] == Catch::Approx(0.01));
+    REQUIRE(pos1(0)[8] == Catch::Approx(1.01));
+    REQUIRE(pos1(1)[0] == Catch::Approx(0.92));
+    REQUIRE(pos1(1)[8] == Catch::Approx(1.02));
+  }
+
   SECTION("jacobian calculation") {
     double faces [6][5*row_size*row_size];
     hexed::Deformed_element elem0 {params2, {0, 0}, 0.2};
