@@ -49,9 +49,18 @@ class Solver {
   Kernel_mesh _kernel_mesh();
   void _put_cache(); // copies the flow state to the residual cache
   void _get_cache(); // copies the residual cache to the flow state
-  void share_vertex_data(std::function<double&(Element&, int i_vertex)>, std::function<double(Mat<>)>);
+
+  struct Reduction {
+    double initial_value;
+    std::function<double(double, double)> binary_reduction;
+  };
+  static Reduction _min;
+  static Reduction _max;
+
+  void share_vertex_data(std::function<double&(Element&, int i_vertex)>, Reduction);
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get,
-                         std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)>);
+                         std::function<double&(Element&, int i_vertex)> set, Reduction);
+
   bool fix_admissibility(double stability_ratio);
   void apply_state_bcs();
   void apply_flux_bcs();
@@ -63,6 +72,7 @@ class Solver {
   bool use_ldg();
   double max_dt(double max_safety_conv, double max_safety_diff);
   void _init_face_state();
+  Interpreter _interpreter();
 
   //! \brief linearizes the steady state equations by finite difference
   class Linearized : public Linear_equation {
@@ -146,16 +156,15 @@ class Solver {
   //! `.state.h5` will be appended to file name
   void read_state(std::string file_name);
   Storage_params storage_params();
-  //! warps the boundary elements such that the element faces coincide with the boundary at their quadrature points.
-  void snap_faces();
   /*! \brief compute the Jacobian of all elements based on the current position of the vertices
    * and value of any face warping.
    * \details Mesh topology must be valid (no duplicate or missing connections) before calling this function.
    * \param snap_faces if `true`, this function will go ahead and perform face snapping for you
    */
   void calc_jacobian(bool snap_faces = true);
-  //! set the flow state
-  void initialize(const Spacetime_func&);
+  //! \brief set the flow state from an HIL expression
+  //! \details `espression` must set the variables `momentum0`, ..., `momentum[n_dim - 1]`, `density`, `energy`
+  void initialize(std::string expression);
   bool using_art_visc(); //!< \brief returns `true` if artificial viscosity is currently turned on
   void set_art_visc_off(); //!< \brief turns off artificial viscosity
   //! \brief turns on artificial viscosity and initializes coefficient to a uniform value
@@ -240,29 +249,25 @@ class Solver {
   std::vector<double> integral_field(const Qpoint_func& integrand);
   //! \brief compute an integral over all surfaces where a particular boundary condition has been enforced
   std::vector<double> integral_surface(const Boundary_func& integrand, int bc_sn);
-  /*! \brief compute the min and max of variables over entire flow field.
-   * \details Layout: `{{var0_min, var0_max}, {var1_min, var1_max}, ...}`.
-   * Bounds are approximated by uniformly sampling a block `n_sample`-on-a-side in each element.
-   */
-  std::vector<std::array<double, 2>> bounds_field(const Qpoint_func&, int n_sample = 20);
 
   /*! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
    * \param format Which format to write the visualization file in. Accepted values are `"xdmf"` and `"tecplot"`
    * \param name name of file to write (not including extension)
-   * \param output_variables what variables to write
+   * \param expression HIL expression specifying variables to visualize.
+   *                   Each variable assigned to in `expression` will be visualized.
    * \param n_sample each element will contain an `n_sample` by `n_sample` array of uniformly-spaced sample points
    * \param wireframe if `true`, visualize the mesh edges as a wireframe instead of the filled surface/solid
    */
-  void visualize_field(std::string format, std::string name, const Qpoint_func& output_variables,
+  void visualize_field(std::string format, std::string name, std::string expression,
                        int n_sample = 10, bool wireframe = false);
   //! \brief write a visualization file describing all surfaces where a particular boundary condition has been enforced.
-  void visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func&,
+  void visualize_surface(std::string format, std::string name, int bc_sn, std::string expression,
                          int n_sample = 10, bool wireframe = false);
-  void visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by,
-                         const Qpoint_func& output_variables, int n_sample = 10);
+  void visualize_contour(std::string format, std::string name, std::string contour_expression,
+                         std::string vis_expression, double const_tol = 1e-10, int n_sample = 10);
   //! \brief visualize the Cartesian surface which theoretically exists after element deletion
   //! but before any vertex snapping
-  void vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func = Uncertainty());
+  void vis_cart_surf(std::string format, std::string name, int bc_sn, std::string expression = "");
   /*! \brief visualize the local time step constraints imposed by convection and diffusion, respectively
    * \warning This function overwrites the reference state,
    * which will invalidate any residual evaluation until `update` is called again.

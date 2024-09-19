@@ -5,12 +5,12 @@
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/kernels.hpp>
 
-void test_mesh(hexed::Accessible_mesh& mesh)
-{
+void test_mesh(hexed::Accessible_mesh& mesh) {
   // construct a mesh that has every possible connection configuration by creating a single element
   // and then extruding all its faces
   mesh.add_element(0, 1, {});
   mesh.extrude();
+  mesh.relax(0.);
   auto& elems = mesh.elements();
   auto params = elems[0].storage_params();
   const int n_face_qpoint = params.n_qpoint()/params.row_size;
@@ -20,12 +20,12 @@ void test_mesh(hexed::Accessible_mesh& mesh)
   hexed::Gauss_legendre basis(params.row_size);
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
+    auto pos = elem.face_position(basis);
     for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
       if (elem.is_connected(i_face)) {
         for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-          auto pos = elem.face_position(basis, i_face, i_qpoint);
           for (int i_var = 0; i_var < params.n_var; ++i_var) {
-            elem.face(i_face, false)[i_var*n_face_qpoint + i_qpoint] = pos[i_var%params.n_dim];
+            elem.face(i_face, false)[i_var*n_face_qpoint + i_qpoint] = pos(i_face/2)(i_face%2)(i_var%params.n_dim)[i_qpoint];
           }
         }
       }
@@ -47,13 +47,13 @@ void test_mesh(hexed::Accessible_mesh& mesh)
   // by comparing it to the value it was originally set to
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
+    auto pos = elem.face_position(basis);
     for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
       if (elem.is_connected(i_face)) {
         for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
-          auto pos = elem.face_position(basis, i_face, i_qpoint);
           for (int i_var = 0; i_var < params.n_var; ++i_var) {
             REQUIRE(elem.face(i_face, false)[i_var*n_face_qpoint + i_qpoint]
-                    == Catch::Approx(pos[i_var%params.n_dim]).scale(1.));
+                    == Catch::Approx(pos(i_face/2)(i_face%2)(i_var%params.n_dim)[i_qpoint]).scale(1.));
           }
         }
       }
@@ -61,8 +61,7 @@ void test_mesh(hexed::Accessible_mesh& mesh)
   }
 }
 
-TEST_CASE("Face_permutation")
-{
+TEST_CASE("Face_permutation") {
   SECTION("2d") {
     hexed::Accessible_mesh mesh {{1, 4, 2, hexed::config::max_row_size}, 1.};
     test_mesh(mesh);

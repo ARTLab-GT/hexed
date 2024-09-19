@@ -59,4 +59,12 @@ TEST_CASE("Namespace")
   REQUIRE(!sub->lookup<std::string>("person"));
   REQUIRE(!sub->exists("unperson"));
   REQUIRE(!sub->exists_recursive("unperson"));
+  // test basic array creation and lookup
+  space->assign("data", hexed::Array<double>::make_uniform({6}, 287.0528));
+  auto data0 = space->lookup<hexed::Array<double>>("data");
+  REQUIRE(data0.value()[3] == Catch::Approx(287.0528));
+  // test that lookups get you a reference rather than a copy
+  data0.value()[1] = -1.;
+  auto data1 = space->lookup<hexed::Array<double>>("data");
+  REQUIRE(data1.value()[1] == Catch::Approx(-1.));
 }

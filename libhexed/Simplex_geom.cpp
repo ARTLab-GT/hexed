@@ -39,9 +39,9 @@ void Simplex_geom<3>::merge(Nearest_point<3>& nearest, Mat<3, 3> sim, Mat<3> poi
 //! \cond
 template<>
 void Simplex_geom<3>::visualize(std::string format, std::string fname) {
-  Array<int> triangles({int(_simplices.size()), 3});
-  Array<double> pos({3, 3*int(_simplices.size())});
-  Array<double> vars({0, 3*int(_simplices.size())});
+  Array<Int> triangles({Int(_simplices.size()), 3});
+  Array<double> pos({3, 3*Int(_simplices.size())});
+  Array<double> vars({0, 3*Int(_simplices.size())});
   int i_vert = 0;
   for (Mat<3, 3> sim : _simplices) {
     for (int elem_vert = 0; elem_vert < 3; ++elem_vert, ++i_vert) {

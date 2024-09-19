@@ -25,8 +25,15 @@
 
 namespace hexed {
 
-constexpr Int whatever = -1; //!< \brief used in `Array<T>::reshaped()`
-constexpr Int same = -2; //!< \brief used in `Array<T>::reshaped()`
+constexpr Int whatever = -1; //!< \brief used in `Array::reshaped()`
+constexpr Int same = -2; //!< \brief used in `Array::reshaped()`
+constexpr Int end = std::numeric_limits<Int>::max(); //! \brief can be passed to `Array::operator()`
+
+inline std::vector<Int> hypercubes(Int n_var, Int n_dim, Int row_size) {
+  std::vector<Int> shape(n_dim + 1, row_size);
+  shape[0] = n_var;
+  return shape;
+}
 
 /*! \brief Represents a dynamic-sized multidimensional array.
  * \details This is an array-style container designed to meet the following objectives:
@@ -43,15 +50,15 @@ constexpr Int same = -2; //!< \brief used in `Array<T>::reshaped()`
  * Also, here is an overview of how to manage ownership with this class,
  * although this information is also scattered through the member documentation.
  * - To create a new array that owns its data, use `Array(std::vector<Int>)`.
- * - To create a new array that references data in another array, use `Array(other)`.
+ * - To create a new array that references data in another array, use `Array(other())`.
  * - To create a new array that references existing data that is not in an array, use `Array(std::vector<Int>, T*)`
  * - To create a new array that is a copy of an existing array (allocating new data), use `Array(other.copy())`
  * - To copy data from an existing array to another (of the same size) without allocating or creating references, use the `=` operator.
  *
  * If you want to pass an `Array` as a function argument, you should be able to pass it by value without thinking about it.
- * Due to the way the copy and move constructors are set up,
- * this should not cause any significant additional allocations unless you explicitly call `copy()`,
- * and if you're passing a temporary object, it should be preserved as long as it needs to be with the move constructor.
+ * If you're passing a temporary object, it should be preserved as long as it needs to be with the move constructor.
+ * That said, for performance it's better to try to use the move constructor instead of the copy constructor whenever appropriate,
+ * because this will avoid unnecessary allocations for arrays that own their data.
  *
  * By default, if `DEBUG` is defined, then dynamic bounds checking is performed and out-of-bounds access will result in an exception.
  * Otherwise, no bounds checking is performed and out-of-bounds access is undefined behavior.
@@ -133,17 +140,25 @@ class Array {
   : Array({vec.size()}, vec.begin(), vec.end()) {
   }
 
-  //! \brief Creates an array which is a reference to `other`'s data.
-  //! \details Note that this array does not own the data, and if `other` is deleted it will now contain a dangling pointer.
-  Array(Array<T>& other) : Array(other.shape(), other.data()) {}
-  /*! \brief Steals whatever assets `other` had.
-   * \details If `other` owned its data, `this` will steal that data.
-   * If `other` had a reference to existing data, `this` will also be a reference to that data.
-   * Leaves `other` in an unspecified but valid state.
+  /*! \brief Copies `that`, maintaining the same ownership status.
+   * \details If `that` owns its data, `this` will allocate new data which is a copy of `that`s data.
+   * If it does not, `this` will be a reference to `that`'s data.
+   * This behavior is good for avoiding accidental dangling pointers, but isn't necessarily the most efficient.
+   * Whenever possible, it is best to explitly use `operator()()`, `copy()`, or the move constructor
+   * to control who owns what.
    */
-  Array(Array<T>&& other) : Array(other.shape(), other.data()) {
-    _owns = other._owns;
-    other._owns = false;
+  Array(Array& that) : Array(that.shape(), that._owns ? nullptr : that.data()) {
+    if (that._owns) for (Int i = 0; i < size(); ++i) initialize(i, that[i]);
+  }
+
+  /*! \brief Steals whatever assets `that` had.
+   * \details If `that` owned its data, `this` will steal that data.
+   * If `that` had a reference to existing data, `this` will also be a reference to that data.
+   * Leaves `that` in an unspecified but valid state.
+   */
+  Array(Array<T>&& that) : Array(that.shape(), that.data()) {
+    _owns = that._owns;
+    that._owns = false;
   }
 
   /*! \brief Initializes an element of the array.
@@ -217,7 +232,7 @@ class Array {
   }
   //! \brief Returns the total size of the array.
   //! \details This is the number of values you can access with the `[]` operator, or equivalently the product of the entries of `shape()`.
-  Int size() const {return bool(_order)*_strides[0];}
+  Int size() const {return bool(_order)*_strides[0]/_strides[_order];}
   //! \brief `true` iff `this` and `other` have the same `shape()`.
   //! \details It's okay to call this on arrays of different `order()`; naturally it will return `false`.
   bool same_shape(const Array<T>& other) {
@@ -233,43 +248,44 @@ class Array {
   Int stride(Int i_dim) const {
     return _strides[i_dim + 1];
   }
+  bool owns() const {return _owns;}
 
   #define QUALIFIED(CONST) \
     CONST T* data() CONST {return _data;} /*!< \brief fetches pointer to data */ \
-    /*! \brief Accesses elements by flat indexing. \
-     * \details Equivalent to `data()[i]`, give or take bounds checking \
+    /*! \brief Accesses elements by flat indexing.
+       \details Equivalent to `data()[i]`, give or take bounds checking
      */ \
     CONST T& operator[](Int i) CONST { \
       HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `[]`"); \
       HEXED_ARRAY_ASSERT(i < size(), "indexing an `Array` out of bounds with `[]`"); \
-      return _data[i]; \
+      return _data[i*_strides[_order]]; \
     } \
     /*! \brief Creates an array as a reference to `this`'s data */ \
     CONST Array<T> operator()() CONST {return {_order, _data, false, _shape, _strides};} \
-    /*! \brief Creates an array which is a view of the `i`th "row" of `this`. \
-     * \details Resulting array will have 1 less `order()` \
-     * and shape equal to the shape of `this` but with the first element removed. \
-     * You can think of it as equivalent to the operator `[]` of multidimensional builtin arrays \
-     * or [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array). \
-     * For example, if you have an order 3 array `a` with shape {10, 4, 5}, you can access the element at (5, 2, 3) \
-     * with either `a[113]` (5*4*5 + 2*5 + 3 = 113) or `a(5)(2)[3]`. \
+    /*! \brief Creates an array which is a view of the `i`th "row" of `this`.
+       \details Resulting array will have 1 less `order()`
+       and shape equal to the shape of `this` but with the first element removed.
+       You can think of it as equivalent to the operator `[]` of multidimensional builtin arrays
+       or [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
+       For example, if you have an order 3 array `a` with shape {10, 4, 5}, you can access the element at (5, 2, 3)
+       with either `a[113]` (5*4*5 + 2*5 + 3 = 113) or `a(5)(2)[3]`.
      */ \
     CONST Array<T> operator()(Int i) CONST { \
       HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
       HEXED_ARRAY_ASSERT(i < _shape[0], "indexing an `Array` out of bounds with `()`"); \
       return {_order - 1, _data + i*_strides[1], false, _shape + 1, _strides + 1}; \
     } \
-    /*! \brief Creates an array which is a view of rows [`start`, `stop`) of this. \
-     * \details As indicated by the interval notation, includes `start` but not `stop`. \
-     * If `stop` is less than `start` or not less than `size()[0]`, \
-     * this results in an array with 0 as the first entry of its `shape` (and consequently size 0). \
-     * _This will not result in an exception nor undefined behavior_, \
-     * unless of course you attempt to access data from this empty array. \
-     * Equivalent to `array[start:stop]` for \
-     * [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array). \
-     * The resulting array will have the same order as `this`. \
-     * The first entry of `shape()` will be `stop - start` and the rest will be the same as `this` \
-     * (granted the above caveat about empty results). \
+    /*! \brief Creates an array which is a view of rows [`start`, `stop`) of this.
+       \details As indicated by the interval notation, includes `start` but not `stop`.
+       If `stop` is less than `start` or not less than `size()[0]`,
+       this results in an array with 0 as the first entry of its `shape` (and consequently size 0).
+       _This will not result in an exception nor undefined behavior_,
+       unless of course you attempt to access data from this empty array.
+       Equivalent to `array[start:stop]` for
+       [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
+       The resulting array will have the same order as `this`.
+       The first entry of `shape()` will be `stop - start` and the rest will be the same as `this`
+       (granted the above caveat about empty results).
      */ \
     CONST Array operator()(Int start, Int stop) CONST { \
       HEXED_ARRAY_ASSERT(_order, "indexing an order-0 `Array` with `()`"); \
@@ -277,22 +293,25 @@ class Array {
       s[0] = std::max(Int(0), std::min(stop, _shape[0]) - start); \
       return {s, _data + start*_strides[1]}; \
     } \
-    /*! \brief Returns an array referencing the same data as `this` but with a different shape. \
-     * \details The new size must be less than or equal to the old size, or else behavior is undefined. \
-     * If any entries of `new_shape` are `hexed::same`, \
-     * then they will be converted to the entry of the current shape at the same index. \
-     * E.g., if `shape()` is `{2, 3, 4}` and you call `reshape({1, same, 4})`, \
-     * the resulting shape will be `{1, 3, 4}`. \
-     * Of course, the index of any `same` arguments must be less than `order()`.
-     * If exactly one of the entries of `new_shape` is `whatever`, \
-     * it will be converted to whatever value is necessary to keep the size the same. \
-     * Making more than 1 entry `whatever` is not allowed. \
-     * Note that reshaping maintains the underlying (row-major) storage order of the values
-     * (unlike Eigen's [conservativeResize]
-     * (https://eigen.tuxfamily.org/dox/classEigen_1_1PlainObjectBase.html#a712c25be1652e5a64a00f28c8ed11462)),
-     * so it can't generally be used to select a block of an `Array`.
-     * It is more useful for adding or removing dimensions.
-     * E.g., `array.reshaped({whatever})` flattens `array`.
+    CONST Array column(Int i) CONST { \
+      return {_order - 1, _data + i*_strides[_order], false, _shape, _strides}; \
+    } \
+    /*! \brief Returns an array referencing the same data as `this` but with a different shape.
+       \details The new size must be less than or equal to the old size, or else behavior is undefined.
+       If any entries of `new_shape` are `hexed::same`,
+       then they will be converted to the entry of the current shape at the same index.
+       E.g., if `shape()` is `{2, 3, 4}` and you call `reshape({1, same, 4})`,
+       the resulting shape will be `{1, 3, 4}`.
+       Of course, the index of any `same` arguments must be less than `order()`.
+       If exactly one of the entries of `new_shape` is `hexed::whatever`,
+       it will be converted to whatever value is necessary to keep the size the same.
+       Making more than 1 entry `hexed::whatever` is not allowed.
+       Note that reshaping maintains the underlying (row-major) storage order of the values
+       (unlike Eigen's [conservativeResize]
+       (https://eigen.tuxfamily.org/dox/classEigen_1_1PlainObjectBase.html#a712c25be1652e5a64a00f28c8ed11462)),
+       so it can't generally be used to select a block of an `Array`.
+       It is more useful for adding or removing dimensions.
+       E.g., `array.reshaped({hexed::whatever})` flattens `array`.
      */ \
     CONST Array reshaped(std::vector<Int> new_shape) CONST { \
       std::vector<Int> s = new_shape; \
@@ -313,18 +332,23 @@ class Array {
         s[i_whatever] = size()/sz; \
       } \
       HEXED_ARRAY_ASSERT(sz <= size(), "`new_shape` is larger than current shape"); \
-      return {s, _data}; \
+      Array r(s, _data); \
+      for (int i_dim = 0; i_dim <= r._order; ++i_dim) r._strides[i_dim] *= _strides[_order]; \
+      return r; \
     } \
-    /*! \brief %Iterator type to allow `Array` to function like a \
-     * [standard container](https://en.cppreference.com/w/cpp/container). \
-     * \details Iterators remain valid throughout the lifetime of the array, \
-     * since there is no mechanism that changes the address of its underlying data. \
+    /*! \brief %Iterator type to allow `Array` to function like a
+       [standard container](https://en.cppreference.com/w/cpp/container).
+       \details Iterators remain valid throughout the lifetime of the array,
+       since there is no mechanism that changes the address of its underlying data.
+       \warning Only valid for `Array`s with inner stride 0.
      */ \
     typedef CONST T* CONST##iterator; \
     CONST##iterator begin() CONST {return data();} /*!< \brief %Iterator to beginning of (flat) data. */ \
     CONST##iterator end() CONST {return data() + size();} /*!< \brief %Iterator 1 word past the end of (flat) data. */ \
     /*! \brief view of data as an `Eigen` vector object */ \
-    CONST Eigen::Map<Eigen::Matrix<T, dyn, 1>> vector() CONST {return {_data, size()};} \
+    CONST Eigen::Map<Eigen::Matrix<T, dyn, 1>, Eigen::Unaligned, Eigen::InnerStride<>> vector() CONST { \
+      return {_data, size(), Eigen::InnerStride<>(_strides[_order])}; \
+    } \
 
   QUALIFIED()
   QUALIFIED(const)

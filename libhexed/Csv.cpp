@@ -40,7 +40,7 @@ void Csv::write_block(Array<double> pos, Array<double> vars) {
   }
 }
 
-void Csv::write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars) {
+void Csv::write_unstruct(Array<Int> elements, Array<double> pos, Array<double> vars) {
   write_block(pos, vars);
 }
 

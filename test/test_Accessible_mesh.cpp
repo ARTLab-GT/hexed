@@ -16,7 +16,7 @@ TEST_CASE("Accessible_mesh") {
   REQUIRE_THROWS(&mesh.element(0, false, sn0 + sn1 + 1)); // test that calling on an invalid serial num throws
   REQUIRE_THROWS(&mesh.element(1, false, sn0)); // test that elements are identified with a specific ref level
   REQUIRE_THROWS(&mesh.element(0,  true, sn0)); // test that elements are identified with a specific deformedness
-  REQUIRE(mesh.element(3, true, sn2).vertex(0).pos[0] == Catch::Approx(1./8.)); // test that ref level and pos are incorporated
+  REQUIRE(mesh.element(3, true, sn2).shape().vertex(0).point({})[0] == Catch::Approx(1./8.)); // test that ref level and pos are incorporated
   REQUIRE(mesh.element(3, true, sn2).refinement_level() == 3);
   // test sequential access
   REQUIRE(mesh.cartesian().elements().size() == 2);
@@ -114,14 +114,12 @@ TEST_CASE("Accessible_mesh") {
     REQUIRE(con.state(1, false) == mesh.element(3, true, sn2).face(0*2 + 1, false));
   }
 
-  SECTION("boundary conditions")
-  {
-    int freestream = mesh.add_boundary_condition(new hexed::Freestream(hexed::Mat<4>{0, 0, 1., 1e5}), new hexed::Null_mbc);
-    int nonpen = mesh.add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
+  SECTION("boundary conditions") {
+    int freestream = mesh.add_boundary_condition(new hexed::Freestream(hexed::Mat<4>{0, 0, 1., 1e5}));
+    int nonpen = mesh.add_boundary_condition(new hexed::Nonpenetration);
     // check that connecting to an invalid serial number throws
     REQUIRE_THROWS(mesh.connect_boundary(0, 0, sn0, 1, 0, nonpen + freestream + 1));
-    SECTION("cartesian")
-    {
+    SECTION("cartesian") {
       mesh.connect_boundary(0, 0, sn1, 1, 0, freestream);
       {
         // check that it got the right face
@@ -269,7 +267,7 @@ TEST_CASE("Accessible_mesh") {
       mesh1.connect_hanging(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {{0, 0}, {0, 1}}, false, {fine_def, fine_def});
     }
     // add boundary conditions
-    int bcsn = mesh1.add_boundary_condition(new hexed::Freestream {hexed::Mat<4>{0., 0., 1., 1.}}, new hexed::Null_mbc);
+    int bcsn = mesh1.add_boundary_condition(new hexed::Freestream {hexed::Mat<4>{0., 0., 1., 1.}});
     for (int i = 0; i < 2; ++i) {
       for (int kind = 0; kind < 2; ++kind) {
         mesh1.connect_boundary(1, kind, kinds[kind][i], 0, 0, bcsn); // left face
@@ -300,17 +298,17 @@ TEST_CASE("Accessible_mesh") {
   SECTION("vertices")
   {
     // check that the number of vertices is correct
-    auto vertices {mesh.vertices()};
+    auto vertices {mesh.shape_vertices()};
     REQUIRE(vertices.size() == 8*mesh.elements().size());
     // spot-check: vertex 2 of element sn1 should be there
     int count = 0;
     for (int i_vert = 0; i_vert < vertices.size(); ++i_vert) {
-      if (&vertices[i_vert] == &mesh.element(0, false, sn1).vertex(2)) ++count;
+      if (&vertices[i_vert] == &mesh.element(0, false, sn1).shape().vertex(2)) ++count;
     }
     REQUIRE(count == 1);
     // test that eaten vertices get dropped from the list
     mesh.connect_cartesian(0, {sn0, sn1}, {0});
-    REQUIRE(mesh.vertices().size() == 8*mesh.elements().size() - 4);
+    REQUIRE(mesh.shape_vertices().size() == 8*mesh.elements().size() - 4);
   }
 }
 
@@ -319,7 +317,7 @@ TEST_CASE("extruded BCs")
   hexed::Storage_params params {2, 4, 2, 2};
   hexed::Accessible_mesh mesh {params, 1.};
   int elem_sn = mesh.add_element(0, true, {0, 0});
-  int bc_sn = mesh.add_boundary_condition(new hexed::Nonpenetration, new hexed::Null_mbc);
+  int bc_sn = mesh.add_boundary_condition(new hexed::Nonpenetration);
   mesh.connect_boundary(0, true, elem_sn, 0, 1, bc_sn);
   mesh.connect_boundary(0, true, elem_sn, 1, 0, bc_sn);
   mesh.extrude();
@@ -337,10 +335,10 @@ TEST_CASE("extruded hanging node connection validity")
   hexed::Accessible_mesh mesh {params, 1.};
   int coarse = mesh.add_element(0, true, {0, 0, 0});
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
-    std::vector<int> fine;
+    std::vector<hexed::Int> fine;
     for (int row = 0; row < 2; ++row) {
       for (int col = 0; col < 2; ++col) {
-        std::vector<int> pos(3);
+        std::vector<hexed::Int> pos(3);
         pos[i_dim] = -1;
         pos[!i_dim] = row;
         pos[2] = col;
@@ -421,7 +419,7 @@ TEST_CASE("Tree meshing") {
     mesh.valid().assert_valid();
     SECTION("neighbors with different ref levels") {
       hexed::Accessible_mesh mesh1({1, 5, 3, hexed::config::max_row_size}, .7);
-      mesh1.add_boundary_condition(new hexed::Copy, new hexed::Null_mbc);
+      mesh1.add_boundary_condition(new hexed::Copy);
       std::vector<hexed::Flow_bc*> bcs;
       for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Copy);
       mesh1.add_tree(bcs);
@@ -475,7 +473,7 @@ TEST_CASE("mesh I/O")
     // compute the sum of the vertex coordinates of all elements (counting each vertex once for each element using it) to check vertex position
     auto& elems = mesh.elements();
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      for (int i_vert = 0; i_vert < 4; ++i_vert) correct_sum_vertices += elems[i_elem].vertex(i_vert).pos;
+      for (int i_vert = 0; i_vert < 4; ++i_vert) correct_sum_vertices += elems[i_elem].shape().vertex(i_vert).point({});
     }
     // refine the mesh again and count the number of Cartesian and deformed elements to make sure the recreated mesh behaves the same way
     mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 2;});
@@ -500,7 +498,7 @@ TEST_CASE("mesh I/O")
       rl1 += elems[i_elem].refinement_level() == 1;
       rl2 += elems[i_elem].refinement_level() == 2;
       if (elems[i_elem].tree) ++n_tree;
-      for (int i_vert = 0; i_vert < 4; ++i_vert) sum_vertices += elems[i_elem].vertex(i_vert).pos;
+      for (int i_vert = 0; i_vert < 4; ++i_vert) sum_vertices += elems[i_elem].shape().vertex(i_vert).point({});
     }
     REQUIRE(rl1 == 2);
     REQUIRE(rl2 == 9);
@@ -522,8 +520,7 @@ TEST_CASE("mesh I/O")
   }
 }
 
-TEST_CASE("masking")
-{
+TEST_CASE("masking") {
   hexed::Accessible_mesh mesh({2, 4, 2, 2}, 1.);
   hexed::Gauss_legendre basis(2);
   std::vector<hexed::Flow_bc*> bcs;
@@ -531,8 +528,7 @@ TEST_CASE("masking")
   mesh.add_tree(bcs);
   mesh.update();
   mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] == elem.nominal_position()[1];});
-  SECTION("initial mask")
-  {
+  SECTION("initial mask") {
     mesh.reset_masks();
     hexed::Accessible_mesh::Masked_mesh(mesh, basis);
     hexed::Accessible_mesh::Masked_mesh masked(mesh, basis);
@@ -548,11 +544,10 @@ TEST_CASE("masking")
     REQUIRE(masked.kernel_mesh.ref_faces.size() == 4);
     REQUIRE(masked.bound_cons.size()  == 12);
   }
-  SECTION("custom mask")
-  {
+  SECTION("custom mask") {
     mesh.reset_masks();
     hexed::Accessible_mesh::Masked_mesh(mesh, basis);
-    hexed::Accessible_mesh::Masked_mesh masked(mesh, basis, [](hexed::Element& elem){return elem.vertex(3).pos[1] < .501;});
+    hexed::Accessible_mesh::Masked_mesh masked(mesh, basis, [](hexed::Element& elem){return elem.shape().vertex(3).point({})[1] < .501;});
     auto& elems = mesh.elements();
     int n_masked = 0;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {

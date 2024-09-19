@@ -46,31 +46,35 @@ Mat<3> Block::point(const std::vector<int>& node_coords) const {
   return _point(node_coords);
 }
 
-Mat<3> Vertex::_point(const std::vector<int>&) const {
-  // usually, the vertex will not be glued or a shadow and we can just return the `pos`
-  if (_shadowed) return _shadowed->point({});
-  if (!_glued_to) return pos;
-  // the rest is to compute the position in the special case that the vertex is glued
-  Array<double> points = _glued_to.value().points(); // fetch _all_ of the nodes of the element `this` is glued to
-  Mat<3> p; // this is where we will put the computed position
-  // compute the interpolation matrix
-  Eigen::Map<const Mat<>> sample(_glued_coords.data(), _glued_coords.size());
-  Mat<dyn, dyn> interp = _glued_to.value().basis().interpolate(sample);
-  // apply the interpolation matrix along each dimension to compute the desired point
-  for (int i_dim = 0; i_dim < 3; ++i_dim) {
-    Mat<> vec = points(i_dim).vector();
-    for (int j_dim = _glued_coords.size() - 1; j_dim >= 0; --j_dim) {
-      Mat<> new_vec = math::dimension_matvec(interp(j_dim, all), vec, j_dim);
-      vec = new_vec;
-    }
-    p(i_dim) = vec(0);
+Mat<3> Block::point(int i_point) const {
+  #ifdef DEBUG
+  HEXED_ASSERT(0 <= i_point && i_point < math::pow(_row_size, _n_dim),
+               format_str(1000, "node index %i is out of bounds", i_point));
+  #endif
+  std::vector<int> node_coords(_n_dim);
+  for (int i_dim = _n_dim - 1, stride = 1; i_dim >= 0; --i_dim, stride *= _row_size) {
+    node_coords[i_dim] = (i_point/stride)%_row_size;
   }
-  return p;
+  return point(node_coords);
+}
+
+Mat<3> Vertex::_point(const std::vector<int>&) const {
+  // usually, the vertex will not be glued or a shadow and we can just return the `_pos`
+  if (_shadowed) return _shadowed->point({});
+  if (!_glued_to) {
+    Mat<3> p;
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      #pragma omp atomic read
+      p(i_dim) = _pos(i_dim);
+    }
+    return p;
+  }
+  return _glued_to->interpolate(_glued_coords);
 }
 
 Vertex::Vertex(Mat<3> pos, int row_size)
 : Block(0, row_size)
-, pos{pos}
+, _pos{pos}
 , _update{Mat<3>::Zero()}
 , _edges(this)
 , _elems(this)
@@ -80,7 +84,7 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 {}
 
 Vertex::~Vertex() {
-  for (auto v : _shadows.theirs()) v->pos = point({});
+  for (auto v : _shadows.theirs()) v->_pos = point({});
 }
 
 double Vertex::nominal_size() const {
@@ -93,7 +97,7 @@ double Vertex::nominal_size() const {
 }
 
 void Vertex::shadow(Vertex& that) {
-  that.pos = pos = .5*(that.point({}) + point({}));
+  that._pos = _pos = .5*(that.point({}) + point({}));
   HEXED_ASSERT(that._shadowed.get() != this, "two `Vertex`s cannot shadow each other");
   HEXED_ASSERT(!_shadowed || !that._shadowed, "one of the vertices must not already be shadowing");
   if (_shadowed) that._shadowed.pair(_shadows);
@@ -104,11 +108,12 @@ void Vertex::eat(Vertex& that) {
   HEXED_ASSERT(alive() && that.alive(), "both vertices must be alive (at least at the start...)");
   if (&that == this) return;
   // compute averaged position
-  std::size_t sz [2] {_elems.partners().size(), that._elems.partners().size()};
-  pos = (sz[0]*point({}) + sz[1]*that.point({}))/(sz[0] + sz[1]);
+  Int sz [2] {_elems.partners().size(), that._elems.partners().size()};
+  _pos = (sz[0]*point({}) + sz[1]*that.point({}))/(sz[0] + sz[1]);
   // steal pointers
-  for (int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
-  for (int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
+  for (Int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
+  for (Int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
+  record.insert(record.end(), that.record.begin(), that.record.end());
 }
 
 void Vertex::glue(Element_shape& to, std::vector<double> coords) {
@@ -118,14 +123,14 @@ void Vertex::glue(Element_shape& to, std::vector<double> coords) {
 }
 
 void Vertex::calc_relax() {
-  _update = _desired_pos() - pos;
+  _update = _desired_pos() - _pos;
 }
 
 void Vertex::apply_relax() {
   if (_shadowed || glued()) return;
   Mat<3> u = _update;
   for (auto s : _shadows.theirs()) u += s->_update;
-  pos += u/(1 + _shadows.theirs().size());
+  _pos += u/(1 + _shadows.theirs().size());
 }
 
 double Vertex::badness(Mat<3> proposed_pos) const {
@@ -133,6 +138,40 @@ double Vertex::badness(Mat<3> proposed_pos) const {
   for (auto s : _shadows.theirs()) des_pos += s->_desired_pos();
   des_pos /= 1 + _shadows.theirs().size();
   return (proposed_pos - des_pos).norm();
+}
+
+void Vertex::set_pos(Mat<3> p) {
+  if (!glued()) {
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      #pragma omp atomic write
+      _pos(i_dim) = p(i_dim);
+    }
+  }
+}
+
+Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
+  if (!_vert.glued()) _acquire.emplace(_vert._shared_value_lock);
+}
+
+double Vertex::Shared_value::get() const {
+  if (_acquire) return _vert._shared_value;
+  HEXED_ASSERT(_vert.glued(), "The glued status of the vertex changed since constructing the `Shared_value`.")
+  double value = 0;
+  for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
+    double interp = 1.;
+    bool skip = false;
+    for (int i_dim = 0; i_dim < _vert._glued_to->n_dim(); ++i_dim) {
+      int sign = i_vert/vstride(_vert._glued_to->n_dim(), i_dim)%2;
+      skip = skip || (_vert._glued_coords[i_dim] == !sign);
+      interp *= !sign + math::sign(sign)*_vert._glued_coords[i_dim];
+    }
+    if (!skip) value += interp*Shared_value(_vert._glued_to->vertex(i_vert)).get();
+  }
+  return value;
+}
+
+void Vertex::Shared_value::set(double value) {
+  if (_acquire) _vert._shared_value = value;
 }
 
 Mat<3> Vertex::_desired_pos() const {
@@ -144,12 +183,13 @@ Mat<3> Vertex::_desired_pos() const {
   double tot_sz = 0;
   for (auto elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
+    if (elem->glued()) continue;
     double nom_sz = elem->nominal_size();
     int i_this = -1;
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
       const Vertex& vert = elem->vertex(i_vert);
-      verts(all, i_vert) = vert.pos;
+      verts(all, i_vert) = vert._pos; // we can use `_pos` because `Mesh_blocks` just set that to `point({})`
       if (&vert == this) i_this = i_vert;
     }
     HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
@@ -175,7 +215,8 @@ Mat<3> Vertex::_desired_pos() const {
       }
     }
   }
-  des_pos = .9*des_pos/tot_sz + .1*pos;
+  if (tot_sz == 0) return _pos;
+  des_pos = .9*des_pos/tot_sz + .1*_pos;
   return des_pos;
 }
 
@@ -311,16 +352,27 @@ Mat<3> Element_shape::_vertex_point(const std::vector<int>& coords) const {
   Mat<3> point = Mat<3>::Zero();
   for (int i_vert = 0; i_vert < math::pow(2, n_dim()); ++i_vert) {
     double weight = 1;
+    bool skip = false;
     for (int i_dim = 0; i_dim < n_dim(); ++i_dim) {
       bool sign = i_vert/vstride(n_dim(), i_dim)%2;
+      skip = skip || (coords[i_dim] == (row_size() - 1)*!sign);
       weight *= !sign + math::sign(sign)*_basis->node(coords[i_dim]);
     }
-    point += weight*_verts[i_vert].value().point({});
+    if (!skip) point += weight*_verts[i_vert].value().point({});
   }
   return point;
 }
 
 Mat<3> Element_shape::_point(const std::vector<int>& coords) const {
+  if (glued()) {
+    Int nc = coords.size();
+    std::vector<double> new_coords(nc);
+    for (int i_dim = 0; i_dim < nc; ++i_dim) {
+      double diff = _glued_corners[1][i_dim] - _glued_corners[0][i_dim];
+      new_coords[i_dim] = _glued_corners[0][i_dim] + _basis->node(coords[i_dim])*diff;
+    }
+    return _glued_to->interpolate(new_coords);
+  }
   // first compute point by interpolating between vertices
   Mat<3> point = _vertex_point(coords);
   // then, if `this` has a side on the boundary, adjust it to account for the actual position of the boundary nodes
@@ -348,6 +400,41 @@ Element_shape::Element_shape(int nd, const Basis& b)
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
 
+Mat<3> Element_shape::interpolate(std::vector<double> ref_coords) const {
+  int nd = n_dim();
+  int rs = row_size();
+  std::vector<Int> shape(nd + 1, rs);
+  shape[0] = 3;
+  Array<double> points(shape);
+  points = 0.;
+  for (int i_point = 0; i_point < (int)points.size()/3; ++i_point) {
+    bool skip = false;
+    std::vector<int> coords(nd);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      coords[i_dim] = i_point/math::pow(rs, nd - 1 - i_dim)%rs;
+      skip = skip || (ref_coords[i_dim] == 0 && coords[i_dim] != 0       );
+      skip = skip || (ref_coords[i_dim] == 1 && coords[i_dim] != (rs - 1));
+    }
+    if (!skip) {
+      points.reshaped({3, whatever}).column(i_point).vector() = point(coords);
+    }
+  }
+  Mat<3> p; // this is where we will put the computed position
+  // compute the interpolation matrix
+  Eigen::Map<const Mat<>> sample(ref_coords.data(), ref_coords.size());
+  Mat<dyn, dyn> interp = _basis->interpolate(sample);
+  // apply the interpolation matrix along each dimension to compute the desired point
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    Mat<> vec = points(i_dim).vector();
+    for (int j_dim = nd - 1; j_dim >= 0; --j_dim) {
+      Mat<> new_vec = math::dimension_matvec(interp(j_dim, all), vec, j_dim);
+      vec = new_vec;
+    }
+    p(i_dim) = vec(0);
+  }
+  return p;
+}
+
 Mat<3> Element_shape::nominal_position(int i_vert) const {
   Mat<3> pos = _nom_pos;
   for (int i_dim = 0; i_dim < n_dim(); ++i_dim) pos(i_dim) += i_vert/vstride(n_dim(), i_dim)%2*_nom_sz;
@@ -373,6 +460,7 @@ int i_edge(Connection_direction dir, int side, int i_bf) {
 void Element_shape::connect(Element_shape& other, Connection_direction dir) {
   HEXED_ASSERT(other.n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
   HEXED_ASSERT(other._basis == _basis, "attempt to connect elements with different basis");
+  if (&other == this) return;
   // eat vertices
   auto inds = vertex_inds(n_dim(), dir);
   for (int i_vert = 0; i_vert < math::pow(2, n_dim() - 1); ++i_vert) {
@@ -431,10 +519,17 @@ void Element_shape::connect(std::vector<Element_shape*> others, Connection_direc
   }
 }
 
+void Element_shape::glue(Element_shape& that, std::array<std::vector<double>, 2> corners) {
+  if (that.glued()) {
+    HEXED_ASSERT(that._glued_to.get() != this, "Mutually gluing 2 elements, which would create infinite recursion.");
+  }
+  _glued_to.set(&that);
+  _glued_corners = corners;
+}
+
 const int Mesh_blocks::no_face = -1;
 
-Mesh_blocks::Mesh_blocks(int nd, const Basis& b): n_dim{nd}, basis{b} {
-}
+Mesh_blocks::Mesh_blocks(int nd, const Basis& b): n_dim{nd}, basis{b} {}
 
 template <typename T>
 Sequence<T&> purge_fetch(std::vector<T>& vec) {
@@ -466,7 +561,7 @@ Sequence<Boundary_block&> Mesh_blocks::boundary_sides() {
 void Mesh_blocks::relax_vertices() {
   auto vs = verts();
   #pragma omp parallel for
-  for (auto& vert : vs) vert.pos = vert.point({});
+  for (auto& vert : vs) vert.set_pos(vert.point({}));
   #pragma omp parallel for
   for (auto& vert : vs) vert.calc_relax();
   #pragma omp parallel for

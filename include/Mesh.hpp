@@ -34,15 +34,15 @@ class Mesh {
    * Add an element at specified nominal position and serial number which uniquely identifies it
    * among elements of this mesh with the same refinement level and deformedness.
    */
-  virtual int add_element(int ref_level, bool is_deformed, std::vector<int> position) = 0;
+  virtual int add_element(int ref_level, bool is_deformed, std::vector<Int> position) = 0;
   /*!
    * Specify that two elements are connected via a Cartesian face. Note: although the interface
    * is stipulated to be Cartesian, the elements themselves can be deformed
    */
-  virtual void connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> dir,
+  virtual void connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Con_dir<Element> dir,
                                  std::array<bool, 2> is_deformed = {false, false}) = 0;
   //! Specify that two elements are connected via a deformed face. Requires both elements to be deformed.
-  virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction) = 0;
+  virtual void connect_deformed(int ref_level, std::array<Int, 2> serial_n, Con_dir<Deformed_element> direction) = 0;
   /*!
    * specify that an element of refinement level `coarse_ref_level` is connected to some elements of refinement level
    * `coarse_ref_level + 1`.
@@ -57,20 +57,19 @@ class Mesh {
    * Only the first `n_dim - 1` elements of `stretch` are meaningful.
    * The rest are ignored.
    */
-  virtual void connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>,
+  virtual void connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial, Con_dir<Deformed_element>,
                                bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
                                std::array<bool, 2> stretch = {false, false}) = 0;
-  /*!
-   * Acquires owenership of `*flow_bc` and `*mesh_bc` and constructs a `Boundary_condition` from them.
+  /*! \brief Acquires owenership of `*flow_bc` and adds it as a boundary condition.
    * Returns a serial number which uniquely identifies the new boundary condition among this `Mesh`'s boundary conditions.
    * It is recommended to use this with `new`, like the constructor for `std::unique_ptr`.
    */
-  virtual int add_boundary_condition(Flow_bc* flow_bc, Mesh_bc* mesh_bc) = 0;
+  virtual int add_boundary_condition(Flow_bc* flow_bc) = 0;
   /*!
    * Connect a face of an element to a boundary condition. This BC will now be applied to that face. `i_dim` and `face_sign`
    * are used to identify which face of the element is participating in the boundary condition.
    */
-  virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) = 0;
+  virtual void connect_boundary(int ref_level, bool is_deformed, Int element_serial_n, int i_dim, int face_sign, int bc_serial_n) = 0;
   //! delete all boundary connections involving a certain boundary condition
   virtual void disconnect_boundary(int bc_sn) = 0;
   //! connects all yet-unconnected faces to a boundary condition specified by serial number
@@ -163,7 +162,6 @@ class Mesh {
    * \returns `true` if the mesh was changed, else `false`
    */
   virtual bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) = 0;
-  virtual void set_all_smooth() = 0; //!< sets `need_smooth` to `true` for all vertices to perform global relaxation (only effective until the next `update()` cycle)
   /*! \brief Relax the vertices to improve mesh quality.
    * \details By default, relaxation is performed incrementally---only vertices of elements that are new
    * in the most recent `update()` cycle are smoothed.

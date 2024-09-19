@@ -3,57 +3,35 @@
 
 namespace hexed {
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level,
-                 Mat<> origin_arg, bool mobile_vertices, int aniso_r_level) :
-  params(params_arg),
-  n_dim(params.n_dim),
-  _nom_pos(n_dim, 0),
-  _nom_sz{mesh_size/math::pow(2, ref_level)},
-  _r_level{ref_level},
-  _aniso_r_level{aniso_r_level},
-  n_dof(params.n_dof()),
-  n_vert(params.n_vertices()),
-  data_size{params.n_dof_numeric()},
-  data{Eigen::VectorXd::Zero(data_size)},
-  vertex_data{Eigen::VectorXd::Constant(2*params.n_vertices(), _nom_sz/n_dim)},
-  _mask{0},
-  tree(this),
-  origin{origin_arg(Eigen::seqN(0, params.n_dim))}
+Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level,
+                 Mat<> origin_arg, bool mobile_vertices, int aniso_r_level)
+: params(params_arg)
+, n_dim(params.n_dim)
+, _nom_pos(pos)
+, _origin{origin_arg}
+, _nom_sz{mesh_size/math::pow(2, ref_level)}
+, _r_level{ref_level}
+, _aniso_r_level{aniso_r_level}
+, n_dof(params.n_dof())
+, n_vert(params.n_vertices())
+, data_size{params.n_dof_numeric()}
+, data{Eigen::VectorXd::Zero(data_size)}
+, _vertex_data({3, params.n_vertices()})
+, _mask{0}
+, tree(this)
+, origin{origin_arg(Eigen::seqN(0, params.n_dim))}
 {
   face_record.fill(0);
   faces.fill(nullptr);
   // initialize local time step scaling to 1.
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) time_step_scale()[i_qpoint] = 1.;
-  // set position of vertex 0
-  Mat<3> first_pos;
-  first_pos.setZero();
-  int n_pos_set = std::min<int>(pos.size(), n_dim);
-  for (int i_dim = 0; i_dim < n_pos_set; ++i_dim) {
-    _nom_pos[i_dim] = pos[i_dim];
-    first_pos[i_dim] = pos[i_dim]*_nom_sz;
-  }
-  first_pos(Eigen::seqN(0, n_dim)) += origin;
-  // construct vertices
-  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert)
-  {
-    // compute position of vertex
-    Mat<3> vertex_pos = first_pos;
-    int stride [3];
-    int i_row [3];
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      stride[i_dim] = math::pow(2, n_dim - i_dim - 1);
-      i_row[i_dim] = (i_vert/stride[i_dim])%2;
-      vertex_pos[i_dim] += i_row[i_dim]*_nom_sz;
-    }
-    vertices.emplace_back(vertex_pos, mobile_vertices);
-    // establish vertex connections (that is, edges).
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      if (i_row[i_dim]) Vertex::connect(*vertices.back(), *vertices[i_vert - stride[i_dim]]);
-    }
-  }
+  _nom_pos.resize(params.n_dim, 0);
+  HEXED_ASSERT(_origin.size() >= params.n_dim, "`origin` has too few components");
+  _vertex_data(0) = _nom_sz/n_dim;
+  _vertex_data(1, 3) = 0.;
 }
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level)
+Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level)
 : Element(params_arg, pos, mesh_size, ref_level, origin_arg, false, aniso_r_level)
 {}
 
@@ -61,38 +39,36 @@ Storage_params Element::storage_params() {
   return params;
 }
 
-std::vector<double> Element::position(const Basis& basis, int i_qpoint) {
-  std::vector<double> pos;
+Array<double> Element::position(const Basis& basis) const {
+  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
+  Array<double> shape_pos = _shape->points();
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    const int stride = math::pow(params.row_size, params.n_dim - i_dim - 1);
-    pos.push_back((basis.node((i_qpoint/stride)%params.row_size) + _nom_pos[i_dim])*_nom_sz + origin(i_dim));
+    auto vec = shape_pos(i_dim).vector();
+    vec = math::hypercube_matvec(_shape->basis().interpolate(basis.nodes()), vec);
   }
-  return pos;
+  return shape_pos;
 }
 
-std::vector<double> Element::face_position(const Basis& basis, int i_face, int i_face_qpoint) {
-  const int i_dim = i_face/2;
-  const int face_positive = i_face%2;
-  // extract a row of quadrature points
-  const int stride = math::pow(params.row_size, params.n_dim - 1 - i_dim);
-  int i_row_start = 0;
-  for (int j_dim = params.n_dim - 1, face_stride = 1; j_dim >= 0; --j_dim) {
-    int interior_stride = math::pow(params.row_size, params.n_dim - 1 - j_dim);
-    if (i_dim != j_dim) {
-      i_row_start += ((i_face_qpoint/face_stride)%params.row_size)*interior_stride;
-      face_stride *= params.row_size;
+Array<double> Element::face_position(const Basis& basis) const {
+  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
+  Array<double> shape_pos = _shape->points();
+  int nd = params.n_dim;
+  std::vector<Int> shape {nd, 2, nd};
+  for (int i_dim = 0; i_dim < nd - 1; ++i_dim) shape.push_back(params.row_size);
+  Array<double> face_pos(shape);
+  Mat<dyn, dyn> boundary = _shape->basis().boundary();
+  Mat<dyn, dyn> interp = _shape->basis().interpolate(basis.nodes());
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+    for (int sign = 0; sign < 2; ++sign) {
+      for (int j_dim = 0; j_dim < nd; ++j_dim) {
+        face_pos(i_dim)(sign)(j_dim).vector() = math::hypercube_matvec(
+          interp,
+          math::dimension_matvec(boundary(sign, all), shape_pos(j_dim).vector(), i_dim)
+        );
+      }
     }
   }
-  Eigen::MatrixXd row (params.row_size, params.n_dim);
-  for (int i_qpoint = 0; i_qpoint < params.row_size; ++i_qpoint) {
-    auto qpoint_pos = position(basis, i_row_start + stride*i_qpoint);
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) row(i_qpoint, i_dim) = qpoint_pos[i_dim];
-  }
-  // extrapolate to get the position of the face quadrature point
-  std::vector<double> pos;
-  Eigen::VectorXd face_qpoint_pos = basis.boundary().row(face_positive)*row;
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) pos.push_back(face_qpoint_pos(i_dim));
-  return pos;
+  return face_pos;
 }
 
 void Element::set_jacobian(const Basis& basis) {
@@ -137,42 +113,52 @@ double Element::jacobian(int i_dim, int j_dim, int i_qpoint) {
   return (i_dim == j_dim) ? 1. : 0.;
 }
 
-void Element::push_shareable_value(std::function<double(Element&, int i_vertex)> fun) {
-  for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    vertices[i_vert].shareable_value = fun(*this, i_vert);
-  }
-}
-
-void Element::fetch_shareable_value(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduction) {
-  for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    access_fun(*this, i_vert) = vertices[i_vert]->shared_value(reduction);
-  }
-}
-
 double& Element::vertex_time_step_scale(int i_vertex) {
-  return vertex_data[i_vertex];
+  return _vertex_data(0)[i_vertex];
 }
 
 double& Element::vertex_elwise_av(int i_vertex) {
-  return vertex_data[params.n_vertices() + i_vertex];
+  return _vertex_data(1)[i_vertex];
 }
 
 double& Element::vertex_fix_admis_coef(int i_vertex) {
-  return vertices[i_vertex].fix_admis_coef;
-}
-
-void Element::set_needs_smooth(bool value) {
-  for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    vertices[i_vert].needs_smooth = value;
-  }
+  return _vertex_data(2)[i_vertex];
 }
 
 void Element::set_face(int i_face, double* data) {faces[i_face] = data;}
 bool Element::is_connected(int i_face) {return faces[i_face];}
 
-void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
-  _shape.reset(new next::Element_shape{blocks.create_element(vertex(0).pos, nominal_size(), boundary_face)});
+Mat<3> Element::_compute_pos() const {
+  Mat<3> pos;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) pos(i_dim) = _origin(i_dim) + _nom_sz*_nom_pos[i_dim];
+  return pos;
 }
+
+void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
+  HEXED_ASSERT(blocks.n_dim == params.n_dim, "Dimensionality of `this` and `blocks` does not match.");
+  _fake_shape.reset();
+  _shape = std::make_unique<next::Element_shape>(blocks.create_element(_compute_pos(), nominal_size(), boundary_face));
+}
+
+void Element::create_fake(next::Mesh_blocks& blocks) {
+  _fake_shape.reset(_shape.release());
+  _shape = std::make_unique<next::Element_shape>(blocks.create_element(_compute_pos(), nominal_size()));
+  _shape->glue(*_fake_shape, {std::vector<double>(params.n_dim, 0.), std::vector<double>(params.n_dim, 1.)});
+}
+
+void Element::split_shape(next::Mesh_blocks& blocks, Element& split_from, double at, int from_face) {
+  HEXED_ASSERT(split_from._fake_shape, "Can only create a split shape from an element that already has a fake shape.");
+  HEXED_ASSERT(_shape, "Must `create_shape` before `split_shape`.");
+  _fake_shape = split_from._fake_shape;
+  auto corners = split_from.shape().glued_corners();
+  auto split_corners = corners;
+  double diff = corners[1 - from_face%2][from_face/2] - corners[from_face%2][from_face/2];
+  corners[from_face%2][from_face/2] += at*diff;
+  split_corners[1 - from_face%2][from_face/2] = corners[from_face%2][from_face/2];
+  split_from.shape().set_glued_corners(corners);
+  _shape->glue(*_fake_shape, split_corners);
+}
+
 next::Element_shape& Element::shape() {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
   return *_shape;

@@ -11,8 +11,8 @@ class Tree_curve {
   struct Segment {
     Mat<3> center;
     double radius;
-    const Array<Segment> segments;
-    const Array<double> nodes;
+    Array<Segment> segments;
+    Array<double> nodes;
     Int nodes_start;
   };
   struct Nearest_index {

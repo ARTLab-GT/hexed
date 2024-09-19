@@ -40,9 +40,9 @@ template <typename T>
 class Sequence {
 public:
   //! \brief type of a functor that returns the size
-  typedef std::function<std::size_t()> sizer;
+  typedef std::function<Int()> sizer;
   //! \brief type of a functor that fetches entries
-  typedef std::function<T(std::size_t)> getter;
+  typedef std::function<T(Int)> getter;
   //! \brief the type used for accessing an entry of this sequence by reference
   //! \details Always a reference and never a pointer, regardless of whether `T` is a reference and/or pointer type
   typedef std::add_lvalue_reference<typename std::remove_pointer<T>::type>::type Reference_t;
@@ -58,11 +58,11 @@ public:
   : _get{get}, _size{size}
   {}
   Sequence()
-  : _get{[](std::size_t index)->T {HEXED_THROW("call to the `get()` of an empty `Sequence`"); throw;}},
-    _size{[]()->std::size_t {return 0;}}
+  : _get{[](Int index)->T {HEXED_THROW("call to the `get()` of an empty `Sequence`"); throw;}},
+    _size{[]()->Int {return 0;}}
   {}
-  std::size_t size() const {return _size();} //!< \brief size of the sequence
-  T operator[](std::size_t index) const {return _get(index);} //!< \brief the `index`th entry of the sequence
+  Int size() const {return _size();} //!< \brief size of the sequence
+  T operator[](Int index) const {return _get(index);} //!< \brief the `index`th entry of the sequence
   operator bool() const {return _size();} //!< \brief `true` iff `size()` is nonzero
   bool empty() const {return !_size();} //!< \brief `true` iff `size()` is zero
   Iterator<T> begin() const {return Iterator<T>(_get, 0);} //!< \brief `Iterator` pointing to the first entry
@@ -82,20 +82,20 @@ public:
   template <typename U = Reference_t>
   Sequence<U> dereference() const {
     getter g{_get};
-    return {[g](std::size_t index)->U {return *g(index);}, _size};
+    return {[g](Int index)->U {return *g(index);}, _size};
   }
 
   //! \brief If the entries of this sequence have addresses, returns them as a sequence.
   Sequence<Pointer_t> address() const {
     getter g{_get};
-    return {[g](std::size_t index)->Pointer_t {return addr_if_possible(g(index));}, _size};
+    return {[g](Int index)->Pointer_t {return addr_if_possible(g(index));}, _size};
   }
 
   //! \brief `static_cast`s the elements to the specified type
   template <typename U>
   Sequence<U> cast() const {
     getter g{_get};
-    return {[g](std::size_t index)->U {return static_cast<U>(g(index));}, _size};
+    return {[g](Int index)->U {return static_cast<U>(g(index));}, _size};
   }
 
   /*! \brief Given a `std::vector`, returns its entries as a sequence.
@@ -104,11 +104,11 @@ public:
    */
   template <typename storage_t = std::remove_reference<T>::type>
   static Sequence vector_view(std::vector<storage_t>& vec) {
-    return {[&vec](std::size_t index)->T{return vec[index];}, [&vec](){return vec.size();}};
+    return {[&vec](Int index)->T{return vec[index];}, [&vec](){return vec.size();}};
   }
   template <typename storage_t = std::remove_reference<T>::type>
   static Sequence vector_view(const std::vector<storage_t>& vec) {
-    return {[&vec](std::size_t index)->const T{return vec[index];}, [&vec](){return vec.size();}};
+    return {[&vec](Int index)->const T{return vec[index];}, [&vec](){return vec.size();}};
   }
 
   //! \brief concatenates
@@ -116,8 +116,8 @@ public:
     getter gets [2] {_get, that._get};
     sizer sizes [2] {_size, that._size};
     return {
-      [gets, sizes](std::size_t index)->T {
-        std::size_t s = sizes[0]();
+      [gets, sizes](Int index)->T {
+        Int s = sizes[0]();
         return index < s ? gets[0](index) : gets[1](index - s);
       },
       [sizes](){return sizes[0]() + sizes[1]();},

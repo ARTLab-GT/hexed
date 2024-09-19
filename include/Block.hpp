@@ -2,12 +2,14 @@
 #define HEXED_BLOCK_HPP_
 
 #include <memory>
+#include <optional>
 #include "math.hpp"
 #include "reciprocal.hpp"
 #include "Basis.hpp"
 #include "Array.hpp"
 #include "Sequence.hpp"
 #include "Kernel_connection.hpp"
+#include "Lock.hpp"
 
 //! \brief %namespace for refactored functionality that may clash with existing names
 namespace hexed::next {
@@ -30,6 +32,8 @@ class Block : public Mortal {
   //! \brief Obtains the node with array indices specified by `node_coords`.
   //! \details `node_coords` must have `n_dim()` entries and each entry must be in [0, `row_size()`).
   Mat<3> point(const std::vector<int>& node_coords) const;
+  //! \brief Obtains the node with flat index `i_point`
+  Mat<3> point(int i_point) const;
   /*! \brief Obtains all the nodes as a multidimensional array
    * \details This is not a reference.
    * Calling this function allocates memory for the points
@@ -115,12 +119,36 @@ class Vertex : public Block {
   //! \brief Applies the update computed with `calc_update`.
   void apply_relax();
   double badness(Mat<3> proposed_pos) const;
+  void set_pos(Mat<3> p);
+
+  /*! \brief Accesses a `double` value used for transmitting shared data between elements.
+   * \details There are several cases where elements have some data which needs to match their vertex neighbors.
+   * For this purpose, every `Vertex` has a single (private) `double` data member, it's "shared value".
+   * When you construct a `Shared_value` object from a `Vertex`,
+   * its `get()` and `set()` members will access the shared value of the vertex.
+   * The `Shared_value` also acquires a `Lock` belonging to the vertex on construction and releases it on destruction,
+   * so you `get()` and `set()` are thread safe.
+   * However, if you need to do an update operation (one that involves both `get()` and `set()`,
+   * you should call both members on the same `Shared_value` object so that the lock will prevent
+   * any other thread from changing the shared value in between the `get()` and `set()`.
+   * When you construct a `Vertex`, its shared value is initialized to 0.
+   */
+  class Shared_value {
+    public:
+    Shared_value(Vertex&); //!< \brief Acquires the `Lock`
+    double get() const; //!< \brief Fetches the shared value.
+    void set(double); //!< \brief Writes to the shared value.
+    private:
+    Vertex& _vert;
+    std::optional<Lock::Acquire> _acquire;
+  };
 
   //! \brief current position of this vertex
   //! \details `Block::point` will return this value, unless the vertes is currently `glue()`d.
-  Mat<3> pos;
+  std::vector<Int> record; //!< for algorithms to keep notes as they please
 
   private:
+  Mat<3> _pos;
   Mat<3> _point(const std::vector<int>&) const override;
   Mat<3> _update;
   Reciprocal_list<Vertex, Edge> _edges;
@@ -130,6 +158,8 @@ class Vertex : public Block {
   Reciprocal_list<Vertex, Vertex> _shadows;
   std::vector<double> _glued_coords;
   Mat<3> _desired_pos() const;
+  double _shared_value;
+  Lock _shared_value_lock;
 };
 
 /*! \brief A `Block` which is part of the mesh boundary.
@@ -163,7 +193,7 @@ class Boundary_block : public Block {
    * [i_dim \f$\in\f$ [0, 3)]
    * \attention The layout is transposed with respect to `Block::points`!
    */
-  inline Array<double> interior() {return _interior;};
+  inline Array<double> interior() {return _interior();};
 
   protected:
   Array<double> _interior; //!< \brief storage for the interior points
@@ -276,6 +306,8 @@ class Element_shape : public Block {
   inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
   inline const Vertex& vertex(int i_vert) const {return *_verts[i_vert];}
   inline const Basis& basis() const {return *_basis;}
+  inline bool glued() const {return _glued_to;}
+  Mat<3> interpolate(std::vector<double> coords) const;
 
   /*! \brief Stipulates that 1 face of `this` is conformally connected to 1 face of `that`.
    * \details Which faces are involved is determined by the `Connection_direction`.
@@ -292,6 +324,11 @@ class Element_shape : public Block {
    */
   void connect(std::vector<Element_shape*> those, Connection_direction);
 
+  void glue(Element_shape& that, std::array<std::vector<double>, 2> corners);
+  inline std::array<std::vector<double>, 2> glued_corners() const {return _glued_corners;}
+  inline void set_glued_corners(std::array<std::vector<double>, 2> corners) {_glued_corners = corners;}
+  inline void unglue() {_glued_to.set();}
+
   private:
   Element_shape(int nd, const Basis&);
   Mat<3> _vertex_point(const std::vector<int>&) const;
@@ -305,6 +342,8 @@ class Element_shape : public Block {
   Reciprocal_list<Element_shape, Boundary_block> _boundary_edges;
   Mortal_ptr<Face> _sf;
   Reciprocal_list<Element_shape, Vertex> _glued_verts;
+  Mortal_ptr<Element_shape> _glued_to;
+  std::array<std::vector<double>, 2> _glued_corners;
 };
 
 /*! \brief Stores all the `Block`s for an entire mesh.
@@ -349,6 +388,7 @@ class Mesh_blocks {
   static const int no_face;
   const int n_dim; //!< \brief number of dimensions (physical and topological)
   const Basis& basis; //!< \brief `Basis` used by all `Block`s in this mesh.
+  inline Int n_actual_verts() const {return _interior_verts.size() + _boundary_verts.size();}
 
   private:
   std::vector<Vertex> _interior_verts;

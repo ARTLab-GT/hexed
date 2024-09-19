@@ -1,8 +1,7 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Interpreter.hpp>
 
-TEST_CASE("Interpreter")
-{
+TEST_CASE("Interpreter") {
   hexed::Interpreter inter(std::vector<std::string>{});
   inter.exec("\n");
   inter.exec("shock_wave = 7\n  boundary0layer=14;interaction = 1.2");
@@ -102,9 +101,16 @@ TEST_CASE("Interpreter")
   REQUIRE(inter.variables->lookup<int>("a") == 5);
   inter.exec("a"); // expressions don't have to contain assignments
   inter.exec("x = (0; {})");
+  // test Array variables
+  inter.variables->assign("arr0", hexed::Array<double>::make(1., 2., 3.));
+  inter.variables->assign("arr1", hexed::Array<double>::make(.1, .2, .3));
+  inter.exec("arr2 = arr0 + arr1");
+  auto arr2 = inter.variables->lookup<hexed::Array<double>>("arr2");
+  REQUIRE(arr2);
+  REQUIRE_THAT(arr2.value(), Catch::Matchers::RangeEquals(hexed::Array<double>::make(1.1, 2.2, 3.3),
+                                                          hexed::math::Approx_equal()));
 
-  SECTION("standard library")
-  {
+  SECTION("standard library") {
     hexed::Interpreter test;
     test.exec("$(read {test_builtin.hil})");
     REQUIRE(test.variables->lookup<int>("triangle").value() == 10);

@@ -255,11 +255,16 @@ Case::Case(std::string input_script)
         }
         veloc = _vard("freestream_speed")*direction;
         _set_vector("freestream_velocity", veloc);
+        for (int i_dim = *n_dim; i_dim < 3; ++i_dim) {
+          _inter.variables->assign("freestream_velocity" + std::to_string(i_dim), 0.);
+        }
       }
       _set_vector("freestream_direction", full_direction);
+      double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*_vard("freestream_density")*veloc.squaredNorm();
+      _inter.variables->assign("freestream_energy", ener);
       freestream(Eigen::seqN(0, *n_dim)) = _vard("freestream_density")*veloc;
       freestream(*n_dim) = _vard("freestream_density");
-      freestream(*n_dim + 1) = _vard("freestream_pressure")/(heat_rat - 1) + .5*_vard("freestream_density")*veloc.squaredNorm();
+      freestream(*n_dim + 1) = ener;
       freestream.conservativeResize(5);
       freestream(Eigen::seqN(*n_dim + 2, 5 - (*n_dim + 2))).setZero();
       _set_vector("freestream", freestream);
@@ -360,12 +365,7 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
-    #if HEXED_OBSESSIVE_TIMING
-    int nd = _inter.variables->lookup<int>("n_dim").value();
-    if (nd == 2) _inter.printer->print(Simplex_geom<2>::performance_report());
-    if (nd == 3) _inter.printer->print(Simplex_geom<3>::performance_report());
-    #endif
-    _solver().initialize(Spacetime_expr(Struct_expr(_vars("init_cond")), _inter));
+    _solver().initialize(_vars("init_cond"));
     return "";
   }));
 
@@ -396,7 +396,6 @@ Case::Case(std::string input_script)
   _inter.variables->create("write_mesh", new Namespace::Heisenberg<std::string>([this]() {
     _printers->info("writing mesh... ");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
-    _solver().mesh().visualize("default", _vars("working_dir") + "mesh_diagnostic");
     _solver().mesh().write(file_name);
     force_symlink(_iteration_suffix() + ".mesh.h5", _vars("working_dir") + "latest.mesh.h5");
     _printers->info("done\n");
@@ -438,21 +437,23 @@ Case::Case(std::string input_script)
     }
     for (std::string v : vis_objects) if (_vari("vis_" + strip_trailing_digits(v))) {
       for (std::string format : {"xdmf", "tecplot", "csv"}) if (_vari("vis_" + format)) {
-        Struct_expr vis_vars(_vars("vis_" + strip_trailing_digits(v) + "_vars"));
+        std::string vis_expr = _vars("vis_" + strip_trailing_digits(v) + "_vars");
+        Struct_expr vis_vars(vis_expr);
         for (bool edges : {false, true}) {
           std::string name = v;
           if (edges) name = name + "_edges";
           if (!edges || (_vari("vis_edges") && _vari("n_dim") + (v == "field") > 2)) {
             std::string file_name = wd + name + suffix;
             if (v == "surface") {
-              _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(), Boundary_expr(vis_vars, _inter), n_sample, edges);
+              _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(), vis_expr, n_sample, edges);
             } else if (v == "field") {
-              _solver().visualize_field(format, file_name, Qpoint_expr(vis_vars, _inter), n_sample, edges);
-              if (_vari("vis_skew")) _solver().visualize_field(format, wd + "skew" + suffix, Equiangle_skewness(), n_sample, edges);
+              _solver().visualize_field(format, file_name, vis_expr, n_sample, edges);
               if (_vari("vis_lts_constraints")) _solver().vis_lts_constraints(format, wd + "lts_constraints" + suffix, n_sample);
             } else if (!edges) { // vis_type == contour0, contour1, etc
               std::string contour_expr = _vars("vis_contour_vars") + v + "_var = " + _vars(v) + ";";
-              _solver().visualize_contour(format, file_name, Qpoint_expr(contour_expr, _inter), Qpoint_expr(vis_vars, _inter), n_sample);
+              auto tol = _inter.variables->lookup<double>(name + "_tol");
+              double const_tol = tol ? *tol : 1e-10;
+              _solver().visualize_contour(format, file_name, _vars(v), _vars("vis_contour_vars"), const_tol, n_sample);
             }
             if (format == "xdmf") {
               std::string latest = wd + name + "_latest1.xmf";

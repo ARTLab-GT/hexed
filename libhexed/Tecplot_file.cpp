@@ -135,7 +135,7 @@ Tecplot_file::Triangles::~Triangles()
   tecZoneNodeMapWrite32(file.file_handle, tecio_zone_index, 0, 0, inds.size(), inds.data());
 }
 
-Tecplot_file::Unstructured::Unstructured(Tecplot_file& file, Array<int> elements, Array<double> pos, Array<double> vars, std::string name_arg)
+Tecplot_file::Unstructured::Unstructured(Tecplot_file& file, Array<Int> elements, Array<double> pos, Array<double> vars, std::string name_arg)
 : Zone{file, 0, name_arg}
 {
   HEXED_ASSERT(pos.order() == 2, "order of `pos` must be 2");

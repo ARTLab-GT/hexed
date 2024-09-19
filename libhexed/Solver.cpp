@@ -13,6 +13,7 @@
 #include <hexed/Row_index.hpp>
 #include <hexed/stabilizing_art_visc.hpp>
 #include <hexed/Array.hpp>
+#include <hexed/vis_variables.hpp>
 
 namespace hexed {
 
@@ -51,26 +52,45 @@ void Solver::_get_cache() {
   }
 }
 
+double max_fun(double x, double y) {return std::max(x, y);}
+double min_fun(double x, double y) {return std::min(x, y);}
+
+Solver::Reduction Solver::_max {-huge, max_fun};
+Solver::Reduction Solver::_min { huge, min_fun};
+
 void Solver::share_vertex_data(std::function<double&(Element&, int i_vertex)> access_fun,
-                               std::function<double(Mat<>)> reduce) {
-  share_vertex_data(access_fun, access_fun, reduce);
+                               Solver::Reduction reduction) {
+  share_vertex_data(access_fun, access_fun, reduction);
 }
 
 void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get,
                                std::function<double&(Element&, int i_vertex)> set,
-                               std::function<double(Mat<>)> reduce) {
+                               Solver::Reduction reduction) {
+  int nv = params.n_vertices();
+  auto verts = acc_mesh->shape_vertices();
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    elements[i_elem].push_shareable_value(get);
+  for (Int i_vert = 0; i_vert < (Int)verts.size(); ++i_vert) {
+    next::Vertex::Shared_value(verts[i_vert]).set(reduction.initial_value);
   }
   #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    elements[i_elem].fetch_shareable_value(set, reduce);
+  for (Int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    auto& elem = elements[i_elem];
+    auto& shape = elem.shape();
+    for (int i_vert = 0; i_vert < nv; ++i_vert) {
+      next::Vertex::Shared_value shared(shape.vertex(i_vert));
+      shared.set(reduction.binary_reduction(shared.get(), get(elem, i_vert)));
+    }
   }
-  auto& matchers = acc_mesh->hanging_vertex_matchers();
   #pragma omp parallel for
-  for (int i_match = 0; i_match < matchers.size(); ++i_match) matchers[i_match].match(set);
+  for (Int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    auto& elem = elements[i_elem];
+    auto& shape = elem.shape();
+    for (int i_vert = 0; i_vert < nv; ++i_vert) {
+      next::Vertex::Shared_value shared(shape.vertex(i_vert));
+      set(elem, i_vert) = shared.get();
+    }
+  }
 }
 
 void Solver::apply_state_bcs() {
@@ -79,7 +99,7 @@ void Solver::apply_state_bcs() {
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flow_bc->apply_state(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).apply_state(bc_cons[i_con]);
   }
   stopwatch["boundary conditions"].stopwatch.pause();
   stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
@@ -94,7 +114,7 @@ void Solver::apply_flux_bcs() {
     Eigen::Map<Mat<>>(bc_cons[i_con].flux_cache(), n_dof) = Eigen::Map<Mat<>>(bc_cons[i_con].inside_face(true), n_dof);
     // apply boundary conditions
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flow_bc->apply_flux(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).apply_flux(bc_cons[i_con]);
   }
 }
 
@@ -103,7 +123,7 @@ void Solver::apply_avc_diff_bcs() {
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flow_bc->apply_diffusion(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).apply_diffusion(bc_cons[i_con]);
   }
 }
 
@@ -112,7 +132,7 @@ void Solver::apply_avc_diff_flux_bcs() {
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flow_bc->flux_diffusion(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).flux_diffusion(bc_cons[i_con]);
   }
 }
 
@@ -152,8 +172,14 @@ void Solver::_init_face_state() {
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flow_bc->init_cache(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).init_cache(bc_cons[i_con]);
   }
+}
+
+Interpreter Solver::_interpreter() {
+  Interpreter inter(std::vector<std::string>{});
+  inter.variables = _namespace;
+  return inter;
 }
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
@@ -232,6 +258,12 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
     }
   }
   stopwatch.emplace("boundary conditions", "(boundary connection)*(time integration stage)");
+  stopwatch.emplace("visualization", "file");
+  stopwatch["visualization"].emplace("field", "element");
+  stopwatch["visualization"].emplace("field wireframe", "element");
+  stopwatch["visualization"].emplace("surface", "surface face");
+  stopwatch["visualization"].emplace("surface wireframe", "surface face");
+  stopwatch["visualization"].emplace("contour", "element");
   // initialize advection state to 1
   auto& elements = acc_mesh->elements();
   const int nq = params.n_qpoint();
@@ -309,7 +341,6 @@ void Solver::write_state(std::string file_name) {
 
 void Solver::calc_jacobian(bool snap) {
   acc_mesh->valid().assert_valid();
-  if (snap) snap_faces();
   const int n_dim = params.n_dim;
   const int rs = basis.row_size;
   const int nfq = params.n_qpoint()/rs;
@@ -406,31 +437,37 @@ void Solver::calc_jacobian(bool snap) {
     Element& elem = bc_cons[i_con].element();
     double* surf_pos = bc_cons[i_con].surface_position();
     int i_face = bc_cons[i_con].direction().i_face(0);
-    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-      auto pos = elem.face_position(basis, i_face, i_qpoint);
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        surf_pos[i_dim*nfq + i_qpoint] = pos[i_dim];
+    Array<double> pos {elem.face_position(basis)(i_face/2)(i_face%2).copy()};
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+        surf_pos[i_dim*nfq + i_qpoint] = pos(i_dim)[i_qpoint];
       }
     }
   }
-  share_vertex_data(&Element::vertex_time_step_scale, Vertex::vector_min);
+  share_vertex_data(&Element::vertex_time_step_scale, _min);
   _preti_masks = acc_mesh->preti_masks(basis);
 }
 
-void Solver::initialize(const Spacetime_func& func) {
+void Solver::initialize(std::string(expr)) {
   acc_mesh->valid().assert_valid();
-  if (func.n_var(params.n_dim) < params.n_var) {
-    throw std::runtime_error("initializer has too few output variables");
-  }
+  std::vector<std::string> state_vars;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) state_vars.push_back("momentum" + std::to_string(i_dim));
+  state_vars.push_back("density");
+  state_vars.push_back("energy");
+  auto inter = _interpreter();
+  int n_var = state_vars.size();
+  int nq = params.n_qpoint();
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      std::vector<double> pos_vec {};
-      auto state = func(elements[i_elem].position(basis, i_qpoint), _namespace->get<double>("flow_time"));
-      for (int i_var = 0; i_var < params.n_var; ++i_var) {
-        elements[i_elem].state()[i_var*params.n_qpoint() + i_qpoint] = state[i_var];
-      }
+    auto& elem = elements[i_elem];
+    auto sub = inter.make_sub();
+    vis_variables::element(*sub.variables, elem);
+    vis_variables::position(*sub.variables, elem, basis);
+    sub.exec(expr);
+    Array<double> state({n_var, nq}, elem.state());
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      sub.variables->assign_array(state(i_var), state_vars[i_var]);
     }
   }
   _init_face_state();
@@ -540,7 +577,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       #pragma omp parallel for
       for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
         int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-        acc_mesh->boundary_condition(bc_sn).flow_bc->apply_advection(bc_cons[i_con]);
+        acc_mesh->boundary_condition(bc_sn).apply_advection(bc_cons[i_con]);
       }
       sw_adv["BCs"].stopwatch.pause();
       sw_adv["BCs"].work_units_completed += acc_mesh->elements().size();
@@ -651,7 +688,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based) {
   } else {
     share_vertex_data([](Element& elem, int){return elem.uncertainty;},
                       [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
-                      Vertex::vector_max);
+                      _max);
     Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -671,7 +708,7 @@ void Solver::set_art_visc_admis() {
   // enforce C^0 continuity
   share_vertex_data([](Element& elem, int){return elem.uncertainty;},
                     [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
-                    Vertex::vector_max);
+                    _max);
   Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
   // interpolate from vertices to quadrature points
   auto& elems = acc_mesh->elements();
@@ -1045,6 +1082,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
   auto& sw_fix = stopwatch["fix admis."];
   sw_fix.stopwatch.start();
   std::string wd = _namespace->lookup<std::string>("working_dir").value();
+  std::string vis_expr = _namespace->lookup<std::string>("vis_field_vars").value();
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
@@ -1053,14 +1091,6 @@ bool Solver::fix_admissibility(double stability_ratio) {
   int n_iters = std::numeric_limits<int>::max();
   for (iter = 0; iter < n_iters; ++iter) {
     HEXED_ASSERT(iter < 1e5, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
-    #if HEXED_USE_XDMF
-    if (iter == 100) {
-      State_variables sv;
-      Record rec;
-      std::vector<const Qpoint_func*> to_vis {&sv, &rec};
-      visualize_field("xdmf", wd + "severe_indamis" + std::to_string(status.iteration), Qf_concat(to_vis));
-    }
-    #endif
     if (is_admissible()) {
       if (iter) n_iters = std::min(n_iters, 2*iter);
       else {
@@ -1070,14 +1100,13 @@ bool Solver::fix_admissibility(double stability_ratio) {
     } else {
       n_iters = std::numeric_limits<int>::max();
     }
+    if (iter == 100) visualize_field("default", wd + "severe_indamis" + std::to_string(status.iteration), vis_expr);
     if (iter == 0) {
       _printer->warn("Warning: ", true);
       _printer->warn(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
                                 _namespace->get<int>("iteration")));
     }
-    auto bounds = bounds_field(State_variables(), 2*rs);
-    _printer->warn(format_str(200, "    iteration %i: mass in [%e, %e]; energy in [%e, %e]\n",
-                              iter, bounds[nd][0], bounds[nd][1], bounds[nd + 1][0], bounds[nd + 1][1]));
+    _printer->warn(format_str(200, "    iteration %i\n", iter));
     auto& elems = acc_mesh->elements();
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1086,7 +1115,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
         elem.vertex_fix_admis_coef(i_vert) = elem.record;
       }
     }
-    share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
+    share_vertex_data(&Element::vertex_fix_admis_coef, _max);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
@@ -1098,7 +1127,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
         elem.vertex_fix_admis_coef(i_vert) = max_fac;
       }
     }
-    share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
+    share_vertex_data(&Element::vertex_fix_admis_coef, _max);
     Mat<dyn, dyn> interp(rs, 2);
     interp(all, 0) = Mat<>::Ones(rs) - basis.nodes();
     interp(all, 1) = basis.nodes();
@@ -1111,16 +1140,10 @@ bool Solver::fix_admissibility(double stability_ratio) {
       }
       Eigen::Map<Mat<>>(elem.laplacian_av_coef(), nq) = math::hypercube_matvec(interp, vert_fac);
     }
-    #if HEXED_USE_XDMF
     if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
       last_fix_vis_iter = status.iteration;
-      State_variables sv;
-      Record rec;
-      Fix_admis_coef fac;
-      std::vector<const Qpoint_func*> to_vis {&sv, &rec, &fac};
-      visualize_field("xdmf", wd + "inadmis" + std::to_string(status.iteration), Qf_concat(to_vis));
+      visualize_field("default", wd + "inadmis" + std::to_string(status.iteration), vis_expr);
     }
-    #endif
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
@@ -1242,159 +1265,155 @@ std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int
   return integral;
 };
 
-std::vector<std::array<double, 2>> Solver::bounds_field(const Qpoint_func& func, int n_sample) {
-  const int n_var = func.n_var(params.n_dim);
-  std::vector<std::array<double, 2>> bounds(n_var);
-  for (int i_var = 0; i_var < n_var; ++i_var) {
-    bounds[i_var] = {std::numeric_limits<double>::max(), -std::numeric_limits<double>::max()};
-  }
-  const int n_block = math::pow(n_sample, params.n_dim);
-  auto& elems = acc_mesh->elements();
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem)
+//! \cond
+template <typename T>
+class Vis_evaluator {
+  public:
+  Vis_evaluator(Interpreter&& inter, std::function<void(Namespace&, T&)> assign, std::string expr, T& t, int n_dim_topo)
+  : _inter{inter}, _assign{assign}, _expr{expr}, _n_dim_topo{n_dim_topo}
   {
-    Element& elem {elems[i_elem]};
-    Eigen::VectorXd vars = Vis_data(elem, func, basis, _namespace->get<double>("flow_time")).interior(n_sample);
-    for (int i_var = 0; i_var < n_var; ++i_var) {
-      auto var = vars(Eigen::seqN(i_var*n_block, n_block));
-      bounds[i_var][0] = std::min(var.minCoeff(), bounds[i_var][0]);
-      bounds[i_var][1] = std::max(var.maxCoeff(), bounds[i_var][1]);
-    }
+    auto sub = _inter.make_sub();
+    _assign(*sub.variables, t);
+    sub.subspace();
+    sub.exec(_expr);
+    _var_names = sub.variables->names();
+    _n_var = _var_names.size();
+    Storage_params params = t.storage_params();
+    _n_dim = params.n_dim;
+    _shape = hypercubes(_n_dim + _n_var, _n_dim_topo, params.row_size);
   }
-  return bounds;
-}
-
-void Solver::visualize_field(std::string format, std::string name, const Qpoint_func& output_variables,
-                             int n_sample, bool wireframe) {
-  auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim, name, output_variables,
-                                       _namespace->get<double>("flow_time"), Visualizer::block);
-  HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
-  Position_func pos_func;
-  int nv = output_variables.n_var(params.n_dim);
-  int n_edges = math::pow(2, params.n_dim - 1)*params.n_dim;
-  auto& elems = acc_mesh->elements();
-  std::vector<Int> pos_shape(params.n_dim + 1, n_sample);
-  pos_shape[0] = params.n_dim;
-  std::vector<Int> out_shape(params.n_dim + 1, n_sample);
-  out_shape[0] = nv;
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Vis_data pos_dat(elems[i_elem], pos_func, basis, _namespace->get<double>("flow_time"));
-    Vis_data out_dat(elems[i_elem], output_variables, basis, _namespace->get<double>("flow_time"));
-    if (wireframe) {
-      Mat<> pos = pos_dat.edges(n_sample);
-      Mat<> out = out_dat.edges(n_sample);
-      Array<double> pos_arr({n_edges, params.n_dim, n_sample}, pos.data());
-      Array<double> out_arr({n_edges,           nv, n_sample}, out.data());
-      for (int i_edge = 0; i_edge < n_edges; ++i_edge) {
-        visualizer->write_block(pos_arr(i_edge), out_arr(i_edge));
-      }
-    } else {
-      Mat<> pos = pos_dat.interior(n_sample);
-      Mat<> out = out_dat.interior(n_sample);
-      visualizer->write_block(Array<double>(pos_shape, pos.data()), Array<double>(out_shape, out.data()));
+  Array<double> evaluate(T& t) {
+    auto sub = _inter.make_sub();
+    _assign(*sub.variables, t);
+    sub.subspace();
+    sub.exec(_expr);
+    Array<double> qpoints(_shape);
+    for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
+      qpoints(i_dim) = sub.variables->lookup<Array<double>>("pos" + std::to_string(i_dim)).value();
     }
+    for (int i_var = 0; i_var < _n_var; ++i_var) {
+      sub.variables->assign_array(qpoints(_n_dim + i_var), _var_names[i_var]);
+    }
+    return qpoints;
   }
-}
+  std::vector<std::string> var_names() {return _var_names;}
 
-void Solver::visualize_surface(std::string format, std::string name, int bc_sn, const Boundary_func& func, int n_sample, bool wireframe) {
-  HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
-  HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");
-  auto visualizer = Visualizer::create(format, params.n_dim, wireframe ? 1 : params.n_dim - 1, name, func, _namespace->get<double>("flow_time"), Visualizer::block);
-  // convenience definitions
-  const int nfq = params.n_qpoint()/params.row_size;
-  const int nd = params.n_dim;
-  const int nv = func.n_var(nd);
-  const int n_block {math::pow(n_sample, nd - 1)};
-  const int n_edge {math::pow(n_sample, nd - 2)};
-  // setup
-  Mat<dyn, dyn> interp = basis.interpolate(Eigen::VectorXd::LinSpaced(n_sample, 0., 1.));
-  Mat<dyn, dyn> boundary = basis.boundary();
-  // iterate through boundary connections and visualize a zone for each
-  auto& bc_cons {acc_mesh->boundary_connections()};
-  std::vector<Int> pos_shape(params.n_dim, n_sample);
-  pos_shape[0] = params.n_dim;
-  std::vector<Int> out_shape(params.n_dim, n_sample);
-  out_shape[0] = nv;
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
-  {
-    auto& con {bc_cons[i_con]};
-    if (con.bound_cond_serial_n() == bc_sn)
-    {
-      auto& elem = con.element();
-      // fetch the position
-      const int i_face = con.direction().i_face(0);
-      Mat<dyn, dyn> qpoint_pos (nfq, nd);
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        auto pos = elem.face_position(basis, i_face, i_qpoint);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) qpoint_pos(i_qpoint, i_dim) = pos[i_dim];
-      }
-      // fetch the output variables
-      Mat<dyn, dyn> qpoint_vars (nfq, nv);
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        auto vars = func(con, i_qpoint, _namespace->get<double>("flow_time"));
-        for (int i_var = 0; i_var < nv; ++i_var) {
-          qpoint_vars(i_qpoint, i_var) = vars[i_var];
-        }
-      }
+  void visualize(std::string format, std::string name, int n_sample, bool wireframe, Sequence<T&>& seq,
+                 double time, const Basis& basis, std::function<bool(T&)> mask) {
+    auto visualizer = Visualizer::create(format, _n_dim, wireframe ? 1 : _n_dim_topo, name, _var_names,
+                                         time, Visualizer::block);
+    #pragma omp parallel for
+    for (Int i = 0; i < seq.size(); ++i) if (mask(seq[i])) {
+      Array<double> qpoints {evaluate(seq[i])};
+      Vis_data vis_dat(qpoints, basis);
       if (wireframe) {
-        for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
-          for (int i_sign = 0; i_sign < 2; ++i_sign) {
-            Mat<dyn, dyn> interp_pos (n_edge, nd);
-            for (int j_dim = 0; j_dim < nd; ++j_dim) {
-              // extrapolate from faces to edges
-              Mat<> uniform = math::dimension_matvec(boundary(i_sign, all), qpoint_pos.col(j_dim), i_dim);
-              // interpolate from edge qpoints to uniformly-spaced sample points
-              interp_pos.col(j_dim) = math::hypercube_matvec(interp, uniform);
-            }
-            Mat<dyn, dyn> interp_vars (n_edge, nv);
-            for (int i_var = 0; i_var < nv; ++i_var) {
-              Mat<> uniform = math::dimension_matvec(boundary(i_sign, all), qpoint_vars.col(i_var), i_dim);
-              interp_vars.col(i_var) = math::hypercube_matvec(interp, uniform);
-            }
-            visualizer->write_block(Array<double>({params.n_dim, n_sample}, interp_pos.data()),
-                                    Array<double>({          nv, n_sample}, interp_vars.data()));
+        Array<double> edges {vis_dat.edges(n_sample)};
+        for (int i_dim = 0; i_dim < _n_dim_topo; ++i_dim) {
+          for (int i_edge = 0; i_edge < edges(i_dim).shape()[0]; ++i_edge) {
+            #pragma omp critical
+            visualizer->write_block(edges(i_dim)(i_edge)(0, _n_dim),
+                                    edges(i_dim)(i_edge)(_n_dim, _n_dim + _n_var));
           }
         }
       } else {
-        // interpolate from quadrature points to sample points
-        Mat<dyn, dyn> interp_pos (n_block, nd);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          interp_pos.col(i_dim) = math::hypercube_matvec(interp, qpoint_pos.col(i_dim));
-        }
-        Mat<dyn, dyn> interp_vars (n_block, nv);
-        for (int i_var = 0; i_var < nv; ++i_var) {
-          interp_vars.col(i_var) = math::hypercube_matvec(interp, qpoint_vars.col(i_var));
-        }
-        // visualize
-        visualizer->write_block(Array<double>(pos_shape, interp_pos.data()), Array<double>(out_shape, interp_vars.data()));
+        Array<double> interior {vis_dat.interior(n_sample)};
+        #pragma omp critical
+        visualizer->write_block(interior(0, _n_dim), interior(_n_dim, _n_dim + _n_var));
       }
     }
   }
-  visualizer.reset();
-}
 
-void Solver::visualize_contour(std::string format, std::string name, const Qpoint_func& contour_by, const Qpoint_func& output_variables, int n_sample) {
-  auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, output_variables,
-                                       _namespace->get<double>("flow_time"), Visualizer::block);
-  Position_func pos_func;
-  int nv = output_variables.n_var(params.n_dim);
+  private:
+  Interpreter _inter;
+  std::function<void(Namespace&, T&)> _assign;
+  std::string _expr;
+  Int _n_var;
+  Int _n_dim;
+  Int _n_dim_topo;
+  std::vector<Int> _shape;
+  std::vector<std::string> _var_names;
+};
+//! \endcond
+
+void Solver::visualize_field(std::string format, std::string name, std::string expr, int n_sample, bool wireframe) {
+  std::string sw_name = "field";
+  if (wireframe) sw_name = sw_name + " wireframe";
+  Stopwatch_tree::Starter sw_starter(stopwatch["visualization"][sw_name]);
+  HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
   auto& elems = acc_mesh->elements();
-  auto bounds = bounds_field(contour_by, n_sample);
-  double tol = 1e-9*(bounds[0][1] - bounds[0][0]); // tolerance to avoid detecting contours on constant data
-  Qf_concat vis_vars({&pos_func, &output_variables});
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto contour = Vis_data(elems[i_elem], contour_by, basis, _namespace->get<double>("flow_time")).compute_contour(0., n_sample/2, 4, tol);
-    Vis_data data(elems[i_elem], vis_vars, basis, _namespace->get<double>("flow_time"));
-    Mat<dyn, dyn> values = data.sample(contour.vert_ref_coords);
-    Eigen::MatrixXi inds = contour.elem_vert_inds.transpose();
-    Array<double> arr({params.n_dim + nv, int(values.rows())}, values.data());
-    visualizer->write_unstruct(Array<int>({int(inds.cols()), int(inds.rows())}, inds.data()),
-                               arr(0, params.n_dim), arr(params.n_dim, params.n_dim + nv));
-  }
+  if (!elems.size()) return;
+  Vis_evaluator<Element> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Element& elem) {vis_variables::field(space, elem, basis);},
+    expr, elems[0], params.n_dim
+  );
+  evaluator.visualize(format, name, n_sample, wireframe, elems,
+                      _namespace->get<double>("flow_time"), basis, [](Element&){return true;});
+  ++stopwatch["visualization"].work_units_completed;
+  stopwatch["visualization"][sw_name].work_units_completed += elems.size();
 }
 
-void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, const Boundary_func& func) {
+void Solver::visualize_surface(std::string format, std::string name, int bc_sn, std::string expr,
+                               int n_sample, bool wireframe) {
+  std::string sw_name = "surface";
+  if (wireframe) sw_name = sw_name + " wireframe";
+  Stopwatch_tree::Starter sw_starter(stopwatch["visualization"][sw_name]);
+  HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
+  HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");
+  auto& bc_cons {acc_mesh->boundary_connections()};
+  if (!bc_cons.size()) return;
+  Vis_evaluator<Boundary_connection> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
+    expr, bc_cons[0], params.n_dim - 1
+  );
+  evaluator.visualize(format, name, n_sample, wireframe, bc_cons,
+                      _namespace->get<double>("flow_time"), basis,
+                      [bc_sn](Boundary_connection& con){return con.bound_cond_serial_n() == bc_sn;});
+  ++stopwatch["visualization"].work_units_completed;
+  stopwatch["visualization"][sw_name].work_units_completed += bc_cons.size();
+}
+
+void Solver::visualize_contour(std::string format, std::string name, std::string contour_expr,
+                               std::string vis_expr, double const_tol, int n_sample) {
+  Stopwatch_tree::Starter sw_starter(stopwatch["visualization"]["contour"]);
+  HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
+  auto& elems = acc_mesh->elements();
+  if (!elems.size()) return;
+  vis_expr = vis_expr + ";hexed_contour = " + contour_expr + ";";
+  Vis_evaluator<Element> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Element& elem) {vis_variables::field(space, elem, basis);},
+    vis_expr, elems[0], params.n_dim
+  );
+  auto var_names = evaluator.var_names();
+  int i_contour = std::find(var_names.begin(), var_names.end(), "hexed_contour") - var_names.begin();
+  auto visualizer = Visualizer::create(format, params.n_dim, params.n_dim - 1, name, var_names,
+                                       _namespace->get<double>("flow_time"), Visualizer::block);
+  Int n_write = 0;
+  #pragma omp parallel for reduction(+:n_write)
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Array<double> qpoints {evaluator.evaluate(elems[i_elem])};
+    Vis_data data(qpoints, basis);
+    auto contour = data.compute_contour(params.n_dim + i_contour, 0., n_sample/2, 4, const_tol);
+    if (contour.elem_vert_inds.size()) {
+      ++n_write;
+      Array<double> values = data.sample(contour.vert_ref_coords);
+      #pragma omp critical
+      visualizer->write_unstruct(contour.elem_vert_inds, values(0, params.n_dim), values(params.n_dim, end));
+    }
+  }
+  if (!n_write) {
+    _printer->warn("Warning: ", true);
+    _printer->warn("Contour is empty. You won't be able to open it in Paraview. ");
+  }
+  ++stopwatch["visualization"].work_units_completed;
+  stopwatch["visualization"]["contour"].work_units_completed += n_write;
+}
+
+void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, std::string expr) {
   Mesh::Reset_vertices reset(*acc_mesh);
-  visualize_surface(format, name, bc_sn, func, 2);
+  visualize_surface(format, name, bc_sn, expr, 2);
 }
 
 void Solver::vis_lts_constraints(std::string format, std::string name, int n_sample) {
@@ -1421,9 +1440,8 @@ void Solver::vis_lts_constraints(std::string format, std::string name, int n_sam
     state = temp;
   }
   // visualize. Note that visualizing straight from the reference state would require implementing another `Qpoint_func` which would be ugly
-  Interpreter inter(std::vector<std::string>{});
-  Struct_expr expr("lts_convective = density; lts_diffusive = energy; lts_ratio = lts_diffusive/lts_convective;");
-  visualize_field(format, name, Qpoint_expr(expr, inter), n_sample);
+  std::string expr {"lts_convective = density; lts_diffusive = energy; lts_ratio = lts_diffusive/lts_convective;"};
+  visualize_field(format, name, expr, n_sample);
   // restore the current state from the reference state
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {

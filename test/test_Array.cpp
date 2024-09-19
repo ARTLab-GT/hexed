@@ -55,7 +55,7 @@ TEST_CASE("Array") {
   REQUIRE_THAT(reshaped1.shape(), Catch::Matchers::RangeEquals(std::vector<int>{2, 12}));
   REQUIRE(&reshaped1(1)[11] == &arr0(1)(2)[3]);
 
-  hexed::Array<double> arr2(arr0);
+  hexed::Array<double> arr2(arr0());
   REQUIRE_THAT(arr0.shape(), Catch::Matchers::RangeEquals(std::vector<int>{2, 3, 4}));
   REQUIRE(arr2[1] == Catch::Approx(42));
   arr2[1] = 406;
@@ -118,5 +118,22 @@ TEST_CASE("Array") {
     std::vector<double> data {-.1, -.7, 1., -.3};
     a0 = data.data();
     REQUIRE_THAT(a0, Catch::Matchers::RangeEquals(data, hexed::math::Approx_equal()));
+  }
+
+  SECTION("slicing") {
+    hexed::Array<int> whole({10, 10, 10});
+    for (int i = 0; i < whole.size(); ++i) whole[i] = i;
+    hexed::Array<int> col0 {whole.column(4)};
+    REQUIRE(col0.order() == 2);
+    REQUIRE_THAT(col0.shape(), Catch::Matchers::RangeEquals(std::vector<int>{10, 10}));
+    REQUIRE(col0(7)[3] == whole(7)(3)[4]);
+    REQUIRE(col0[65] == whole(6)(5)[4]);
+    hexed::Array<int> col1 {col0.column(2)};
+    REQUIRE(col1.order() == 1);
+    REQUIRE_THAT(col1.shape(), Catch::Matchers::RangeEquals(std::vector<int>{10}));
+    REQUIRE(col1[6] == whole(6)(2)[4]);
+    REQUIRE(col1.vector()(6) == whole(6)(2)[4]);
+    REQUIRE(whole.order() == 3);
+    REQUIRE_THAT(whole.shape(), Catch::Matchers::RangeEquals(std::vector<int>{10, 10, 10}));
   }
 }

@@ -5,10 +5,10 @@
 #include <hexed/Deformed_element.hpp>
 #include <hexed/Equidistant.hpp>
 #include <hexed/Gauss_legendre.hpp>
+#include <hexed/Gauss_lobatto.hpp>
 #include "testing_utils.hpp"
 
-TEST_CASE("Deformed_element")
-{
+TEST_CASE("Deformed_element") {
   hexed::Storage_params params {2, 2, 2, 4};
   hexed::Deformed_element element {params};
 
@@ -23,77 +23,74 @@ TEST_CASE("Deformed_element")
   element.face_normal(0) = &some_variable;
   element.face_normal(3) = &some_variable;
 
-  for (int i_adj = 0; i_adj < 16; ++i_adj) {
-    REQUIRE(element.node_adjustments()[i_adj] == 0.);
-  }
-  element.node_adjustments()[0] = 2.7;
-  element.node_adjustments()[4*2*2 - 1] = 0.04;
-  REQUIRE(element.node_adjustments()[0] == 2.7);
-  REQUIRE(element.node_adjustments()[4*2*2 - 1] == 0.04);
-  REQUIRE(element.vertex(1).is_mobile());
+  const int row_size = 3;
+  static_assert (row_size <= hexed::config::max_row_size);
+  hexed::Gauss_lobatto block_basis(row_size);
+  hexed::Equidistant basis {row_size};
+  hexed::next::Mesh_blocks blocks2d(2, block_basis);
+  hexed::next::Mesh_blocks blocks3d(3, block_basis);
+  hexed::Storage_params params2 {2, 4, 2, row_size};
+  hexed::Storage_params params3 {2, 5, 3, row_size};
 
-  hexed::Storage_params params3d {1, 1, 3, 2};
-  hexed::Deformed_element element3d {params3d};
-
-  SECTION("position calculation")
-  {
-    const int row_size = 3;
-    static_assert (row_size <= hexed::config::max_row_size);
-    hexed::Equidistant basis {row_size};
-    hexed::Storage_params params2 {2, 4, 2, row_size};
+  SECTION("position calculation") {
     hexed::Deformed_element elem {params2, {0, 0}, 1., 0, hexed::Mat<2>{.03, .02}};
-    elem.vertex(3).pos[0] = 0.63;
-    elem.node_adjustments()[2*3 + 1] =  0.2;
-    elem.node_adjustments()[3*3 + 1] = -0.1;
-    REQUIRE(elem.position(basis, 0)[0] == Catch::Approx(0.03));
-    REQUIRE(elem.position(basis, 7)[0] == Catch::Approx(0.83));
-    REQUIRE(elem.position(basis, 8)[0] == Catch::Approx(0.63));
-    REQUIRE(elem.position(basis, 7)[1] == Catch::Approx(0.52));
+    elem.create_shape(blocks2d);
+    auto p = elem.shape().vertex(3).point({});
+    p[0] = 0.63;
+    elem.shape().vertex(3).set_pos(p);
+    auto pos = elem.position(basis);
+    REQUIRE(pos(0)[0] == Catch::Approx(0.03));
+    REQUIRE(pos(0)[7] == Catch::Approx(0.83));
+    REQUIRE(pos(0)[8] == Catch::Approx(0.63));
+    REQUIRE(pos(1)[7] == Catch::Approx(0.52));
 
-    REQUIRE(elem.position(basis, 3)[0] == Catch::Approx(0.53 - 0.2*0.2));
-    REQUIRE(elem.position(basis, 4)[0] == Catch::Approx(0.43 - 0.2*(0.2 - 0.1)/2));
-    REQUIRE(elem.position(basis, 5)[0] == Catch::Approx(0.33 + 0.2*0.1));
-    REQUIRE(elem.position(basis, 3)[1] == Catch::Approx(0.02 + 0.2));
-    REQUIRE(elem.position(basis, 4)[1] == Catch::Approx(0.52 + (0.2 - 0.1)/2));
-    REQUIRE(elem.position(basis, 5)[1] == Catch::Approx(1.02 - 0.1));
     // check that the face quadrature points are the same as the interior quadrature points
     // that happen to lie on the faces (true for equidistant and Lobatto bases but not Legendre)
-    REQUIRE(elem.face_position(basis, 0, 2)[1] == elem.position(basis, 2)[1]);
-    REQUIRE(elem.face_position(basis, 2, 1)[0] == elem.position(basis, 3)[0]);
-    REQUIRE(elem.face_position(basis, 3, 1)[1] == elem.position(basis, 5)[1]);
-
-    hexed::Deformed_element elem1 {params2};
-    elem1.node_adjustments()[1] = 0.1;
-    REQUIRE(elem1.position(basis, 0)[0] == Catch::Approx(0.0));
-    REQUIRE(elem1.position(basis, 6)[0] == Catch::Approx(1.0));
-    REQUIRE(elem1.position(basis, 4)[0] == Catch::Approx(0.55));
-
-    hexed::Storage_params params3 {2, 5, 3, row_size};
-    hexed::Deformed_element elem2 {params3, {}, 0.2};
-    elem2.node_adjustments()[4] = 0.01;
-    REQUIRE(elem2.position(basis, 13)[0] == Catch::Approx(0.101));
-    REQUIRE(elem2.position(basis, 13)[1] == Catch::Approx(.1));
-    REQUIRE(elem2.position(basis, 13)[2] == Catch::Approx(.1));
+    auto face_pos = elem.face_position(basis);
+    REQUIRE(face_pos(0)(0)(1)[2] == pos(1)[2]);
+    REQUIRE(face_pos(1)(0)(0)[1] == pos(0)[3]);
+    REQUIRE(face_pos(1)(1)(1)[1] == pos(1)[5]);
 
     hexed::Gauss_legendre leg_basis {row_size};
-    hexed::Deformed_element elem3 {params2, {}, 0.2};
-    elem3.node_adjustments()[1] = 0.1;
-    elem3.node_adjustments()[3] = -0.2;
-    REQUIRE(elem3.position(leg_basis, 3)[0] == Catch::Approx(0.08));
-    REQUIRE(elem3.position(leg_basis, 4)[0] == Catch::Approx(0.11));
+    hexed::Deformed_element elem1 {params3, {}, 0.2};
+    SECTION("dimensionality must match") {
+      REQUIRE_THROWS(elem1.create_shape(blocks2d));
+    }
+    elem1.create_shape(blocks3d);
+    auto pos1 = elem1.position(leg_basis);
+    REQUIRE(pos1(2)[0] == Catch::Approx(.2*leg_basis.node(0)));
+    REQUIRE(pos1(2)[2] == Catch::Approx(.2*leg_basis.node(2)));
+    REQUIRE(pos1(2)[3] == Catch::Approx(.2*leg_basis.node(0)));
+    REQUIRE(pos1(1)[3] == Catch::Approx(.1));
   }
 
-  SECTION("jacobian calculation")
-  {
-    const int row_size = 3;
+  SECTION("splitting") {
+    hexed::Deformed_element elem0(params2, {0, 0}, 1., 0, hexed::Mat<2>{.01, .02});
+    hexed::Deformed_element elem1(params2, {0, 0}, 1., 0, hexed::Mat<2>{.01, .02});
+    elem0.create_shape(blocks2d, hexed::next::Mesh_blocks::no_face);
+    elem1.create_shape(blocks2d, hexed::next::Mesh_blocks::no_face);
+    elem0.create_fake(blocks2d);
+    elem1.split_shape(blocks2d, elem0, .1, 3);
+    auto pos0 {elem0.position(basis)};
+    auto pos1 {elem1.position(basis)};
+    REQUIRE(pos0(0)[0] == Catch::Approx(0.01));
+    REQUIRE(pos0(0)[8] == Catch::Approx(1.01));
+    REQUIRE(pos0(1)[0] == Catch::Approx(0.02));
+    REQUIRE(pos0(1)[8] == Catch::Approx(0.92));
+    REQUIRE(pos1(0)[0] == Catch::Approx(0.01));
+    REQUIRE(pos1(0)[8] == Catch::Approx(1.01));
+    REQUIRE(pos1(1)[0] == Catch::Approx(0.92));
+    REQUIRE(pos1(1)[8] == Catch::Approx(1.02));
+  }
+
+  SECTION("jacobian calculation") {
     double faces [6][5*row_size*row_size];
-    static_assert (row_size <= hexed::config::max_row_size);
-    hexed::Equidistant basis {row_size};
-    hexed::Storage_params params2 {2, 4, 2, row_size};
     hexed::Deformed_element elem0 {params2, {0, 0}, 0.2};
     hexed::Deformed_element elem1 {params2, {1, 1}, 0.2};
-    elem0.vertex(3).pos = {0.8*0.2, 0.8*0.2, 0.};
-    elem1.node_adjustments()[6 + 1] = 0.1;
+    elem0.create_shape(blocks2d);
+    elem0.shape().vertex(3).set_pos(hexed::Mat<3>{0.8*0.2, 0.8*0.2, 0.});
+    elem1.create_shape(blocks2d, 2);
+    blocks2d.edges_2d()[0].interior()(0)[1] += .1*.2;
     // jacobian is correct
     for (int i_face = 0; i_face < 6; ++i_face) elem0.set_face(i_face, faces[i_face]);
     elem0.set_jacobian(basis);
@@ -126,9 +123,9 @@ TEST_CASE("Deformed_element")
     REQUIRE(elem0.vertex_time_step_scale(0) == .2/2);
     REQUIRE(elem0.vertex_time_step_scale(3) == Catch::Approx(.2/2*(.8*.8 - .2*.2)/std::sqrt(.8*.8 + .2*.2)));
 
-    hexed::Storage_params params3 {2, 5, 3, row_size};
     hexed::Deformed_element elem2 {params3, {0, 0, 0}, 0.2};
-    elem2.vertex(7).pos = {0.8*0.2, 0.8*0.2, 0.8*0.2};
+    elem2.create_shape(blocks3d);
+    elem2.shape().vertex(7).set_pos(hexed::Mat<3>{0.8*0.2, 0.8*0.2, 0.8*0.2});
     for (int i_face = 0; i_face < 6; ++i_face) elem2.set_face(i_face, faces[i_face]);
     elem2.set_jacobian(basis);
     REQUIRE(elem2.jacobian(0, 0,  0) == 1.);

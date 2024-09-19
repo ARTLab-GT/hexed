@@ -4,15 +4,13 @@
 #include <fstream>
 #include "Visualizer.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Writes output in Comma-Separated Value format
  * \details File will be open as long as this object exists.
  * If the file already exists, it will be overwritten.
  */
-class Csv : public Visualizer
-{
+class Csv : public Visualizer {
   int _row;
   int _cols;
   std::ofstream _file;
@@ -33,7 +31,7 @@ class Csv : public Visualizer
   //! \brief Accepts physical mesh data and writes only the node values. \show_details
   void write_block(Array<double> pos, Array<double> vars) override;
   //! \brief Accepts physical mesh data and writes only the node values. \show_details
-  void write_unstruct(Array<int> elements, Array<double> pos, Array<double> vars) override;
+  void write_unstruct(Array<Int> elements, Array<double> pos, Array<double> vars) override;
 };
 
 }

@@ -462,11 +462,23 @@ class Xdmf(C_project):
 class Catch2(C_project):
     version = "3.6.0"
     installed_files = {"include":["catch2/catch_all.hpp"], "lib":["Catch2Main", "Catch2"]}
+    def __init__(self, builder, sanitize=False):
+        self.sanitize = sanitize
     def build(self):
         directory = self.builder.fetch_archive(
             f"https://github.com/catchorg/Catch2/archive/refs/tags/v{self.version}.tar.gz", outputs=f"Catch2-{self.version}"
         )[0]
-        self.builder.cmake(directory, ["-DBUILD_TESTING=OFF", "-DBUILD_SHARED_LIBS=ON"])
+        args = ["-DBUILD_TESTING=OFF", "-DBUILD_SHARED_LIBS=ON"]
+        if self.sanitize:
+            args.append("-DCMAKE_CXX_FLAGS=-g -DDEBUG" + " ".join([f"-fsanitize={f}" for f in [
+                "bounds-strict",
+                "undefined",
+                "address",
+                "leak",
+                "pointer-compare",
+                "pointer-subtract",
+            ]]))
+        self.builder.cmake(directory, args)
 
 class Doxygen(Buildable):
     version = "1.11.0"
