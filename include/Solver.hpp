@@ -49,9 +49,18 @@ class Solver {
   Kernel_mesh _kernel_mesh();
   void _put_cache(); // copies the flow state to the residual cache
   void _get_cache(); // copies the residual cache to the flow state
-  void share_vertex_data(std::function<double&(Element&, int i_vertex)>, std::function<double(Mat<>)>);
+
+  struct Reduction {
+    double initial_value;
+    std::function<double(double, double)> binary_reduction;
+  };
+  static Reduction _min;
+  static Reduction _max;
+
+  void share_vertex_data(std::function<double&(Element&, int i_vertex)>, Reduction);
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get,
-                         std::function<double&(Element&, int i_vertex)> set, std::function<double(Mat<>)>);
+                         std::function<double&(Element&, int i_vertex)> set, Reduction);
+
   bool fix_admissibility(double stability_ratio);
   void apply_state_bcs();
   void apply_flux_bcs();

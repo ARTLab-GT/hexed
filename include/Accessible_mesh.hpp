@@ -148,6 +148,8 @@ class Accessible_mesh : public Mesh {
   void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) override;
   void disconnect_boundary(int bc_sn) override;
   void cleanup() override;
+  next::Sequence<next::Vertex&> shape_vertices() {return _blocks.verts();}
+  next::Sequence<next::Vertex&> shape_boundary_vertices() {return _blocks.boundary_verts();}
 
   void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
   void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;

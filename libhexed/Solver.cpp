@@ -52,26 +52,45 @@ void Solver::_get_cache() {
   }
 }
 
+double max_fun(double x, double y) {return std::max(x, y);}
+double min_fun(double x, double y) {return std::min(x, y);}
+
+Solver::Reduction Solver::_max {-huge, max_fun};
+Solver::Reduction Solver::_min { huge, min_fun};
+
 void Solver::share_vertex_data(std::function<double&(Element&, int i_vertex)> access_fun,
-                               std::function<double(Mat<>)> reduce) {
-  share_vertex_data(access_fun, access_fun, reduce);
+                               Solver::Reduction reduction) {
+  share_vertex_data(access_fun, access_fun, reduction);
 }
 
 void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get,
                                std::function<double&(Element&, int i_vertex)> set,
-                               std::function<double(Mat<>)> reduce) {
+                               Solver::Reduction reduction) {
+  int nv = params.n_vertices();
+  auto verts = acc_mesh->shape_vertices();
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    elements[i_elem].push_shareable_value(get);
+  for (Int i_vert = 0; i_vert < (Int)verts.size(); ++i_vert) {
+    next::Vertex::Shared_value(verts[i_vert]).set(reduction.initial_value);
   }
   #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    elements[i_elem].fetch_shareable_value(set, reduce);
+  for (Int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    auto& elem = elements[i_elem];
+    auto& shape = elem.shape();
+    for (int i_vert = 0; i_vert < nv; ++i_vert) {
+      next::Vertex::Shared_value shared(shape.vertex(i_vert));
+      shared.set(reduction.binary_reduction(shared.get(), get(elem, i_vert)));
+    }
   }
-  auto& matchers = acc_mesh->hanging_vertex_matchers();
   #pragma omp parallel for
-  for (int i_match = 0; i_match < matchers.size(); ++i_match) matchers[i_match].match(set);
+  for (Int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    auto& elem = elements[i_elem];
+    auto& shape = elem.shape();
+    for (int i_vert = 0; i_vert < nv; ++i_vert) {
+      next::Vertex::Shared_value shared(shape.vertex(i_vert));
+      set(elem, i_vert) = shared.get();
+    }
+  }
 }
 
 void Solver::apply_state_bcs() {
@@ -425,7 +444,7 @@ void Solver::calc_jacobian(bool snap) {
       }
     }
   }
-  share_vertex_data(&Element::vertex_time_step_scale, Vertex::vector_min);
+  share_vertex_data(&Element::vertex_time_step_scale, _min);
   _preti_masks = acc_mesh->preti_masks(basis);
 }
 
@@ -669,7 +688,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based) {
   } else {
     share_vertex_data([](Element& elem, int){return elem.uncertainty;},
                       [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
-                      Vertex::vector_max);
+                      _max);
     Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -689,7 +708,7 @@ void Solver::set_art_visc_admis() {
   // enforce C^0 continuity
   share_vertex_data([](Element& elem, int){return elem.uncertainty;},
                     [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
-                    Vertex::vector_max);
+                    _max);
   Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
   // interpolate from vertices to quadrature points
   auto& elems = acc_mesh->elements();
@@ -1096,7 +1115,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
         elem.vertex_fix_admis_coef(i_vert) = elem.record;
       }
     }
-    share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
+    share_vertex_data(&Element::vertex_fix_admis_coef, _max);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
@@ -1108,7 +1127,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
         elem.vertex_fix_admis_coef(i_vert) = max_fac;
       }
     }
-    share_vertex_data(&Element::vertex_fix_admis_coef, Vertex::vector_max);
+    share_vertex_data(&Element::vertex_fix_admis_coef, _max);
     Mat<dyn, dyn> interp(rs, 2);
     interp(all, 0) = Mat<>::Ones(rs) - basis.nodes();
     interp(all, 1) = basis.nodes();
