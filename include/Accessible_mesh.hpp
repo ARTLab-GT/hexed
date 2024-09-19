@@ -30,15 +30,13 @@ class Accessible_mesh : public Mesh {
   Concatenation<Face_connection<Deformed_element>&> def_face_cons;
   Concatenation<Refined_face&> ref_face_v;
   Concatenation<Hanging_vertex_matcher&> matcher_v;
-  std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
   int surf_bc_sn;
+  std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
   std::unique_ptr<Surface_geom> surf_geom;
   std::vector<Element_face_connection<Deformed_element>*> extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
   std::vector<int> tree_bcs;
   bool verts_are_reset;
-  std::vector<std::vector<Vertex::Non_transferable_ptr>> boundary_verts; // a vector of the vertices that are on each boundary
-  std::vector<Vertex::Non_transferable_ptr> smooth_verts; // a vector of the vertices that need to be smoothed in this sweep
   int _mask_levels;
   Gauss_lobatto _basis;
   next::Mesh_blocks _blocks;
@@ -81,11 +79,6 @@ class Accessible_mesh : public Mesh {
   void purge();
   void delete_bad_extrusions();
   void deform();
-  void id_smooth_verts();
-  void id_boundary_verts();
-  // identify which vertices are on which boundaries and write it to `Vertex::record`
-  // must be called directly befor `snap_vertices`
-  void snap_vertices();
   void create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
   void read_file(std::string file_name);
   void _connect_shapes(Element&, Element&, Connection_direction);
@@ -156,7 +149,6 @@ class Accessible_mesh : public Mesh {
   void relax_and_match(int n_relax = 0, double factor = .9) override;
   void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
-  void set_all_smooth() override;
   void relax(double factor = 0.9) override;
   inline int surface_bc_sn() override {return surf_bc_sn;}
   inline Surface_geom& surface_geometry() {return *surf_geom;}

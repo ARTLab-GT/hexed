@@ -101,11 +101,11 @@ void Vertex::eat(Vertex& that) {
   HEXED_ASSERT(alive() && that.alive(), "both vertices must be alive (at least at the start...)");
   if (&that == this) return;
   // compute averaged position
-  std::size_t sz [2] {_elems.partners().size(), that._elems.partners().size()};
+  Int sz [2] {_elems.partners().size(), that._elems.partners().size()};
   pos = (sz[0]*point({}) + sz[1]*that.point({}))/(sz[0] + sz[1]);
   // steal pointers
-  for (int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
-  for (int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
+  for (Int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
+  for (Int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
 }
 
 void Vertex::glue(Element_shape& to, std::vector<double> coords) {

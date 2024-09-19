@@ -162,7 +162,6 @@ class Mesh {
    * \returns `true` if the mesh was changed, else `false`
    */
   virtual bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) = 0;
-  virtual void set_all_smooth() = 0; //!< sets `need_smooth` to `true` for all vertices to perform global relaxation (only effective until the next `update()` cycle)
   /*! \brief Relax the vertices to improve mesh quality.
    * \details By default, relaxation is performed incrementally---only vertices of elements that are new
    * in the most recent `update()` cycle are smoothed.

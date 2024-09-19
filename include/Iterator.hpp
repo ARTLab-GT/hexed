@@ -3,6 +3,7 @@
 
 #include <functional>
 #include "utils.hpp"
+#include "math.hpp"
 
 namespace hexed {
 
@@ -15,13 +16,13 @@ class Iterator {
   public:
   using iterator_category = std::random_access_iterator_tag;
   using value_type = T;
-  using difference_type = int;
+  using difference_type = Int;
   using pointer = std::remove_reference<T>*;
   using reference = std::add_lvalue_reference<T>;
 
-  Iterator(std::function<T(std::size_t)> get, std::size_t index) : _get{get}, _index{index} {}
-  std::size_t index() const {return _index;} //!< \brief Obtains the current index of this iterator.
-  std::function<T(std::size_t)> get() const {return _get;} //!< \brief Obtains this iterator's access function.
+  Iterator(std::function<T(Int)> get, Int index) : _get{get}, _index{index} {}
+  Int index() const {return _index;} //!< \brief Obtains the current index of this iterator.
+  std::function<T(Int)> get() const {return _get;} //!< \brief Obtains this iterator's access function.
   Iterator& operator++() {return *this += 1;}
   Iterator& operator--() {return *this -= 1;}
   Iterator& operator-=(difference_type diff) {return *this += -diff;}
@@ -48,8 +49,8 @@ class Iterator {
   T operator[](difference_type diff) {return _get(_index + diff);}
 
   private:
-  std::function<T(std::size_t)> _get;
-  std::size_t _index;
+  std::function<T(Int)> _get;
+  Int _index;
 };
 
 //! \relates Iterator

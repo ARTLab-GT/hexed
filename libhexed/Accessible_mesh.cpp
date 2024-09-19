@@ -18,101 +18,6 @@ Element_container& Accessible_mesh::container(bool is_deformed) {
 template<> Mesh_by_type<         Element>& Accessible_mesh::mbt() {return car;}
 template<> Mesh_by_type<Deformed_element>& Accessible_mesh::mbt() {return def;}
 
-void Accessible_mesh::id_boundary_verts() {
-  auto verts = vertices();
-  #pragma omp parallel for
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
-    verts[i_vert].record.clear();
-  }
-  for (auto& b_verts : boundary_verts) {
-    erase_if(b_verts, [](Vertex::Non_transferable_ptr& ptr) {
-      if (!ptr) return true;
-      return !ptr->needs_smooth();
-    });
-  }
-  for (unsigned bc_sn = 0; bc_sn < boundary_verts.size(); ++bc_sn) {
-    #pragma omp parallel for
-    for (auto& vert : boundary_verts[bc_sn]) {
-      vert->record.push_back(bc_sn);
-    }
-    auto& cons = def.boundary_connections();
-    for (int i_con = 0; i_con < cons.size(); ++i_con) {
-      auto& con = cons[i_con];
-      if (con.bound_cond_serial_n() == int(bc_sn)) {
-        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-          if ((i_vert/math::pow(2, params.n_dim - 1 - con.i_dim()))%2 == con.inside_face_sign()) {
-            auto& vert = con.element().vertex(i_vert);
-            Lock::Acquire a(vert.lock);
-            if (!std::count(vert.record.begin(), vert.record.end(), bc_sn)) {
-              vert.record.push_back(bc_sn);
-              if (vert.needs_smooth()) boundary_verts[bc_sn].emplace_back(vert);
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-void Accessible_mesh::snap_vertices() {
-  //! \todo this is a terrible way to find the max ref level. future self please fix
-  double min_sz = huge;
-  #pragma omp parallel for reduction(min : min_sz)
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    min_sz = std::max(min_sz, elems[i_elem].nominal_size());
-  }
-  if (tree) {
-    auto snap_extremes = [this]() {
-      for (int i_bc = 0; i_bc < 2*params.n_dim; ++i_bc) {
-        int bc_sn = tree_bcs[i_bc];
-        #pragma omp parallel for
-        for (auto& vert : boundary_verts[bc_sn]) {
-          int i_dim = i_bc/2;
-          int sign = i_bc%2;
-          vert->pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
-        }
-      }
-    };
-    // snap extremes before and after snapping to surface to ensure exact extreme snapping and accurate surface snapping
-    snap_extremes();
-    if (surf_geom) {
-      // if i just implement a better way to find the distance guess, we won't need all these atomics
-      #pragma omp parallel for
-      for (auto& vert : boundary_verts[surf_bc_sn]) {
-        Mat<> pos(params.n_dim);
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          #pragma omp atomic read
-          pos(i_dim) = vert->pos(i_dim);
-        }
-        double dist_guess = min_sz;
-        for (const Vertex& neighb : vert->get_neighbors()) {
-          Mat<> neighb_pos(params.n_dim);
-          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-            #pragma omp atomic read
-            neighb_pos(i_dim) = neighb.pos(i_dim);
-          }
-          dist_guess = std::max(dist_guess, (neighb_pos - pos).norm());
-        }
-        pos = surf_geom->nearest_point(pos, huge, dist_guess).point();
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          #pragma omp atomic write
-          vert->pos(i_dim) = pos(i_dim);
-        }
-      }
-    }
-    snap_extremes();
-  }
-  // vertex relaxation/snapping will cause hanging vertices to drift away from hanging vertex faces they are supposed to be coincident with
-  // so now we put them back where they belong
-  auto& matchers = hanging_vertex_matchers();
-  #pragma omp parallel for
-  for (int i_match = 0; i_match < matchers.size(); ++i_match) {
-    matchers[i_match].match(&Element::vertex_position<0>);
-    matchers[i_match].match(&Element::vertex_position<1>);
-    matchers[i_match].match(&Element::vertex_position<2>);
-  }
-}
-
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
   _blocks.edges_2d();
   _blocks.faces_3d();
@@ -389,7 +294,6 @@ void Accessible_mesh::connect_hanging(int coarse_ref_level, int coarse_serial, s
 }
 
 int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc) {
-  boundary_verts.emplace_back();
   bound_conds.emplace_back(flow_bc);
   // no reason to delete boundary conditions, so the serial number can just be the index
   return bound_conds.size() - 1;
@@ -412,8 +316,6 @@ void Accessible_mesh::disconnect_boundary(int bc_sn) {
 
 void Accessible_mesh::cleanup() {
   purge();
-  id_smooth_verts();
-  id_boundary_verts();
 }
 
 Mesh::Connection_validity Accessible_mesh::valid() {
@@ -864,9 +766,6 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   connect_new<Deformed_element>(0);
   extrude(true);
   connect_rest(surf_bc_sn);
-  id_boundary_verts();
-  snap_vertices();
-  id_smooth_verts();
   _n_verts = _blocks.verts().size();
 }
 
@@ -1243,16 +1142,6 @@ void Accessible_mesh::purge() {
   }
   // delete dangling vertex pointers
   erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
-  for (auto& b_verts : boundary_verts) erase_if(b_verts, &Vertex::Non_transferable_ptr::is_null);
-}
-
-void Accessible_mesh::id_smooth_verts() {
-  smooth_verts.clear();
-  auto verts = vertices();
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
-    auto& vert = verts[i_vert];
-    if (vert.is_mobile() && vert.needs_smooth()) smooth_verts.emplace_back(vert);
-  }
 }
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
@@ -1464,9 +1353,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       pos(Eigen::seqN(0, nd)) += elem.origin;
     }
   }
-  id_boundary_verts();
-  snap_vertices();
-  id_smooth_verts();
   _n_verts = _blocks.verts().size();
   if (surf_geom) {
     for (auto& ptr : point_matched_vertices) ptr.set();
@@ -1479,40 +1365,12 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   return n_before > n_after; // any change to the element structure (including adding elements!) will cause `purge` to reduce the size of `elems`
 }
 
-void Accessible_mesh::set_all_smooth() {
-  auto& elems = elements();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    elems[i_elem].set_needs_smooth(true);
-  }
-  id_smooth_verts();
-  id_boundary_verts();
-}
-
 void update_pos(next::Vertex& vert, Mat<3> pos) {
   if ((pos - vert.pos).norm() < vert.nominal_size()) vert.pos = pos;
 }
 
 void Accessible_mesh::relax(double factor) {
   {
-    Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["legacy"]);
-    id_boundary_verts();
-    // calculate average neighbor position
-    #pragma omp parallel for
-    for (auto& vert : smooth_verts) {
-      vert->temp_vector.setZero();
-      auto neighbs = vert->get_neighbors();
-      for (auto& neighb : neighbs) vert->temp_vector += neighb.pos;
-      vert->temp_vector /= neighbs.size();
-    }
-    // update position
-    #pragma omp parallel for
-    for (auto& vert : smooth_verts) {
-      if (vert->is_mobile()) vert->pos = factor*vert->temp_vector + (1 - factor)*vert->pos;
-    }
-    snap_vertices();
-    _stopwatch["relax"]["legacy"].work_units_completed += smooth_verts.size();
-  }{
     // update `next::Vertex`s
     Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["optimization"]);
     _blocks.relax_vertices();

@@ -298,12 +298,12 @@ TEST_CASE("Accessible_mesh") {
   SECTION("vertices")
   {
     // check that the number of vertices is correct
-    auto vertices {mesh.vertices()};
+    auto vertices {mesh.shape_vertices()};
     REQUIRE(vertices.size() == 8*mesh.elements().size());
     // spot-check: vertex 2 of element sn1 should be there
     int count = 0;
     for (int i_vert = 0; i_vert < vertices.size(); ++i_vert) {
-      if (&vertices[i_vert] == &mesh.element(0, false, sn1).vertex(2)) ++count;
+      if (&vertices[i_vert] == &mesh.element(0, false, sn1).shape().vertex(2)) ++count;
     }
     REQUIRE(count == 1);
     // test that eaten vertices get dropped from the list
