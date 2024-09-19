@@ -16,7 +16,7 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
 , n_vert(params.n_vertices())
 , data_size{params.n_dof_numeric()}
 , data{Eigen::VectorXd::Zero(data_size)}
-, vertex_data{Eigen::VectorXd::Constant(3*params.n_vertices(), _nom_sz/n_dim)}
+, _vertex_data({3, params.n_vertices()})
 , _mask{0}
 , tree(this)
 , origin{origin_arg(Eigen::seqN(0, params.n_dim))}
@@ -27,7 +27,8 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) time_step_scale()[i_qpoint] = 1.;
   _nom_pos.resize(params.n_dim, 0);
   HEXED_ASSERT(_origin.size() >= params.n_dim, "`origin` has too few components");
-  vertex_data(Eigen::seqN(params.n_vertices(), last)).setZero();
+  _vertex_data(0) = _nom_sz/n_dim;
+  _vertex_data(1, 3) = 0.;
 }
 
 Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level)
@@ -113,15 +114,15 @@ double Element::jacobian(int i_dim, int j_dim, int i_qpoint) {
 }
 
 double& Element::vertex_time_step_scale(int i_vertex) {
-  return vertex_data[0*params.n_vertices() + i_vertex];
+  return _vertex_data(0)[i_vertex];
 }
 
 double& Element::vertex_elwise_av(int i_vertex) {
-  return vertex_data[1*params.n_vertices() + i_vertex];
+  return _vertex_data(1)[i_vertex];
 }
 
 double& Element::vertex_fix_admis_coef(int i_vertex) {
-  return vertex_data[2*params.n_vertices() + i_vertex];
+  return _vertex_data(2)[i_vertex];
 }
 
 void Element::set_face(int i_face, double* data) {faces[i_face] = data;}

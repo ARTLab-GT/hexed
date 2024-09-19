@@ -43,7 +43,7 @@ class Element : public Kernel_element {
   int n_vert;
   int data_size;
   Eigen::VectorXd data;
-  Eigen::VectorXd vertex_data;
+  Array<double> _vertex_data;
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
   int _mask;
   // may contain a fake element that `this` is a subset of

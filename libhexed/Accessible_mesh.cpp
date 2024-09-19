@@ -613,6 +613,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
   for (auto con_plan : con_plans) {
     connect_deformed(con_plan.ref_level, con_plan.serial_ns, con_plan.dir);
   }
+  _n_verts = _blocks.verts().size();
 }
 
 void Accessible_mesh::connect_rest(int bc_sn) {
@@ -706,7 +707,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
     auto& elem = elems[i_elem];
     if (elem.tree) if (intersects_surface(elem.tree.get())) elem.tree->set_status(0);
   }
-  // pefrorm flood fill
+    // pefrorm flood fill
   Tree* start = tree->find_leaf(flood_fill_start);
   if (!start) start = tree.get();
   start->flood_fill(1);
@@ -1298,6 +1299,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       matched_edges[i_edge].clear();
     }
   }
+  _n_verts = _blocks.verts().size();
   _stopwatch["update"].work_units_completed += 1;
   return n_before > n_after; // any change to the element structure (including adding elements!) will cause `purge` to reduce the size of `elems`
 }
