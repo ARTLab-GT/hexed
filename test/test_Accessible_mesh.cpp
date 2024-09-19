@@ -335,7 +335,7 @@ TEST_CASE("extruded hanging node connection validity")
   hexed::Accessible_mesh mesh {params, 1.};
   int coarse = mesh.add_element(0, true, {0, 0, 0});
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
-    std::vector<int> fine;
+    std::vector<hexed::Int> fine;
     for (int row = 0; row < 2; ++row) {
       for (int col = 0; col < 2; ++col) {
         std::vector<int> pos(3);

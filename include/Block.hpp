@@ -145,6 +145,7 @@ class Vertex : public Block {
   //! \brief current position of this vertex
   //! \details `Block::point` will return this value, unless the vertes is currently `glue()`d.
   Mat<3> pos;
+  std::vector<Int> record; //!< for algorithms to keep notes as they please
 
   private:
   Mat<3> _point(const std::vector<int>&) const override;

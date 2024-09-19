@@ -39,10 +39,10 @@ class Mesh {
    * Specify that two elements are connected via a Cartesian face. Note: although the interface
    * is stipulated to be Cartesian, the elements themselves can be deformed
    */
-  virtual void connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> dir,
+  virtual void connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Con_dir<Element> dir,
                                  std::array<bool, 2> is_deformed = {false, false}) = 0;
   //! Specify that two elements are connected via a deformed face. Requires both elements to be deformed.
-  virtual void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction) = 0;
+  virtual void connect_deformed(int ref_level, std::array<Int, 2> serial_n, Con_dir<Deformed_element> direction) = 0;
   /*!
    * specify that an element of refinement level `coarse_ref_level` is connected to some elements of refinement level
    * `coarse_ref_level + 1`.
@@ -57,7 +57,7 @@ class Mesh {
    * Only the first `n_dim - 1` elements of `stretch` are meaningful.
    * The rest are ignored.
    */
-  virtual void connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>,
+  virtual void connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial, Con_dir<Deformed_element>,
                                bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
                                std::array<bool, 2> stretch = {false, false}) = 0;
   /*! \brief Acquires owenership of `*flow_bc` and adds it as a boundary condition.
@@ -69,7 +69,7 @@ class Mesh {
    * Connect a face of an element to a boundary condition. This BC will now be applied to that face. `i_dim` and `face_sign`
    * are used to identify which face of the element is participating in the boundary condition.
    */
-  virtual void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) = 0;
+  virtual void connect_boundary(int ref_level, bool is_deformed, Int element_serial_n, int i_dim, int face_sign, int bc_serial_n) = 0;
   //! delete all boundary connections involving a certain boundary condition
   virtual void disconnect_boundary(int bc_sn) = 0;
   //! connects all yet-unconnected faces to a boundary condition specified by serial number

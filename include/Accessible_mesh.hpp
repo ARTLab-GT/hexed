@@ -129,16 +129,16 @@ class Accessible_mesh : public Mesh {
   //! access all elements, both Cartesian and deformed
   Sequence<Element&>& elements() {return elems;}
   Sequence<Kernel_element&>& kernel_elements() {return kernel_elems;}
-  void connect_cartesian(int ref_level, std::array<int, 2> serial_n, Con_dir<Element> dir,
+  void connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Con_dir<Element> dir,
                          std::array<bool, 2> is_deformed = {false, false}) override;
-  void connect_deformed(int ref_level, std::array<int, 2> serial_n, Con_dir<Deformed_element> direction) override;
-  void connect_hanging(int coarse_ref_level, int coarse_serial, std::vector<int> fine_serial, Con_dir<Deformed_element>,
+  void connect_deformed(int ref_level, std::array<Int, 2> serial_n, Con_dir<Deformed_element> direction) override;
+  void connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial, Con_dir<Deformed_element>,
                        bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
                        std::array<bool, 2> stretch = {false, false}) override;
   //! \returns a view of all connections between elements, including one connection for every fine element in hanging node connections.
   Sequence<Element_connection&>& element_connections() {return elem_cons;}
   int add_boundary_condition(Flow_bc*) override;
-  void connect_boundary(int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) override;
+  void connect_boundary(int ref_level, bool is_deformed, Int element_serial_n, int i_dim, int face_sign, int bc_serial_n) override;
   void disconnect_boundary(int bc_sn) override;
   void cleanup() override;
   next::Sequence<next::Vertex&> shape_vertices() {return _blocks.verts();}
