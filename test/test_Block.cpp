@@ -97,8 +97,8 @@ TEST_CASE("Block") {
       REQUIRE(vert3.are_shadows(vert2));
       REQ_VEC_EQ(vert2.point({}), hexed::Mat<3>{1., 1., 1.});
       REQ_VEC_EQ(vert3.point({}), hexed::Mat<3>{1., 1., 1.});
-      vert2.pos(0) = 4;
-      vert3.pos(1) = 5;
+      vert2.set_pos({4., 1., 1.});
+      vert3.set_pos({1., 5., 1.});
       REQ_VEC_EQ(vert2.point({}), hexed::Mat<3>{1., 5., 1.});
       REQ_VEC_EQ(vert3.point({}), hexed::Mat<3>{1., 5., 1.});
     }
@@ -197,7 +197,9 @@ TEST_CASE("Block") {
     face.visualize("default", "vertex_interp_face0");
     auto pos2 = [](double pos0, double pos1){return 4.*pos0 - 2.*pos0*pos0 - 2*pos1 + 1.*pos1*pos1;};
     for (auto& vert : verts) {
-      vert.pos(2) = pos2(vert.pos(0), vert.pos(1));
+      auto p = vert.point({});
+      p(2) = pos2(vert.point({})(0), vert.point({})(1));
+      vert.set_pos(p);
     }
     for (int i_edge = 0; i_edge < 4; ++i_edge) {
       face.edge(i_edge).reset();
@@ -235,10 +237,10 @@ TEST_CASE("Block") {
         REQUIRE(&elems[1].vertex(1) == &boundary[1]);
         REQUIRE(&elems[2].vertex(1) == &boundary[2]);
       }
-      REQUIRE_THAT(elems[1].vertex(0).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9,  .3, .1}, hexed::math::Approx_equal()));
-      REQUIRE_THAT(elems[1].vertex(1).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9,  1., .1}, hexed::math::Approx_equal()));
-      REQUIRE_THAT(elems[0].vertex(2).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{ .5,  .3, .1}, hexed::math::Approx_equal()));
-      REQUIRE_THAT(elems[2].vertex(3).pos, Catch::Matchers::RangeEquals(hexed::Mat<3>{ .5, 1.7, .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[1].vertex(0).point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9,  .3, .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[1].vertex(1).point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9,  1., .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[0].vertex(2).point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{ .5,  .3, .1}, hexed::math::Approx_equal()));
+      REQUIRE_THAT(elems[2].vertex(3).point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{ .5, 1.7, .1}, hexed::math::Approx_equal()));
       REQUIRE_THAT(elems[0].point({0, 0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.2,  .3, .1}, hexed::math::Approx_equal()));
       REQUIRE_THAT(elems[0].point({2, 0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.15,  .3, .1}, hexed::math::Approx_equal()));
       REQUIRE_THAT(elems[0].point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.15, .65, .1}, hexed::math::Approx_equal()));

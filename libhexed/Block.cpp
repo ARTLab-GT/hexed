@@ -59,15 +59,22 @@ Mat<3> Block::point(int i_point) const {
 }
 
 Mat<3> Vertex::_point(const std::vector<int>&) const {
-  // usually, the vertex will not be glued or a shadow and we can just return the `pos`
+  // usually, the vertex will not be glued or a shadow and we can just return the `_pos`
   if (_shadowed) return _shadowed->point({});
-  if (!_glued_to) return pos;
+  if (!_glued_to) {
+    Mat<3> p;
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      #pragma omp atomic read
+      p(i_dim) = _pos(i_dim);
+    }
+    return p;
+  }
   return _glued_to->interpolate(_glued_coords);
 }
 
 Vertex::Vertex(Mat<3> pos, int row_size)
 : Block(0, row_size)
-, pos{pos}
+, _pos{pos}
 , _update{Mat<3>::Zero()}
 , _edges(this)
 , _elems(this)
@@ -77,7 +84,7 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 {}
 
 Vertex::~Vertex() {
-  for (auto v : _shadows.theirs()) v->pos = point({});
+  for (auto v : _shadows.theirs()) v->_pos = point({});
 }
 
 double Vertex::nominal_size() const {
@@ -90,7 +97,7 @@ double Vertex::nominal_size() const {
 }
 
 void Vertex::shadow(Vertex& that) {
-  that.pos = pos = .5*(that.point({}) + point({}));
+  that._pos = _pos = .5*(that.point({}) + point({}));
   HEXED_ASSERT(that._shadowed.get() != this, "two `Vertex`s cannot shadow each other");
   HEXED_ASSERT(!_shadowed || !that._shadowed, "one of the vertices must not already be shadowing");
   if (_shadowed) that._shadowed.pair(_shadows);
@@ -102,7 +109,7 @@ void Vertex::eat(Vertex& that) {
   if (&that == this) return;
   // compute averaged position
   Int sz [2] {_elems.partners().size(), that._elems.partners().size()};
-  pos = (sz[0]*point({}) + sz[1]*that.point({}))/(sz[0] + sz[1]);
+  _pos = (sz[0]*point({}) + sz[1]*that.point({}))/(sz[0] + sz[1]);
   // steal pointers
   for (Int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
   for (Int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
@@ -116,14 +123,14 @@ void Vertex::glue(Element_shape& to, std::vector<double> coords) {
 }
 
 void Vertex::calc_relax() {
-  _update = _desired_pos() - pos;
+  _update = _desired_pos() - _pos;
 }
 
 void Vertex::apply_relax() {
   if (_shadowed || glued()) return;
   Mat<3> u = _update;
   for (auto s : _shadows.theirs()) u += s->_update;
-  pos += u/(1 + _shadows.theirs().size());
+  _pos += u/(1 + _shadows.theirs().size());
 }
 
 double Vertex::badness(Mat<3> proposed_pos) const {
@@ -131,6 +138,15 @@ double Vertex::badness(Mat<3> proposed_pos) const {
   for (auto s : _shadows.theirs()) des_pos += s->_desired_pos();
   des_pos /= 1 + _shadows.theirs().size();
   return (proposed_pos - des_pos).norm();
+}
+
+void Vertex::set_pos(Mat<3> p) {
+  if (!glued()) {
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      #pragma omp atomic write
+      _pos(i_dim) = p(i_dim);
+    }
+  }
 }
 
 Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
@@ -173,7 +189,7 @@ Mat<3> Vertex::_desired_pos() const {
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
       const Vertex& vert = elem->vertex(i_vert);
-      verts(all, i_vert) = vert.pos;
+      verts(all, i_vert) = vert._pos; // we can use `_pos` because `Mesh_blocks` just set that to `point({})`
       if (&vert == this) i_this = i_vert;
     }
     HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
@@ -199,8 +215,8 @@ Mat<3> Vertex::_desired_pos() const {
       }
     }
   }
-  if (tot_sz == 0) return pos;
-  des_pos = .9*des_pos/tot_sz + .1*pos;
+  if (tot_sz == 0) return _pos;
+  des_pos = .9*des_pos/tot_sz + .1*_pos;
   return des_pos;
 }
 
@@ -545,7 +561,7 @@ Sequence<Boundary_block&> Mesh_blocks::boundary_sides() {
 void Mesh_blocks::relax_vertices() {
   auto vs = verts();
   #pragma omp parallel for
-  for (auto& vert : vs) vert.pos = vert.point({});
+  for (auto& vert : vs) vert.set_pos(vert.point({}));
   #pragma omp parallel for
   for (auto& vert : vs) vert.calc_relax();
   #pragma omp parallel for

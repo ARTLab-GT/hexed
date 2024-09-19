@@ -35,7 +35,9 @@ TEST_CASE("Deformed_element") {
   SECTION("position calculation") {
     hexed::Deformed_element elem {params2, {0, 0}, 1., 0, hexed::Mat<2>{.03, .02}};
     elem.create_shape(blocks2d);
-    elem.shape().vertex(3).pos[0] = 0.63;
+    auto p = elem.shape().vertex(3).point({});
+    p[0] = 0.63;
+    elem.shape().vertex(3).set_pos(p);
     auto pos = elem.position(basis);
     REQUIRE(pos(0)[0] == Catch::Approx(0.03));
     REQUIRE(pos(0)[7] == Catch::Approx(0.83));
@@ -86,7 +88,7 @@ TEST_CASE("Deformed_element") {
     hexed::Deformed_element elem0 {params2, {0, 0}, 0.2};
     hexed::Deformed_element elem1 {params2, {1, 1}, 0.2};
     elem0.create_shape(blocks2d);
-    elem0.shape().vertex(3).pos = hexed::Mat<3>{0.8*0.2, 0.8*0.2, 0.};
+    elem0.shape().vertex(3).set_pos(hexed::Mat<3>{0.8*0.2, 0.8*0.2, 0.});
     elem1.create_shape(blocks2d, 2);
     blocks2d.edges_2d()[0].interior()(0)[1] += .1*.2;
     // jacobian is correct
@@ -123,7 +125,7 @@ TEST_CASE("Deformed_element") {
 
     hexed::Deformed_element elem2 {params3, {0, 0, 0}, 0.2};
     elem2.create_shape(blocks3d);
-    elem2.shape().vertex(7).pos = hexed::Mat<3>{0.8*0.2, 0.8*0.2, 0.8*0.2};
+    elem2.shape().vertex(7).set_pos(hexed::Mat<3>{0.8*0.2, 0.8*0.2, 0.8*0.2});
     for (int i_face = 0; i_face < 6; ++i_face) elem2.set_face(i_face, faces[i_face]);
     elem2.set_jacobian(basis);
     REQUIRE(elem2.jacobian(0, 0,  0) == 1.);

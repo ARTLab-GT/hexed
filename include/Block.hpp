@@ -119,6 +119,7 @@ class Vertex : public Block {
   //! \brief Applies the update computed with `calc_update`.
   void apply_relax();
   double badness(Mat<3> proposed_pos) const;
+  void set_pos(Mat<3> p);
 
   /*! \brief Accesses a `double` value used for transmitting shared data between elements.
    * \details There are several cases where elements have some data which needs to match their vertex neighbors.
@@ -144,10 +145,10 @@ class Vertex : public Block {
 
   //! \brief current position of this vertex
   //! \details `Block::point` will return this value, unless the vertes is currently `glue()`d.
-  Mat<3> pos;
   std::vector<Int> record; //!< for algorithms to keep notes as they please
 
   private:
+  Mat<3> _pos;
   Mat<3> _point(const std::vector<int>&) const override;
   Mat<3> _update;
   Reciprocal_list<Vertex, Edge> _edges;

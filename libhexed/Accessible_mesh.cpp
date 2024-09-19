@@ -573,7 +573,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
         HEXED_ASSERT(fine_vert.record.size() == n_record, \
                      format_str(1000, "`fine_vert.record.size() == %li != n_record == %li` (position = [%e, %e, %e])", \
                                 fine_vert.record.size(), n_record, \
-                                fine_vert.pos[0], fine_vert.pos[1], fine_vert.pos[2]).c_str()); \
+                                fine_vert.point({})[0], fine_vert.point({})[1], fine_vert.point({})[2]).c_str()); \
         sn[1] = fine_vert.record[1]; \
         stretch_dim = extr_dim > free_dim; \
         fine_vert.record.erase(fine_vert.record.begin(), fine_vert.record.begin() + n_record); \
@@ -1305,7 +1305,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
 }
 
 void update_pos(next::Vertex& vert, Mat<3> pos) {
-  if ((pos - vert.pos).norm() < vert.nominal_size()) vert.pos = pos;
+  if ((pos - vert.point({})).norm() < vert.nominal_size()) vert.set_pos(pos);
 }
 
 void Accessible_mesh::relax(double factor) {
@@ -1327,11 +1327,10 @@ void Accessible_mesh::relax(double factor) {
         bool sign = bc_sn%2;
         std::vector<int> inds = vertex_inds(params.n_dim, {{i_dim, i_dim}, {sign, !sign}})[0];
         for (int i_vert : inds) {
-          // Note: Since each vertex is may be shared by multiple boundary faces,
-          // it may be redundantly snapped several times.
-          // This is fine, but it necessitates an atomic write to prevent races.
-          #pragma omp atomic write
-          con.element().shape().vertex(i_vert).pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+          auto& vert = con.element().shape().vertex(i_vert);
+          Mat<3> pos = vert.point({});
+          pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+          vert.set_pos(pos);
         }
       }
     }
@@ -1344,14 +1343,16 @@ void Accessible_mesh::relax(double factor) {
     #pragma omp parallel for
     for (auto& vert : bverts) {
       HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
+      Mat<3> pos = vert.point({});
       auto seq = Eigen::seqN(0, params.n_dim);
-      vert.pos(seq) = surf_geom->nearest_point(vert.pos(seq), huge, vert.nominal_size()/2).point();
+      pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
+      vert.set_pos(pos);
     }
     // snap vertices to geometry edges
     auto edges = surf_geom->edges();
     auto points = surf_geom->points();
     for (Int i_point = 0; i_point < (Int)points.size(); ++i_point) {
-      if (point_matched_vertices[i_point]) point_matched_vertices[i_point]->pos = points[i_point];
+      if (point_matched_vertices[i_point]) point_matched_vertices[i_point]->set_pos(points[i_point]);
     }
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
       auto& geom_edge = edges[i_geom_edge];
@@ -1363,7 +1364,7 @@ void Accessible_mesh::relax(double factor) {
       }
       for (Int i_vert = 1; i_vert < (Int)matched_vertices[i_geom_edge].size() - 1; ++i_vert) {
         auto& vert = matched_vertices[i_geom_edge][i_vert].value();
-        Int nearest = geom_edge.nearest_point(vert.pos, 2*vert.nominal_size()).index;
+        Int nearest = geom_edge.nearest_point(vert.point({}), 2*vert.nominal_size()).index;
         if (nearest >= 0) update_pos(vert, nodes(nearest).vector());
       }
     }
@@ -1621,7 +1622,8 @@ void Accessible_mesh::write(std::string name) {
   auto dset = file.createDataSet("vertices/position", H5::PredType::NATIVE_DOUBLE, H5::DataSpace(2, dims));
   for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
     auto& vert = verts[i_vert];
-    h5_write_row(dset, 3, i_vert, vert.pos.data());
+    Mat<3> p = vert.point({});
+    h5_write_row(dset, 3, i_vert, p.data());
     vert.record.clear();
     vert.record.push_back(i_vert);
   }
@@ -1773,7 +1775,8 @@ void Accessible_mesh::read_file(std::string file_name) {
     elem_ptrs[i_elem] = &elem;
     if (is_def) def_elem_ptrs[i_elem] = &def.elems.at(ref_level, sn);
     for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
-      h5_read_row(vert_pos_dset, params.n_dim, vert_inds[i_vert], elem.shape().vertex(i_vert).pos.data());
+      Mat<3> p = elem.shape().vertex(i_vert).point({});
+      h5_read_row(vert_pos_dset, params.n_dim, vert_inds[i_vert], p.data());
     }
   }
   // read tree
@@ -1921,7 +1924,7 @@ void Accessible_mesh::export_polymesh(std::string dir_name) {
     next::Vertex& vert = verts[i_vert];
     vert.record.clear();
     vert.record.push_back(i_vert);
-    return format_str(100, "(%.20e %.20e %.20e)", vert.pos[0], vert.pos[1], vert.pos[2]);
+    return format_str(100, "(%.20e %.20e %.20e)", vert.point({})[0], vert.point({})[1], vert.point({})[2]);
   });
   std::vector<int> owners(n_faces);
   std::vector<int> neighbors(n_internal);
