@@ -460,8 +460,8 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     int sn = add_element(ref_level, true, nom_pos, face.elem.origin, face.elem.aniso_ref_level() + 1, 2*face.i_dim + face.face_sign);
     Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
-    if (face.elem.tree) elem.create_fake(_blocks);
-    else elem.split_shape(_blocks, face.elem, offset, 2*face.i_dim + face.face_sign);
+    if (face.elem.fake_shape()) elem.split_shape(_blocks, face.elem, offset, 2*face.i_dim + face.face_sign);
+    else elem.create_fake(_blocks);
     elem.record = sn;
     elem.needs_snapping = !force;
     if (collapse) {
