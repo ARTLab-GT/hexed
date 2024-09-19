@@ -448,4 +448,38 @@ void Outflow::apply_flux(Boundary_face& bf) {
   for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
 }
 
+Expression_bc::Expression_bc(Interpreter& inter, std::string state_expr, std::string flux_expr)
+: _inter{inter}, _exprs{state_expr, flux_expr}
+{}
+
+void Expression_bc::_apply(Boundary_face& bf, bool is_flux) {
+  auto sub = _inter.make_sub();
+  auto params = bf.storage_params();
+  const int nd = params.n_dim;
+  const int nv = params.n_var;
+  const int nq = params.n_qpoint()/params.row_size;
+  std::array<std::string, 2> surface_properties {"pos", "normal"};
+  std::array<std::string, 2> names {"state", "flux"};
+  Array<double> surface({2, nd, nq});
+  surface(0) = Array<double>({nd, nq}, bf.surface_position());
+  surface(1) = Array<double>({nd, nq}, bf.surface_normal());
+  for (int i = 0; i < 2; ++i) {
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      sub.variables->assign(surface_properties[i] + std::to_string(i_dim), surface(i)(i_dim));
+    }
+    for (int i_dim = nd; i_dim < 3; ++i_dim) {
+      sub.variables->assign(surface_properties[i] + std::to_string(i_dim), 0.);
+    }
+    Array<double> inside({nv, nq}, bf.inside_face(i));
+    for (int i_var = 0; i_var < nv; ++i_var) {
+      sub.variables->assign(names[i] + std::to_string(i_var), inside(i_var).copy());
+    }
+  }
+  sub.exec(_exprs[is_flux]);
+  Array<double> ghost({nv, nq}, bf.ghost_face(is_flux));
+  for (int i_var = 0; i_var < nv; ++i_var) {
+    sub.variables->assign_array(ghost(i_var), "ghost_" + names[is_flux] + std::to_string(i_var));
+  }
+}
+
 }

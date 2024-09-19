@@ -4,6 +4,7 @@
 #include "Surface_func.hpp"
 #include "Surface_geom.hpp"
 #include "Boundary_face.hpp"
+#include "Interpreter.hpp"
 
 namespace hexed {
 
@@ -170,9 +171,9 @@ class No_slip : public Flow_bc {
 //! \details All members just copy the inside data.
 class Copy : public Flow_bc {
   public:
-  virtual void apply_state(Boundary_face&);
-  virtual void apply_flux(Boundary_face&);
-  virtual void apply_advection(Boundary_face&);
+  void apply_state(Boundary_face&) override;
+  void apply_flux(Boundary_face&) override;
+  void apply_advection(Boundary_face&) override;
 };
 
 //! \brief for supersonic outlets
@@ -180,8 +181,20 @@ class Copy : public Flow_bc {
 class Outflow : public Flow_bc {
   public:
   //! inverts flux (so that avg is zero)
-  virtual void apply_state(Boundary_face&);
-  virtual void apply_flux(Boundary_face&);
+  void apply_state(Boundary_face&) override;
+  void apply_flux(Boundary_face&) override;
+};
+
+//! \brief Sets the boundary condition explicitly based on a `HIL` expression.
+class Expression_bc : public Flow_bc {
+  public:
+  Expression_bc(Interpreter&, std::string state_expr, std::string flux_expr);
+  inline void apply_state(Boundary_face& bf) override {_apply(bf, 0);}
+  inline void apply_flux(Boundary_face& bf) override {_apply(bf, 1);}
+  private:
+  void _apply(Boundary_face&, bool is_flux);
+  Interpreter& _inter;
+  std::array<std::string, 2> _exprs;
 };
 
 }

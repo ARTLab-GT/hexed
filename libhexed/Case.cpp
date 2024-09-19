@@ -72,8 +72,12 @@ Flow_bc* Case::_make_bc(std::string name) {
     }
     HEXED_ASSERT(thermal, "thermal BC specification not understood", assert::User_error);
     return new No_slip(thermal, _vard("heat_flux_coercion"));
-  }
-  else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()), assert::User_error);
+  } else if (name == "expression") {
+    HEXED_ASSERT(   _inter.variables->lookup<std::string>("surface_bc_state")
+                 && _inter.variables->lookup<std::string>("surface_bc_flux"),
+                 "To use the `expression` BC type, you must define `surface_bc_state` and `surface_bc_flux` as strings.");
+    return new Expression_bc(_inter, _vars("surface_bc_state"), _vars("surface_bc_flux"));
+  } else HEXED_THROW(format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()), assert::User_error);
   return nullptr; // will never happen. just to shut up GCC warning
 }
 
