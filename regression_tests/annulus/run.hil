@@ -1,10 +1,9 @@
 n_dim = 2
-row_size = 4
+$read {resolution.hil}
 mesh_extreme00 = -1.
 mesh_extreme10 = -1.
 mesh_extreme01 =  1.
 mesh_extreme11 =  1.
-init_ref_level = 5
 geom0 = {auto0.csv}
 geom1 = {auto1.csv}
 flood_fill_start0 = 0.75
@@ -49,7 +48,7 @@ iterate = iterate + {
     l2_error = sqrt(integral_field_pointwise_error/pi/(outer_radius^2 - inner_radius^2))/angular_speed/outer_radius
 }
 monitor_vars = {l2_error = l2_error;}
-working_dir = {hexed_out} row_size + {_} + init_ref_level
+working_dir = {hexed_out} + row_size + {_} + init_ref_level
 done = {iteration > 1000 & l2_error_max - l2_error_min < 1e-1*(l2_error_min + l2_error_max)/2}
 $simulate
-println({L2 error: } + l2_error)
+shell({echo "} + row_size + { } + init_ref_level + { } + wall_time + { } + l2_error + {" >> results.txt})
