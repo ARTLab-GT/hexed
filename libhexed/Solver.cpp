@@ -211,6 +211,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("av_diff_max_safety", .7); // stability ratio for diffusion
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
   _namespace->assign_default("n_cheby_bl", 1);
+  _namespace->assign_default("n_flow_bl", 1);
   _namespace->assign_default("max_conv_sub_iters", 1);
   _namespace->assign_default("n_cheby_av", 1);
   _namespace->assign_default("cheby_safety", .9); // safety factor to apply to Chebyshev-acceleration
@@ -895,23 +896,19 @@ void Solver::update() {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   double safety = _namespace->get<double>("max_safety");
   double cheby_safety = _namespace->get<double>("cheby_safety");
-  for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow)
-  {
+  for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
     // compute time step
     double dt = 0;
     HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
     int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
-    for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti != 1)
-    {
+    for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti != 1) {
       int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
-      for (int i_bl = 0; i_bl < n_bl; ++i_bl)
-      {
-        int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : 1;
+      for (int i_bl = 0; i_bl < n_bl; ++i_bl) {
+        int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : _namespace->get<int>("n_cheby_flow");
         int max_sub_iters = i_preti ? _namespace->get<int>("max_conv_sub_iters") : 1;
         double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
         // run chebyshev iterations
-        for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
-        {
+        for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
           _preti_level = i_preti - bool(i_preti);
           Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
           double cheby_step = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
