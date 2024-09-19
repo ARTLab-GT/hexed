@@ -103,6 +103,24 @@ TEST_CASE("Block") {
       REQ_VEC_EQ(vert3.point({}), hexed::Mat<3>{1., 5., 1.});
     }
 
+    SECTION("vertex shared value") {
+      hexed::next::Vertex vert({0., 0., 0.}, 2);
+      REQUIRE(hexed::next::Vertex::Shared_value(vert).get() == Catch::Approx(0.).scale(1.));
+      // test that the lock is working properly cause otherwise this should be a race condition
+      #pragma omp parallel for
+      for (int i = 0; i < 10; ++i) {
+        hexed::next::Vertex::Shared_value shared(vert);
+        shared.set(shared.get() + .1);
+      }
+      REQUIRE(hexed::next::Vertex::Shared_value(vert).get() == Catch::Approx(1.));
+      auto elem = blocks2.create_element({0., 0., 0.}, 1.);
+      hexed::next::Vertex::Shared_value(elem.vertex(0)).set(1.);
+      // check that this vertices with 0 influence are not actually accessed
+      hexed::next::Vertex::Shared_value(elem.vertex(2)).set(std::nan(""));
+      vert.glue(elem, {0., .3});
+      REQUIRE(hexed::next::Vertex::Shared_value(vert).get() == Catch::Approx(.7));
+    }
+
     SECTION("edge `glue`ing") {
       hexed::next::Vertex vert4({1., 1., 1.}, 4);
       hexed::next::Vertex vert5({2., 1., 1.}, 4);

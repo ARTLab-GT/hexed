@@ -132,6 +132,31 @@ double Vertex::badness(Mat<3> proposed_pos) const {
   return (proposed_pos - des_pos).norm();
 }
 
+Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
+  if (!_vert.glued()) _acquire.emplace(_vert._shared_value_lock);
+}
+
+double Vertex::Shared_value::get() const {
+  if (_acquire) return _vert._shared_value;
+  HEXED_ASSERT(_vert.glued(), "The glued status of the vertex changed since constructing the `Shared_value`.")
+  double value = 0;
+  for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
+    double interp = 1.;
+    bool skip = false;
+    for (int i_dim = 0; i_dim < _vert._glued_to->n_dim(); ++i_dim) {
+      int sign = i_vert/vstride(_vert._glued_to->n_dim(), i_dim)%2;
+      skip = skip || (_vert._glued_coords[i_dim] == !sign);
+      interp *= !sign + math::sign(sign)*_vert._glued_coords[i_dim];
+    }
+    if (!skip) value += interp*Shared_value(_vert._glued_to->vertex(i_vert)).get();
+  }
+  return value;
+}
+
+void Vertex::Shared_value::set(double value) {
+  if (_acquire) _vert._shared_value = value;
+}
+
 Mat<3> Vertex::_desired_pos() const {
   Mat<3> des_pos = Mat<3>::Zero();
   HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute optimize postion");

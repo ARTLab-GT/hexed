@@ -2,12 +2,14 @@
 #define HEXED_BLOCK_HPP_
 
 #include <memory>
+#include <optional>
 #include "math.hpp"
 #include "reciprocal.hpp"
 #include "Basis.hpp"
 #include "Array.hpp"
 #include "Sequence.hpp"
 #include "Kernel_connection.hpp"
+#include "Lock.hpp"
 
 //! \brief %namespace for refactored functionality that may clash with existing names
 namespace hexed::next {
@@ -118,6 +120,28 @@ class Vertex : public Block {
   void apply_relax();
   double badness(Mat<3> proposed_pos) const;
 
+  /*! \brief Accesses a `double` value used for transmitting shared data between elements.
+   * \details There are several cases where elements have some data which needs to match their vertex neighbors.
+   * For this purpose, every `Vertex` has a single (private) `double` data member, it's "shared value".
+   * When you construct a `Shared_value` object from a `Vertex`,
+   * its `get()` and `set()` members will access the shared value of the vertex.
+   * The `Shared_value` also acquires a `Lock` belonging to the vertex on construction and releases it on destruction,
+   * so you `get()` and `set()` are thread safe.
+   * However, if you need to do an update operation (one that involves both `get()` and `set()`,
+   * you should call both members on the same `Shared_value` object so that the lock will prevent
+   * any other thread from changing the shared value in between the `get()` and `set()`.
+   * When you construct a `Vertex`, its shared value is initialized to 0.
+   */
+  class Shared_value {
+    public:
+    Shared_value(Vertex&); //!< \brief Acquires the `Lock`
+    double get() const; //!< \brief Fetches the shared value.
+    void set(double); //!< \brief Writes to the shared value.
+    private:
+    Vertex& _vert;
+    std::optional<Lock::Acquire> _acquire;
+  };
+
   //! \brief current position of this vertex
   //! \details `Block::point` will return this value, unless the vertes is currently `glue()`d.
   Mat<3> pos;
@@ -132,6 +156,8 @@ class Vertex : public Block {
   Reciprocal_list<Vertex, Vertex> _shadows;
   std::vector<double> _glued_coords;
   Mat<3> _desired_pos() const;
+  double _shared_value;
+  Lock _shared_value_lock;
 };
 
 /*! \brief A `Block` which is part of the mesh boundary.
