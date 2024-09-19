@@ -29,7 +29,6 @@ class Accessible_mesh : public Mesh {
   Concatenation<Boundary_connection&> bound_cons;
   Concatenation<Face_connection<Deformed_element>&> def_face_cons;
   Concatenation<Refined_face&> ref_face_v;
-  Concatenation<Hanging_vertex_matcher&> matcher_v;
   int surf_bc_sn;
   std::unique_ptr<Surface_geom> surf_geom;
   std::vector<Element_face_connection<Deformed_element>*> extrude_cons;
@@ -200,8 +199,6 @@ class Accessible_mesh : public Mesh {
   Sequence<Boundary_connection&>& boundary_connections() {return bound_cons;}
   //! \returns a view of all Refined_face objects owned by this mesh (there will be one for every hanging node connection)
   inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}
-  //! \returns a view of all Hanging_vertex_matcher objects owned by this mesh (there will be one for every hanging node connection)
-  inline Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() {return matcher_v;}
   inline int n_elements() override {return elements().size();}
   Connection_validity valid() override;
   //! convenience typedef for the Vector_view used to access Vertex objects

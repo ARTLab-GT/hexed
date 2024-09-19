@@ -29,7 +29,6 @@ class View_by_type
   virtual Sequence<Element_connection&>& element_connections() = 0;
   virtual Sequence<Refined_face&>& refined_faces() = 0;
   virtual Sequence<Refined_connection<element_t>&>& refined_connections() = 0;
-  virtual Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() = 0;
   virtual Sequence<Boundary_connection&>& boundary_connections() = 0;
   //! \endcond
 };
@@ -100,7 +99,6 @@ class Mesh_by_type : public View_by_type<element_t>
   static Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> empty_con_view;
   Connection_view<Element_connection&> elem_con_v;
   static Refined_face& ref_face(ref_con_t& ref_con) {return ref_con.refined_face;}
-  static Hanging_vertex_matcher& matcher(ref_con_t& ref_con) {return ref_con.matcher;}
   // need to build up a vector view over the whole array `ref_face_cons`
   std::array<Vector_view<ref_con_t&, std::unique_ptr<ref_con_t>,
                          &ptr_convert<ref_con_t&, std::unique_ptr<ref_con_t>>>,
@@ -109,7 +107,6 @@ class Mesh_by_type : public View_by_type<element_t>
   Concatenation<ref_con_t&> ref_con_v;
   // now that view can be used to view the `Refined_connection`s as other types
   Vector_view<Refined_face&, ref_con_t&, &ref_face, Concatenation> ref_v;
-  Vector_view<Hanging_vertex_matcher&, ref_con_t&, &matcher, Concatenation> matcher_v;
   Vector_view<Boundary_connection&, std::unique_ptr<Typed_bound_connection<element_t>>, ptr_convert<Boundary_connection&, std::unique_ptr<Typed_bound_connection<element_t>>>> bound_con_v;
   Vector_view<Face_connection<Deformed_element>&, std::unique_ptr<Typed_bound_connection<element_t>>, ptr_convert<Face_connection<Deformed_element>&, std::unique_ptr<Typed_bound_connection<element_t>>>> bound_face_con_view;
   Concatenation<Face_connection<element_t>&> face_con_v;
@@ -128,7 +125,6 @@ class Mesh_by_type : public View_by_type<element_t>
     ref_con_cat01{ref_con_vs[0], ref_con_vs[1]},
     ref_con_v{ref_con_cat01, ref_con_vs[2]},
     ref_v{ref_con_v},
-    matcher_v{ref_con_v},
     bound_con_v{bound_cons},
     bound_face_con_view{bound_cons},
     face_con_v{elem_face_con_v, empty_con_view}
@@ -142,7 +138,6 @@ class Mesh_by_type : public View_by_type<element_t>
   Sequence<Element_connection&>& element_connections() override {return elem_con_v;}
   Sequence<Refined_face&>& refined_faces() override {return ref_v;}
   Sequence<Refined_connection<element_t>&>& refined_connections() override {return ref_con_v;}
-  Sequence<Hanging_vertex_matcher&>& hanging_vertex_matchers() override {return matcher_v;}
   Sequence<Boundary_connection&>& boundary_connections() override {return bound_con_v;}
 
   //! write the number of connections for each face to `Element::face_record`. Assumes initialized to 0

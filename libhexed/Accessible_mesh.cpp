@@ -147,7 +147,6 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 , bound_cons{car.boundary_connections(), def.boundary_connections()}
 , def_face_cons{def.elem_face_con_v, bound_face_cons}
 , ref_face_v{car.refined_faces(), def.refined_faces()}
-, matcher_v{car.hanging_vertex_matchers(), def.hanging_vertex_matchers()}
 , surf_bc_sn{-1} // set to -1 to prevent uninitialized comparisons
 , verts_are_reset{false}
 , _mask_levels{0}

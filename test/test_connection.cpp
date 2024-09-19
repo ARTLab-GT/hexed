@@ -182,8 +182,7 @@ TEST_CASE("Element_face_connection<Deformed_element>")
   REQUIRE(&elem0.vertex(2) != &elem1.vertex(6)); // again, basic sanity check that they're not just all the same
 }
 
-TEST_CASE("Refined_connection<Deformed_element>")
-{
+TEST_CASE("Refined_connection<Deformed_element>") {
   hexed::Storage_params params {3, 5, 3, 6};
   hexed::Deformed_element coarse (params);
   hexed::Deformed_element elem0 (params);
@@ -194,8 +193,7 @@ TEST_CASE("Refined_connection<Deformed_element>")
   REQUIRE_THROWS(hexed::Refined_connection<hexed::Deformed_element>(&coarse, elem_ptrs, hexed::Con_dir<hexed::Deformed_element>{{0, 2}, {1, 1}}));
   elem_ptrs.push_back(&elem2);
   elem_ptrs.push_back(&elem3);
-  SECTION("not reversed")
-  {
+  SECTION("not reversed") {
     {
       hexed::Refined_connection<hexed::Deformed_element> con {&coarse, elem_ptrs, hexed::Con_dir<hexed::Deformed_element>{{0, 2}, {1, 1}}};
       REQUIRE(con.refined_face.coarse == coarse.face(2*0 + 1, false));
@@ -212,11 +210,6 @@ TEST_CASE("Refined_connection<Deformed_element>")
       REQUIRE(&coarse.vertex(6) == &elem1.vertex(3));
       REQUIRE(&coarse.vertex(7) == &elem3.vertex(7));
       REQUIRE(&coarse.vertex(5) != &elem0.vertex(5));
-      elem0.vertex_time_step_scale(1) = 0.;
-      con.matcher.match(&hexed::Element::vertex_time_step_scale);
-      REQUIRE(elem1.vertex_time_step_scale(1) == Catch::Approx(0.5/3));
-      REQUIRE(elem2.vertex_time_step_scale(3) == Catch::Approx(0.75/3));
-      REQUIRE(elem2.vertex_time_step_scale(2) == Catch::Approx(1./3));
       REQUIRE(coarse.face(1, false) == con.coarse_state());
       for (int i_con = 0; i_con < 4; ++i_con) {
         auto& c = con.connection(i_con);
