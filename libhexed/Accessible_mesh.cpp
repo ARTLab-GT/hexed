@@ -176,7 +176,6 @@ Accessible_mesh::~Accessible_mesh() {
 int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin, int aniso_ref_level, int surface_face) {
   int sn = container(is_deformed).emplace(ref_level, position, origin, aniso_ref_level);
   Element& elem = element(ref_level, is_deformed, sn);
-  for (int i_vert = 0; i_vert < n_vert; ++i_vert) vert_ptrs.emplace_back(elem.vertex(i_vert));
   elem.create_shape(_blocks, surface_face);
   elem.shape().deformed = is_deformed;
   return sn;
@@ -343,12 +342,6 @@ Mesh::Connection_validity Accessible_mesh::valid() {
   return {n_redundant, n_missing};
 }
 
-Accessible_mesh::vertex_view Accessible_mesh::vertices() {
-  HEXED_ASSERT(!verts_are_reset, "looks like you have a `Mesh::Reset_vertices` you forgot to destroy");
-  erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
-  return vert_ptrs;
-}
-
 //! \cond helper classes and functions for Accessible_mesh::extrude
 struct Empty_face {
   Deformed_element& elem;
@@ -392,7 +385,6 @@ void request_connection(Element& elem, int n_dim, int i_dim, bool i_sign, int j_
 }
 
 void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
-  erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
   const int nd = params.n_dim;
   const int n_faces = 2*nd;
   { // initialize number of connections of each face to 0
@@ -1107,8 +1099,6 @@ void Accessible_mesh::purge() {
     car.elems.purge();
     def.elems.purge();
   }
-  // delete dangling vertex pointers
-  erase_if(vert_ptrs, &Vertex::Non_transferable_ptr::is_null);
 }
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,

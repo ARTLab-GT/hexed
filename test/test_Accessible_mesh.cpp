@@ -308,7 +308,7 @@ TEST_CASE("Accessible_mesh") {
     REQUIRE(count == 1);
     // test that eaten vertices get dropped from the list
     mesh.connect_cartesian(0, {sn0, sn1}, {0});
-    REQUIRE(mesh.vertices().size() == 8*mesh.elements().size() - 4);
+    REQUIRE(mesh.shape_vertices().size() == 8*mesh.elements().size() - 4);
   }
 }
 

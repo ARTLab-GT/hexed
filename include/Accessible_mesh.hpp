@@ -31,7 +31,6 @@ class Accessible_mesh : public Mesh {
   Concatenation<Refined_face&> ref_face_v;
   Concatenation<Hanging_vertex_matcher&> matcher_v;
   int surf_bc_sn;
-  std::vector<Vertex::Non_transferable_ptr> vert_ptrs;
   std::unique_ptr<Surface_geom> surf_geom;
   std::vector<Element_face_connection<Deformed_element>*> extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
@@ -206,9 +205,6 @@ class Accessible_mesh : public Mesh {
   inline int n_elements() override {return elements().size();}
   Connection_validity valid() override;
   //! convenience typedef for the Vector_view used to access Vertex objects
-  typedef Vector_view<Vertex&, Vertex::Non_transferable_ptr, &ptr_convert<Vertex&, Vertex::Non_transferable_ptr>> vertex_view;
-  //! \returns a view of all Vertex objects used by elements in this mesh. Each vertex will appear exactly once, even if it is shared by multiple elements.
-  vertex_view vertices();
   void extrude(bool collapse = false, double offset = 0, bool force = false) override; // note: test for this is in `test_Solver.cpp` so that the result can be visualized
   void connect_rest(int bc_sn) override;
   std::vector<elem_handle> elem_handles() override;
