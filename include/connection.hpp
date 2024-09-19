@@ -97,11 +97,6 @@ class Element_face_connection : public Element_connection, public Face_connectio
     for (int i_side : {0, 1}) {
       elements[i_side]->set_face(dir.i_face(i_side), Face_connection<element_t>::state(i_side, false));
     }
-    auto inds = vertex_inds(elements[0]->storage_params().n_dim, dir);
-    // cppcheck-suppress syntaxError
-    for (unsigned i_vert = 0; i_vert < inds[0].size(); ++i_vert) {
-      elements[0]->vertex(inds[0][i_vert]).eat(elements[1]->vertex(inds[1][i_vert]));
-    }
     connect_normal();
   }
   Element_face_connection(const Element_face_connection&) = delete; //!< copy semantics are deleted since only one connection object can connect the same elements
@@ -229,15 +224,6 @@ class Refined_connection {
       )
     );
     std::vector<int> permutation_inds {face_vertex_inds(nd, con_dir)};
-    auto vert_inds {vertex_inds(nd, con_dir)};
-    // merge vertices
-    for (int i_face = 0; i_face < params.n_vertices()/2; ++i_face) {
-      int inds [] {math::stretched_ind(nd, i_face, str),
-                   math::stretched_ind(nd, permutation_inds[i_face], str)};
-      auto& vert0 = coarse->vertex(vert_inds[rev][i_face]);
-      auto& vert1 = fine[inds[!rev]]->vertex(vert_inds[!rev][i_face]);
-      vert0.eat(vert1);
-    }
     // connect faces
     for (int i_face = 0; i_face < int(fine.size()); ++i_face) {
       int inds [] {i_face, permutation_inds[i_face]};

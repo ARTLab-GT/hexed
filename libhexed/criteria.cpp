@@ -13,7 +13,7 @@ std::function<bool(Element&)> criterion(std::function<bool(bool is_extruded, int
     Eigen::Vector3d center;
     center.setZero();
     for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-      center += elem.vertex(i_vert).pos;
+      center += elem.shape().vertex(i_vert).point({});
     }
     center /= params.n_vertices();
     return f(!elem.tree, elem.refinement_level(), elem.nominal_size(), center, elem.uncertainty);

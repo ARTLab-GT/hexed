@@ -64,7 +64,7 @@ class Accessible_mesh : public Mesh {
   };
 
   Element_container& container(bool is_deformed);
-  int add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin,
+  int add_element(int ref_level, bool is_deformed, std::vector<Int> position, Mat<> origin,
                   int aniso_ref_level = 0, int surface_face = next::Mesh_blocks::no_face);
   Element& add_elem(bool is_deformed, Tree&);
   bool intersects_surface(Tree*);
@@ -121,7 +121,7 @@ class Accessible_mesh : public Mesh {
   inline View_by_type<         Element>& cartesian() {return car;}
   //! \returns a View_by_type containing only the deformed elements in the mesh
   inline View_by_type<Deformed_element>&  deformed() {return def;}
-  int add_element(int ref_level, bool is_deformed, std::vector<int> position) override;
+  int add_element(int ref_level, bool is_deformed, std::vector<Int> position) override;
   //! Access an element. If the parameters to not describe an existing element, throw an exception.
   Element& element(int ref_level, bool is_deformed, int serial_n);
   //! access all elements, both Cartesian and deformed

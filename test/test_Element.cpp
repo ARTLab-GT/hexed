@@ -53,28 +53,4 @@ TEST_CASE("Element") {
     REQUIRE(element.jacobian(2, 2, i_qpoint) == 1.);
     REQUIRE(element.jacobian_determinant(i_qpoint) == 1.);
   }
-  REQUIRE(!element.vertex(2).is_mobile());
-
-  SECTION("push/fetch viscosity") {
-    // test push_required_visc
-    element.vertex_time_step_scale(0) = 0.1;
-    element.vertex_time_step_scale(1) = 0.;
-    element.vertex_time_step_scale(2) = 0.;
-    element.vertex_time_step_scale(3) = 0.2;
-    element.push_shareable_value(&hexed::Element::vertex_time_step_scale);
-    REQUIRE(element.vertex(0).shared_value() == Catch::Approx(0.1));
-    REQUIRE(element.vertex(1).shared_value() == Catch::Approx(0.));
-    REQUIRE(element.vertex(3).shared_value() == Catch::Approx(0.2));
-    // make sure vertex combination doesn't break anything
-    hexed::Vertex::Transferable_ptr ptr ({0, 0, 0});
-    ptr->eat(element.vertex(0));
-    REQUIRE(element.vertex(0).shared_value() == Catch::Approx(0.1));
-    ptr.shareable_value = 0.3;
-    REQUIRE(element.vertex(0).shared_value() == Catch::Approx(0.3));
-    // test fetch_visc
-    element.fetch_shareable_value(&hexed::Element::vertex_time_step_scale);
-    REQUIRE(element.vertex_time_step_scale(0) == Catch::Approx(0.3));
-    REQUIRE(element.vertex_time_step_scale(1) == Catch::Approx(0.));
-    REQUIRE(element.vertex_time_step_scale(3) == Catch::Approx(0.2));
-  }
 }

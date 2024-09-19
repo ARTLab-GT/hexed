@@ -172,7 +172,7 @@ Accessible_mesh::~Accessible_mesh() {
   def.purge_connections(criteria::always);
 }
 
-int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position, Mat<> origin, int aniso_ref_level, int surface_face) {
+int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<Int> position, Mat<> origin, int aniso_ref_level, int surface_face) {
   int sn = container(is_deformed).emplace(ref_level, position, origin, aniso_ref_level);
   Element& elem = element(ref_level, is_deformed, sn);
   elem.create_shape(_blocks, surface_face);
@@ -180,7 +180,7 @@ int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<in
   return sn;
 }
 
-int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<int> position) {
+int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<Int> position) {
   return add_element(ref_level, is_deformed, position, Mat<>::Zero(params.n_dim));
 }
 
@@ -643,7 +643,7 @@ std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles() {
 
 Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t) {
   auto np = t.coordinates();
-  int sn = add_element(t.refinement_level(), is_deformed, std::vector<int>(np.begin(), np.end()), t.origin());
+  int sn = add_element(t.refinement_level(), is_deformed, std::vector<Int>(np.begin(), np.end()), t.origin());
   auto& elem = element(t.refinement_level(), is_deformed, sn);
   elem.record = sn; // put the serial number in the record so it can be used for connections
   elem.tree.pair(t.elem);
@@ -1122,7 +1122,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
     bool unref = unrefine_criterion(elem);
     if (ref && !unref) elem.record = 1;
     else if (unref && !ref) elem.record = -1;
-    elem.set_needs_smooth(false);
   }
   // pass refinement requests of extruded elements to their extrusion parents
   #pragma omp parallel for
@@ -1292,24 +1291,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   connect_new<Deformed_element>(0);
   extrude(true);
   connect_rest(surf_bc_sn);
-  // if any immobile vertices have strayed from their nominal position (probably by `eat`ing)
-  // snap them back where they belong
-  auto& car_elems = cartesian().elements();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < car_elems.size(); ++i_elem) {
-    auto& elem = car_elems[i_elem];
-    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-      Lock::Acquire a(elem.vertex(i_vert).lock);
-      auto& pos = elem.vertex(i_vert).pos;
-      double nom_sz = elem.nominal_size();
-      auto nom_pos = elem.nominal_position();
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        pos[i_dim] = nom_sz*(nom_pos[i_dim] + (i_vert/math::pow(2, nd - 1 - i_dim))%2);
-      }
-      pos(Eigen::seqN(0, nd)) += elem.origin;
-    }
-  }
-  _n_verts = _blocks.verts().size();
   if (surf_geom) {
     for (auto& ptr : point_matched_vertices) ptr.set();
     for (Int i_edge = 0; i_edge < (Int)surf_geom->edges().size(); ++i_edge) {
@@ -1660,7 +1641,8 @@ void Accessible_mesh::write(std::string name) {
       vert_inds[i_vert] = elem.shape().vertex(i_vert).record[0];
     }
     h5_write_row(vert_dset, params.n_vertices(), i_elem, vert_inds);
-    std::vector<int> nom_pos = elem.nominal_position();
+    std::vector<int> nom_pos;
+    for (Int p : elem.nominal_position()) nom_pos.push_back(p);
     h5_write_row(nom_pos_dset, params.n_dim, i_elem, nom_pos.data());
     h5_write_value(is_def_dset, i_elem, elem.get_is_deformed());
     h5_write_value(ref_level_dset, i_elem, elem.refinement_level());
@@ -1777,17 +1759,19 @@ void Accessible_mesh::read_file(std::string file_name) {
   for (int i_elem = 0; i_elem < n_elem; ++i_elem) {
     std::vector<int> nom_pos(params.n_dim);
     h5_read_row(nom_pos_dset, params.n_dim, i_elem, nom_pos.data());
+    std::vector<Int> np;
+    for (int p : nom_pos) np.push_back(p);
     int ref_level = h5_read_value<int>(ref_level_dset, i_elem);
     int aniso_ref_level = h5_read_value<int>(aniso_ref_level_dset, i_elem);
     int is_def = h5_read_value<bool>(is_def_dset, i_elem);
-    int sn = add_element(ref_level, is_def, nom_pos, tree ? tree->origin() : Mat<>::Zero(params.n_dim), aniso_ref_level);
+    int sn = add_element(ref_level, is_def, np, tree ? tree->origin() : Mat<>::Zero(params.n_dim), aniso_ref_level);
     int vert_inds[8] {};
     h5_read_row(vert_ind_dset, n_vert, i_elem, vert_inds);
     auto& elem = element(ref_level, is_def, sn);
     elem_ptrs[i_elem] = &elem;
     if (is_def) def_elem_ptrs[i_elem] = &def.elems.at(ref_level, sn);
     for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
-      h5_read_row(vert_pos_dset, params.n_dim, vert_inds[i_vert], elem.vertex(i_vert).pos.data());
+      h5_read_row(vert_pos_dset, params.n_dim, vert_inds[i_vert], elem.shape().vertex(i_vert).pos.data());
     }
   }
   // read tree
@@ -1945,7 +1929,7 @@ void Accessible_mesh::export_polymesh(std::string dir_name) {
     auto& verts = faces[i_face++];
     for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
       if ((i_vert/math::pow(2, params.n_dim - i_dim - 1))%2 == face_sign) {
-        verts.push_back(elem.vertex(i_vert).record[0]);
+        verts.push_back(elem.shape().vertex(i_vert).record[0]);
       }
     }
     if ((face_sign != i_dim%2) != flip) std::swap(verts[0], verts[1]);

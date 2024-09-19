@@ -146,10 +146,10 @@ TEST_CASE("Element_face_connection<Element>")
     REQUIRE(&con.element(1) == &elem1);
     REQUIRE(con.state(0, false) == elem0.face(3, false));
     REQUIRE(con.state(1, false) == elem1.face(2, false));
-    REQUIRE(&elem0.vertex(2) == &elem1.vertex(0));
-    REQUIRE(&elem0.vertex(7) == &elem1.vertex(5));
+    REQUIRE(&elem0.shape().vertex(2) == &elem1.shape().vertex(0));
+    REQUIRE(&elem0.shape().vertex(7) == &elem1.shape().vertex(5));
     // make sure it didn't just combine all the vertices or something stupid like that
-    REQUIRE(&elem0.vertex(0) != &elem1.vertex(2));
+    REQUIRE(&elem0.shape().vertex(0) != &elem1.shape().vertex(2));
   }
   // check that faces get reset to nullptr after the connection is deleted
   REQUIRE(!elem0.is_connected(3));
@@ -175,11 +175,11 @@ TEST_CASE("Element_face_connection<Deformed_element>")
   REQUIRE(con.normal() == con.normal(0));
   REQUIRE(con.state(0, false) == elem0.face(4, false));
   REQUIRE(con.state(1, false) == elem1.face(3, false));
-  REQUIRE(&elem0.vertex(0) == &elem1.vertex(3));
-  REQUIRE(&elem0.vertex(2) == &elem1.vertex(2));
-  REQUIRE(&elem0.vertex(4) == &elem1.vertex(7));
-  REQUIRE(&elem0.vertex(6) == &elem1.vertex(6));
-  REQUIRE(&elem0.vertex(2) != &elem1.vertex(6)); // again, basic sanity check that they're not just all the same
+  REQUIRE(&elem0.shape().vertex(0) == &elem1.shape().vertex(3));
+  REQUIRE(&elem0.shape().vertex(2) == &elem1.shape().vertex(2));
+  REQUIRE(&elem0.shape().vertex(4) == &elem1.shape().vertex(7));
+  REQUIRE(&elem0.shape().vertex(6) == &elem1.shape().vertex(6));
+  REQUIRE(&elem0.shape().vertex(2) != &elem1.shape().vertex(6)); // again, basic sanity check that they're not just all the same
 }
 
 TEST_CASE("Refined_connection<Deformed_element>") {
@@ -205,11 +205,11 @@ TEST_CASE("Refined_connection<Deformed_element>") {
       REQUIRE(&fine_con.element(0) == &coarse);
       REQUIRE(&fine_con.element(1) == &elem2); // note transposed
       REQUIRE(fine_con.state(0, false) == con.refined_face.fine[1]);
-      REQUIRE(&coarse.vertex(4) == &elem0.vertex(1));
-      REQUIRE(&coarse.vertex(5) == &elem2.vertex(5));
-      REQUIRE(&coarse.vertex(6) == &elem1.vertex(3));
-      REQUIRE(&coarse.vertex(7) == &elem3.vertex(7));
-      REQUIRE(&coarse.vertex(5) != &elem0.vertex(5));
+      REQUIRE(&coarse.shape().vertex(4) == &elem0.shape().vertex(1));
+      REQUIRE(&coarse.shape().vertex(5) == &elem2.shape().vertex(5));
+      REQUIRE(&coarse.shape().vertex(6) == &elem1.shape().vertex(3));
+      REQUIRE(&coarse.shape().vertex(7) == &elem3.shape().vertex(7));
+      REQUIRE(&coarse.shape().vertex(5) != &elem0.shape().vertex(5));
       REQUIRE(coarse.face(1, false) == con.coarse_state());
       for (int i_con = 0; i_con < 4; ++i_con) {
         auto& c = con.connection(i_con);
@@ -232,11 +232,11 @@ TEST_CASE("Refined_connection<Deformed_element>") {
     REQUIRE(&fine_con.element(0) == &elem1);
     REQUIRE(&fine_con.element(1) == &coarse);
     REQUIRE(fine_con.state(1, false) == con.refined_face.fine[2]); // note transposed
-    REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
-    REQUIRE(&elem1.vertex(5) == &coarse.vertex(5));
-    REQUIRE(&elem2.vertex(6) == &coarse.vertex(3));
-    REQUIRE(&elem3.vertex(7) == &coarse.vertex(7));
-    REQUIRE(&elem0.vertex(5) != &coarse.vertex(5));
+    REQUIRE(&elem0.shape().vertex(4) == &coarse.shape().vertex(1));
+    REQUIRE(&elem1.shape().vertex(5) == &coarse.shape().vertex(5));
+    REQUIRE(&elem2.shape().vertex(6) == &coarse.shape().vertex(3));
+    REQUIRE(&elem3.shape().vertex(7) == &coarse.shape().vertex(7));
+    REQUIRE(&elem0.shape().vertex(5) != &coarse.shape().vertex(5));
   }
   SECTION("stretched")
   {
@@ -262,11 +262,11 @@ TEST_CASE("Refined_connection<Deformed_element>") {
       REQUIRE(&fine_con.element(1) == &elem1);
       REQUIRE(fine_con.state(0, false) == con.refined_face.fine[1]);
       REQUIRE(fine_con.state(1, false) == elem1.face(2*0 + 1, false));
-      REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
-      REQUIRE(&elem1.vertex(5) == &coarse.vertex(5));
-      REQUIRE(&elem0.vertex(6) == &coarse.vertex(3));
-      REQUIRE(&elem1.vertex(7) == &coarse.vertex(7));
-      REQUIRE(&elem0.vertex(5) != &coarse.vertex(5));
+      REQUIRE(&elem0.shape().vertex(4) == &coarse.shape().vertex(1));
+      REQUIRE(&elem1.shape().vertex(5) == &coarse.shape().vertex(5));
+      REQUIRE(&elem0.shape().vertex(6) == &coarse.shape().vertex(3));
+      REQUIRE(&elem1.shape().vertex(7) == &coarse.shape().vertex(7));
+      REQUIRE(&elem0.shape().vertex(5) != &coarse.shape().vertex(5));
     }
     SECTION("stretch dimension 0 reverse")
     {
@@ -279,11 +279,11 @@ TEST_CASE("Refined_connection<Deformed_element>") {
       REQUIRE(&fine_con.element(1) == &coarse);
       REQUIRE(fine_con.state(0, false) == elem1.face(2*0 + 1, false));
       REQUIRE(fine_con.state(1, false) == con.refined_face.fine[1]);
-      REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
-      REQUIRE(&elem1.vertex(5) == &coarse.vertex(5));
-      REQUIRE(&elem0.vertex(6) == &coarse.vertex(3));
-      REQUIRE(&elem1.vertex(7) == &coarse.vertex(7));
-      REQUIRE(&elem0.vertex(5) != &coarse.vertex(5));
+      REQUIRE(&elem0.shape().vertex(4) == &coarse.shape().vertex(1));
+      REQUIRE(&elem1.shape().vertex(5) == &coarse.shape().vertex(5));
+      REQUIRE(&elem0.shape().vertex(6) == &coarse.shape().vertex(3));
+      REQUIRE(&elem1.shape().vertex(7) == &coarse.shape().vertex(7));
+      REQUIRE(&elem0.shape().vertex(5) != &coarse.shape().vertex(5));
     }
     SECTION("stretch dimension 1")
     {
@@ -296,11 +296,11 @@ TEST_CASE("Refined_connection<Deformed_element>") {
       REQUIRE(&fine_con.element(1) == &elem1);
       REQUIRE(fine_con.state(0, false) == con.refined_face.fine[1]);
       REQUIRE(fine_con.state(1, false) == elem1.face(2*0 + 1, false));
-      REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
-      REQUIRE(&elem0.vertex(5) == &coarse.vertex(5));
-      REQUIRE(&elem1.vertex(6) == &coarse.vertex(3));
-      REQUIRE(&elem1.vertex(7) == &coarse.vertex(7));
-      REQUIRE(&elem1.vertex(5) != &coarse.vertex(5));
+      REQUIRE(&elem0.shape().vertex(4) == &coarse.shape().vertex(1));
+      REQUIRE(&elem0.shape().vertex(5) == &coarse.shape().vertex(5));
+      REQUIRE(&elem1.shape().vertex(6) == &coarse.shape().vertex(3));
+      REQUIRE(&elem1.shape().vertex(7) == &coarse.shape().vertex(7));
+      REQUIRE(&elem1.shape().vertex(5) != &coarse.shape().vertex(5));
     }
     SECTION("stretch both")
     {
@@ -313,11 +313,11 @@ TEST_CASE("Refined_connection<Deformed_element>") {
       REQUIRE(&fine_con.element(1) == &coarse);
       REQUIRE(fine_con.state(0, false) == elem0.face(2*0 + 1, false));
       REQUIRE(fine_con.state(1, false) == con.refined_face.fine[0]);
-      REQUIRE(&elem0.vertex(4) == &coarse.vertex(1));
-      REQUIRE(&elem0.vertex(5) == &coarse.vertex(5));
-      REQUIRE(&elem0.vertex(6) == &coarse.vertex(3));
-      REQUIRE(&elem0.vertex(7) == &coarse.vertex(7));
-      REQUIRE(&elem0.vertex(5) != &coarse.vertex(1));
+      REQUIRE(&elem0.shape().vertex(4) == &coarse.shape().vertex(1));
+      REQUIRE(&elem0.shape().vertex(5) == &coarse.shape().vertex(5));
+      REQUIRE(&elem0.shape().vertex(6) == &coarse.shape().vertex(3));
+      REQUIRE(&elem0.shape().vertex(7) == &coarse.shape().vertex(7));
+      REQUIRE(&elem0.shape().vertex(5) != &coarse.shape().vertex(1));
     }
     SECTION("not transposed")
     {

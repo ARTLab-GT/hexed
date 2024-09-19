@@ -16,7 +16,7 @@ void element(Namespace& space, Element& elem)
   Eigen::Vector3d center;
   center.setZero();
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-    center += elem.vertex(i_vert).pos;
+    center += elem.shape().vertex(i_vert).point({});
   }
   center /= params.n_vertices();
   for (int i_dim = 0; i_dim < 3; ++i_dim) {

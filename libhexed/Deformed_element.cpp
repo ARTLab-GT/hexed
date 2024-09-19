@@ -3,7 +3,7 @@
 
 namespace hexed {
 
-Deformed_element::Deformed_element(Storage_params params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level) :
+Deformed_element::Deformed_element(Storage_params params, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level) :
   Element{params, pos, mesh_size, ref_level, origin_arg, true, aniso_r_level},
   n_qpoint{params.n_qpoint()},
   jac_dat{(n_dim*n_dim + 1)*n_qpoint},

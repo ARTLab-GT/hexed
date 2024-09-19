@@ -3,57 +3,34 @@
 
 namespace hexed {
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level,
-                 Mat<> origin_arg, bool mobile_vertices, int aniso_r_level) :
-  params(params_arg),
-  n_dim(params.n_dim),
-  _nom_pos(n_dim, 0),
-  _nom_sz{mesh_size/math::pow(2, ref_level)},
-  _r_level{ref_level},
-  _aniso_r_level{aniso_r_level},
-  n_dof(params.n_dof()),
-  n_vert(params.n_vertices()),
-  data_size{params.n_dof_numeric()},
-  data{Eigen::VectorXd::Zero(data_size)},
-  vertex_data{Eigen::VectorXd::Constant(2*params.n_vertices(), _nom_sz/n_dim)},
-  _mask{0},
-  tree(this),
-  origin{origin_arg(Eigen::seqN(0, params.n_dim))}
+Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level,
+                 Mat<> origin_arg, bool mobile_vertices, int aniso_r_level)
+: params(params_arg)
+, n_dim(params.n_dim)
+, _nom_pos(pos)
+, _origin{origin_arg}
+, _nom_sz{mesh_size/math::pow(2, ref_level)}
+, _r_level{ref_level}
+, _aniso_r_level{aniso_r_level}
+, n_dof(params.n_dof())
+, n_vert(params.n_vertices())
+, data_size{params.n_dof_numeric()}
+, data{Eigen::VectorXd::Zero(data_size)}
+, vertex_data{Eigen::VectorXd::Constant(3*params.n_vertices(), _nom_sz/n_dim)}
+, _mask{0}
+, tree(this)
+, origin{origin_arg(Eigen::seqN(0, params.n_dim))}
 {
   face_record.fill(0);
   faces.fill(nullptr);
   // initialize local time step scaling to 1.
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) time_step_scale()[i_qpoint] = 1.;
-  // set position of vertex 0
-  Mat<3> first_pos;
-  first_pos.setZero();
-  int n_pos_set = std::min<int>(pos.size(), n_dim);
-  for (int i_dim = 0; i_dim < n_pos_set; ++i_dim) {
-    _nom_pos[i_dim] = pos[i_dim];
-    first_pos[i_dim] = pos[i_dim]*_nom_sz;
-  }
-  first_pos(Eigen::seqN(0, n_dim)) += origin;
-  // construct vertices
-  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert)
-  {
-    // compute position of vertex
-    Mat<3> vertex_pos = first_pos;
-    int stride [3];
-    int i_row [3];
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      stride[i_dim] = math::pow(2, n_dim - i_dim - 1);
-      i_row[i_dim] = (i_vert/stride[i_dim])%2;
-      vertex_pos[i_dim] += i_row[i_dim]*_nom_sz;
-    }
-    vertices.emplace_back(vertex_pos, mobile_vertices);
-    // establish vertex connections (that is, edges).
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      if (i_row[i_dim]) Vertex::connect(*vertices.back(), *vertices[i_vert - stride[i_dim]]);
-    }
-  }
+  _nom_pos.resize(params.n_dim, 0);
+  HEXED_ASSERT(_origin.size() >= params.n_dim, "`origin` has too few components");
+  vertex_data(Eigen::seqN(params.n_vertices(), last)).setZero();
 }
 
-Element::Element(Storage_params params_arg, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level)
+Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level)
 : Element(params_arg, pos, mesh_size, ref_level, origin_arg, false, aniso_r_level)
 {}
 
@@ -135,48 +112,36 @@ double Element::jacobian(int i_dim, int j_dim, int i_qpoint) {
   return (i_dim == j_dim) ? 1. : 0.;
 }
 
-void Element::push_shareable_value(std::function<double(Element&, int i_vertex)> fun) {
-  for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    vertices[i_vert].shareable_value = fun(*this, i_vert);
-  }
-}
-
-void Element::fetch_shareable_value(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduction) {
-  for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    access_fun(*this, i_vert) = vertices[i_vert]->shared_value(reduction);
-  }
-}
-
 double& Element::vertex_time_step_scale(int i_vertex) {
-  return vertex_data[i_vertex];
+  return vertex_data[0*params.n_vertices() + i_vertex];
 }
 
 double& Element::vertex_elwise_av(int i_vertex) {
-  return vertex_data[params.n_vertices() + i_vertex];
+  return vertex_data[1*params.n_vertices() + i_vertex];
 }
 
 double& Element::vertex_fix_admis_coef(int i_vertex) {
-  return vertices[i_vertex].fix_admis_coef;
-}
-
-void Element::set_needs_smooth(bool value) {
-  for (int i_vert = 0; i_vert < storage_params().n_vertices(); ++i_vert) {
-    vertices[i_vert].needs_smooth = value;
-  }
+  return vertex_data[2*params.n_vertices() + i_vertex];
 }
 
 void Element::set_face(int i_face, double* data) {faces[i_face] = data;}
 bool Element::is_connected(int i_face) {return faces[i_face];}
 
+Mat<3> Element::_compute_pos() const {
+  Mat<3> pos;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) pos(i_dim) = _origin(i_dim) + _nom_sz*_nom_pos[i_dim];
+  return pos;
+}
+
 void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
   HEXED_ASSERT(blocks.n_dim == params.n_dim, "Dimensionality of `this` and `blocks` does not match.");
   _fake_shape.reset();
-  _shape = std::make_unique<next::Element_shape>(blocks.create_element(vertex(0).pos, nominal_size(), boundary_face));
+  _shape = std::make_unique<next::Element_shape>(blocks.create_element(_compute_pos(), nominal_size(), boundary_face));
 }
 
 void Element::create_fake(next::Mesh_blocks& blocks) {
   _fake_shape.reset(_shape.release());
-  _shape = std::make_unique<next::Element_shape>(blocks.create_element(vertex(0).pos, nominal_size()));
+  _shape = std::make_unique<next::Element_shape>(blocks.create_element(_compute_pos(), nominal_size()));
   _shape->glue(*_fake_shape, {std::vector<double>(params.n_dim, 0.), std::vector<double>(params.n_dim, 1.)});
 }
 

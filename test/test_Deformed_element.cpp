@@ -23,8 +23,6 @@ TEST_CASE("Deformed_element") {
   element.face_normal(0) = &some_variable;
   element.face_normal(3) = &some_variable;
 
-  REQUIRE(element.vertex(1).is_mobile());
-
   const int row_size = 3;
   static_assert (row_size <= hexed::config::max_row_size);
   hexed::Gauss_lobatto block_basis(row_size);

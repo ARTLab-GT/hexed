@@ -13,10 +13,10 @@ void element(Namespace& space, Element& elem) {
   space.assign("uncertainty", elem.uncertainty);
   space.assign("snapping_problem", int(elem.snapping_problem));
   auto params = elem.storage_params();
-  Eigen::Vector3d center;
+  Mat<3> center;
   center.setZero();
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-    center += elem.vertex(i_vert).pos;
+    center += elem.shape().vertex(i_vert).point({});
   }
   center /= params.n_vertices();
   for (int i_dim = 0; i_dim < 3; ++i_dim) {

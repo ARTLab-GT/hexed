@@ -8,7 +8,6 @@
 
 #include "Kernel_element.hpp"
 #include "Storage_params.hpp"
-#include "Vertex.hpp"
 #include "Basis.hpp"
 #include "Lock.hpp"
 #include "Mutual_ptr.hpp"
@@ -26,17 +25,18 @@ class Accessible_mesh;
  */
 class Element : public Kernel_element {
   protected:
+  // constructor that allows the vertices to be created as mobile, for the  benefit of `Deformed_element`
+  Element(Storage_params, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
+          bool mobile_vertices, int aniso_r_level);
+  Mat<3> _compute_pos() const;
   Storage_params params;
   int n_dim;
-  std::vector<int> _nom_pos;
+  std::vector<Int> _nom_pos;
+  Mat<> _origin;
   double _nom_sz;
   int _r_level;
   int _aniso_r_level;
-  std::vector<Vertex::Transferable_ptr> vertices;
   std::unique_ptr<next::Element_shape> _shape;
-  // constructor that allows the vertices to be created as mobile, for the  benefit of `Deformed_element`
-  Element(Storage_params, std::vector<int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
-          bool mobile_vertices, int aniso_r_level);
 
   private:
   int n_dof;
@@ -71,7 +71,7 @@ class Element : public Kernel_element {
    * The vertices will be spaced at intervals of the nominal size.
    * Only the first `n_dim` elements of `origin_arg` are considered.
    */
-  Element(Storage_params, std::vector<int> pos = {}, double mesh_size = 1., int ref_level = 0,
+  Element(Storage_params, std::vector<Int> pos = {}, double mesh_size = 1., int ref_level = 0,
           Mat<> origin_arg = Mat<>::Zero(3), int aniso_ref_level = 0);
   virtual inline bool get_is_deformed() {return is_deformed;} //!< for determining whether a pointer is deformed
   //! \details Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
@@ -87,7 +87,7 @@ class Element : public Kernel_element {
   inline double nominal_size() const override {return _nom_sz;}
   inline int refinement_level() {return _r_level;} //!< \brief indicates how many times this element has been isotropically refined
   int aniso_ref_level() {return _aniso_r_level;} //!< \brief indicates how many times this element has been anisotropically refined
-  inline std::vector<int> nominal_position() {return _nom_pos;}
+  inline std::vector<Int> nominal_position() {return _nom_pos;}
   //! pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); //!< layout: [i_var][i_qpoint]
   double* advection_state(); //!< layout: [i_node][i_qpoint] \note `0 <= i_node < row_size`
@@ -110,16 +110,10 @@ class Element : public Kernel_element {
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
   virtual inline double jacobian_determinant(int i_qpoint) {return 1.;} //!< \brief determinant of `jacobian`
 
-  inline Vertex& vertex(int i_vertex) { return *vertices[i_vertex]; }
-  template <int i_dim> double& vertex_position(int i_vertex) {return vertices[i_vertex]->pos[i_dim];}
-  //! \brief functions to communicate with nodal neighbors
-  void push_shareable_value(std::function<double(Element&, int i_vertex)>); //!< \brief writes shareable value to vertices so that shared value can be determined
-  void fetch_shareable_value(std::function<double&(Element&, int i_vertex)> access_fun, std::function<double(Mat<>)> reduction = Vertex::vector_max); // set `this`'s copy of shareable value to the shared values at the vertices
   //! \brief Time step scale at the vertices. TSS in the interior is set by interpolating this.
   double& vertex_time_step_scale(int i_vertex) override;
   double& vertex_elwise_av(int i_vertex);
   double& vertex_fix_admis_coef(int i_vertex);
-  void set_needs_smooth(bool); //!< \brief sets the `Vertex::Transferable_ptr::needs_smooth` of the vertices
   void set_face(int i_face, double* data);
   bool is_connected(int i_face);
 

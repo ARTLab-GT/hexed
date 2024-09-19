@@ -34,7 +34,7 @@ class Mesh {
    * Add an element at specified nominal position and serial number which uniquely identifies it
    * among elements of this mesh with the same refinement level and deformedness.
    */
-  virtual int add_element(int ref_level, bool is_deformed, std::vector<int> position) = 0;
+  virtual int add_element(int ref_level, bool is_deformed, std::vector<Int> position) = 0;
   /*!
    * Specify that two elements are connected via a Cartesian face. Note: although the interface
    * is stipulated to be Cartesian, the elements themselves can be deformed
