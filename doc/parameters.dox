@@ -57,15 +57,6 @@ If you intend for your time stepping to be CFL driven, simply keep this number l
 \note Not defined until \ref create_solver is evaluated.
 
 <hr>
-\subsubsection transport_model
-__type:__ string \n
-__default:__ `{inviscid}` \n
-Specifies model to use for molecular transport coefficients (viscosity and thermal conductivity).
-Accepted values:
-- `{inviscid}`
-- `{sutherland}`: Uses Sutherland's law for air (non-constant Prandtl number)
-
-<hr>
 \subsubsection thermal_bc
 __type:__ string \n
 __default:__ `{heat_flux = 0.}` \n
@@ -180,9 +171,10 @@ May be any non-negative integer, up to time and memory constraints.
 __type:__ string \n
 __default:__ `{auto}` \n
 Specifies surface boundary condition.
-If `{auto}`, surface boundary condition will be determined automatically depending on the value of \ref transport_model.
-`{inviscid}` &rarr; `{nonpenetration}` and `{sutherland}` &rarr; `{no_slip}`.
-Otherwise, the name of a supported \ref boundary_conditions "Boundary condition type".
+It should be the name of a supported \ref boundary_conditions "Boundary condition type".
+If `{auto}`, surface boundary condition will be determined automatically depending on whether you define \ref viscosity_model .
+If you do (and set it to something other than `{}`), `surface_bc` will default to `{no_slip}`.
+If you do not, it will default to `{nonpenetration}`.
 
 <hr>
 \subsubsection monitor_vars

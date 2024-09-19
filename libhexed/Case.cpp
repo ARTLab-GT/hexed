@@ -299,7 +299,9 @@ Case::Case(std::string input_script)
         transport_models.emplace_back(Transport_model::sutherland(sub.variables->lookup<double>("ref_value").value(),
                                                                   sub.variables->lookup<double>("ref_temperature").value(),
                                                                   sub.variables->lookup<double>("offset").value()));
-      } else HEXED_ASSERT(false, format_str(200, "invalid transport model specification for %s", name), assert::User_error);
+      } else if (sub.variables->exists("const_value")) {
+        transport_models.emplace_back(Transport_model::constant(sub.variables->lookup<double>("const_value").value()));
+      } else HEXED_THROW(format_str(200, "invalid transport model specification for %s", name.c_str()), assert::User_error);
     }
     // create history monitors
     _monitor_expr.reset(new Struct_expr(_vars("monitor_vars")));

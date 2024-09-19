@@ -250,6 +250,7 @@ Interpreter::Interpreter(std::vector<std::string> preload)
     {"-", [this](const _Dynamic_value& val) {
       if      (val.i) return _Dynamic_value((*val.i)*-1);
       else if (val.d) return _Dynamic_value((*val.d)*-1);
+      else if (val.a) return _Dynamic_value((*val.a)*-1.);
       else HEXED_ASSERT(false, "unary operator `-` cannot be applied to type `string`.", Hil_exception);
     }},
     {"!", [this](const _Dynamic_value& val) {

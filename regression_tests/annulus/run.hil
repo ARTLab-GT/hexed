@@ -1,0 +1,36 @@
+n_dim = 2
+mesh_extreme00 = -1.
+mesh_extreme10 = -1.
+mesh_extreme01 =  1.
+mesh_extreme11 =  1.
+init_ref_level = 4
+geom0 = {auto0.csv}
+geom1 = {auto1.csv}
+flood_fill_start0 = 0.75
+flood_fill_start1 = 0.
+flood_fill_start2 = 0.
+
+freestream_temperature = 300.;
+freestream_density = 1.;
+freestream_speed = 0.;
+viscosity_model = {const_value = 1.}
+conductivity_model = {const_value = 1.}
+surface_bc = {expression}
+rotation_speed = 1.
+inner_radius = .25
+surface_bc_state = {
+    ghost_state0 = -pos1*state2*rotation_speed*(sqrt(pos0^2 + pos1^2) - inner_radius)/(1. - inner_radius)
+    ghost_state1 =  pos0*state2*rotation_speed*(sqrt(pos0^2 + pos1^2) - inner_radius)/(1. - inner_radius)
+    ghost_state2 = state2
+    ghost_state3 = state2*specific_gas_air*freestream_temperature/0.4 + .5*(state0^2 + state1^2)/state2;
+}
+surface_bc_flux = {
+    ghost_flux0 = flux0
+    ghost_flux1 = flux1
+    ghost_flux2 = 0.
+    ghost_flux3 = flux3
+}
+
+done = {normalized_residual < 1e-4}
+shell {python3 make_geom.py}
+$simulate

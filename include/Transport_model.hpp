@@ -4,15 +4,13 @@
 #include "math.hpp"
 #include "constants.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*!
  * A model for molecular transport coefficients (e.g. viscosity and thermal conductivity)
  * which supports either a constant coefficient or Sutherland's law.
  */
-class Transport_model
-{
+class Transport_model {
   double const_val;
   double ref_val;
   double ref_temp;
@@ -32,8 +30,7 @@ class Transport_model
   /*! Compute whatever transport coefficient this object is supposed to represent.
    * Expects the square root of the temperature to be precomputed (so the caller can reuse it for multiple transport coefficients)
    */
-  double coefficient(double sqrt_temp) const
-  {
+  double coefficient(double sqrt_temp) const {
     return const_val + ref_val*math::pow(sqrt_temp/sqrt_ref_temp, 3)*(ref_temp + temp_offset)/(sqrt_temp*sqrt_temp + temp_offset);
   }
   //! create a `Transport_model` that always returns 0 (with `is_viscous` set to `false`)
@@ -44,8 +41,7 @@ class Transport_model
    * according to [Sutherland's law](https://en.wikipedia.org/wiki/Viscosity#Chapman%E2%80%93Enskog_theory).
    * It will return `reference_value` at `reference_temperature` and `temperature_offset` is the Sutherland constant \f$S\f$
    */
-  static inline Transport_model sutherland(double reference_value, double reference_temperature, double temperature_offset)
-  {
+  static inline Transport_model sutherland(double reference_value, double reference_temperature, double temperature_offset) {
     return {0., reference_value, reference_temperature, temperature_offset, 1};
   }
 };
