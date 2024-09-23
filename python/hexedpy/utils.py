@@ -85,7 +85,7 @@ class History_plot:
     r"""! \brief creates a real-time, interactive plot of the convergence history
     \details Convergence history is obtained from the `output.txt` file which contains the console output of \ref hexecute.
     Every column in the output whose name is not in `History_plot.column_blacklist` will be plotted in its own subplot.
-    Columns with names ending in `residual` will be plotted on a log scale.
+    Columns with names ending in `residual` or `error` will be plotted on a log scale.
     A `History_plot` instance should be created in a separate process from the solver
     but may be created before, after, or during the simulation---the plot will not appear until an `output.txt` file exists.
     A `History_plot` can be created directly from the \ref hil "HIL" solver script with $\ref plot_history.
@@ -143,7 +143,7 @@ class History_plot:
             ax.grid(True)
             ax.set_xlabel("iteration")
             ax.set_ylabel(col)
-            if col.endswith("residual"):
+            if col.endswith("residual") or col.endswith("error"):
                 self._axs[i_col].set_ylim(0.1, 1.)
                 self._axs[i_col].set_yscale("log")
         return self._curves
@@ -165,7 +165,7 @@ class History_plot:
                 ax = self._axs[i_col]
                 col = self._plot_columns[i_col]
                 last_value = self._data[col][self._data.shape[0] - 1]
-                if col.endswith("residual"):
+                if col.endswith("residual") or col.endswith("error"):
                     if last_value < ax.get_ylim()[0]:
                         ax.set_ylim(ax.get_ylim()[0]*.1, ax.get_ylim()[1])
                     elif last_value > ax.get_ylim()[1]:

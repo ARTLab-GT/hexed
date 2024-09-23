@@ -41,6 +41,7 @@ class Hexed(bu.C_project):
             bu.not_source(f) or
             re.match(self.sdir + r"build(?!\.py)", bu.absolute(f)) or
             f.startswith(self.sdir + "samples") or
+            f.startswith(self.sdir + "regression_tests") or
             f.startswith(self.sdir + ".git") or
             f.endswith(".tags")
         ))
