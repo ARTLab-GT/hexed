@@ -105,7 +105,7 @@ class History_plot:
             self._lines += [line.decode("utf-8") for line in output_file.readlines()]
             self._file_position = output_file.tell()
 
-    def __init__(self, directory = "hexed_out", interval = 0.2):
+    def __init__(self, directory = "hexed_out", interval = 2.):
         r"""! \brief creates and shows an animated history plot
         \param directory Convergence history will be obtained by looking for a file `output.txt` in `directory`.
         \param interval The plot will be updated every `interval` seconds to include new iterations.
@@ -130,7 +130,7 @@ class History_plot:
         plt.tight_layout()
         self._fig.set_size_inches(18, 5)
         ani = FuncAnimation(self._fig, self._update, frames = self._infinite_generator, init_func = self._init,
-                            blit = True, repeat = False, interval = int(self._interval*1e3), cache_frame_data = False)
+                            blit = False, repeat = False, interval = int(self._interval*1e3), cache_frame_data = False)
         plt.show()
 
     def _init(self):
