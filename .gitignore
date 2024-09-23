@@ -7,3 +7,5 @@ hexed_out*
 auto*.csv
 *.szplt
 .*.swp
+resolution.hil
+results.txt

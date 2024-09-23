@@ -1,4 +1,5 @@
 n_dim = 2
+suffix = {}
 $read {resolution.hil}
 mesh_extreme00 = -1.
 mesh_extreme10 = -1.
@@ -9,6 +10,9 @@ geom1 = {auto1.csv}
 flood_fill_start0 = 0.75
 flood_fill_start1 = 0.
 flood_fill_start2 = 0.
+refine_if = {is_extruded}
+unrefine_if = {false}
+max_refinement_iters = 1
 
 freestream_temperature = 300.;
 freestream_density = 1.;
@@ -34,21 +38,25 @@ surface_bc_flux = {
 }
 l2_error = 0.
 
+error_expr = {
+    radius = sqrt(pos0^2 + pos1^2)
+    speed = angular_speed*(inner_radius/radius - radius/inner_radius)/(inner_radius/outer_radius - outer_radius/inner_radius)
+    pointwise_error = (momentum0/density - -pos1/radius*speed)^2 + (momentum1/density -  pos0/radius*speed)^2
+}
+
 fix_therm_admis = true
 n_cheby_flow = 10
 shell {python3 make_geom.py}
 print_vars = print_vars + {l2_error = l2_error;}
-iterate = iterate + {
-    integrand_field = {
-        radius = sqrt(pos0^2 + pos1^2)
-        speed = angular_speed*(inner_radius/radius - radius/inner_radius)/(inner_radius/outer_radius - outer_radius/inner_radius)
-        pointwise_error = (momentum0/density - -pos1/radius*speed)^2 + (momentum1/density -  pos0/radius*speed)^2
-    }
+vis_field_vars = vis_field_vars + error_expr
+iterate = {
+    integrand_field = error_expr
     integrate_field
     l2_error = sqrt(integral_field_pointwise_error/pi/(outer_radius^2 - inner_radius^2))/angular_speed/outer_radius
-}
+} + iterate
 monitor_vars = {l2_error = l2_error;}
-working_dir = {hexed_out} + row_size + {_} + init_ref_level
-done = {iteration > 1000 & l2_error_max - l2_error_min < 1e-1*(l2_error_min + l2_error_max)/2}
+working_dir = {hexed_out} + suffix + row_size + {_} + init_ref_level
+done = {iteration > 1000 & l2_error_max - l2_error_min < 1e-2*(l2_error_min + l2_error_max)/2}
+$plot_history
 $simulate
 shell({echo "} + row_size + { } + init_ref_level + { } + wall_time + { } + l2_error + {" >> results.txt})

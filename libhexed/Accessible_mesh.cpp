@@ -8,6 +8,8 @@
 #include <hexed/utils.hpp>
 #include <hexed/Gauss_legendre.hpp>
 
+#define HEXED_PERTURB_MESH 1
+
 namespace hexed {
 
 Element_container& Accessible_mesh::container(bool is_deformed) {
@@ -126,6 +128,54 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
     }
   }
   for (int i_relax = 0; i_relax < n_relax - n_relax/2; ++i_relax) relax(factor);
+  #if HEXED_PERTURB_MESH
+  auto all_verts = _blocks.verts();
+  #pragma omp parallel for
+  for (int i_vert = 0; i_vert < all_verts.size(); ++i_vert) {
+    all_verts[i_vert].record.clear();
+    all_verts[i_vert].record.push_back(0.);
+  }
+  auto& elems = elements();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    if (!elems[i_elem].tree) {
+      for (int i_vert = 0; i_vert < 4; ++i_vert) {
+        elems[i_elem].shape().vertex(i_vert).record[0] = 1;
+      }
+    }
+  }
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    elem.record = 0;
+    for (int i_vert = 0; i_vert < 4; ++i_vert) {
+      elem.record = elem.record || elem.shape().vertex(i_vert).record[0];
+    }
+  }
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    if (elems[i_elem].record) continue;
+    auto& tree = *elems[i_elem].tree;
+    for (int i_vert = 0; i_vert < 4; ++i_vert) {
+      auto& vert = elems[i_elem].shape().vertex(i_vert);
+      Mat<3> pos = Mat<3>::Zero();
+      for (int i_dim = 0; i_dim < 2; ++i_dim) {
+        pos(i_dim) = tree.nominal_position()(i_dim) + i_vert/math::pow(2, 1 - i_dim)%2*tree.nominal_size();
+      }
+      vert.set_pos(pos);
+    }
+  }
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (elems[i_elem].record) continue;
+    auto np = elem.nominal_position();
+    if (np[0]%2 &&  np[1]%2) {
+      Mat<3> perturb {.0, .0, 0.};
+      for (int i_vert = 0; i_vert < 2; ++i_vert) {
+        auto& vert = elem.shape().vertex(i_vert);
+        vert.set_pos(vert.point({}) + math::sign(!i_vert)*elem.nominal_size()*perturb);
+      }
+    }
+  }
+  #endif
 }
 
 Storage_params incr_res_cache(Storage_params params) {
@@ -997,8 +1047,15 @@ void Accessible_mesh::delete_bad_extrusions() {
 }
 
 void Accessible_mesh::deform() {
-  int nd = params.n_dim;
   auto& elems = elements();
+  #if HEXED_PERTURB_MESH
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (elem.record != 2 && elem.tree) elem.record = 3*!elem.get_is_deformed();
+  }
+  #else
+  int nd = params.n_dim;
   // start with all elements as cartesian
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1072,6 +1129,7 @@ void Accessible_mesh::deform() {
       }
     }
   } while (changed);
+  #endif
   // add new elements
   for (bool is_deformed : {0, 1}) {
     auto& cont = container(is_deformed);
