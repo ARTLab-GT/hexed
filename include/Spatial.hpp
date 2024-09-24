@@ -359,8 +359,8 @@ class Spatial {
           }
         }
 
-        // compute gradient (times jacobian determinant, cause that's easier)
         if constexpr (Pde::has_diffusion) {
+          // compute gradient
           static_assert(Pde::n_extrap >= Pde::n_update);
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             Mat<Pde::n_extrap> grad_vars = _eq.fetch_extrap(n_qpoint, state + i_qpoint);
@@ -390,6 +390,48 @@ class Spatial {
             }
           }
           for (int i = 0; i < 2*Pde::n_update*n_qpoint; ++i) (&time_rate[0][0][0])[i] = 0;
+          if constexpr (is_deformed) {
+            for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+              for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+                for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
+                  visc_storage[i_dim][i_var][i_qpoint] /= elem_det[i_qpoint]; // divide by the determinant to get the actual gradient (see above)
+                }
+              }
+            }
+          }
+
+          // compute viscous face flux
+          for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+            for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
+              typename Pde::Computation<1> comp(_eq);
+              constexpr int n_col = Pde::n_state + n_dim*Pde::n_extrap + is_deformed*n_dim;
+              Mat<row_size, n_col> row;
+              for (int i_row = 0; i_row < row_size; ++i_row) {
+                comp.fetch_state(n_qpoint, state + ind.i_qpoint(i_row));
+                for (int i_var = 0; i_var < Pde::n_state; ++i_var) row(i_row, i_var) = comp.state(i_var);
+              }
+              row(all, Eigen::seqN(Pde::n_state, n_dim*Pde::n_extrap)) = Row_rw<n_dim*Pde::n_extrap, row_size>::read_row(visc_storage[0][0], ind);
+              if constexpr (is_deformed) row(all, Eigen::seqN(Pde::n_state + n_dim*Pde::n_extrap, n_dim)) = Row_rw<n_dim, row_size>::read_row(nrml + i_dim*n_dim*n_qpoint, ind);
+              Mat<2, n_col> bound = boundary*row;
+              for (int face_sign = 0; face_sign < 2; ++face_sign) {
+                for (int i_var = 0; i_var < Pde::n_state; ++i_var) {
+                  comp.state(i_var) = bound(face_sign, i_var);
+                }
+                for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+                  for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
+                    comp.gradient(i_var, j_dim) = bound(face_sign, Pde::n_state + j_dim*Pde::n_extrap + i_var);
+                  }
+                  if constexpr (is_deformed) comp.normal(j_dim) = bound(face_sign, Pde::n_state + n_dim*Pde::n_extrap + j_dim);
+                  else comp.normal(j_dim) = i_dim == j_dim;
+                }
+                if constexpr (Pde::has_convection) comp.compute_scalars_conv();
+                comp.compute_flux_diff();
+                for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+                  visc_faces[i_dim*2 + face_sign][i_var*ind.n_fqpoint + ind.i_face_qpoint()] = comp.flux_diff(i_var);
+                }
+              }
+            }
+          }
         }
 
         // compute flux
@@ -415,7 +457,6 @@ class Spatial {
                 comp.gradient(i_var, i_dim) = visc_storage[i_dim][i_var][i_qpoint];
               }
             }
-            if constexpr (is_deformed) comp.gradient /= elem_det[i_qpoint]; // divide by the determinant to get the actual gradient (see above)
             // compute flux and write to temporary storage
             comp.compute_flux_diff();
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -448,6 +489,7 @@ class Spatial {
             // compute viscous update
             if constexpr (Pde::has_diffusion) {
               row_f = Row_rw<Pde::n_update, row_size>::read_row(visc_storage[i_dim][0], ind);
+              #if 0
               face_f = boundary*row_f;
               // write viscous row_f to faces to enable calculation of the numerical row_f
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
@@ -455,6 +497,7 @@ class Spatial {
                   visc_faces[ind.i_dim*2 + is_positive][i_var*ind.n_fqpoint + ind.i_face_qpoint()] = face_f(is_positive, i_var);
                 }
               }
+              #endif
               Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f), time_rate[1][0], ind, 1.);
             }
           }
