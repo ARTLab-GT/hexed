@@ -211,7 +211,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("av_diff_max_safety", .7); // stability ratio for diffusion
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
   _namespace->assign_default("n_cheby_bl", 1);
-  _namespace->assign_default("n_flow_bl", 1);
+  _namespace->assign_default("n_cheby_flow", 1);
   _namespace->assign_default("max_conv_sub_iters", 1);
   _namespace->assign_default("n_cheby_av", 1);
   _namespace->assign_default("cheby_safety", .9); // safety factor to apply to Chebyshev-acceleration

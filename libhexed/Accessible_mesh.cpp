@@ -66,6 +66,7 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
       }
       matched_edges[i_geom_edge].clear();
       matched_vertices[i_geom_edge].clear();
+      if (!best_vert) continue;
       matched_vertices[i_geom_edge].emplace_back(best_vert);
       next::Vertex* curr = best_vert;
       while (true) {
@@ -128,54 +129,6 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
     }
   }
   for (int i_relax = 0; i_relax < n_relax - n_relax/2; ++i_relax) relax(factor);
-  #if HEXED_PERTURB_MESH
-  auto all_verts = _blocks.verts();
-  #pragma omp parallel for
-  for (int i_vert = 0; i_vert < all_verts.size(); ++i_vert) {
-    all_verts[i_vert].record.clear();
-    all_verts[i_vert].record.push_back(0.);
-  }
-  auto& elems = elements();
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    if (!elems[i_elem].tree) {
-      for (int i_vert = 0; i_vert < 4; ++i_vert) {
-        elems[i_elem].shape().vertex(i_vert).record[0] = 1;
-      }
-    }
-  }
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    elem.record = 0;
-    for (int i_vert = 0; i_vert < 4; ++i_vert) {
-      elem.record = elem.record || elem.shape().vertex(i_vert).record[0];
-    }
-  }
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    if (elems[i_elem].record) continue;
-    auto& tree = *elems[i_elem].tree;
-    for (int i_vert = 0; i_vert < 4; ++i_vert) {
-      auto& vert = elems[i_elem].shape().vertex(i_vert);
-      Mat<3> pos = Mat<3>::Zero();
-      for (int i_dim = 0; i_dim < 2; ++i_dim) {
-        pos(i_dim) = tree.nominal_position()(i_dim) + i_vert/math::pow(2, 1 - i_dim)%2*tree.nominal_size();
-      }
-      vert.set_pos(pos);
-    }
-  }
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    if (elems[i_elem].record) continue;
-    auto np = elem.nominal_position();
-    if (np[0]%2 &&  np[1]%2) {
-      Mat<3> perturb {.0, .0, 0.};
-      for (int i_vert = 0; i_vert < 2; ++i_vert) {
-        auto& vert = elem.shape().vertex(i_vert);
-        vert.set_pos(vert.point({}) + math::sign(!i_vert)*elem.nominal_size()*perturb);
-      }
-    }
-  }
-  #endif
 }
 
 Storage_params incr_res_cache(Storage_params params) {
@@ -1048,13 +1001,6 @@ void Accessible_mesh::delete_bad_extrusions() {
 
 void Accessible_mesh::deform() {
   auto& elems = elements();
-  #if HEXED_PERTURB_MESH
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    if (elem.record != 2 && elem.tree) elem.record = 3*!elem.get_is_deformed();
-  }
-  #else
   int nd = params.n_dim;
   // start with all elements as cartesian
   #pragma omp parallel for
@@ -1129,7 +1075,6 @@ void Accessible_mesh::deform() {
       }
     }
   } while (changed);
-  #endif
   // add new elements
   for (bool is_deformed : {0, 1}) {
     auto& cont = container(is_deformed);
@@ -1426,6 +1371,31 @@ void Accessible_mesh::relax(double factor) {
         if (nearest >= 0) update_pos(vert, nodes(nearest).vector());
       }
     }
+    #if HEXED_PERTURB_MESH
+    for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
+      auto& con = bound_cons[i_con];
+      if (con.bound_cond_serial_n() != surf_bc_sn) continue;
+      auto dir = con.direction();
+      if (dir.i_dim[0] == 1) {
+        Element& elem = con.element();
+        #if 0
+        if ((elem.nominal_position()[0] == 4) /*&& (elem.nominal_position()[2]%2)*/) {
+          for (int i = 0; i < 2; ++i) {
+            Mat<3> pos = Mat<3>::Zero();
+            for (int j = 0; j < 2; ++j) pos += .5*elem.fake_shape()->vertex(2*dir.face_sign[0] + 4*j + i).point({});
+            pos = surf_geom->nearest_point(pos).point();
+            for (int j = 0; j < 2; ++j) elem.fake_shape()->vertex(2*dir.face_sign[0] + 4*j + i).set_pos(pos);
+          }
+        }
+        #endif
+        if ((elem.nominal_position()[0] == 4) && (elem.nominal_position()[2]%2)) {
+          Mat<3> pos = elem.fake_shape()->vertex(2*dir.face_sign[0]).point({});
+          //pos = .75*pos + .25*elem.fake_shape()->vertex(2*dir.face_sign[0] + 5).point({});
+          elem.fake_shape()->vertex(2*dir.face_sign[0] + 4).set_pos(pos);
+        }
+      }
+    }
+    #endif
     // snaps a `Boundary_block` to the geometry surface
     auto snap_block = [this](next::Boundary_block& block) {
       block.reset();
