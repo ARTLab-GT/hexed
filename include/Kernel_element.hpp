@@ -1,8 +1,7 @@
 #ifndef HEXED_KERNEL_ELEMENT_HPP_
 #define HEXED_KERNEL_ELEMENT_HPP_
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Represents an element as the kernels see it.
  * \details Includes only the bare minimum of information needed to run the \ref Spatial "spatial discretization kernels".
@@ -11,8 +10,7 @@ namespace hexed
  * It also helps to better define what the kernels do and what exactly their inputs and outputs are.
  * The kernel is responsible for knowing what the `Storage_params` and storage order of the element are.
  */
-class Kernel_element
-{
+class Kernel_element {
   public:
   virtual ~Kernel_element() = default;
   int record = 0; //!< for algorithms to book-keep general information
