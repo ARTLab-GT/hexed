@@ -584,11 +584,7 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create<std::string>("integrate_field", new Namespace::Heisenberg<std::string>([this]() {
-    Struct_expr integrand(_vars("integrand_field"));
-    auto integral = _solver().integral_field(Qpoint_expr(integrand, _inter));
-    for (unsigned i_var = 0; i_var < integrand.names.size(); ++i_var) {
-      _inter.variables->assign("integral_field_" + integrand.names[i_var], integral[i_var]);
-    }
+    _solver().integrate_field(_vars("integrand_field"));
     return "";
   }));
   _inter.variables->create<std::string>("integrate_surface", new Namespace::Heisenberg<std::string>([this]() {

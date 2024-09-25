@@ -106,6 +106,7 @@ void Solver::apply_state_bcs() {
 }
 
 void Solver::apply_flux_bcs() {
+  stopwatch["boundary conditions"].stopwatch.start();
   auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -116,24 +117,32 @@ void Solver::apply_flux_bcs() {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh->boundary_condition(bc_sn).apply_flux(bc_cons[i_con]);
   }
+  stopwatch["boundary conditions"].stopwatch.pause();
+  stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
 }
 
 void Solver::apply_avc_diff_bcs() {
+  stopwatch["boundary conditions"].stopwatch.start();
   auto& bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh->boundary_condition(bc_sn).apply_diffusion(bc_cons[i_con]);
   }
+  stopwatch["boundary conditions"].stopwatch.pause();
+  stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
 }
 
 void Solver::apply_avc_diff_flux_bcs() {
+  stopwatch["boundary conditions"].stopwatch.start();
   auto& bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh->boundary_condition(bc_sn).flux_diffusion(bc_cons[i_con]);
   }
+  stopwatch["boundary conditions"].stopwatch.pause();
+  stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
 }
 
 void Solver::apply_fta_flux_bcs() {
@@ -265,6 +274,9 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   stopwatch["visualization"].emplace("surface", "surface face");
   stopwatch["visualization"].emplace("surface wireframe", "surface face");
   stopwatch["visualization"].emplace("contour", "element");
+  stopwatch.emplace("integrals", "integral");
+  stopwatch["integrals"].emplace("field", "integral");
+  stopwatch["integrals"].emplace("surface", "integral");
   // initialize advection state to 1
   auto& elements = acc_mesh->elements();
   const int nq = params.n_qpoint();
@@ -1207,60 +1219,27 @@ std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n
 }
 
 std::vector<double> Solver::integral_field(const Qpoint_func& integrand) {
+  Stopwatch_tree::Starter sw_starter(stopwatch["integrals"]["field"]);
   // compute `n_dim`-dimensional quadrature weights from 1D weights
   Eigen::VectorXd weights = math::pow_outer(basis.node_weights(), params.n_dim);
   // now compute the integral with the above quadrature weights
-  std::vector<double> integral (integrand.n_var(params.n_dim), 0.);
+  Mat<dyn, dyn> integral = Mat<dyn, dyn>::Zero(integrand.n_var(params.n_dim), 1);
   auto& elements = acc_mesh->elements();
+  #pragma omp parallel for reduction(+:integral)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     Element& element {elements[i_elem]};
     double volume = math::pow(element.nominal_size(), params.n_dim);
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
       auto qpoint_integrand {integrand(element, basis, i_qpoint, _namespace->get<double>("flow_time"))};
       for (unsigned i_var = 0; i_var < qpoint_integrand.size(); ++i_var) {
-        integral[i_var] += weights[i_qpoint]*volume*qpoint_integrand[i_var]*element.jacobian_determinant(i_qpoint);
+        integral(i_var) += weights[i_qpoint]*volume*qpoint_integrand[i_var]*element.jacobian_determinant(i_qpoint);
       }
     }
   }
-  return integral;
+  stopwatch["integrals"]["field"].work_units_completed += 1;
+  stopwatch["integrals"].work_units_completed += 1;
+  return {integral.data(), integral.data() + integral.size()};
 }
-
-std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int bc_sn) {
-  // setup
-  const int nd = params.n_dim;
-  const int n_int = integrand.n_var(nd);
-  const int nq = params.n_qpoint();
-  const int nfq = nq/basis.row_size;
-  Eigen::MatrixXd boundary = basis.boundary();
-  Eigen::VectorXd weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
-  // write the state to the faces so that the BCs can access it
-  compute_write_face(_kernel_mesh());
-  // compute the integral
-  std::vector<double> integral (n_int, 0.);
-  auto& bc_cons {acc_mesh->boundary_connections()};
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
-  {
-    auto& con {bc_cons[i_con]};
-    auto& elem = con.element();
-    double area = math::pow(elem.nominal_size(), nd - 1);
-    if (con.bound_cond_serial_n() == bc_sn)
-    {
-      double* nrml = con.normal();
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        double nrml_mag = 0;
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          nrml_mag += math::pow(nrml[i_dim*nfq + i_qpoint], 2);
-        }
-        nrml_mag = std::sqrt(nrml_mag);
-        auto qpoint_integrand = integrand(con, i_qpoint, _namespace->get<double>("flow_time"));
-        for (int i_var = 0; i_var < n_int; ++i_var) {
-          integral[i_var] += qpoint_integrand[i_var]*weights(i_qpoint)*area*nrml_mag;
-        }
-      }
-    }
-  }
-  return integral;
-};
 
 //! \cond
 template <typename T>
@@ -1332,7 +1311,39 @@ class Vis_evaluator {
 };
 //! \endcond
 
+void Solver::integrate_field(std::string expr) {
+  Stopwatch_tree::Starter sw_starter(stopwatch["integrals"]["field"]);
+  // setup
+  const int nd = params.n_dim;
+  auto& elems {acc_mesh->elements()};
+  if (!elems.size()) return;
+  Vis_evaluator<Element> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Element& elem) {vis_variables::field(space, elem, basis);},
+    expr, elems[0], params.n_dim
+  );
+  std::vector<std::string> var_names = evaluator.var_names();
+  Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim);
+  // compute the integral
+  Mat<dyn, dyn> integral = Mat<dyn, dyn>::Zero(var_names.size(), 1);
+  #pragma omp parallel for reduction(+:integral)
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    double volume = math::pow(elem.nominal_size(), params.n_dim);
+    Array<double> qpoints{evaluator.evaluate(elem)};
+    for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
+      integral(i_var) += volume*weights.dot(qpoints(nd + i_var).vector());
+    }
+  }
+  for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
+    _namespace->assign("integral_field_" + var_names[i_var], integral(i_var));
+  }
+  ++stopwatch["integrals"]["field"].work_units_completed;
+  ++stopwatch["integrals"].work_units_completed;
+};
+
 void Solver::integrate_surface(std::string expr, int bc_sn) {
+  Stopwatch_tree::Starter sw_starter(stopwatch["integrals"]["surface"]);
   // setup
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
@@ -1345,7 +1356,7 @@ void Solver::integrate_surface(std::string expr, int bc_sn) {
     expr, bc_cons[0], params.n_dim - 1
   );
   std::vector<std::string> var_names = evaluator.var_names();
-  Eigen::VectorXd weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
+  Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
   // write the state to the faces so that the BCs can access it
   compute_write_face(_kernel_mesh());
   // compute the integral
@@ -1372,6 +1383,8 @@ void Solver::integrate_surface(std::string expr, int bc_sn) {
   for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
     _namespace->assign("integral_surface_" + var_names[i_var], integral(i_var));
   }
+  ++stopwatch["integrals"]["surface"].work_units_completed;
+  ++stopwatch["integrals"].work_units_completed;
 };
 
 void Solver::visualize_field(std::string format, std::string name, std::string expr, int n_sample, bool wireframe) {
