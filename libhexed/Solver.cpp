@@ -1332,6 +1332,48 @@ class Vis_evaluator {
 };
 //! \endcond
 
+void Solver::integrate_surface(std::string expr, int bc_sn) {
+  // setup
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint();
+  const int nfq = nq/basis.row_size;
+  auto& bc_cons {acc_mesh->boundary_connections()};
+  if (!bc_cons.size()) return;
+  Vis_evaluator<Boundary_connection> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
+    expr, bc_cons[0], params.n_dim - 1
+  );
+  std::vector<std::string> var_names = evaluator.var_names();
+  Eigen::VectorXd weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
+  // write the state to the faces so that the BCs can access it
+  compute_write_face(_kernel_mesh());
+  // compute the integral
+  Mat<dyn, dyn> integral = Mat<dyn, dyn>::Zero(var_names.size(), 1);
+  #pragma omp parallel for reduction(+:integral)
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con {bc_cons[i_con]};
+    if (con.bound_cond_serial_n() != bc_sn) continue;
+    auto& elem = con.element();
+    double area = math::pow(elem.nominal_size(), nd - 1);
+    Array<double> qpoints{evaluator.evaluate(con)};
+    double* nrml = con.normal();
+    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+      double nrml_mag = 0;
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        nrml_mag += math::pow(nrml[i_dim*nfq + i_qpoint], 2);
+      }
+      nrml_mag = std::sqrt(nrml_mag);
+      for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
+        integral(i_var) += nrml_mag*weights(i_qpoint)*area*qpoints(nd + i_var)[i_qpoint];
+      }
+    }
+  }
+  for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
+    _namespace->assign("integral_surface_" + var_names[i_var], integral(i_var));
+  }
+};
+
 void Solver::visualize_field(std::string format, std::string name, std::string expr, int n_sample, bool wireframe) {
   std::string sw_name = "field";
   if (wireframe) sw_name = sw_name + " wireframe";

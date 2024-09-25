@@ -592,11 +592,7 @@ Case::Case(std::string input_script)
     return "";
   }));
   _inter.variables->create<std::string>("integrate_surface", new Namespace::Heisenberg<std::string>([this]() {
-    Struct_expr integrand(_vars("integrand_surface"));
-    auto integral = _solver().integral_surface(Boundary_expr(integrand, _inter), _solver().mesh().surface_bc_sn());
-    for (unsigned i_var = 0; i_var < integrand.names.size(); ++i_var) {
-      _inter.variables->assign("integral_surface_" + integrand.names[i_var], integral[i_var]);
-    }
+    _solver().integrate_surface(_vars("integrand_surface"), _solver().mesh().surface_bc_sn());
     return "";
   }));
 
