@@ -2,7 +2,7 @@
 #define HEXED_INTERPRETER_HPP_
 
 #include <functional>
-#include <list>
+#include <deque>
 #include "math.hpp"
 #include "Namespace.hpp"
 #include "Lock.hpp"
@@ -75,7 +75,7 @@ class Interpreter {
   };
   static std::function<_Dynamic_value(const _Dynamic_value&)> _numeric_unary(double (*f)(double), std::string name);
 
-  std::list<char> _text;
+  std::deque<char> _text;
   std::map<std::string, std::function<_Dynamic_value(const _Dynamic_value&)>> _un_ops;
   std::map<std::string, _Binary_op> _bin_ops;
   Lock _lock;
