@@ -160,25 +160,25 @@ class History_plot:
                 last_iter = self._data["iteration"][self._data.shape[0] - 1]
                 if last_iter > self._axs[0].get_xlim()[1]:
                     for ax in self._axs:
-                        ax.set_xlim(0, ax.get_xlim()[1]*2)
+                        ax.set_xlim(0, self._data["iteration"].max()*2)
             for i_col in range(len(self._plot_columns)):
                 ax = self._axs[i_col]
                 col = self._plot_columns[i_col]
                 last_value = self._data[col][self._data.shape[0] - 1]
                 if col.endswith("residual") or col.endswith("error"):
                     if last_value < ax.get_ylim()[0]:
-                        ax.set_ylim(ax.get_ylim()[0]*.1, ax.get_ylim()[1])
+                        ax.set_ylim(self._data[col].min()*.1, ax.get_ylim()[1])
                     elif last_value > ax.get_ylim()[1]:
-                        ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[1]*10)
+                        ax.set_ylim(ax.get_ylim()[0], self._data[col].max()*10)
                 else:
                     if self._data.shape[0] == 2:
                         ax.set_ylim(self._data[col].min(), self._data[col].max())
                     else:
                         ylim = ax.get_ylim()
                         if last_value < ylim[0]:
-                            ax.set_ylim(ylim[0] - .5*(ylim[1] - ylim[0]), ylim[1])
+                            ax.set_ylim(ylim[1] + 1.5*(self._data[col].min() - ylim[1]), ylim[1])
                         elif last_value > ylim[1]:
-                            ax.set_ylim(ylim[0], ylim[1] + .5*(ylim[1] - ylim[0]))
+                            ax.set_ylim(ylim[0], ylim[0] + 1.5*(self._data[col].max() - ylim[0]))
         for i_col in range(len(self._plot_columns)):
             self._curves[i_col].set_data(self._data["iteration"], self._data[self._plot_columns[i_col]])
         return self._curves
