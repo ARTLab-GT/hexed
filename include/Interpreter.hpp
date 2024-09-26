@@ -76,6 +76,7 @@ class Interpreter {
   static std::function<_Dynamic_value(const _Dynamic_value&)> _numeric_unary(double (*f)(double), std::string name);
 
   std::deque<char> _text;
+  double _start_time;
   std::map<std::string, std::function<_Dynamic_value(const _Dynamic_value&)>> _un_ops;
   std::map<std::string, _Binary_op> _bin_ops;
   Lock _lock;

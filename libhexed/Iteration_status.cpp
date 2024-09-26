@@ -1,17 +1,14 @@
-#include <Iteration_status.hpp>
+#include <hexed/Iteration_status.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
-int Iteration_status::width()
-{
+int Iteration_status::width() {
   int w = number_width;
   for (auto label : labels) w = std::max<int>(w, label.size());
   return w;
 }
 
-std::string Iteration_status::value_string()
-{
+std::string Iteration_status::value_string() {
   std::string r = "";
   r += format("i", iteration);
   r += format(double_format, mmtm_res);
@@ -25,8 +22,7 @@ std::string Iteration_status::value_string()
   return r;
 }
 
-std::string Iteration_status::header()
-{
+std::string Iteration_status::header() {
   std::string h = "";
   for (auto label : labels) {
     h += format("s", label.c_str());
@@ -35,26 +31,22 @@ std::string Iteration_status::header()
   return h;
 }
 
-std::string Iteration_status::report()
-{
+std::string Iteration_status::report() {
   auto r = value_string();
   for (unsigned i = 0; i < sep.size(); ++i) r.pop_back();
   return r;
 }
 
-void Iteration_status::set_time()
-{
-  start = std::chrono::system_clock::now();
+void Iteration_status::set_time() {
+  start = std::chrono::steady_clock::now();
 }
 
-double Iteration_status::start_time()
-{
+double Iteration_status::start_time() {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(start.time_since_epoch()).count()*1e-9;
 }
 
-double Iteration_status::wall_time()
-{
-  return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - start).count()*1e-9;
+double Iteration_status::wall_time() {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count()*1e-9;
 }
 
 }

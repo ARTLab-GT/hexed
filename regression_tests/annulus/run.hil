@@ -57,6 +57,5 @@ iterate = {
 monitor_vars = {l2_error = l2_error;}
 working_dir = {hexed_out} + suffix + row_size + {_} + init_ref_level
 done = {iteration > 1000 & l2_error_max - l2_error_min < 1e-2*(l2_error_min + l2_error_max)/2}
-$plot_history
 $simulate
-shell({echo "} + row_size + { } + init_ref_level + { } + wall_time + { } + l2_error + {" >> results.txt})
+shell({echo "} + commit + {,} + start_time + {,} + row_size + {,} + init_ref_level + {,} + wall_time + {,} + l2_error + {" >> results.txt})

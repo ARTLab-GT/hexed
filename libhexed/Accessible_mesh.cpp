@@ -8,7 +8,7 @@
 #include <hexed/utils.hpp>
 #include <hexed/Gauss_legendre.hpp>
 
-#define HEXED_PERTURB_MESH 1
+#define HEXED_PERTURB_MESH 0
 
 namespace hexed {
 

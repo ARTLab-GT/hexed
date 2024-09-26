@@ -172,6 +172,7 @@ std::string Case::_assignment(std::string var_name) {
 
 Case::Case(std::string input_script)
 : _printers{std::make_shared<Printer_set>()}
+, _start_time{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())}
 {
   _inter.variables->assign("input_script", input_script);
   _inter.variables->assign("version_major", config::version_major);
@@ -179,6 +180,7 @@ Case::Case(std::string input_script)
   _inter.variables->assign("version_patch", config::version_patch);
   _inter.variables->assign<std::string>("commit", config::commit);
   _inter.variables->assign("vis_default_format", Visualizer::default_format);
+  _inter.variables->assign<int>("start_time", _start_time);
 
   // create custom Heisenberg variables
 
@@ -189,10 +191,9 @@ Case::Case(std::string input_script)
     }
     _inter.printer = _printers;
     char utc [100];
-    std::time_t time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&time));
+    std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&_start_time));
     _printers->info(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
-                               config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, time));
+                               config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, _start_time));
     return "";
   }));
 

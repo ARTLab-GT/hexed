@@ -246,7 +246,10 @@ std::function<Interpreter::_Dynamic_value(const Interpreter::_Dynamic_value&)> I
 }
 
 Interpreter::Interpreter(std::vector<std::string> preload)
-: _un_ops {
+: _start_time{std::chrono::duration_cast<std::chrono::nanoseconds>(
+    std::chrono::steady_clock::now().time_since_epoch()
+  ).count()*1e-9}
+, _un_ops {
     {"-", [this](const _Dynamic_value& val) {
       if      (val.i) return _Dynamic_value((*val.i)*-1);
       else if (val.d) return _Dynamic_value((*val.d)*-1);
@@ -357,6 +360,9 @@ Interpreter::Interpreter(std::vector<std::string> preload)
   variables->create("steady_time", new Namespace::Heisenberg<double>([]() {
     auto time = std::chrono::steady_clock::now().time_since_epoch();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(time).count()*1e-9;
+  }));
+  variables->create("wall_time", new Namespace::Heisenberg<double>([this]() {
+    return variables->lookup<double>("steady_time").value() - _start_time;
   }));
   // builtin values
   variables->assign("huge", huge);

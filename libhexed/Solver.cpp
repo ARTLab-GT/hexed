@@ -241,7 +241,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("flow_time", 0.);
   _namespace->assign_default("time_step", 0.);
   _namespace->assign_default("art_visc_residual", 0.);
-  _namespace->assign_default("wall_time", 0.);
   status.set_time();
   // setup categories for performance reporting
   std::string unit = "(element*(time integration stage))";
@@ -967,7 +966,6 @@ void Solver::update() {
   }
   _preti_level = 0;
 
-  _namespace->assign("wall_time", status.wall_time());
   ++status.iteration;
   stopwatch.stopwatch.pause();
 }
