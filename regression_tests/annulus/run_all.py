@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 if len(sys.argv) > 1:
     for degree in [2, 3, 4, 5]:
-        for ref_level in [3, 4]:
+        for ref_level in [3, 4, 5]:
             with open("resolution.hil", "w") as resolution:
                 resolution.write(f"""
                     row_size = {degree + 1}

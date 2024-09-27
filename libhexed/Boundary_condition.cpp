@@ -364,10 +364,15 @@ void No_slip::apply_state(Boundary_face& bf) {
   double* in_f = bf.inside_face(false);
   double* sc = bf.state_cache();
   Array<double> presc = bf.prescribed_data();
+  int nd = params.n_dim;
   int nfq = params.n_qpoint()/params.row_size;
   // set ghost state
-  for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = 2*presc[i_dof] - in_f[i_dof];
-  for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+      gh_f[i_dim*nfq + i_qpoint] = 2*presc(i_dim)[i_qpoint]*in_f[nd*nfq + i_qpoint] - in_f[i_dim*nfq + i_qpoint];
+    }
+  }
+  for (int i_dof = params.n_dim*nfq; i_dof < (nd + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     Mat<> state(params.n_var);
     for (int i_var = 0; i_var < params.n_var; ++i_var) state(i_var) = in_f[i_var*nfq + i_qpoint];
