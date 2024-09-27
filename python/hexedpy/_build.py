@@ -9,6 +9,13 @@ class Hexed(bu.C_project):
     def __init__(self, builder):
         self.builder = builder
         #### add extra build options and information to be passed to the code
+        if os.path.isdir(self.sdir + ".git/"):
+            self[bu.Pip]("gitpython").do
+            command = f"import git; repo = git.Repo('{self.sdir}'); print(repo.head.commit, end='')"
+            commit = self.builder.python("-c", command, capture_output=True).stdout.decode()
+        else:
+            commit = "notagitrepo"
+        version_components = self.version.split(".")
         self.builder.add_options({
             "build_mode": bu.Option("release", convert=lambda s: s.lower(),
                                     assertions=bu.assert_true(lambda s: s in ["release", "debug"])),
@@ -27,6 +34,11 @@ class Hexed(bu.C_project):
             "test_args": bu.Option(""),
             "gdb": bu.Option(False, convert=bu.as_bool),
             "valgrind": bu.Option(False, convert=bu.as_bool),
+            "commit": bu.Option(commit, convert=str),
+            "version": bu.Option(self.version, convert=str),
+            "version_major": bu.Option(version_components[0], convert=int),
+            "version_minor": bu.Option(version_components[1], convert=int),
+            "version_patch": bu.Option(version_components[2], convert=int),
         })
         is_release = self.builder.options["build_mode"] == "release"
         self.builder.add_options({
@@ -70,14 +82,6 @@ class Hexed(bu.C_project):
 
     def build(self):
         #### configure
-        if os.path.isdir(self.sdir + ".git/"):
-            self[bu.Pip]("gitpython").do
-            command = f"import git; repo = git.Repo('{self.sdir}'); print(repo.head.commit, end='')"
-            self.builder.info["commit"] = self.builder.python("-c", command, capture_output=True).stdout.decode()
-        else:
-            self.builder.info["commit"] = "notagitrepo"
-        self.builder.info["version"] = self.version
-        self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
         bu.Compiler.cpp_standard = 20
         if self.builder.options["architecture"] != "any":
             bu.Compiler.architecture = self.builder.options["architecture"]

@@ -575,7 +575,6 @@ class Configure(Buildable):
             match = re.search(r"{\[([^}]+)\]}", self._text)
             if match is None: break
             options = self.builder.options
-            info = self.builder.info
             self._text = f"{self._text[:match.start()]}{eval(match.group(1))}{self._text[match.end():]}"
         with open(self.new_name, "w") as out_file:
             out_file.write(self._text)
@@ -865,8 +864,8 @@ class Builder:
             "use_system_paths": Option(True, convert=as_bool),
             "use_env_paths": Option(True, convert=as_bool),
             "internet": Option(True, convert=as_bool),
+            "date": Option(time.strftime("%Y-%m-%d", time.gmtime())),
         }
-        self.info = {"date":time.strftime("%Y-%m-%d", time.gmtime())}
         self.indent = ""
         for opt in opts:
             self._merge_option(opt)
@@ -938,7 +937,6 @@ class Builder:
         return self.options["build_dir"]
 
     def synch_cache(self):
-        in_text = ""
         existing_opts = {}
         for fname in os.listdir(self.cache_dir):
             with open(self.cache_dir + fname, "r") as cache:
