@@ -1,5 +1,5 @@
 PROJECT_NAME = hexed
-PROJECT_NUMBER = {[info["version"]]}
+PROJECT_NUMBER = {[options["version"]]}
 INPUT = {[options["source_dir"]]}include {[options["source_dir"]]}libhexed {[options["source_dir"]]} {[options["build_dir"]]}python_package/hexedpy {[options["build_dir"]]}doc {[options["source_dir"]]}/config.hpp.in
 OUTPUT_DIRECTORY = {[options["build_dir"]]}doc
 GENERATE_TREEVIEW = YES
@@ -15,7 +15,7 @@ PREDEFINED = HEXED_USE_NLOPT=1 HEXED_USE_OTTER=1 HEXED_USE_TECPLOT=1 HEXED_USE_X
 VERBATIM_HEADERS = NO
 EXAMPLE_PATH = {[options["source_dir"]]}
 HTML_EXTRA_STYLESHEET = {[options["source_dir"]]}/doc/style.css
-ALIASES += today="{[info["date"]]}" proj_version=" version {[info["version"]]}, commit `{[info["commit"]]}`" me="\ref Contact \"me\"" show_details="\details \f$ \f$"
+ALIASES += today="{[options["date"]]}" proj_version=" version {[options["version"]]}, commit `{[options["commit"]]}`" me="\ref Contact \"me\"" show_details="\details \f$ \f$"
 IMAGE_PATH = {[options["build_dir"]]}doc/html/
 CITE_BIB_FILES = {[options["source_dir"]]}/doc/references.bib
 COLLABORATION_GRAPH = NO
