@@ -363,9 +363,10 @@ void No_slip::apply_state(Boundary_face& bf) {
   double* gh_f = bf.ghost_face(false);
   double* in_f = bf.inside_face(false);
   double* sc = bf.state_cache();
+  Array<double> presc = bf.prescribed_data();
   int nfq = params.n_qpoint()/params.row_size;
   // set ghost state
-  for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = 2*presc[i_dof] - in_f[i_dof];
   for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     Mat<> state(params.n_var);
@@ -400,7 +401,8 @@ void No_slip::apply_flux(Boundary_face& bf) {
     int flux_sign = 2*bf.inside_face_sign() - 1;
     Mat<> state(params.n_var);
     for (int i_var = 0; i_var < params.n_var; ++i_var) state(i_var) = sc[i_var*nfq + i_qpoint];
-    gh_f[i_dof] = _coercion*(normal*flux_sign*_thermal->ghost_heat_flux(state, in_f[i_dof]*flux_sign/normal) - in_f[i_dof]) + in_f[i_dof];
+    double ghost_heat = _thermal->ghost_heat_flux(state, in_f[i_dof]*flux_sign/normal);
+    gh_f[i_dof] = _coercion*(normal*flux_sign*ghost_heat - in_f[i_dof]) + in_f[i_dof];
   }
 }
 
@@ -421,6 +423,34 @@ void No_slip::apply_advection(Boundary_face& bf) {
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       gh_f[(nd + i_adv)*nq + i_qpoint] = in_f[(nd + i_adv)*nq + i_qpoint];
     }
+  }
+}
+
+void No_slip::set_prescribed(Interpreter& inter, Boundary_face& bf) {
+  auto sub = inter.make_sub();
+  auto params = bf.storage_params();
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint()/params.row_size;
+  std::array<std::string, 2> surface_properties {"pos", "normal"};
+  Array<double> surface({2, nd, nq});
+  surface(0) = Array<double>({nd, nq}, bf.surface_position());
+  surface(1) = Array<double>({nd, nq}, bf.surface_normal());
+  for (int i = 0; i < 2; ++i) {
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      sub.variables->assign(surface_properties[i] + std::to_string(i_dim), surface(i)(i_dim));
+    }
+    for (int i_dim = nd; i_dim < 3; ++i_dim) {
+      sub.variables->assign(surface_properties[i] + std::to_string(i_dim), 0.);
+    }
+  }
+  auto expr = inter.variables->lookup<std::string>("wall_velocity");
+  HEXED_ASSERT(expr, "`wall_velocity` must be specified for `No_slip`");
+  sub.exec(expr.value());
+  Array<double> data {bf.prescribed_data()};
+  HEXED_ASSERT(data.shape()[0] == nd && data.size() == nd*nq,
+               "`prescribed_data` is not the right shape to hold the velocity");
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+    sub.variables->assign_array(data(i_dim), "velocity" + std::to_string(i_dim));
   }
 }
 

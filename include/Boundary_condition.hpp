@@ -27,6 +27,8 @@ class Flow_bc {
   virtual void flux_diffusion(Boundary_face&);
   //! initialize `Boundary_face::state_cache` at beginning of simulation (used by `Cache_bc`)
   virtual inline void init_cache(Boundary_face&) {}
+  virtual inline int n_prescribed(int n_dim) const {return 0;}
+  virtual inline void set_prescribed(Interpreter&, Boundary_face&) {}
   virtual ~Flow_bc() = default;
 };
 
@@ -163,8 +165,11 @@ class No_slip : public Flow_bc {
   public:
   No_slip(std::shared_ptr<Thermal_bc> = std::make_shared<Prescribed_heat_flux>(), double heat_flux_coercion = 2.);
   void apply_advection(Boundary_face&) override;
-  void apply_state(Boundary_face&) override; // note: `apply_state` must be called before `apply_flux` to prime `state_cache`
+  //! \note `apply_state` must be called before `apply_flux` to prime `state_cache`
+  void apply_state(Boundary_face&) override;
   void apply_flux(Boundary_face&) override;
+  inline int n_prescribed(int n_dim) const override {return n_dim;}
+  void set_prescribed(Interpreter&, Boundary_face&) override;
 };
 
 //! \brief Mostly used for testing, but you can maybe get away with it for supersonic outlets.

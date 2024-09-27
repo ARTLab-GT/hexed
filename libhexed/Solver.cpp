@@ -177,11 +177,13 @@ double Solver::max_dt(double msc, double msd) {
 void Solver::_init_face_state() {
   compute_write_face(_kernel_mesh());
   compute_prolong(_kernel_mesh());
+  auto inter {_interpreter()};
   auto& bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh->boundary_condition(bc_sn).init_cache(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).set_prescribed(inter, bc_cons[i_con]);
   }
 }
 

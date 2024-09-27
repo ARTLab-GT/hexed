@@ -20,23 +20,15 @@ freestream_speed = 0.;
 visc = 1e2
 viscosity_model = {const_value = visc}
 conductivity_model = {const_value = 1.4*specific_gas_air/0.4*visc}
-surface_bc = {expression}
+surface_bc = {no_slip}
 angular_speed = 1e2
 outer_radius = 1.
 inner_radius = .25
-surface_bc_state = {
-    ghost_state0 = -pos1*state2*angular_speed*(sqrt(pos0^2 + pos1^2) - inner_radius)/(outer_radius - inner_radius)
-    ghost_state1 =  pos0*state2*angular_speed*(sqrt(pos0^2 + pos1^2) - inner_radius)/(outer_radius - inner_radius)
-    ghost_state2 = state2
-    ghost_state3 = state2*specific_gas_air*freestream_temperature/0.4 + .5*(state0^2 + state1^2)/state2;
+wall_velocity = {
+    velocity0 = -pos1*angular_speed*(sqrt(pos0^2 + pos1^2) - inner_radius)/(outer_radius - inner_radius)
+    velocity1 =  pos0*angular_speed*(sqrt(pos0^2 + pos1^2) - inner_radius)/(outer_radius - inner_radius)
 }
-surface_bc_flux = {
-    ghost_flux0 = flux0
-    ghost_flux1 = flux1
-    ghost_flux2 = 0.
-    ghost_flux3 = flux3
-}
-l2_error = 0.
+thermal_bc = {temperature = 300}
 
 error_expr = {
     radius = sqrt(pos0^2 + pos1^2)

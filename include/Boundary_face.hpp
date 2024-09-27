@@ -5,16 +5,15 @@
 #include "math.hpp"
 #include "Storage_params.hpp"
 #include "Basis.hpp"
+#include "Array.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*!
  * Represents an element face where a boundary condition is to be applied without details
  * about the element or connection direction
  */
-class Boundary_face
-{
+class Boundary_face {
   public:
   virtual ~Boundary_face() = default;
   virtual Storage_params storage_params() = 0;
@@ -26,6 +25,7 @@ class Boundary_face
   virtual double* surface_position() = 0;
   virtual double* state_cache() = 0; //!< \brief can be used to record the state for state-dependent flux boundary conditions
   virtual double* flux_cache() = 0; //!< \brief is used to record the flux for surface visualization/integrals
+  virtual Array<double> prescribed_data() = 0;
 };
 
 }

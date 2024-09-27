@@ -303,10 +303,15 @@ int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc) {
 void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, Int element_serial_n, int i_dim, int face_sign, int bc_serial_n) {
   // create boundary condition
   HEXED_ASSERT(bc_serial_n < int(bound_conds.size()), "demand for non-existent `Boundary_condition`");
+  Flow_bc& bc = *bound_conds[bc_serial_n];
   if (is_deformed) {
-    def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(def.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n));
+    def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(
+      def.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n, bc.n_prescribed(params.n_dim)
+     ));
   } else {
-    car.bound_cons.emplace_back(new Typed_bound_connection<Element>(car.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n));
+    car.bound_cons.emplace_back(new Typed_bound_connection<Element>(
+      car.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n, bc.n_prescribed(params.n_dim)
+    ));
   }
 }
 
@@ -484,7 +489,9 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
         int face_rec = face.elem.face_record[2*j_dim + face_sign];
         if (face_rec >= 2) {
           // if parent element has boundary connections on other faces
-          def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(elem, j_dim, face_sign, face_rec - 2));
+          def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(
+            elem, j_dim, face_sign, face_rec - 2, bound_conds[face_rec - 2]->n_prescribed(nd)
+          ));
         } else request_connection(elem, nd, face.i_dim, face.face_sign, j_dim, face_sign);
       }
     }
@@ -631,8 +638,8 @@ void Accessible_mesh::connect_rest(int bc_sn) {
   car.record_connections();
   def.record_connections();
   // make connections
-  car.connect_empty(bc_sn);
-  def.connect_empty(bc_sn);
+  car.connect_empty(bc_sn, *bound_conds[bc_sn]);
+  def.connect_empty(bc_sn, *bound_conds[bc_sn]);
 }
 
 std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles() {
@@ -774,7 +781,11 @@ void Accessible_mesh::connect_new(int start_at) {
             direction(i_dim) = math::sign(sign);
             auto neighbors = elem.tree->find_neighbors(direction);
             // if this element is at the boundary of the tree (as opposed to a surface geometry boundary) set an extremal boundary condition
-            if (neighbors.empty()) m.bound_cons.emplace_back(new Typed_bound_connection<element_t>(elem, i_dim, sign, tree_bcs[2*i_dim + sign]));
+            if (neighbors.empty()) {
+              m.bound_cons.emplace_back(new Typed_bound_connection<element_t>(
+                elem, i_dim, sign, tree_bcs[2*i_dim + sign], bound_conds[tree_bcs[2*i_dim + sign]]->n_prescribed(nd)
+              ));
+            }
             // otherwise, if the element has not only a tree neighbor but also an element neighbor...
             else if (neighbors[0]->elem) {
               if (neighbors.size() == 1) {
@@ -1887,9 +1898,13 @@ void Accessible_mesh::read_file(std::string file_name) {
     h5_read_row(bound_con_dset, 4, i_con, data);
     HEXED_ASSERT(data[1] < int(bound_conds.size()), "mesh file refers to nonexistant boundary condition");
     if (elem_ptrs[data[0]]->get_is_deformed()) {
-      def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(*def_elem_ptrs[data[0]], data[2], data[3], data[1]));
+      def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(
+        *def_elem_ptrs[data[0]], data[2], data[3], data[1], bound_conds[data[1]]->n_prescribed(params.n_dim)
+      ));
     } else {
-      car.bound_cons.emplace_back(new Typed_bound_connection<Element         >(    *elem_ptrs[data[0]], data[2], data[3], data[1]));
+      car.bound_cons.emplace_back(new Typed_bound_connection<Element>(
+        *elem_ptrs[data[0]], data[2], data[3], data[1], bound_conds[data[1]]->n_prescribed(params.n_dim)
+      ));
     }
   }
   cleanup();

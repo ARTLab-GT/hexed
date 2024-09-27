@@ -10,10 +10,10 @@
 TEST_CASE("Typed_boundary_connection") {
   hexed::Storage_params params {3, 4, 2, 4};
   hexed::Element element {params};
-  hexed::Typed_bound_connection<hexed::Element> tbc0 {element, 1, false, 0};
+  hexed::Typed_bound_connection<hexed::Element> tbc0 {element, 1, false, 0, 0};
   REQUIRE(element.face(2, false) == tbc0.state(0, false));
   REQUIRE(tbc0.ghost_face(false) == tbc0.state(1, false));
-  hexed::Typed_bound_connection<hexed::Element> tbc1 {element, 1,  true, 1};
+  hexed::Typed_bound_connection<hexed::Element> tbc1 {element, 1,  true, 1, 0};
   REQUIRE(element.face(3, false) == tbc1.state(0, false));
   REQUIRE(tbc1.ghost_face(false) == tbc1.state(1, false));
   REQUIRE(tbc0.storage_params().n_var == 4);
@@ -43,7 +43,7 @@ TEST_CASE("Freestream") {
   hexed::Element element {params};
   const int n_qpoint = row_size*row_size;
   hexed::Freestream freestream {hexed::Mat<5>{10., 30., -20., 1.3, 1.2e5}};
-  hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0};
+  hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0, 0};
   // set inside face to something arbitrary
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     tbc.inside_face(false)[0*n_qpoint + i_qpoint] = 20.;
@@ -70,7 +70,7 @@ TEST_CASE("Riemann_invariants") {
   const int n_qpoint = row_size*row_size;
   hexed::Mat<5> fs {10., 30., -20., 1.3, 4e5};
   hexed::Riemann_invariants ri {fs};
-  hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0};
+  hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0, 0};
   hexed::Mat<5> inside_state {1/1.2, -600/1.2, 1/1.2, 1.2, 101325/.4 + .5*1.2*360002};
   SECTION("supersonic inflow")
   {
@@ -113,7 +113,7 @@ TEST_CASE("Function_bc") {
   const int n_qpoint = row_size;
   hexed::Annular_diffusion_test func(1.7, 2., 1e5);
   hexed::Function_bc bc(func);
-  hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0};
+  hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0, 0};
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     // set inside face to something arbitrary
     tbc.inside_face(false)[0*n_qpoint + i_qpoint] = 20.;
@@ -141,7 +141,7 @@ TEST_CASE("Nonpenetration") {
   hexed::Storage_params params {3, 4, 2, row_size};
   hexed::Deformed_element element {params};
   hexed::Nonpenetration nonpen;
-  hexed::Typed_bound_connection<hexed::Deformed_element> tbc {element, 0, true, 0};
+  hexed::Typed_bound_connection<hexed::Deformed_element> tbc {element, 0, true, 0, 0};
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
     double qpoint_nrml [] {-4., 3.};
     for (int i_dim = 0; i_dim < 2; ++i_dim) tbc.normal()[i_dim*row_size + i_qpoint] = qpoint_nrml[i_dim];
@@ -181,7 +181,7 @@ TEST_CASE("No_slip") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 4, 2, row_size};
   hexed::Deformed_element element {params};
-  hexed::Typed_bound_connection<hexed::Deformed_element> tbc {element, 0, false, 0};
+  hexed::Typed_bound_connection<hexed::Deformed_element> tbc {element, 0, false, 0, 2};
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
     for (int i_dim = 0; i_dim < 2; ++i_dim) tbc.normal()[i_dim*row_size + i_qpoint] = .7/std::sqrt(2.);
   }
@@ -265,7 +265,7 @@ TEST_CASE("Copy") {
   hexed::Element element {params};
   const int n_qpoint = row_size*row_size;
   hexed::Copy copy;
-  hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0};
+  hexed::Typed_bound_connection<hexed::Element> tbc {element, 1, false, 0, 0};
   // set inside face to something arbitrary
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     tbc.inside_face(false)[0*n_qpoint + i_qpoint] = 20.;
