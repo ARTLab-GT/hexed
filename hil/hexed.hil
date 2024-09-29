@@ -208,6 +208,7 @@ vis_xdmf = false
 vis_tecplot = false
 vis_csv = false
 $({vis_} + vis_default_format) = true
+grad_vars = {}
 vis_skew = false
 vis_lts_constraints = false
 vis_edges = true

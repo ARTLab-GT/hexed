@@ -73,6 +73,11 @@ class Namespace {
 template <typename T> T Namespace::Value<T>::get() {return _val;}
 template <> inline Array<double> Namespace::Value<Array<double>>::get() {return _val();}
 
+template <typename T>
+std::map<std::string, std::unique_ptr<Namespace::Variable<T>>>& Namespace::_get_map() {
+  static_assert(false, "`Namespace` does not deal with this type.");
+}
+
 template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>&           Namespace::_get_map() {return _ints;}
 template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<double>>>&        Namespace::_get_map() {return _doubles;}
 template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<std::string>>>&   Namespace::_get_map() {return _strings;}

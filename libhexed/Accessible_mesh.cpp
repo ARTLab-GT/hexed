@@ -8,7 +8,7 @@
 #include <hexed/utils.hpp>
 #include <hexed/Gauss_legendre.hpp>
 
-#define HEXED_PERTURB_MESH 0
+#define HEXED_PERTURB_MESH 1
 
 namespace hexed {
 
@@ -1403,7 +1403,7 @@ void Accessible_mesh::relax(double factor) {
           for (int i = 0; i < 4; ++i) {
             Mat<3, 2> pos;
             for (int j = 0; j < 2; ++j) pos(all, j) = elem.fake_shape()->vertex(4*j + i).point({});
-            double interp = .5*(1. - .1);
+            double interp = .5*(1. - (i != 2*dir.face_sign[0]));
             Mat<2, 2> coefs;
             coefs << 1 - interp, interp, interp, 1 - interp;
             pos = pos*coefs;
