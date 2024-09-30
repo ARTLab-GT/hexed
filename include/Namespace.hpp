@@ -65,7 +65,7 @@ class Namespace {
   template<typename T> void assign(std::string name, T value);
   template<typename T> void assign_default(std::string name, T value);
   template<typename T> std::optional<T> lookup(std::string name);
-  template<typename T> T get(std::string name);
+  template<typename T, typename Error_type = std::runtime_error> T get(std::string name, std::string message = "");
   std::vector<std::string> names() const;
   void assign_array(Array<double>, std::string name);
 };
@@ -130,10 +130,13 @@ std::optional<T> Namespace::lookup(std::string name) {
   return {};
 }
 
-template<typename T>
-T Namespace::get(std::string name) {
+template<typename T, typename Error_type>
+T Namespace::get(std::string name, std::string message) {
   auto val = lookup<T>(name);
-  HEXED_ASSERT(val, format_str(1000, "failed to obtain variable `%s` as type `%s`", name.c_str(), typeid(T).name()));
+  HEXED_ASSERT(val, message.empty()
+                    ? format_str(1000, "failed to obtain variable `%s` as type `%s`", name.c_str(), typeid(T).name())
+                    : message,
+               Error_type);
   return *val;
 }
 

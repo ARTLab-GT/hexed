@@ -1277,7 +1277,7 @@ class Vis_evaluator {
     _assign(*sub.variables, t);
     sub.exec(_expr + ";" + _grad_expr);
     for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
-      qpoints(i_dim) = sub.variables->lookup<Array<double>>("pos" + std::to_string(i_dim)).value();
+      qpoints(i_dim) = sub.variables->get<Array<double>>("pos" + std::to_string(i_dim));
     }
     if (_n_dim_topo == _n_dim) {
       int nq = qpoints.size()/(_n_dim + _n_var);

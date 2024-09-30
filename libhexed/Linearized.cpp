@@ -9,13 +9,13 @@ Solver::Linearized::Linearized(Solver& s)
   _weights = math::pow_outer(_solver.basis.node_weights(), _solver.params.n_dim);
   double mmtm = 0.;
   for (int i_dim = 0; i_dim < _solver.params.n_dim; ++i_dim) {
-    double component = _solver._namespace->lookup<double>("freestream" + std::to_string(_solver.params.n_dim)).value();
+    double component = _solver._namespace->get<double>("freestream" + std::to_string(_solver.params.n_dim));
     mmtm += math::pow(component, 2);
   }
   mmtm = std::sqrt(mmtm);
   for (int i_dim = 0; i_dim < _solver.params.n_dim; ++i_dim) _ref_state(i_dim) = mmtm;
   for (int i_var = _solver.params.n_dim; i_var < _solver.params.n_var; ++i_var) {
-    _ref_state(i_var) = _solver._namespace->lookup<double>("freestream" + std::to_string(i_var)).value();
+    _ref_state(i_var) = _solver._namespace->get<double>("freestream" + std::to_string(i_var));
   }
   scale(-storage_start + 3, -storage_start, 1.);
   scale(0, -storage_start, 0.);
