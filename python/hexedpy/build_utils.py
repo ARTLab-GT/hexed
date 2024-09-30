@@ -80,6 +80,10 @@ def assert_true(fun, message=""):
 def assert_nonneg(arg):
     assert arg >= 0, "negative values forbidden"
 
+def printed(arg):
+    print(arg)
+    return arg
+
 class Completed:
     def __init__(self, assets, found, earliest_mtime, latest_mtime):
         self.assets = list(assets)
@@ -563,7 +567,7 @@ class Configure(Buildable):
         with open(self.old_name, "r") as in_file:
             self._text = in_file.read()
         self._opts = []
-        for opt in re.findall(r'options\["(\w+)"\]', self._text):
+        for opt in re.findall(r'options\[.(\w+).\]', self._text):
             if opt != "build_dir" and opt not in self._opts:
                 self._opts.append(opt)
     def depends(self):

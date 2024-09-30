@@ -10,9 +10,7 @@ geom1 = {auto1.csv}
 flood_fill_start0 = 0.75
 flood_fill_start1 = 0.
 flood_fill_start2 = 0.
-refine_if = {is_extruded}
-unrefine_if = {false}
-max_refinement_iters = 1
+max_refinement_iters = 0
 
 freestream_temperature = 300.;
 freestream_density = 1.;
