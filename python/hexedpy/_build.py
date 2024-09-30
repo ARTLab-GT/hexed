@@ -34,11 +34,11 @@ class Hexed(bu.C_project):
             "test_args": bu.Option(""),
             "gdb": bu.Option(False, convert=bu.as_bool),
             "valgrind": bu.Option(False, convert=bu.as_bool),
-            "commit": bu.Option(commit, convert=str),
-            "version": bu.Option(self.version, convert=str),
-            "version_major": bu.Option(version_components[0], convert=int),
-            "version_minor": bu.Option(version_components[1], convert=int),
-            "version_patch": bu.Option(version_components[2], convert=int),
+            "commit": bu.Option(commit, convert=str, force=True),
+            "version": bu.Option(self.version, convert=str, force=True),
+            "version_major": bu.Option(version_components[0], convert=int, force=True),
+            "version_minor": bu.Option(version_components[1], convert=int, force=True),
+            "version_patch": bu.Option(version_components[2], convert=int, force=True),
         })
         is_release = self.builder.options["build_mode"] == "release"
         self.builder.add_options({

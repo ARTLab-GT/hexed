@@ -746,11 +746,12 @@ class Option:
     def _set(self, value):
         self._value = self._convert(value)
         self._assertions(self._value)
-    def __init__(self, value="", convert=lambda x: x, assertions=lambda x: None):
+    def __init__(self, value="", convert=lambda x: x, assertions=lambda x: None, force=False):
         self._convert = convert
         self._assertions = assertions
         self._set(value)
         self._modified = False
+        self._force = force
     @property
     def value(self):
         return self._value
@@ -763,7 +764,10 @@ class Option:
     def merge(self, other):
         self._convert = other._convert
         self._assertions = other._assertions
-        self._set(self._value)
+        if other._force:
+            self._set(other._value)
+        else:
+            self._set(self._value)
     @staticmethod
     def directory(default):
         def assert_is_dir(path):
