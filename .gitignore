@@ -8,5 +8,5 @@ auto*.csv
 *.szplt
 .*.swp
 resolution.hil
-results.svg
-results.pdf
+*results.svg
+*results.pdf

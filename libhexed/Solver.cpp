@@ -1245,9 +1245,8 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand) {
 template <typename T>
 class Vis_evaluator {
   public:
-  Vis_evaluator(Interpreter&& inter, std::function<void(Namespace&, T&)> assign, std::string expr, T& t,
-                int n_dim_topo, const Basis& basis)
-  : _inter{inter}, _assign{assign}, _expr{expr}, _n_dim_topo{n_dim_topo}, _diff_mat{basis.diff_mat()}
+  Vis_evaluator(Interpreter&& inter, std::function<void(Namespace&, T&)> assign, std::string expr, T& t, int n_dim_topo)
+  : _inter{inter}, _assign{assign}, _expr{expr}, _n_dim_topo{n_dim_topo}
   {
     Storage_params params = t.storage_params();
     _n_dim = params.n_dim;
@@ -1256,17 +1255,6 @@ class Vis_evaluator {
     sub.subspace();
     sub.exec(_expr);
     _var_names = sub.variables->names();
-    if (_n_dim_topo == _n_dim) {
-      sub.subspace();
-      _grad_expr = inter.variables->get<std::string>("grad_vars");
-      sub.exec(_grad_expr);
-      _grad_vars = sub.variables->names();
-      for (std::string var : _grad_vars) {
-        for (int i_dim = 0; i_dim < 3; ++i_dim) {
-          _var_names.push_back("grad" + std::to_string(i_dim) + "_" + var);
-        }
-      }
-    }
     _n_var = _var_names.size();
     _shape = hypercubes(_n_dim + _n_var, _n_dim_topo, params.row_size);
   }
@@ -1275,34 +1263,9 @@ class Vis_evaluator {
     Array<double> qpoints(_shape);
     auto sub = _inter.make_sub();
     _assign(*sub.variables, t);
-    sub.exec(_expr + ";" + _grad_expr);
+    sub.exec(_expr);
     for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
       qpoints(i_dim) = sub.variables->get<Array<double>>("pos" + std::to_string(i_dim));
-    }
-    if (_n_dim_topo == _n_dim) {
-      int nq = qpoints.size()/(_n_dim + _n_var);
-      for (std::string name : _grad_vars) {
-        Array<double> ref_grad({_n_dim, nq});
-        Array<double> var({nq});
-        sub.variables->assign_array(var(), name);
-        for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
-          ref_grad(i_dim).vector() = math::dimension_matvec(_diff_mat, var.vector(), i_dim);
-        }
-        for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
-          Array<double> grad {Array<double>::make_uniform({nq}, 0.)};
-          Array<double> temp({nq});
-          for (int j_dim = 0; j_dim < _n_dim; ++j_dim) {
-            sub.variables->assign_array(temp(), "ref_level_nrml" + std::to_string(j_dim) + std::to_string(i_dim));
-            grad += ref_grad(j_dim)*temp;
-          }
-          sub.variables->assign_array(temp(), "jacobian_determinant");
-          grad /= temp*sub.variables->get<double>("nom_sz");
-          sub.variables->assign("grad" + std::to_string(i_dim) + "_" + name, grad.copy());
-        }
-        for (int i_dim = _n_dim; i_dim < 3; ++i_dim) {
-          sub.variables->assign("grad" + std::to_string(i_dim) + "_" + name, 0.);
-        }
-      }
     }
     for (int i_var = 0; i_var < _n_var; ++i_var) {
       sub.variables->assign_array(qpoints(_n_dim + i_var), _var_names[i_var]);
@@ -1340,14 +1303,11 @@ class Vis_evaluator {
   Interpreter _inter;
   std::function<void(Namespace&, T&)> _assign;
   std::string _expr;
-  std::string _grad_expr;
   Int _n_var;
   Int _n_dim;
   Int _n_dim_topo;
   std::vector<Int> _shape;
-  std::vector<std::string> _grad_vars;
   std::vector<std::string> _var_names;
-  Mat<dyn, dyn> _diff_mat;
 };
 //! \endcond
 
@@ -1360,7 +1320,7 @@ void Solver::integrate_field(std::string expr) {
   Vis_evaluator<Element> evaluator(
     _interpreter(),
     [&](Namespace& space, Element& elem) {vis_variables::field(space, elem, basis);},
-    expr, elems[0], params.n_dim, basis
+    expr, elems[0], params.n_dim
   );
   std::vector<std::string> var_names = evaluator.var_names();
   Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim);
@@ -1393,7 +1353,7 @@ void Solver::integrate_surface(std::string expr, int bc_sn) {
   Vis_evaluator<Boundary_connection> evaluator(
     _interpreter(),
     [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
-    expr, bc_cons[0], params.n_dim - 1, basis
+    expr, bc_cons[0], params.n_dim - 1
   );
   std::vector<std::string> var_names = evaluator.var_names();
   Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
@@ -1437,7 +1397,7 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
   Vis_evaluator<Element> evaluator(
     _interpreter(),
     [&](Namespace& space, Element& elem) {vis_variables::field(space, elem, basis);},
-    expr, elems[0], params.n_dim, basis
+    expr, elems[0], params.n_dim
   );
   evaluator.visualize(format, name, n_sample, wireframe, elems,
                       _namespace->get<double>("flow_time"), basis, [](Element&){return true;});
@@ -1457,7 +1417,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   Vis_evaluator<Boundary_connection> evaluator(
     _interpreter(),
     [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
-    expr, bc_cons[0], params.n_dim - 1, basis
+    expr, bc_cons[0], params.n_dim - 1
   );
   evaluator.visualize(format, name, n_sample, wireframe, bc_cons,
                       _namespace->get<double>("flow_time"), basis,
@@ -1476,7 +1436,7 @@ void Solver::visualize_contour(std::string format, std::string name, std::string
   Vis_evaluator<Element> evaluator(
     _interpreter(),
     [&](Namespace& space, Element& elem) {vis_variables::field(space, elem, basis);},
-    vis_expr, elems[0], params.n_dim, basis
+    vis_expr, elems[0], params.n_dim
   );
   auto var_names = evaluator.var_names();
   int i_contour = std::find(var_names.begin(), var_names.end(), "hexed_contour") - var_names.begin();

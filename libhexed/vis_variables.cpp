@@ -46,16 +46,6 @@ void state(Namespace& space, Element& elem) {
     space.assign("momentum" + std::to_string(i_dim), 0.);
     space.assign("residual_momentum" + std::to_string(i_dim), 0.);
   }
-  Array<double> rln ({params.n_dim, params.n_dim, nq}, elem.reference_level_normals());
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) {
-      std::string name = "ref_level_nrml" + std::to_string(i_dim) + std::to_string(j_dim);
-      if (elem.get_is_deformed()) space.assign(name, rln(i_dim)(j_dim).copy());
-      else space.assign(name, double(i_dim == j_dim));
-    }
-  }
-  if (elem.get_is_deformed()) space.assign("jacobian_determinant", Array<double>({nq}, elem.jacobian_determinant()));
-  else space.assign("jacobian_determinant", 1.);
   assign_state("density", params.n_dim);
   assign_state("energy", params.n_dim + 1);
   space.assign("bulk_art_visc", Array<double>({nq}, elem.bulk_av_coef()));

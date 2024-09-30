@@ -588,17 +588,11 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create<std::string>("integrate_field", new Namespace::Heisenberg<std::string>([this]() {
-    std::string grad_vars = _vars("grad_vars");
-    _inter.variables->assign("grad_vars", std::string());
     _solver().integrate_field(_vars("integrand_field"));
-    _inter.variables->assign("grad_vars", grad_vars);
     return "";
   }));
   _inter.variables->create<std::string>("integrate_surface", new Namespace::Heisenberg<std::string>([this]() {
-    std::string grad_vars = _vars("grad_vars");
-    _inter.variables->assign("grad_vars", std::string());
     _solver().integrate_surface(_vars("integrand_surface"), _solver().mesh().surface_bc_sn());
-    _inter.variables->assign("grad_vars", grad_vars);
     return "";
   }));
 
