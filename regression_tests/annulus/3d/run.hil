@@ -1,0 +1,5 @@
+n_dim = 3
+geom0 = {geom0.iges}
+geom1 = {geom1.iges}
+depth = 2.
+$read {../run.hil}

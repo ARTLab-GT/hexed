@@ -5,6 +5,7 @@ mesh_extreme20 = -1.
 mesh_extreme01 =  1.
 mesh_extreme11 =  1.
 mesh_extreme21 =  1.
+extremal_bc20 = extremal_bc21 = {nonpenetration}
 
 flood_fill_start0 = 0.75
 flood_fill_start1 = 0.
