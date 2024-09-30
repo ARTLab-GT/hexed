@@ -8,8 +8,6 @@
 #include <hexed/utils.hpp>
 #include <hexed/Gauss_legendre.hpp>
 
-#define HEXED_PERTURB_MESH 1
-
 namespace hexed {
 
 Element_container& Accessible_mesh::container(bool is_deformed) {
@@ -1382,40 +1380,6 @@ void Accessible_mesh::relax(double factor) {
         if (nearest >= 0) update_pos(vert, nodes(nearest).vector());
       }
     }
-    #if HEXED_PERTURB_MESH
-    for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
-      auto& con = bound_cons[i_con];
-      if (con.bound_cond_serial_n() != surf_bc_sn) continue;
-      auto dir = con.direction();
-      if (dir.i_dim[0] == 1) {
-        Element& elem = con.element();
-        #if 0
-        if ((elem.nominal_position()[0] == 4) /*&& (elem.nominal_position()[2]%2)*/) {
-          for (int i = 0; i < 2; ++i) {
-            Mat<3> pos = Mat<3>::Zero();
-            for (int j = 0; j < 2; ++j) pos += .5*elem.fake_shape()->vertex(2*dir.face_sign[0] + 4*j + i).point({});
-            pos = surf_geom->nearest_point(pos).point();
-            for (int j = 0; j < 2; ++j) elem.fake_shape()->vertex(2*dir.face_sign[0] + 4*j + i).set_pos(pos);
-          }
-        }
-        #endif
-        if ((elem.nominal_position()[0] == 4) && (elem.nominal_position()[2]%2)) {
-          for (int i = 0; i < 4; ++i) {
-            Mat<3, 2> pos;
-            for (int j = 0; j < 2; ++j) pos(all, j) = elem.fake_shape()->vertex(4*j + i).point({});
-            double interp = .5*(1. - (i != 2*dir.face_sign[0]));
-            Mat<2, 2> coefs;
-            coefs << 1 - interp, interp, interp, 1 - interp;
-            pos = pos*coefs;
-            if (i/2 == dir.face_sign[0]) {
-              for (int j = 0; j < 2; ++j) pos(all, j) = surf_geom->nearest_point(pos(all, j)).point();
-            }
-            for (int j = 0; j < 2; ++j) elem.fake_shape()->vertex(4*j + i).set_pos(pos(all, j));
-          }
-        }
-      }
-    }
-    #endif
     // snaps a `Boundary_block` to the geometry surface
     auto snap_block = [this](next::Boundary_block& block) {
       block.reset();
