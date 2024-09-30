@@ -29,6 +29,13 @@ namespace hexed {
  * -# call the some of the functions in output section to get the data you want from the simulation
  */
 class Solver {
+  public:
+  struct Reduction {
+    double initial_value;
+    std::function<double(double, double)> binary_reduction;
+  };
+
+  private:
   Storage_params params;
   std::unique_ptr<Accessible_mesh> acc_mesh;
   Gauss_legendre basis;
@@ -49,13 +56,6 @@ class Solver {
   Kernel_mesh _kernel_mesh();
   void _put_cache(); // copies the flow state to the residual cache
   void _get_cache(); // copies the residual cache to the flow state
-
-  struct Reduction {
-    double initial_value;
-    std::function<double(double, double)> binary_reduction;
-  };
-  static Reduction _min;
-  static Reduction _max;
 
   void share_vertex_data(std::function<double&(Element&, int i_vertex)>, Reduction);
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get,

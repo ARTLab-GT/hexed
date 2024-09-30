@@ -55,9 +55,6 @@ void Solver::_get_cache() {
 double max_fun(double x, double y) {return std::max(x, y);}
 double min_fun(double x, double y) {return std::min(x, y);}
 
-Solver::Reduction Solver::_max {-huge, max_fun};
-Solver::Reduction Solver::_min { huge, min_fun};
-
 void Solver::share_vertex_data(std::function<double&(Element&, int i_vertex)> access_fun,
                                Solver::Reduction reduction) {
   share_vertex_data(access_fun, access_fun, reduction);
@@ -458,7 +455,7 @@ void Solver::calc_jacobian(bool snap) {
       }
     }
   }
-  share_vertex_data(&Element::vertex_time_step_scale, _min);
+  share_vertex_data(&Element::vertex_time_step_scale, { huge, &min_fun});
   _preti_masks = acc_mesh->preti_masks(basis);
 }
 
@@ -702,7 +699,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based) {
   } else {
     share_vertex_data([](Element& elem, int){return elem.uncertainty;},
                       [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
-                      _max);
+                      {-huge, &max_fun});
     Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -722,7 +719,7 @@ void Solver::set_art_visc_admis() {
   // enforce C^0 continuity
   share_vertex_data([](Element& elem, int){return elem.uncertainty;},
                     [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
-                    _max);
+                    {-huge, &max_fun});
   Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
   // interpolate from vertices to quadrature points
   auto& elems = acc_mesh->elements();
@@ -1124,7 +1121,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
         elem.vertex_fix_admis_coef(i_vert) = elem.record;
       }
     }
-    share_vertex_data(&Element::vertex_fix_admis_coef, _max);
+    share_vertex_data(&Element::vertex_fix_admis_coef, {-huge, &max_fun});
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
@@ -1136,7 +1133,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
         elem.vertex_fix_admis_coef(i_vert) = max_fac;
       }
     }
-    share_vertex_data(&Element::vertex_fix_admis_coef, _max);
+    share_vertex_data(&Element::vertex_fix_admis_coef, {-huge, &max_fun});
     Mat<dyn, dyn> interp(rs, 2);
     interp(all, 0) = Mat<>::Ones(rs) - basis.nodes();
     interp(all, 1) = basis.nodes();
