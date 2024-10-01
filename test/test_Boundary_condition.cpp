@@ -122,6 +122,7 @@ TEST_CASE("Function_bc") {
     tbc.inside_face(false)[3*n_qpoint + i_qpoint] = 1e4;
   }
   // set position at node 0 to have radius 2*e (not the actual position, but for this test that doesn't matter)
+  for (int i_dof = 0; i_dof < 2*n_qpoint; ++i_dof) tbc.surface_position()[i_dof] = 0.;
   tbc.surface_position()[0*n_qpoint + 0] =  1.2*std::exp(1.);
   tbc.surface_position()[1*n_qpoint + 0] = -1.6*std::exp(1.);
   // set position at node 4 to have radius 2*e^2

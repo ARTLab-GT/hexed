@@ -194,7 +194,7 @@ class Hexed(bu.C_project):
         if self.builder.options["gdb"]:
             args = ["gdb", "--args"] + args
         if self.builder.options["valgrind"]:
-            args = ["valgrind"] + args
+            args = ["valgrind", "--leak-check=full", "--show-reachable=no", "--gen-suppressions=all"] + args
         self.builder.env["HEXED_PATH"] = self.bdir + "python_package/hexedpy/lib/hexed/"
         return self.builder.subproc(args)
 
