@@ -1,0 +1,20 @@
+{
+   <extrude_leak>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+   fun:allocate_stack
+   fun:pthread_create@@GLIBC_2.34
+   obj:/usr/lib/x86_64-linux-gnu/libgomp.so.1.0.0
+   fun:GOMP_parallel
+   fun:_ZN5hexed15Accessible_mesh12connect_restEi
+   fun:_ZL23CATCH2_INTERNAL_TEST_14v
+   fun:_ZNK5Catch12_GLOBAL__N_121TestInvokerAsFunction6invokeEv
+   fun:_ZNK5Catch14TestCaseHandle6invokeEv
+   fun:_ZN5Catch10RunContext20invokeActiveTestCaseEv
+   fun:_ZN5Catch10RunContext14runCurrentTestERNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES7_
+   fun:_ZN5Catch10RunContext7runTestERKNS_14TestCaseHandleE
+}

@@ -149,7 +149,8 @@ class Hexed(bu.C_project):
                 args=[const_file, out_file, lang, preamble],
                 extra_depends=[const_file],
             ).do
-        translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
+        translate(package_dir + "hexedpy/lib/hexed/constants.hil",
+                  "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
         translate(package_dir + "hexedpy/constants.py",
             r'## \namespace hexedpy.constants \brief Ports \ref hexed::constants "hexed::constants" into Python. \see `constants.hpp`', "py")
         if self.builder.options["build_wheel"]:
@@ -194,7 +195,13 @@ class Hexed(bu.C_project):
         if self.builder.options["gdb"]:
             args = ["gdb", "--args"] + args
         if self.builder.options["valgrind"]:
-            args = ["valgrind", "--leak-check=full", "--show-reachable=no", "--gen-suppressions=all"] + args
+            args = [
+                "valgrind",
+                "--leak-check=full",
+                "--show-reachable=no",
+                "--gen-suppressions=all",
+                f"--suppressions={self.sdir}hexed.supp",
+            ] + args
         self.builder.env["HEXED_PATH"] = self.bdir + "python_package/hexedpy/lib/hexed/"
         return self.builder.subproc(args)
 
