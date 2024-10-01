@@ -3,16 +3,14 @@
 
 #include "math.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Facilitates the process of iterating through all rows along a particular dimension.
  * \details This is essential in the local kernel where a `row_size`[x`row_size`[x`row_size`]]
  * array of flux values must be multipled by the derivative matrix row-wise
  * along every dimension.
  */
-class Row_index
-{
+class Row_index {
   int i_outer = 0;
   int i_inner = 0;
   int i_fq = 0;
@@ -37,8 +35,7 @@ class Row_index
   {}
 
   //! \brief advances object to the next row
-  constexpr void operator++()
-  {
+  constexpr void operator++() {
     ++i_fq;
     ++i_inner;
     if (i_inner == stride) {

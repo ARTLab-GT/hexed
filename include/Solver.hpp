@@ -29,6 +29,12 @@ namespace hexed {
  * -# call the some of the functions in output section to get the data you want from the simulation
  */
 class Solver {
+  private:
+  struct Reduction {
+    double initial_value;
+    std::function<double(double, double)> binary_reduction;
+  };
+
   Storage_params params;
   std::unique_ptr<Accessible_mesh> acc_mesh;
   Gauss_legendre basis;
@@ -49,13 +55,6 @@ class Solver {
   Kernel_mesh _kernel_mesh();
   void _put_cache(); // copies the flow state to the residual cache
   void _get_cache(); // copies the residual cache to the flow state
-
-  struct Reduction {
-    double initial_value;
-    std::function<double(double, double)> binary_reduction;
-  };
-  static Reduction _min;
-  static Reduction _max;
 
   void share_vertex_data(std::function<double&(Element&, int i_vertex)>, Reduction);
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get,
@@ -247,8 +246,9 @@ class Solver {
   const Stopwatch_tree& stopwatch_tree();
   //! \brief compute an integral over the entire flow field at the current time
   std::vector<double> integral_field(const Qpoint_func& integrand);
+  void integrate_field(std::string expression);
   //! \brief compute an integral over all surfaces where a particular boundary condition has been enforced
-  std::vector<double> integral_surface(const Boundary_func& integrand, int bc_sn);
+  void integrate_surface(std::string expression, int bc_sn);
 
   /*! \brief write a visualization file describing the entire flow field (but not identifying surfaces)
    * \param format Which format to write the visualization file in. Accepted values are `"xdmf"` and `"tecplot"`

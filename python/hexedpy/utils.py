@@ -85,7 +85,7 @@ class History_plot:
     r"""! \brief creates a real-time, interactive plot of the convergence history
     \details Convergence history is obtained from the `output.txt` file which contains the console output of \ref hexecute.
     Every column in the output whose name is not in `History_plot.column_blacklist` will be plotted in its own subplot.
-    Columns with names ending in `residual` will be plotted on a log scale.
+    Columns with names ending in `residual` or `error` will be plotted on a log scale.
     A `History_plot` instance should be created in a separate process from the solver
     but may be created before, after, or during the simulation---the plot will not appear until an `output.txt` file exists.
     A `History_plot` can be created directly from the \ref hil "HIL" solver script with $\ref plot_history.
@@ -105,7 +105,7 @@ class History_plot:
             self._lines += [line.decode("utf-8") for line in output_file.readlines()]
             self._file_position = output_file.tell()
 
-    def __init__(self, directory = "hexed_out", interval = 0.2):
+    def __init__(self, directory = "hexed_out", interval = 2.):
         r"""! \brief creates and shows an animated history plot
         \param directory Convergence history will be obtained by looking for a file `output.txt` in `directory`.
         \param interval The plot will be updated every `interval` seconds to include new iterations.
@@ -130,7 +130,7 @@ class History_plot:
         plt.tight_layout()
         self._fig.set_size_inches(18, 5)
         ani = FuncAnimation(self._fig, self._update, frames = self._infinite_generator, init_func = self._init,
-                            blit = True, repeat = False, interval = int(self._interval*1e3), cache_frame_data = False)
+                            blit = False, repeat = False, interval = int(self._interval*1e3), cache_frame_data = False)
         plt.show()
 
     def _init(self):
@@ -143,7 +143,7 @@ class History_plot:
             ax.grid(True)
             ax.set_xlabel("iteration")
             ax.set_ylabel(col)
-            if col.endswith("residual"):
+            if col.endswith("residual") or col.endswith("error"):
                 self._axs[i_col].set_ylim(0.1, 1.)
                 self._axs[i_col].set_yscale("log")
         return self._curves
@@ -160,25 +160,25 @@ class History_plot:
                 last_iter = self._data["iteration"][self._data.shape[0] - 1]
                 if last_iter > self._axs[0].get_xlim()[1]:
                     for ax in self._axs:
-                        ax.set_xlim(0, ax.get_xlim()[1]*2)
+                        ax.set_xlim(0, self._data["iteration"].max()*2)
             for i_col in range(len(self._plot_columns)):
                 ax = self._axs[i_col]
                 col = self._plot_columns[i_col]
                 last_value = self._data[col][self._data.shape[0] - 1]
-                if col.endswith("residual"):
+                if col.endswith("residual") or col.endswith("error"):
                     if last_value < ax.get_ylim()[0]:
-                        ax.set_ylim(ax.get_ylim()[0]*.1, ax.get_ylim()[1])
+                        ax.set_ylim(self._data[col].min()*.1, ax.get_ylim()[1])
                     elif last_value > ax.get_ylim()[1]:
-                        ax.set_ylim(ax.get_ylim()[0], ax.get_ylim()[1]*10)
+                        ax.set_ylim(ax.get_ylim()[0], self._data[col].max()*10)
                 else:
                     if self._data.shape[0] == 2:
                         ax.set_ylim(self._data[col].min(), self._data[col].max())
                     else:
                         ylim = ax.get_ylim()
                         if last_value < ylim[0]:
-                            ax.set_ylim(ylim[0] - .5*(ylim[1] - ylim[0]), ylim[1])
+                            ax.set_ylim(ylim[1] + 1.5*(self._data[col].min() - ylim[1]), ylim[1])
                         elif last_value > ylim[1]:
-                            ax.set_ylim(ylim[0], ylim[1] + .5*(ylim[1] - ylim[0]))
+                            ax.set_ylim(ylim[0], ylim[0] + 1.5*(self._data[col].max() - ylim[0]))
         for i_col in range(len(self._plot_columns)):
             self._curves[i_col].set_data(self._data["iteration"], self._data[self._plot_columns[i_col]])
         return self._curves

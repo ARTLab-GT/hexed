@@ -57,15 +57,6 @@ If you intend for your time stepping to be CFL driven, simply keep this number l
 \note Not defined until \ref create_solver is evaluated.
 
 <hr>
-\subsubsection transport_model
-__type:__ string \n
-__default:__ `{inviscid}` \n
-Specifies model to use for molecular transport coefficients (viscosity and thermal conductivity).
-Accepted values:
-- `{inviscid}`
-- `{sutherland}`: Uses Sutherland's law for air (non-constant Prandtl number)
-
-<hr>
 \subsubsection thermal_bc
 __type:__ string \n
 __default:__ `{heat_flux = 0.}` \n
@@ -180,9 +171,38 @@ May be any non-negative integer, up to time and memory constraints.
 __type:__ string \n
 __default:__ `{auto}` \n
 Specifies surface boundary condition.
-If `{auto}`, surface boundary condition will be determined automatically depending on the value of \ref transport_model.
-`{inviscid}` &rarr; `{nonpenetration}` and `{sutherland}` &rarr; `{no_slip}`.
-Otherwise, the name of a supported \ref boundary_conditions "Boundary condition type".
+It should be the name of a supported \ref boundary_conditions "Boundary condition type".
+If `{auto}`, surface boundary condition will be determined automatically depending on whether you define \ref viscosity_model .
+If you do (and set it to something other than `{}`), `surface_bc` will default to `{no_slip}`.
+If you do not, it will default to `{nonpenetration}`.
+
+<hr>
+\subsubsection viscosity_model
+__type:__ string \n
+__default:__ `{}` \n
+Model to compute the dynamic viscosity.
+Options are the following:
+- `{}` (empty string): Inviscid.
+- Code setting the variable `const_value`:
+  Constant viscosity equal to `const_value`.
+  For example, `{const_value = 1.8e-5}` will set the viscosity to 1.8e-5 Pa s.
+- Code setting the variables `ref_value`, `ref_temperature`, and `offset`:
+  Sets the viscosity to [Sutherland's law](https://en.wikipedia.org/wiki/Viscosity#Chapman%E2%80%93Enskog_theory) (a result of Chapman-Enskog theory)
+  with \f$ \mu_0 \f$ = `ref_value`, \f$ T_0 \f$ = `ref_temperature` and \f$ S \f$ = `offset`.
+  E.g. `{ref_value = 1.7e-5; ref_temperature = 273.; offset = 111.;}`.
+
+\note Setting `viscosity_model = {}` is not the same as setting it to `viscosity_model = {const_value = 0.}`.
+The former will solve the inviscid flow equations, whereas the latter will solve the viscous flow equations with a viscosity coefficient of 0.
+
+\see \ref air_viscosity
+
+<hr>
+\subsubsection conductivity_model
+__type:__ string \n
+__default:__ {} \n
+Model to compute the thermal conductivity.
+The options are the same as \ref viscosity_model .
+\see \ref air_conductivity
 
 <hr>
 \subsubsection monitor_vars
@@ -723,6 +743,79 @@ __type:__ float \n
 __default:__ 0.5 \n
 If \ref elementwise_art_visc_pde "PDE-based" \ref elementwise_art_visc "elementwise artificial viscosity" is used,
 this controls the amount of diffusion used to smooth the artificial viscosity coefficient.
+
+<hr>
+
+\section solver_builtins Solver-specific builtin variables
+The following variables are automatically defined by the solver but are not intended to be modified.
+They are there to provide values you may wish to reference.
+
+<hr>
+\subsubsection air_viscosity
+__type:__ string \n
+Best available Sutherland's Law approximation for the viscosity of air that I am aware of,
+which is from White \cite white_viscous (Table 1-2).
+To use it this model, set `viscosity_model = air_viscosity`.
+\see \ref viscosity_model
+
+<hr>
+\subsubsection air_conductivity
+__type:__ string \n
+Best available Sutherland's Law approximation for the thermal conductivity of air that I am aware of,
+which is from White \cite white_viscous (Table 1-3).
+To use it this model, set `conductivity_model = air_conductivity`.
+
+\note Using \ref air_viscosity together with \ref air_conductivity results in a non-constant Prandtl number!
+Technically, this is correct---air does not have a constant Prandtl number---but
+for reasons I do not fully understand, most people use a constant Prandtl number in their transport models.
+To obtain a constant Prandtl number, you can do something like:
+```{.unparsed}
+conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
+```
+(this works for \f$ \gamma = 1.4 \f$ and \f$ Pr = .72 \f$).
+
+\todo Does this give the _correct_ Prandtl number variation?
+I just selected the most credible Sutherland models I could find for viscosity and conductivity independently,
+but I am not sure to what extent the difference reflects the true Prandtl number variation versus disagreement between different authors.
+There may be merit to trying to tweak the default viscosity and conductivity models to work better in combination.
+
+\see \ref conductivity_model
+
+<hr>
+\subsubsection air_visc_ref
+__type:__ float \n
+__value:__ 1.716e-5 \n
+`reference_value` used in \ref air_viscosity .
+
+<hr>
+\subsubsection air_visc_ref_temp
+__type:__ float \n
+__value:__ 273. \n
+`reference_temperature` used in \ref air_viscosity .
+
+<hr>
+\subsubsection air_visc_offset
+__type:__ float \n
+__value:__ 111. \n
+`offset` used in \ref air_viscosity .
+
+<hr>
+\subsubsection air_cond_ref
+__type:__ float \n
+__value:__ .0241 \n
+`reference_value` used in \ref air_conductivity .
+
+<hr>
+\subsubsection air_cond_ref_temp
+__type:__ float \n
+__value:__ 273. \n
+`reference_temperature` used in \ref air_conductivity .
+
+<hr>
+\subsubsection air_cond_offset
+__type:__ float \n
+__value:__ 194. \n
+`offset` used in \ref air_conductivity .
 
 <hr>
 

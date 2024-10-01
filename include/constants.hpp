@@ -65,6 +65,41 @@ const double meter = 1; //!< \brief m
 const double kilogram = 1; //!< \brief kg
 const double second = 1; //!< \brief s
 const double kelvin = 1; //!< \brief K
+//! \details Dimensionless unit, which I would argue is not a unit at all, but it's here anyway.
+const double radian = 1;
+const double pascal = 1; //!< \brief Pa
+const double newton = 1; //!< \brief N
+
+const double deci = 1e-1; //!< \brief d
+const double centi = 1e-2; //!< \brief c
+const double milli = 1e-3; //!< \brief m
+const double micro = 1e-6; //!< \brief \f$ \mu \f$
+const double nano = 1e-9; //!< \brief n
+const double pico = 1e-12; //!< \brief p
+const double femto = 1e-15; //!< \brief f
+const double atto = 1e-18; //!< \brief a
+const double zepto = 1e-21; //!< \brief z
+const double yocto = 1e-24; //!< \brief y
+const double ronto = 1e-27; //!< \brief r
+const double quecto = 1e-30; //!< \brief q
+const double deka = 1e1; //!< \brief da
+const double hecto = 1e2; //!< \brief h
+const double kilo = 1e3; //!< \brief k
+const double mega = 1e6; //!< \brief M
+const double giga = 1e9; //!< \brief G
+const double tera = 1e12; //!< \brief T
+const double peta = 1e15; //!< \brief P
+const double exa = 1e18; //!< \brief E
+const double zeta = 1e21; //!< \brief Z
+const double yotta = 1e24; //!< \brief Y
+const double ronna = 1e27; //!< \brief R
+const double quetta = 1e30; //!< \brief Q
+
+const double gram = 1e-3; //!< \brief g
+const double liter = 1e-3; //!< \brief L
+const double angstrom = 1e-10; //!< \brief Angstrom
+const double tonne = 1e3; //!< \brief aka "metric ton"
+
 const double std_grav = 9.80665; //!< \brief \f$ g_0 \f$ [standard gravity](https://en.wikipedia.org/wiki/Standard_gravity)
 const double foot = 0.3048; //!< \brief [ft](https://en.wikipedia.org/wiki/International_yard_and_pound)
 const double yard = 3*foot; //!< \brief [yd](https://en.wikipedia.org/wiki/International_yard_and_pound)
@@ -94,6 +129,9 @@ const double btu = calorie*rankine*pound_mass/1e-3; //!< \brief British Thermal 
 const double bar = 1e5; //!< \brief deprecated unit of pressure
 const double mmhg = 133.322387415; //!< \brief [millimiter of mercury](https://en.wikipedia.org/wiki/Millimetre_of_mercury)
 const double torr = atmosphere/760; //!< \brief [Torr](https://en.wikipedia.org/wiki/Torr)
+const double astronomical_unit = 149597870700.; //!< \brief au
+const double short_ton = 2000*pound_mass; //!< \brief (imperial) short ton
+const double long_ton = 2240*pound_mass; //!< \brief (imperial) long ton
 
 /*! \brief [US customary volume measurements](https://en.wikipedia.org/wiki/United_States_customary_units#Volume)
  * \details These differ significantly from the \ref imperial units of the same name.

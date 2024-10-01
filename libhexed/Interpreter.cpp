@@ -228,7 +228,7 @@ std::string Interpreter::_Dynamic_value::to_string(std::string fd) const {
 
 Interpreter::_Dynamic_value Interpreter::_general_add(const Interpreter::_Dynamic_value& o0, const Interpreter::_Dynamic_value& o1) {
   if (!o0.s && !o1.s) return _arithmetic_op<_add<double>, _add<int>>(o0, o1);
-  std::string fd = variables->lookup<std::string>("format_double").value();
+  std::string fd = variables->get<std::string>("format_double");
   return _Dynamic_value(o0.to_string(fd) + o1.to_string(fd));
 }
 
@@ -246,10 +246,14 @@ std::function<Interpreter::_Dynamic_value(const Interpreter::_Dynamic_value&)> I
 }
 
 Interpreter::Interpreter(std::vector<std::string> preload)
-: _un_ops {
+: _start_time{std::chrono::duration_cast<std::chrono::nanoseconds>(
+    std::chrono::steady_clock::now().time_since_epoch()
+  ).count()*1e-9}
+, _un_ops {
     {"-", [this](const _Dynamic_value& val) {
       if      (val.i) return _Dynamic_value((*val.i)*-1);
       else if (val.d) return _Dynamic_value((*val.d)*-1);
+      else if (val.a) return _Dynamic_value((*val.a)*-1.);
       else HEXED_ASSERT(false, "unary operator `-` cannot be applied to type `string`.", Hil_exception);
     }},
     {"!", [this](const _Dynamic_value& val) {
@@ -291,7 +295,7 @@ Interpreter::Interpreter(std::vector<std::string> preload)
     {"print", [this](const _Dynamic_value& val) {
       auto s = _general_add({""}, val);
       Printer* p;
-      std::string print_type = variables->lookup<std::string>("print_type").value();
+      std::string print_type = variables->get<std::string>("print_type");
       if (print_type == "warn") p = &printer->warn;
       else if (print_type == "error") p = &printer->error;
       else {
@@ -301,7 +305,7 @@ Interpreter::Interpreter(std::vector<std::string> preload)
           printer->warn(format_str(1000, "Invalid `print_type` `{%s}`. Defaulting to `{info}`\n", print_type.c_str()));
         }
       }
-      (*p)(s.s.value(), variables->lookup<int>("print_emph").value());
+      (*p)(s.s.value(), variables->get<int>("print_emph"));
       variables->assign("print_type", std::string("info"));
       variables->assign("print_emph", 0);
       return _Dynamic_value("");
@@ -357,6 +361,9 @@ Interpreter::Interpreter(std::vector<std::string> preload)
     auto time = std::chrono::steady_clock::now().time_since_epoch();
     return std::chrono::duration_cast<std::chrono::nanoseconds>(time).count()*1e-9;
   }));
+  variables->create("wall_time", new Namespace::Heisenberg<double>([this]() {
+    return variables->get<double>("steady_time") - _start_time;
+  }));
   // builtin values
   variables->assign("huge", huge);
   variables->assign("nan", std::nan(""));
@@ -380,7 +387,7 @@ void Interpreter::exec(std::string comms) {
       _eval(std::numeric_limits<int>::max() - 1);
       break;
     } catch (const Hil_exception& e) {
-      std::string except = variables->lookup<std::string>("except").value();
+      std::string except = variables->get<std::string>("except");
       std::string message = "Hexed Interface Language exception (in `hexed::Interpreter`):\n    " + std::string(e.what()) + "\n" + _debug_info();
       if (!except.empty()) {
         variables->assign<std::string>("exception", message);

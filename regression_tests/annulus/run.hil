@@ -1,0 +1,62 @@
+$read {resolution.hil}
+mesh_extreme00 = -1.
+mesh_extreme10 = -1.
+mesh_extreme20 = -1.
+mesh_extreme01 =  1.
+mesh_extreme11 =  1.
+mesh_extreme21 =  1.
+extremal_bc20 = extremal_bc21 = {nonpenetration}
+
+flood_fill_start0 = 0.75
+flood_fill_start1 = 0.
+flood_fill_start2 = 0.
+max_refinement_iters = 0
+
+freestream_temperature = 300.;
+freestream_density = 1.;
+freestream_speed = 0.;
+visc = 1e2
+viscosity_model = {const_value = visc}
+conductivity_model = {const_value = 1.4*specific_gas_air/0.4*visc}
+surface_bc = {no_slip}
+angular_speed = 1e2
+outer_radius = 1.
+inner_radius = .25
+wall_velocity = {
+    velocity0 = -pos1*angular_speed*(sqrt(pos0^2 + pos1^2) - inner_radius)/(outer_radius - inner_radius)
+    velocity1 =  pos0*angular_speed*(sqrt(pos0^2 + pos1^2) - inner_radius)/(outer_radius - inner_radius)
+    velocity2 = 0.
+}
+thermal_bc = {temperature = 300}
+
+veloc_error_expr = {
+    radius = sqrt(pos0^2 + pos1^2)
+    speed = angular_speed*(inner_radius/radius - radius/inner_radius)/(inner_radius/outer_radius - outer_radius/inner_radius)
+    veloc_error_sq = (momentum0/density - -pos1/radius*speed)^2 + (momentum1/density -  pos0/radius*speed)^2 + (momentum2/density)^2
+}
+
+stress_error_expr = {
+    radius = sqrt(pos0^2 + pos1^2)
+    correct_speed = angular_speed*(inner_radius/radius - radius/inner_radius)/(inner_radius/outer_radius - outer_radius/inner_radius)
+    stress_magnitude = visc*angular_speed*(-inner_radius/radius^2 - 1./inner_radius)/(inner_radius/outer_radius - outer_radius/inner_radius)
+    stress_error_sq = (radius - outer_radius)/(inner_radius - outer_radius)*((visc_stress0 - -stress_magnitude*pos1/radius)^2 + (visc_stress1 -  stress_magnitude*pos0/radius)^2 + visc_stress2^2)
+}
+
+fix_therm_admis = true
+n_cheby_flow = 10
+print_vars = print_vars + {veloc_error = veloc_error; stress_error = stress_error;}
+vis_field_vars = vis_field_vars + veloc_error_expr
+vis_surface_vars = vis_surface_vars + stress_error_expr
+iterate = {
+    integrand_field = veloc_error_expr
+    integrate_field
+    veloc_error = sqrt(integral_field_veloc_error_sq/pi/(outer_radius^2 - inner_radius^2)/depth)/angular_speed/outer_radius
+    integrand_surface = stress_error_expr
+    integrate_surface
+    stress_error = sqrt(integral_surface_stress_error_sq/(4*pi*inner_radius))/(visc*angular_speed/(outer_radius - inner_radius))
+} + iterate
+monitor_vars = {veloc_error = veloc_error; stress_error = stress_error;}
+working_dir = {hexed_out} + row_size + {_} + init_ref_level
+done = {iteration > 1000 & veloc_error_max - veloc_error_min < 1e-2*(veloc_error_min + veloc_error_max)/2 & stress_error_max - stress_error_min < 1e-2*(stress_error_min + stress_error_max)/2}
+$simulate
+shell({echo "} + commit + {,} + start_time + {,} + row_size + {,} + init_ref_level + {,} + wall_time + {,} + veloc_error + {,} + stress_error + {" >> results.txt})

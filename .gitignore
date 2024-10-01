@@ -4,6 +4,9 @@ __pycache__
 *tags*
 !*doxytags
 hexed_out*
-auto.csv
+auto*.csv
 *.szplt
 .*.swp
+resolution.hil
+*results.svg
+*results.pdf

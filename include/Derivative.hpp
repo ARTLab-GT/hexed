@@ -4,16 +4,14 @@
 #include <Eigen/Dense>
 #include "Basis.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*
- * Represents the operator on L_2([0, 1]) which returns the derivative projected
+ * Represents the operator on L^2([0, 1]) which returns the derivative projected
  * onto the space of polynomials of row size `row_size` by discontinuous Galerkin projection.
  */
 template <int row_size>
-class Derivative
-{
+class Derivative {
   private:
   const Eigen::Matrix<double, 2, row_size> boundary;
   const Eigen::Matrix<double, 2, 2> sign {{-1, 0}, {0, 1}};
@@ -23,10 +21,10 @@ class Derivative
 
   public:
   Derivative(const Basis& basis)
-  : boundary {basis.boundary()},
-    inv_weights {Eigen::Array<double, row_size, 1>::Constant(1.)/basis.node_weights().array()},
-    stiff {-1*inv_weights.asDiagonal()*basis.diff_mat().transpose()*basis.node_weights().asDiagonal()},
-    lift {inv_weights.asDiagonal()*basis.boundary().transpose()*sign}
+  : boundary {basis.boundary()}
+  , inv_weights {Eigen::Array<double, row_size, 1>::Constant(1.)/basis.node_weights().array()}
+  , stiff {-1*inv_weights.asDiagonal()*basis.diff_mat().transpose()*basis.node_weights().asDiagonal()}
+  , lift {inv_weights.asDiagonal()*basis.boundary().transpose()*sign}
   {}
 
   /*
@@ -37,24 +35,21 @@ class Derivative
    * that the integral of the return value is equal to the difference between the specified boundary values.
    */
   template<int n_var>
-  Eigen::Matrix<double, row_size, n_var> interior_term(const Eigen::Matrix<double, row_size, n_var>& qpoint_vals) const
-  {
+  Eigen::Matrix<double, row_size, n_var> interior_term(const Eigen::Matrix<double, row_size,
+                                                       n_var>& qpoint_vals) const {
     return stiff*qpoint_vals;
   }
   template<int n_var>
-  Eigen::Matrix<double, row_size, n_var> boundary_term(const Eigen::Matrix<double, 2, n_var>& boundary_vals) const
-  {
+  Eigen::Matrix<double, row_size, n_var> boundary_term(const Eigen::Matrix<double, 2, n_var>& boundary_vals) const {
     return lift*boundary_vals;
   }
   template<int n_var>
   Eigen::Matrix<double, row_size, n_var> operator()(const Eigen::Matrix<double, row_size, n_var>& qpoint_vals,
-                                                    const Eigen::Matrix<double, 2, n_var>& boundary_vals) const
-  {
+                                                    const Eigen::Matrix<double, 2, n_var>& boundary_vals) const {
     return stiff*qpoint_vals + lift*boundary_vals;
   }
   template<int n_var>
-  Eigen::Matrix<double, row_size, n_var> operator()(const Eigen::Matrix<double, row_size, n_var>& qpoint_vals) const
-  {
+  Eigen::Matrix<double, row_size, n_var> operator()(const Eigen::Matrix<double, row_size, n_var>& qpoint_vals) const {
     return stiff*qpoint_vals;
   }
 };

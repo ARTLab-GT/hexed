@@ -9,6 +9,13 @@ class Hexed(bu.C_project):
     def __init__(self, builder):
         self.builder = builder
         #### add extra build options and information to be passed to the code
+        if os.path.isdir(self.sdir + ".git/"):
+            self[bu.Pip]("gitpython").do
+            command = f"import git; repo = git.Repo('{self.sdir}'); print(repo.head.commit, end='')"
+            commit = self.builder.python("-c", command, capture_output=True).stdout.decode()
+        else:
+            commit = "notagitrepo"
+        version_components = self.version.split(".")
         self.builder.add_options({
             "build_mode": bu.Option("release", convert=lambda s: s.lower(),
                                     assertions=bu.assert_true(lambda s: s in ["release", "debug"])),
@@ -27,6 +34,11 @@ class Hexed(bu.C_project):
             "test_args": bu.Option(""),
             "gdb": bu.Option(False, convert=bu.as_bool),
             "valgrind": bu.Option(False, convert=bu.as_bool),
+            "commit": bu.Option(commit, convert=str, force=True),
+            "version": bu.Option(self.version, convert=str, force=True),
+            "version_major": bu.Option(version_components[0], convert=int, force=True),
+            "version_minor": bu.Option(version_components[1], convert=int, force=True),
+            "version_patch": bu.Option(version_components[2], convert=int, force=True),
         })
         is_release = self.builder.options["build_mode"] == "release"
         self.builder.add_options({
@@ -41,6 +53,7 @@ class Hexed(bu.C_project):
             bu.not_source(f) or
             re.match(self.sdir + r"build(?!\.py)", bu.absolute(f)) or
             f.startswith(self.sdir + "samples") or
+            f.startswith(self.sdir + "regression_tests") or
             f.startswith(self.sdir + ".git") or
             f.endswith(".tags")
         ))
@@ -69,14 +82,6 @@ class Hexed(bu.C_project):
 
     def build(self):
         #### configure
-        if os.path.isdir(self.sdir + ".git/"):
-            self[bu.Pip]("gitpython").do
-            command = f"import git; repo = git.Repo('{self.sdir}'); print(repo.head.commit, end='')"
-            self.builder.info["commit"] = self.builder.python("-c", command, capture_output=True).stdout.decode()
-        else:
-            self.builder.info["commit"] = "notagitrepo"
-        self.builder.info["version"] = self.version
-        self.builder.info["version_major"], self.builder.info["version_minor"], self.builder.info["version_patch"] = self.version.split(".")
         bu.Compiler.cpp_standard = 20
         if self.builder.options["architecture"] != "any":
             bu.Compiler.architecture = self.builder.options["architecture"]
@@ -144,7 +149,8 @@ class Hexed(bu.C_project):
                 args=[const_file, out_file, lang, preamble],
                 extra_depends=[const_file],
             ).do
-        translate(package_dir + "hexedpy/lib/hexed/constants.hil", "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
+        translate(package_dir + "hexedpy/lib/hexed/constants.hil",
+                  "{This is an automatically-generated port of `constants.hpp` into HIL.}", "hil")
         translate(package_dir + "hexedpy/constants.py",
             r'## \namespace hexedpy.constants \brief Ports \ref hexed::constants "hexed::constants" into Python. \see `constants.hpp`', "py")
         if self.builder.options["build_wheel"]:
@@ -189,7 +195,13 @@ class Hexed(bu.C_project):
         if self.builder.options["gdb"]:
             args = ["gdb", "--args"] + args
         if self.builder.options["valgrind"]:
-            args = ["valgrind"] + args
+            args = [
+                "valgrind",
+                "--leak-check=full",
+                "--show-reachable=no",
+                "--gen-suppressions=all",
+                f"--suppressions={self.sdir}hexed.supp",
+            ] + args
         self.builder.env["HEXED_PATH"] = self.bdir + "python_package/hexedpy/lib/hexed/"
         return self.builder.subproc(args)
 

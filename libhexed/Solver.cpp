@@ -55,9 +55,6 @@ void Solver::_get_cache() {
 double max_fun(double x, double y) {return std::max(x, y);}
 double min_fun(double x, double y) {return std::min(x, y);}
 
-Solver::Reduction Solver::_max {-huge, max_fun};
-Solver::Reduction Solver::_min { huge, min_fun};
-
 void Solver::share_vertex_data(std::function<double&(Element&, int i_vertex)> access_fun,
                                Solver::Reduction reduction) {
   share_vertex_data(access_fun, access_fun, reduction);
@@ -106,6 +103,7 @@ void Solver::apply_state_bcs() {
 }
 
 void Solver::apply_flux_bcs() {
+  stopwatch["boundary conditions"].stopwatch.start();
   auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -116,24 +114,32 @@ void Solver::apply_flux_bcs() {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh->boundary_condition(bc_sn).apply_flux(bc_cons[i_con]);
   }
+  stopwatch["boundary conditions"].stopwatch.pause();
+  stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
 }
 
 void Solver::apply_avc_diff_bcs() {
+  stopwatch["boundary conditions"].stopwatch.start();
   auto& bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh->boundary_condition(bc_sn).apply_diffusion(bc_cons[i_con]);
   }
+  stopwatch["boundary conditions"].stopwatch.pause();
+  stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
 }
 
 void Solver::apply_avc_diff_flux_bcs() {
+  stopwatch["boundary conditions"].stopwatch.start();
   auto& bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh->boundary_condition(bc_sn).flux_diffusion(bc_cons[i_con]);
   }
+  stopwatch["boundary conditions"].stopwatch.pause();
+  stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
 }
 
 void Solver::apply_fta_flux_bcs() {
@@ -168,11 +174,13 @@ double Solver::max_dt(double msc, double msd) {
 void Solver::_init_face_state() {
   compute_write_face(_kernel_mesh());
   compute_prolong(_kernel_mesh());
+  auto inter {_interpreter()};
   auto& bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
     acc_mesh->boundary_condition(bc_sn).init_cache(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).set_prescribed(inter, bc_cons[i_con]);
   }
 }
 
@@ -211,6 +219,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("av_diff_max_safety", .7); // stability ratio for diffusion
   _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
   _namespace->assign_default("n_cheby_bl", 1);
+  _namespace->assign_default("n_cheby_flow", 1);
   _namespace->assign_default("max_conv_sub_iters", 1);
   _namespace->assign_default("n_cheby_av", 1);
   _namespace->assign_default("cheby_safety", .9); // safety factor to apply to Chebyshev-acceleration
@@ -231,7 +240,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("flow_time", 0.);
   _namespace->assign_default("time_step", 0.);
   _namespace->assign_default("art_visc_residual", 0.);
-  _namespace->assign_default("wall_time", 0.);
   status.set_time();
   // setup categories for performance reporting
   std::string unit = "(element*(time integration stage))";
@@ -264,6 +272,9 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   stopwatch["visualization"].emplace("surface", "surface face");
   stopwatch["visualization"].emplace("surface wireframe", "surface face");
   stopwatch["visualization"].emplace("contour", "element");
+  stopwatch.emplace("integrals", "integral");
+  stopwatch["integrals"].emplace("field", "integral");
+  stopwatch["integrals"].emplace("surface", "integral");
   // initialize advection state to 1
   auto& elements = acc_mesh->elements();
   const int nq = params.n_qpoint();
@@ -444,7 +455,7 @@ void Solver::calc_jacobian(bool snap) {
       }
     }
   }
-  share_vertex_data(&Element::vertex_time_step_scale, _min);
+  share_vertex_data(&Element::vertex_time_step_scale, { huge, &min_fun});
   _preti_masks = acc_mesh->preti_masks(basis);
 }
 
@@ -688,7 +699,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based) {
   } else {
     share_vertex_data([](Element& elem, int){return elem.uncertainty;},
                       [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
-                      _max);
+                      {-huge, &max_fun});
     Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -708,7 +719,7 @@ void Solver::set_art_visc_admis() {
   // enforce C^0 continuity
   share_vertex_data([](Element& elem, int){return elem.uncertainty;},
                     [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
-                    _max);
+                    {-huge, &max_fun});
   Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
   // interpolate from vertices to quadrature points
   auto& elems = acc_mesh->elements();
@@ -895,23 +906,19 @@ void Solver::update() {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   double safety = _namespace->get<double>("max_safety");
   double cheby_safety = _namespace->get<double>("cheby_safety");
-  for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow)
-  {
+  for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
     // compute time step
     double dt = 0;
     HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
     int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
-    for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti != 1)
-    {
+    for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti != 1) {
       int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
-      for (int i_bl = 0; i_bl < n_bl; ++i_bl)
-      {
-        int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : 1;
+      for (int i_bl = 0; i_bl < n_bl; ++i_bl) {
+        int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : _namespace->get<int>("n_cheby_flow");
         int max_sub_iters = i_preti ? _namespace->get<int>("max_conv_sub_iters") : 1;
         double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
         // run chebyshev iterations
-        for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby)
-        {
+        for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
           _preti_level = i_preti - bool(i_preti);
           Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
           double cheby_step = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
@@ -958,7 +965,6 @@ void Solver::update() {
   }
   _preti_level = 0;
 
-  _namespace->assign("wall_time", status.wall_time());
   ++status.iteration;
   stopwatch.stopwatch.pause();
 }
@@ -1081,8 +1087,8 @@ bool Solver::fix_admissibility(double stability_ratio) {
   if (!fix_admis) return false;
   auto& sw_fix = stopwatch["fix admis."];
   sw_fix.stopwatch.start();
-  std::string wd = _namespace->lookup<std::string>("working_dir").value();
-  std::string vis_expr = _namespace->lookup<std::string>("vis_field_vars").value();
+  std::string wd = _namespace->get<std::string>("working_dir");
+  std::string vis_expr = _namespace->get<std::string>("vis_field_vars");
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
@@ -1115,7 +1121,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
         elem.vertex_fix_admis_coef(i_vert) = elem.record;
       }
     }
-    share_vertex_data(&Element::vertex_fix_admis_coef, _max);
+    share_vertex_data(&Element::vertex_fix_admis_coef, {-huge, &max_fun});
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
@@ -1127,7 +1133,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
         elem.vertex_fix_admis_coef(i_vert) = max_fac;
       }
     }
-    share_vertex_data(&Element::vertex_fix_admis_coef, _max);
+    share_vertex_data(&Element::vertex_fix_admis_coef, {-huge, &max_fun});
     Mat<dyn, dyn> interp(rs, 2);
     interp(all, 0) = Mat<>::Ones(rs) - basis.nodes();
     interp(all, 1) = basis.nodes();
@@ -1210,60 +1216,27 @@ std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n
 }
 
 std::vector<double> Solver::integral_field(const Qpoint_func& integrand) {
+  Stopwatch_tree::Starter sw_starter(stopwatch["integrals"]["field"]);
   // compute `n_dim`-dimensional quadrature weights from 1D weights
   Eigen::VectorXd weights = math::pow_outer(basis.node_weights(), params.n_dim);
   // now compute the integral with the above quadrature weights
-  std::vector<double> integral (integrand.n_var(params.n_dim), 0.);
+  Mat<dyn, dyn> integral = Mat<dyn, dyn>::Zero(integrand.n_var(params.n_dim), 1);
   auto& elements = acc_mesh->elements();
+  #pragma omp parallel for reduction(+:integral)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     Element& element {elements[i_elem]};
     double volume = math::pow(element.nominal_size(), params.n_dim);
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
       auto qpoint_integrand {integrand(element, basis, i_qpoint, _namespace->get<double>("flow_time"))};
       for (unsigned i_var = 0; i_var < qpoint_integrand.size(); ++i_var) {
-        integral[i_var] += weights[i_qpoint]*volume*qpoint_integrand[i_var]*element.jacobian_determinant(i_qpoint);
+        integral(i_var) += weights[i_qpoint]*volume*qpoint_integrand[i_var]*element.jacobian_determinant(i_qpoint);
       }
     }
   }
-  return integral;
+  stopwatch["integrals"]["field"].work_units_completed += 1;
+  stopwatch["integrals"].work_units_completed += 1;
+  return {integral.data(), integral.data() + integral.size()};
 }
-
-std::vector<double> Solver::integral_surface(const Boundary_func& integrand, int bc_sn) {
-  // setup
-  const int nd = params.n_dim;
-  const int n_int = integrand.n_var(nd);
-  const int nq = params.n_qpoint();
-  const int nfq = nq/basis.row_size;
-  Eigen::MatrixXd boundary = basis.boundary();
-  Eigen::VectorXd weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
-  // write the state to the faces so that the BCs can access it
-  compute_write_face(_kernel_mesh());
-  // compute the integral
-  std::vector<double> integral (n_int, 0.);
-  auto& bc_cons {acc_mesh->boundary_connections()};
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con)
-  {
-    auto& con {bc_cons[i_con]};
-    auto& elem = con.element();
-    double area = math::pow(elem.nominal_size(), nd - 1);
-    if (con.bound_cond_serial_n() == bc_sn)
-    {
-      double* nrml = con.normal();
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        double nrml_mag = 0;
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          nrml_mag += math::pow(nrml[i_dim*nfq + i_qpoint], 2);
-        }
-        nrml_mag = std::sqrt(nrml_mag);
-        auto qpoint_integrand = integrand(con, i_qpoint, _namespace->get<double>("flow_time"));
-        for (int i_var = 0; i_var < n_int; ++i_var) {
-          integral[i_var] += qpoint_integrand[i_var]*weights(i_qpoint)*area*nrml_mag;
-        }
-      }
-    }
-  }
-  return integral;
-};
 
 //! \cond
 template <typename T>
@@ -1272,24 +1245,24 @@ class Vis_evaluator {
   Vis_evaluator(Interpreter&& inter, std::function<void(Namespace&, T&)> assign, std::string expr, T& t, int n_dim_topo)
   : _inter{inter}, _assign{assign}, _expr{expr}, _n_dim_topo{n_dim_topo}
   {
+    Storage_params params = t.storage_params();
+    _n_dim = params.n_dim;
     auto sub = _inter.make_sub();
     _assign(*sub.variables, t);
     sub.subspace();
     sub.exec(_expr);
     _var_names = sub.variables->names();
     _n_var = _var_names.size();
-    Storage_params params = t.storage_params();
-    _n_dim = params.n_dim;
     _shape = hypercubes(_n_dim + _n_var, _n_dim_topo, params.row_size);
   }
+
   Array<double> evaluate(T& t) {
+    Array<double> qpoints(_shape);
     auto sub = _inter.make_sub();
     _assign(*sub.variables, t);
-    sub.subspace();
     sub.exec(_expr);
-    Array<double> qpoints(_shape);
     for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
-      qpoints(i_dim) = sub.variables->lookup<Array<double>>("pos" + std::to_string(i_dim)).value();
+      qpoints(i_dim) = sub.variables->get<Array<double>>("pos" + std::to_string(i_dim));
     }
     for (int i_var = 0; i_var < _n_var; ++i_var) {
       sub.variables->assign_array(qpoints(_n_dim + i_var), _var_names[i_var]);
@@ -1334,6 +1307,82 @@ class Vis_evaluator {
   std::vector<std::string> _var_names;
 };
 //! \endcond
+
+void Solver::integrate_field(std::string expr) {
+  Stopwatch_tree::Starter sw_starter(stopwatch["integrals"]["field"]);
+  // setup
+  const int nd = params.n_dim;
+  auto& elems {acc_mesh->elements()};
+  if (!elems.size()) return;
+  Vis_evaluator<Element> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Element& elem) {vis_variables::field(space, elem, basis);},
+    expr, elems[0], params.n_dim
+  );
+  std::vector<std::string> var_names = evaluator.var_names();
+  Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim);
+  // compute the integral
+  Mat<dyn, dyn> integral = Mat<dyn, dyn>::Zero(var_names.size(), 1);
+  #pragma omp parallel for reduction(+:integral)
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    double volume = math::pow(elem.nominal_size(), params.n_dim);
+    Array<double> qpoints{evaluator.evaluate(elem)};
+    for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
+      integral(i_var) += volume*weights.dot(qpoints(nd + i_var).vector());
+    }
+  }
+  for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
+    _namespace->assign("integral_field_" + var_names[i_var], integral(i_var));
+  }
+  ++stopwatch["integrals"]["field"].work_units_completed;
+  ++stopwatch["integrals"].work_units_completed;
+};
+
+void Solver::integrate_surface(std::string expr, int bc_sn) {
+  Stopwatch_tree::Starter sw_starter(stopwatch["integrals"]["surface"]);
+  // setup
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint();
+  const int nfq = nq/basis.row_size;
+  auto& bc_cons {acc_mesh->boundary_connections()};
+  if (!bc_cons.size()) return;
+  Vis_evaluator<Boundary_connection> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
+    expr, bc_cons[0], params.n_dim - 1
+  );
+  std::vector<std::string> var_names = evaluator.var_names();
+  Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
+  // write the state to the faces so that the BCs can access it
+  compute_write_face(_kernel_mesh());
+  // compute the integral
+  Mat<dyn, dyn> integral = Mat<dyn, dyn>::Zero(var_names.size(), 1);
+  #pragma omp parallel for reduction(+:integral)
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con {bc_cons[i_con]};
+    if (con.bound_cond_serial_n() != bc_sn) continue;
+    auto& elem = con.element();
+    double area = math::pow(elem.nominal_size(), nd - 1);
+    Array<double> qpoints{evaluator.evaluate(con)};
+    double* nrml = con.normal();
+    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+      double nrml_mag = 0;
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        nrml_mag += math::pow(nrml[i_dim*nfq + i_qpoint], 2);
+      }
+      nrml_mag = std::sqrt(nrml_mag);
+      for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
+        integral(i_var) += nrml_mag*weights(i_qpoint)*area*qpoints(nd + i_var)[i_qpoint];
+      }
+    }
+  }
+  for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
+    _namespace->assign("integral_surface_" + var_names[i_var], integral(i_var));
+  }
+  ++stopwatch["integrals"]["surface"].work_units_completed;
+  ++stopwatch["integrals"].work_units_completed;
+};
 
 void Solver::visualize_field(std::string format, std::string name, std::string expr, int n_sample, bool wireframe) {
   std::string sw_name = "field";

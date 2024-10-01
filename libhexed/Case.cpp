@@ -53,27 +53,31 @@ Flow_bc* Case::_make_bc(std::string name) {
     sub.exec("$thermal_bc");
     std::shared_ptr<Thermal_bc> thermal;
     if (sub.variables->exists("heat_flux")) { // note not recursive
-      thermal = std::make_shared<Prescribed_heat_flux>(sub.variables->lookup<double>("heat_flux").value());
+      thermal = std::make_shared<Prescribed_heat_flux>(sub.variables->get<double>("heat_flux"));
     } else if (sub.variables->exists("emissivity") || sub.variables->exists("heat_transfer_coef")) {
       auto equilibrium = std::make_shared<Thermal_equilibrium>();
       HEXED_ASSERT(sub.variables->exists("heat_transfer_coef") == sub.variables->exists("temperature"),
         "must specify both surface heat_transfer_coef and temperature or neither", assert::User_error);
-      if (sub.variables->exists("emissivity")) equilibrium->emissivity = sub.variables->lookup<double>("emissivity").value();
+      if (sub.variables->exists("emissivity")) equilibrium->emissivity = sub.variables->get<double>("emissivity");
       if (sub.variables->exists("heat_transfer_coef")) {
-        equilibrium->heat_transfer_coef = sub.variables->lookup<double>("heat_transfer_coef").value();
-        equilibrium->temperature = sub.variables->lookup<double>("temperature").value();
+        equilibrium->heat_transfer_coef = sub.variables->get<double>("heat_transfer_coef");
+        equilibrium->temperature = sub.variables->get<double>("temperature");
       }
       thermal = equilibrium;
     } else if (sub.variables->exists("internal_energy")) { // note not recursive
-      thermal = std::make_shared<Prescribed_energy>(sub.variables->lookup<double>("internal_energy").value());
+      thermal = std::make_shared<Prescribed_energy>(sub.variables->get<double>("internal_energy"));
     } else if (sub.variables->exists("temperature")) { // note not recursive
-      double energy = sub.variables->lookup<double>("temperature").value()*constants::specific_gas_air/(heat_rat - 1.);
+      double energy = sub.variables->get<double>("temperature")*constants::specific_gas_air/(heat_rat - 1.);
       thermal = std::make_shared<Prescribed_energy>(energy);
     }
     HEXED_ASSERT(thermal, "thermal BC specification not understood", assert::User_error);
     return new No_slip(thermal, _vard("heat_flux_coercion"));
-  }
-  else HEXED_ASSERT(false, format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()), assert::User_error);
+  } else if (name == "expression") {
+    HEXED_ASSERT(   _inter.variables->lookup<std::string>("surface_bc_state")
+                 && _inter.variables->lookup<std::string>("surface_bc_flux"),
+                 "To use the `expression` BC type, you must define `surface_bc_state` and `surface_bc_flux` as strings.");
+    return new Expression_bc(_inter, _vars("surface_bc_state"), _vars("surface_bc_flux"));
+  } else HEXED_THROW(format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()), assert::User_error);
   return nullptr; // will never happen. just to shut up GCC warning
 }
 
@@ -168,6 +172,7 @@ std::string Case::_assignment(std::string var_name) {
 
 Case::Case(std::string input_script)
 : _printers{std::make_shared<Printer_set>()}
+, _start_time{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())}
 {
   _inter.variables->assign("input_script", input_script);
   _inter.variables->assign("version_major", config::version_major);
@@ -175,6 +180,7 @@ Case::Case(std::string input_script)
   _inter.variables->assign("version_patch", config::version_patch);
   _inter.variables->assign<std::string>("commit", config::commit);
   _inter.variables->assign("vis_default_format", Visualizer::default_format);
+  _inter.variables->assign<int>("start_time", _start_time);
 
   // create custom Heisenberg variables
 
@@ -185,24 +191,26 @@ Case::Case(std::string input_script)
     }
     _inter.printer = _printers;
     char utc [100];
-    std::time_t time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&time));
+    std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&_start_time));
     _printers->info(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
-                               config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, time));
+                               config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, _start_time));
     return "";
   }));
 
   _inter.variables->create("setup_parameters", new Namespace::Heisenberg<std::string>([this]() {
     // setup storage parameters
-    auto n_dim = _inter.variables->lookup<int>("n_dim");
-    HEXED_ASSERT(n_dim && (n_dim.value() > 0) && (n_dim.value() <= 3),
-                 "`n_dim` must be defined as an integer in [1, 3]", assert::User_error);
-    auto row_size = _inter.variables->lookup<int>("row_size");
-    HEXED_ASSERT(row_size.value() >= 2 && row_size.value() <= config::max_row_size,
+    int n_dim = _inter.variables->get<int, assert::User_error>("n_dim", "User must define `n_dim`.");
+    HEXED_ASSERT((n_dim > 0) && (n_dim <= 3), "`n_dim` must be an integer in [1, 3]", assert::User_error);
+    HEXED_ASSERT(_inter.variables->exists_recursive("row_size"), "no row size ??");
+    int row_size = _inter.variables->get<int, assert::User_error>(
+      "row_size",
+      "`row_size` is not defined as an integer (did you define it as a different type?)"
+    );
+    HEXED_ASSERT(row_size >= 2 && row_size <= config::max_row_size,
                  format_str(300, "`row_size` must be between 2 and %i", config::max_row_size), assert::User_error);
     // compute freestream
-    Mat<> freestream(*n_dim + 2);
-    if (_inter.variables->lookup<double>("freestream0")) freestream = _get_vector("freestream", *n_dim + 2);
+    Mat<> freestream(n_dim + 2);
+    if (_inter.variables->lookup<double>("freestream0")) freestream = _get_vector("freestream", n_dim + 2);
     else {
       if (_inter.variables->lookup<double>("altitude")) {
         HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_temperature"), "cannot specify both altitude and temperature (consider `temperature_offset`)",
@@ -216,7 +224,7 @@ Case::Case(std::string input_script)
                    + _inter.variables->lookup<double>("freestream_temperature").has_value() == 2,
                    "exactly two of freestream density, pressure, and temperature must be specified", assert::User_error);
       if (_inter.variables->lookup<double>("freestream_density")) {
-        freestream(*n_dim) = _vard("freestream_density");
+        freestream(n_dim) = _vard("freestream_density");
         if (_inter.variables->lookup<double>("freestream_pressure")) {
           _inter.variables->assign<double>("freestream_temperature",
             _vard("freestream_pressure")/(constants::specific_gas_air*_vard("freestream_density")));
@@ -234,39 +242,39 @@ Case::Case(std::string input_script)
                    "exactly one of velocity, speed, and Mach number must be specified", assert::User_error);
       Mat<> veloc;
       Mat<> full_direction = Mat<>::Zero(3);
-      auto direction = full_direction(Eigen::seqN(0, *n_dim));
+      auto direction = full_direction(Eigen::seqN(0, n_dim));
       if (_inter.variables->lookup<double>("freestream_velocity0")) {
-        veloc = _get_vector("freestream_velocity", *n_dim);
+        veloc = _get_vector("freestream_velocity", n_dim);
         direction = veloc.normalized();
       } else {
         _inter.variables->assign<double>("freestream_sound_speed", std::sqrt(heat_rat*constants::specific_gas_air*_vard("freestream_temperature")));
         if (_inter.variables->lookup<double>("freestream_speed")) _inter.variables->assign<double>("freestream_mach", _vard("freestream_speed")/_vard("freestream_sound_speed"));
         else _inter.variables->assign<double>("freestream_speed", _vard("freestream_mach")*_vard("freestream_sound_speed"));
-        if (_inter.variables->lookup<double>("freestream_direction0")) direction = _get_vector("freestream_direction", *n_dim).normalized();
+        if (_inter.variables->lookup<double>("freestream_direction0")) direction = _get_vector("freestream_direction", n_dim).normalized();
         else {
-          direction.setUnit(*n_dim, 0);
-          if (*n_dim == 2) {
+          direction.setUnit(n_dim, 0);
+          if (n_dim == 2) {
             direction = Eigen::Rotation2D<double>(_vard("attack"))*direction;
           }
-          if (*n_dim == 3) {
+          if (n_dim == 3) {
             direction = Eigen::AngleAxis<double>(-_vard("attack"  ), Eigen::Vector3d::Unit(1))*direction;
             direction = Eigen::AngleAxis<double>( _vard("sideslip"), Eigen::Vector3d::Unit(2))*direction;
           }
         }
         veloc = _vard("freestream_speed")*direction;
         _set_vector("freestream_velocity", veloc);
-        for (int i_dim = *n_dim; i_dim < 3; ++i_dim) {
+        for (int i_dim = n_dim; i_dim < 3; ++i_dim) {
           _inter.variables->assign("freestream_velocity" + std::to_string(i_dim), 0.);
         }
       }
       _set_vector("freestream_direction", full_direction);
       double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*_vard("freestream_density")*veloc.squaredNorm();
       _inter.variables->assign("freestream_energy", ener);
-      freestream(Eigen::seqN(0, *n_dim)) = _vard("freestream_density")*veloc;
-      freestream(*n_dim) = _vard("freestream_density");
-      freestream(*n_dim + 1) = ener;
+      freestream(Eigen::seqN(0, n_dim)) = _vard("freestream_density")*veloc;
+      freestream(n_dim) = _vard("freestream_density");
+      freestream(n_dim + 1) = ener;
       freestream.conservativeResize(5);
-      freestream(Eigen::seqN(*n_dim + 2, 5 - (*n_dim + 2))).setZero();
+      freestream(Eigen::seqN(n_dim + 2, 5 - (n_dim + 2))).setZero();
       _set_vector("freestream", freestream);
     }
     return "";
@@ -292,10 +300,12 @@ Case::Case(std::string input_script)
       model.eval(sub);
       if (model.names.empty()) transport_models.emplace_back(inviscid);
       else if (sub.variables->exists("offset")) {
-        transport_models.emplace_back(Transport_model::sutherland(sub.variables->lookup<double>("ref_value").value(),
-                                                                  sub.variables->lookup<double>("ref_temperature").value(),
-                                                                  sub.variables->lookup<double>("offset").value()));
-      } else HEXED_ASSERT(false, format_str(200, "invalid transport model specification for %s", name), assert::User_error);
+        transport_models.emplace_back(Transport_model::sutherland(sub.variables->get<double>("ref_value"),
+                                                                  sub.variables->get<double>("ref_temperature"),
+                                                                  sub.variables->get<double>("offset")));
+      } else if (sub.variables->exists("const_value")) {
+        transport_models.emplace_back(Transport_model::constant(sub.variables->get<double>("const_value")));
+      } else HEXED_THROW(format_str(200, "invalid transport model specification for %s", name.c_str()), assert::User_error);
     }
     // create history monitors
     _monitor_expr.reset(new Struct_expr(_vars("monitor_vars")));
@@ -338,7 +348,7 @@ Case::Case(std::string input_script)
         auto sub = _inter.make_sub();
         hil_properties::element(*sub.variables, elem);
         sub.exec(code);
-        return sub.variables->lookup<int>("return").value();
+        return sub.variables->get<int>("return");
       });
     }
     Jac_inv_det_func jidf;
@@ -578,19 +588,11 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create<std::string>("integrate_field", new Namespace::Heisenberg<std::string>([this]() {
-    Struct_expr integrand(_vars("integrand_field"));
-    auto integral = _solver().integral_field(Qpoint_expr(integrand, _inter));
-    for (unsigned i_var = 0; i_var < integrand.names.size(); ++i_var) {
-      _inter.variables->assign("integral_field_" + integrand.names[i_var], integral[i_var]);
-    }
+    _solver().integrate_field(_vars("integrand_field"));
     return "";
   }));
   _inter.variables->create<std::string>("integrate_surface", new Namespace::Heisenberg<std::string>([this]() {
-    Struct_expr integrand(_vars("integrand_surface"));
-    auto integral = _solver().integral_surface(Boundary_expr(integrand, _inter), _solver().mesh().surface_bc_sn());
-    for (unsigned i_var = 0; i_var < integrand.names.size(); ++i_var) {
-      _inter.variables->assign("integral_surface_" + integrand.names[i_var], integral[i_var]);
-    }
+    _solver().integrate_surface(_vars("integrand_surface"), _solver().mesh().surface_bc_sn());
     return "";
   }));
 

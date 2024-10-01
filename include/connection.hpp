@@ -307,9 +307,10 @@ class Typed_bound_connection : public Boundary_connection {
   Mat<> cache;
   void connect_normal();
   void disconnect_normal();
+  Array<double> _prescribed_data;
 
   public:
-  Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n)
+  Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n, int n_prescribed)
   : Boundary_connection{elem_arg.storage_params()}
   , elem{elem_arg}
   , params{elem.storage_params()}
@@ -319,9 +320,11 @@ class Typed_bound_connection : public Boundary_connection {
   , state_size{params.n_var*params.n_qpoint()/params.row_size}
   , pos(params.n_dim*params.n_qpoint()/params.row_size)
   , cache{Mat<>::Zero(2*state_size)}
+  , _prescribed_data({n_prescribed, params.n_qpoint()/params.row_size})
   {
     connect_normal();
     elem.set_face(direction().i_face(0), state(0, false));
+    _prescribed_data = 0.;
   }
   Typed_bound_connection(const Typed_bound_connection&) = delete; //!< can only have one `Typed_bound_connection` per face, so delete copy semantics
   Typed_bound_connection& operator=(const Typed_bound_connection&) = delete;
@@ -343,6 +346,7 @@ class Typed_bound_connection : public Boundary_connection {
   int bound_cond_serial_n() override {return bc_sn;}
   element_t& element() override {return elem;}
   int mask(int i_side) override {return i_side ? -1 : element().mask();}
+  Array<double> prescribed_data() override {return _prescribed_data();}
 };
 
 template <>

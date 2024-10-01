@@ -80,6 +80,10 @@ def assert_true(fun, message=""):
 def assert_nonneg(arg):
     assert arg >= 0, "negative values forbidden"
 
+def printed(arg):
+    print(arg)
+    return arg
+
 class Completed:
     def __init__(self, assets, found, earliest_mtime, latest_mtime):
         self.assets = list(assets)
@@ -563,7 +567,7 @@ class Configure(Buildable):
         with open(self.old_name, "r") as in_file:
             self._text = in_file.read()
         self._opts = []
-        for opt in re.findall(r'options\["(\w+)"\]', self._text):
+        for opt in re.findall(r'options\[.(\w+).\]', self._text):
             if opt != "build_dir" and opt not in self._opts:
                 self._opts.append(opt)
     def depends(self):
@@ -575,7 +579,6 @@ class Configure(Buildable):
             match = re.search(r"{\[([^}]+)\]}", self._text)
             if match is None: break
             options = self.builder.options
-            info = self.builder.info
             self._text = f"{self._text[:match.start()]}{eval(match.group(1))}{self._text[match.end():]}"
         with open(self.new_name, "w") as out_file:
             out_file.write(self._text)
@@ -747,11 +750,12 @@ class Option:
     def _set(self, value):
         self._value = self._convert(value)
         self._assertions(self._value)
-    def __init__(self, value="", convert=lambda x: x, assertions=lambda x: None):
+    def __init__(self, value="", convert=lambda x: x, assertions=lambda x: None, force=False):
         self._convert = convert
         self._assertions = assertions
         self._set(value)
         self._modified = False
+        self._force = force
     @property
     def value(self):
         return self._value
@@ -764,7 +768,10 @@ class Option:
     def merge(self, other):
         self._convert = other._convert
         self._assertions = other._assertions
-        self._set(self._value)
+        if other._force:
+            self._set(other._value)
+        else:
+            self._set(self._value)
     @staticmethod
     def directory(default):
         def assert_is_dir(path):
@@ -865,8 +872,8 @@ class Builder:
             "use_system_paths": Option(True, convert=as_bool),
             "use_env_paths": Option(True, convert=as_bool),
             "internet": Option(True, convert=as_bool),
+            "date": Option(time.strftime("%Y-%m-%d", time.gmtime())),
         }
-        self.info = {"date":time.strftime("%Y-%m-%d", time.gmtime())}
         self.indent = ""
         for opt in opts:
             self._merge_option(opt)
@@ -938,7 +945,6 @@ class Builder:
         return self.options["build_dir"]
 
     def synch_cache(self):
-        in_text = ""
         existing_opts = {}
         for fname in os.listdir(self.cache_dir):
             with open(self.cache_dir + fname, "r") as cache:

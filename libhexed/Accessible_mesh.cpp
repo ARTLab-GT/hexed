@@ -64,6 +64,7 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
       }
       matched_edges[i_geom_edge].clear();
       matched_vertices[i_geom_edge].clear();
+      if (!best_vert) continue;
       matched_vertices[i_geom_edge].emplace_back(best_vert);
       next::Vertex* curr = best_vert;
       while (true) {
@@ -300,10 +301,15 @@ int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc) {
 void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, Int element_serial_n, int i_dim, int face_sign, int bc_serial_n) {
   // create boundary condition
   HEXED_ASSERT(bc_serial_n < int(bound_conds.size()), "demand for non-existent `Boundary_condition`");
+  Flow_bc& bc = *bound_conds[bc_serial_n];
   if (is_deformed) {
-    def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(def.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n));
+    def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(
+      def.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n, bc.n_prescribed(params.n_dim)
+     ));
   } else {
-    car.bound_cons.emplace_back(new Typed_bound_connection<Element>(car.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n));
+    car.bound_cons.emplace_back(new Typed_bound_connection<Element>(
+      car.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n, bc.n_prescribed(params.n_dim)
+    ));
   }
 }
 
@@ -481,7 +487,9 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
         int face_rec = face.elem.face_record[2*j_dim + face_sign];
         if (face_rec >= 2) {
           // if parent element has boundary connections on other faces
-          def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(elem, j_dim, face_sign, face_rec - 2));
+          def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(
+            elem, j_dim, face_sign, face_rec - 2, bound_conds[face_rec - 2]->n_prescribed(nd)
+          ));
         } else request_connection(elem, nd, face.i_dim, face.face_sign, j_dim, face_sign);
       }
     }
@@ -617,6 +625,8 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
 }
 
 void Accessible_mesh::connect_rest(int bc_sn) {
+  HEXED_ASSERT((Int)bound_conds.size() > bc_sn, "nonexistant boundary condition");
+  HEXED_ASSERT(bound_conds[bc_sn], "BC pointer is null");
   auto& elem_seq = elements();
   // locate unconnected faces
   #pragma omp parallel for
@@ -628,8 +638,8 @@ void Accessible_mesh::connect_rest(int bc_sn) {
   car.record_connections();
   def.record_connections();
   // make connections
-  car.connect_empty(bc_sn);
-  def.connect_empty(bc_sn);
+  car.connect_empty(bc_sn, *bound_conds[bc_sn]);
+  def.connect_empty(bc_sn, *bound_conds[bc_sn]);
 }
 
 std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles() {
@@ -771,7 +781,11 @@ void Accessible_mesh::connect_new(int start_at) {
             direction(i_dim) = math::sign(sign);
             auto neighbors = elem.tree->find_neighbors(direction);
             // if this element is at the boundary of the tree (as opposed to a surface geometry boundary) set an extremal boundary condition
-            if (neighbors.empty()) m.bound_cons.emplace_back(new Typed_bound_connection<element_t>(elem, i_dim, sign, tree_bcs[2*i_dim + sign]));
+            if (neighbors.empty()) {
+              m.bound_cons.emplace_back(new Typed_bound_connection<element_t>(
+                elem, i_dim, sign, tree_bcs[2*i_dim + sign], bound_conds[tree_bcs[2*i_dim + sign]]->n_prescribed(nd)
+              ));
+            }
             // otherwise, if the element has not only a tree neighbor but also an element neighbor...
             else if (neighbors[0]->elem) {
               if (neighbors.size() == 1) {
@@ -997,8 +1011,8 @@ void Accessible_mesh::delete_bad_extrusions() {
 }
 
 void Accessible_mesh::deform() {
-  int nd = params.n_dim;
   auto& elems = elements();
+  int nd = params.n_dim;
   // start with all elements as cartesian
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1291,8 +1305,8 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
   extrude(true);
-  connect_rest(surf_bc_sn);
   if (surf_geom) {
+    connect_rest(surf_bc_sn);
     for (auto& ptr : point_matched_vertices) ptr.set();
     for (Int i_edge = 0; i_edge < (Int)surf_geom->edges().size(); ++i_edge) {
       matched_vertices[i_edge].clear();
@@ -1850,9 +1864,13 @@ void Accessible_mesh::read_file(std::string file_name) {
     h5_read_row(bound_con_dset, 4, i_con, data);
     HEXED_ASSERT(data[1] < int(bound_conds.size()), "mesh file refers to nonexistant boundary condition");
     if (elem_ptrs[data[0]]->get_is_deformed()) {
-      def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(*def_elem_ptrs[data[0]], data[2], data[3], data[1]));
+      def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(
+        *def_elem_ptrs[data[0]], data[2], data[3], data[1], bound_conds[data[1]]->n_prescribed(params.n_dim)
+      ));
     } else {
-      car.bound_cons.emplace_back(new Typed_bound_connection<Element         >(    *elem_ptrs[data[0]], data[2], data[3], data[1]));
+      car.bound_cons.emplace_back(new Typed_bound_connection<Element>(
+        *elem_ptrs[data[0]], data[2], data[3], data[1], bound_conds[data[1]]->n_prescribed(params.n_dim)
+      ));
     }
   }
   cleanup();

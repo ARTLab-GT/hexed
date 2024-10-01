@@ -93,7 +93,6 @@ class Mesh_by_type : public View_by_type<element_t>
     }
   };
   Connection_view<Face_connection<element_t>&> elem_face_con_v;
-  Vector_view<Kernel_connection&, Face_connection<element_t>&, &trivial_convert<Kernel_connection&, Face_connection<element_t>&>, Sequence> kernel_cons;
   // this is useful to allow optional concatenation by providing an empty vector to concatenate
   static std::vector<Element_face_connection<element_t>> empty_con_vec;
   static Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> empty_con_view;
@@ -110,24 +109,25 @@ class Mesh_by_type : public View_by_type<element_t>
   Vector_view<Boundary_connection&, std::unique_ptr<Typed_bound_connection<element_t>>, ptr_convert<Boundary_connection&, std::unique_ptr<Typed_bound_connection<element_t>>>> bound_con_v;
   Vector_view<Face_connection<Deformed_element>&, std::unique_ptr<Typed_bound_connection<element_t>>, ptr_convert<Face_connection<Deformed_element>&, std::unique_ptr<Typed_bound_connection<element_t>>>> bound_face_con_view;
   Concatenation<Face_connection<element_t>&> face_con_v;
+  Vector_view<Kernel_connection&, Face_connection<element_t>&, &trivial_convert<Kernel_connection&, Face_connection<element_t>&>, Sequence> kernel_cons;
   //!\}
 
-  Mesh_by_type(Storage_params params, double root_spacing) :
-    n_faces{2*params.n_dim},
-    par{params},
-    elems{params, root_spacing},
-    elem_v{elems.elements()},
-    kernel_elems{elem_v},
-    elem_face_con_v{*this},
-    kernel_cons{face_con_v},
-    elem_con_v{*this},
-    ref_con_vs{ref_face_cons[0], ref_face_cons[1], ref_face_cons[2]},
-    ref_con_cat01{ref_con_vs[0], ref_con_vs[1]},
-    ref_con_v{ref_con_cat01, ref_con_vs[2]},
-    ref_v{ref_con_v},
-    bound_con_v{bound_cons},
-    bound_face_con_view{bound_cons},
-    face_con_v{elem_face_con_v, empty_con_view}
+  Mesh_by_type(Storage_params params, double root_spacing)
+  : n_faces{2*params.n_dim}
+  , par{params}
+  , elems{params, root_spacing}
+  , elem_v{elems.elements()}
+  , kernel_elems{elem_v}
+  , elem_face_con_v{*this}
+  , elem_con_v{*this}
+  , ref_con_vs{ref_face_cons[0], ref_face_cons[1], ref_face_cons[2]}
+  , ref_con_cat01{ref_con_vs[0], ref_con_vs[1]}
+  , ref_con_v{ref_con_cat01, ref_con_vs[2]}
+  , ref_v{ref_con_v}
+  , bound_con_v{bound_cons}
+  , bound_face_con_view{bound_cons}
+  , face_con_v{elem_face_con_v, empty_con_view}
+  , kernel_cons{face_con_v}
   {}
 
   // `View_by_type` interface implementation
@@ -167,8 +167,7 @@ class Mesh_by_type : public View_by_type<element_t>
   }
 
   //! helper function for `Accessible_mesh::connect_rest`
-  void connect_empty(int bc_sn)
-  {
+  void connect_empty(int bc_sn, Flow_bc& bound_cond) {
     auto& elem_seq = elements();
     // connect unconnected faces
     for (int i_elem = 0; i_elem < elem_seq.size(); ++i_elem) {
@@ -176,7 +175,7 @@ class Mesh_by_type : public View_by_type<element_t>
       for (int i_dim = 0; i_dim < par.n_dim; ++i_dim) {
         for (int face_sign = 0; face_sign < 2; ++face_sign) {
           if (elem.face_record[2*i_dim + face_sign] == 0) {
-            bound_cons.emplace_back(new Typed_bound_connection<element_t>(elem, i_dim, face_sign, bc_sn));
+            bound_cons.emplace_back(new Typed_bound_connection<element_t>(elem, i_dim, face_sign, bc_sn, bound_cond.n_prescribed(par.n_dim)));
             connect_normal(2*i_dim + face_sign);
           }
         }
@@ -219,8 +218,7 @@ Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> Mes
 template <> inline void Mesh_by_type<Element>::connect_normal(int i_face) {}
 
 template <>
-inline void Mesh_by_type<Deformed_element>::connect_normal(int i_face)
-{
+inline void Mesh_by_type<Deformed_element>::connect_normal(int i_face) {
   auto& con = *bound_cons.back();
   con.element().face_normal(i_face) = con.normal(0);
 }

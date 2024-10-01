@@ -1,4 +1,5 @@
-#include <global_hacks.hpp>
+#ifdef HEXED_USE_GLOBAL_HACKS
+#include <hexed/global_hacks.hpp>
 
 namespace hexed::global_hacks {
 
@@ -7,3 +8,4 @@ Stopwatch_tree stopwatch("task");
 std::vector<double> numbers(3, 0.0);
 
 }
+#endif

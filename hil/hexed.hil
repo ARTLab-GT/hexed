@@ -259,6 +259,11 @@ init_cond = {
     density = freestream_density + 0*pos0
     energy = freestream_energy + 0*pos0
 }
+wall_velocity = {
+    velocity0 = 0.
+    velocity1 = 0.
+    velocity2 = 0.
+}
 
 {overrideable macros}
 write_init = {write_mesh}

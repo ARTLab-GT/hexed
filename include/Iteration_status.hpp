@@ -6,8 +6,7 @@
 #include <cmath>
 #include <chrono>
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Contains high-level diagnostic information about the status of a time-marching scheme.
  * \details More precisely, it contains single numbers (as opposed to field or mesh-dependent data) which
@@ -15,15 +14,13 @@ namespace hexed
  * the end user, this class can provide a text report formatted to be readable both by a human
  * from the console and by a CSV parser from a file.
  */
-class Iteration_status
-{
-  std::chrono::time_point<std::chrono::system_clock> start;
+class Iteration_status {
+  std::chrono::time_point<std::chrono::steady_clock> start;
 
   protected:
   int width();
   template<typename T>
-  std::string format(std::string after, T value)
-  {
+  std::string format(std::string after, T value) {
     std::string f = "";
     const int buf_size = 100;
     char buffer [buf_size];

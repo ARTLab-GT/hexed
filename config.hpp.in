@@ -12,9 +12,9 @@
 //! \brief Namespace for options configured at build time. See \ref hexed_config.hpp.in.
 namespace hexed::config {
 
-constexpr int version_major = {[info["version_major"]]}; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
-constexpr int version_minor = {[info["version_minor"]]}; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
-constexpr int version_patch = {[info["version_patch"]]}; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
+constexpr int version_major = {[options["version_major"]]}; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
+constexpr int version_minor = {[options["version_minor"]]}; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
+constexpr int version_patch = {[options["version_patch"]]}; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
 //! \brief commit hash of the source this code was compiled from
 //! \note hex digits stored as a c-string since there isn't a standard integer type large enough to hold it as an integer
 extern const std::string commit;

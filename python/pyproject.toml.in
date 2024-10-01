@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hexedpy"
-version = "{[info['version']]}"
+version = "{[options['version']]}"
 authors = [
     {name="Micaiah Smith-Pierce", email="micaiah@gatech.edu"},
 ]
