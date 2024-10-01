@@ -129,7 +129,7 @@ void Element::set_face(int i_face, double* data) {faces[i_face] = data;}
 bool Element::is_connected(int i_face) {return faces[i_face];}
 
 Mat<3> Element::_compute_pos() const {
-  Mat<3> pos;
+  Mat<3> pos = Mat<3>::Zero();
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) pos(i_dim) = _origin(i_dim) + _nom_sz*_nom_pos[i_dim];
   return pos;
 }
