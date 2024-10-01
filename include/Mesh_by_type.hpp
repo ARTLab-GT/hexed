@@ -218,8 +218,7 @@ Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> Mes
 template <> inline void Mesh_by_type<Element>::connect_normal(int i_face) {}
 
 template <>
-inline void Mesh_by_type<Deformed_element>::connect_normal(int i_face)
-{
+inline void Mesh_by_type<Deformed_element>::connect_normal(int i_face) {
   auto& con = *bound_cons.back();
   con.element().face_normal(i_face) = con.normal(0);
 }

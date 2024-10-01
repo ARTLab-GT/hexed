@@ -625,6 +625,8 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
 }
 
 void Accessible_mesh::connect_rest(int bc_sn) {
+  HEXED_ASSERT((Int)bound_conds.size() > bc_sn, "nonexistant boundary condition");
+  HEXED_ASSERT(bound_conds[bc_sn], "BC pointer is null");
   auto& elem_seq = elements();
   // locate unconnected faces
   #pragma omp parallel for
@@ -1303,8 +1305,8 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
   extrude(true);
-  connect_rest(surf_bc_sn);
   if (surf_geom) {
+    connect_rest(surf_bc_sn);
     for (auto& ptr : point_matched_vertices) ptr.set();
     for (Int i_edge = 0; i_edge < (Int)surf_geom->edges().size(); ++i_edge) {
       matched_vertices[i_edge].clear();
