@@ -29,13 +29,12 @@ namespace hexed {
  * -# call the some of the functions in output section to get the data you want from the simulation
  */
 class Solver {
-  public:
+  private:
   struct Reduction {
     double initial_value;
     std::function<double(double, double)> binary_reduction;
   };
 
-  private:
   Storage_params params;
   std::unique_ptr<Accessible_mesh> acc_mesh;
   Gauss_legendre basis;
