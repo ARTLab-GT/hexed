@@ -81,6 +81,7 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , _glued_to(this)
 , _shadowed(this)
 , _shadows(this)
+, _shared_value{0}
 {}
 
 Vertex::~Vertex() {
