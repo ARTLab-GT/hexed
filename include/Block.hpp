@@ -120,6 +120,7 @@ class Vertex : public Block {
   void apply_relax();
   double badness(Mat<3> proposed_pos) const;
   void set_pos(Mat<3> p);
+  int n_elements() const; //!< \brief The number of elements sharing this vertex
 
   /*! \brief Accesses a `double` value used for transmitting shared data between elements.
    * \details There are several cases where elements have some data which needs to match their vertex neighbors.

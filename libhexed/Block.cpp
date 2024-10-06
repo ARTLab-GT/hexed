@@ -150,6 +150,12 @@ void Vertex::set_pos(Mat<3> p) {
   }
 }
 
+int Vertex::n_elements() const {
+  int n = 0;
+  for (auto elem : _elems.theirs()) n += bool(elem);
+  return n;
+}
+
 Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
   if (!_vert.glued()) _acquire.emplace(_vert._shared_value_lock);
 }

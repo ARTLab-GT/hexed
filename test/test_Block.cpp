@@ -250,6 +250,7 @@ TEST_CASE("Block") {
       REQUIRE_THAT(edges[0].interior()(1), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9, .65, .1}, hexed::math::Approx_equal()));
       edges[0].interior()(1)[0] = -.8;
       REQUIRE_THAT(elems[1].point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.5, .65, .1}, hexed::math::Approx_equal()));
+      REQUIRE(elems[0].vertex(0).n_elements() == 1);
       elems[0].connect(elems[1], {{0, 0}, {0, 1}});
       {
         auto interior = blocks2.interior_verts();
@@ -258,6 +259,7 @@ TEST_CASE("Block") {
         REQUIRE(&elems[0].vertex(0) == &elems[1].vertex(2));
         REQUIRE(&elems[0].vertex(1) == &elems[1].vertex(3));
       }
+      REQUIRE(elems[0].vertex(0).n_elements() == 2);
     }
 
     SECTION("3D conformal") {
