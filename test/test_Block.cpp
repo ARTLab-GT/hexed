@@ -309,6 +309,12 @@ TEST_CASE("Block") {
         REQUIRE(&elems[1].vertex(4) == &elems[3].vertex(4));
         REQUIRE(&elems[1].vertex(6) == &elems[3].vertex(6));
       }
+      REQUIRE_THAT(elems[1].vertex(4).neighbors(), Catch::Matchers::UnorderedRangeEquals(std::vector<hexed::next::Vertex*> {
+        &elems[1].vertex(0),
+        &elems[1].vertex(6),
+        &elems[1].vertex(5),
+        &elems[3].vertex(0),
+      }));
       REQUIRE_THAT(faces[2].edge(1).point({1}), Catch::Matchers::RangeEquals(faces[0].edge(2).point({1}), hexed::math::Approx_equal()));
       elems[2].connect(elems[1], {{0, 1}, {1, 0}});
       elems[3].connect(elems[2], {{1, 2}, {0, 0}});

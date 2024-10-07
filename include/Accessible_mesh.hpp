@@ -93,6 +93,7 @@ class Accessible_mesh : public Mesh {
     Mortal_ptr<next::Edge> edge;
     std::array<Geom_edge::Node, 2> nodes;
   };
+  void _match_topo();
 
   public:
   //! \brief how far must the center of an element be from the geometry relative to the nominal size

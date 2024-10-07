@@ -7,6 +7,7 @@
 #include <hexed/erase_if.hpp>
 #include <hexed/utils.hpp>
 #include <hexed/Gauss_legendre.hpp>
+#include <hexed/Visualizer.hpp> //FIXME
 
 namespace hexed {
 
@@ -18,12 +19,14 @@ Element_container& Accessible_mesh::container(bool is_deformed) {
 template<> Mesh_by_type<         Element>& Accessible_mesh::mbt() {return car;}
 template<> Mesh_by_type<Deformed_element>& Accessible_mesh::mbt() {return def;}
 
-void Accessible_mesh::relax_and_match(int n_relax, double factor) {
+void Accessible_mesh::_match_topo() {
   _blocks.edges_2d();
   _blocks.faces_3d();
-  auto verts = _blocks.boundary_verts();
-  for (auto& vert : verts) vert.unshadow();
-  for (int i_relax = 0; i_relax < n_relax/2; ++i_relax) relax(factor);
+  auto all_verts = _blocks.verts();
+  std::vector<hexed::next::Vertex*> verts;
+  for (auto& vert : all_verts) {
+    if (vert.n_elements() < params.n_vertices() && !vert.glued()) verts.push_back(&vert);
+  }
   if (surf_geom) {
     auto points = surf_geom->points();
     for (int i_point = 0; i_point < (Int)points.size(); ++i_point) {
@@ -31,10 +34,10 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
       next::Vertex* nearest = nullptr; // if no nearest point is found, the matched vertex is set to null
       double dist_sq = huge;
       for (auto& vert : verts) {
-        double d = (vert.point({}) - point).squaredNorm();
-        if (d < dist_sq && vert.independent()) {
+        double d = (vert->point({}) - point).squaredNorm();
+        if (d < dist_sq && vert->independent()) {
           dist_sq = d;
-          nearest = &vert;
+          nearest = vert;
         }
       }
       point_matched_vertices[i_point].set(nearest);
@@ -47,15 +50,16 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
       next::Vertex* best_vert = nullptr;
       double badness = huge;
       double arc_len = 0;
+      std::cout << verts.size() << std::endl;
       for (auto& vert : verts) {
-        if (!vert.glued()) {
-          Mat<3> p = vert.point({});
-          double d = vert.nominal_size()*4;
+        if (!vert->glued()) {
+          Mat<3> p = vert->point({});
+          double d = std::sqrt(huge);
           auto node = geom_edge.nearest_point(p, d, {-huge, d}).index;
           if (node >= 0) {
             double b = (p - nodes(node).vector()).norm() + arc_length[node];
             if (b < badness) {
-              best_vert = &vert;
+              best_vert = vert;
               badness = b;
               arc_len = arc_length[node];
             }
@@ -64,68 +68,58 @@ void Accessible_mesh::relax_and_match(int n_relax, double factor) {
       }
       matched_edges[i_geom_edge].clear();
       matched_vertices[i_geom_edge].clear();
+      std::cout << (best_vert == nullptr) << std::endl;
       if (!best_vert) continue;
       matched_vertices[i_geom_edge].emplace_back(best_vert);
       next::Vertex* curr = best_vert;
       while (true) {
-        next::Edge* best_edge = nullptr;
         double temp_arc_len = 0;
         double progress = -huge;
-        for (auto& edge : curr->edges()) if (!edge.glued()) {
-          next::Vertex* vert = &edge.vertex(0) == curr ? &edge.vertex(1) : &edge.vertex(0);
+        best_vert = nullptr;
+        for (next::Vertex* vert : curr->neighbors()) if (!vert->glued() && vert->n_elements() < params.n_vertices()) {
           Mat<3> p = vert->point({});
-          double d = 4*edge.element()->nominal_size();
+          double d = huge;
           auto node = geom_edge.nearest_point(p, d, {arc_len - d, arc_len + d}).index;
           if (node >= 0) {
             double prog = arc_length[node] - (p - nodes(node).vector()).norm();
             if (prog > progress) {
-              best_edge = &edge;
               best_vert = vert;
               progress = prog;
               temp_arc_len = arc_length[node];
+              std::cout << p.transpose() << std::endl;
             }
           }
         }
-        if (!best_edge) break;
-        if (!matched_edges[i_geom_edge].empty()) if (best_edge == matched_edges[i_geom_edge].back().get()) {
-          matched_edges[i_geom_edge].erase(matched_edges[i_geom_edge].end());
-          matched_vertices[i_geom_edge].erase(matched_vertices[i_geom_edge].end());
-          break;
+        if (!best_vert) break;
+        if (matched_vertices[i_geom_edge].size() > 1) {
+          if (best_vert == matched_vertices[i_geom_edge][matched_vertices[i_geom_edge].size() - 1].get()) {
+            matched_vertices[i_geom_edge].erase(matched_vertices[i_geom_edge].end() - 1);
+            break;
+          }
         }
-        matched_edges[i_geom_edge].emplace_back(best_edge);
+        if (matched_vertices[i_geom_edge].size() > 100) break;
         curr = best_vert;
         matched_vertices[i_geom_edge].emplace_back(best_vert);
         arc_len = temp_arc_len;
       }
-    }
-    for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
-      for (std::size_t i_edge = 1; i_edge < matched_edges[i_geom_edge].size(); ++i_edge) {
-        std::array<next::Edge*, 2> edges {
-          matched_edges[i_geom_edge][i_edge - 1].get(),
-          matched_edges[i_geom_edge][i_edge].get(),
-        };
-        bool collapsed = false;
-        for (int i = 0; i < 2; ++i) collapsed = collapsed || edges[i]->vertex(0).are_shadows(edges[i]->vertex(1));
-        if (!collapsed) {
-          bool shared_elem = false;
-          for (auto elem0 : edges[0]->contacted_elements()) {
-            for (auto elem1 : edges[1]->contacted_elements()) {
-              shared_elem = shared_elem || elem0 == elem1;
-            }
-          }
-          if (shared_elem) {
-            double badness [2] {};
-            for (int i = 0; i < 2; ++i) {
-              Mat<3> avg_pos = .5*(edges[i]->vertex(0).point({}) + edges[i]->vertex(1).point({}));
-              for (int j = 0; j < 2; ++j) badness[i] += edges[i]->vertex(j).badness(avg_pos);
-            }
-            int collapse = badness[1] < badness[0];
-            edges[collapse]->vertex(0).shadow(edges[collapse]->vertex(1));
+      std::cout << matched_vertices[i_geom_edge].size() << "\n" << std::endl;
+      if (matched_vertices[i_geom_edge].size()) {
+        Array<double> pos({3, (Int)matched_vertices[i_geom_edge].size()});
+        for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
+          Mat<3> p = matched_vertices[i_geom_edge][i_vert]->point({});
+          for (int i_dim = 0; i_dim < 3; ++i_dim) {
+            pos(i_dim)[i_vert] = p(i_dim);
           }
         }
+        auto vis = Visualizer::create("default", 3, 1, "match_edge" + std::to_string(i_geom_edge), {}, 0., Visualizer::block);
+        vis->write_block(pos(), Array<double>({}));
       }
     }
   }
+}
+
+void Accessible_mesh::relax_and_match(int n_relax, double factor) {
+  for (int i_relax = 0; i_relax < n_relax/2; ++i_relax) relax(factor);
   for (int i_relax = 0; i_relax < n_relax - n_relax/2; ++i_relax) relax(factor);
 }
 
@@ -733,8 +727,9 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   purge();
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
-  extrude(true);
-  connect_rest(surf_bc_sn);
+  _match_topo();
+  //extrude(true);
+  //connect_rest(surf_bc_sn);
   _n_verts = _blocks.verts().size();
 }
 
@@ -1329,6 +1324,7 @@ void Accessible_mesh::relax(double factor) {
     _blocks.relax_vertices();
     _stopwatch["relax"]["optimization"].work_units_completed += _n_verts;
   }
+  #if 0
   // snap vertices to extremal boundaries
   if (tree) {
     Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);
@@ -1427,6 +1423,11 @@ void Accessible_mesh::relax(double factor) {
     #pragma omp parallel for
     for (auto& block : blocks) block.reset();
   }
+  #else
+  auto blocks = _blocks.boundary_sides();
+  #pragma omp parallel for
+  for (auto& block : blocks) block.reset();
+  #endif
   _stopwatch["relax"].work_units_completed += _n_verts;
 }
 

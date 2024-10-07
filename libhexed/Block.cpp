@@ -58,20 +58,6 @@ Mat<3> Block::point(int i_point) const {
   return point(node_coords);
 }
 
-Mat<3> Vertex::_point(const std::vector<int>&) const {
-  // usually, the vertex will not be glued or a shadow and we can just return the `_pos`
-  if (_shadowed) return _shadowed->point({});
-  if (!_glued_to) {
-    Mat<3> p;
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      #pragma omp atomic read
-      p(i_dim) = _pos(i_dim);
-    }
-    return p;
-  }
-  return _glued_to->interpolate(_glued_coords);
-}
-
 Vertex::Vertex(Mat<3> pos, int row_size)
 : Block(0, row_size)
 , _pos{pos}
@@ -156,6 +142,24 @@ int Vertex::n_elements() const {
   return n;
 }
 
+std::vector<Vertex*> Vertex::neighbors() {
+  std::vector<Vertex*> n;
+  for (auto elem : _elems.theirs()) {
+    HEXED_ASSERT(_elems.theirs()[0], "element is null");
+    int nv = math::pow(2, elem->n_dim());
+    int i_this = _get_index(*elem);
+    for (int i_vert = 0; i_vert < nv; ++i_vert) {
+      Vertex* vert = &elem->vertex(i_vert);
+      for (int stride = 1; stride < nv; stride *= 2) {
+        if (i_this - i_vert == stride*(2*(i_this/stride%2) - 1) && std::find(n.begin(), n.end(), vert) == n.end()) {
+          n.push_back(vert);
+        }
+      }
+    }
+  }
+  return n;
+}
+
 Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
   if (!_vert.glued()) _acquire.emplace(_vert._shared_value_lock);
 }
@@ -181,6 +185,20 @@ void Vertex::Shared_value::set(double value) {
   if (_acquire) _vert._shared_value = value;
 }
 
+Mat<3> Vertex::_point(const std::vector<int>&) const {
+  // usually, the vertex will not be glued or a shadow and we can just return the `_pos`
+  if (_shadowed) return _shadowed->point({});
+  if (!_glued_to) {
+    Mat<3> p;
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      #pragma omp atomic read
+      p(i_dim) = _pos(i_dim);
+    }
+    return p;
+  }
+  return _glued_to->interpolate(_glued_coords);
+}
+
 Mat<3> Vertex::_desired_pos() const {
   Mat<3> des_pos = Mat<3>::Zero();
   HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute optimize postion");
@@ -192,12 +210,11 @@ Mat<3> Vertex::_desired_pos() const {
     HEXED_ASSERT(elem, "element is null");
     if (elem->glued()) continue;
     double nom_sz = elem->nominal_size();
-    int i_this = -1;
+    int i_this = _get_index(*elem);
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
-      const Vertex& vert = elem->vertex(i_vert);
-      verts(all, i_vert) = vert._pos; // we can use `_pos` because `Mesh_blocks` just set that to `point({})`
-      if (&vert == this) i_this = i_vert;
+      // we can use `_pos` because `Mesh_blocks` just set that to `point({})`
+      verts(all, i_vert) = elem->vertex(i_vert)._pos;
     }
     HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
     if (!elem->deformed) return elem->nominal_position(i_this);
@@ -225,6 +242,16 @@ Mat<3> Vertex::_desired_pos() const {
   if (tot_sz == 0) return _pos;
   des_pos = .9*des_pos/tot_sz + .1*_pos;
   return des_pos;
+}
+
+int Vertex::_get_index(const Element_shape& elem) const {
+  int i_this = -1;
+  int nv = math::pow(2, elem.n_dim());
+  for (int i_vert = 0; i_vert < nv; ++i_vert) {
+    if (&elem.vertex(i_vert) == this) i_this = i_vert;
+  }
+  HEXED_ASSERT(i_this >= 0, "`this` is not a vertex of `elem`");
+  return i_this;
 }
 
 std::vector<Int> interior_dims(int n_dim, int row_size) {

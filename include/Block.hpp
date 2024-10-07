@@ -121,6 +121,12 @@ class Vertex : public Block {
   double badness(Mat<3> proposed_pos) const;
   void set_pos(Mat<3> p);
   int n_elements() const; //!< \brief The number of elements sharing this vertex
+  /*! \brief The list of vertices that share an edge with `this`.
+   * \details By "share an edge" I mean that they are connected by a geometric edge of an element,
+   * not necessarily and actual `Edge` object.
+   * The latter would only ever be true for boundary vertices, whereas the former can be true in the interior.
+   */
+  std::vector<Vertex*> neighbors();
 
   /*! \brief Accesses a `double` value used for transmitting shared data between elements.
    * \details There are several cases where elements have some data which needs to match their vertex neighbors.
@@ -149,8 +155,10 @@ class Vertex : public Block {
   std::vector<Int> record; //!< for algorithms to keep notes as they please
 
   private:
-  Mat<3> _pos;
   Mat<3> _point(const std::vector<int>&) const override;
+  Mat<3> _desired_pos() const;
+  int _get_index(const Element_shape&) const;
+  Mat<3> _pos;
   Mat<3> _update;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;
@@ -158,7 +166,6 @@ class Vertex : public Block {
   Reciprocal_ptr<Vertex, Vertex> _shadowed;
   Reciprocal_list<Vertex, Vertex> _shadows;
   std::vector<double> _glued_coords;
-  Mat<3> _desired_pos() const;
   double _shared_value;
   Lock _shared_value_lock;
 };

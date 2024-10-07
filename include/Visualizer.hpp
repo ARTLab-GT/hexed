@@ -72,7 +72,8 @@ class Visualizer {
    * \param element_type Along with `n_dim_topo`, specifies the type of elements to visualize.
    */
   static std::unique_ptr<Visualizer> create(std::string format, int n_dim_geom, int n_dim_topo,
-                                            std::string file_name, std::vector<std::string> variable_names, double time, elem_type element_type);
+                                            std::string file_name, std::vector<std::string> variable_names,
+                                            double time, elem_type element_type);
   //! \brief overload of `create(std::string, int, int, std::string, std::vector<std::string>, double, elem_type)`
   //! \details The number and names of variables are determined from the `Output_data` supplied.
   static std::unique_ptr<Visualizer> create(std::string format, int n_dim_geom, int n_dim_topo,
