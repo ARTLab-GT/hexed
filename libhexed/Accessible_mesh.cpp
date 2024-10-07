@@ -22,14 +22,12 @@ template<> Mesh_by_type<Deformed_element>& Accessible_mesh::mbt() {return def;}
 
 namespace dijkstra {
   struct Node {
-    Node(next::Vertex* v) : vert{v}, cost{huge}, prev{nullptr} {}
     next::Vertex* vert;
     double cost;
-    Node* prev;
+    int updates;
   };
-
-  bool compare(std::unique_ptr<Node>& x, std::unique_ptr<Node>& y) {
-    return x->cost > y->cost;
+  bool compare(Node x, Node y) {
+    return x.cost > y.cost;
   }
 }
 
@@ -74,11 +72,58 @@ void Accessible_mesh::_match_topo() {
           }
         }
       }
+      std::cout << "n edge vertices: ";
+      if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
+      #pragma omp parallel for
+      for (next::Vertex* vert : verts) {
+        vert->dijkstra_dist = huge;
+        vert->dijkstra_updates = 0;
+        vert->dijkstra_prev = nullptr;
+        double d = 4*vert->nominal_size();
+        auto nearest = geom_edge.nearest_point(vert->point({}), d);
+        vert->dijkstra_curve_dist_sq = nearest.index >= 0 && nearest.distance <= d ?
+                                       nearest.distance*nearest.distance : std::nan("");
+        vert->dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
+      }
       std::priority_queue<
-        std::unique_ptr<dijkstra::Node>,
-        std::vector<std::unique_ptr<dijkstra::Node>>,
-        std::function<bool(std::unique_ptr<dijkstra::Node>&, std::unique_ptr<dijkstra::Node>&)>
+        dijkstra::Node,
+        std::vector<dijkstra::Node>,
+        std::function<bool(dijkstra::Node, dijkstra::Node)>
       > unvisited(&dijkstra::compare);
+      // Dijkstra's algorithm will start at the second endpoint and go to the first,
+      // so that we can traverse the path in reverse via `Vertex::dijkstra_prev`,
+      // we will end up with a path from the first endpoint to the second
+      unvisited.emplace(start_end[1], 0., 1);
+      start_end[1]->dijkstra_dist = 0;
+      start_end[1]->dijkstra_updates = 1;
+      dijkstra::Node curr {nullptr, 0., 0};
+      while (curr.vert != start_end[0] && !unvisited.empty()) {
+        curr = unvisited.top();
+        unvisited.pop();
+        if (curr.updates < curr.vert->dijkstra_updates) continue;
+        for (next::Vertex* vert : curr.vert->neighbors()) {
+          if (std::isfinite(vert->dijkstra_curve_dist_sq)
+              && vert->n_elements() < params.n_vertices() && !vert->glued()) {
+            double interval = std::max((curr.vert->point({}) - vert->point({})).norm(),
+                                       std::abs(vert->dijkstra_arc_len - curr.vert->dijkstra_arc_len));
+            double d = curr.cost + .5*(curr.vert->dijkstra_curve_dist_sq + vert->dijkstra_curve_dist_sq)*interval;
+            if (d < vert->dijkstra_dist) {
+              vert->dijkstra_dist = d;
+              vert->dijkstra_prev = curr.vert;
+              unvisited.emplace(vert, d, ++vert->dijkstra_updates);
+            }
+          }
+        }
+      }
+      matched_vertices[i_geom_edge].clear();
+      if (curr.vert == start_end[0]) {
+        next::Vertex* vert = curr.vert;
+        do {
+          matched_vertices[i_geom_edge].emplace_back(vert);
+          vert = vert->dijkstra_prev;
+        } while (vert);
+      }
+      std::cout << matched_vertices[i_geom_edge].size() << std::endl;
       #else
       Array<double> nodes {geom_edge.nodes()};
       Array<double> arc_length {geom_edge.arc_length()};
