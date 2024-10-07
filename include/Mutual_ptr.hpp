@@ -3,8 +3,7 @@
 
 #include "assert.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Abstract base class for implementing mutually-connected pointers.
  * \details Specifies an interface that has a reference to a `T` (`mine()`),
@@ -14,8 +13,7 @@ namespace hexed
  * and then implement their own interface that calls `connect(Ptr_base<U, T>*)` and `disconnect(Ptr_base<U, T>*)`.
  */
 template <typename T, typename U>
-class Ptr_base
-{
+class Ptr_base {
   friend class Ptr_base<U, T>;
 
   protected:
@@ -26,15 +24,13 @@ class Ptr_base
   virtual void disconnect_self(Ptr_base<U, T>*) = 0;
 
   //! \brief Mutually connect us by calling both our `connect_self`.
-  void connect(Ptr_base<U, T>* other)
-  {
+  void connect(Ptr_base<U, T>* other) {
     connect_self(other);
     if (other) other->connect_self(this);
   }
 
   //! \brief Mutually disconnect us by calling both our `disconnect_self`.
-  void disconnect(Ptr_base<U, T>* other)
-  {
+  void disconnect(Ptr_base<U, T>* other) {
     if (other) other->disconnect_self(this);
     disconnect_self(other);
   }
@@ -57,17 +53,14 @@ class Ptr_base
  * and can point to objects of type `U` by pairing with a `Mutual_ptr<U, T>`, or more generally, any `Ptr_base<U, T>`.
  */
 template <typename T, typename U>
-class Mutual_ptr : public Ptr_base<T, U>
-{
+class Mutual_ptr : public Ptr_base<T, U> {
   T* _mine;
   Ptr_base<U, T>* _partner;
-  void connect_self(Ptr_base<U, T>* other) override
-  {
+  void connect_self(Ptr_base<U, T>* other) override {
     unpair();
     _partner = other;
   }
-  void disconnect_self(Ptr_base<U, T>* other) override
-  {
+  void disconnect_self(Ptr_base<U, T>* other) override {
     HEXED_ASSERT(_partner == other, "can only disconnect a `Mutual_ptr` from its current partner");
     _partner = nullptr;
   }
@@ -75,8 +68,7 @@ class Mutual_ptr : public Ptr_base<T, U>
   public:
   //! \brief Constructs a `Mutual_ptr` permanently associated with `data`.
   //! \details `data` cannot be null. Henceforth, the value of `*data` can be changed but its address cannot.
-  Mutual_ptr(T* data) : _mine{data}, _partner{nullptr}
-  {
+  Mutual_ptr(T* data) : _mine{data}, _partner{nullptr} {
     HEXED_ASSERT(_mine, "`Mutual_ptr` cannot be constructed from null data");
   }
   ~Mutual_ptr() {unpair();} //!< \brief \ref unpair() "unpairs"
@@ -91,8 +83,7 @@ class Mutual_ptr : public Ptr_base<T, U>
    * \details If `other` is unpaired, `this` will be unpaired.
    * `other` is left unpaired with its `mine` intact.
    */
-  Mutual_ptr& operator=(Mutual_ptr&& other)
-  {
+  Mutual_ptr& operator=(Mutual_ptr&& other) {
     unpair();
     _mine = other._mine;
     if (other._partner) pair(*other._partner);
@@ -120,8 +111,7 @@ class Mutual_ptr : public Ptr_base<T, U>
     /*! \brief dereferencing members refers to `partner()`s `mine()` (undefined if unpaired) */ \
     CONST U* operator->() CONST {return &_partner->mine();} \
     /*! \brief obtains reference to `partner()`'s `mine()` if paired and throws exception if not paired */ \
-    CONST U& value()  CONST \
-    { \
+    CONST U& value()  CONST { \
       HEXED_ASSERT(partner(), "attempt to get the value of an unpaired `Mutual_ptr`"); \
       return _partner->mine(); \
     } \
@@ -138,16 +128,13 @@ class Mutual_ptr : public Ptr_base<T, U>
  * will simply remove partners from the sequence.
  */
 template <typename T, typename U>
-class Multiple_ptr : public Ptr_base<T, U>
-{
+class Multiple_ptr : public Ptr_base<T, U> {
   T* _mine;
   std::vector<Ptr_base<U, T>*> _partners;
-  void connect_self(Ptr_base<U, T>* other) override
-  {
+  void connect_self(Ptr_base<U, T>* other) override {
     _partners.push_back(other);
   }
-  void disconnect_self(Ptr_base<U, T>* other) override
-  {
+  void disconnect_self(Ptr_base<U, T>* other) override {
     std::erase(_partners, other);
   }
 
@@ -167,8 +154,7 @@ class Multiple_ptr : public Ptr_base<T, U>
    * Any partners `this` had before the move assignment will be removed.
    * `other` will be left with its `mine()` intact and no partners.
    */
-  Multiple_ptr& operator=(Multiple_ptr&& other)
-  {
+  Multiple_ptr& operator=(Multiple_ptr&& other) {
     _mine = other._mine;
     for (auto p : _partners) this->disconnect(p);
     for (auto p : other._partners) {

@@ -54,7 +54,7 @@ void Accessible_mesh::_match_topo() {
       for (auto& vert : verts) {
         if (!vert->glued()) {
           Mat<3> p = vert->point({});
-          double d = std::sqrt(huge);
+          double d = 4*vert->nominal_size();
           auto node = geom_edge.nearest_point(p, d, {-huge, d}).index;
           if (node >= 0) {
             double b = (p - nodes(node).vector()).norm() + arc_length[node];
@@ -78,7 +78,7 @@ void Accessible_mesh::_match_topo() {
         best_vert = nullptr;
         for (next::Vertex* vert : curr->neighbors()) if (!vert->glued() && vert->n_elements() < params.n_vertices()) {
           Mat<3> p = vert->point({});
-          double d = huge;
+          double d = 4*vert->nominal_size();
           auto node = geom_edge.nearest_point(p, d, {arc_len - d, arc_len + d}).index;
           if (node >= 0) {
             double prog = arc_length[node] - (p - nodes(node).vector()).norm();
@@ -92,7 +92,7 @@ void Accessible_mesh::_match_topo() {
         }
         if (!best_vert) break;
         if (matched_vertices[i_geom_edge].size() > 1) {
-          if (best_vert == matched_vertices[i_geom_edge][matched_vertices[i_geom_edge].size() - 1].get()) {
+          if (std::find(matched_vertices[i_geom_edge].begin(), matched_vertices[i_geom_edge].end(), best_vert) != matched_vertices[i_geom_edge].end()) {
             matched_vertices[i_geom_edge].erase(matched_vertices[i_geom_edge].end() - 1);
             break;
           }
@@ -105,14 +105,16 @@ void Accessible_mesh::_match_topo() {
       std::cout << matched_vertices[i_geom_edge].size() << "\n" << std::endl;
       if (matched_vertices[i_geom_edge].size()) {
         Array<double> pos({3, (Int)matched_vertices[i_geom_edge].size()});
+        Array<double> vars({1, (Int)matched_vertices[i_geom_edge].size()});
+        vars = i_geom_edge;
         for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
           Mat<3> p = matched_vertices[i_geom_edge][i_vert]->point({});
           for (int i_dim = 0; i_dim < 3; ++i_dim) {
             pos(i_dim)[i_vert] = p(i_dim);
           }
         }
-        auto vis = Visualizer::create("default", 3, 1, "match_edge" + std::to_string(i_geom_edge), {}, 0., Visualizer::block);
-        vis->write_block(pos(), Array<double>({}));
+        auto vis = Visualizer::create("default", 3, 1, "match_edge" + std::to_string(i_geom_edge), {"i_geom_edge"}, 0., Visualizer::block);
+        vis->write_block(pos(), vars());
       }
     }
   }
