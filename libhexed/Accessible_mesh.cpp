@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <queue>
 #include <H5Cpp.h>
 #include <hexed/Accessible_mesh.hpp>
 #include <hexed/math.hpp>
@@ -18,6 +19,19 @@ Element_container& Accessible_mesh::container(bool is_deformed) {
 
 template<> Mesh_by_type<         Element>& Accessible_mesh::mbt() {return car;}
 template<> Mesh_by_type<Deformed_element>& Accessible_mesh::mbt() {return def;}
+
+namespace dijkstra {
+  struct Node {
+    Node(next::Vertex* v) : vert{v}, cost{huge}, prev{nullptr} {}
+    next::Vertex* vert;
+    double cost;
+    Node* prev;
+  };
+
+  bool compare(std::unique_ptr<Node>& x, std::unique_ptr<Node>& y) {
+    return x->cost > y->cost;
+  }
+}
 
 void Accessible_mesh::_match_topo() {
   _blocks.edges_2d();
@@ -44,7 +58,28 @@ void Accessible_mesh::_match_topo() {
     }
     auto edges = surf_geom->edges();
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+      #if 1
       auto& geom_edge = edges[i_geom_edge];
+      std::array<next::Vertex*, 2> start_end {nullptr, nullptr};
+      for (int i_endpoint = 0; i_endpoint < 2; ++i_endpoint) {
+        double dist_sq = huge;
+        Mat<3> endpoint = geom_edge.nodes()(i_endpoint*(geom_edge.nodes().shape()[0] - 1)).vector();
+        for (auto& vert : verts) {
+          if (!vert->glued()) {
+            double d = (vert->point({}) - endpoint).squaredNorm();
+            if (d < dist_sq) {
+              dist_sq = d;
+              start_end[i_endpoint] = vert;
+            }
+          }
+        }
+      }
+      std::priority_queue<
+        std::unique_ptr<dijkstra::Node>,
+        std::vector<std::unique_ptr<dijkstra::Node>>,
+        std::function<bool(std::unique_ptr<dijkstra::Node>&, std::unique_ptr<dijkstra::Node>&)>
+      > unvisited(&dijkstra::compare);
+      #else
       Array<double> nodes {geom_edge.nodes()};
       Array<double> arc_length {geom_edge.arc_length()};
       next::Vertex* best_vert = nullptr;
@@ -103,6 +138,7 @@ void Accessible_mesh::_match_topo() {
         arc_len = temp_arc_len;
       }
       std::cout << matched_vertices[i_geom_edge].size() << "\n" << std::endl;
+      #endif
       if (matched_vertices[i_geom_edge].size()) {
         Array<double> pos({3, (Int)matched_vertices[i_geom_edge].size()});
         Array<double> vars({1, (Int)matched_vertices[i_geom_edge].size()});
