@@ -7,10 +7,10 @@ namespace hexed {
 #define COMPUTE_CONVECTION(Pde_templ, ...) { \
   (*kernel_factory<Spatial<Pde_templ, false>::Neighbor>(mesh.n_dim, mesh.row_size, opts.i_stage, mesh.mask_level, mesh.n_var __VA_OPT__(,) __VA_ARGS__))(mesh.car_cons, opts.sw_car, "neighbor"); \
   (*kernel_factory<Spatial<Pde_templ,  true>::Neighbor>(mesh.n_dim, mesh.row_size, opts.i_stage, mesh.mask_level, mesh.n_var __VA_OPT__(,) __VA_ARGS__))(mesh.def_cons, opts.sw_def, "neighbor"); \
-  (*kernel_factory<Spatial<Pde_templ, false>::Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level))(mesh.ref_faces, opts.sw_pr); \
+  (*kernel_factory<Spatial<Pde_templ, false>::Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var))(mesh.ref_faces, opts.sw_pr); \
   (*kernel_factory<Spatial<Pde_templ, false>::Local>(mesh.n_dim, mesh.row_size, mesh.basis, opts.dt, opts.i_stage, opts.compute_residual, opts.use_filter, opts.mask, opts.conv_substep, mesh.n_var __VA_OPT__(,) __VA_ARGS__))(mesh.car_elems, opts.sw_car, "local"); \
   (*kernel_factory<Spatial<Pde_templ,  true>::Local>(mesh.n_dim, mesh.row_size, mesh.basis, opts.dt, opts.i_stage, opts.compute_residual, opts.use_filter, opts.mask, opts.conv_substep, mesh.n_var __VA_OPT__(,) __VA_ARGS__))(mesh.def_elems, opts.sw_def, "local"); \
-  (*kernel_factory<Spatial<Pde_templ, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level))(mesh.ref_faces, opts.sw_pr); \
+  (*kernel_factory<Spatial<Pde_templ, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var))(mesh.ref_faces, opts.sw_pr); \
 }
 
 void compute_euler(Kernel_mesh mesh, Kernel_options opts) COMPUTE_CONVECTION(pde::Navier_stokes<false>::Pde)
@@ -19,15 +19,15 @@ void compute_advection(Kernel_mesh mesh, Kernel_options opts, double advect_leng
 #undef COMPUTE_CONVECTION
 
 void compute_prolong(Kernel_mesh mesh, bool scale, bool offset) {
-  (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, scale, offset))(mesh.ref_faces);
+  (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var, scale, offset))(mesh.ref_faces);
 }
 
 void compute_restrict(Kernel_mesh mesh, bool scale, bool offset) {
-  (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, scale, offset))(mesh.ref_faces);
+  (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var, scale, offset))(mesh.ref_faces);
 }
 
 void compute_prolong_advection(Kernel_mesh mesh) {
-  (*kernel_factory<Spatial<pde::Advection, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, false, false))(mesh.ref_faces);
+  (*kernel_factory<Spatial<pde::Advection, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var, false, false))(mesh.ref_faces);
 }
 
 std::unique_ptr<Face_permutation_dynamic> face_permutation(int n_dim, int row_size, Connection_direction dir, double* data) {

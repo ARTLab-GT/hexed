@@ -133,14 +133,16 @@ class Spatial {
     const Eigen::Matrix<double, row_size, row_size> prolong_mat [2];
     bool scl;
     bool off;
+    int _n_var;
     int _mask;
 
     public:
-    Prolong_refined(const Basis& basis, int mask, bool scale = false, bool offset = false) :
-      prolong_mat{basis.prolong(0), basis.prolong(1)},
-      scl{scale},
-      off{offset},
-      _mask{mask}
+    Prolong_refined(const Basis& basis, int mask, int n_var, bool scale = false, bool offset = false)
+    : prolong_mat{basis.prolong(0), basis.prolong(1)}
+    , scl{scale}
+    , off{offset}
+    , _n_var{n_var}
+    , _mask{mask}
     {}
 
     virtual void operator()(Sequence<Refined_face&>& ref_faces) {
@@ -151,13 +153,13 @@ class Spatial {
       for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face) {
         auto& ref_face {ref_faces[i_ref_face]};
         if (ref_face.fine_mask() >= _mask) {
-          double* coarse {ref_face.coarse + off*(n_dim + 2)*nfq};
+          double* coarse {ref_face.coarse + off*_n_var*nfq};
           const auto str = ref_face.stretch;
           // update number of faces to reflect any face stretching
           int nf = n_face;
           for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
           for (int i_face = 0; i_face < nf; ++i_face) if (ref_face.fine_masks[i_face] >= _mask) {
-            double* fine {ref_face.fine[i_face] + off*(n_dim + 2)*nfq};
+            double* fine {ref_face.fine[i_face] + off*_n_var*nfq};
             for (int i_var = 0; i_var < n_var; ++i_var) {
               double* var_face {fine + i_var*nfq};
               // initialize fine face to be equal to coarse face
@@ -205,14 +207,16 @@ class Spatial {
     const Eigen::Matrix<double, row_size, row_size> restrict_mat [2];
     bool scl;
     bool off;
+    int _n_var;
     int _mask;
 
     public:
-    Restrict_refined(const Basis& basis, int mask, bool scale = true, bool offset = false) :
-      restrict_mat{basis.restrict(0), basis.restrict(1)},
-      scl{scale},
-      off{offset},
-      _mask{mask}
+    Restrict_refined(const Basis& basis, int mask, int n_var, bool scale = true, bool offset = false)
+    : restrict_mat{basis.restrict(0), basis.restrict(1)}
+    , scl{scale}
+    , off{offset}
+    , _n_var{n_var}
+    , _mask{mask}
     {}
 
     virtual void operator()(Sequence<Refined_face&>& ref_faces) {
@@ -223,14 +227,14 @@ class Spatial {
       for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face) {
         auto& ref_face {ref_faces[i_ref_face]};
         if (ref_face.coarse_mask >= _mask) {
-          double* coarse {ref_face.coarse + off*(n_dim + 2)*nfq};
+          double* coarse {ref_face.coarse + off*_n_var*nfq};
           for (int i_dof = 0; i_dof < n_var*nfq; ++i_dof) coarse[i_dof] = 0.;
           auto str = ref_face.stretch;
           // update number of faces to reflect any face stretching
           int nf = n_face;
           for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
           for (int i_face = 0; i_face < nf; ++i_face) {
-            double* fine {ref_face.fine[i_face] + off*(n_dim + 2)*nfq};
+            double* fine {ref_face.fine[i_face] + off*_n_var*nfq};
             for (int i_var = 0; i_var < n_var; ++i_var) {
               double* var_face {fine + i_var*nfq};
               for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) {
@@ -704,7 +708,7 @@ class Spatial {
   class Neighbor_reconcile : public Kernel<Kernel_connection&> {
     using Pde = Pde_templ<n_dim, row_size>;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
-    int _mask;
+    const int _mask;
 
     public:
     Neighbor_reconcile(int mask) : _mask{mask} {}
@@ -713,7 +717,7 @@ class Spatial {
       for (int i_con = 0; i_con < connections.size(); ++i_con) {
         auto& con = connections[i_con];
         auto dir = con.get_direction();
-        double face [2][(n_dim + 2)*n_fqpoint]; // copying face data to temporary stack storage improves efficiency FIXME
+        double face [2][Pde::n_update*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
