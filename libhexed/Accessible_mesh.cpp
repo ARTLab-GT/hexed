@@ -48,6 +48,7 @@ void Accessible_mesh::_match_topo() {
   if (!surf_geom) return;
   _blocks.edges_2d();
   _blocks.faces_3d();
+  std::vector<hexed::next::Vertex*> verts;
   auto all_verts = _blocks.verts();
   #pragma omp parallel for
   for (auto& vert : all_verts) {
@@ -68,10 +69,6 @@ void Accessible_mesh::_match_topo() {
       }
     }
   }
-  std::vector<hexed::next::Vertex*> verts;
-  for (auto& vert : all_verts) {
-    if (vert.record[0] && !vert.glued()) verts.push_back(&vert);
-  }
   auto points = surf_geom->points();
   for (int i_point = 0; i_point < (Int)points.size(); ++i_point) {
     Mat<3> point = points[i_point];
@@ -87,12 +84,25 @@ void Accessible_mesh::_match_topo() {
     point_matched_vertices[i_point].set(nearest);
   }
   if (params.n_dim < 3) return;
+  for (auto& vert : all_verts) {
+    if (vert.record[0] && !vert.glued()) verts.push_back(&vert);
+  }
+  for (int i_relax = 0; i_relax < 10; ++i_relax) {
+    relax(.5);
+    #pragma omp parallel for
+    for (next::Vertex* vert : verts) {
+      vert->set_pos(surf_geom->nearest_point(vert->point({}), std::sqrt(huge), 2*vert->nominal_size()).point());
+    }
+  }
   #pragma omp parallel for
   for (next::Vertex* vert : verts) {
     Mat<3> point = vert->point({});
+    #if 0
     auto nearest = surf_geom->nearest_point(point, 2*vert->nominal_size());
     if (nearest.empty()) vert->dijkstra_point = point;
     else vert->dijkstra_point = nearest.point();
+    #endif
+    vert->dijkstra_point = point;
     vert->snapped_edge = -1;
   }
   auto edges = surf_geom->edges();
@@ -106,7 +116,7 @@ void Accessible_mesh::_match_topo() {
       for (auto& vert : verts) {
         if (!vert->glued()) {
           double d = (vert->dijkstra_point - endpoint).squaredNorm();
-          if (d < dist_sq) {
+          if (d < std::min(dist_sq, math::pow(2*vert->nominal_size(), 2))) {
             dist_sq = d;
             start_end[i_endpoint] = vert;
           }
