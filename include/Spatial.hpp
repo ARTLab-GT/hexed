@@ -220,8 +220,7 @@ class Spatial {
       constexpr int nfq = math::pow(row_size, n_dim - 1);
 
       #pragma omp parallel for
-      for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face)
-      {
+      for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face) {
         auto& ref_face {ref_faces[i_ref_face]};
         if (ref_face.coarse_mask >= _mask) {
           double* coarse {ref_face.coarse + off*(n_dim + 2)*nfq};
@@ -230,28 +229,20 @@ class Spatial {
           // update number of faces to reflect any face stretching
           int nf = n_face;
           for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
-          for (int i_face = 0; i_face < nf; ++i_face)
-          {
+          for (int i_face = 0; i_face < nf; ++i_face) {
             double* fine {ref_face.fine[i_face] + off*(n_dim + 2)*nfq};
-            for (int i_var = 0; i_var < n_var; ++i_var)
-            {
+            for (int i_var = 0; i_var < n_var; ++i_var) {
               double* var_face {fine + i_var*nfq};
-              for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim)
-              {
-                if (str[i_dim])
-                {
+              for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) {
+                if (str[i_dim]) {
                   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) var_face[i_qpoint] /= 1 + scl;
-                }
-                else
-                {
+                } else {
                   const int pow {n_dim - 2 - i_dim};
                   const int face_stride {str[n_dim - 2] ? 1 : math::pow(2, pow)};
                   const int qpoint_stride {math::pow(row_size, pow)};
                   const int i_half {(i_face/face_stride)%2}; // is this face covering the upper or lower half of the coarse face with respect to the current dimension?
-                  for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer)
-                  {
-                    for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner)
-                    {
+                  for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer) {
+                    for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner) {
                       Eigen::Matrix<double, row_size, 1> row;
                       for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
                         row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
