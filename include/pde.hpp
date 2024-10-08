@@ -25,14 +25,6 @@ constexpr int advection_offset(int n_dim) {return n_dim + 9;}
  */
 template <bool visc = false>
 class Navier_stokes {
-  //! check that the flow state is thermodynamically admissible
-  #define ASSERT_THERM_ADMIS \
-    HEXED_ASSERT(state(n_dim) > 0, "nonpositive density", assert::Numerical_exception); \
-    HEXED_ASSERT(state(n_dim + 1) >= 0, "negative energy", assert::Numerical_exception); \
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) { \
-      HEXED_ASSERT(!std::isnan(state(n_dim)), "momentum is NaN", assert::Numerical_exception); \
-    } \
-
   public:
   Navier_stokes() = delete;
 
@@ -238,7 +230,6 @@ class Navier_stokes {
       }
     };
   };
-  #undef ASSERT_THERM_ADMIS
 };
 
 /*!
