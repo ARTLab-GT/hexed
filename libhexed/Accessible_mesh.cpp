@@ -31,172 +31,221 @@ namespace dijkstra {
   }
 }
 
+void Accessible_mesh::_record_connections() {
+  auto& elem_seq = elements();
+  // locate unconnected faces
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elem_seq.size(); ++i_elem) {
+    for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+      elem_seq[i_elem].face_record[i_face] = 0;
+    }
+  }
+  car.record_connections();
+  def.record_connections();
+}
+
 void Accessible_mesh::_match_topo() {
+  if (!surf_geom) return;
   _blocks.edges_2d();
   _blocks.faces_3d();
   auto all_verts = _blocks.verts();
+  #pragma omp parallel for
+  for (auto& vert : all_verts) {
+    vert.record.resize(1);
+    vert.record[0] = 0;
+  }
+  _record_connections();
+  auto& elems = elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        if (elem.face_record[2*i_dim + i_vert/math::pow(2, params.n_dim - i_dim - 1)%2] == 0) {
+          #pragma omp atomic write
+          elem.shape().vertex(i_vert).record[0] = 1;
+        }
+      }
+    }
+  }
   std::vector<hexed::next::Vertex*> verts;
   for (auto& vert : all_verts) {
-    if (vert.n_elements() < params.n_vertices() && !vert.glued()) verts.push_back(&vert);
+    if (vert.record[0] && !vert.glued()) verts.push_back(&vert);
   }
-  if (surf_geom) {
-    auto points = surf_geom->points();
-    for (int i_point = 0; i_point < (Int)points.size(); ++i_point) {
-      Mat<3> point = points[i_point];
-      next::Vertex* nearest = nullptr; // if no nearest point is found, the matched vertex is set to null
-      double dist_sq = huge;
-      for (auto& vert : verts) {
-        double d = (vert->point({}) - point).squaredNorm();
-        if (d < dist_sq && vert->independent()) {
-          dist_sq = d;
-          nearest = vert;
-        }
+  auto points = surf_geom->points();
+  for (int i_point = 0; i_point < (Int)points.size(); ++i_point) {
+    Mat<3> point = points[i_point];
+    next::Vertex* nearest = nullptr; // if no nearest point is found, the matched vertex is set to null
+    double dist_sq = huge;
+    for (auto& vert : verts) {
+      double d = (vert->point({}) - point).squaredNorm();
+      if (d < dist_sq && vert->independent()) {
+        dist_sq = d;
+        nearest = vert;
       }
-      point_matched_vertices[i_point].set(nearest);
     }
-    auto edges = surf_geom->edges();
-    for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
-      #if 1
-      auto& geom_edge = edges[i_geom_edge];
-      std::array<next::Vertex*, 2> start_end {nullptr, nullptr};
-      for (int i_endpoint = 0; i_endpoint < 2; ++i_endpoint) {
-        double dist_sq = huge;
-        Mat<3> endpoint = geom_edge.nodes()(i_endpoint*(geom_edge.nodes().shape()[0] - 1)).vector();
-        for (auto& vert : verts) {
-          if (!vert->glued()) {
-            double d = (vert->point({}) - endpoint).squaredNorm();
-            if (d < dist_sq) {
-              dist_sq = d;
-              start_end[i_endpoint] = vert;
-            }
-          }
-        }
-      }
-      std::cout << "n edge vertices: ";
-      if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
-      #pragma omp parallel for
-      for (next::Vertex* vert : verts) {
-        vert->dijkstra_dist = huge;
-        vert->dijkstra_updates = 0;
-        vert->dijkstra_prev = nullptr;
-        double d = 4*vert->nominal_size();
-        auto nearest = geom_edge.nearest_point(vert->point({}), d);
-        vert->dijkstra_curve_dist_sq = nearest.index >= 0 && nearest.distance <= d ?
-                                       nearest.distance*nearest.distance : std::nan("");
-        vert->dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
-      }
-      std::priority_queue<
-        dijkstra::Node,
-        std::vector<dijkstra::Node>,
-        std::function<bool(dijkstra::Node, dijkstra::Node)>
-      > unvisited(&dijkstra::compare);
-      // Dijkstra's algorithm will start at the second endpoint and go to the first,
-      // so that we can traverse the path in reverse via `Vertex::dijkstra_prev`,
-      // we will end up with a path from the first endpoint to the second
-      unvisited.emplace(start_end[1], 0., 1);
-      start_end[1]->dijkstra_dist = 0;
-      start_end[1]->dijkstra_updates = 1;
-      dijkstra::Node curr {nullptr, 0., 0};
-      while (curr.vert != start_end[0] && !unvisited.empty()) {
-        curr = unvisited.top();
-        unvisited.pop();
-        if (curr.updates < curr.vert->dijkstra_updates) continue;
-        for (next::Vertex* vert : curr.vert->neighbors()) {
-          if (std::isfinite(vert->dijkstra_curve_dist_sq)
-              && vert->n_elements() < params.n_vertices() && !vert->glued()) {
-            double interval = std::max((curr.vert->point({}) - vert->point({})).norm(),
-                                       std::abs(vert->dijkstra_arc_len - curr.vert->dijkstra_arc_len));
-            double d = curr.cost + .5*(curr.vert->dijkstra_curve_dist_sq + vert->dijkstra_curve_dist_sq)*interval;
-            if (d < vert->dijkstra_dist) {
-              vert->dijkstra_dist = d;
-              vert->dijkstra_prev = curr.vert;
-              unvisited.emplace(vert, d, ++vert->dijkstra_updates);
-            }
-          }
-        }
-      }
-      matched_vertices[i_geom_edge].clear();
-      if (curr.vert == start_end[0]) {
-        next::Vertex* vert = curr.vert;
-        do {
-          matched_vertices[i_geom_edge].emplace_back(vert);
-          vert = vert->dijkstra_prev;
-        } while (vert);
-      }
-      std::cout << matched_vertices[i_geom_edge].size() << std::endl;
-      #else
-      Array<double> nodes {geom_edge.nodes()};
-      Array<double> arc_length {geom_edge.arc_length()};
-      next::Vertex* best_vert = nullptr;
-      double badness = huge;
-      double arc_len = 0;
-      std::cout << verts.size() << std::endl;
+    point_matched_vertices[i_point].set(nearest);
+  }
+  if (params.n_dim < 3) return;
+  #pragma omp parallel for
+  for (next::Vertex* vert : verts) {
+    Mat<3> point = vert->point({});
+    auto nearest = surf_geom->nearest_point(point, 2*vert->nominal_size());
+    if (nearest.empty()) vert->dijkstra_point = point;
+    else vert->dijkstra_point = nearest.point();
+    vert->snapped_edge = -1;
+  }
+  auto edges = surf_geom->edges();
+  for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+    #if 1
+    auto& geom_edge = edges[i_geom_edge];
+    std::array<next::Vertex*, 2> start_end {nullptr, nullptr};
+    for (int i_endpoint = 0; i_endpoint < 2; ++i_endpoint) {
+      double dist_sq = huge;
+      Mat<3> endpoint = geom_edge.nodes()(i_endpoint*(geom_edge.nodes().shape()[0] - 1)).vector();
       for (auto& vert : verts) {
         if (!vert->glued()) {
-          Mat<3> p = vert->point({});
-          double d = 4*vert->nominal_size();
-          auto node = geom_edge.nearest_point(p, d, {-huge, d}).index;
-          if (node >= 0) {
-            double b = (p - nodes(node).vector()).norm() + arc_length[node];
-            if (b < badness) {
-              best_vert = vert;
-              badness = b;
-              arc_len = arc_length[node];
-            }
+          double d = (vert->dijkstra_point - endpoint).squaredNorm();
+          if (d < dist_sq) {
+            dist_sq = d;
+            start_end[i_endpoint] = vert;
           }
         }
       }
-      matched_edges[i_geom_edge].clear();
-      matched_vertices[i_geom_edge].clear();
-      std::cout << (best_vert == nullptr) << std::endl;
-      if (!best_vert) continue;
+      if (start_end[i_endpoint]) {
+        start_end[i_endpoint]->dijkstra_point = endpoint;
+        start_end[i_endpoint]->snapped_edge = i_geom_edge;
+      }
+    }
+    std::cout << "n edge vertices: ";
+    if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
+    #pragma omp parallel for
+    for (next::Vertex* vert : verts) {
+      vert->dijkstra_dist = huge;
+      vert->dijkstra_updates = 0;
+      vert->dijkstra_prev = nullptr;
+      double d = 2*vert->nominal_size();
+      auto nearest = geom_edge.nearest_point(vert->dijkstra_point, d);
+      vert->dijkstra_curve_dist_sq = nearest.index >= 0 && nearest.distance <= d ?
+                                     nearest.distance*nearest.distance : std::nan("");
+      vert->dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
+    }
+    std::priority_queue<
+      dijkstra::Node,
+      std::vector<dijkstra::Node>,
+      std::function<bool(dijkstra::Node, dijkstra::Node)>
+    > unvisited(&dijkstra::compare);
+    // Dijkstra's algorithm will start at the second endpoint and go to the first,
+    // so that we can traverse the path in reverse via `Vertex::dijkstra_prev`,
+    // we will end up with a path from the first endpoint to the second
+    unvisited.emplace(start_end[1], 0., 1);
+    start_end[1]->dijkstra_dist = 0;
+    start_end[1]->dijkstra_updates = 1;
+    dijkstra::Node curr {nullptr, 0., 0};
+    while (curr.vert != start_end[0] && !unvisited.empty()) {
+      curr = unvisited.top();
+      unvisited.pop();
+      if (curr.updates < curr.vert->dijkstra_updates) continue;
+      for (next::Vertex* vert : curr.vert->neighbors()) {
+        if (std::isfinite(vert->dijkstra_curve_dist_sq)
+            && vert->n_elements() < params.n_vertices() && !vert->glued()) {
+          double interval = std::max((curr.vert->dijkstra_point - vert->dijkstra_point).norm(),
+                                     std::abs(vert->dijkstra_arc_len - curr.vert->dijkstra_arc_len));
+          double d = curr.cost + .5*(curr.vert->dijkstra_curve_dist_sq + vert->dijkstra_curve_dist_sq)*interval;
+          if (d < vert->dijkstra_dist) {
+            vert->dijkstra_dist = d;
+            vert->dijkstra_prev = curr.vert;
+            unvisited.emplace(vert, d, ++vert->dijkstra_updates);
+          }
+        }
+      }
+    }
+    matched_vertices[i_geom_edge].clear();
+    if (curr.vert == start_end[0]) {
+      next::Vertex* vert = curr.vert;
+      do {
+        matched_vertices[i_geom_edge].emplace_back(vert);
+        if (vert->snapped_edge < 0) {
+          Int ind = geom_edge.nearest_point(vert->dijkstra_point, 2*vert->nominal_size()).index;
+          if (ind >= 0) vert->dijkstra_point = geom_edge.nodes()(ind).vector();
+          vert->snapped_edge = i_geom_edge;
+        }
+        vert = vert->dijkstra_prev;
+      } while (vert);
+    }
+    std::cout << matched_vertices[i_geom_edge].size() << std::endl;
+    #else
+    Array<double> nodes {geom_edge.nodes()};
+    Array<double> arc_length {geom_edge.arc_length()};
+    next::Vertex* best_vert = nullptr;
+    double badness = huge;
+    double arc_len = 0;
+    std::cout << verts.size() << std::endl;
+    for (auto& vert : verts) {
+      if (!vert->glued()) {
+        Mat<3> p = vert->point({});
+        double d = 4*vert->nominal_size();
+        auto node = geom_edge.nearest_point(p, d, {-huge, d}).index;
+        if (node >= 0) {
+          double b = (p - nodes(node).vector()).norm() + arc_length[node];
+          if (b < badness) {
+            best_vert = vert;
+            badness = b;
+            arc_len = arc_length[node];
+          }
+        }
+      }
+    }
+    matched_edges[i_geom_edge].clear();
+    matched_vertices[i_geom_edge].clear();
+    std::cout << (best_vert == nullptr) << std::endl;
+    if (!best_vert) continue;
+    matched_vertices[i_geom_edge].emplace_back(best_vert);
+    next::Vertex* curr = best_vert;
+    while (true) {
+      double temp_arc_len = 0;
+      double progress = -huge;
+      best_vert = nullptr;
+      for (next::Vertex* vert : curr->neighbors()) if (!vert->glued() && vert->n_elements() < params.n_vertices()) {
+        Mat<3> p = vert->point({});
+        double d = 4*vert->nominal_size();
+        auto node = geom_edge.nearest_point(p, d, {arc_len - d, arc_len + d}).index;
+        if (node >= 0) {
+          double prog = arc_length[node] - (p - nodes(node).vector()).norm();
+          if (prog > progress) {
+            best_vert = vert;
+            progress = prog;
+            temp_arc_len = arc_length[node];
+            std::cout << p.transpose() << std::endl;
+          }
+        }
+      }
+      if (!best_vert) break;
+      if (matched_vertices[i_geom_edge].size() > 1) {
+        if (std::find(matched_vertices[i_geom_edge].begin(), matched_vertices[i_geom_edge].end(), best_vert) != matched_vertices[i_geom_edge].end()) {
+          matched_vertices[i_geom_edge].erase(matched_vertices[i_geom_edge].end() - 1);
+          break;
+        }
+      }
+      if (matched_vertices[i_geom_edge].size() > 100) break;
+      curr = best_vert;
       matched_vertices[i_geom_edge].emplace_back(best_vert);
-      next::Vertex* curr = best_vert;
-      while (true) {
-        double temp_arc_len = 0;
-        double progress = -huge;
-        best_vert = nullptr;
-        for (next::Vertex* vert : curr->neighbors()) if (!vert->glued() && vert->n_elements() < params.n_vertices()) {
-          Mat<3> p = vert->point({});
-          double d = 4*vert->nominal_size();
-          auto node = geom_edge.nearest_point(p, d, {arc_len - d, arc_len + d}).index;
-          if (node >= 0) {
-            double prog = arc_length[node] - (p - nodes(node).vector()).norm();
-            if (prog > progress) {
-              best_vert = vert;
-              progress = prog;
-              temp_arc_len = arc_length[node];
-              std::cout << p.transpose() << std::endl;
-            }
-          }
+      arc_len = temp_arc_len;
+    }
+    std::cout << matched_vertices[i_geom_edge].size() << "\n" << std::endl;
+    #endif
+    if (matched_vertices[i_geom_edge].size()) {
+      Array<double> pos({3, (Int)matched_vertices[i_geom_edge].size()});
+      Array<double> vars({1, (Int)matched_vertices[i_geom_edge].size()});
+      vars = i_geom_edge;
+      for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
+        Mat<3> p = matched_vertices[i_geom_edge][i_vert]->point({});
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          pos(i_dim)[i_vert] = p(i_dim) + rand()%100*1e-4;
         }
-        if (!best_vert) break;
-        if (matched_vertices[i_geom_edge].size() > 1) {
-          if (std::find(matched_vertices[i_geom_edge].begin(), matched_vertices[i_geom_edge].end(), best_vert) != matched_vertices[i_geom_edge].end()) {
-            matched_vertices[i_geom_edge].erase(matched_vertices[i_geom_edge].end() - 1);
-            break;
-          }
-        }
-        if (matched_vertices[i_geom_edge].size() > 100) break;
-        curr = best_vert;
-        matched_vertices[i_geom_edge].emplace_back(best_vert);
-        arc_len = temp_arc_len;
       }
-      std::cout << matched_vertices[i_geom_edge].size() << "\n" << std::endl;
-      #endif
-      if (matched_vertices[i_geom_edge].size()) {
-        Array<double> pos({3, (Int)matched_vertices[i_geom_edge].size()});
-        Array<double> vars({1, (Int)matched_vertices[i_geom_edge].size()});
-        vars = i_geom_edge;
-        for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
-          Mat<3> p = matched_vertices[i_geom_edge][i_vert]->point({});
-          for (int i_dim = 0; i_dim < 3; ++i_dim) {
-            pos(i_dim)[i_vert] = p(i_dim);
-          }
-        }
-        auto vis = Visualizer::create("default", 3, 1, "match_edge" + std::to_string(i_geom_edge), {"i_geom_edge"}, 0., Visualizer::block);
-        vis->write_block(pos(), vars());
-      }
+      auto vis = Visualizer::create("default", 3, 1, "match_edge" + std::to_string(i_geom_edge), {"i_geom_edge"}, 0., Visualizer::block);
+      vis->write_block(pos(), vars());
     }
   }
 }
@@ -812,7 +861,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   connect_new<Deformed_element>(0);
   _match_topo();
   //extrude(true);
-  //connect_rest(surf_bc_sn);
+  connect_rest(surf_bc_sn);
   _n_verts = _blocks.verts().size();
 }
 
