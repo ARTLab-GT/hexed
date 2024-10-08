@@ -286,8 +286,7 @@ void Freestream::apply_flux(Boundary_face& bf) {copy_state(bf);}
 void Cache_bc::apply_flux(Boundary_face& bf) {copy_state(bf);}
 
 void reflect_normal(double* gh_f, double* nrml, int nq, int nd) {
-  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint)
-  {
+  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
     double dot = 0.;
     double norm_sq = 0.;
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
