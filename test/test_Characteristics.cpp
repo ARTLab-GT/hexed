@@ -1,8 +1,7 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/pde.hpp>
 
-TEST_CASE("Characteristics")
-{
+TEST_CASE("Characteristics") {
   // arbitrary state to linearize about
   double mass = 1.225;
   hexed::Mat<3> veloc {10., 4., 12.};
@@ -23,7 +22,7 @@ TEST_CASE("Characteristics")
   REQUIRE((decomp.rowwise().sum() - state1).cwiseQuotient(state1).norm() == Catch::Approx(0).scale(1.));
   // check that the columns are indeed eigenvectors of linearized flux
   double diff = 1e-6; // use a small perturbation so that flux is effectively linear
-  hexed::pde::Navier_stokes<>::Pde<3, 2> ns;
+  hexed::pde::Navier_stokes<>::Pde<3, 2> ns(5);
   hexed::pde::Navier_stokes<>::Pde<3, 2>::Computation<1> comp (ns);
   comp.normal = normal;
   for (int i = 0; i < 3; ++i) {

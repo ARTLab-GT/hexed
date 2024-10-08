@@ -13,11 +13,11 @@
  */
 namespace hexed::pde {
 
-constexpr int tss_offset(int n_dim) {return n_dim + 2;}
-constexpr int bulk_av_offset(int n_dim) {return n_dim + 3;}
-constexpr int laplacian_av_offset(int n_dim) {return n_dim + 4;}
-constexpr int forcing_offset(int n_dim) {return n_dim + 5;}
-constexpr int advection_offset(int n_dim) {return n_dim + 9;}
+constexpr int tss_offset(int n_var) {return n_var + 0;}
+constexpr int bulk_av_offset(int n_var) {return n_var + 1;}
+constexpr int laplacian_av_offset(int n_var) {return n_var + 2;}
+constexpr int forcing_offset(int n_var) {return n_var + 3;}
+constexpr int advection_offset(int n_var) {return n_var + 7;}
 
 /*!
  * contains a PDE class representing the Naver-Stokes equations
@@ -30,6 +30,7 @@ class Navier_stokes {
 
   template <int n_dim, int row_size>
   class Pde {
+    const int _n_var;
     public:
     static constexpr bool has_diffusion = visc;
     static constexpr bool has_convection = true;
@@ -41,8 +42,8 @@ class Navier_stokes {
     Transport_model dyn_visc;
     Transport_model therm_cond;
 
-    Pde(Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid)
-    : dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
+    Pde(int n_var, Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid)
+    : _n_var{n_var}, dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
     {}
 
     Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
@@ -64,8 +65,8 @@ class Navier_stokes {
       Mat<n_state> state;
       void fetch_state(int stride, const double* data) {
         for (int i_var = 0; i_var < n_dim + 2; ++i_var) state(i_var) = data[i_var*stride];
-        state(n_dim + 2) = data[bulk_av_offset(n_dim)*stride];
-        state(n_dim + 3) = data[laplacian_av_offset(n_dim)*stride];
+        state(n_dim + 2) = data[bulk_av_offset(_eq._n_var)*stride];
+        state(n_dim + 3) = data[laplacian_av_offset(_eq._n_var)*stride];
       }
       Mat<n_update> update_state;
       void fetch_extrap_state(int stride, const double* data) {
@@ -157,7 +158,7 @@ class Navier_stokes {
      * This is useful for characteristic-based boundary conditions.
      */
     class Characteristics {
-      static constexpr int n_var = n_dim + 2;
+      static constexpr int n_var_euler = n_dim + 2;
       Mat<3> vals;
       Mat<3, 3> vecs;
       // using a QR factorization allows a least-squares solution to be found if matrix is singular (i.e. if pressure is 0)
@@ -174,7 +175,7 @@ class Navier_stokes {
        * construct with a direction in which to compute the flux
        * and a reference state vector about which to compute the Jacobian
        */
-      Characteristics(Mat<n_var> state, Mat<n_dim> direction)
+      Characteristics(Mat<n_var_euler> state, Mat<n_dim> direction)
       : dir{direction/direction.norm()}
       , mass{state(n_dim)}
       , veloc{state(Eigen::seqN(0, n_dim))/mass}
@@ -207,7 +208,7 @@ class Navier_stokes {
        * Column `j` should be an eigenvector of the Jacobian with eigenvalue `eigvals()(j)`
        * and the sum of the columns should be `state`.
        */
-      Mat<n_var, 3> decomp(Mat<n_var> state) {
+      Mat<n_var_euler, 3> decomp(Mat<n_var_euler> state) {
         Mat<n_dim> mmtm = state(Eigen::seqN(0, n_dim));
         // component of tangential momentum perturbation which is not induced by mass perturbation
         Mat<n_dim> mmtm_correction = tang(mmtm) - state(n_dim)*tang(veloc);
@@ -221,7 +222,7 @@ class Navier_stokes {
         Mat<1, 3> eig_basis = fact.solve(state_1d).transpose();
         Mat<3, 3> eig_decomp = vecs.array().rowwise()*eig_basis.array();
         // ND eigenvector decomposition
-        Mat<n_var, 3> d(state.rows(), 3);
+        Mat<n_var_euler, 3> d(state.rows(), 3);
         d(Eigen::seqN(n_dim, 2), Eigen::all) = eig_decomp(Eigen::seqN(1, 2), Eigen::all);
         d(Eigen::seqN(0, n_dim), Eigen::all) = dir*eig_decomp(0, Eigen::all) + tang(veloc)*eig_basis; // second term accounts for tangential momentum induced by mass perturbation
         d(Eigen::seqN(0, n_dim), 2) += mmtm_correction;
@@ -238,6 +239,7 @@ class Navier_stokes {
  */
 template <int n_dim, int row_size>
 class Advection {
+  const int _n_var;
   static constexpr int _n_adv = row_size;
   const double _advect_length;
   Mat<row_size> _nodes;
@@ -250,21 +252,21 @@ class Advection {
   static constexpr int n_extrap = n_dim + _n_adv;
   static constexpr int n_update = _n_adv;
 
-  Advection(double advect_length)
-  : _advect_length{advect_length}, _nodes{2*Gauss_legendre(row_size).nodes() - Mat<row_size>::Ones()}
+  Advection(int n_var, double advect_length)
+  : _n_var{n_var}, _advect_length{advect_length}, _nodes{2*Gauss_legendre(row_size).nodes() - Mat<row_size>::Ones()}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
     Mat<n_extrap> extrap;
     for (int i_var = 0; i_var < n_dim; ++i_var) extrap(i_var) = data[i_var*stride];
-    for (int i_adv = 0; i_adv < _n_adv; ++i_adv) extrap(n_dim + i_adv) = data[(advection_offset(n_dim) + i_adv)*stride];
+    for (int i_adv = 0; i_adv < _n_adv; ++i_adv) extrap(n_dim + i_adv) = data[(advection_offset(_n_var) + i_adv)*stride];
     return extrap;
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool is_critical) const {
-    double pseudo = 1 + data[tss_offset(n_dim)*stride]*2/_advect_length;
+    double pseudo = 1 + data[tss_offset(_n_var)*stride]*2/_advect_length;
     for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
-      double& d = data[(advection_offset(n_dim) + i_adv)*stride];
+      double& d = data[(advection_offset(_n_var) + i_adv)*stride];
       if (is_critical) d = (d + update(i_adv))/pseudo;
       else d += update(i_adv)/pseudo;
     }
@@ -318,6 +320,7 @@ class Advection {
  */
 template <int n_dim, int row_size>
 class Smooth_art_visc {
+  const int _n_var;
   public:
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
@@ -328,20 +331,20 @@ class Smooth_art_visc {
   const double _diff_time;
   const double _cheby;
 
-  Smooth_art_visc(double diff_time, double chebyshev_step)
-  : _diff_time{diff_time}, _cheby{chebyshev_step}
+  Smooth_art_visc(int n_var, double diff_time, double chebyshev_step)
+  : _n_var{n_var}, _diff_time{diff_time}, _cheby{chebyshev_step}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
     Mat<n_extrap> extrap;
-    for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[(forcing_offset(n_dim) + 1 + i_var)*stride];
+    for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[(forcing_offset(_n_var) + 1 + i_var)*stride];
     return extrap;
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-    double pseudo = 1 + data[tss_offset(n_dim)*stride]*_cheby/_diff_time;
+    double pseudo = 1 + data[tss_offset(_n_var)*stride]*_cheby/_diff_time;
     for (int i_var = 0; i_var < n_update; ++i_var) {
-      double& d = data[(forcing_offset(n_dim) + 1 + i_var)*stride];
+      double& d = data[(forcing_offset(_n_var) + 1 + i_var)*stride];
       d += update(i_var);
       if (critical) d /= pseudo;
     }
@@ -355,7 +358,7 @@ class Smooth_art_visc {
 
     Mat<n_state> state;
     void fetch_state(int stride, const double* data) {
-      for (int i_var = 0; i_var < n_state; ++i_var) state(i_var) = data[(forcing_offset(n_dim) + i_var)*stride];
+      for (int i_var = 0; i_var < n_state; ++i_var) state(i_var) = data[(forcing_offset(_eq._n_var) + i_var)*stride];
     }
     Mat<n_update> update_state;
     void fetch_extrap_state(int stride, const double* data) {
@@ -390,6 +393,7 @@ class Smooth_art_visc {
  */
 template <int n_dim, int row_size>
 class Fix_therm_admis {
+  int _n_var;
   public:
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
@@ -397,6 +401,8 @@ class Fix_therm_admis {
   static constexpr int n_state = n_dim + 2;
   static constexpr int n_update = n_state;
   static constexpr int n_extrap = n_state;
+
+  Fix_therm_admis(int n_var) : _n_var{n_var} {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
     Mat<n_extrap> extrap;

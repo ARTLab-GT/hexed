@@ -21,6 +21,7 @@ Kernel_mesh Solver::_kernel_mesh() {
   return {
     params.n_dim,
     params.row_size,
+    params.n_var,
     0,
     basis,
     acc_mesh->cartesian().kernel_connections(),

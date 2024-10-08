@@ -713,7 +713,7 @@ class Spatial {
       for (int i_con = 0; i_con < connections.size(); ++i_con) {
         auto& con = connections[i_con];
         auto dir = con.get_direction();
-        double face [2][(n_dim + 2)*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
+        double face [2][(n_dim + 2)*n_fqpoint]; // copying face data to temporary stack storage improves efficiency FIXME
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
@@ -769,8 +769,7 @@ class Spatial {
       // compute the maximum stable time step for all elements and take the minimum
       double dt = std::numeric_limits<double>::max();
       #pragma omp parallel for reduction(min:dt)
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
-      {
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
         Kernel_element& elem {elements[i_elem]};
         double* state = elem.state();
         double* tss = elem.time_step_scale();
@@ -778,8 +777,7 @@ class Spatial {
         for (unsigned i_vert = 0; i_vert < vertex_spacing.size(); ++i_vert) {
           vertex_spacing(i_vert) = elem.vertex_time_step_scale(i_vert);
         }
-        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
-        {
+        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           // get mesh spacing
           Mat<n_dim> coords;
           for (int i_dim = 0; i_dim < n_dim; ++i_dim) {

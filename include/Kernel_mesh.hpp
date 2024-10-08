@@ -8,13 +8,12 @@
 #include "Kernel_element.hpp"
 #include "Refined_face.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
-struct Kernel_mesh
-{
+struct Kernel_mesh {
   const int n_dim;
   const int row_size;
+  const int n_var;
   const int mask_level;
   const Basis& basis;
   Sequence<Kernel_connection&>& car_cons;

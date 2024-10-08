@@ -1435,6 +1435,7 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
 : kernel_mesh {
     mesh.params.n_dim,
     mesh.params.row_size,
+    mesh.params.n_var,
     mesh._mask_levels,
     basis,
     _masked_car_cons.slice,
