@@ -123,6 +123,7 @@ class Solver {
    */
   Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
          Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
+         Turbulence_model = laminar,
          std::shared_ptr<Namespace> space = std::make_shared<Namespace>(),
          std::shared_ptr<Printer_set> printer = std::make_shared<Printer_set>(), bool implicit = false);
 

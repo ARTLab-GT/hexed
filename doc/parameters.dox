@@ -205,6 +205,23 @@ The options are the same as \ref viscosity_model .
 \see \ref air_conductivity
 
 <hr>
+\subsubsection turbulence_model
+__type:__ string \n
+__default:__ `{}` \n
+Model for turbulence.
+If the flow is inviscid (\ref viscosity_model = `{}`), this parameter is ignored.
+Recognized values are:
+- `{}`: Solve the ordinary Navier-Stokes equations. No turbulence model is applied.
+- `{k-omega}`: Solve the RANS equations with \f$ k\text{-}\omega \f$ closure.
+
+<hr>
+\subsubsection turbulent_prandtl
+__type:__ float \n
+__default:__ 0.9 \n
+Turbulent Prandtl number (\f$ Pr_t \f$).
+Default value recommended by [LaRC](https://turbmodels.larc.nasa.gov/wilcox.html).
+
+<hr>
 \subsubsection monitor_vars
 __type:__ string \n
 __default:__ `{}` \n

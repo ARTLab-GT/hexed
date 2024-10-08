@@ -181,6 +181,8 @@ max_ref_level = 10
 geometry_uncertainty = 1e-2
 viscosity_model = {}
 conductivity_model = {}
+turbulence_model = {}
+turbulent_prandtl = .9
 thermal_bc = {heat_flux = 0.}
 surface_bc = {auto}
 temperature_offset = 0.

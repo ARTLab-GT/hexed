@@ -68,7 +68,9 @@ class Face_connection<Deformed_element> : public Kernel_connection {
   virtual Con_dir<Deformed_element> direction() = 0;
   double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}
   double* normal(int i_side) {return _data.data() + 2*_face_sz + i_side*_nrml_sz;}
-  double* normal() override {return _data.data() + 2*_face_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
+  //! \brief area-weighted face normal vector
+  //! \details layout: [i_dim][i_face_qpoint]
+  double* normal() override {return _data.data() + 2*_face_sz;}
 };
 
 /*!

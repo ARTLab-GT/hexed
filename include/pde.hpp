@@ -23,7 +23,7 @@ constexpr int advection_offset(int n_var) {return n_var + 7;}
  * contains a PDE class representing the Naver-Stokes equations
  * with template options to specify the details of the equation set
  */
-template <bool visc = false>
+template <bool visc = false, Turbulence_model turb = laminar>
 class Navier_stokes {
   public:
   Navier_stokes() = delete;

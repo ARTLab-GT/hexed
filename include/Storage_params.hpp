@@ -3,12 +3,10 @@
 
 #include <vector>
 
-namespace hexed
-{
+namespace hexed {
 
 //! \brief the parameters of the numerical scheme that are necessary to determine storage requirements
-class Storage_params
-{
+class Storage_params {
   public:
   //! \brief number of variables in the artificial viscosity advection equation
   static constexpr int n_advection(int row_size) {return row_size;}

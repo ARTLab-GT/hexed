@@ -48,5 +48,7 @@ class Transport_model {
 
 const auto inviscid = Transport_model::inviscid(); //!< always returns zero
 
+enum Turbulence_model {laminar, k_omega};
+
 }
 #endif

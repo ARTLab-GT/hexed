@@ -305,8 +305,14 @@ Case::Case(std::string input_script)
                                                                   sub.variables->get<double>("offset")));
       } else if (sub.variables->exists("const_value")) {
         transport_models.emplace_back(Transport_model::constant(sub.variables->get<double>("const_value")));
-      } else HEXED_THROW(format_str(200, "invalid transport model specification for %s", name.c_str()), assert::User_error);
+      } else HEXED_THROW(format_str(200, "invalid transport model specification `{%s}` for %s",
+                                    model, name.c_str()), assert::User_error);
     }
+    Turbulence_model turb_model;
+    std::string turb = _vars("turbulence_model");
+    if      (turb == "") turb_model = laminar;
+    else if (turb == "k-omega") turb_model = k_omega;
+    else HEXED_THROW("unrecognized turbulence model `{" + turb + "}`", assert::User_error);
     // create history monitors
     _monitor_expr.reset(new Struct_expr(_vars("monitor_vars")));
     for (std::string name : _monitor_expr->names) {
@@ -315,7 +321,7 @@ Case::Case(std::string input_script)
       _inter.variables->assign_default(name + "_max",  huge);
     }
     // setup actual solver
-    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, true, transport_models[0], transport_models[1], _inter.variables, _printers));
+    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, true, transport_models[0], transport_models[1], turb_model, _inter.variables, _printers));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis"));
     return "";

@@ -192,9 +192,9 @@ Interpreter Solver::_interpreter() {
 }
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
-               Transport_model viscosity_model, Transport_model thermal_conductivity_model,
+               Transport_model viscosity_model, Transport_model thermal_conductivity_model, Turbulence_model turbulence_model,
                std::shared_ptr<Namespace> space, std::shared_ptr<Printer_set> printer, bool implicit)
-: params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2, n_dim, row_size}
+: params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2 + 2*(turbulence_model == k_omega), n_dim, row_size}
 , acc_mesh{new Accessible_mesh(params, root_mesh_size)}
 , basis{row_size}
 , stopwatch{"(element*update)"}
