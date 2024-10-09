@@ -144,15 +144,15 @@ void Solver::apply_avc_diff_flux_bcs() {
 }
 
 void Solver::apply_fta_flux_bcs() {
-  int nd = params.n_dim;
   int rs = params.row_size;
   int nq = params.n_qpoint();
+  int nv = params.n_var;
   auto& bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     double* in_f = bc_cons[i_con].inside_face(true);
     double* gh_f = bc_cons[i_con].ghost_face(true);
-    for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+    for (int i_dof = 0; i_dof < nq*nv/rs; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
   }
 }
 
@@ -1038,7 +1038,7 @@ bool Solver::is_admissible() {
   bool admiss = 1;
   bool finite = 1;
   auto check_admis = [&](double* data, int n_qpoint) {
-    const int n_var = nd + 2;
+    const int n_var = params.n_var;
     bool adm = true;
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       adm = adm && (data[nd*n_qpoint + i_qpoint] > 0.)
@@ -1090,7 +1090,6 @@ bool Solver::fix_admissibility(double stability_ratio) {
   sw_fix.stopwatch.start();
   std::string wd = _namespace->get<std::string>("working_dir");
   std::string vis_expr = _namespace->get<std::string>("vis_field_vars");
-  const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
   const int nv = params.n_vertices();
@@ -1181,7 +1180,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
       for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
         double* in_f = bc_cons[i_con].inside_face(false);
         double* gh_f = bc_cons[i_con].ghost_face(false);
-        for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+        for (int i_dof = 0; i_dof < nq*params.n_var/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
       }
       opts.dt = s;
       compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
