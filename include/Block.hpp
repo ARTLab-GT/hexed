@@ -158,7 +158,8 @@ class Vertex : public Block {
   Mat<3> dijkstra_point; //!< \brief nominal location of this vertex used in Dijkstra's algorithm
   double dijkstra_dist; //!< \brief the "distance" from the start node to this node in Dijkstra's algorithm
   int dijkstra_updates; //!< \brief number of times `dijkstra_dist` has been updated in Dijkstra's algorithm
-  Vertex* dijkstra_prev; //!< \brief holds the previous node in the shortest path to this node in Dijkstra's algorithm
+  Vertex* dijkstra_prev_vert; //!< \brief holds the previous node in the shortest path to this node in Dijkstra's algorithm
+  Edge* dijkstra_prev_edge; //!< \brief holds the previous node in the shortest path to this node in Dijkstra's algorithm
   double dijkstra_curve_dist_sq; //!< \brief squared distance from the curve
   double dijkstra_arc_len; //!< \brief arc length of the nearest point on the curve
 
