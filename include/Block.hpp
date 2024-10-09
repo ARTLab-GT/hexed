@@ -257,6 +257,9 @@ class Edge : public Boundary_block {
   void unglue() {_glued_to.unpair();} //!< \brief If this edge is currently `glue()`d, unglue it.
   bool glued() const; //!< \brief `true` iff `this` is currently `glue()`d to another edge
   std::vector<Element_shape*> contacted_elements();
+  Edge* glued_to() {return _glued_to.get();}
+
+  Int snapped_edge;
 
   private:
   Mat<3> _point(const std::vector<int>&) const override;
@@ -345,6 +348,8 @@ class Element_shape : public Block {
   inline std::array<std::vector<double>, 2> glued_corners() const {return _glued_corners;}
   inline void set_glued_corners(std::array<std::vector<double>, 2> corners) {_glued_corners = corners;}
   inline void unglue() {_glued_to.set();}
+  inline Face* boundary_face_3d() {return _sf.get();}
+  inline int boundary_face() const {return _i_bf;}
 
   private:
   Element_shape(int nd, const Basis&);

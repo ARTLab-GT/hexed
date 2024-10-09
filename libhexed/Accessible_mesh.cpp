@@ -71,6 +71,13 @@ void Accessible_mesh::_match_topo() {
     vert.dijkstra_point = point;
     vert.snapped_edge = -1;
   }
+  auto faces = _blocks.faces_3d();
+  #pragma omp parallel for
+  for (next::Face& face : faces) {
+    for (int i_edge = 0; i_edge < 4; ++i_edge) {
+      face.edge(i_edge).snapped_edge = -1;
+    }
+  }
   auto edges = surf_geom->edges();
   for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
     auto& geom_edge = edges[i_geom_edge];
@@ -92,7 +99,6 @@ void Accessible_mesh::_match_topo() {
         start_end[i_endpoint]->snapped_edge = i_geom_edge;
       }
     }
-    std::cout << "n edge vertices: ";
     if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
     #pragma omp parallel for
     for (next::Vertex& vert : verts) {
@@ -141,7 +147,10 @@ void Accessible_mesh::_match_topo() {
       next::Vertex* vert = curr.vert;
       do {
         matched_vertices[i_geom_edge].emplace_back(vert);
-        if (vert->dijkstra_prev_edge) matched_edges[i_geom_edge].emplace_back(vert->dijkstra_prev_edge);
+        if (vert->dijkstra_prev_edge) {
+          matched_edges[i_geom_edge].emplace_back(vert->dijkstra_prev_edge);
+          vert->dijkstra_prev_edge->snapped_edge = i_geom_edge;
+        }
         if (vert->snapped_edge < 0) {
           Int ind = geom_edge.nearest_point(vert->dijkstra_point, 2*vert->nominal_size()).index;
           if (ind >= 0) vert->dijkstra_point = geom_edge.nodes()(ind).vector();
@@ -150,7 +159,6 @@ void Accessible_mesh::_match_topo() {
         vert = vert->dijkstra_prev_vert;
       } while (vert);
     }
-    std::cout << matched_vertices[i_geom_edge].size() << std::endl;
     if (matched_vertices[i_geom_edge].size()) {
       Array<double> pos({3, (Int)matched_vertices[i_geom_edge].size()});
       Array<double> vars({1, (Int)matched_vertices[i_geom_edge].size()});
@@ -165,6 +173,58 @@ void Accessible_mesh::_match_topo() {
       vis->write_block(pos(), vars());
     }
   }
+
+  auto& elems = def.elements();
+  for (int i_element = 0; i_element < elems.size(); ++i_element) {
+    auto& elem = elems[i_element];
+    elem.record = 0;
+    next::Element_shape* shape = elem.fake_shape();
+    if (shape) {
+      next::Face* face = shape->boundary_face_3d();
+      if (face) {
+        std::vector<Int> matched_to(4);
+        bool matched = false;
+        for (int i_edge = 0; i_edge < 4; ++i_edge) {
+          auto& edge = face->edge(i_edge);
+          if (edge.glued()) matched_to[i_edge] = edge.glued_to()->snapped_edge;
+          else matched_to[i_edge] = edge.snapped_edge;
+          matched = matched || matched_to[i_edge] >= 0;
+        }
+        auto set_vertices = [&](Element& e) {
+          auto& s = e.shape();
+          for (int i_vert = 0; i_vert < 8; ++i_vert) {
+            s.vertex(i_vert).set_pos(shape->vertex(i_vert).point({}));
+          }
+        };
+        if (matched) {
+          int sn;
+          sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
+          Deformed_element& inside = def.elems.at(elem.refinement_level(), sn);
+          set_vertices(inside);
+          sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
+          Deformed_element& surface = def.elems.at(elem.refinement_level(), sn);
+          set_vertices(surface);
+          int i_dim = shape->boundary_face()/2;
+          bool i_sign = shape->boundary_face()%2;
+          _connect({&inside, &surface}, Con_dir<Deformed_element>({i_dim, i_dim}, {i_sign, !i_sign}));
+          elem.record = 2;
+          for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
+            for (bool j_sign : {0, 1}) {
+              Int m = matched_to[2*(j_dim > 3 - j_dim - i_dim) + j_sign];
+              if (m >= 0) {
+                sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
+                Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
+                set_vertices(match_elem);
+                _connect({&surface, &match_elem}, Con_dir<Deformed_element>({j_dim, j_dim}, {j_sign, !j_sign}));
+                _connect({&inside,  &match_elem}, Con_dir<Deformed_element>({j_dim, i_dim}, {j_sign, !i_sign}));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  purge();
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
@@ -777,6 +837,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
   extrude(true);
+  connect_rest(surf_bc_sn);
   _match_topo();
   connect_rest(surf_bc_sn);
   _n_verts = _blocks.verts().size();
