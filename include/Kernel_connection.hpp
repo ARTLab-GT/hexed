@@ -7,6 +7,7 @@ class Connection_direction {
   public:
   std::array<int, 2> i_dim;
   std::array<bool, 2> face_sign;
+  int rotate = 0;
   int i_face(int i_side) const {return 2*i_dim[i_side] + face_sign[i_side];}
   /*!
    * Answers the question: Is it necessary to flip the normal of element `i_side` so that it

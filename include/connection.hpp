@@ -21,7 +21,9 @@ template <class element_t> class Con_dir {};
 template <>
 class Con_dir<Deformed_element> : public Connection_direction {
   public:
-  Con_dir(std::array<int, 2> i_dimension, std::array<bool, 2> sign) : Connection_direction{i_dimension, sign} {}
+  Con_dir(std::array<int, 2> i_dimension, std::array<bool, 2> sign, int rotate = 0)
+  : Connection_direction{i_dimension, sign, rotate}
+  {}
 };
 
 template <>

@@ -298,16 +298,16 @@ void Accessible_mesh::_match_topo() {
         dim_arr[i_side] = vert.record[6*i_side + 2];
         sign_arr[i_side] = vert.record[6*i_side + 3];
       }
-      bool aligned = true;
+      int rotate = 0;
       for (int i_dim = 0; i_dim < 3; ++i_dim) if (i_dim != dim_arr[0] && i_dim != dim_arr[1]) {
         Int np [2];
         for (int i_side = 0; i_side < 2; ++i_side) {
           np[i_side] = elem_arr[i_side]->nominal_position()[i_dim]
                        + (i_dim == vert.record[6*i_side + 4])*(1 - 2*vert.record[6*i_side + 5]);
         }
-        aligned = aligned && np[0] == np[1];
+        rotate += (np[0] - np[1])*math::sign(dim_arr[0] == (dim_arr[1] + 1)%3);
       }
-      if (aligned) _connect(elem_arr, {dim_arr, sign_arr});
+      _connect(elem_arr, {dim_arr, sign_arr, rotate});
     }
   }
   #pragma omp parallel for
