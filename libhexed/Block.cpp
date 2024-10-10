@@ -481,14 +481,12 @@ int i_edge(Connection_direction dir, int side, int i_bf) {
 
 #define ASSERT_CON_DIMS(dir, that) { \
   HEXED_ASSERT((that)._bf, "connection expected subordinate element to have boundary face"); \
-  if (dir.i_dim[0] == dir.i_dim[1]) { \
-    HEXED_ASSERT(_i_bf == (that)._i_bf, "boundary face mismatch on same-dim connection"); \
-  } else { \
-    HEXED_ASSERT(_i_bf/2 == dir.i_dim[1], "boundary face mismatch on left element"); \
-    HEXED_ASSERT((that)._i_bf/2 == dir.i_dim[0], "boundary face mismatch in on right element"); \
-    HEXED_ASSERT((_i_bf%2 == dir.face_sign[1]) == ((that)._i_bf%2 == dir.face_sign[0]), \
-                 "boundary face sign mismatch in different-dim connection"); \
-  } \
+  HEXED_ASSERT(_i_bf == (that)._i_bf || ( \
+    dir.i_dim[0] != dir.i_dim[1] \
+    && _i_bf/2 == dir.i_dim[1] \
+    && (that)._i_bf/2 == dir.i_dim[0] \
+    && (_i_bf%2 == dir.face_sign[1]) == ((that)._i_bf%2 == dir.face_sign[0]) \
+  ), "boundary face mismatch"); \
 } \
 
 void Element_shape::connect(Element_shape& other, Connection_direction dir) {
