@@ -49,6 +49,11 @@ void Accessible_mesh::_match_topo() {
   _blocks.edges_2d();
   _blocks.faces_3d();
   for (int i = 0; i < 20; ++i) relax(.5);
+  auto all_verts = _blocks.verts();
+  #pragma omp parallel for
+  for (auto& vert : all_verts) {
+    vert.record.clear();
+  }
   auto verts = _blocks.boundary_verts();
   auto points = surf_geom->points();
   for (int i_point = 0; i_point < (Int)points.size(); ++i_point) {
@@ -231,7 +236,19 @@ void Accessible_mesh::_match_topo() {
                   }
                 }
               } else {
-                //elem.face_record[2*j_dim + j_sign] = inside_sn;
+                elem.face_record[2*j_dim + j_sign] = inside_sn;
+              }
+            }
+          }
+          for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
+            int k_dim = 3 - j_dim - i_dim;
+            for (bool j_sign : {0, 1}) if (matched_elems[2*j_dim + j_sign]) {
+              for (bool k_sign : {0, 1}) if (!matched_elems[2*k_dim + k_sign]) {
+                int i_vert =   i_sign*math::pow(2, 2 - i_dim)
+                             + j_sign*math::pow(2, 2 - j_dim)
+                             + k_sign*math::pow(2, 2 - k_dim);
+                std::vector<Int> record {elem.refinement_level(), elem.face_record[2*j_dim + j_sign], k_dim, k_sign};
+                shape->vertex(i_vert).record.insert(shape->vertex(i_vert).record.end(), record.begin(), record.end());
               }
             }
           }
@@ -239,25 +256,44 @@ void Accessible_mesh::_match_topo() {
       }
     }
   }
+  extrude_cons.clear();
   for (auto& con : def.cons) {
     auto dir = con->direction();
     bool replace = false;
-    std::array<Deformed_element*, 2> elems;
+    std::array<Deformed_element*, 2> elem_arr;
     for (int i_side = 0; i_side < 2; ++i_side) {
       Deformed_element& elem = con->element(i_side);
       if (elem.face_record[dir.i_face(i_side)] >= 0) {
         replace = true;
-        elems[i_side] = &def.elems.at(elem.refinement_level(), elem.face_record[dir.i_face(i_side)]);
+        elem_arr[i_side] = &def.elems.at(elem.refinement_level(), elem.face_record[dir.i_face(i_side)]);
       } else {
-        elems[i_side] = &elem;
+        elem_arr[i_side] = &elem;
       }
     }
-    if (replace) {
+    if (replace) if (bool(elem_arr[0]->fake_shape()) == bool(elem_arr[1]->fake_shape())) {
       con.reset();
-      _connect(elems, dir);
+      _connect(elem_arr, dir);
     }
   }
+  for (auto& vert : verts) {
+    if (vert.record.size() == 8) {
+      std::array<Deformed_element*, 2> elem_arr;
+      std::array<int, 2> dim_arr;
+      std::array<bool, 2> sign_arr;
+      for (int i_side = 0; i_side < 2; ++i_side) {
+        elem_arr[i_side] = &def.elems.at(vert.record[4*i_side], vert.record[4*i_side + 1]);
+        dim_arr[i_side] = vert.record[4*i_side + 2];
+        sign_arr[i_side] = vert.record[4*i_side + 3];
+      }
+      if (dim_arr[0] == dim_arr[1]) _connect(elem_arr, {dim_arr, sign_arr});
+    }
+  }
+  #pragma omp parallel for
+  for (auto& vert : all_verts) {
+    vert.record.clear();
+  }
   purge();
+  for (int i = 0; i < 1; ++i) relax(.5);
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
