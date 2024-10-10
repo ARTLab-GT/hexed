@@ -222,7 +222,7 @@ void Accessible_mesh::_match_topo() {
                 matched_elems[2*j_dim + j_sign] = &match_elem;
                 if (j_dim > k_dim) {
                   for (bool k_sign : {0, 1}) {
-                    if (matched_to[k_sign]) {
+                    if (matched_elems[k_sign]) {
                       _connect({&match_elem,  matched_elems[2*k_dim + k_sign]},
                                Con_dir<Deformed_element>({k_dim, j_dim}, {k_sign, j_sign}));
                     }
