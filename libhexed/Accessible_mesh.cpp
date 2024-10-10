@@ -221,17 +221,17 @@ void Accessible_mesh::_match_topo() {
                 _connect({&surface, &match_elem}, Con_dir<Deformed_element>({j_dim, j_dim}, {j_sign, !j_sign}));
                 _connect({&inside,  &match_elem}, Con_dir<Deformed_element>({j_dim, i_dim}, {j_sign, !i_sign}));
                 matched_elems[2*j_dim + j_sign] = &match_elem;
+                elem.face_record[2*j_dim + j_sign] = sn;
                 if (j_dim > k_dim) {
                   for (bool k_sign : {0, 1}) {
                     if (matched_elems[2*k_dim + k_sign]) {
-                      std::cout << "foo" << std::endl;
                       _connect({&match_elem,  matched_elems[2*k_dim + k_sign]},
                                Con_dir<Deformed_element>({k_dim, j_dim}, {k_sign, j_sign}));
                     }
                   }
                 }
               } else {
-                elem.face_record[2*j_dim + j_sign] = inside_sn;
+                //elem.face_record[2*j_dim + j_sign] = inside_sn;
               }
             }
           }
@@ -239,14 +239,13 @@ void Accessible_mesh::_match_topo() {
       }
     }
   }
-  #if 0
   for (auto& con : def.cons) {
     auto dir = con->direction();
     bool replace = false;
     std::array<Deformed_element*, 2> elems;
     for (int i_side = 0; i_side < 2; ++i_side) {
       Deformed_element& elem = con->element(i_side);
-      if (elem.face_record[2*dir.i_face(i_side)] >= 0) {
+      if (elem.face_record[dir.i_face(i_side)] >= 0) {
         replace = true;
         elems[i_side] = &def.elems.at(elem.refinement_level(), elem.face_record[dir.i_face(i_side)]);
       } else {
@@ -254,11 +253,10 @@ void Accessible_mesh::_match_topo() {
       }
     }
     if (replace) {
-      _connect(elems, dir);
       con.reset();
+      _connect(elems, dir);
     }
   }
-  #endif
   purge();
 }
 
