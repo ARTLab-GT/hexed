@@ -189,13 +189,18 @@ void Accessible_mesh::_match_topo() {
     if (shape) {
       next::Face* face = shape->boundary_face_3d();
       if (face) {
+        int i_dim = shape->boundary_face()/2;
+        bool i_sign = shape->boundary_face()%2;
         std::vector<Int> matched_to(4);
         bool matched = false;
+        for (int i_vert = 0; i_vert < 8; ++i_vert) if (i_vert/math::pow(2, 2 - i_dim)%2 == i_sign) {
+          matched = matched || shape->vertex(i_vert).snapped_edge >= 0;
+        }
+        if (!matched) continue;
         for (int i_edge = 0; i_edge < 4; ++i_edge) {
           auto& edge = face->edge(i_edge);
           if (edge.glued()) matched_to[i_edge] = edge.glued_to()->snapped_edge;
           else matched_to[i_edge] = edge.snapped_edge;
-          matched = matched || matched_to[i_edge] >= 0;
         }
         auto set_vertices = [&](Element& e) {
           auto& s = e.shape();
@@ -204,55 +209,51 @@ void Accessible_mesh::_match_topo() {
           }
           for (int i_face = 0; i_face < 6; ++i_face) e.face_record[i_face] = -1;
         };
-        if (matched) {
-          int i_dim = shape->boundary_face()/2;
-          bool i_sign = shape->boundary_face()%2;
-          Int inside_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
-          Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
-          set_vertices(inside);
-          elem.face_record[2*i_dim + !i_sign] = inside_sn;
-          Int surface_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
-          Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
-          set_vertices(surface);
-          _connect({&inside, &surface}, Con_dir<Deformed_element>({i_dim, i_dim}, {i_sign, !i_sign}));
-          elem.record = 2;
-          std::vector<Deformed_element*> matched_elems(6, nullptr);
-          for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
-            for (bool j_sign : {0, 1}) {
-              int k_dim = 3 - j_dim - i_dim;
-              Int m = matched_to[2*(j_dim > k_dim) + j_sign];
-              if (m >= 0) {
-                Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
-                Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
-                set_vertices(match_elem);
-                _connect({&surface, &match_elem}, Con_dir<Deformed_element>({j_dim, j_dim}, {j_sign, !j_sign}));
-                _connect({&inside,  &match_elem}, Con_dir<Deformed_element>({j_dim, i_dim}, {j_sign, !i_sign}));
-                matched_elems[2*j_dim + j_sign] = &match_elem;
-                elem.face_record[2*j_dim + j_sign] = sn;
-                if (j_dim > k_dim) {
-                  for (bool k_sign : {0, 1}) {
-                    if (matched_elems[2*k_dim + k_sign]) {
-                      _connect({&match_elem,  matched_elems[2*k_dim + k_sign]},
-                               Con_dir<Deformed_element>({k_dim, j_dim}, {k_sign, j_sign}));
-                    }
+        Int inside_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
+        Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
+        set_vertices(inside);
+        elem.face_record[2*i_dim + !i_sign] = inside_sn;
+        Int surface_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
+        Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
+        set_vertices(surface);
+        _connect({&inside, &surface}, Con_dir<Deformed_element>({i_dim, i_dim}, {i_sign, !i_sign}));
+        elem.record = 2;
+        std::vector<Deformed_element*> matched_elems(6, nullptr);
+        for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
+          for (bool j_sign : {0, 1}) {
+            int k_dim = 3 - j_dim - i_dim;
+            Int m = matched_to[2*(j_dim > k_dim) + j_sign];
+            if (m >= 0) {
+              Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
+              Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
+              set_vertices(match_elem);
+              _connect({&surface, &match_elem}, Con_dir<Deformed_element>({j_dim, j_dim}, {j_sign, !j_sign}));
+              _connect({&inside,  &match_elem}, Con_dir<Deformed_element>({j_dim, i_dim}, {j_sign, !i_sign}));
+              matched_elems[2*j_dim + j_sign] = &match_elem;
+              elem.face_record[2*j_dim + j_sign] = sn;
+              if (j_dim > k_dim) {
+                for (bool k_sign : {0, 1}) {
+                  if (matched_elems[2*k_dim + k_sign]) {
+                    _connect({&match_elem,  matched_elems[2*k_dim + k_sign]},
+                             Con_dir<Deformed_element>({k_dim, j_dim}, {k_sign, j_sign}));
                   }
                 }
-              } else {
-                elem.face_record[2*j_dim + j_sign] = inside_sn;
-                inside.face_record[2*j_dim + j_sign] = surface_sn;
               }
+            } else {
+              elem.face_record[2*j_dim + j_sign] = inside_sn;
+              inside.face_record[2*j_dim + j_sign] = surface_sn;
             }
           }
-          for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
-            int k_dim = 3 - j_dim - i_dim;
-            for (bool j_sign : {0, 1}) if (matched_elems[2*j_dim + j_sign]) {
-              for (bool k_sign : {0, 1}) if (!matched_elems[2*k_dim + k_sign]) {
-                int i_vert =   i_sign*math::pow(2, 2 - i_dim)
-                             + j_sign*math::pow(2, 2 - j_dim)
-                             + k_sign*math::pow(2, 2 - k_dim);
-                std::vector<Int> record {elem.refinement_level(), elem.face_record[2*j_dim + j_sign], k_dim, k_sign};
-                shape->vertex(i_vert).record.insert(shape->vertex(i_vert).record.end(), record.begin(), record.end());
-              }
+        }
+        for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
+          int k_dim = 3 - j_dim - i_dim;
+          for (bool j_sign : {0, 1}) if (matched_elems[2*j_dim + j_sign]) {
+            for (bool k_sign : {0, 1}) if (!matched_elems[2*k_dim + k_sign]) {
+              int i_vert =   i_sign*math::pow(2, 2 - i_dim)
+                           + j_sign*math::pow(2, 2 - j_dim)
+                           + k_sign*math::pow(2, 2 - k_dim);
+              std::vector<Int> record {elem.refinement_level(), elem.face_record[2*j_dim + j_sign], k_dim, k_sign};
+              shape->vertex(i_vert).record.insert(shape->vertex(i_vert).record.end(), record.begin(), record.end());
             }
           }
         }
