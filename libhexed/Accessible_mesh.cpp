@@ -252,8 +252,8 @@ void Accessible_mesh::_match_topo() {
               int i_vert =   i_sign*math::pow(2, 2 - i_dim)
                            + j_sign*math::pow(2, 2 - j_dim)
                            + k_sign*math::pow(2, 2 - k_dim);
-              std::vector<Int> record {elem.refinement_level(), elem.face_record[2*j_dim + j_sign], k_dim, k_sign};
-              shape->vertex(i_vert).record.insert(shape->vertex(i_vert).record.end(), record.begin(), record.end());
+              std::vector<Int> record {elem.refinement_level(), elem.face_record[2*j_dim + j_sign], k_dim, k_sign, i_dim, i_sign};
+              surface.shape().vertex(i_vert).record.insert(shape->vertex(i_vert).record.end(), record.begin(), record.end());
             }
           }
         }
@@ -288,17 +288,26 @@ void Accessible_mesh::_match_topo() {
       }
     }
   }
-  for (auto& vert : verts) {
-    if (vert.record.size() == 8) {
+  for (auto& vert : all_verts) {
+    if (vert.record.size() == 12) {
       std::array<Deformed_element*, 2> elem_arr;
       std::array<int, 2> dim_arr;
       std::array<bool, 2> sign_arr;
       for (int i_side = 0; i_side < 2; ++i_side) {
-        elem_arr[i_side] = &def.elems.at(vert.record[4*i_side], vert.record[4*i_side + 1]);
-        dim_arr[i_side] = vert.record[4*i_side + 2];
-        sign_arr[i_side] = vert.record[4*i_side + 3];
+        elem_arr[i_side] = &def.elems.at(vert.record[6*i_side], vert.record[6*i_side + 1]);
+        dim_arr[i_side] = vert.record[6*i_side + 2];
+        sign_arr[i_side] = vert.record[6*i_side + 3];
       }
-      if (dim_arr[0] == dim_arr[1]) _connect(elem_arr, {dim_arr, sign_arr});
+      bool aligned = true;
+      for (int i_dim = 0; i_dim < 3; ++i_dim) if (i_dim != dim_arr[0] && i_dim != dim_arr[1]) {
+        Int np [2];
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          np[i_side] = elem_arr[i_side]->nominal_position()[i_dim]
+                       + (i_dim == vert.record[6*i_side + 4])*(1 - 2*vert.record[6*i_side + 5]);
+        }
+        aligned = aligned && np[0] == np[1];
+      }
+      if (aligned) _connect(elem_arr, {dim_arr, sign_arr});
     }
   }
   #pragma omp parallel for
@@ -306,7 +315,7 @@ void Accessible_mesh::_match_topo() {
     vert.record.clear();
   }
   purge();
-  //for (int i = 0; i < 1; ++i) relax(.5);
+  for (int i = 0; i < 1; ++i) relax(.5);
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
