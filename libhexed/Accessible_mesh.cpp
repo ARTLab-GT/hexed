@@ -178,6 +178,7 @@ void Accessible_mesh::_match_topo() {
   for (int i_element = 0; i_element < elems.size(); ++i_element) {
     auto& elem = elems[i_element];
     elem.record = 0;
+    for (int i_face = 0; i_face < 6; ++i_face) elem.face_record[i_face] = -1;
     next::Element_shape* shape = elem.fake_shape();
     if (shape) {
       next::Face* face = shape->boundary_face_3d();
@@ -197,15 +198,15 @@ void Accessible_mesh::_match_topo() {
           }
         };
         if (matched) {
-          int sn;
-          sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
-          Deformed_element& inside = def.elems.at(elem.refinement_level(), sn);
-          set_vertices(inside);
-          sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
-          Deformed_element& surface = def.elems.at(elem.refinement_level(), sn);
-          set_vertices(surface);
           int i_dim = shape->boundary_face()/2;
           bool i_sign = shape->boundary_face()%2;
+          Int inside_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
+          Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
+          set_vertices(inside);
+          elem.face_record[2*i_dim + !i_sign] = inside_sn;
+          Int surface_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
+          Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
+          set_vertices(surface);
           _connect({&inside, &surface}, Con_dir<Deformed_element>({i_dim, i_dim}, {i_sign, !i_sign}));
           elem.record = 2;
           std::vector<Deformed_element*> matched_elems(6, nullptr);
@@ -214,7 +215,7 @@ void Accessible_mesh::_match_topo() {
               int k_dim = 3 - j_dim - i_dim;
               Int m = matched_to[2*(j_dim > k_dim) + j_sign];
               if (m >= 0) {
-                sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
+                Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
                 set_vertices(match_elem);
                 _connect({&surface, &match_elem}, Con_dir<Deformed_element>({j_dim, j_dim}, {j_sign, !j_sign}));
@@ -222,12 +223,15 @@ void Accessible_mesh::_match_topo() {
                 matched_elems[2*j_dim + j_sign] = &match_elem;
                 if (j_dim > k_dim) {
                   for (bool k_sign : {0, 1}) {
-                    if (matched_elems[k_sign]) {
+                    if (matched_elems[2*k_dim + k_sign]) {
+                      std::cout << "foo" << std::endl;
                       _connect({&match_elem,  matched_elems[2*k_dim + k_sign]},
                                Con_dir<Deformed_element>({k_dim, j_dim}, {k_sign, j_sign}));
                     }
                   }
                 }
+              } else {
+                elem.face_record[2*j_dim + j_sign] = inside_sn;
               }
             }
           }
@@ -235,6 +239,26 @@ void Accessible_mesh::_match_topo() {
       }
     }
   }
+  #if 0
+  for (auto& con : def.cons) {
+    auto dir = con->direction();
+    bool replace = false;
+    std::array<Deformed_element*, 2> elems;
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      Deformed_element& elem = con->element(i_side);
+      if (elem.face_record[2*dir.i_face(i_side)] >= 0) {
+        replace = true;
+        elems[i_side] = &def.elems.at(elem.refinement_level(), elem.face_record[dir.i_face(i_side)]);
+      } else {
+        elems[i_side] = &elem;
+      }
+    }
+    if (replace) {
+      _connect(elems, dir);
+      con.reset();
+    }
+  }
+  #endif
   purge();
 }
 
