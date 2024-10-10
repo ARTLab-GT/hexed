@@ -208,15 +208,26 @@ void Accessible_mesh::_match_topo() {
           bool i_sign = shape->boundary_face()%2;
           _connect({&inside, &surface}, Con_dir<Deformed_element>({i_dim, i_dim}, {i_sign, !i_sign}));
           elem.record = 2;
+          std::vector<Deformed_element*> matched_elems(6, nullptr);
           for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
             for (bool j_sign : {0, 1}) {
-              Int m = matched_to[2*(j_dim > 3 - j_dim - i_dim) + j_sign];
+              int k_dim = 3 - j_dim - i_dim;
+              Int m = matched_to[2*(j_dim > k_dim) + j_sign];
               if (m >= 0) {
                 sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
                 set_vertices(match_elem);
                 _connect({&surface, &match_elem}, Con_dir<Deformed_element>({j_dim, j_dim}, {j_sign, !j_sign}));
                 _connect({&inside,  &match_elem}, Con_dir<Deformed_element>({j_dim, i_dim}, {j_sign, !i_sign}));
+                matched_elems[2*j_dim + j_sign] = &match_elem;
+                if (j_dim > k_dim) {
+                  for (bool k_sign : {0, 1}) {
+                    if (matched_to[k_sign]) {
+                      _connect({&match_elem,  matched_elems[2*k_dim + k_sign]},
+                               Con_dir<Deformed_element>({k_dim, j_dim}, {k_sign, j_sign}));
+                    }
+                  }
+                }
               }
             }
           }
