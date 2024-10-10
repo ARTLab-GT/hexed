@@ -239,7 +239,7 @@ void Accessible_mesh::_match_topo() {
                 }
               } else {
                 elem.face_record[2*j_dim + j_sign] = inside_sn;
-                //inside.face_record[2*j_dim + j_sign] = surface_sn;
+                inside.face_record[2*j_dim + j_sign] = surface_sn;
               }
             }
           }
