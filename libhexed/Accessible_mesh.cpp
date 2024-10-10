@@ -305,7 +305,9 @@ void Accessible_mesh::_match_topo() {
           np[i_side] = elem_arr[i_side]->nominal_position()[i_dim]
                        + (i_dim == vert.record[6*i_side + 4])*(1 - 2*vert.record[6*i_side + 5]);
         }
-        rotate += (np[0] - np[1])*math::sign(dim_arr[0] == (dim_arr[1] + 1)%3);
+        rotate += (np[1] - np[0])*math::sign(dim_arr[0] == (dim_arr[1] + 1)%3)
+                                 *math::sign(sign_arr[0] == sign_arr[1])
+                                 *math::sign(dim_arr[0] == dim_arr[1]);
       }
       _connect(elem_arr, {dim_arr, sign_arr, rotate});
     }

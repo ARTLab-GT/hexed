@@ -23,16 +23,11 @@ std::vector<int> face_vertex_inds(int n_dim, const Connection_direction& directi
   }
   if (direction.transpose()) std::swap(inds[1], inds[2]); // only possible for this to happen if `n_dim == 3`
   if (n_dim == 3 && direction.rotate != 0) {
-    std::cout << direction.rotate << "; ";
-    for (int i_vert = 0; i_vert < n_vert; ++i_vert) std::cout << inds[i_vert] << " ";
-    std::cout << "; ";
     std::swap(inds[1], inds[2]);
     int stride = 1 + ((direction.rotate == 1) == (direction.i_dim[1] != 1));
     for (int i = 0; i < 2; ++i) {
       std::swap(inds[i*(2/stride)], inds[i*(2/stride) + stride]);
     }
-    for (int i_vert = 0; i_vert < n_vert; ++i_vert) std::cout << inds[i_vert] << " ";
-    std::cout << std::endl;
   }
   return inds;
 }
