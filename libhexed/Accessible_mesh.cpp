@@ -180,7 +180,8 @@ void Accessible_mesh::_match_topo() {
   }
 
   auto& elems = def.elements();
-  for (int i_element = 0; i_element < elems.size(); ++i_element) {
+  Int elems_sz = elems.size();
+  for (Int i_element = 0; i_element < elems_sz; ++i_element) {
     auto& elem = elems[i_element];
     elem.record = 0;
     for (int i_face = 0; i_face < 6; ++i_face) elem.face_record[i_face] = -1;
@@ -201,6 +202,7 @@ void Accessible_mesh::_match_topo() {
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
             s.vertex(i_vert).set_pos(shape->vertex(i_vert).point({}));
           }
+          for (int i_face = 0; i_face < 6; ++i_face) e.face_record[i_face] = -1;
         };
         if (matched) {
           int i_dim = shape->boundary_face()/2;
@@ -237,6 +239,7 @@ void Accessible_mesh::_match_topo() {
                 }
               } else {
                 elem.face_record[2*j_dim + j_sign] = inside_sn;
+                //inside.face_record[2*j_dim + j_sign] = surface_sn;
               }
             }
           }
@@ -257,15 +260,21 @@ void Accessible_mesh::_match_topo() {
     }
   }
   extrude_cons.clear();
-  for (auto& con : def.cons) {
+  Int cons_sz = def.cons.size();
+  for (int i_con = 0; i_con < cons_sz; ++i_con) {
+    auto& con = def.cons[i_con];
     auto dir = con->direction();
     bool replace = false;
     std::array<Deformed_element*, 2> elem_arr;
+    std::array<Deformed_element*, 2> surfaces {nullptr, nullptr};
     for (int i_side = 0; i_side < 2; ++i_side) {
       Deformed_element& elem = con->element(i_side);
       if (elem.face_record[dir.i_face(i_side)] >= 0) {
         replace = true;
         elem_arr[i_side] = &def.elems.at(elem.refinement_level(), elem.face_record[dir.i_face(i_side)]);
+        if (elem_arr[i_side]->face_record[dir.i_face(i_side)] >= 0) {
+          surfaces[i_side] = &def.elems.at(elem.refinement_level(), elem_arr[i_side]->face_record[dir.i_face(i_side)]);
+        }
       } else {
         elem_arr[i_side] = &elem;
       }
@@ -273,6 +282,9 @@ void Accessible_mesh::_match_topo() {
     if (replace) if (bool(elem_arr[0]->fake_shape()) == bool(elem_arr[1]->fake_shape())) {
       con.reset();
       _connect(elem_arr, dir);
+      if (surfaces[0] && surfaces[1]) {
+        _connect(surfaces, dir);
+      }
     }
   }
   for (auto& vert : verts) {
@@ -293,7 +305,7 @@ void Accessible_mesh::_match_topo() {
     vert.record.clear();
   }
   purge();
-  for (int i = 0; i < 1; ++i) relax(.5);
+  //for (int i = 0; i < 1; ++i) relax(.5);
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
