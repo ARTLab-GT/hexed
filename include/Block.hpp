@@ -356,6 +356,7 @@ class Element_shape : public Block {
   Element_shape(int nd, const Basis&);
   Mat<3> _vertex_point(const std::vector<int>&) const;
   Mat<3> _point(const std::vector<int>&) const override;
+  void _glue_edges(std::vector<Element_shape*> those);
   const Basis* _basis;
   double _nom_sz;
   Mat<3> _nom_pos;

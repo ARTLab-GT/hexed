@@ -70,6 +70,7 @@ void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get
   for (Int i_vert = 0; i_vert < (Int)verts.size(); ++i_vert) {
     next::Vertex::Shared_value(verts[i_vert]).set(reduction.initial_value);
   }
+  std::cout << "[6" << std::endl;
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     auto& elem = elements[i_elem];
@@ -79,6 +80,7 @@ void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get
       shared.set(reduction.binary_reduction(shared.get(), get(elem, i_vert)));
     }
   }
+  std::cout << "6]" << std::endl;
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     auto& elem = elements[i_elem];
@@ -356,12 +358,14 @@ void Solver::calc_jacobian(bool snap) {
   const int rs = basis.row_size;
   const int nfq = params.n_qpoint()/rs;
 
+  std::cout << "[2" << std::endl;
   // compute element jacobians
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
   }
+  std::cout << "2]" << std::endl;
 
   /*
    * compute surface normals for deformed connections
@@ -372,6 +376,7 @@ void Solver::calc_jacobian(bool snap) {
     double* nrml = def_cons[i_con].normal();
     for (int i_data = 0; i_data < n_dim*nfq; ++i_data) nrml[i_data] = 0.;
   }
+  std::cout << "[3" << std::endl;
   // for deformed refined faces, set normal to coarse face normal (for Cartesian, setting normal is not necessary)
   auto& ref_cons = acc_mesh->deformed().refined_connections();
   compute_prolong(_kernel_mesh(), true);
@@ -393,6 +398,7 @@ void Solver::calc_jacobian(bool snap) {
       fp->restore();
     }
   }
+  std::cout << "3]" << std::endl;
   // for BCs, copy normal to ghost face
   auto& bc_cons = acc_mesh->boundary_connections();
   #pragma omp parallel for
@@ -403,8 +409,7 @@ void Solver::calc_jacobian(bool snap) {
   }
   // compute the shared face normal
   #pragma omp parallel for
-  for (int i_con = 0; i_con < def_cons.size(); ++i_con)
-  {
+  for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
     auto& con = def_cons[i_con];
     double* elem_nrml [2] {con.state(0, false), con.state(1, false)};
     auto dir = con.direction();
@@ -428,6 +433,7 @@ void Solver::calc_jacobian(bool snap) {
       }
     }
   }
+  std::cout << "[4" << std::endl;
   // write face normal for coarse hanging node faces
   #pragma omp parallel for
   for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
@@ -442,6 +448,7 @@ void Solver::calc_jacobian(bool snap) {
       nrml[i_data] = state[i_data];
     }
   }
+  std::cout << "4]" << std::endl;
   // set position at boundary faces
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -455,7 +462,9 @@ void Solver::calc_jacobian(bool snap) {
       }
     }
   }
+  std::cout << "[5" << std::endl;
   share_vertex_data(&Element::vertex_time_step_scale, { huge, &min_fun});
+  std::cout << "5]" << std::endl;
   _preti_masks = acc_mesh->preti_masks(basis);
 }
 

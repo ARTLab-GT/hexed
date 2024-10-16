@@ -331,9 +331,13 @@ Case::Case(std::string input_script)
     Surface_geom* geom = _make_geom();
     if (geom) {
       _has_geom = true;
+      std::cout << "[0" << std::endl;
       _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc")), _get_vector("flood_fill_start", _vari("n_dim")));
+      std::cout << "0]" << std::endl;
       //_solver().mesh().relax_and_match(_vari("n_smooth"), .5);
+      std::cout << "[1" << std::endl;
       _solver().calc_jacobian();
+      std::cout << "1]" << std::endl;
     }
     return "";
   }));

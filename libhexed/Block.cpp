@@ -166,6 +166,7 @@ Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
 
 double Vertex::Shared_value::get() const {
   if (_acquire) return _vert._shared_value;
+  return 0;
   HEXED_ASSERT(_vert.glued(), "The glued status of the vertex changed since constructing the `Shared_value`.")
   double value = 0;
   for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
@@ -188,7 +189,8 @@ void Vertex::Shared_value::set(double value) {
 Mat<3> Vertex::_point(const std::vector<int>&) const {
   // usually, the vertex will not be glued or a shadow and we can just return the `_pos`
   if (_shadowed) return _shadowed->point({});
-  if (!_glued_to) {
+  //if (!_glued_to) {
+  if (true) {
     Mat<3> p;
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
       #pragma omp atomic read
@@ -428,6 +430,23 @@ Mat<3> Element_shape::_point(const std::vector<int>& coords) const {
   return point;
 }
 
+void Element_shape::_glue_edges(std::vector<Element_shape*> those) {
+  if (n_dim() != 3 || !_sf) return;
+  for (Element_shape* that : those) if (that->_sf) {
+    for (int i_edge = 0; i_edge < 4; ++i_edge) {
+      auto& edge0 = that->_sf.value().edge(i_edge);
+      for (int j_edge = 0; j_edge < 4; ++j_edge) {
+        auto& edge1 = _sf.value().edge(j_edge);
+        for (bool reverse : {0, 1}) {
+          if (&edge0.vertex(0) == &edge1.vertex(reverse) && &edge0.vertex(1) == &edge1.vertex(!reverse)) {
+            edge0.glue(edge1, Edge::no, reverse);
+          }
+        }
+      }
+    }
+  }
+}
+
 Element_shape::Element_shape(int nd, const Basis& b)
 : Block(nd, b.row_size)
 , _basis{&b}
@@ -480,20 +499,6 @@ Mat<3> Element_shape::nominal_position(int i_vert) const {
   return pos;
 }
 
-int i_edge(Connection_direction dir, int side, int i_bf) {
-  return 2*(dir.i_dim[side] > 3 - dir.i_dim[side] - i_bf/2) + dir.face_sign[side];
-}
-
-#define ASSERT_CON_DIMS(dir, that) { \
-  HEXED_ASSERT((that)._bf, "connection expected subordinate element to have boundary face"); \
-  HEXED_ASSERT(_i_bf == (that)._i_bf || ( \
-    dir.i_dim[0] != dir.i_dim[1] \
-    && _i_bf/2 == dir.i_dim[1] \
-    && (that)._i_bf/2 == dir.i_dim[0] \
-    && (_i_bf%2 == dir.face_sign[1]) == ((that)._i_bf%2 == dir.face_sign[0]) \
-  ), "boundary face mismatch"); \
-} \
-
 void Element_shape::connect(Element_shape& that, Connection_direction dir) {
   HEXED_ASSERT(that.n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
   HEXED_ASSERT(that._basis == _basis, "attempt to connect elements with different basis");
@@ -503,26 +508,14 @@ void Element_shape::connect(Element_shape& that, Connection_direction dir) {
   for (int i_vert = 0; i_vert < math::pow(2, n_dim() - 1); ++i_vert) {
     vertex(inds[0][i_vert]).eat(that.vertex(inds[1][i_vert]));
   }
-  // glue boundary edges
-  if (n_dim() == 3 && _sf && that._sf) {
-    for (int i_edge = 0; i_edge < 4; ++i_edge) {
-      auto& edge0 = that._sf.value().edge(i_edge);
-      for (int j_edge = 0; j_edge < 4; ++j_edge) {
-        auto& edge1 = _sf.value().edge(j_edge);
-        for (bool reverse : {0, 1}) {
-          if (&edge0.vertex(0) == &edge1.vertex(reverse) && &edge0.vertex(1) == &edge1.vertex(!reverse)) {
-            edge0.glue(edge1, Edge::no, reverse);
-          }
-        }
-      }
-    }
-  }
+  _glue_edges({&that});
 }
 
 void Element_shape::connect(std::vector<Element_shape*> those, Connection_direction dir) {
   HEXED_ASSERT(those.size() == math::pow(std::size_t(2), n_dim() - 1), "wrong number of fine elements");
   for (Element_shape* that : those) {
     HEXED_ASSERT(that, "fine element pointer is null");
+    HEXED_ASSERT(that != this, "Self-connections must be conforming.");
     HEXED_ASSERT(that->n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
     HEXED_ASSERT(that->_basis == _basis, "attempt to connect elements with different basis");
   }
@@ -531,6 +524,7 @@ void Element_shape::connect(std::vector<Element_shape*> those, Connection_direct
   auto face_inds = face_vertex_inds(n_dim(), dir);
   int nv = math::pow(2, n_dim() - 1);
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
+    HEXED_ASSERT(those[face_inds[i_vert]], "foo");
     // eat the non-hanging vertices of the fine elements
     vertex(inds[0][i_vert]).eat(those[face_inds[i_vert]]->vertex(inds[1][i_vert]));
     // glue the hanging vertices
@@ -550,19 +544,7 @@ void Element_shape::connect(std::vector<Element_shape*> those, Connection_direct
       if (do_it) those[face_inds[i_vert]]->vertex(inds[1][j_vert]).glue(*this, coords);
     }
   }
-  // glue edges
-  if (n_dim() == 3 && _bf && _i_bf/2 != dir.i_dim[0]) {
-    Edge& edge = _sf.value().edge(i_edge(dir, 0, _i_bf));
-    int edge_dim = _i_bf/2 > 3 - dir.i_dim[0] - _i_bf/2;
-    int strides [2] {vstride(2, edge_dim), vstride(2, !edge_dim)};
-    Array<Element_shape*> to_glue({2}, [&](int i){return those[face_inds[_i_bf%2*strides[0] + i*strides[1]]];});
-    auto glue = [&](int i_glue, int i_half) {
-      ASSERT_CON_DIMS(dir, *to_glue[i_glue]);
-      to_glue[i_glue]->_sf.value().edge(i_edge(dir, 1, to_glue[i_glue]->_i_bf)).glue(edge, i_half);
-    };
-    if (to_glue[0] == to_glue[1]) glue(0, Edge::no);
-    else for (int i_glue = 0; i_glue < 2; ++i_glue) glue(i_glue, i_glue);
-  }
+  _glue_edges(those);
 }
 
 void Element_shape::glue(Element_shape& that, std::array<std::vector<double>, 2> corners) {

@@ -281,11 +281,27 @@ void Accessible_mesh::_match_topo() {
         elem_arr[i_side] = &elem;
       }
     }
-    if (replace) if (bool(elem_arr[0]->fake_shape()) == bool(elem_arr[1]->fake_shape())) {
+    if (replace) {
       con.reset();
-      _connect(elem_arr, dir);
-      if (surfaces[0] && surfaces[1]) {
-        _connect(surfaces, dir);
+      if (bool(elem_arr[0]->fake_shape()) == bool(elem_arr[1]->fake_shape())) {
+        _connect(elem_arr, dir);
+        if (surfaces[0]) {
+          HEXED_ASSERT(surfaces[1], "Both faces must identify a surface element or neither.");
+          _connect(surfaces, dir);
+        }
+      } else {
+        bool coarse_sign = surfaces[0];
+        std::vector<Deformed_element*> fine {elem_arr[!coarse_sign], surfaces[!coarse_sign]};
+        HEXED_ASSERT(fine[1], "Fine element must identify a surface element");
+        std::array<bool, 2> stretch {false, false};
+        HEXED_ASSERT(elem_arr[coarse_sign]->fake_shape(), "Coarse element must have a fake shape.");
+        int i_bf = fine[1]->shape().boundary_face();
+        int i_dim = i_bf/2;
+        stretch[i_dim < 3 - i_dim - dir.i_dim[!coarse_sign]] = true;
+        if (!(i_bf%2)) std::swap(fine[0], fine[1]);
+        Con_dir<Deformed_element> new_dir {{dir.i_dim[coarse_sign], dir.i_dim[!coarse_sign]},
+                                           {dir.face_sign[coarse_sign], dir.face_sign[!coarse_sign]}};
+        _connect(elem_arr[coarse_sign], fine, new_dir, stretch);
       }
     }
   }
@@ -420,8 +436,8 @@ void Accessible_mesh::_connect_shapes(Elem_t* coarse, std::vector<Elem_t*> fine,
     }
   }
   coarse->shape().connect(fine_shapes, dir);
-  HEXED_ASSERT(   std::all_of(fine_shapes.begin(), fine_shapes.end(), [](void* p)->bool{return  p;})
-               || std::all_of(fine_shapes.begin(), fine_shapes.end(), [](void* p)->bool{return !p;}),
+  HEXED_ASSERT(   std::all_of(fake_fine_shapes.begin(), fake_fine_shapes.end(), [](void* p)->bool{return  p;})
+               || std::all_of(fake_fine_shapes.begin(), fake_fine_shapes.end(), [](void* p)->bool{return !p;}),
                "All of the fine elements must have fake shapes or none.");
   next::Element_shape* coarse_fake = coarse->fake_shape();
   if (coarse_fake || fake_fine_shapes[0]) {
