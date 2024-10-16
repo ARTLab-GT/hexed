@@ -252,7 +252,7 @@ class Edge : public Boundary_block {
    * If `that` is destroyed, this edge is no longer glued and `Block::point` once again respects `interior()`.
    * Unlike in the case of `Vertex::glue`, `interior()` is not updated to match the latest value of `point()`.
    */
-  void glue(Edge& that, int half = no);
+  void glue(Edge& that, int half = no, bool reverse = false);
 
   void unglue() {_glued_to.unpair();} //!< \brief If this edge is currently `glue()`d, unglue it.
   bool glued() const; //!< \brief `true` iff `this` is currently `glue()`d to another edge
@@ -267,6 +267,7 @@ class Edge : public Boundary_block {
   Reciprocal_ptr<Edge, Edge> _glued_to;
   Reciprocal_list<Edge, Edge> _glued;
   int _half;
+  bool _glued_reverse;
 };
 
 /*! \brief A 2-dimensional `Block` bounded by 4 `Edge`s.

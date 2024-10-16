@@ -270,8 +270,12 @@ Boundary_block::Boundary_block(int n_dim, const Basis& b)
 Mat<3> Edge::_point(const std::vector<int>& coords) const {
   int coord = coords[0];
   if (glued()) {
-    if (_half == no) return _glued_to.value()._point(coords);
-    else {
+    if (_glued_reverse) {
+      coord = row_size() - 1 - coord;
+    }
+    if (_half == no) {
+      return _glued_to.value()._point({coord});
+    } else {
       Mat<3, dyn> pts(3, row_size());
       for (int c = 0; c < row_size(); ++c) pts(all, c) = _glued_to.value().point({c});
       return pts*basis().prolong(_half)(coord, all).transpose();
@@ -302,9 +306,10 @@ void Edge::reset() {
 
 const int Edge::no = -1;
 
-void Edge::glue(Edge& other, int half) {
+void Edge::glue(Edge& other, int half, bool reverse) {
   _glued_to.pair(other._glued);
   _half = half;
+  _glued_reverse = reverse;
 }
 
 bool Edge::glued() const {
@@ -489,28 +494,37 @@ int i_edge(Connection_direction dir, int side, int i_bf) {
   ), "boundary face mismatch"); \
 } \
 
-void Element_shape::connect(Element_shape& other, Connection_direction dir) {
-  HEXED_ASSERT(other.n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
-  HEXED_ASSERT(other._basis == _basis, "attempt to connect elements with different basis");
-  if (&other == this) return;
+void Element_shape::connect(Element_shape& that, Connection_direction dir) {
+  HEXED_ASSERT(that.n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
+  HEXED_ASSERT(that._basis == _basis, "attempt to connect elements with different basis");
+  if (&that == this) return;
   // eat vertices
   auto inds = vertex_inds(n_dim(), dir);
   for (int i_vert = 0; i_vert < math::pow(2, n_dim() - 1); ++i_vert) {
-    vertex(inds[0][i_vert]).eat(other.vertex(inds[1][i_vert]));
+    vertex(inds[0][i_vert]).eat(that.vertex(inds[1][i_vert]));
   }
   // glue boundary edges
-  if (n_dim() == 3 && _bf && _i_bf/2 != dir.i_dim[0]) {
-    ASSERT_CON_DIMS(dir, other);
-    other._sf.value().edge(i_edge(dir, 1, other._i_bf)).glue(_sf.value().edge(i_edge(dir, 0, _i_bf)));
+  if (n_dim() == 3 && _sf && that._sf) {
+    for (int i_edge = 0; i_edge < 4; ++i_edge) {
+      auto& edge0 = that._sf.value().edge(i_edge);
+      for (int j_edge = 0; j_edge < 4; ++j_edge) {
+        auto& edge1 = _sf.value().edge(j_edge);
+        for (bool reverse : {0, 1}) {
+          if (&edge0.vertex(0) == &edge1.vertex(reverse) && &edge0.vertex(1) == &edge1.vertex(!reverse)) {
+            edge0.glue(edge1, Edge::no, reverse);
+          }
+        }
+      }
+    }
   }
 }
 
-void Element_shape::connect(std::vector<Element_shape*> others, Connection_direction dir) {
-  HEXED_ASSERT(others.size() == math::pow(std::size_t(2), n_dim() - 1), "wrong number of fine elements");
-  for (Element_shape* other : others) {
-    HEXED_ASSERT(other, "fine element pointer is null");
-    HEXED_ASSERT(other->n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
-    HEXED_ASSERT(other->_basis == _basis, "attempt to connect elements with different basis");
+void Element_shape::connect(std::vector<Element_shape*> those, Connection_direction dir) {
+  HEXED_ASSERT(those.size() == math::pow(std::size_t(2), n_dim() - 1), "wrong number of fine elements");
+  for (Element_shape* that : those) {
+    HEXED_ASSERT(that, "fine element pointer is null");
+    HEXED_ASSERT(that->n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
+    HEXED_ASSERT(that->_basis == _basis, "attempt to connect elements with different basis");
   }
   // eat/glue vertices
   auto inds = vertex_inds(n_dim(), dir);
@@ -518,7 +532,7 @@ void Element_shape::connect(std::vector<Element_shape*> others, Connection_direc
   int nv = math::pow(2, n_dim() - 1);
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
     // eat the non-hanging vertices of the fine elements
-    vertex(inds[0][i_vert]).eat(others[face_inds[i_vert]]->vertex(inds[1][i_vert]));
+    vertex(inds[0][i_vert]).eat(those[face_inds[i_vert]]->vertex(inds[1][i_vert]));
     // glue the hanging vertices
     for (int j_vert = 0; j_vert < nv; ++j_vert) if (j_vert != i_vert) {
       std::vector<double> coords(n_dim());
@@ -528,12 +542,12 @@ void Element_shape::connect(std::vector<Element_shape*> others, Connection_direc
         else {
           int vs = vstride(n_dim() - 1, face_dim++);
           int c = i_vert/vs%2 + j_vert/vs%2;
-          do_it = do_it && !(c == 1 &&    others[face_inds[i_vert - i_vert/vs%2*vs]]
-                                       == others[face_inds[i_vert + (1 - i_vert/vs%2)*vs]]);
+          do_it = do_it && !(c == 1 &&    those[face_inds[i_vert - i_vert/vs%2*vs]]
+                                       == those[face_inds[i_vert + (1 - i_vert/vs%2)*vs]]);
           coords[i_dim] = .5*c;
         }
       }
-      if (do_it) others[face_inds[i_vert]]->vertex(inds[1][j_vert]).glue(*this, coords);
+      if (do_it) those[face_inds[i_vert]]->vertex(inds[1][j_vert]).glue(*this, coords);
     }
   }
   // glue edges
@@ -541,7 +555,7 @@ void Element_shape::connect(std::vector<Element_shape*> others, Connection_direc
     Edge& edge = _sf.value().edge(i_edge(dir, 0, _i_bf));
     int edge_dim = _i_bf/2 > 3 - dir.i_dim[0] - _i_bf/2;
     int strides [2] {vstride(2, edge_dim), vstride(2, !edge_dim)};
-    Array<Element_shape*> to_glue({2}, [&](int i){return others[face_inds[_i_bf%2*strides[0] + i*strides[1]]];});
+    Array<Element_shape*> to_glue({2}, [&](int i){return those[face_inds[_i_bf%2*strides[0] + i*strides[1]]];});
     auto glue = [&](int i_glue, int i_half) {
       ASSERT_CON_DIMS(dir, *to_glue[i_glue]);
       to_glue[i_glue]->_sf.value().edge(i_edge(dir, 1, to_glue[i_glue]->_i_bf)).glue(edge, i_half);
