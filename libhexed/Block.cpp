@@ -166,7 +166,6 @@ Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
 
 double Vertex::Shared_value::get() const {
   if (_acquire) return _vert._shared_value;
-  return 0;
   HEXED_ASSERT(_vert.glued(), "The glued status of the vertex changed since constructing the `Shared_value`.")
   double value = 0;
   for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
@@ -189,8 +188,7 @@ void Vertex::Shared_value::set(double value) {
 Mat<3> Vertex::_point(const std::vector<int>&) const {
   // usually, the vertex will not be glued or a shadow and we can just return the `_pos`
   if (_shadowed) return _shadowed->point({});
-  //if (!_glued_to) {
-  if (true) {
+  if (!_glued_to) {
     Mat<3> p;
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
       #pragma omp atomic read

@@ -334,7 +334,7 @@ void Accessible_mesh::_match_topo() {
     vert.record.clear();
   }
   purge();
-  for (int i = 0; i < 1; ++i) relax(.5);
+  for (int i = 0; i < 5; ++i) relax(.5);
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
