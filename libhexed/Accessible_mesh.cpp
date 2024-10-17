@@ -46,6 +46,7 @@ namespace dijkstra {
 
 void Accessible_mesh::_match_topo() {
   if (!surf_geom) return;
+  std::cout << "[2" << std::endl;
   _blocks.edges_2d();
   _blocks.faces_3d();
   for (int i = 0; i < 20; ++i) relax(.5);
@@ -180,7 +181,9 @@ void Accessible_mesh::_match_topo() {
       vis->write_block(pos(), vars());
     }
   }
+  std::cout << "2]" << std::endl;
 
+  std::cout << "[3" << std::endl;
   auto& elems = def.elements();
   Int elems_sz = elems.size();
   for (Int i_element = 0; i_element < elems_sz; ++i_element) {
@@ -364,6 +367,7 @@ void Accessible_mesh::_match_topo() {
     vert.record.clear();
   }
   purge();
+  std::cout << "3]" << std::endl;
   for (int i = 0; i < 20; ++i) relax(.5);
 }
 
@@ -1574,6 +1578,7 @@ void update_pos(next::Vertex& vert, Mat<3> pos) {
 }
 
 void Accessible_mesh::relax(double factor) {
+  std::cout << "[4" << std::endl;
   {
     // update `next::Vertex`s
     Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["optimization"]);
@@ -1582,6 +1587,7 @@ void Accessible_mesh::relax(double factor) {
   }
   #if 1
   // snap vertices to extremal boundaries
+  std::cout << "[5" << std::endl;
   if (tree) {
     Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);
     #pragma omp parallel for
@@ -1602,6 +1608,7 @@ void Accessible_mesh::relax(double factor) {
     }
     _stopwatch["relax"]["extremal snapping"].work_units_completed += _n_verts;
   }
+  std::cout << "5]" << std::endl;
   if (surf_geom) {
     Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
     auto bverts = _blocks.boundary_verts();
@@ -1616,6 +1623,7 @@ void Accessible_mesh::relax(double factor) {
       vert.set_pos(pos);
     }
     }
+    std::cout << "[6" << std::endl;
     // snap vertices to geometry edges
     auto edges = surf_geom->edges();
     auto points = surf_geom->points();
@@ -1636,16 +1644,22 @@ void Accessible_mesh::relax(double factor) {
         }
       }
     }
+    std::cout << "6]" << std::endl;
     // snaps a `Boundary_block` to the geometry surface
     auto snap_block = [this](next::Boundary_block& block) {
+      std::cout << "[9" << std::endl;
       block.reset();
+      std::cout << "9]" << std::endl;
       Array<double> interior {block.interior().reshaped({whatever, 3})};
+      std::cout << "[10" << std::endl;
       for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
         auto p = interior(i_point)(0, params.n_dim).vector();
         Mat<> p_mat {p};
         p = surf_geom->nearest_point(p_mat, huge, block.element()->nominal_size()/params.row_size).point();
       }
+      std::cout << "10]" << std::endl;
     };
+    std::cout << "[7" << std::endl;
     // snap edges to the surface (regardless of dimensionality)
     auto edges_2d = _blocks.edges_2d();
     #pragma omp parallel for
@@ -1655,6 +1669,7 @@ void Accessible_mesh::relax(double factor) {
     for (auto& face : faces_3d) {
       for (int i_edge = 0; i_edge < 4; ++i_edge) snap_block(face.edge(i_edge));
     }
+    std::cout << "7]" << std::endl;
     // Snap mesh edges to geometry edges.
     // This has to happen after snapping edges to the surface (which would undo this)
     // but before snapping faces to the surface
@@ -1672,9 +1687,11 @@ void Accessible_mesh::relax(double factor) {
         }
       }
     }
+    std::cout << "[8" << std::endl;
     // snap face interiors (if 3D) to surface
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for (auto& face : faces_3d) snap_block(face);
+    std::cout << "8]" << std::endl;
     _stopwatch["relax"]["surface snapping"].work_units_completed += bverts.size();
   } else {
     auto blocks = _blocks.boundary_sides();
@@ -1687,6 +1704,7 @@ void Accessible_mesh::relax(double factor) {
   for (auto& block : blocks) block.reset();
   #endif
   _stopwatch["relax"].work_units_completed += _n_verts;
+  std::cout << "4]" << std::endl;
 }
 
 Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& basis,
