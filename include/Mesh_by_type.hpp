@@ -188,6 +188,7 @@ class Mesh_by_type : public View_by_type<element_t>
   void purge_connections(std::function<bool(Element&)> predicate = [](Element& elem){return elem.record != 0;})
   {
     auto bound_predicate = [&](std::unique_ptr<Typed_bound_connection<element_t>>& con){
+      if (!con) return true;
       if (con->element().tree) {
         Tree* neighbor = con->element().tree->find_neighbor(math::direction(par.n_dim, con->i_dim(), con->inside_face_sign()));
         if (neighbor) if (neighbor->elem) return true; // remember that either all neighbors exist or none

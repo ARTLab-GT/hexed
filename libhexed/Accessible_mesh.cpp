@@ -281,6 +281,7 @@ void Accessible_mesh::_match_topo() {
   Int cons_sz = def.cons.size();
   for (int i_con = 0; i_con < cons_sz; ++i_con) {
     auto& con = def.cons[i_con];
+    if (!con) continue;
     auto dir = con->direction();
     bool replace = false;
     std::array<Deformed_element*, 2> elem_arr;
@@ -319,6 +320,19 @@ void Accessible_mesh::_match_topo() {
                                            {dir.face_sign[coarse_sign], dir.face_sign[!coarse_sign]}};
         _connect(elem_arr[coarse_sign], fine, new_dir, stretch);
       }
+    }
+  }
+  Int bound_cons_sz = def.bound_cons.size();
+  for (int i_con = 0; i_con < bound_cons_sz; ++i_con) {
+    auto& con = def.bound_cons[i_con];
+    if (!con) continue;
+    auto dir = con->direction();
+    Int record = con->element().face_record[dir.i_face(0)];
+    if (record >= 0) {
+      int bc_sn = con->bound_cond_serial_n();
+      int ref_level = con->element().refinement_level();
+      con.reset();
+      connect_boundary(ref_level, true, record, dir.i_dim[0], dir.face_sign[0], bc_sn);
     }
   }
   for (auto& vert : all_verts) {
