@@ -156,6 +156,7 @@ class Vertex : public Block {
   std::vector<Int> record; //!< for algorithms to keep notes as they please
 
   Int snapped_edge;
+  Int snapped_endpoint;
   Mat<3> dijkstra_point; //!< \brief nominal location of this vertex used in Dijkstra's algorithm
   double dijkstra_dist; //!< \brief the "distance" from the start node to this node in Dijkstra's algorithm
   int dijkstra_updates; //!< \brief number of times `dijkstra_dist` has been updated in Dijkstra's algorithm

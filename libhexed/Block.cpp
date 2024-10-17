@@ -60,6 +60,8 @@ Mat<3> Block::point(int i_point) const {
 
 Vertex::Vertex(Mat<3> pos, int row_size)
 : Block(0, row_size)
+, snapped_edge{-1}
+, snapped_endpoint{-1}
 , _pos{pos}
 , _update{Mat<3>::Zero()}
 , _edges(this)
@@ -101,6 +103,10 @@ void Vertex::eat(Vertex& that) {
   for (Int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
   for (Int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
   record.insert(record.end(), that.record.begin(), that.record.end());
+  if (that.snapped_endpoint >= 0 && snapped_endpoint < 0) {
+    snapped_edge = that.snapped_edge;
+    snapped_endpoint = that.snapped_endpoint;
+  }
 }
 
 void Vertex::glue(Element_shape& to, std::vector<double> coords) {

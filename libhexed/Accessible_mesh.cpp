@@ -75,6 +75,7 @@ void Accessible_mesh::_match_topo() {
     Mat<3> point = vert.point({});
     vert.dijkstra_point = point;
     vert.snapped_edge = -1;
+    vert.snapped_endpoint = -1;
   }
   auto faces = _blocks.faces_3d();
   #pragma omp parallel for
@@ -102,6 +103,7 @@ void Accessible_mesh::_match_topo() {
       if (start_end[i_endpoint]) {
         start_end[i_endpoint]->dijkstra_point = endpoint;
         start_end[i_endpoint]->snapped_edge = i_geom_edge;
+        start_end[i_endpoint]->snapped_endpoint = i_endpoint;
       }
     }
     if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
@@ -232,14 +234,6 @@ void Accessible_mesh::_match_topo() {
               _connect({&inside,  &match_elem}, Con_dir<Deformed_element>({j_dim, i_dim}, {j_sign, !i_sign}));
               matched_elems[2*j_dim + j_sign] = &match_elem;
               elem.face_record[2*j_dim + j_sign] = sn;
-              if (j_dim > k_dim) {
-                for (bool k_sign : {0, 1}) {
-                  if (matched_elems[2*k_dim + k_sign]) {
-                    _connect({&match_elem,  matched_elems[2*k_dim + k_sign]},
-                             Con_dir<Deformed_element>({k_dim, j_dim}, {k_sign, j_sign}));
-                  }
-                }
-              }
               for (bool k_sign : {0, 1}) {
                 int i_vert =   i_sign*math::pow(2, 2 - i_dim)
                              + j_sign*math::pow(2, 2 - j_dim)
@@ -247,7 +241,16 @@ void Accessible_mesh::_match_topo() {
                 int i_snapped = shape->vertex(i_vert).snapped_edge;
                 auto& vert = match_elem.shape().vertex(i_vert);
                 vert.snapped_edge = i_snapped;
+                vert.snapped_endpoint = shape->vertex(i_vert).snapped_endpoint;
                 matched_vertices[i_snapped].emplace_back(&vert);
+              }
+              if (j_dim > k_dim) {
+                for (bool k_sign : {0, 1}) {
+                  if (matched_elems[2*k_dim + k_sign]) {
+                    _connect({&match_elem,  matched_elems[2*k_dim + k_sign]},
+                             Con_dir<Deformed_element>({k_dim, j_dim}, {k_sign, j_sign}));
+                  }
+                }
               }
             } else {
               elem.face_record[2*j_dim + j_sign] = inside_sn;
@@ -343,7 +346,7 @@ void Accessible_mesh::_match_topo() {
     vert.record.clear();
   }
   purge();
-  for (int i = 0; i < 10; ++i) relax(0.);
+  for (int i = 0; i < 20; ++i) relax(0.);
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
@@ -1614,8 +1617,12 @@ void Accessible_mesh::relax(double factor) {
       #endif
       for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
         auto& vert = matched_vertices[i_geom_edge][i_vert].value();
-        Int nearest = geom_edge.nearest_point(vert.point({}), 2*vert.nominal_size()).index;
-        if (nearest >= 0) update_pos(vert, nodes(nearest).vector());
+        if (vert.snapped_endpoint >= 0) {
+          update_pos(vert, nodes(vert.snapped_endpoint*(n_points - 1)).vector());
+        } else {
+          Int nearest = geom_edge.nearest_point(vert.point({}), 2*vert.nominal_size()).index;
+          if (nearest >= 0) update_pos(vert, nodes(nearest).vector());
+        }
       }
     }
     #endif
