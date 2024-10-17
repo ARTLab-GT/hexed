@@ -142,23 +142,27 @@ int Vertex::n_elements() const {
   return n;
 }
 
-std::vector<Vertex*> Vertex::neighbors() {
-  std::vector<Vertex*> n;
-  for (auto elem : _elems.theirs()) {
-    HEXED_ASSERT(_elems.theirs()[0], "element is null");
-    int nv = math::pow(2, elem->n_dim());
-    int i_this = _get_index(*elem);
-    for (int i_vert = 0; i_vert < nv; ++i_vert) {
-      Vertex* vert = &elem->vertex(i_vert);
-      for (int stride = 1; stride < nv; stride *= 2) {
-        if (i_this - i_vert == stride*(2*(i_this/stride%2) - 1) && std::find(n.begin(), n.end(), vert) == n.end()) {
-          n.push_back(vert);
-        }
-      }
-    }
-  }
-  return n;
+#define NEIGHBORS(CONST) \
+std::vector<CONST Vertex*> Vertex::neighbors() CONST { \
+  std::vector<CONST Vertex*> n; \
+  for (auto elem : _elems.theirs()) { \
+    HEXED_ASSERT(_elems.theirs()[0], "element is null"); \
+    int nv = math::pow(2, elem->n_dim()); \
+    int i_this = _get_index(*elem); \
+    for (int i_vert = 0; i_vert < nv; ++i_vert) { \
+      CONST Vertex* vert = &elem->vertex(i_vert); \
+      for (int stride = 1; stride < nv; stride *= 2) { \
+        if (i_this - i_vert == stride*(2*(i_this/stride%2) - 1) && std::find(n.begin(), n.end(), vert) == n.end()) { \
+          n.push_back(vert); \
+        } \
+      } \
+    } \
+  } \
+  return n; \
 }
+NEIGHBORS()
+NEIGHBORS(const)
+#undef NEIGHBORS
 
 Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
   if (!_vert.glued()) _acquire.emplace(_vert._shared_value_lock);
@@ -203,6 +207,13 @@ Mat<3> Vertex::_desired_pos() const {
   Mat<3> des_pos = Mat<3>::Zero();
   HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute optimize postion");
   HEXED_ASSERT(_elems.theirs()[0], "element is null");
+  #if 1
+  auto n = neighbors();
+  for (const Vertex* vert : n) {
+    des_pos += vert->point({});
+  }
+  des_pos = .1*_pos + .9*des_pos/n.size();
+  #else
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
   double tot_sz = 0;
@@ -241,6 +252,7 @@ Mat<3> Vertex::_desired_pos() const {
   }
   if (tot_sz == 0) return _pos;
   des_pos = .9*des_pos/tot_sz + .1*_pos;
+  #endif
   return des_pos;
 }
 

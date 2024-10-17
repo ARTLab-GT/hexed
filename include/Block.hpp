@@ -127,6 +127,7 @@ class Vertex : public Block {
    * The latter would only ever be true for boundary vertices, whereas the former can be true in the interior.
    */
   std::vector<Vertex*> neighbors();
+  std::vector<const Vertex*> neighbors() const; //!< \overload
 
   /*! \brief Accesses a `double` value used for transmitting shared data between elements.
    * \details There are several cases where elements have some data which needs to match their vertex neighbors.
