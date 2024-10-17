@@ -240,6 +240,15 @@ void Accessible_mesh::_match_topo() {
                   }
                 }
               }
+              for (bool k_sign : {0, 1}) {
+                int i_vert =   i_sign*math::pow(2, 2 - i_dim)
+                             + j_sign*math::pow(2, 2 - j_dim)
+                             + k_sign*math::pow(2, 2 - k_dim);
+                int i_snapped = shape->vertex(i_vert).snapped_edge;
+                auto& vert = match_elem.shape().vertex(i_vert);
+                vert.snapped_edge = i_snapped;
+                matched_vertices[i_snapped].emplace_back(&vert);
+              }
             } else {
               elem.face_record[2*j_dim + j_sign] = inside_sn;
               inside.face_record[2*j_dim + j_sign] = surface_sn;
@@ -334,7 +343,7 @@ void Accessible_mesh::_match_topo() {
     vert.record.clear();
   }
   purge();
-  for (int i = 0; i < 5; ++i) relax(.5);
+  for (int i = 0; i < 10; ++i) relax(0.);
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
@@ -1327,6 +1336,12 @@ void Accessible_mesh::purge() {
     // delete old elements
     car.elems.purge();
     def.elems.purge();
+    // delete old matched vertices and edges
+    _blocks.verts(); // evaluating `verts` and `boundary_sides` automatically purges the vertex and face/edge lists
+    _blocks.boundary_sides();
+    std::erase(point_matched_vertices, nullptr);
+    for (auto& vec : matched_vertices) std::erase(vec, nullptr);
+    for (auto& vec : matched_edges) std::erase(vec, nullptr);
   }
 }
 
@@ -1568,8 +1583,9 @@ void Accessible_mesh::relax(double factor) {
   }
   if (surf_geom) {
     Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
-    // snap vertices to surface boundary
     auto bverts = _blocks.boundary_verts();
+    if (factor > 1e-3) {
+    // snap vertices to surface boundary
     #pragma omp parallel for
     for (auto& vert : bverts) {
       HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
@@ -1578,7 +1594,8 @@ void Accessible_mesh::relax(double factor) {
       pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
       vert.set_pos(pos);
     }
-    #if 0
+    }
+    #if 1
     // snap vertices to geometry edges
     auto edges = surf_geom->edges();
     auto points = surf_geom->points();
@@ -1589,11 +1606,13 @@ void Accessible_mesh::relax(double factor) {
       auto& geom_edge = edges[i_geom_edge];
       Array<double> nodes{geom_edge.nodes()};
       Int n_points = nodes.shape()[0];
+      #if 0
       if (matched_vertices[i_geom_edge].size() >= 2 && n_points) {
         update_pos(matched_vertices[i_geom_edge].front().value(), nodes(0).vector());
         update_pos(matched_vertices[i_geom_edge].back().value(), nodes(n_points - 1).vector());
       }
-      for (Int i_vert = 1; i_vert < (Int)matched_vertices[i_geom_edge].size() - 1; ++i_vert) {
+      #endif
+      for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
         auto& vert = matched_vertices[i_geom_edge][i_vert].value();
         Int nearest = geom_edge.nearest_point(vert.point({}), 2*vert.nominal_size()).index;
         if (nearest >= 0) update_pos(vert, nodes(nearest).vector());

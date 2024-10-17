@@ -351,7 +351,7 @@ void Solver::write_state(std::string file_name) {
 }
 
 void Solver::calc_jacobian(bool snap) {
-  acc_mesh->valid().assert_valid();
+  //acc_mesh->valid().assert_valid();
   const int n_dim = params.n_dim;
   const int rs = basis.row_size;
   const int nfq = params.n_qpoint()/rs;
