@@ -225,7 +225,8 @@ void Accessible_mesh::_match_topo() {
         for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
           for (bool j_sign : {0, 1}) {
             int k_dim = 3 - j_dim - i_dim;
-            Int m = matched_to[2*(j_dim > k_dim) + j_sign];
+            int i_edge_matched = 2*(j_dim > k_dim) + j_sign;
+            Int m = matched_to[i_edge_matched];
             if (m >= 0) {
               Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, bf);
               Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
@@ -244,6 +245,9 @@ void Accessible_mesh::_match_topo() {
                 vert.snapped_endpoint = shape->vertex(i_vert).snapped_endpoint;
                 matched_vertices[i_snapped].emplace_back(&vert);
               }
+              auto& matched_edge = match_elem.shape().boundary_face_3d()->edge(i_edge_matched);
+              matched_edge.snapped_edge = m;
+              matched_edges[m].emplace_back(&matched_edge);
               if (j_dim > k_dim) {
                 for (bool k_sign : {0, 1}) {
                   if (matched_elems[2*k_dim + k_sign]) {
@@ -346,7 +350,7 @@ void Accessible_mesh::_match_topo() {
     vert.record.clear();
   }
   purge();
-  for (int i = 0; i < 20; ++i) relax(0.);
+  for (int i = 0; i < 20; ++i) relax(.5);
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
@@ -1598,7 +1602,6 @@ void Accessible_mesh::relax(double factor) {
       vert.set_pos(pos);
     }
     }
-    #if 1
     // snap vertices to geometry edges
     auto edges = surf_geom->edges();
     auto points = surf_geom->points();
@@ -1609,12 +1612,6 @@ void Accessible_mesh::relax(double factor) {
       auto& geom_edge = edges[i_geom_edge];
       Array<double> nodes{geom_edge.nodes()};
       Int n_points = nodes.shape()[0];
-      #if 0
-      if (matched_vertices[i_geom_edge].size() >= 2 && n_points) {
-        update_pos(matched_vertices[i_geom_edge].front().value(), nodes(0).vector());
-        update_pos(matched_vertices[i_geom_edge].back().value(), nodes(n_points - 1).vector());
-      }
-      #endif
       for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
         auto& vert = matched_vertices[i_geom_edge][i_vert].value();
         if (vert.snapped_endpoint >= 0) {
@@ -1625,18 +1622,15 @@ void Accessible_mesh::relax(double factor) {
         }
       }
     }
-    #endif
     // snaps a `Boundary_block` to the geometry surface
     auto snap_block = [this](next::Boundary_block& block) {
       block.reset();
-      #if 0
       Array<double> interior {block.interior().reshaped({whatever, 3})};
       for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
         auto p = interior(i_point)(0, params.n_dim).vector();
         Mat<> p_mat {p};
         p = surf_geom->nearest_point(p_mat, huge, block.element()->nominal_size()/params.row_size).point();
       }
-      #endif
     };
     // snap edges to the surface (regardless of dimensionality)
     auto edges_2d = _blocks.edges_2d();
@@ -1647,7 +1641,6 @@ void Accessible_mesh::relax(double factor) {
     for (auto& face : faces_3d) {
       for (int i_edge = 0; i_edge < 4; ++i_edge) snap_block(face.edge(i_edge));
     }
-    #if 0
     // Snap mesh edges to geometry edges.
     // This has to happen after snapping edges to the surface (which would undo this)
     // but before snapping faces to the surface
@@ -1665,7 +1658,6 @@ void Accessible_mesh::relax(double factor) {
         }
       }
     }
-    #endif
     // snap face interiors (if 3D) to surface
     #pragma omp parallel for
     for (auto& face : faces_3d) snap_block(face);
