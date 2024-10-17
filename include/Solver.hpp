@@ -108,6 +108,7 @@ class Solver {
    * how it depends on temperature
    * \param thermal_conductivity_model determines whether the flow has thermal conductivity and if so,
    *        how it depends on temperature
+   * \param turbulence_model How and if to model turbulence.
    * \param space `Namespace` containing any user-defined parameters affecting the behavior of the solver.
    *        If no namespace is provided, a new blank namespace is creqated.
    *        Any optional parameters which are not found in the namespace shall be created with their default values.
@@ -123,7 +124,7 @@ class Solver {
    */
   Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
          Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
-         Turbulence_model = laminar,
+         Turbulence_model turbulence_model = laminar,
          std::shared_ptr<Namespace> space = std::make_shared<Namespace>(),
          std::shared_ptr<Printer_set> printer = std::make_shared<Printer_set>(), bool implicit = false);
 

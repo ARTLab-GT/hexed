@@ -42,7 +42,7 @@ void Case::_set_vector(std::string name, Mat<> vec) {
 }
 
 Flow_bc* Case::_make_bc(std::string name) {
-  Mat<> freestream = _get_vector("freestream", _vari("n_dim") + 2);
+  Mat<> freestream = _get_vector("freestream", _vari("n_var"));
   if      (name == "characteristic") return new Riemann_invariants(freestream);
   else if (name == "freestream") return new Freestream(freestream);
   else if (name == "pressure_outflow") return new Pressure_outflow(_vard("freestream_pressure"));
@@ -209,7 +209,9 @@ Case::Case(std::string input_script)
     HEXED_ASSERT(row_size >= 2 && row_size <= config::max_row_size,
                  format_str(300, "`row_size` must be between 2 and %i", config::max_row_size), assert::User_error);
     // compute freestream
-    Mat<> freestream(n_dim + 2);
+    int n_var = n_dim + 2 + 2*(_vars("turbulence_model") == "k-omega");
+    _inter.variables->assign("n_var", n_var);
+    Mat<> freestream(n_var);
     if (_inter.variables->lookup<double>("freestream0")) freestream = _get_vector("freestream", n_dim + 2);
     else {
       if (_inter.variables->lookup<double>("altitude")) {
@@ -267,14 +269,17 @@ Case::Case(std::string input_script)
           _inter.variables->assign("freestream_velocity" + std::to_string(i_dim), 0.);
         }
       }
+      if (_vars("turbulence_model") == "k-omega") {
+        freestream(n_dim + 2) = _vard("freestream_turbulent_kinetic_energy");
+        freestream(n_dim + 3) = std::log(_vard("freestream_turbulent_dissipation"));
+        HEXED_ASSERT(std::isfinite(freestream(n_dim + 3)), "invalid `freestream_turbulent_dissipation`");
+      }
       _set_vector("freestream_direction", full_direction);
       double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*_vard("freestream_density")*veloc.squaredNorm();
       _inter.variables->assign("freestream_energy", ener);
       freestream(Eigen::seqN(0, n_dim)) = _vard("freestream_density")*veloc;
       freestream(n_dim) = _vard("freestream_density");
       freestream(n_dim + 1) = ener;
-      freestream.conservativeResize(5);
-      freestream(Eigen::seqN(n_dim + 2, 5 - (n_dim + 2))).setZero();
       _set_vector("freestream", freestream);
     }
     return "";

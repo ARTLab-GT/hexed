@@ -6,8 +6,7 @@
 #include "Basis.hpp"
 #include "Struct_expr.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 class Element;
 
@@ -16,8 +15,7 @@ class Element;
  * quadrature weights, etc. Note: `Output_data` is a virtual base class because
  * derived classes may inherit from multiple types of `Output_data`.
  */
-class Qpoint_func : virtual public Output_data
-{
+class Qpoint_func : virtual public Output_data {
   public:
   virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const = 0;
 };
@@ -27,8 +25,7 @@ class Qpoint_func : virtual public Output_data
  * the variables defined in `hil_properties::element`, `hil_properties::position`, and `hil_properties::state`
  * as well as `time`.
  */
-class Qpoint_expr : public Qpoint_func
-{
+class Qpoint_expr : public Qpoint_func {
   Struct_expr _expr;
   const Interpreter& _inter;
   public:
@@ -40,8 +37,7 @@ class Qpoint_expr : public Qpoint_func
 };
 
 //! \brief Returns a vector with one element: the Jacobian determinant at the quadrature point.
-class Jacobian_det_func : public Qpoint_func
-{
+class Jacobian_det_func : public Qpoint_func {
   public:
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "jacobian_determinant";}
@@ -49,8 +45,7 @@ class Jacobian_det_func : public Qpoint_func
 };
 
 //! \brief Determinant of inverse of Jacobian
-class Jac_inv_det_func : public Qpoint_func
-{
+class Jac_inv_det_func : public Qpoint_func {
   public:
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "jacobian_inverse_determinant";}
@@ -58,8 +53,7 @@ class Jac_inv_det_func : public Qpoint_func
 };
 
 //! \brief Fetches the value of the `Element::time_step_scale` member.
-class Time_step_scale_func : public Qpoint_func
-{
+class Time_step_scale_func : public Qpoint_func {
   public:
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "time_step_scale";}
@@ -68,8 +62,7 @@ class Time_step_scale_func : public Qpoint_func
 
 //! \brief returns the residual of the Navier-Stokes equations, not weighted by local time step
 //! \details assumes that `Solver::compute_residual` has been invoked since the last time step or artificial viscosity update
-class Physical_residual : public Qpoint_func
-{
+class Physical_residual : public Qpoint_func {
   public:
   inline int n_var(int n_dim) const override {return n_dim + 2;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "residual" + std::to_string(i_var);}
@@ -77,8 +70,7 @@ class Physical_residual : public Qpoint_func
 };
 
 //! \brief fetches the artificial viscosity coefficient
-class Art_visc_coef : public Qpoint_func
-{
+class Art_visc_coef : public Qpoint_func {
   public:
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "artificial_viscosity_coefficient";}
@@ -86,8 +78,7 @@ class Art_visc_coef : public Qpoint_func
 };
 
 //! \brief fetches the `Element::fix_admis_coef`
-class Fix_admis_coef : public Qpoint_func
-{
+class Fix_admis_coef : public Qpoint_func {
   public:
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "fix_admis_coef";}
@@ -95,8 +86,7 @@ class Fix_admis_coef : public Qpoint_func
 };
 
 //! \brief returns a component of another `Qpoint_func`
-class Component : public Qpoint_func
-{
+class Component : public Qpoint_func {
   const Qpoint_func& qf;
   int iv;
 
@@ -108,8 +98,7 @@ class Component : public Qpoint_func
   inline Component(Qpoint_func&& base, int i_var) = delete; // can't accept temporaries. would cause dangling reference
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return qf.variable_name(n_dim, iv);}
-  inline std::vector<double> operator()(Element& e, const Basis& b, int i_qpoint, double time) const override
-  {
+  inline std::vector<double> operator()(Element& e, const Basis& b, int i_qpoint, double time) const override {
     return {qf(e, b, i_qpoint, time)[iv]};
   }
 };
@@ -121,8 +110,7 @@ class Component : public Qpoint_func
  * then `Scaled` will return an output which is in the range [0, 1].
  * This is useful for manually computing contour plots or colormapping data.
  */
-class Scaled : public Qpoint_func
-{
+class Scaled : public Qpoint_func {
   const Qpoint_func& qf;
   std::array<double, 2> bnd;
 
@@ -135,8 +123,7 @@ class Scaled : public Qpoint_func
   Scaled(Qpoint_func&& base, std::array<double, 2> bounds) = delete;
   inline int n_var(int n_dim) const override {return 1;}
   inline std::string variable_name(int n_dim, int i_var) const override {return "scaled_" + qf.variable_name(n_dim, 0);}
-  inline std::vector<double> operator()(Element& e, const Basis& b, int i_qpoint, double time) const override
-  {
+  inline std::vector<double> operator()(Element& e, const Basis& b, int i_qpoint, double time) const override {
     double val = qf(e, b, i_qpoint, time)[0];
     val = (val - bnd[0])/(bnd[1] - bnd[0]);
     return {val};
@@ -144,8 +131,7 @@ class Scaled : public Qpoint_func
 };
 
 //! \brief Raises the output of a `Qpoint_func` to a user-specified power.
-class Pow : public Qpoint_func
-{
+class Pow : public Qpoint_func {
   const Qpoint_func& qf;
   int exp;
 
@@ -158,8 +144,7 @@ class Pow : public Qpoint_func
 };
 
 //! \brief Fetches the advection states used for computing the smoothness-based artfificial viscosity
-class Advection_state : public Qpoint_func
-{
+class Advection_state : public Qpoint_func {
   int rs;
   public:
   Advection_state(int row_size) : rs{row_size} {} //!< `Advection_state::operator()` will only work when called on a `Element` with the specified row size.
@@ -169,8 +154,7 @@ class Advection_state : public Qpoint_func
 };
 
 //! \brief Fetches one of the forcing variables in artificial viscosity computation
-class Art_visc_forcing : public Qpoint_func
-{
+class Art_visc_forcing : public Qpoint_func {
   public:
   int n_var(int n_dim) const override; //!< \returns `Element::n_forcing`
   inline std::string variable_name(int n_dim, int i_var) const override {return "art_visc_forcing" + std::to_string(i_var);};
