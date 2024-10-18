@@ -36,8 +36,8 @@ void position(Namespace&, Element&, const Basis&);
  * - `residual_xxx` for `xxx` in {`momentum0`, ..., `energy`}: residual of each of the conserved state variables
  *
  * If turbulent, also assigns the following variables:
- * - `turbulent_kinetic_energy`: the \f$ k \f$ in two-equation turbulence models
- * - `log_turbulent_dissipation`: \f$ \tilde{\omega} = \ln \omega \f$ in the \f$ k\text{-}\omega \f$ model.
+ * - `turbulent_kinetic_energy`: the \f$ \rho k \f$ in two-equation turbulence models
+ * - `log_turbulent_dissipation`: \f$ \rho \tilde{\omega} = \rho \ln \omega \f$ in the \f$ k\text{-}\omega \f$ model.
  *   Note that this technically violates the rules of dimensional analysis
  *   by taking the log of a dimensional quantity,
  *   but numerically this will not cause a problem.
