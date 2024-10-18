@@ -14,7 +14,6 @@ init_layer_splits = 3
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
 turbulence_model = {k-omega}
-max_refinement_iters = 1
 
 {freestream definition. Note that not all of the variables below are parameters considered by the solver. Some are simply user-defined variables.}
 freestream_temperature = zero_celsius
