@@ -466,6 +466,10 @@ void Solver::initialize(std::string(expr)) {
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) state_vars.push_back("momentum" + std::to_string(i_dim));
   state_vars.push_back("density");
   state_vars.push_back("energy");
+  if (params.n_var == params.n_dim + 4) {
+    state_vars.push_back("turbulent_kinetic_energy");
+    state_vars.push_back("turbulent_dissipation_bassi");
+  }
   auto inter = _interpreter();
   int n_var = state_vars.size();
   int nq = params.n_qpoint();
@@ -482,6 +486,7 @@ void Solver::initialize(std::string(expr)) {
       sub.variables->assign_array(state(i_var), state_vars[i_var]);
     }
   }
+  std::cout << elements[0].state()[4*params.n_qpoint()] << " " << elements[0].state()[5*params.n_qpoint()] << std::endl;
   _init_face_state();
 }
 

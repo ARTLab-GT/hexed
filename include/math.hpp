@@ -22,7 +22,7 @@ constexpr double huge = std::numeric_limits<double>::max();
 #pragma omp declare reduction (+ : Mat<dyn, dyn> : omp_out = omp_out + omp_in) \
   initializer(omp_priv = Mat<dyn, dyn>::Zero(omp_orig.rows(), omp_orig.cols()))
 
-//! Miscellaneous mathematical functions that aren't in `std::math`
+//! \brief Miscellaneous mathematical functions that aren't in `std::math`
 namespace math {
 
 /*! \brief Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.

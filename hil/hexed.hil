@@ -260,6 +260,12 @@ init_cond = {
     momentum2 = freestream_density*freestream_velocity2 + 0*pos0
     density = freestream_density + 0*pos0
     energy = freestream_energy + 0*pos0
+    case0 = {}
+    case1 = {
+        turbulent_kinetic_energy = freestream_turbulent_kinetic_energy
+        turbulent_dissipation_bassi = freestream_density*log(freestream_specific_turbulent_dissipation)
+    }
+    $$({case} + (turbulence_model == {k-omega}))
 }
 wall_velocity = {
     velocity0 = 0.

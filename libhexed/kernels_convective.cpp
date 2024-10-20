@@ -13,17 +13,18 @@ namespace hexed {
   (*kernel_factory<Spatial<Pde_templ, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var))(mesh.ref_faces, opts.sw_pr); \
 }
 
-void compute_euler(Kernel_mesh mesh, Kernel_options opts) COMPUTE_CONVECTION(pde::Navier_stokes<false>::Pde)
+typedef pde::Navier_stokes<false, k_omega> turb_euler;
+void compute_euler(Kernel_mesh mesh, Kernel_options opts) COMPUTE_CONVECTION(turb_euler::Pde)
 void compute_advection(Kernel_mesh mesh, Kernel_options opts, double advect_length) COMPUTE_CONVECTION(pde::Advection, advect_length)
 
 #undef COMPUTE_CONVECTION
 
 void compute_prolong(Kernel_mesh mesh, bool scale, bool offset) {
-  (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var, scale, offset))(mesh.ref_faces);
+  (*kernel_factory<Spatial<turb_euler::Pde, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var, scale, offset))(mesh.ref_faces);
 }
 
 void compute_restrict(Kernel_mesh mesh, bool scale, bool offset) {
-  (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var, scale, offset))(mesh.ref_faces);
+  (*kernel_factory<Spatial<turb_euler::Pde, false>::Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var, scale, offset))(mesh.ref_faces);
 }
 
 void compute_prolong_advection(Kernel_mesh mesh) {
@@ -31,11 +32,11 @@ void compute_prolong_advection(Kernel_mesh mesh) {
 }
 
 std::unique_ptr<Face_permutation_dynamic> face_permutation(int n_dim, int row_size, Connection_direction dir, double* data) {
-  return kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, true>::Face_permutation>(n_dim, row_size, dir, data);
+  return kernel_factory<Spatial<turb_euler::Pde, true>::Face_permutation>(n_dim, row_size, dir, data);
 }
 
 void compute_write_face(Kernel_mesh mesh) {
-  (*kernel_factory<Spatial<pde::Navier_stokes<false>::Pde, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var))(mesh.elems);
+  (*kernel_factory<Spatial<turb_euler::Pde, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var))(mesh.elems);
 }
 
 void compute_write_face_advection(Kernel_mesh mesh) {

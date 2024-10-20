@@ -34,10 +34,16 @@ class Navier_stokes {
     public:
     static constexpr bool has_diffusion = visc;
     static constexpr bool has_convection = true;
-    static constexpr bool has_source = false;
-    static constexpr int n_update = n_dim + 2;
-    static constexpr int n_state = n_dim + 4;
-    static constexpr int n_extrap = n_dim + 2;
+    static constexpr bool has_source = visc && (turb != laminar);
+    static constexpr int n_update = n_dim + 2 + 2*(turb == k_omega);
+    static constexpr int n_state = n_dim + 4 + 2*(turb == k_omega);
+    static constexpr int n_extrap = n_dim + 2 + 2*(turb == k_omega);
+    static constexpr int i_mass = n_dim;
+    static constexpr int i_energy = n_dim + 1;
+    static constexpr int i_turb_kin_ener = n_dim + 2;
+    static constexpr int i_turb_diss = n_dim + 3;
+    static constexpr int i_bulk_art_visc = n_update;
+    static constexpr int i_laplacian_art_visc = n_update + 1;
     static constexpr double heat_rat = 1.4;
     Transport_model dyn_visc;
     Transport_model therm_cond;
@@ -64,15 +70,15 @@ class Navier_stokes {
 
       Mat<n_state> state;
       void fetch_state(int stride, const double* data) {
-        for (int i_var = 0; i_var < n_dim + 2; ++i_var) state(i_var) = data[i_var*stride];
-        state(n_dim + 2) = data[bulk_av_offset(_eq._n_var)*stride];
-        state(n_dim + 3) = data[laplacian_av_offset(_eq._n_var)*stride];
+        for (int i_var = 0; i_var < n_update; ++i_var) state(i_var) = data[i_var*stride];
+        state(i_bulk_art_visc) = data[bulk_av_offset(_eq._n_var)*stride];
+        state(i_laplacian_art_visc) = data[laplacian_av_offset(_eq._n_var)*stride];
       }
       Mat<n_update> update_state;
       void fetch_extrap_state(int stride, const double* data) {
-        for (int i_var = 0; i_var < n_dim + 2; ++i_var) state(i_var) = data[i_var*stride];
-        state(n_dim + 2) = 0.;
-        state(n_dim + 3) = 0.;
+        for (int i_var = 0; i_var < n_extrap; ++i_var) state(i_var) = data[i_var*stride];
+        state(i_bulk_art_visc) = 0.;
+        state(i_laplacian_art_visc) = 0.;
         update_state = state(Eigen::seqN(0, n_update));
       }
 
@@ -80,28 +86,34 @@ class Navier_stokes {
       double kin_ener;
       double pressure;
       void compute_scalars_conv() {
-        mass = state(n_dim);
+        mass = state(i_mass);
         kin_ener = 0;
         for (int i_dim = 0; i_dim < n_dim; ++i_dim) kin_ener += state(i_dim)*state(i_dim);
         kin_ener *= .5/mass;
-        pressure = (heat_rat - 1.)*(state((n_dim + 1)) - kin_ener);
+        pressure = (heat_rat - 1.)*(state(i_energy) - kin_ener);
       }
 
       Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
       Mat<n_update, n_dim_flux> flux_conv;
+      /*! \todo Carter: compute convective fluxes of the turbulent variables
+       * Set `flux_conv(i_turb_kin_ener)` and `flux_conv(i_turb_diss)` to contain the source terms of
+       * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
+       */
       void compute_flux_conv() {
         compute_scalars_conv();
         for (int i_dim = 0; i_dim < n_dim_flux; ++i_dim) {
-          flux_conv(n_dim, i_dim) = 0;
+          flux_conv(i_mass, i_dim) = 0;
           for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-            flux_conv(n_dim, i_dim) += state(j_dim)*normal(j_dim, i_dim);
+            flux_conv(i_mass, i_dim) += state(j_dim)*normal(j_dim, i_dim);
           }
-          double vol_flux = flux_conv(n_dim, i_dim)/mass;
-          flux_conv(n_dim + 1, i_dim) = (state((n_dim + 1)) + pressure)*vol_flux;
+          double vol_flux = flux_conv(i_mass, i_dim)/mass;
+          flux_conv(i_energy, i_dim) = (state(i_energy) + pressure)*vol_flux;
           for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
             flux_conv(j_dim, i_dim) = state(j_dim)*vol_flux + pressure*normal(j_dim, i_dim);
           }
         }
+        flux_conv(i_turb_kin_ener, all).setZero();
+        flux_conv(i_turb_diss, all).setZero();
       }
 
       double bulk_av;
@@ -110,10 +122,13 @@ class Navier_stokes {
       double dyn_visc_coef;
       double therm_cond_coef;
       double energy_cond;
+      //! \todo Carter: compute whatever variables you need for the turbulent fluxes
       void compute_scalars_diff() {
-        bulk_av = std::abs(state(n_dim + 2));
-        laplacian_av = std::abs(state(n_dim + 3));
-        sqrt_temp = std::sqrt(std::max((state(n_dim + 1) - kin_ener)/mass, 0.)*(heat_rat - 1)/constants::specific_gas_air);
+        //bulk_av = std::abs(state(i_bulk_art_visc));
+        //laplacian_av = std::abs(state(i_laplacian_art_visc));
+        bulk_av = 0;
+        laplacian_av = 0;
+        sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)*(heat_rat - 1)/constants::specific_gas_air);
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
@@ -121,30 +136,50 @@ class Navier_stokes {
 
       Mat<n_extrap, n_dim> gradient;
       Mat<n_update, n_dim_flux> flux_diff;
+      /*! \todo Carter: modify `flux_diff` to include diffusive fluxes of the turbulent variables
+       * and add turbulent terms to the fluxes of the state variables
+       */
       void compute_flux_diff() {
         compute_scalars_diff();
         auto seq = Eigen::seqN(0, n_dim);
         auto mmtm = state(seq);
         Mat<n_update, n_dim> f;
         Mat<n_dim> veloc = mmtm/mass;
-        Mat<n_dim, n_dim> veloc_grad = (gradient(seq, all) - veloc*gradient(n_dim, all))/mass;
+        Mat<n_dim, n_dim> veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
                                    + (bulk_av*mass - 2./3.*dyn_visc_coef)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
         f = -laplacian_av*gradient;
         f(seq, all) -= stress;
-        Mat<1, n_dim> int_ener_grad = -state(n_dim + 1)/mass/mass*gradient(n_dim, all) + gradient(n_dim + 1, all)/mass - veloc.transpose()*veloc_grad;
-        f(n_dim + 1, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
+        Mat<1, n_dim> int_ener_grad = -state(i_energy)/mass/mass*gradient(i_mass, all) + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
+        f(i_energy, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
+        f(i_turb_kin_ener, all).setZero();
+        f(i_turb_diss, all).setZero();
         flux_diff = f*normal;
+      }
+
+      Mat<n_update> source;
+      /*! \todo Carter: compute the turbulent source terms.
+       * Set `source(i_turb_kin_ener)` and `source(i_turb_diss)` to contain the source terms of
+       * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
+       */
+      void compute_source() {
+        if constexpr (has_source) {
+          source.setZero();
+          // modify `source` here
+        }
       }
 
       double char_speed;
       void compute_char_speed() {
-        const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(n_dim + 1)/state(n_dim)); // numerical estimate (not less than actual speed of sound)
-        const double speed = state(Eigen::seqN(0, n_dim)).norm()/state(n_dim);
+        const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(i_energy)/state(i_mass)); // numerical estimate (not less than actual speed of sound)
+        const double speed = state(Eigen::seqN(0, n_dim)).norm()/state(i_mass);
         char_speed = sound_speed + speed;
       }
 
       double diffusivity;
+      //! \todo Carter: Modify the diffusivity estimate to keep the time step stable for turbulent flows.
+      //! This is can come later.
+      //! To start off, you can just reduce \ref max_safety until it's stable.
       void compute_diffusivity() {
         compute_scalars_conv();
         compute_scalars_diff();
@@ -177,12 +212,12 @@ class Navier_stokes {
        */
       Characteristics(Mat<n_var_euler> state, Mat<n_dim> direction)
       : dir{direction/direction.norm()}
-      , mass{state(n_dim)}
+      , mass{state(i_mass)}
       , veloc{state(Eigen::seqN(0, n_dim))/mass}
       {
         // compute more properties of the reference state
         double vsq = veloc.squaredNorm();
-        double pres = .4*(state(n_dim + 1) - .5*mass*vsq);
+        double pres = .4*(state(i_energy) - .5*mass*vsq);
         double sound_speed = std::sqrt(1.4*std::max(pres, 0.)/mass);
         // compute eigenvalues
         vals(2) = nrml(veloc);
@@ -211,13 +246,13 @@ class Navier_stokes {
       Mat<n_var_euler, 3> decomp(Mat<n_var_euler> state) {
         Mat<n_dim> mmtm = state(Eigen::seqN(0, n_dim));
         // component of tangential momentum perturbation which is not induced by mass perturbation
-        Mat<n_dim> mmtm_correction = tang(mmtm) - state(n_dim)*tang(veloc);
+        Mat<n_dim> mmtm_correction = tang(mmtm) - state(i_mass)*tang(veloc);
         // compute state for 1D eigenvector problem
         Mat<3> state_1d;
         state_1d <<
           nrml(mmtm),
-          state(n_dim),
-          state(n_dim + 1) - veloc.dot(mmtm_correction); //! \todo shouldn't this have a `0.5*`?
+          state(i_mass),
+          state(i_energy) - veloc.dot(mmtm_correction); //! \todo shouldn't this have a `0.5*`?
         // decompose 1D state into eigenvectors
         Mat<1, 3> eig_basis = fact.solve(state_1d).transpose();
         Mat<3, 3> eig_decomp = vecs.array().rowwise()*eig_basis.array();
@@ -226,7 +261,7 @@ class Navier_stokes {
         d(Eigen::seqN(n_dim, 2), Eigen::all) = eig_decomp(Eigen::seqN(1, 2), Eigen::all);
         d(Eigen::seqN(0, n_dim), Eigen::all) = dir*eig_decomp(0, Eigen::all) + tang(veloc)*eig_basis; // second term accounts for tangential momentum induced by mass perturbation
         d(Eigen::seqN(0, n_dim), 2) += mmtm_correction;
-        d(n_dim + 1, 2) += veloc.dot(mmtm_correction); // correct energy to account for tangential momentum perturbation
+        d(i_energy, 2) += veloc.dot(mmtm_correction); // correct energy to account for tangential momentum perturbation
         return d;
       }
     };

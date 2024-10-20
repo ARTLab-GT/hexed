@@ -37,7 +37,7 @@ void position(Namespace&, Element&, const Basis&);
  *
  * If turbulent, also assigns the following variables:
  * - `turbulent_kinetic_energy`: the \f$ \rho k \f$ in two-equation turbulence models
- * - `log_turbulent_dissipation`: \f$ \rho \tilde{\omega} = \rho \ln \omega \f$ in the \f$ k\text{-}\omega \f$ model.
+ * - `turbulent_dissipation_bassi`: \f$ \rho \tilde{\omega} = \rho \ln \omega \f$ in the \f$ k\text{-}\omega \f$ model.
  *   Note that this technically violates the rules of dimensional analysis
  *   by taking the log of a dimensional quantity,
  *   but numerically this will not cause a problem.
