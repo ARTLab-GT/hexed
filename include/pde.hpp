@@ -108,12 +108,14 @@ class Navier_stokes {
           }
           double vol_flux = flux_conv(i_mass, i_dim)/mass;
           flux_conv(i_energy, i_dim) = (state(i_energy) + pressure)*vol_flux;
+          if constexpr (turb == k_omega) {
+            flux_conv(i_turb_kin_ener, i_dim) = state(i_turb_kin_ener)*vol_flux;
+            flux_conv(i_turb_diss, i_dim) = state(i_turb_diss)*vol_flux;
+          }
           for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
             flux_conv(j_dim, i_dim) = state(j_dim)*vol_flux + pressure*normal(j_dim, i_dim);
           }
         }
-        flux_conv(i_turb_kin_ener, all).setZero();
-        flux_conv(i_turb_diss, all).setZero();
       }
 
       double bulk_av;
@@ -152,20 +154,25 @@ class Navier_stokes {
         f(seq, all) -= stress;
         Mat<1, n_dim> int_ener_grad = -state(i_energy)/mass/mass*gradient(i_mass, all) + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
         f(i_energy, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
-        f(i_turb_kin_ener, all).setZero();
-        f(i_turb_diss, all).setZero();
+        if constexpr (turb == k_omega) {
+          f(i_turb_kin_ener, all) = -dyn_visc_coef/mass*gradient(i_turb_kin_ener, all);
+          f(i_turb_diss, all) = -dyn_visc_coef/mass*gradient(i_turb_diss, all);
+        }
         flux_diff = f*normal;
       }
 
       Mat<n_update> source;
-      /*! \todo Carter: compute the turbulent source terms.
-       * Set `source(i_turb_kin_ener)` and `source(i_turb_diss)` to contain the source terms of
-       * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
-       */
       void compute_source() {
         if constexpr (has_source) {
           source.setZero();
-          // modify `source` here
+        }
+        if constexpr (turb == k_omega) {
+          /*! \todo Carter: compute the turbulent source terms.
+           * Set `source(i_turb_kin_ener)` and `source(i_turb_diss)` to contain the source terms of
+           * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
+           */
+          source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
+          source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
         }
       }
 

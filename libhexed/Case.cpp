@@ -270,7 +270,7 @@ Case::Case(std::string input_script)
         }
       }
       if (_vars("turbulence_model") == "k-omega") {
-        freestream(n_dim + 2) = _vard("freestream_turbulent_kinetic_energy");
+        freestream(n_dim + 2) = _vard("freestream_density")*_vard("freestream_specific_turbulent_kinetic_energy");
         freestream(n_dim + 3) = _vard("freestream_density")*std::log(_vard("freestream_specific_turbulent_dissipation"));
         HEXED_ASSERT(std::isfinite(freestream(n_dim + 3)), "invalid `freestream_turbulent_dissipation`");
       }

@@ -364,7 +364,7 @@ void No_slip::apply_state(Boundary_face& bf) {
   double* sc = bf.state_cache();
   Array<double> presc = bf.prescribed_data();
   int nd = params.n_dim;
-  int nfq = params.n_qpoint()/params.row_size;
+  int nfq = params.n_qpoint()/params.row_size; // number of face quadrature points
   // set ghost state
   // momentum
   for (int i_dim = 0; i_dim < nd; ++i_dim) {
@@ -381,8 +381,15 @@ void No_slip::apply_state(Boundary_face& bf) {
     gh_f[(params.n_dim + 1)*nfq + i_qpoint] = math::pow(_thermal->ghost_energy(state), 2)/state(last);
   }
   // turbulence variables
-  // CARTER
-  for (int i_dof = (params.n_dim + 2)*nfq; i_dof < params.n_var*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+  //! \todo Carter: set the correct wall boundary conditions for the turbulence variables
+  if (params.n_var == params.n_dim + 4) {
+    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+      double spec_turb_kin_ener_wall = 1.;
+      double spec_turb_diss_wall = .01;
+      gh_f[(params.n_dim + 2)*nfq + i_qpoint] = spec_turb_kin_ener_wall*in_f[params.n_dim*nfq + i_qpoint];
+      gh_f[(params.n_dim + 3)*nfq + i_qpoint] = std::log(spec_turb_diss_wall)*in_f[params.n_dim*nfq + i_qpoint];
+    }
+  }
   // prime `state_cache` with average state for use in emissivity BC
   for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
     sc[i_dof] = (gh_f[i_dof] + in_f[i_dof])/2;
@@ -415,8 +422,7 @@ void No_slip::apply_flux(Boundary_face& bf) {
     gh_f[i_dof] = _coercion*(normal*flux_sign*ghost_heat - in_f[i_dof]) + in_f[i_dof];
   }
   // set turbulence variables
-  // CARTER
-  for (int i_dof = (params.n_dim + 2)*nfq; i_dof < params.n_var*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  for (int i_dof = (params.n_dim + 2)*nfq; i_dof < params.n_var*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
 }
 
 void No_slip::apply_advection(Boundary_face& bf) {
