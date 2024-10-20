@@ -1,4 +1,5 @@
 n_dim = 2
+row_size = 5
 mesh_extreme00 = -10.
 mesh_extreme10 = -10.
 mesh_extreme01 =  10.

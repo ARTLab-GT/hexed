@@ -486,7 +486,6 @@ void Solver::initialize(std::string(expr)) {
       sub.variables->assign_array(state(i_var), state_vars[i_var]);
     }
   }
-  std::cout << elements[0].state()[4*params.n_qpoint()] << " " << elements[0].state()[5*params.n_qpoint()] << std::endl;
   _init_face_state();
 }
 
