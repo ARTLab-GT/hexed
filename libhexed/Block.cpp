@@ -378,7 +378,6 @@ void Face::reset() {
   // array views of the matrices
   Array<double> lhs({rs, rs, rs - 2, rs - 2}, lhs_mat.data());
   Array<double> rhs({rs, rs, 3}, rhs_mat.data());
-  std::cout << "[11" << std::endl;
   // populate arrays/matrices
   for (int i_row = 0; i_row < rs; ++i_row) {
     for (int j_row = 1; j_row < rs - 1; ++j_row) {
@@ -388,24 +387,19 @@ void Face::reset() {
         lhs(j_row)(i_row)(j_row - 1)[col - 1] += dmsq(i_row, col);
       }
       // add influence of edge (not corner) nodes on boundary-normal rows
-      std::cout << "[12" << std::endl;
       for (int col : {0, rs - 1}) {
         rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(    bool(col)).point({j_row});
         rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(2 + bool(col)).point({j_row});
       }
-      std::cout << "12]" << std::endl;
     }
     // add influence of edges (including corners) nodes on other nodes on the same edge
     for (int j_row : {0, rs - 1}) {
-      std::cout << "[13" << std::endl;
       for (int col = 0; col < rs; ++col) {
         rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(    bool(j_row)).point({col});
         rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(2 + bool(j_row)).point({col});
       }
-      std::cout << "13]" << std::endl;
     }
   }
-  std::cout << "11]" << std::endl;
   // compute least-squares solution
   Mat_rm<> soln = lhs_mat.fullPivHouseholderQr().solve(rhs_mat);
   _interior = soln.data();
