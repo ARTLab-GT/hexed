@@ -159,6 +159,11 @@ void Element::split_shape(next::Mesh_blocks& blocks, Element& split_from, double
   _shape->glue(*_fake_shape, split_corners);
 }
 
+void Element::destroy_shape() {
+  _shape.reset();
+  _fake_shape.reset();
+}
+
 next::Element_shape& Element::shape() {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
   return *_shape;

@@ -120,6 +120,7 @@ class Element : public Kernel_element {
   void create_shape(next::Mesh_blocks&, int boundary_face = next::Mesh_blocks::no_face);
   void create_fake(next::Mesh_blocks&);
   void split_shape(next::Mesh_blocks&, Element& split_from, double at, int from_face);
+  void destroy_shape();
   next::Element_shape& shape();
   inline next::Element_shape* fake_shape() {return _fake_shape.get();}
 

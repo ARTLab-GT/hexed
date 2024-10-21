@@ -116,9 +116,13 @@ void Accessible_mesh::_match_topo() {
       vert.dijkstra_prev_edge = nullptr;
       double d = 2*vert.nominal_size();
       auto nearest = geom_edge.nearest_point(vert.dijkstra_point, d);
-      vert.dijkstra_curve_dist_sq = nearest.index >= 0 && nearest.distance <= d ?
-                                    nearest.distance*nearest.distance : std::nan("");
-      vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
+      if (nearest.index >= 0 && nearest.distance <= d) {
+        vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
+        vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
+      } else {
+        vert.dijkstra_curve_dist_sq = std::sqrt(huge);
+        vert.dijkstra_arc_len = std::sqrt(huge);
+      }
     }
     std::priority_queue<
       dijkstra::Node,
@@ -277,11 +281,13 @@ void Accessible_mesh::_match_topo() {
             }
           }
         }
+        elem.destroy_shape();
       }
     }
   }
   extrude_cons.clear();
   Int cons_sz = def.cons.size();
+  _blocks.boundary_sides();
   for (int i_con = 0; i_con < cons_sz; ++i_con) {
     auto& con = def.cons[i_con];
     if (!con) continue;
@@ -321,7 +327,12 @@ void Accessible_mesh::_match_topo() {
         if (!(i_bf%2)) std::swap(fine[0], fine[1]);
         Con_dir<Deformed_element> new_dir {{dir.i_dim[coarse_sign], dir.i_dim[!coarse_sign]},
                                            {dir.face_sign[coarse_sign], dir.face_sign[!coarse_sign]}};
+        try {
         _connect(elem_arr[coarse_sign], fine, new_dir, stretch);
+        } catch (const std::runtime_error& e) {
+          next::Block::visualize("default", "debug", {[&](Int i)->next::Block& {if (i < (Int)fine.size()) return fine[i]->shape(); return elem_arr[coarse_sign]->shape();}, [&]()->Int {return fine.size() + 1;}});
+          throw e;
+        }
       }
     }
   }

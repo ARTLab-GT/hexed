@@ -325,6 +325,8 @@ void Edge::reset() {
 const int Edge::no = -1;
 
 void Edge::glue(Edge& other, int half, bool reverse) {
+  HEXED_ASSERT(&other != this, "cannot glue an edge to itself");
+  HEXED_ASSERT(!other._glued_to, "Cascading edge gluing is forbidden (in order to catch algorithmic bugs).");
   _glued_to.pair(other._glued);
   _half = half;
   _glued_reverse = reverse;
