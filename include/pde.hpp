@@ -62,6 +62,24 @@ class Navier_stokes {
       for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
     }
 
+    /*! \todo __Carter:__ This is the class you have to modify to implement the \f$ k\text{-}\omega \f$ equations.
+     * Currently, to test that the numerical kernel is capable of handling the extra equations,
+     * I've set it to solve the arbitrary equations:
+     * \f$
+     * \frac{\partial \rho k}{\partial t}
+     * + \frac{\partial}{\partial x_j}
+     *   \left( \rho u_j k - \frac{\mu}{\rho} \frac{\partial \rho k}{\partial x_j} \right)
+     * = -0.1 \mu k
+     * \f$
+     * and
+     * \f$
+     * \frac{\partial \rho \tilde{\omega}}{\partial t}
+     * + \frac{\partial}{\partial x_j}
+     *   \left( \rho u_j \tilde{\omega} - \frac{\mu}{\rho} \frac{\partial \rho \tilde{\omega}}{\partial x_j} \right)
+     * = -0.1 \mu \tilde{\omega}
+     * \f$
+     * (Einstein summation convention)
+     */
     template <int n_dim_flux>
     class Computation {
       const Pde& _eq;
@@ -95,10 +113,6 @@ class Navier_stokes {
 
       Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
       Mat<n_update, n_dim_flux> flux_conv;
-      /*! \todo Carter: compute convective fluxes of the turbulent variables
-       * Set `flux_conv(i_turb_kin_ener)` and `flux_conv(i_turb_diss)` to contain the source terms of
-       * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
-       */
       void compute_flux_conv() {
         compute_scalars_conv();
         for (int i_dim = 0; i_dim < n_dim_flux; ++i_dim) {
@@ -109,6 +123,7 @@ class Navier_stokes {
           double vol_flux = flux_conv(i_mass, i_dim)/mass;
           flux_conv(i_energy, i_dim) = (state(i_energy) + pressure)*vol_flux;
           if constexpr (turb == k_omega) {
+            // these convective fluxes for the turbulent variables should be correct
             flux_conv(i_turb_kin_ener, i_dim) = state(i_turb_kin_ener)*vol_flux;
             flux_conv(i_turb_diss, i_dim) = state(i_turb_diss)*vol_flux;
           }
@@ -124,13 +139,13 @@ class Navier_stokes {
       double dyn_visc_coef;
       double therm_cond_coef;
       double energy_cond;
-      //! \todo Carter: compute whatever variables you need for the turbulent fluxes
+      //! \todo __Carter:__ Compute whatever variables you need for the turbulent fluxes
+      //! which might also be needed for source terms and/or the time step calculation.
       void compute_scalars_diff() {
-        //bulk_av = std::abs(state(i_bulk_art_visc));
-        //laplacian_av = std::abs(state(i_laplacian_art_visc));
-        bulk_av = 0;
-        laplacian_av = 0;
-        sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)*(heat_rat - 1)/constants::specific_gas_air);
+        bulk_av = std::abs(state(i_bulk_art_visc));
+        laplacian_av = std::abs(state(i_laplacian_art_visc));
+        sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)
+                              *(heat_rat - 1)/constants::specific_gas_air);
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
@@ -138,39 +153,45 @@ class Navier_stokes {
 
       Mat<n_extrap, n_dim> gradient;
       Mat<n_update, n_dim_flux> flux_diff;
-      /*! \todo Carter: modify `flux_diff` to include diffusive fluxes of the turbulent variables
-       * and add turbulent terms to the fluxes of the state variables
+      /*! \todo __Carter:__ modify `flux_diff` to include turbulence modeling.
+       * Set `flux_diff_phys(i_turb_kin_ener)` and `flux_diff_phys(i_turb_diss)` to contain the source terms of
+       * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
+       * Also modify the other fluxes to include turbulent terms.
        */
       void compute_flux_diff() {
         compute_scalars_diff();
         auto seq = Eigen::seqN(0, n_dim);
         auto mmtm = state(seq);
-        Mat<n_update, n_dim> f;
+        Mat<n_update, n_dim> flux_diff_phys; // flux in physical space
         Mat<n_dim> veloc = mmtm/mass;
         Mat<n_dim, n_dim> veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
-                                   + (bulk_av*mass - 2./3.*dyn_visc_coef)*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
-        f = -laplacian_av*gradient;
-        f(seq, all) -= stress;
-        Mat<1, n_dim> int_ener_grad = -state(i_energy)/mass/mass*gradient(i_mass, all) + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
-        f(i_energy, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
+                                   + (bulk_av*mass - 2./3.*dyn_visc_coef)
+                                     *veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
+        flux_diff_phys = -laplacian_av*gradient;
+        flux_diff_phys(seq, all) -= stress;
+        Mat<1, n_dim> int_ener_grad = -state(i_energy)/mass/mass*gradient(i_mass, all)
+                                      + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
+        flux_diff_phys(i_energy, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
         if constexpr (turb == k_omega) {
-          f(i_turb_kin_ener, all) = -dyn_visc_coef/mass*gradient(i_turb_kin_ener, all);
-          f(i_turb_diss, all) = -dyn_visc_coef/mass*gradient(i_turb_diss, all);
+          // these turbulent fluxes are wrong
+          flux_diff_phys(i_turb_kin_ener, all) = -dyn_visc_coef/mass*gradient(i_turb_kin_ener, all);
+          flux_diff_phys(i_turb_diss, all) = -dyn_visc_coef/mass*gradient(i_turb_diss, all);
         }
-        flux_diff = f*normal;
+        flux_diff = flux_diff_phys*normal; // flux in reference space
       }
 
       Mat<n_update> source;
+      /*! \todo __Carter:__ compute the turbulent source terms.
+       * Set `source(i_turb_kin_ener)` and `source(i_turb_diss)` to contain the source terms of
+       * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
+       */
       void compute_source() {
         if constexpr (has_source) {
           source.setZero();
         }
         if constexpr (turb == k_omega) {
-          /*! \todo Carter: compute the turbulent source terms.
-           * Set `source(i_turb_kin_ener)` and `source(i_turb_diss)` to contain the source terms of
-           * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
-           */
+          // these source terms are wrong
           source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
           source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
         }
@@ -178,15 +199,17 @@ class Navier_stokes {
 
       double char_speed;
       void compute_char_speed() {
-        const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(i_energy)/state(i_mass)); // numerical estimate (not less than actual speed of sound)
+        // numerical estimate (not less than actual speed of sound)
+        const double sound_speed = std::sqrt(heat_rat*(heat_rat - 1)*state(i_energy)/state(i_mass));
         const double speed = state(Eigen::seqN(0, n_dim)).norm()/state(i_mass);
         char_speed = sound_speed + speed;
       }
 
       double diffusivity;
-      //! \todo Carter: Modify the diffusivity estimate to keep the time step stable for turbulent flows.
-      //! This is can come later.
-      //! To start off, you can just reduce \ref max_safety until it's stable.
+      /*! \todo __Carter:__ Modify the diffusivity estimate to keep the time step stable for turbulent flows.
+       * This is can come later.
+       * To start off, you can just reduce \ref max_safety until it's stable.
+       */
       void compute_diffusivity() {
         compute_scalars_conv();
         compute_scalars_diff();

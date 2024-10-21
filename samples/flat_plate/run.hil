@@ -25,6 +25,7 @@ freestream_direction1 = 0.6
 target_thickness = .01
 target_reynolds = (5/target_thickness)^2
 freestream_density = target_reynolds*1.8e-5/freestream_speed
+{Carter: set these to the freestream values you want for k and omega}
 freestream_specific_turbulent_kinetic_energy = 1e-5
 freestream_specific_turbulent_dissipation = .1
 
@@ -32,7 +33,6 @@ freestream_specific_turbulent_dissipation = .1
 $set_subsonic_bl_multirate
 }
 done = {normalized_residual < 1e-4}
-working_dir = {hexed_out_turb}
 vis_field_vars = vis_field_vars + {specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density; turbulent_dissipation_bassi = turbulent_dissipation_bassi; specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density);}
 
 $start
