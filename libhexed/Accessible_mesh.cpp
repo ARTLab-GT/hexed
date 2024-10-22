@@ -107,7 +107,6 @@ void Accessible_mesh::_match_topo() {
         start_end[i_endpoint]->snapped_endpoint = i_endpoint;
       }
     }
-    if (start_end[0] == start_end[1]) std::cout << "periodic" << std::endl;
     if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
     #pragma omp parallel for
     for (next::Vertex& vert : verts) {
@@ -119,10 +118,11 @@ void Accessible_mesh::_match_topo() {
       auto nearest = geom_edge.nearest_point(vert.dijkstra_point, d);
       if (nearest.index >= 0 && nearest.distance <= d) {
         vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
+        if (vert.snapped_edge >= 0) {
+          vert.dijkstra_curve_dist_sq *= 100.;
+        }
         vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
       } else {
-        #pragma omp critical
-        std::cout << vert.dijkstra_point.transpose() << "; " << nearest.index << " " << nearest.distance << std::endl;
         vert.dijkstra_curve_dist_sq = std::sqrt(huge);
         vert.dijkstra_arc_len = std::sqrt(huge);
       }
@@ -152,7 +152,8 @@ void Accessible_mesh::_match_topo() {
           vert->dijkstra_dist = d;
           vert->dijkstra_prev_vert = curr.vert;
           vert->dijkstra_prev_edge = &edge;
-          unvisited.emplace(vert, d, ++vert->dijkstra_updates);
+          ++vert->dijkstra_updates;
+          unvisited.emplace(vert, d, vert->dijkstra_updates);
         }
       }
     }
@@ -1573,6 +1574,9 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       matched_vertices[i_edge].clear();
       matched_edges[i_edge].clear();
     }
+    _match_topo();
+    connect_rest(surf_bc_sn);
+    _n_verts = _blocks.verts().size();
   }
   _n_verts = _blocks.verts().size();
   _stopwatch["update"].work_units_completed += 1;
