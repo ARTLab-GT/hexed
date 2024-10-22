@@ -309,6 +309,8 @@ Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
 , _verts{this, this}
 , _glued_to(this)
 , _glued(this)
+, _half{no}
+, _glued_reverse{false}
 {
   vertex0.pair(_verts[0]);
   vertex1.pair(_verts[1]);

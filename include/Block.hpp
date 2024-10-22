@@ -269,7 +269,7 @@ class Edge : public Boundary_block {
   Reciprocal_ptr<Edge, Edge> _glued_to;
   Reciprocal_list<Edge, Edge> _glued;
   int _half;
-  bool _glued_reverse;
+  int _glued_reverse;
 };
 
 /*! \brief A 2-dimensional `Block` bounded by 4 `Edge`s.
