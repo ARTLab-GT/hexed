@@ -192,13 +192,22 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
     auto& param_nodes = discrete_curves.back();
     for (auto& curve : composite) {
       Array<double> phys_nodes({_n_div + 1, 3});
+      Mat<3> start = curve->point(Mat<1>{0.});
+      double mean_squared_dist = 0;
       for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
         Mat<3> pt = curve->point(Mat<1>{i_node*_sz});
+        mean_squared_dist += (pt - start).squaredNorm();
         phys_nodes(i_node).vector() = pt;
         Mat<2> params = _surf->nearest_params(pt, [](Mat<2>){return true;}, default_max_dist).params;
         param_nodes.push_back(params);
       }
-      _curves.emplace_back(phys_nodes.copy(), 4);
+      mean_squared_dist /= n_div + 1;
+      if ((curve->point(Mat<1>{1.}) - start).squaredNorm() < .1*mean_squared_dist) {
+        _curves.emplace_back(phys_nodes(0, n_div/2 + 1).copy(), 4);
+        _curves.emplace_back(phys_nodes(n_div/2, n_div + 1).copy(), 4);
+      } else {
+        _curves.emplace_back(phys_nodes.copy(), 4);
+      }
     }
     if (!param_nodes.empty()) param_nodes.push_back(param_nodes.front());
   }

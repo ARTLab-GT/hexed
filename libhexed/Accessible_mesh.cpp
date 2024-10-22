@@ -94,7 +94,8 @@ void Accessible_mesh::_match_topo() {
       for (auto& vert : verts) {
         if (!vert.glued()) {
           double d = (vert.dijkstra_point - endpoint).squaredNorm();
-          if (d < std::min(dist_sq, math::pow(4*vert.nominal_size(), 2))) {
+          //if (d < std::min(dist_sq, math::pow(4*vert.nominal_size(), 2))) {
+          if (d < dist_sq) {
             dist_sq = d;
             start_end[i_endpoint] = &vert;
           }
@@ -106,6 +107,7 @@ void Accessible_mesh::_match_topo() {
         start_end[i_endpoint]->snapped_endpoint = i_endpoint;
       }
     }
+    if (start_end[0] == start_end[1]) std::cout << "periodic" << std::endl;
     if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
     #pragma omp parallel for
     for (next::Vertex& vert : verts) {
@@ -113,12 +115,14 @@ void Accessible_mesh::_match_topo() {
       vert.dijkstra_updates = 0;
       vert.dijkstra_prev_vert = nullptr;
       vert.dijkstra_prev_edge = nullptr;
-      double d = 2*vert.nominal_size();
+      double d = huge;
       auto nearest = geom_edge.nearest_point(vert.dijkstra_point, d);
       if (nearest.index >= 0 && nearest.distance <= d) {
         vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
         vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
       } else {
+        #pragma omp critical
+        std::cout << vert.dijkstra_point.transpose() << "; " << nearest.index << " " << nearest.distance << std::endl;
         vert.dijkstra_curve_dist_sq = std::sqrt(huge);
         vert.dijkstra_arc_len = std::sqrt(huge);
       }
@@ -163,7 +167,7 @@ void Accessible_mesh::_match_topo() {
           vert->dijkstra_prev_edge->snapped_edge = i_geom_edge;
         }
         if (vert->snapped_edge < 0) {
-          Int ind = geom_edge.nearest_point(vert->dijkstra_point, 4*vert->nominal_size()).index;
+          Int ind = geom_edge.nearest_point(vert->dijkstra_point, huge).index;
           if (ind >= 0) vert->dijkstra_point = geom_edge.nodes()(ind).vector();
           vert->snapped_edge = i_geom_edge;
         }
