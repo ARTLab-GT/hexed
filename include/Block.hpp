@@ -120,6 +120,7 @@ class Vertex : public Block {
   void apply_relax();
   double badness(Mat<3> proposed_pos) const;
   void set_pos(Mat<3> p);
+  void reset_pos();
   int n_elements() const; //!< \brief The number of elements sharing this vertex
   /*! \brief The list of vertices that share an edge with `this`.
    * \details By "share an edge" I mean that they are connected by a geometric edge of an element,
@@ -269,7 +270,7 @@ class Edge : public Boundary_block {
   Reciprocal_ptr<Edge, Edge> _glued_to;
   Reciprocal_list<Edge, Edge> _glued;
   int _half;
-  int _glued_reverse;
+  bool _glued_reverse;
 };
 
 /*! \brief A 2-dimensional `Block` bounded by 4 `Edge`s.

@@ -142,6 +142,16 @@ void Vertex::set_pos(Mat<3> p) {
   }
 }
 
+void Vertex::reset_pos() {
+  _pos.setZero();
+  int n = 0;
+  for (auto elem : _elems.theirs()) if (elem) if (!elem->glued()) {
+    _pos += elem->nominal_position(_get_index(*elem));
+    ++n;
+  }
+  _pos /= n;
+}
+
 int Vertex::n_elements() const {
   int n = 0;
   for (auto elem : _elems.theirs()) n += bool(elem);
@@ -515,7 +525,13 @@ Mat<3> Element_shape::interpolate(std::vector<double> ref_coords) const {
 
 Mat<3> Element_shape::nominal_position(int i_vert) const {
   Mat<3> pos = _nom_pos;
-  for (int i_dim = 0; i_dim < n_dim(); ++i_dim) pos(i_dim) += i_vert/vstride(n_dim(), i_dim)%2*_nom_sz;
+  for (int i_dim = 0; i_dim < n_dim(); ++i_dim) {
+    int sign = i_vert/vstride(n_dim(), i_dim)%2;
+    pos(i_dim) += sign*_nom_sz;
+    if (_i_bf != Mesh_blocks::no_face && _i_bf/2 == i_dim && _i_bf%2 == sign) {
+      pos(i_dim) -= math::sign(sign)*.9*_nom_sz;
+    }
+  }
   return pos;
 }
 

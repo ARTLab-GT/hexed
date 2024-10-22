@@ -45,10 +45,10 @@ namespace dijkstra {
 }
 
 void Accessible_mesh::_match_topo() {
+  for (int i_relax = 0; i_relax < 20; ++i_relax) relax(.5);
   if (!surf_geom) return;
   _blocks.edges_2d();
   _blocks.faces_3d();
-  for (int i = 0; i < 20; ++i) relax(.5);
   auto all_verts = _blocks.verts();
   #pragma omp parallel for
   for (auto& vert : all_verts) {
@@ -94,7 +94,6 @@ void Accessible_mesh::_match_topo() {
       for (auto& vert : verts) {
         if (!vert.glued()) {
           double d = (vert.dijkstra_point - endpoint).squaredNorm();
-          //if (d < std::min(dist_sq, math::pow(4*vert.nominal_size(), 2))) {
           if (d < dist_sq) {
             dist_sq = d;
             start_end[i_endpoint] = &vert;
@@ -375,7 +374,11 @@ void Accessible_mesh::_match_topo() {
     vert.record.clear();
   }
   purge();
-  for (int i = 0; i < 20; ++i) relax(.5);
+  #pragma omp parallel for
+  for (auto& vert : all_verts) {
+    vert.reset_pos();
+  }
+  //for (int i_relax = 0; i_relax < 20; ++i_relax) relax(.5);
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
