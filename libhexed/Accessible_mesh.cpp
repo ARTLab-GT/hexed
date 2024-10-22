@@ -164,7 +164,6 @@ void Accessible_mesh::_match_topo() {
       do {
         matched_vertices[i_geom_edge].emplace_back(vert);
         if (vert->dijkstra_prev_edge) {
-          matched_edges[i_geom_edge].emplace_back(vert->dijkstra_prev_edge);
           vert->dijkstra_prev_edge->snapped_edge = i_geom_edge;
         }
         if (vert->snapped_edge < 0) {
@@ -211,8 +210,11 @@ void Accessible_mesh::_match_topo() {
         if (!matched) continue;
         for (int i_edge = 0; i_edge < 4; ++i_edge) {
           auto& edge = face->edge(i_edge);
-          if (edge.glued()) matched_to[i_edge] = edge.glued_to()->snapped_edge;
-          else matched_to[i_edge] = edge.snapped_edge;
+          if (edge.glued()) {
+            matched_to[i_edge] = edge.glued_to()->snapped_edge;
+          } else {
+            matched_to[i_edge] = edge.snapped_edge;
+          }
         }
         auto set_vertices = [&](Element& e) {
           auto& s = e.shape();
@@ -249,6 +251,7 @@ void Accessible_mesh::_match_topo() {
                              + j_sign*math::pow(2, 2 - j_dim)
                              + k_sign*math::pow(2, 2 - k_dim);
                 int i_snapped = shape->vertex(i_vert).snapped_edge;
+                HEXED_ASSERT(i_snapped >= 0, "Vertex and edge do not agree on whether they are snapped.");
                 auto& vert = match_elem.shape().vertex(i_vert);
                 vert.snapped_edge = i_snapped;
                 vert.snapped_endpoint = shape->vertex(i_vert).snapped_endpoint;
@@ -257,14 +260,6 @@ void Accessible_mesh::_match_topo() {
               auto& matched_edge = match_elem.shape().boundary_face_3d()->edge(i_edge_matched);
               matched_edge.snapped_edge = m;
               matched_edges[m].emplace_back(&matched_edge);
-              if (j_dim > k_dim) {
-                for (bool k_sign : {0, 1}) {
-                  if (matched_elems[2*k_dim + k_sign]) {
-                    _connect({&match_elem,  matched_elems[2*k_dim + k_sign]},
-                             Con_dir<Deformed_element>({k_dim, j_dim}, {k_sign, j_sign}));
-                  }
-                }
-              }
             } else {
               elem.face_record[2*j_dim + j_sign] = inside_sn;
               inside.face_record[2*j_dim + j_sign] = surface_sn;
@@ -274,17 +269,22 @@ void Accessible_mesh::_match_topo() {
         for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
           int k_dim = 3 - j_dim - i_dim;
           for (bool j_sign : {0, 1}) if (matched_elems[2*j_dim + j_sign]) {
-            for (bool k_sign : {0, 1}) if (!matched_elems[2*k_dim + k_sign]) {
+            for (bool k_sign : {0, 1}) {
               int i_vert =   i_sign*math::pow(2, 2 - i_dim)
                            + j_sign*math::pow(2, 2 - j_dim)
                            + k_sign*math::pow(2, 2 - k_dim);
               std::vector<Int> record {elem.refinement_level(), elem.face_record[2*j_dim + j_sign], k_dim, k_sign, i_dim, i_sign};
-              surface.shape().vertex(i_vert).record.insert(shape->vertex(i_vert).record.end(), record.begin(), record.end());
+              auto& vert = surface.shape().vertex(i_vert);
+              vert.record.insert(vert.record.end(), record.begin(), record.end());
             }
           }
         }
-        elem.destroy_shape();
       }
+    }
+  }
+  for (Int i_element = 0; i_element < elems.size(); ++i_element) {
+    if (elems[i_element].record == 2) {
+      elems[i_element].destroy_shape();
     }
   }
   extrude_cons.clear();
@@ -1633,6 +1633,7 @@ void Accessible_mesh::relax(double factor) {
     // snap vertices to geometry edges
     auto edges = surf_geom->edges();
     auto points = surf_geom->points();
+    #if 1
     for (Int i_point = 0; i_point < (Int)points.size(); ++i_point) {
       if (point_matched_vertices[i_point]) point_matched_vertices[i_point]->set_pos(points[i_point]);
     }
@@ -1650,6 +1651,7 @@ void Accessible_mesh::relax(double factor) {
         }
       }
     }
+    #endif
     // snaps a `Boundary_block` to the geometry surface
     auto snap_block = [this](next::Boundary_block& block) {
       block.reset();
