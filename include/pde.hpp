@@ -45,6 +45,15 @@ class Navier_stokes {
     static constexpr int i_bulk_art_visc = n_update;
     static constexpr int i_laplacian_art_visc = n_update + 1;
     static constexpr double heat_rat = 1.4;
+
+    if constexpr (turb == komega) {
+      static constexpr double alpha = 13./25.;
+      static constexpr double beta_s = 9./100.;
+      static constexpr double sigma = 1./2.;
+      static constexpr double sigma_s = 3./5.;
+      static constexpr double sigma_do = 1./8.;
+      static inline double mu_t_bar() {return 1.;} // mu_t_bar = \alpha^* \rho \bar{k} e^{-\tilde{\omega}_r}
+    } 
     Transport_model dyn_visc;
     Transport_model therm_cond;
 
@@ -175,8 +184,10 @@ class Navier_stokes {
         flux_diff_phys(i_energy, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
         if constexpr (turb == k_omega) {
           // these turbulent fluxes are wrong
-          flux_diff_phys(i_turb_kin_ener, all) = -dyn_visc_coef/mass*gradient(i_turb_kin_ener, all);
-          flux_diff_phys(i_turb_diss, all) = -dyn_visc_coef/mass*gradient(i_turb_diss, all);
+          flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s*mu_t_bar())/mass*gradient(i_turb_kin_ener, all); //Needs mu_t_bar implementation
+	  flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma*mu_t_bar())/mass*gradient(i_turb_diss, all);
+	  //flux_diff_phys(i_turb_kin_ener, all) = -dyn_visc_coef/mass*gradient(i_turb_kin_ener, all);
+          //flux_diff_phys(i_turb_diss, all) = -dyn_visc_coef/mass*gradient(i_turb_diss, all);
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
       }
@@ -192,7 +203,8 @@ class Navier_stokes {
         }
         if constexpr (turb == k_omega) {
           // these source terms are wrong
-          source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
+          source(i_energy) = beta_s * state(i_mass) * std::max(0, state(i_turb_kin_ener)); //Add in exponent for dissipation
+	  source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
           source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
         }
       }
