@@ -285,7 +285,7 @@ void Accessible_mesh::_match_topo() {
         for (int i_vert = 0; i_vert < 8; ++i_vert) {
           Mat<3> pos = orig_pos(all, i_vert);
           for (int j_dim = 0; j_dim < 3; ++j_dim) {
-            double offset = .1 + .4*(j_dim == i_dim);
+            double offset = .2 + .3*(j_dim == i_dim);
             int stride = math::pow(2, 2 - j_dim);
             bool j_sign = i_vert/stride%2;
             if ((j_dim == i_dim && j_sign != i_sign) || matched_elems[2*j_dim + j_sign]) {
