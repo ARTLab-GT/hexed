@@ -188,15 +188,20 @@ void Accessible_mesh::_match_topo() {
     }
   }
 
+  #pragma omp parallel for
+  for (auto& vert : all_verts) {
+    vert.reset_pos();
+  }
+  #if 1
   auto& elems = def.elements();
   Int elems_sz = elems.size();
   for (Int i_element = 0; i_element < elems_sz; ++i_element) {
     auto& elem = elems[i_element];
     elem.record = 0;
     for (int i_face = 0; i_face < 6; ++i_face) elem.face_record[i_face] = -1;
-    next::Element_shape* shape = elem.fake_shape();
+    const next::Element_shape* shape = elem.fake_shape();
     if (shape) {
-      next::Face* face = shape->boundary_face_3d();
+      const next::Face* face = shape->boundary_face_3d();
       if (face) {
         int bf = shape->boundary_face();
         int i_dim = bf/2;
@@ -221,6 +226,7 @@ void Accessible_mesh::_match_topo() {
             s.vertex(i_vert).set_pos(shape->vertex(i_vert).point({}));
           }
           for (int i_face = 0; i_face < 6; ++i_face) e.face_record[i_face] = -1;
+          s.extruded_direction = shape->extruded_direction;
         };
         Int inside_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
         Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
@@ -232,6 +238,10 @@ void Accessible_mesh::_match_topo() {
         _connect({&inside, &surface}, Con_dir<Deformed_element>({i_dim, i_dim}, {i_sign, !i_sign}));
         elem.record = 2;
         std::vector<Deformed_element*> matched_elems(6, nullptr);
+        for (int i_vert = 0; i_vert < 8; ++i_vert) {
+          HEXED_ASSERT(std::isfinite( inside.shape().vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
+          HEXED_ASSERT(std::isfinite(surface.shape().vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
+        }
         for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
           for (bool j_sign : {0, 1}) {
             int k_dim = 3 - j_dim - i_dim;
@@ -259,11 +269,30 @@ void Accessible_mesh::_match_topo() {
               auto& matched_edge = match_elem.shape().boundary_face_3d()->edge(i_edge_matched);
               matched_edge.snapped_edge = m;
               matched_edges[m].emplace_back(&matched_edge);
+              for (int i_vert = 0; i_vert < 8; ++i_vert) {
+                HEXED_ASSERT(std::isfinite(match_elem.shape().vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
+              }
             } else {
               elem.face_record[2*j_dim + j_sign] = inside_sn;
               inside.face_record[2*j_dim + j_sign] = surface_sn;
             }
           }
+        }
+        Mat<3, 8> orig_pos;
+        for (int i_vert = 0; i_vert < 8; ++i_vert) {
+          orig_pos(all, i_vert) = shape->vertex(i_vert).point({});
+        }
+        for (int i_vert = 0; i_vert < 8; ++i_vert) {
+          Mat<3> pos = orig_pos(all, i_vert);
+          for (int j_dim = 0; j_dim < 3; ++j_dim) {
+            double offset = .1 + .4*(j_dim == i_dim);
+            int stride = math::pow(2, 2 - j_dim);
+            bool j_sign = i_vert/stride%2;
+            if ((j_dim == i_dim && j_sign != i_sign) || matched_elems[2*j_dim + j_sign]) {
+              pos += offset*(orig_pos(all, i_vert - math::sign(j_sign)*stride) - orig_pos(all, i_vert));
+            }
+          }
+          surface.shape().vertex(i_vert).set_pos(pos);
         }
         for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
           int k_dim = 3 - j_dim - i_dim;
@@ -278,6 +307,22 @@ void Accessible_mesh::_match_topo() {
             }
           }
         }
+        std::vector<Deformed_element*> check_elems {&elem, &inside, &surface};
+        for (auto p : matched_elems) if (p) check_elems.push_back(p);
+        for (auto e : check_elems) {
+          for (int i_vert = 0; i_vert < 8; ++i_vert) {
+            HEXED_ASSERT(std::isfinite(e->shape().vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
+          }
+        }
+      }
+    }
+  }
+  for (int i_element = 0; i_element < elems.size(); ++i_element) {
+    if (elems[i_element].record == 2) continue;
+    for (int i_vert = 0; i_vert < 8; ++i_vert) {
+      HEXED_ASSERT(std::isfinite(elems[i_element].shape().vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
+      if (elems[i_element].fake_shape()) {
+        HEXED_ASSERT(std::isfinite(elems[i_element].fake_shape()->vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
       }
     }
   }
@@ -374,11 +419,8 @@ void Accessible_mesh::_match_topo() {
     vert.record.clear();
   }
   purge();
-  #pragma omp parallel for
-  for (auto& vert : all_verts) {
-    vert.reset_pos();
-  }
   //for (int i_relax = 0; i_relax < 20; ++i_relax) relax(.5);
+  #endif
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
@@ -731,9 +773,10 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
       int stride = math::pow(2, nd - 1 - face.i_dim);
       for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
         int i_collapse = i_vert + (face.face_sign - (i_vert/stride)%2)*stride;
-        elem.shape().vertex(i_vert).point({}) = face.elem.shape().vertex(i_collapse).point({});
+        elem.fake_shape()->vertex(i_vert).point({}) = face.elem.shape().vertex(i_collapse).point({});
       }
     }
+    elem.fake_shape()->extruded_direction = 2*face.i_dim + face.face_sign;
     std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};
     _connect(el_arr, dir);
     extrude_cons.push_back(def.cons.back().get());

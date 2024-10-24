@@ -261,6 +261,7 @@ class Edge : public Boundary_block {
   bool glued() const; //!< \brief `true` iff `this` is currently `glue()`d to another edge
   std::vector<Element_shape*> contacted_elements();
   Edge* glued_to() {return _glued_to.get();}
+  const Edge* glued_to() const {return _glued_to.get();}
 
   Int snapped_edge;
 
@@ -292,6 +293,7 @@ class Face : public Boundary_block {
   //! \brief Access the `i`th edge.
   //! \details The order of the edges is \f$ \{\xi_0 = 0\}, \{\xi_0 = 1\}, \{\xi_1 = 0\}, \{\xi_1 = 1\} \f$.
   inline Edge& edge(int i) {return _edges[i];}
+  inline const Edge& edge(int i) const {return _edges[i];}
 
   /*! \brief sets `interior()` to minimize the Laplacian.
    * \details Specifically, the Laplacian of each physical coordinate as a function of the reference coordinates
@@ -321,11 +323,11 @@ class Element_shape : public Block {
   friend void Vertex::glue(Element_shape&, std::vector<double>);
 
   public:
-  bool deformed = false;
   //! \brief Obtains the edge length of this element before any vertex adjustment.
   inline double nominal_size() const {return _nom_sz;}
   //! \brief What the position of vertex `i_vert` _would_ be supposed to be if this were a Cartesian element.
   Mat<3> nominal_position(int i_vert = 0) const;
+  Mat<3> nominal_center() const;
   //! \brief Accesses the `i_vert`th vertex (in standard row-major order)
   inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
   inline const Vertex& vertex(int i_vert) const {return *_verts[i_vert];}
@@ -353,7 +355,11 @@ class Element_shape : public Block {
   inline void set_glued_corners(std::array<std::vector<double>, 2> corners) {_glued_corners = corners;}
   inline void unglue() {_glued_to.set();}
   inline Face* boundary_face_3d() {return _sf.get();}
+  inline const Face* boundary_face_3d() const {return _sf.get();}
   inline int boundary_face() const {return _i_bf;}
+
+  bool deformed;
+  int extruded_direction;
 
   private:
   Element_shape(int nd, const Basis&);

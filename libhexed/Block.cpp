@@ -143,13 +143,13 @@ void Vertex::set_pos(Mat<3> p) {
 }
 
 void Vertex::reset_pos() {
-  _pos.setZero();
+  Mat<3> p = Mat<3>::Zero();
   int n = 0;
   for (auto elem : _elems.theirs()) if (elem) if (!elem->glued()) {
-    _pos += elem->nominal_position(_get_index(*elem));
+    p += elem->nominal_center();
     ++n;
   }
-  _pos /= n;
+  if (n) _pos = p/n;
 }
 
 int Vertex::n_elements() const {
@@ -479,6 +479,8 @@ void Element_shape::_glue_edges(std::vector<Element_shape*> those) {
 
 Element_shape::Element_shape(int nd, const Basis& b)
 : Block(nd, b.row_size)
+, deformed{false}
+, extruded_direction{Mesh_blocks::no_face}
 , _basis{&b}
 , _i_bf{6}
 , _bf(this)
@@ -528,12 +530,20 @@ Mat<3> Element_shape::nominal_position(int i_vert) const {
   for (int i_dim = 0; i_dim < n_dim(); ++i_dim) {
     int sign = i_vert/vstride(n_dim(), i_dim)%2;
     pos(i_dim) += sign*_nom_sz;
-    if (_i_bf != Mesh_blocks::no_face && _i_bf/2 == i_dim && _i_bf%2 == sign) {
-      pos(i_dim) -= math::sign(sign)*.9*_nom_sz;
+    if (extruded_direction != Mesh_blocks::no_face && extruded_direction/2 == i_dim && extruded_direction%2 == sign) {
+      pos(i_dim) -= math::sign(sign)*.7*_nom_sz;
     }
   }
   return pos;
 }
+
+Mat<3> Element_shape::nominal_center() const {
+  Mat<3> c = _nom_pos + Mat<3>::Constant(.5*_nom_sz);
+  if (extruded_direction != Mesh_blocks::no_face) {
+    c(extruded_direction/2) -= math::sign(extruded_direction%2)*.5*_nom_sz;
+  }
+  return c;
+};
 
 void Element_shape::connect(Element_shape& that, Connection_direction dir) {
   HEXED_ASSERT(that.n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
