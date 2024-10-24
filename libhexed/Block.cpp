@@ -152,6 +152,38 @@ void Vertex::reset_pos() {
   if (n) _pos = p/n;
 }
 
+constexpr double jacobian_tolerance = 1e-4;
+
+bool Vertex::mobile() const {
+  bool m = false;
+  for (auto elem : _elems.theirs()) if (elem) m = m || (!elem->glued() && elem->deformed);
+  return m;
+}
+
+double Vertex::quality_objective() const {
+  int nd = _elems.theirs()[0]->n_dim();
+  int nv = math::pow(2, nd);
+  double total = 0;
+  for (auto elem : _elems.theirs()) {
+    HEXED_ASSERT(elem, "element is null");
+    if (elem->glued()) continue;
+    int i_this = _get_index(*elem);
+    // this will still give the right determinant even in 2D where not all the entries are set
+    Mat<3, 3> jacobian = Mat<3, 3>::Identity();
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      int stride = vstride(nd, i_dim);
+      int i_start = i_this - i_this/stride%2*stride;
+      int i_end = i_start + stride;
+      jacobian(all, i_dim) = elem->vertex(i_end).point({}) - elem->vertex(i_start).point({});
+    }
+    jacobian /= elem->nominal_size();
+    double det = jacobian.determinant();
+    if (det <= 0) std::cout << point({}).transpose() << " | " << det << std::endl;
+    total += math::pow((det - 1)/(det - jacobian_tolerance), 2);
+  }
+  return total;
+}
+
 int Vertex::n_elements() const {
   int n = 0;
   for (auto elem : _elems.theirs()) n += bool(elem);
