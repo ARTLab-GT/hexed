@@ -44,7 +44,7 @@ namespace dijkstra {
   }
 }
 
-void Accessible_mesh::_offset_vertices() {
+void Accessible_mesh::_offset_vertices(double offset) {
   auto all_verts = _blocks.verts();
   #pragma omp parallel for
   for (auto& vert : all_verts) {
@@ -70,7 +70,7 @@ void Accessible_mesh::_offset_vertices() {
   }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
-    vert.set_pos(vert.point({}) + .1*vert.offset);
+    vert.set_pos(vert.point({}) + offset*vert.offset);
     vert.offset.setZero();
   }
 }
@@ -228,7 +228,7 @@ void Accessible_mesh::_match_topo() {
   for (auto& vert : all_verts) {
     vert.reset_pos();
   }
-  _offset_vertices();
+  _offset_vertices(.2);
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
@@ -470,7 +470,7 @@ void Accessible_mesh::_match_topo() {
     vert.record.clear();
   }
   purge();
-  _offset_vertices();
+  _offset_vertices(.05);
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
