@@ -48,8 +48,7 @@ void Accessible_mesh::_offset_vertices() {
   auto all_verts = _blocks.verts();
   #pragma omp parallel for
   for (auto& vert : all_verts) {
-    vert.reset_pos();
-    vert.offset_dir.setZero();
+    vert.offset.setZero();
   }
   for (auto& con : def.cons) {
     auto dir = con->get_direction();
@@ -64,15 +63,15 @@ void Accessible_mesh::_offset_vertices() {
         auto& vert = con->element(!is_new[0]).active_shape().vertex(i_vert);
         int sign = -math::sign(dir.face_sign[is_new[0]]);
         int i_dim = dir.i_dim[is_new[0]];
-        HEXED_ASSERT(vert.offset_dir(i_dim) != -sign, "Vertex has opposite faces.");
-        vert.offset_dir(i_dim) = sign;
+        //HEXED_ASSERT(vert.offset_dir(i_dim) != -sign, "Vertex has opposite faces.");
+        vert.offset(i_dim) = sign*con->element(!is_new[0]).nominal_size();
       }
     }
   }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
-    vert.set_pos(vert.point({}) + .1*vert.offset_dir.cast<double>()*vert.nominal_size());
-    vert.offset_dir.setZero();
+    vert.set_pos(vert.point({}) + .1*vert.offset);
+    vert.offset.setZero();
   }
 }
 
@@ -225,12 +224,15 @@ void Accessible_mesh::_match_topo() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     if (!elems[i_elem].tree) elems[i_elem].active_shape().is_new = true;
   }
+  #pragma omp parallel for
+  for (auto& vert : all_verts) {
+    vert.reset_pos();
+  }
   _offset_vertices();
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
-  #if 0
   Int elems_sz = elems.size();
   for (Int i_element = 0; i_element < elems_sz; ++i_element) {
     auto& elem = elems[i_element];
@@ -268,10 +270,12 @@ void Accessible_mesh::_match_topo() {
         Int inside_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
         Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
         set_vertices(inside);
+        inside.shape().is_new = false;
         elem.face_record[2*i_dim + !i_sign] = inside_sn;
         Int surface_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, bf);
         Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
         set_vertices(surface);
+        surface.shape().is_new = false;
         _connect({&inside, &surface}, Con_dir<Deformed_element>({i_dim, i_dim}, {i_sign, !i_sign}));
         elem.record = 2;
         std::vector<Deformed_element*> matched_elems(6, nullptr);
@@ -288,6 +292,7 @@ void Accessible_mesh::_match_topo() {
               Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, bf);
               Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
               set_vertices(match_elem);
+              match_elem.shape().is_new = true;
               _connect({&surface, &match_elem}, Con_dir<Deformed_element>({j_dim, j_dim}, {j_sign, !j_sign}));
               _connect({&inside,  &match_elem}, Con_dir<Deformed_element>({j_dim, i_dim}, {j_sign, !i_sign}));
               matched_elems[2*j_dim + j_sign] = &match_elem;
@@ -315,6 +320,7 @@ void Accessible_mesh::_match_topo() {
             }
           }
         }
+        #if 1
         Mat<3, 8> orig_pos;
         for (int i_vert = 0; i_vert < 8; ++i_vert) {
           orig_pos(all, i_vert) = shape->vertex(i_vert).point({});
@@ -322,7 +328,7 @@ void Accessible_mesh::_match_topo() {
         for (int i_vert = 0; i_vert < 8; ++i_vert) {
           Mat<3> pos = orig_pos(all, i_vert);
           for (int j_dim = 0; j_dim < 3; ++j_dim) {
-            double offset = .2 + .3*(j_dim == i_dim);
+            double offset = .0 + .5*(j_dim == i_dim);
             int stride = math::pow(2, 2 - j_dim);
             bool j_sign = i_vert/stride%2;
             if ((j_dim == i_dim && j_sign != i_sign) || matched_elems[2*j_dim + j_sign]) {
@@ -331,6 +337,11 @@ void Accessible_mesh::_match_topo() {
           }
           surface.shape().vertex(i_vert).set_pos(pos);
         }
+        #else
+        for (int i_vert = 0; i_vert < 8; ++i_vert) {
+          surface.active_shape().vertex(i_vert).set_pos(shape->vertex(i_vert).point({}));
+        }
+        #endif
         for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
           int k_dim = 3 - j_dim - i_dim;
           for (bool j_sign : {0, 1}) if (matched_elems[2*j_dim + j_sign]) {
@@ -366,6 +377,10 @@ void Accessible_mesh::_match_topo() {
   for (Int i_element = 0; i_element < elems.size(); ++i_element) {
     if (elems[i_element].record == 2) {
       elems[i_element].destroy_shape();
+    } else {
+      for (int i_vert = 0; i_vert < 8; ++i_vert) {
+        elems[i_element].shape().vertex(i_vert).set_pos(elems[i_element].active_shape().vertex(i_vert).point({}));
+      }
     }
   }
   extrude_cons.clear();
@@ -455,8 +470,12 @@ void Accessible_mesh::_match_topo() {
     vert.record.clear();
   }
   purge();
+  _offset_vertices();
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].active_shape().is_new = false;
+  }
   //for (int i_relax = 0; i_relax < 20; ++i_relax) relax(.5);
-  #endif
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {

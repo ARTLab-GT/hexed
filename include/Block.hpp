@@ -156,7 +156,7 @@ class Vertex : public Block {
   //! \details `Block::point` will return this value, unless the vertes is currently `glue()`d.
   std::vector<Int> record; //!< for algorithms to keep notes as they please
 
-  Eigen::Vector<int, 3> offset_dir;
+  Mat<3> offset;
   Int snapped_edge;
   Int snapped_endpoint;
   Mat<3> dijkstra_point; //!< \brief nominal location of this vertex used in Dijkstra's algorithm
