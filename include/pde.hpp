@@ -49,10 +49,18 @@ class Navier_stokes {
     if constexpr (turb == komega) {
       static constexpr double alpha = 13./25.;
       static constexpr double beta_s = 9./100.;
+      static constexpr double beta_0 = 0.0708;
       static constexpr double sigma = 1./2.;
       static constexpr double sigma_s = 3./5.;
       static constexpr double sigma_do = 1./8.;
-      static inline double mu_t_bar() {return 1.;} // mu_t_bar = \alpha^* \rho \bar{k} e^{-\tilde{\omega}_r}
+      static inline double beta() {return beta_0*f_beta();} // \beta = \beta_0 * f_\beta
+      static inline double f_beta() {return (1. + 85.*chi_o())/(1. + 100.*chi_o());} // f_\beta = \frac{1 + 85 \Chi_\omega}{1 + 100 \Chi_\omega}
+      static inline double chi_o() {return std::abs((Omega_ij() * Omega_jk() * S_ki())/std::pow(beta_s * std::exp(state(i_turb_diss)), 3))} // \chi_\omega \def |\frac{\Omega_{ij} \Omega_{jk} S_{ki}}{(\beta^* \omega)^3}|
+      static inline double Omega_ij() {return 0.5 * (veloc_grad(0, 1) - veloc_grad(1, 0));} // \Omega_{ij} = \frac{1}{2} (\frac{\partial U_i}{\partial x_j} - \frac{\partial U_j}{\partial x_i})
+      static inline double Omega_jk() {return 0.5 * (veloc_grad(1, 2) - veloc_grad(2, 1));} // \Omega_{jk} = \frac{1}{2} (\frac{\partial U_j}{\partial x_k} - \frac{\partial U_k}{\partial x_j})
+      static inline double S_ki() {return 0.5 * (veloc_grad(2, 0) + veloc_grad(0, 2));} // S_{ki} = \frac{1}{2} (\frac{\partial U_k}{\partial x_i} + \frac{\partial U_i}{\partial x_k})
+      static inline double mu_t_bar() {return state(i_mass) * std::max(0, state(i_turb_kin_ener)) * std::exp(-real_turb_diss());} // mu_t_bar = \alpha^* \rho \bar{k} e^{-\tilde{\omega}_r}
+      static inline double real_turb_diss() {return 1.} // \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0})
     } 
     Transport_model dyn_visc;
     Transport_model therm_cond;
