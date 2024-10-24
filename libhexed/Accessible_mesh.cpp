@@ -401,15 +401,14 @@ void Accessible_mesh::_match_topo() {
         sign_arr[i_side] = vert.record[6*i_side + 3];
       }
       int rotate = 0;
-      for (int i_dim = 0; i_dim < 3; ++i_dim) if (i_dim != dim_arr[0] && i_dim != dim_arr[1]) {
-        Int np [2];
-        for (int i_side = 0; i_side < 2; ++i_side) {
-          np[i_side] = elem_arr[i_side]->nominal_position()[i_dim]
-                       + (i_dim == vert.record[6*i_side + 4])*(1 - 2*vert.record[6*i_side + 5]);
+      for (int sign : {-1, 1}) {
+        auto inds = vertex_inds(3, {dim_arr, sign_arr, sign});
+        for (int i_vert = 0; i_vert < 4; ++i_vert) {
+          if (   &elem_arr[0]->shape().vertex(inds[0][i_vert])
+              == &elem_arr[1]->shape().vertex(inds[1][i_vert])) {
+            rotate = sign;
+          }
         }
-        rotate += (np[1] - np[0])*math::sign(dim_arr[0] == (dim_arr[1] + 1)%3)
-                                 *math::sign(sign_arr[0] == sign_arr[1])
-                                 *math::sign(dim_arr[0] == dim_arr[1]);
       }
       _connect(elem_arr, {dim_arr, sign_arr, rotate});
     }
