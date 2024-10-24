@@ -146,7 +146,7 @@ void Vertex::reset_pos() {
   Mat<3> p = Mat<3>::Zero();
   int n = 0;
   for (auto elem : _elems.theirs()) if (elem) if (!elem->glued()) {
-    p += elem->nominal_center();
+    p += elem->nominal_position(_get_index(*elem));
     ++n;
   }
   if (n) _pos = p/n;
@@ -481,6 +481,7 @@ Element_shape::Element_shape(int nd, const Basis& b)
 : Block(nd, b.row_size)
 , deformed{false}
 , extruded_direction{Mesh_blocks::no_face}
+, is_new{false}
 , _basis{&b}
 , _i_bf{6}
 , _bf(this)
@@ -531,7 +532,7 @@ Mat<3> Element_shape::nominal_position(int i_vert) const {
     int sign = i_vert/vstride(n_dim(), i_dim)%2;
     pos(i_dim) += sign*_nom_sz;
     if (extruded_direction != Mesh_blocks::no_face && extruded_direction/2 == i_dim && extruded_direction%2 == sign) {
-      pos(i_dim) -= math::sign(sign)*.7*_nom_sz;
+      pos(i_dim) -= math::sign(sign)*_nom_sz;
     }
   }
   return pos;
