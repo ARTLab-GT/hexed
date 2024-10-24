@@ -94,6 +94,7 @@ class Accessible_mesh : public Mesh {
     std::array<Geom_edge::Node, 2> nodes;
   };
   void _record_connections();
+  void _offset_vertices();
   void _match_topo();
 
   public:

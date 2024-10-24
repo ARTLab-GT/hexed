@@ -169,6 +169,11 @@ next::Element_shape& Element::shape() {
   return *_shape;
 }
 
+next::Element_shape& Element::active_shape() {
+  if (fake_shape()) return *fake_shape();
+  return shape();
+}
+
 double* Element::state() {return data.data();}
 double* Element::residual_cache() {return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();}
 double* Element::face(int i_face, bool is_ldg) {return faces[i_face] + is_ldg*params.n_dof()/params.row_size;}

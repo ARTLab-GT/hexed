@@ -44,6 +44,38 @@ namespace dijkstra {
   }
 }
 
+void Accessible_mesh::_offset_vertices() {
+  auto all_verts = _blocks.verts();
+  #pragma omp parallel for
+  for (auto& vert : all_verts) {
+    vert.reset_pos();
+    vert.offset_dir.setZero();
+  }
+  for (auto& con : def.cons) {
+    auto dir = con->get_direction();
+    if (dir.i_dim[0] != dir.i_dim[1]) continue;
+    bool is_new [2] {false, false};
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      is_new[i_side] = con->element(i_side).active_shape().is_new;
+    }
+    if (is_new[0] != is_new[1]) {
+      auto i_verts = vertex_inds(3, dir)[!is_new[0]];
+      for (int i_vert : i_verts) {
+        auto& vert = con->element(!is_new[0]).active_shape().vertex(i_vert);
+        int sign = -math::sign(dir.face_sign[is_new[0]]);
+        int i_dim = dir.i_dim[is_new[0]];
+        HEXED_ASSERT(vert.offset_dir(i_dim) != -sign, "Vertex has opposite faces.");
+        vert.offset_dir(i_dim) = sign;
+      }
+    }
+  }
+  #pragma omp parallel for
+  for (auto& vert : all_verts) {
+    vert.set_pos(vert.point({}) + .1*vert.offset_dir.cast<double>()*vert.nominal_size());
+    vert.offset_dir.setZero();
+  }
+}
+
 void Accessible_mesh::_match_topo() {
   for (int i_relax = 0; i_relax < 20; ++i_relax) relax(.5);
   if (!surf_geom) return;
@@ -191,36 +223,12 @@ void Accessible_mesh::_match_topo() {
   auto& elems = def.elements();
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto shape = elems[i_elem].fake_shape();
-    if (shape) shape->is_new = true;
+    if (!elems[i_elem].tree) elems[i_elem].active_shape().is_new = true;
   }
+  _offset_vertices();
   #pragma omp parallel for
-  for (auto& vert : all_verts) {
-    vert.reset_pos();
-    vert.offset_dir.setZero();
-  }
-  for (auto& con : def.cons) {
-    auto dir = con->get_direction();
-    if (dir.i_dim[0] != dir.i_dim[1]) continue;
-    bool is_new [2] {false, false};
-    for (int i_side = 0; i_side < 2; ++i_side) {
-      if (con->element(i_side).fake_shape()) is_new[i_side] = con->element(i_side).fake_shape()->is_new;
-    }
-    if (is_new[0] != is_new[1]) {
-      auto i_verts = vertex_inds(3, dir)[!is_new[0]];
-      for (int i_vert : i_verts) {
-        auto& vert = con->element(!is_new[0]).fake_shape()->vertex(i_vert);
-        int sign = -math::sign(dir.face_sign[is_new[0]]);
-        int i_dim = dir.i_dim[is_new[0]];
-        HEXED_ASSERT(vert.offset_dir(i_dim) != -sign, "Vertex has opposite faces.");
-        vert.offset_dir(i_dim) = sign;
-      }
-    }
-  }
-  #pragma omp parallel for
-  for (auto& vert : all_verts) {
-    vert.set_pos(vert.point({}) + .1*vert.offset_dir.cast<double>()*vert.nominal_size());
-    vert.offset_dir.setZero();
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].active_shape().is_new = false;
   }
   #if 0
   Int elems_sz = elems.size();
