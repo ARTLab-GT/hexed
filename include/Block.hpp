@@ -122,7 +122,7 @@ class Vertex : public Block {
   void set_pos(Mat<3> p);
   void reset_pos();
   bool mobile() const;
-  double quality_objective() const;
+  void improve_quality();
   int n_elements() const; //!< \brief The number of elements sharing this vertex
   /*! \brief The list of vertices that share an edge with `this`.
    * \details By "share an edge" I mean that they are connected by a geometric edge of an element,
@@ -170,6 +170,11 @@ class Vertex : public Block {
   double dijkstra_arc_len; //!< \brief arc length of the nearest point on the curve
 
   private:
+  struct _Optimization_state {
+    double objective;
+    Mat<3> gradient;
+  };
+  _Optimization_state _compute_state();
   Mat<3> _point(const std::vector<int>&) const override;
   Mat<3> _desired_pos() const;
   int _get_index(const Element_shape&) const;

@@ -152,7 +152,7 @@ void Vertex::reset_pos() {
   if (n) _pos = p/n;
 }
 
-constexpr double jacobian_tolerance = 1e-4;
+constexpr double jacobian_tolerance = 1e-3;
 
 bool Vertex::mobile() const {
   bool m = false;
@@ -160,28 +160,72 @@ bool Vertex::mobile() const {
   return m;
 }
 
-double Vertex::quality_objective() const {
+Vertex::_Optimization_state Vertex::_compute_state() {
+  set_pos(point({}));
+  _Optimization_state state;
+  state.objective = 0;
+  state.gradient.setZero();
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
-  double total = 0;
   for (auto elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
     if (elem->glued()) continue;
     int i_this = _get_index(*elem);
+    double ns = elem->nominal_size();
+    Mat<3, dyn> verts(3, nv);
+    for (int i_vert = 0; i_vert < nv; ++i_vert) {
+      verts(all, i_vert) = elem->vertex(i_vert).point({});
+    }
     // this will still give the right determinant even in 2D where not all the entries are set
     Mat<3, 3> jacobian = Mat<3, 3>::Identity();
+    std::vector<int> i_those(nd + 1);
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      int stride = vstride(nd, i_dim);
-      int i_start = i_this - i_this/stride%2*stride;
-      int i_end = i_start + stride;
-      jacobian(all, i_dim) = elem->vertex(i_end).point({}) - elem->vertex(i_start).point({});
+      i_those[i_dim] = i_this - math::sign(i_this/vstride(nd, i_dim)%2)*vstride(nd, i_dim);
     }
-    jacobian /= elem->nominal_size();
-    double det = jacobian.determinant();
-    if (det <= 0) std::cout << point({}).transpose() << " | " << det << std::endl;
-    total += math::pow((det - 1)/(det - jacobian_tolerance), 2);
+    i_those[nd] = i_this;
+    for (int i_that : i_those) {
+      int grad_sign [3] {};
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        int stride = vstride(nd, i_dim);
+        int i_start = i_that - i_that/stride%2*stride;
+        int i_end = i_start + stride;
+        if (i_this == i_start) grad_sign[i_dim] = -1;
+        if (i_this == i_end) grad_sign[i_dim] = 1;
+        jacobian(all, i_dim) = elem->vertex(i_end).point({}) - elem->vertex(i_start).point({});
+      }
+      jacobian /= ns;
+      double det = jacobian.determinant();
+      HEXED_ASSERT(det > jacobian_tolerance,
+                   format_str(200, "Jacobian determinant %e exceeds minimum of %e.", det, jacobian_tolerance));
+      Mat<3> det_grad = Mat<3>::Zero();
+      for (int j_dim = 0; j_dim < nd; ++j_dim) {
+        Mat<3> temp = jacobian(all, j_dim);
+        jacobian(all, j_dim).setZero();
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          jacobian(i_dim, j_dim) = 1/ns;
+          det_grad(i_dim) += grad_sign[j_dim]*jacobian.determinant();
+          jacobian(i_dim, j_dim) = 0;
+        }
+        jacobian(all, j_dim) = temp;
+      }
+      //state.objective += math::pow((det - 1)/(det - jacobian_tolerance), 2);
+      state.objective += det;
+      state.gradient += det_grad;
+    }
   }
-  return total;
+  return state;
+}
+
+void Vertex::improve_quality() {
+  auto state = _compute_state();
+  double ns = nominal_size();
+  if (state.gradient.norm()*ns < 1e-4*state.objective) return;
+  double eps = 1e-8;
+  set_pos(_pos + eps*ns*state.gradient.normalized());
+  auto new_state = _compute_state();
+  double actual = (new_state.objective - state.objective)/eps/ns;
+  double error = std::abs(actual - state.gradient.norm())/state.objective;
+  if (!(error < 1e-2)) std::cout << error << " " << actual << " " << state.gradient.norm() << std::endl;
 }
 
 int Vertex::n_elements() const {

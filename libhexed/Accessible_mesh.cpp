@@ -204,19 +204,6 @@ void Accessible_mesh::_match_topo() {
         vert = vert->dijkstra_prev_vert;
       } while (vert);
     }
-    if (matched_vertices[i_geom_edge].size()) {
-      Array<double> pos({3, (Int)matched_vertices[i_geom_edge].size()});
-      Array<double> vars({1, (Int)matched_vertices[i_geom_edge].size()});
-      vars = i_geom_edge;
-      for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
-        Mat<3> p = matched_vertices[i_geom_edge][i_vert]->point({});
-        for (int i_dim = 0; i_dim < 3; ++i_dim) {
-          pos(i_dim)[i_vert] = p(i_dim) + rand()%100*1e-4;
-        }
-      }
-      auto vis = Visualizer::create("default", 3, 1, "match_edge" + std::to_string(i_geom_edge), {"i_geom_edge"}, 0., Visualizer::block);
-      vis->write_block(pos(), vars());
-    }
   }
 
   auto& elems = def.elements();
@@ -232,6 +219,21 @@ void Accessible_mesh::_match_topo() {
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
+  }
+  for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+    if (matched_vertices[i_geom_edge].size()) {
+      Array<double> pos({3, (Int)matched_vertices[i_geom_edge].size()});
+      Array<double> vars({1, (Int)matched_vertices[i_geom_edge].size()});
+      vars = i_geom_edge;
+      for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
+        Mat<3> p = matched_vertices[i_geom_edge][i_vert]->point({});
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          pos(i_dim)[i_vert] = p(i_dim) + rand()%100*1e-5;
+        }
+      }
+      auto vis = Visualizer::create("default", 3, 1, "match_edge" + std::to_string(i_geom_edge), {"i_geom_edge"}, 0., Visualizer::block);
+      vis->write_block(pos(), vars());
+    }
   }
   Int elems_sz = elems.size();
   for (Int i_element = 0; i_element < elems_sz; ++i_element) {
@@ -479,7 +481,7 @@ void Accessible_mesh::_match_topo() {
 
   auto new_verts = _blocks.verts();
   for (auto& vert : new_verts) {
-    if (vert.mobile()) vert.quality_objective();
+    if (vert.mobile()) vert.improve_quality();
   }
 }
 
