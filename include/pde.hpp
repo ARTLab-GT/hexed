@@ -53,14 +53,28 @@ class Navier_stokes {
       static constexpr double sigma = 1./2.;
       static constexpr double sigma_s = 3./5.;
       static constexpr double sigma_do = 1./8.;
+      static constexpr double c_lim = 7./8.;
+
       static inline double beta() {return beta_0*f_beta();} // \beta = \beta_0 * f_\beta
       static inline double f_beta() {return (1. + 85.*chi_o())/(1. + 100.*chi_o());} // f_\beta = \frac{1 + 85 \Chi_\omega}{1 + 100 \Chi_\omega}
-      static inline double chi_o() {return std::abs((Omega_ij() * Omega_jk() * S_ki())/std::pow(beta_s * std::exp(state(i_turb_diss)), 3))} // \chi_\omega \def |\frac{\Omega_{ij} \Omega_{jk} S_{ki}}{(\beta^* \omega)^3}|
-      static inline double Omega_ij() {return 0.5 * (veloc_grad(0, 1) - veloc_grad(1, 0));} // \Omega_{ij} = \frac{1}{2} (\frac{\partial U_i}{\partial x_j} - \frac{\partial U_j}{\partial x_i})
-      static inline double Omega_jk() {return 0.5 * (veloc_grad(1, 2) - veloc_grad(2, 1));} // \Omega_{jk} = \frac{1}{2} (\frac{\partial U_j}{\partial x_k} - \frac{\partial U_k}{\partial x_j})
-      static inline double S_ki() {return 0.5 * (veloc_grad(2, 0) + veloc_grad(0, 2));} // S_{ki} = \frac{1}{2} (\frac{\partial U_k}{\partial x_i} + \frac{\partial U_i}{\partial x_k})
+      static inline double chi_o() {return std::abs(((omega() * omega())*S()).sum())/std::pow(beta_s * std::exp(state(i_turb_diss)), 3)} // \chi_\omega \def |\frac{\Omega_{ij} \Omega_{jk} S_{ki}}{(\beta^* \omega)^3}|
+      static inline double omega() {return 0.5 * (veloc_grad - veloc_grad.tranpose());}
+      static inline double S() {return 0.5 * (veloc_grad + veloc_grad.transpose());}
       static inline double mu_t_bar() {return state(i_mass) * std::max(0, state(i_turb_kin_ener)) * std::exp(-real_turb_diss());} // mu_t_bar = \alpha^* \rho \bar{k} e^{-\tilde{\omega}_r}
       static inline double real_turb_diss() {return 1.} // \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0})
+      
+      static inline double sigma_d() {
+	// This expression is not properly scaled by dividing by \rho^2 but it's being compared to 0 so should be okay
+        if (gradient(i_turb_kin_ener, all).dot(std::exp(state(i_turb_diss) * gradient(i_turb_diss, all)) > 0) {
+	  return sigma_do;
+	} else {
+	  return 0.;
+	}
+      }
+
+      //static inline double Omega_ij() {return 0.5 * (veloc_grad(0, 1) - veloc_grad(1, 0));} // \Omega_{ij} = \frac{1}{2} (\frac{\partial U_i}{\partial x_j} - \frac{\partial U_j}{\partial x_i})
+      //static inline double Omega_jk() {return 0.5 * (veloc_grad(1, 2) - veloc_grad(2, 1));} // \Omega_{jk} = \frac{1}{2} (\frac{\partial U_j}{\partial x_k} - \frac{\partial U_k}{\partial x_j})
+      //static inline double S_ki() {return 0.5 * (veloc_grad(2, 0) + veloc_grad(0, 2));} // S_{ki} = \frac{1}{2} (\frac{\partial U_k}{\partial x_i} + \frac{\partial U_i}{\partial x_k})
     } 
     Transport_model dyn_visc;
     Transport_model therm_cond;
