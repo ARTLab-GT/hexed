@@ -9,12 +9,17 @@ const double grad_scale = 1e-6;
     for (int j = 0; j < vert_seq.size(); ++j) { \
       ma = hexed::Mesh_assessment(vert_seq, i, j); \
       double orth = ma.orthogonality; \
+      hexed::Mat<3> lengths = ma.edge_lengths; \
       hexed::Array<double> old_pos {flat_arr(j).copy()}; \
       hexed::Mat<3> vec = hexed::Mat<3>::Random(); \
       flat_arr(j).vector() += grad_scale*vec; \
       ma = hexed::Mesh_assessment(vert_seq, i, j); \
       REQUIRE((ma.orthogonality - orth)/grad_scale == Catch::Approx(vec.dot(ma.grad_orth)).margin(1e-4)); \
       flat_arr(j) = old_pos; \
+      for (int i_dim = 0; i_dim < 3; ++i_dim) { \
+        REQUIRE((ma.edge_lengths(i_dim) - lengths(i_dim))/grad_scale \
+                == Catch::Approx(vec.dot(ma.grad_lengths(i_dim, hexed::all))).margin(1e-4)); \
+      } \
     } \
   } \
 

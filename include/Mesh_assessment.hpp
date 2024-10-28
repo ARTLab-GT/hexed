@@ -12,6 +12,7 @@ struct Mesh_assessment {
   double orthogonality;
   Mat<3> edge_lengths;
   Mat<3> grad_orth;
+  Mat<3, 3> grad_lengths;
 };
 
 }

@@ -6,6 +6,7 @@ Mesh_assessment::Mesh_assessment()
 : orthogonality{1}
 , edge_lengths{Mat<3>::Zero()}
 , grad_orth{Mat<3>::Zero()}
+, grad_lengths{Mat<3, 3>::Zero()}
 {}
 
 Mesh_assessment::Mesh_assessment(next::Sequence<Mat<3>> vertices, int jac_vert, int grad_vert) {
@@ -26,6 +27,7 @@ Mesh_assessment::Mesh_assessment(next::Sequence<Mat<3>> vertices, int jac_vert, 
   }
   orthogonality = edges.determinant();
   grad_orth.setZero();
+  grad_lengths.setZero();
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     Mat<3> dim_grad = edges(all, (i_dim + 1)%3).cross(edges(all, (i_dim + 2)%3));
     dim_grad -= dim_grad.dot(edges(all, i_dim))*edges(all, i_dim);
