@@ -32,6 +32,7 @@ Mesh_assessment::Mesh_assessment(next::Sequence<Mat<3>> vertices, int jac_vert, 
     Mat<3> dim_grad = edges(all, (i_dim + 1)%3).cross(edges(all, (i_dim + 2)%3));
     dim_grad -= dim_grad.dot(edges(all, i_dim))*edges(all, i_dim);
     grad_orth += dim_grad*edge_sensitivity[i_dim]/edge_lengths(i_dim);
+    grad_lengths(i_dim, all) = edge_sensitivity[i_dim]*edges(all, i_dim);
   }
 }
 
