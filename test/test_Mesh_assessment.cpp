@@ -2,7 +2,23 @@
 #include <hexed/Mesh_assessment.hpp>
 #include <hexed/Array.hpp>
 
+const double grad_scale = 1e-6;
+
+#define TEST_GRADIENT \
+  for (int i = 0; i < vert_seq.size(); ++i) { \
+    for (int j = 0; j < vert_seq.size(); ++j) { \
+      ma = hexed::Mesh_assessment(vert_seq, i, j); \
+      double orth = ma.orthogonality; \
+      hexed::Array<double> old_pos {flat_arr(j).copy()}; \
+      hexed::Mat<3> vec = hexed::Mat<3>::Random(); \
+      flat_arr(j).vector() += grad_scale*vec; \
+      ma = hexed::Mesh_assessment(vert_seq, i, j); \
+      REQUIRE((ma.orthogonality - orth)/grad_scale == Catch::Approx(vec.dot(ma.grad_orth)).margin(1e-4)); \
+    } \
+  } \
+
 TEST_CASE("Mesh_assessment") {
+  srand(1011);
   SECTION("2D") {
     hexed::Array<double> vert_arr({2, 2, 3});
     vert_arr = 0;
@@ -24,6 +40,7 @@ TEST_CASE("Mesh_assessment") {
     REQUIRE(ma.orthogonality == Catch::Approx(2./std::sqrt(5.)));
     REQUIRE_THAT(ma.edge_lengths, Catch::Matchers::RangeEquals(hexed::Mat<3>{.125*std::sqrt(5.), .25, 0.},
                                                                hexed::math::Approx_equal(0, 1e-10)));
+    TEST_GRADIENT
   }
   SECTION("3D") {
     hexed::Array<double> vert_arr({2, 2, 2, 3});
@@ -52,5 +69,6 @@ TEST_CASE("Mesh_assessment") {
     REQUIRE_THAT(ma.edge_lengths,
                  Catch::Matchers::RangeEquals(hexed::Mat<3>{1., std::sqrt(1 + .2*.2), 1.},
                                               hexed::math::Approx_equal(0, 1e-10)));
+    TEST_GRADIENT
   }
 }
