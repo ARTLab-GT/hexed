@@ -9,7 +9,7 @@ TEST_CASE("Mesh_assessment") {
     vert_arr(1)(0)[0] = .25;
     vert_arr(1)(1)[0] = .25;
     vert_arr(0)(1)[1] = .25;
-    vert_arr(1)(1)[1] = .5;
+    vert_arr(1)(1)[1] = .375;
     hexed::Array<double> flat_arr = vert_arr.reshaped({hexed::whatever, 3});
     hexed::next::Sequence<hexed::Mat<3>> vert_seq {
       [&](hexed::Int i)->hexed::Mat<3> {return flat_arr(i).vector();},
@@ -22,7 +22,7 @@ TEST_CASE("Mesh_assessment") {
                                                                hexed::math::Approx_equal(0, 1e-10)));
     ma = hexed::Mesh_assessment(vert_seq, 1, 0);
     REQUIRE(ma.orthogonality == Catch::Approx(2./std::sqrt(5.)));
-    REQUIRE_THAT(ma.edge_lengths, Catch::Matchers::RangeEquals(hexed::Mat<3>{.25, .125*std::sqrt(5.), 0.},
+    REQUIRE_THAT(ma.edge_lengths, Catch::Matchers::RangeEquals(hexed::Mat<3>{.125*std::sqrt(5.), .25, 0.},
                                                                hexed::math::Approx_equal(0, 1e-10)));
   }
   SECTION("3D") {
@@ -39,7 +39,7 @@ TEST_CASE("Mesh_assessment") {
     hexed::Array<double> flat_arr = vert_arr.reshaped({hexed::whatever, 3});
     hexed::next::Sequence<hexed::Mat<3>> vert_seq {
       [&](hexed::Int i)->hexed::Mat<3> {return flat_arr(i).vector();},
-      []()->hexed::Int {return 4;},
+      []()->hexed::Int {return 8;},
     };
     hexed::Mesh_assessment ma;
     ma = hexed::Mesh_assessment(vert_seq, 4, 4);
