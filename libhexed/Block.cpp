@@ -1,6 +1,7 @@
 #include <hexed/Block.hpp>
 #include <hexed/Visualizer.hpp>
 #include <hexed/vertex_inds.hpp>
+#include <hexed/Mesh_assessment.hpp>
 
 namespace hexed::next {
 
@@ -154,6 +155,16 @@ void Vertex::reset_pos() {
 
 constexpr double jacobian_tolerance = 1e-3;
 
+double compute_badness(double value, double target, double lower_bound) {
+  return math::pow((value - target)/(value - lower_bound*target), 2);
+}
+
+double deriv_badness(double value, double target, double lower_bound) {
+  double num = value - target;
+  double denom = value - lower_bound*target;
+  return 2*num/denom*(1/denom - num/denom/denom);
+}
+
 bool Vertex::mobile() const {
   bool m = false;
   for (auto elem : _elems.theirs()) if (elem) m = m || (!elem->glued() && elem->deformed);
@@ -163,6 +174,7 @@ bool Vertex::mobile() const {
 Vertex::_Optimization_state Vertex::_compute_state() {
   set_pos(point({}));
   _Optimization_state state;
+  state.feasible = true;
   state.objective = 0;
   state.gradient.setZero();
   int nd = _elems.theirs()[0]->n_dim();
@@ -176,41 +188,28 @@ Vertex::_Optimization_state Vertex::_compute_state() {
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
       verts(all, i_vert) = elem->vertex(i_vert).point({});
     }
-    // this will still give the right determinant even in 2D where not all the entries are set
-    Mat<3, 3> jacobian = Mat<3, 3>::Identity();
+    Sequence<Mat<3>> vert_seq {
+      [&](Int i_vert)->Mat<3> {return verts(all, i_vert);},
+      [&]()->Int {return nv;},
+    };
     std::vector<int> i_those(nd + 1);
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
       i_those[i_dim] = i_this - math::sign(i_this/vstride(nd, i_dim)%2)*vstride(nd, i_dim);
+      HEXED_ASSERT(i_those[i_dim] >= 0 && i_those[i_dim] < nv, "`i_those` out of bounds");
     }
     i_those[nd] = i_this;
     for (int i_that : i_those) {
-      int grad_sign [3] {};
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        int stride = vstride(nd, i_dim);
-        int i_start = i_that - i_that/stride%2*stride;
-        int i_end = i_start + stride;
-        if (i_this == i_start) grad_sign[i_dim] = -1;
-        if (i_this == i_end) grad_sign[i_dim] = 1;
-        jacobian(all, i_dim) = elem->vertex(i_end).point({}) - elem->vertex(i_start).point({});
-      }
-      jacobian /= ns;
-      double det = jacobian.determinant();
-      HEXED_ASSERT(det > jacobian_tolerance,
-                   format_str(200, "Jacobian determinant %e exceeds minimum of %e.", det, jacobian_tolerance));
-      Mat<3> det_grad = Mat<3>::Zero();
-      for (int j_dim = 0; j_dim < nd; ++j_dim) {
-        Mat<3> temp = jacobian(all, j_dim);
-        jacobian(all, j_dim).setZero();
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          jacobian(i_dim, j_dim) = 1/ns;
-          det_grad(i_dim) += grad_sign[j_dim]*jacobian.determinant();
-          jacobian(i_dim, j_dim) = 0;
+      Mesh_assessment ma(vert_seq, i_that, i_this);
+      state.feasible = state.feasible && ma.orthogonality > jacobian_tolerance;
+      for (int i_dim = 0; i_dim < nd; ++i_dim) state.feasible = state.feasible && ma.edge_lengths(i_dim) > jacobian_tolerance;
+      if (state.feasible) {
+        state.objective += compute_badness(ma.orthogonality, 1., jacobian_tolerance);
+        state.gradient += deriv_badness(ma.orthogonality, 1., jacobian_tolerance)*ma.grad_orth;
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          //state.objective += compute_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance);
+          //state.gradient += deriv_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance)*ma.grad_lengths(i_dim, all).transpose();
         }
-        jacobian(all, j_dim) = temp;
       }
-      //state.objective += math::pow((det - 1)/(det - jacobian_tolerance), 2);
-      state.objective += det;
-      state.gradient += det_grad;
     }
   }
   return state;
@@ -219,13 +218,16 @@ Vertex::_Optimization_state Vertex::_compute_state() {
 void Vertex::improve_quality() {
   auto state = _compute_state();
   double ns = nominal_size();
+  HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
   if (state.gradient.norm()*ns < 1e-4*state.objective) return;
   double eps = 1e-8;
-  set_pos(_pos + eps*ns*state.gradient.normalized());
+  set_pos(point({}) + eps*ns*state.gradient.normalized());
   auto new_state = _compute_state();
   double actual = (new_state.objective - state.objective)/eps/ns;
-  double error = std::abs(actual - state.gradient.norm())/state.objective;
-  if (!(error < 1e-2)) std::cout << error << " " << actual << " " << state.gradient.norm() << std::endl;
+  double error = std::abs(actual - state.gradient.norm())/state.gradient.norm();
+  std::cout << error;
+  if (error > 1e-2) std::cout << " " << actual << " " << state.gradient.norm();
+  std::cout << std::endl;
 }
 
 int Vertex::n_elements() const {

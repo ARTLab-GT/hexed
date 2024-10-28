@@ -171,6 +171,7 @@ class Vertex : public Block {
 
   private:
   struct _Optimization_state {
+    bool feasible;
     double objective;
     Mat<3> gradient;
   };
