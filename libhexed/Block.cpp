@@ -224,19 +224,15 @@ void Vertex::improve_quality() {
   double step_sz = .1*ns;
   Mat<3> step_dir = -state.gradient.normalized();
   Mat<3> orig_pos = _point({});
-  bool abandoned = false;
   do {
-    if (step_sz < 1e-10*ns) {
+    if (step_sz < 1e-12*ns) {
       set_pos(orig_pos);
-      std::cerr << "warning: abandoning optimization step" << std::endl;
-      abandoned = true;
       break;
     }
     set_pos(orig_pos + step_sz*step_dir);
     new_state = _compute_state();
     step_sz /= 2;
   } while (!(new_state.feasible && new_state.objective < state.objective));
-  if (!abandoned) std::cerr << "accepting optimization step" << std::endl;
 }
 
 int Vertex::n_elements() const {

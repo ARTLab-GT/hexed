@@ -480,7 +480,7 @@ void Accessible_mesh::_match_topo() {
   //for (int i_relax = 0; i_relax < 20; ++i_relax) relax(.5);
 
   auto new_verts = _blocks.verts();
-  for (int i_relax = 0; i_relax < 5; ++i_relax) {
+  for (int i_relax = 0; i_relax < 20; ++i_relax) {
     for (auto& vert : new_verts) {
       if (vert.mobile()) vert.improve_quality();
     }
