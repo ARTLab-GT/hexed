@@ -203,11 +203,11 @@ Vertex::_Optimization_state Vertex::_compute_state() {
       state.feasible = state.feasible && ma.orthogonality > jacobian_tolerance;
       for (int i_dim = 0; i_dim < nd; ++i_dim) state.feasible = state.feasible && ma.edge_lengths(i_dim) > jacobian_tolerance;
       if (state.feasible) {
-        state.objective += compute_badness(ma.orthogonality, 1., jacobian_tolerance);
-        state.gradient += deriv_badness(ma.orthogonality, 1., jacobian_tolerance)*ma.grad_orth;
+        state.objective += 100*compute_badness(ma.orthogonality, 1., jacobian_tolerance);
+        state.gradient += 100*deriv_badness(ma.orthogonality, 1., jacobian_tolerance)*ma.grad_orth;
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
-          //state.objective += compute_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance);
-          //state.gradient += deriv_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance)*ma.grad_lengths(i_dim, all).transpose();
+          state.objective += compute_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance);
+          state.gradient += deriv_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance)*ma.grad_lengths(i_dim, all).transpose();
         }
       }
     }
@@ -220,14 +220,23 @@ void Vertex::improve_quality() {
   double ns = nominal_size();
   HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
   if (state.gradient.norm()*ns < 1e-4*state.objective) return;
-  double eps = 1e-8;
-  set_pos(point({}) + eps*ns*state.gradient.normalized());
-  auto new_state = _compute_state();
-  double actual = (new_state.objective - state.objective)/eps/ns;
-  double error = std::abs(actual - state.gradient.norm())/state.gradient.norm();
-  std::cout << error;
-  if (error > 1e-2) std::cout << " " << actual << " " << state.gradient.norm();
-  std::cout << std::endl;
+  _Optimization_state new_state;
+  double step_sz = .1*ns;
+  Mat<3> step_dir = -state.gradient.normalized();
+  Mat<3> orig_pos = _point({});
+  bool abandoned = false;
+  do {
+    if (step_sz < 1e-10*ns) {
+      set_pos(orig_pos);
+      std::cerr << "warning: abandoning optimization step" << std::endl;
+      abandoned = true;
+      break;
+    }
+    set_pos(orig_pos + step_sz*step_dir);
+    new_state = _compute_state();
+    step_sz /= 2;
+  } while (!(new_state.feasible && new_state.objective < state.objective));
+  if (!abandoned) std::cerr << "accepting optimization step" << std::endl;
 }
 
 int Vertex::n_elements() const {
