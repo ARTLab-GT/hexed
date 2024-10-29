@@ -168,6 +168,7 @@ double deriv_badness(double value, double target, double lower_bound) {
 bool Vertex::mobile() const {
   bool m = false;
   for (auto elem : _elems.theirs()) if (elem) m = m || (!elem->glued() && elem->deformed);
+  m = m && !glued();
   return m;
 }
 
@@ -201,13 +202,18 @@ Vertex::_Optimization_state Vertex::_compute_state() {
     for (int i_that : i_those) {
       Mesh_assessment ma(vert_seq, i_that, i_this);
       state.feasible = state.feasible && ma.orthogonality > jacobian_tolerance;
-      for (int i_dim = 0; i_dim < nd; ++i_dim) state.feasible = state.feasible && ma.edge_lengths(i_dim) > jacobian_tolerance;
+      for (int i_dim = 0; i_dim < nd; ++i_dim) state.feasible = state.feasible && ma.edge_lengths(i_dim) > jacobian_tolerance*ns;
       if (state.feasible) {
         state.objective += 100*compute_badness(ma.orthogonality, 1., jacobian_tolerance);
         state.gradient += 100*deriv_badness(ma.orthogonality, 1., jacobian_tolerance)*ma.grad_orth;
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
           state.objective += compute_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance);
           state.gradient += deriv_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance)*ma.grad_lengths(i_dim, all).transpose();
+        }
+        if (!glued() && elem->vertex(i_that).glued()) {
+          auto that_state = elem->vertex(i_that)._compute_state();
+          state.objective += that_state.objective;
+          state.feasible = state.feasible && that_state.feasible;
         }
       }
     }
@@ -233,6 +239,35 @@ void Vertex::improve_quality() {
     new_state = _compute_state();
     step_sz /= 2;
   } while (!(new_state.feasible && new_state.objective < state.objective));
+}
+
+void Vertex::move_toward(Mat<3> p) {
+  Mat<3> orig_pos = _point({});
+  auto state = _compute_state();
+  double ns = nominal_size();
+  HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
+  Mat<3> diff = p - orig_pos;
+  double step_sz = diff.norm();
+  double orig_sz = step_sz;
+  diff /= step_sz;
+  _Optimization_state new_state;
+  do {
+    if (step_sz < 1e-12*ns) {
+      set_pos(orig_pos);
+      break;
+    }
+    set_pos(orig_pos + diff*step_sz);
+    new_state = _compute_state();
+    step_sz /= 2;
+  } while (!(new_state.feasible && new_state.objective < 10*state.objective));
+  state = _compute_state();
+  HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria after `move_toward`.");
+}
+
+double Vertex::quality() {
+  auto state = _compute_state();
+  HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
+  return state.objective;
 }
 
 int Vertex::n_elements() const {

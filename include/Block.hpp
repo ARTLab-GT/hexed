@@ -123,6 +123,8 @@ class Vertex : public Block {
   void reset_pos();
   bool mobile() const;
   void improve_quality();
+  void move_toward(Mat<3> pos);
+  double quality();
   int n_elements() const; //!< \brief The number of elements sharing this vertex
   /*! \brief The list of vertices that share an edge with `this`.
    * \details By "share an edge" I mean that they are connected by a geometric edge of an element,

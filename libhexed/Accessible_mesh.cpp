@@ -484,6 +484,104 @@ void Accessible_mesh::_match_topo() {
     for (auto& vert : new_verts) {
       if (vert.mobile()) vert.improve_quality();
     }
+    // snap vertices to extremal boundaries
+    if (tree) {
+      Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);
+      for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
+        auto& con = bound_cons[i_con];
+        int bc_sn = con.bound_cond_serial_n();
+        if (bc_sn < 2*params.n_dim) {
+          int i_dim = bc_sn/2;
+          bool sign = bc_sn%2;
+          std::vector<int> inds = vertex_inds(params.n_dim, {{i_dim, i_dim}, {sign, !sign}})[0];
+          for (int i_vert : inds) {
+            auto& vert = con.element().shape().vertex(i_vert);
+            Mat<3> pos = vert.point({});
+            pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+            vert.move_toward(pos);
+          }
+        }
+      }
+      _stopwatch["relax"]["extremal snapping"].work_units_completed += _n_verts;
+    }
+    if (surf_geom) {
+      Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
+      auto bverts = _blocks.boundary_verts();
+      // snap vertices to surface boundary
+      for (auto& vert : bverts) if (vert.mobile()) {
+        HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
+        Mat<3> pos = vert.point({});
+        auto seq = Eigen::seqN(0, params.n_dim);
+        pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
+        vert.move_toward(pos);
+      }
+      // snap vertices to geometry edges
+      auto edges = surf_geom->edges();
+      auto points = surf_geom->points();
+      #if 1
+      for (Int i_point = 0; i_point < (Int)points.size(); ++i_point) {
+        if (point_matched_vertices[i_point]) point_matched_vertices[i_point]->set_pos(points[i_point]);
+      }
+      for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+        auto& geom_edge = edges[i_geom_edge];
+        Array<double> nodes{geom_edge.nodes()};
+        Int n_points = nodes.shape()[0];
+        for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
+          auto& vert = matched_vertices[i_geom_edge][i_vert].value();
+          if (vert.snapped_endpoint >= 0) {
+            vert.move_toward(nodes(vert.snapped_endpoint*(n_points - 1)).vector());
+          } else {
+            Int nearest = geom_edge.nearest_point(vert.point({}), 2*vert.nominal_size()).index;
+            if (nearest >= 0) vert.move_toward(nodes(nearest).vector());
+          }
+        }
+      }
+      #endif
+      // snaps a `Boundary_block` to the geometry surface
+      auto snap_block = [this](next::Boundary_block& block) {
+        block.reset();
+        Array<double> interior {block.interior().reshaped({whatever, 3})};
+        for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
+          auto p = interior(i_point)(0, params.n_dim).vector();
+          Mat<> p_mat {p};
+          p = surf_geom->nearest_point(p_mat, huge, block.element()->nominal_size()/params.row_size).point();
+        }
+      };
+      // snap edges to the surface (regardless of dimensionality)
+      auto edges_2d = _blocks.edges_2d();
+      #pragma omp parallel for
+      for (auto& edge : edges_2d) snap_block(edge);
+      auto faces_3d = _blocks.faces_3d();
+      #pragma omp parallel for
+      for (auto& face : faces_3d) {
+        for (int i_edge = 0; i_edge < 4; ++i_edge) snap_block(face.edge(i_edge));
+      }
+      // Snap mesh edges to geometry edges.
+      // This has to happen after snapping edges to the surface (which would undo this)
+      // but before snapping faces to the surface
+      // (or else the `reset()` function would be called with incorrect edge data)
+      for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+        auto& geom_edge = edges[i_geom_edge];
+        Array<double> nodes {geom_edge.nodes()};
+        for (auto& edge : matched_edges[i_geom_edge]) {
+          edge.value().reset();
+          Array<double> interior {edge.value().interior()};
+          double max_dist = .5*edge.value().element()->nominal_size();
+          for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
+            Int nearest = geom_edge.nearest_point(interior(i_point).vector(), max_dist).index;
+            if (nearest >= 0) interior(i_point) = nodes(nearest);
+          }
+        }
+      }
+      // snap face interiors (if 3D) to surface
+      #pragma omp parallel for
+      for (auto& face : faces_3d) snap_block(face);
+      _stopwatch["relax"]["surface snapping"].work_units_completed += bverts.size();
+    } else {
+      auto blocks = _blocks.boundary_sides();
+      #pragma omp parallel for
+      for (auto& block : blocks) block.reset();
+    }
   }
 }
 
