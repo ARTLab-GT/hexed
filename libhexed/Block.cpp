@@ -174,10 +174,11 @@ bool Vertex::mobile() const {
   return m;
 }
 
-Vertex::_Optimization_state Vertex::_compute_state() {
+Vertex::_Optimization_state Vertex::_compute_state(std::vector<std::pair<Element_shape*, int>> skip) {
   set_pos(point({}));
   _Optimization_state state;
   state.feasible = true;
+  state.glued_neighbor = false;
   state.objective = 0;
   state.gradient.setZero();
   int nd = _elems.theirs()[0]->n_dim();
@@ -202,18 +203,27 @@ Vertex::_Optimization_state Vertex::_compute_state() {
     }
     i_those[nd] = i_this;
     for (int i_that : i_those) {
+      bool include_obj = true;
+      for (auto s : skip) include_obj = include_obj && !(s.first == elem && s.second == i_that);
       Mesh_assessment ma(vert_seq, i_that, i_this);
       state.feasible = state.feasible && ma.orthogonality > jacobian_tolerance;
-      for (int i_dim = 0; i_dim < nd; ++i_dim) state.feasible = state.feasible && ma.edge_lengths(i_dim) > jacobian_tolerance*ns;
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        state.feasible = state.feasible && ma.edge_lengths(i_dim) > jacobian_tolerance*ns;
+      }
       if (state.feasible) {
-        state.objective += 10*compute_badness(ma.orthogonality, 1., jacobian_tolerance);
+        state.objective += include_obj*10*compute_badness(ma.orthogonality, 1., jacobian_tolerance);
         state.gradient += 10*deriv_badness(ma.orthogonality, 1., jacobian_tolerance)*ma.grad_orth;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          state.objective += compute_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance);
-          state.gradient += deriv_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance)*ma.grad_lengths(i_dim, all).transpose();
+          //state.objective += include_obj*compute_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance);
+          //state.gradient += deriv_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance)
+          //                  *ma.grad_lengths(i_dim, all).transpose();
         }
         if (!glued() && elem->vertex(i_that).glued()) {
-          auto that_state = elem->vertex(i_that)._compute_state();
+          auto that_skip = skip;
+          that_skip.emplace_back(elem, i_this);
+          that_skip.emplace_back(elem, i_that);
+          state.glued_neighbor = true;
+          auto that_state = elem->vertex(i_that)._compute_state(that_skip);
           state.objective += that_state.objective;
           state.gradient += .5*that_state.gradient;
           state.feasible = state.feasible && that_state.feasible;
@@ -236,8 +246,10 @@ void Vertex::improve_quality() {
     Mat<3> orig_pos = _point({});
     do {
       if (step_sz < 1e-12*ns) {
+        std::cout << "  step rejected in `improve_quality`. feasible = " << new_state.feasible << " glued neighbor = " << state.glued_neighbor
+                  << " objective = " << new_state.objective << " prev objective = " << state.objective << " diff = " << new_state.objective - state.objective
+                  << " gradient = " << state.gradient.norm()*ns << std::endl;
         set_pos(orig_pos);
-        std::cout << "  step rejected in `improve_quality`" << std::endl;
         break;
       }
       set_pos(orig_pos + step_sz*step_dir);

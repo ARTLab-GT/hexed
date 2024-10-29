@@ -177,10 +177,11 @@ class Vertex : public Block {
   private:
   struct _Optimization_state {
     bool feasible;
+    bool glued_neighbor;
     double objective;
     Mat<3> gradient;
   };
-  _Optimization_state _compute_state();
+  _Optimization_state _compute_state(std::vector<std::pair<Element_shape*, int>> skip = {});
   Mat<3> _point(const std::vector<int>&) const override;
   Mat<3> _desired_pos() const;
   int _get_index(const Element_shape&) const;
