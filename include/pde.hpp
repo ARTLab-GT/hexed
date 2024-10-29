@@ -48,6 +48,7 @@ class Navier_stokes {
 
     if constexpr (turb == komega) {
       static constexpr double alpha = 13./25.;
+      static constexpr double alpha_s = 1.; //TODO: Fix definition of alpha_s
       static constexpr double beta_s = 9./100.;
       static constexpr double beta_0 = 0.0708;
       static constexpr double sigma = 1./2.;
@@ -61,7 +62,6 @@ class Navier_stokes {
       static inline double omega() {return 0.5 * (veloc_grad - veloc_grad.tranpose());}
       static inline double S() {return 0.5 * (veloc_grad + veloc_grad.transpose());}
       static inline double mu_t_bar() {return state(i_mass) * std::max(0, state(i_turb_kin_ener)) * std::exp(-real_turb_diss());} // mu_t_bar = \alpha^* \rho \bar{k} e^{-\tilde{\omega}_r}
-      static inline double real_turb_diss() {return 1.} // \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0})
       
       static inline double sigma_d() {
 	// This expression is not properly scaled by dividing by \rho^2 but it's being compared to 0 so should be okay
@@ -170,6 +170,7 @@ class Navier_stokes {
       double dyn_visc_coef;
       double therm_cond_coef;
       double energy_cond;
+      double mu_t_bar;
       //! \todo __Carter:__ Compute whatever variables you need for the turbulent fluxes
       //! which might also be needed for source terms and/or the time step calculation.
       void compute_scalars_diff() {
@@ -180,6 +181,8 @@ class Navier_stokes {
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
+	double real_turb_diss = state(i_turb_diss); //TODO: \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0}
+        mu_t_bar = alpha_s * state(i_mass) * std::max(0, state(i_turb_kin_ener)) * std::exp(-real_turb_diss);	
       }
 
       Mat<n_extrap, n_dim> gradient;
@@ -206,14 +209,31 @@ class Navier_stokes {
         flux_diff_phys(i_energy, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
         if constexpr (turb == k_omega) {
           // these turbulent fluxes are wrong
-          flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s*mu_t_bar())/mass*gradient(i_turb_kin_ener, all); //Needs mu_t_bar implementation
-	  flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma*mu_t_bar())/mass*gradient(i_turb_diss, all);
+          flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s*mu_t_bar)/mass*gradient(i_turb_kin_ener, all); //Needs mu_t_bar implementation
+	  flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma*mu_t_bar)/mass*gradient(i_turb_diss, all);
 	  //flux_diff_phys(i_turb_kin_ener, all) = -dyn_visc_coef/mass*gradient(i_turb_kin_ener, all);
           //flux_diff_phys(i_turb_diss, all) = -dyn_visc_coef/mass*gradient(i_turb_diss, all);
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
       }
 
+      double beta;
+      void compute_scalars_source() {
+        Mat<n_dim, n_dim> omega = 0.5 * (veloc_grad - veloc_grad.tranpose());
+	Mat<n_dim, n_dim> S = 0.5 * (veloc_grad + veloc_grad.tranpose());
+
+	double sum = 0;
+	for (int i = 0; i < n_dim; ++i){
+          for (int j = 0; j < n_dim; ++j){
+            for (int k = 0; k < n_dim; ++k){
+              sum += omega(i, j)*omega(j, k)*S(k, i);
+	    }
+	  }
+	}
+	double chi_o = std::abs(sum)/std::pow(beta_s * std::exp(state(i_turb_diss)), 3);
+        double f_beta = (1. + 85.*chi_o)/(1. + 100.*chi_o);
+        beta = beta_0 * f_beta;
+      };
       Mat<n_update> source;
       /*! \todo __Carter:__ compute the turbulent source terms.
        * Set `source(i_turb_kin_ener)` and `source(i_turb_diss)` to contain the source terms of
