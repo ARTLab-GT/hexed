@@ -124,8 +124,11 @@ class Vertex : public Block {
   bool mobile() const;
   void improve_quality();
   void move_toward(Mat<3> pos);
+  void set_target(Mat<3> pos);
+  void set_target();
   double quality();
   int n_elements() const; //!< \brief The number of elements sharing this vertex
+  inline bool is_surface() const {return _edges.theirs().size();}
   /*! \brief The list of vertices that share an edge with `this`.
    * \details By "share an edge" I mean that they are connected by a geometric edge of an element,
    * not necessarily and actual `Edge` object.
@@ -183,6 +186,8 @@ class Vertex : public Block {
   int _get_index(const Element_shape&) const;
   Mat<3> _pos;
   Mat<3> _update;
+  Mat<3> _target;
+  bool _has_target;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;
   Reciprocal_ptr<Vertex, Element_shape> _glued_to;

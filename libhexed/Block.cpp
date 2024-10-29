@@ -65,6 +65,8 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , snapped_endpoint{-1}
 , _pos{pos}
 , _update{Mat<3>::Zero()}
+, _target{Mat<3>::Zero()}
+, _has_target{false}
 , _edges(this)
 , _elems(this)
 , _glued_to(this)
@@ -153,7 +155,7 @@ void Vertex::reset_pos() {
   if (n) _pos = p/n;
 }
 
-constexpr double jacobian_tolerance = 1e-3;
+constexpr double jacobian_tolerance = 1e-2;
 
 double compute_badness(double value, double target, double lower_bound) {
   return math::pow((value - target)/(value - lower_bound*target), 2);
@@ -204,8 +206,8 @@ Vertex::_Optimization_state Vertex::_compute_state() {
       state.feasible = state.feasible && ma.orthogonality > jacobian_tolerance;
       for (int i_dim = 0; i_dim < nd; ++i_dim) state.feasible = state.feasible && ma.edge_lengths(i_dim) > jacobian_tolerance*ns;
       if (state.feasible) {
-        state.objective += 100*compute_badness(ma.orthogonality, 1., jacobian_tolerance);
-        state.gradient += 100*deriv_badness(ma.orthogonality, 1., jacobian_tolerance)*ma.grad_orth;
+        state.objective += 10*compute_badness(ma.orthogonality, 1., jacobian_tolerance);
+        state.gradient += 10*deriv_badness(ma.orthogonality, 1., jacobian_tolerance)*ma.grad_orth;
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
           state.objective += compute_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance);
           state.gradient += deriv_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance)*ma.grad_lengths(i_dim, all).transpose();
@@ -213,6 +215,7 @@ Vertex::_Optimization_state Vertex::_compute_state() {
         if (!glued() && elem->vertex(i_that).glued()) {
           auto that_state = elem->vertex(i_that)._compute_state();
           state.objective += that_state.objective;
+          state.gradient += .5*that_state.gradient;
           state.feasible = state.feasible && that_state.feasible;
         }
       }
@@ -225,20 +228,21 @@ void Vertex::improve_quality() {
   auto state = _compute_state();
   double ns = nominal_size();
   HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
-  if (state.gradient.norm()*ns < 1e-4*state.objective) return;
-  _Optimization_state new_state;
-  double step_sz = .1*ns;
-  Mat<3> step_dir = -state.gradient.normalized();
-  Mat<3> orig_pos = _point({});
-  do {
-    if (step_sz < 1e-12*ns) {
-      set_pos(orig_pos);
-      break;
-    }
-    set_pos(orig_pos + step_sz*step_dir);
-    new_state = _compute_state();
-    step_sz /= 2;
-  } while (!(new_state.feasible && new_state.objective < state.objective));
+  if (state.gradient.norm()*ns > 1e-4*state.objective) {
+    _Optimization_state new_state;
+    double step_sz = .1*ns;
+    Mat<3> step_dir = -state.gradient.normalized();
+    Mat<3> orig_pos = _point({});
+    do {
+      if (step_sz < 1e-12*ns) {
+        set_pos(orig_pos);
+        break;
+      }
+      set_pos(orig_pos + step_sz*step_dir);
+      new_state = _compute_state();
+      step_sz /= 2;
+    } while (!(new_state.feasible && new_state.objective < state.objective));
+  }
 }
 
 void Vertex::move_toward(Mat<3> p) {
@@ -252,16 +256,23 @@ void Vertex::move_toward(Mat<3> p) {
   diff /= step_sz;
   _Optimization_state new_state;
   do {
-    if (step_sz < 1e-12*ns) {
+    if (step_sz < 1e-14*ns) {
       set_pos(orig_pos);
       break;
     }
     set_pos(orig_pos + diff*step_sz);
     new_state = _compute_state();
     step_sz /= 2;
-  } while (!(new_state.feasible && new_state.objective < 10*state.objective));
-  state = _compute_state();
-  HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria after `move_toward`.");
+  } while (!(new_state.feasible && new_state.objective < 100*state.objective));
+}
+
+void Vertex::set_target(Mat<3> p) {
+  _target = p;
+  _has_target = true;
+}
+
+void Vertex::set_target() {
+  _has_target = false;
 }
 
 double Vertex::quality() {

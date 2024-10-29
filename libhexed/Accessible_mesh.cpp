@@ -480,8 +480,9 @@ void Accessible_mesh::_match_topo() {
   //for (int i_relax = 0; i_relax < 20; ++i_relax) relax(.5);
 
   auto new_verts = _blocks.verts();
-  for (int i_relax = 0; i_relax < 20; ++i_relax) {
-    for (auto& vert : new_verts) {
+  for (int i_relax = 0; i_relax < 80; ++i_relax) {
+    auto bverts = _blocks.boundary_verts();
+    for (auto& vert : bverts) {
       if (vert.mobile()) vert.improve_quality();
     }
     // snap vertices to extremal boundaries
@@ -506,7 +507,6 @@ void Accessible_mesh::_match_topo() {
     }
     if (surf_geom) {
       Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
-      auto bverts = _blocks.boundary_verts();
       // snap vertices to surface boundary
       for (auto& vert : bverts) if (vert.mobile()) {
         HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
@@ -581,6 +581,9 @@ void Accessible_mesh::_match_topo() {
       auto blocks = _blocks.boundary_sides();
       #pragma omp parallel for
       for (auto& block : blocks) block.reset();
+    }
+    for (auto& vert : new_verts) {
+      if (vert.mobile()) if (!vert.is_surface()) vert.improve_quality();
     }
   }
 }
