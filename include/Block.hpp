@@ -123,7 +123,7 @@ class Vertex : public Block {
   void reset_pos();
   bool mobile() const;
   void improve_quality();
-  void move_toward(Mat<3> pos);
+  void move_toward(std::function<Mat<3>(Mat<3>)> target);
   void set_target(Mat<3> pos);
   void set_target();
   double quality();

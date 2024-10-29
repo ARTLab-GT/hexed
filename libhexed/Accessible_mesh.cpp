@@ -480,11 +480,14 @@ void Accessible_mesh::_match_topo() {
   //for (int i_relax = 0; i_relax < 20; ++i_relax) relax(.5);
 
   auto new_verts = _blocks.verts();
-  for (int i_relax = 0; i_relax < 80; ++i_relax) {
-    auto bverts = _blocks.boundary_verts();
-    for (auto& vert : bverts) {
+  for (int i_relax = 0; i_relax < 20; ++i_relax) {
+    for (auto& vert : new_verts) {
       if (vert.mobile()) vert.improve_quality();
     }
+  }
+  for (int i_relax = 0; i_relax < 80; ++i_relax) {
+    std::cout << "iteration " << i_relax << std::endl;
+    auto bverts = _blocks.boundary_verts();
     // snap vertices to extremal boundaries
     if (tree) {
       Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);
@@ -497,9 +500,11 @@ void Accessible_mesh::_match_topo() {
           std::vector<int> inds = vertex_inds(params.n_dim, {{i_dim, i_dim}, {sign, !sign}})[0];
           for (int i_vert : inds) {
             auto& vert = con.element().shape().vertex(i_vert);
-            Mat<3> pos = vert.point({});
-            pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
-            vert.move_toward(pos);
+            auto target = [&](Mat<3> pos) {
+              pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+              return pos;
+            };
+            vert.move_toward(target);
           }
         }
       }
@@ -508,12 +513,14 @@ void Accessible_mesh::_match_topo() {
     if (surf_geom) {
       Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
       // snap vertices to surface boundary
-      for (auto& vert : bverts) if (vert.mobile()) {
+      for (auto& vert : bverts) if (vert.mobile() && vert.snapped_edge == -1) {
         HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
-        Mat<3> pos = vert.point({});
-        auto seq = Eigen::seqN(0, params.n_dim);
-        pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
-        vert.move_toward(pos);
+        auto target = [&](Mat<3> pos) {
+          auto seq = Eigen::seqN(0, params.n_dim);
+          pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
+          return pos;
+        };
+        vert.move_toward(target);
       }
       // snap vertices to geometry edges
       auto edges = surf_geom->edges();
@@ -529,10 +536,10 @@ void Accessible_mesh::_match_topo() {
         for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
           auto& vert = matched_vertices[i_geom_edge][i_vert].value();
           if (vert.snapped_endpoint >= 0) {
-            vert.move_toward(nodes(vert.snapped_endpoint*(n_points - 1)).vector());
+            vert.move_toward([&](Mat<3>)->Mat<3>{return nodes(vert.snapped_endpoint*(n_points - 1)).vector();});
           } else {
             Int nearest = geom_edge.nearest_point(vert.point({}), 2*vert.nominal_size()).index;
-            if (nearest >= 0) vert.move_toward(nodes(nearest).vector());
+            if (nearest >= 0) vert.move_toward([&](Mat<3>)->Mat<3>{return nodes(nearest).vector();});
           }
         }
       }

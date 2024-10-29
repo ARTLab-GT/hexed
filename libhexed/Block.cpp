@@ -208,7 +208,7 @@ Vertex::_Optimization_state Vertex::_compute_state() {
       if (state.feasible) {
         state.objective += 10*compute_badness(ma.orthogonality, 1., jacobian_tolerance);
         state.gradient += 10*deriv_badness(ma.orthogonality, 1., jacobian_tolerance)*ma.grad_orth;
-        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
           state.objective += compute_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance);
           state.gradient += deriv_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance)*ma.grad_lengths(i_dim, all).transpose();
         }
@@ -228,7 +228,8 @@ void Vertex::improve_quality() {
   auto state = _compute_state();
   double ns = nominal_size();
   HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
-  if (state.gradient.norm()*ns > 1e-4*state.objective) {
+  //if (state.gradient.norm()*ns > 1e-4*state.objective) {
+  if (true) {
     _Optimization_state new_state;
     double step_sz = .1*ns;
     Mat<3> step_dir = -state.gradient.normalized();
@@ -236,6 +237,7 @@ void Vertex::improve_quality() {
     do {
       if (step_sz < 1e-12*ns) {
         set_pos(orig_pos);
+        std::cout << "  step rejected in `improve_quality`" << std::endl;
         break;
       }
       set_pos(orig_pos + step_sz*step_dir);
@@ -245,25 +247,43 @@ void Vertex::improve_quality() {
   }
 }
 
-void Vertex::move_toward(Mat<3> p) {
+void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
   Mat<3> orig_pos = _point({});
   auto state = _compute_state();
   double ns = nominal_size();
   HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
-  Mat<3> diff = p - orig_pos;
-  double step_sz = diff.norm();
-  double orig_sz = step_sz;
-  diff /= step_sz;
+  Mat<3> improve_dir = -state.gradient.normalized();
+  double improve_sz = .1*ns;
+  Mat<3> target = get_target(orig_pos);
+  Mat<3> snap_dir = target - orig_pos;
+  double snap_sz = snap_dir.norm();
+  double orig_dist = snap_sz;
+  snap_dir /= snap_sz;
   _Optimization_state new_state;
   do {
-    if (step_sz < 1e-14*ns) {
-      set_pos(orig_pos);
+    if (improve_sz < 1e-12*ns) {
+      _pos = orig_pos;
+      std::cout << "  improvement step rejected in `move_toward`" << std::endl;
       break;
     }
-    set_pos(orig_pos + diff*step_sz);
+    Mat<3> improved_pos = orig_pos + improve_sz*improve_dir;
+    _pos = improved_pos;
     new_state = _compute_state();
-    step_sz /= 2;
-  } while (!(new_state.feasible && new_state.objective < 100*state.objective));
+    improve_sz /= 2;
+    target = get_target(improved_pos);
+    if (new_state.feasible && new_state.objective < state.objective) {
+      do {
+        if (snap_sz < 1e-14*ns) {
+          _pos = improved_pos;
+          std::cout << "    snapping step rejected in `move_toward`" << std::endl;
+          break;
+        }
+        _pos = improved_pos + snap_sz*snap_dir;
+        new_state = _compute_state();
+        snap_sz /= 2;
+      } while (!(new_state.feasible && new_state.objective < 10*state.objective));
+    }
+  } while (!(new_state.feasible && (target - _pos).norm() <= orig_dist + 1e-8*ns));
 }
 
 void Vertex::set_target(Mat<3> p) {
