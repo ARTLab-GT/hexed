@@ -220,9 +220,9 @@ Vertex::_Optimization_state Vertex::_compute_state(std::vector<_Gradient_entry> 
         state.objective += (!skip_obj)*10*compute_badness(ma.orthogonality, 1., jacobian_tolerance);
         state.gradient += (!skip_grad)*10*deriv_badness(ma.orthogonality, 1., jacobian_tolerance)*ma.grad_orth;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          //state.objective += include_obj*compute_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance);
-          //state.gradient += deriv_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance)
-          //                  *ma.grad_lengths(i_dim, all).transpose();
+          state.objective += (!skip_obj)*compute_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance);
+          state.gradient += (!skip_grad)*deriv_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance)
+                            *ma.grad_lengths(i_dim, all).transpose();
         }
         Vertex& that_vert = elem->vertex(i_that);
         if (!glued() && that_vert.glued()) {
