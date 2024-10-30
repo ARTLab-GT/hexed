@@ -175,13 +175,19 @@ class Vertex : public Block {
   double dijkstra_arc_len; //!< \brief arc length of the nearest point on the curve
 
   private:
-  struct _Optimization_state {
-    bool feasible;
-    bool glued_neighbor;
-    double objective;
-    Mat<3> gradient;
+  struct _Gradient_entry {
+    Element_shape* elem;
+    int i;
+    int j;
   };
-  _Optimization_state _compute_state(std::vector<std::pair<Element_shape*, int>> skip = {});
+  struct _Optimization_state {
+    bool feasible = false;
+    bool glued_neighbor = false;
+    double objective = huge;
+    Mat<3> gradient = Mat<3>::Zero();
+    std::vector<_Gradient_entry> skip;
+  };
+  _Optimization_state _compute_state(std::vector<_Gradient_entry> skip = {});
   Mat<3> _point(const std::vector<int>&) const override;
   Mat<3> _desired_pos() const;
   int _get_index(const Element_shape&) const;

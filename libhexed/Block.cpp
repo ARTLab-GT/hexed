@@ -174,16 +174,17 @@ bool Vertex::mobile() const {
   return m;
 }
 
-Vertex::_Optimization_state Vertex::_compute_state(std::vector<std::pair<Element_shape*, int>> skip) {
+Vertex::_Optimization_state Vertex::_compute_state(std::vector<_Gradient_entry> skip) {
   set_pos(point({}));
   _Optimization_state state;
   state.feasible = true;
   state.glued_neighbor = false;
   state.objective = 0;
   state.gradient.setZero();
+  state.skip = skip;
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
-  for (auto elem : _elems.theirs()) {
+  for (Element_shape* elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
     if (elem->glued()) continue;
     int i_this = _get_index(*elem);
@@ -203,30 +204,38 @@ Vertex::_Optimization_state Vertex::_compute_state(std::vector<std::pair<Element
     }
     i_those[nd] = i_this;
     for (int i_that : i_those) {
-      bool include_obj = true;
-      for (auto s : skip) include_obj = include_obj && !(s.first == elem && s.second == i_that);
+      bool skip_obj = false;
+      bool skip_grad = false;
+      for (auto s : state.skip) if (s.elem == elem) {
+        skip_obj = skip_obj || s.i == i_that;
+        skip_grad = skip_grad || (s.i == i_that && s.j == i_this);
+      }
+      if (!skip_grad) state.skip.emplace_back(elem, i_that, i_this);
       Mesh_assessment ma(vert_seq, i_that, i_this);
       state.feasible = state.feasible && ma.orthogonality > jacobian_tolerance;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         state.feasible = state.feasible && ma.edge_lengths(i_dim) > jacobian_tolerance*ns;
       }
       if (state.feasible) {
-        state.objective += include_obj*10*compute_badness(ma.orthogonality, 1., jacobian_tolerance);
-        state.gradient += 10*deriv_badness(ma.orthogonality, 1., jacobian_tolerance)*ma.grad_orth;
+        state.objective += (!skip_obj)*10*compute_badness(ma.orthogonality, 1., jacobian_tolerance);
+        state.gradient += (!skip_grad)*10*deriv_badness(ma.orthogonality, 1., jacobian_tolerance)*ma.grad_orth;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
           //state.objective += include_obj*compute_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance);
           //state.gradient += deriv_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance)
           //                  *ma.grad_lengths(i_dim, all).transpose();
         }
-        if (!glued() && elem->vertex(i_that).glued()) {
-          auto that_skip = skip;
-          that_skip.emplace_back(elem, i_this);
-          that_skip.emplace_back(elem, i_that);
-          state.glued_neighbor = true;
-          auto that_state = elem->vertex(i_that)._compute_state(that_skip);
-          state.objective += that_state.objective;
-          state.gradient += .5*that_state.gradient;
-          state.feasible = state.feasible && that_state.feasible;
+        Vertex& that_vert = elem->vertex(i_that);
+        if (!glued() && that_vert.glued()) {
+          bool coupled = false;
+          for (auto e : _elems.theirs()) coupled = coupled || (!e->glued() && e == that_vert._glued_to.get());
+          if (coupled) {
+            state.glued_neighbor = true;
+            auto that_state = that_vert._compute_state(state.skip);
+            state.objective += that_state.objective;
+            state.gradient += .5*that_state.gradient;
+            state.feasible = state.feasible && that_state.feasible;
+            state.skip = that_state.skip;
+          }
         }
       }
     }
@@ -246,6 +255,13 @@ void Vertex::improve_quality() {
     Mat<3> orig_pos = _point({});
     do {
       if (step_sz < 1e-12*ns) {
+        HEXED_ASSERT(!new_state.feasible, "feasible step rejected (suspect incorrect gradient)");
+        #if 0
+        if (new_state.feasible) {
+          #pragma omp critical
+          std::cerr << "Warning: feasible step rejected (suspect incorrect gradient)" << std::endl;
+        }
+        #endif
         std::cout << "  step rejected in `improve_quality`. feasible = " << new_state.feasible << " glued neighbor = " << state.glued_neighbor
                   << " objective = " << new_state.objective << " prev objective = " << state.objective << " diff = " << new_state.objective - state.objective
                   << " gradient = " << state.gradient.norm()*ns << std::endl;
