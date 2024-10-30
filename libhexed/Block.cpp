@@ -247,8 +247,7 @@ void Vertex::improve_quality() {
   auto state = _compute_state();
   double ns = nominal_size();
   HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
-  //if (state.gradient.norm()*ns > 1e-4*state.objective) {
-  if (true) {
+  if (state.gradient.norm()*ns > 1e-6*state.objective) {
     _Optimization_state new_state;
     double step_sz = .1*ns;
     Mat<3> step_dir = -state.gradient.normalized();
@@ -283,10 +282,8 @@ void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
   Mat<3> improve_dir = -state.gradient.normalized();
   double improve_sz = .1*ns;
   Mat<3> target = get_target(orig_pos);
-  Mat<3> snap_dir = target - orig_pos;
-  double snap_sz = snap_dir.norm();
-  double orig_dist = snap_sz;
-  snap_dir /= snap_sz;
+  double orig_dist = (target - orig_pos).norm();
+  bool improved = false;
   _Optimization_state new_state;
   do {
     if (improve_sz < 1e-12*ns) {
@@ -297,11 +294,15 @@ void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
     Mat<3> improved_pos = orig_pos + improve_sz*improve_dir;
     _pos = improved_pos;
     new_state = _compute_state();
+    improved = new_state.objective < state.objective;
     improve_sz /= 2;
-    target = get_target(improved_pos);
-    if (new_state.feasible && new_state.objective < state.objective) {
+    if (new_state.feasible && improved) {
+      target = get_target(improved_pos);
+      Mat<3> snap_dir = target - improved_pos;
+      double snap_sz = snap_dir.norm();
+      snap_dir /= snap_sz;
       do {
-        if (snap_sz < 1e-14*ns) {
+        if (snap_sz <= 1e-3*orig_dist) {
           _pos = improved_pos;
           std::cout << "    snapping step rejected in `move_toward`" << std::endl;
           break;
@@ -311,7 +312,7 @@ void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
         snap_sz /= 2;
       } while (!(new_state.feasible && new_state.objective < 10*state.objective));
     }
-  } while (!(new_state.feasible && (target - _pos).norm() <= orig_dist + 1e-8*ns));
+  } while (!(new_state.feasible && improved && (target - _pos).norm() <= orig_dist + 1e-8*ns));
 }
 
 void Vertex::set_target(Mat<3> p) {
