@@ -513,37 +513,32 @@ void Accessible_mesh::_match_topo() {
     if (surf_geom) {
       Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
       // snap vertices to surface boundary
-      for (auto& vert : bverts) if (vert.mobile() && vert.snapped_edge == -1) {
+      for (auto& vert : bverts) if (vert.mobile()) {
         HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
-        auto target = [&](Mat<3> pos) {
-          auto seq = Eigen::seqN(0, params.n_dim);
-          pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
-          return pos;
-        };
-        vert.move_toward(target);
-      }
-      // snap vertices to geometry edges
-      auto edges = surf_geom->edges();
-      auto points = surf_geom->points();
-      #if 1
-      for (Int i_point = 0; i_point < (Int)points.size(); ++i_point) {
-        if (point_matched_vertices[i_point]) point_matched_vertices[i_point]->set_pos(points[i_point]);
-      }
-      for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
-        auto& geom_edge = edges[i_geom_edge];
-        Array<double> nodes{geom_edge.nodes()};
-        Int n_points = nodes.shape()[0];
-        for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
-          auto& vert = matched_vertices[i_geom_edge][i_vert].value();
-          if (vert.snapped_endpoint >= 0) {
-            vert.move_toward([&](Mat<3>)->Mat<3>{return nodes(vert.snapped_endpoint*(n_points - 1)).vector();});
+        if (vert.snapped_edge == -1) {
+          auto target = [&](Mat<3> pos) {
+            auto seq = Eigen::seqN(0, params.n_dim);
+            pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
+            return pos;
+          };
+          vert.move_toward(target);
+        } else {
+          auto& geom_edge = edges[vert.snapped_edge];
+          Array<double> nodes{geom_edge.nodes()};
+          Int n_points = nodes.shape()[0];
+          if (vert.snapped_endpoint == -1) {
+            auto target = [&](Mat<3> pos)->Mat<3> {
+              Int nearest = geom_edge.nearest_point(pos, 8*vert.nominal_size()).index;
+              HEXED_ASSERT(nearest >= 0, "Nearest point on edge not found.");
+              return nodes(nearest).vector();
+            };
+            vert.move_toward(target);
           } else {
-            Int nearest = geom_edge.nearest_point(vert.point({}), 2*vert.nominal_size()).index;
-            if (nearest >= 0) vert.move_toward([&](Mat<3>)->Mat<3>{return nodes(nearest).vector();});
+            Mat<3> t = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
+            vert.move_toward([t](Mat<3>){return t;});
           }
         }
       }
-      #endif
       // snaps a `Boundary_block` to the geometry surface
       auto snap_block = [this](next::Boundary_block& block) {
         block.reset();
