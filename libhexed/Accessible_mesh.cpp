@@ -485,7 +485,7 @@ void Accessible_mesh::_match_topo() {
       if (vert.mobile()) vert.improve_quality();
     }
   }
-  for (int i_relax = 0; i_relax < 80; ++i_relax) {
+  for (int i_relax = 0; i_relax < 120; ++i_relax) {
     std::cout << "iteration " << i_relax << std::endl;
     auto bverts = _blocks.boundary_verts();
     // snap vertices to extremal boundaries
