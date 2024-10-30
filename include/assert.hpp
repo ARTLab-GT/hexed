@@ -87,7 +87,7 @@ void throw_critical(const char* message) {
  * Defaults to `std::runtime_error`.
  */
 #define HEXED_THROW(message, ...) { \
-  assert::throw_critical<__VA_ARGS__>(format_str(1000, \
+  hexed::assert::throw_critical<__VA_ARGS__>(hexed::format_str(1000, \
     "%s\n" \
     "  At: line %d of `%s`\n" \
     "  In: %s", \
@@ -100,7 +100,7 @@ void throw_critical(const char* message) {
  */
 #define HEXED_ASSERT(expression, message, ...) { \
   if (!(expression)) { \
-    HEXED_THROW(format_str(1000, \
+    HEXED_THROW(hexed::format_str(1000, \
       "%s\n" \
       "  Assertion `%s` failed in `%s`.\n", \
       std::string(message).c_str(), #expression, __FUNCTION__) \
