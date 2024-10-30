@@ -255,12 +255,6 @@ void Vertex::improve_quality() {
     do {
       if (step_sz < 1e-12*ns) {
         HEXED_ASSERT(!new_state.feasible, "feasible step rejected (suspect incorrect gradient)");
-        #if 0
-        if (new_state.feasible) {
-          #pragma omp critical
-          std::cerr << "Warning: feasible step rejected (suspect incorrect gradient)" << std::endl;
-        }
-        #endif
         std::cout << "  step rejected in `improve_quality`. feasible = " << new_state.feasible << " glued neighbor = " << state.glued_neighbor
                   << " objective = " << new_state.objective << " prev objective = " << state.objective << " diff = " << new_state.objective - state.objective
                   << " gradient = " << state.gradient.norm()*ns << std::endl;
@@ -300,9 +294,11 @@ void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
       target = get_target(improved_pos);
       Mat<3> snap_dir = target - improved_pos;
       double snap_sz = snap_dir.norm();
+      double orig_snap_sz = snap_sz;
+      if (snap_sz < 1e-12*ns) continue;
       snap_dir /= snap_sz;
       do {
-        if (snap_sz <= 1e-3*orig_dist) {
+        if (snap_sz < 1e-3*orig_snap_sz) {
           _pos = improved_pos;
           std::cout << "    snapping step rejected in `move_toward`" << std::endl;
           break;
@@ -312,7 +308,7 @@ void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
         snap_sz /= 2;
       } while (!(new_state.feasible && new_state.objective < 10*state.objective));
     }
-  } while (!(new_state.feasible && improved && (target - _pos).norm() <= orig_dist + 1e-8*ns));
+  } while (!(new_state.feasible && improved && (target - _pos).norm() < orig_dist + 1e-8*ns));
 }
 
 void Vertex::set_target(Mat<3> p) {
