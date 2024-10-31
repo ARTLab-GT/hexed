@@ -488,6 +488,9 @@ void Accessible_mesh::_match_topo() {
   for (int i_relax = 0; i_relax < 120; ++i_relax) {
     std::cout << "iteration " << i_relax << std::endl;
     auto bverts = _blocks.boundary_verts();
+    for (auto& vert : bverts) {
+      if (vert.mobile()) vert.improve_quality();
+    }
     // snap vertices to extremal boundaries
     if (tree) {
       Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);
