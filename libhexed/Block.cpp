@@ -360,12 +360,11 @@ void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
   }
   {
     state = _compute_state();
-    double factor = 1e4/ns;
     Mat<3> target = get_target(orig_pos);
     Mat<3> snap_vec = target - orig_pos;
     double dist = snap_vec.norm();
-    state.objective += factor*dist*dist;
-    Mat<3> dir = -state.gradient + factor*2*snap_vec;
+    state.objective += distance_weight*dist*dist;
+    Mat<3> dir = -state.gradient + distance_weight*2*snap_vec;
     if (dir.norm()*ns < 1e-6*state.objective) return;
     dir.normalize();
     double sz = .1*ns;
@@ -380,12 +379,14 @@ void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
       }
       _pos = orig_pos + sz*dir;
       new_state = _compute_state();
-      new_state.objective += factor*(_pos - target).squaredNorm();
+      new_state.objective += distance_weight*(_pos - target).squaredNorm();
       sz /= 2;
     } while (!(new_state.feasible && new_state.objective < state.objective));
   }
   #endif
 }
+
+double Vertex::distance_weight = 0;
 
 void Vertex::set_target(Mat<3> p) {
   _target = p;

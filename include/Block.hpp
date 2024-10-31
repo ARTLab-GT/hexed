@@ -174,6 +174,7 @@ class Vertex : public Block {
   double dijkstra_curve_dist_sq; //!< \brief squared distance from the curve
   double dijkstra_arc_len; //!< \brief arc length of the nearest point on the curve
   Mat<3> debug_pos;
+  static double distance_weight;
 
   private:
   struct _Gradient_entry {

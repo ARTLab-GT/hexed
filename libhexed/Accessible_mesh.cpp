@@ -485,7 +485,11 @@ void Accessible_mesh::_match_topo() {
       if (vert.mobile()) vert.improve_quality();
     }
   }
-  for (int i_relax = 0; i_relax < 240; ++i_relax) {
+  next::Vertex::distance_weight = 1;
+  for (int i_weight = 0; i_weight < 5; ++i_weight) {
+    next::Vertex::distance_weight *= 10;
+    std::cout << "distance weight: " << next::Vertex::distance_weight << std::endl;
+  for (int i_relax = 0; i_relax < 100; ++i_relax) {
     std::cout << "iteration " << i_relax << std::endl;
     auto bverts = _blocks.boundary_verts();
     #if 0
@@ -592,6 +596,7 @@ void Accessible_mesh::_match_topo() {
     for (auto& vert : new_verts) {
       if (vert.mobile()) if (!vert.is_surface()) vert.improve_quality();
     }
+  }
   }
   #if 0
   for (auto& vert : new_verts) {
