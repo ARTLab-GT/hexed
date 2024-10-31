@@ -155,7 +155,8 @@ void Vertex::reset_pos() {
   if (n) _pos = p/n;
 }
 
-constexpr double jacobian_tolerance = 1e-2;
+constexpr double ortho_tolerance = 1e-3;
+constexpr double edge_tolerance = 1e-3;
 
 double compute_badness(double value, double target, double lower_bound) {
   return math::pow((value - target)/(value - lower_bound*target), 2);
@@ -212,16 +213,16 @@ Vertex::_Optimization_state Vertex::_compute_state(std::vector<_Gradient_entry> 
       }
       if (!skip_grad) state.skip.emplace_back(elem, i_that, i_this);
       Mesh_assessment ma(vert_seq, i_that, i_this);
-      state.feasible = state.feasible && ma.orthogonality > jacobian_tolerance;
+      state.feasible = state.feasible && ma.orthogonality > ortho_tolerance;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state.feasible = state.feasible && ma.edge_lengths(i_dim) > jacobian_tolerance*ns;
+        state.feasible = state.feasible && ma.edge_lengths(i_dim) > edge_tolerance*ns;
       }
       if (state.feasible) {
-        state.objective += (!skip_obj)*10*compute_badness(ma.orthogonality, 1., jacobian_tolerance);
-        state.gradient += (!skip_grad)*10*deriv_badness(ma.orthogonality, 1., jacobian_tolerance)*ma.grad_orth;
+        state.objective += (!skip_obj)*10*compute_badness(ma.orthogonality, 1., ortho_tolerance);
+        state.gradient += (!skip_grad)*10*deriv_badness(ma.orthogonality, 1., ortho_tolerance)*ma.grad_orth;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          state.objective += (!skip_obj)*compute_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance);
-          state.gradient += (!skip_grad)*deriv_badness(ma.edge_lengths(i_dim), ns, jacobian_tolerance)
+          state.objective += (!skip_obj)*compute_badness(ma.edge_lengths(i_dim), ns, edge_tolerance);
+          state.gradient += (!skip_grad)*deriv_badness(ma.edge_lengths(i_dim), ns, edge_tolerance)
                             *ma.grad_lengths(i_dim, all).transpose();
         }
         Vertex& that_vert = elem->vertex(i_that);
@@ -252,6 +253,7 @@ void Vertex::improve_quality() {
     double step_sz = .1*ns;
     Mat<3> step_dir = -state.gradient.normalized();
     Mat<3> orig_pos = _point({});
+    debug_pos = orig_pos + step_dir*.01*ns;
     do {
       if (step_sz < 1e-12*ns) {
         HEXED_ASSERT(!new_state.feasible, "feasible step rejected (suspect incorrect gradient)");
@@ -278,6 +280,8 @@ void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
   Mat<3> target = get_target(orig_pos);
   double orig_dist = (target - orig_pos).norm();
   bool improved = false;
+  bool set_debug = true;
+  debug_pos = orig_pos + improve_dir*.01*ns;
   _Optimization_state new_state;
   do {
     if (improve_sz < 1e-12*ns) {
@@ -291,6 +295,10 @@ void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
     improved = new_state.objective < state.objective;
     improve_sz /= 2;
     if (new_state.feasible && improved) {
+      if (!set_debug) {
+        debug_pos = improved_pos;
+        set_debug = true;
+      }
       target = get_target(improved_pos);
       Mat<3> snap_dir = target - improved_pos;
       double snap_sz = snap_dir.norm();

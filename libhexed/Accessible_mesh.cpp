@@ -588,6 +588,11 @@ void Accessible_mesh::_match_topo() {
       if (vert.mobile()) if (!vert.is_surface()) vert.improve_quality();
     }
   }
+  #if 0
+  for (auto& vert : new_verts) {
+    vert.set_pos(vert.debug_pos);
+  }
+  #endif
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
