@@ -218,13 +218,16 @@ Vertex::_Optimization_state Vertex::_compute_state(std::vector<_Gradient_entry> 
         state.feasible = state.feasible && ma.edge_lengths(i_dim) > edge_tolerance*ns;
       }
       if (state.feasible) {
+        Vertex& that_vert = elem->vertex(i_that);
         double orth_diff = ma.orthogonality - ortho_tolerance;
-        state.objective += (!skip_obj)*1./orth_diff;
-        state.gradient += (!skip_grad)*1.*(-1/orth_diff/orth_diff)*ma.grad_orth;
+        //double factor = that_vert.is_surface() ? 10. : 1.;
+        double factor = 1;
+        state.objective += (!skip_obj)*factor*1./orth_diff;
+        state.gradient += (!skip_grad)*factor*1.*(-1/orth_diff/orth_diff)*ma.grad_orth;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
           #if 1
-          state.objective += (!skip_obj)*compute_badness(ma.edge_lengths(i_dim), ns, edge_tolerance);
-          state.gradient += (!skip_grad)*deriv_badness(ma.edge_lengths(i_dim), ns, edge_tolerance)
+          state.objective += (!skip_obj)*factor*compute_badness(ma.edge_lengths(i_dim), ns, edge_tolerance);
+          state.gradient += (!skip_grad)*factor*deriv_badness(ma.edge_lengths(i_dim), ns, edge_tolerance)
                             *ma.grad_lengths(i_dim, all).transpose();
           #else
           double len = ma.edge_lengths(i_dim)/ns;
@@ -234,7 +237,6 @@ Vertex::_Optimization_state Vertex::_compute_state(std::vector<_Gradient_entry> 
                             *ma.grad_lengths(i_dim, all).transpose();
           #endif
         }
-        Vertex& that_vert = elem->vertex(i_that);
         if (!glued() && that_vert.glued()) {
           bool coupled = false;
           for (auto e : _elems.theirs()) coupled = coupled || (!e->glued() && e == that_vert._glued_to.get());
@@ -358,23 +360,29 @@ void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
   }
   {
     state = _compute_state();
+    double factor = 1e4/ns;
     Mat<3> target = get_target(orig_pos);
-    Mat<3> snap_dir = target - orig_pos;
-    double snap_sz = snap_dir.norm();
-    double orig_snap_sz = snap_sz;
-    if (snap_sz < 1e-12*ns) return;
-    snap_dir /= snap_sz;
+    Mat<3> snap_vec = target - orig_pos;
+    double dist = snap_vec.norm();
+    state.objective += factor*dist*dist;
+    Mat<3> dir = -state.gradient + factor*2*snap_vec;
+    if (dir.norm()*ns < 1e-6*state.objective) return;
+    dir.normalize();
+    double sz = .1*ns;
     _Optimization_state new_state;
     do {
-      if (snap_sz < 1e-3*orig_snap_sz) {
+      if (sz < 1e-12*ns) {
         _pos = orig_pos;
-        std::cout << "    snapping step rejected in `move_toward`" << std::endl;
+        std::cout << "  improvement step rejected in `move_toward`. feasible = " << new_state.feasible << " glued neighbor = " << state.glued_neighbor
+                  << " objective = " << new_state.objective << " prev objective = " << state.objective << " diff = " << new_state.objective - state.objective
+                  << " gradient = " << state.gradient.norm()*ns << std::endl;
         break;
       }
-      _pos = orig_pos + snap_sz*snap_dir;
+      _pos = orig_pos + sz*dir;
       new_state = _compute_state();
-      snap_sz /= 2;
-    } while (!(new_state.feasible && new_state.objective < 10*state.objective));
+      new_state.objective += factor*(_pos - target).squaredNorm();
+      sz /= 2;
+    } while (!(new_state.feasible && new_state.objective < state.objective));
   }
   #endif
 }

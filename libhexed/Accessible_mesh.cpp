@@ -480,17 +480,19 @@ void Accessible_mesh::_match_topo() {
   //for (int i_relax = 0; i_relax < 20; ++i_relax) relax(.5);
 
   auto new_verts = _blocks.verts();
-  for (int i_relax = 0; i_relax < 20; ++i_relax) {
+  for (int i_relax = 0; i_relax < 0; ++i_relax) {
     for (auto& vert : new_verts) {
       if (vert.mobile()) vert.improve_quality();
     }
   }
-  for (int i_relax = 0; i_relax < 120; ++i_relax) {
+  for (int i_relax = 0; i_relax < 240; ++i_relax) {
     std::cout << "iteration " << i_relax << std::endl;
     auto bverts = _blocks.boundary_verts();
+    #if 0
     for (auto& vert : bverts) {
       if (vert.mobile()) vert.improve_quality();
     }
+    #endif
     // snap vertices to extremal boundaries
     if (tree) {
       Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);
