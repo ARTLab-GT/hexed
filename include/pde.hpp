@@ -48,7 +48,7 @@ class Navier_stokes {
 
     if constexpr (turb == komega) {
       static constexpr double alpha = 13./25.;
-      static constexpr double alpha_s = 1.; //TODO: Fix definition of alpha_s
+      static constexpr double alpha_s = 1.; //TODO: Confirm definition of alpha_s
       static constexpr double beta_s = 9./100.;
       static constexpr double beta_0 = 0.0708;
       static constexpr double sigma = 1./2.;
@@ -56,12 +56,6 @@ class Navier_stokes {
       static constexpr double sigma_do = 1./8.;
       static constexpr double c_lim = 7./8.;
 
-      static inline double beta() {return beta_0*f_beta();} // \beta = \beta_0 * f_\beta
-      static inline double f_beta() {return (1. + 85.*chi_o())/(1. + 100.*chi_o());} // f_\beta = \frac{1 + 85 \Chi_\omega}{1 + 100 \Chi_\omega}
-      static inline double chi_o() {return std::abs(((omega() * omega())*S()).sum())/std::pow(beta_s * std::exp(state(i_turb_diss)), 3)} // \chi_\omega \def |\frac{\Omega_{ij} \Omega_{jk} S_{ki}}{(\beta^* \omega)^3}|
-      static inline double omega() {return 0.5 * (veloc_grad - veloc_grad.tranpose());}
-      static inline double S() {return 0.5 * (veloc_grad + veloc_grad.transpose());}
-      static inline double mu_t_bar() {return state(i_mass) * std::max(0, state(i_turb_kin_ener)) * std::exp(-real_turb_diss());} // mu_t_bar = \alpha^* \rho \bar{k} e^{-\tilde{\omega}_r}
       
       static inline double sigma_d() {
 	// This expression is not properly scaled by dividing by \rho^2 but it's being compared to 0 so should be okay
@@ -72,9 +66,6 @@ class Navier_stokes {
 	}
       }
 
-      //static inline double Omega_ij() {return 0.5 * (veloc_grad(0, 1) - veloc_grad(1, 0));} // \Omega_{ij} = \frac{1}{2} (\frac{\partial U_i}{\partial x_j} - \frac{\partial U_j}{\partial x_i})
-      //static inline double Omega_jk() {return 0.5 * (veloc_grad(1, 2) - veloc_grad(2, 1));} // \Omega_{jk} = \frac{1}{2} (\frac{\partial U_j}{\partial x_k} - \frac{\partial U_k}{\partial x_j})
-      //static inline double S_ki() {return 0.5 * (veloc_grad(2, 0) + veloc_grad(0, 2));} // S_{ki} = \frac{1}{2} (\frac{\partial U_k}{\partial x_i} + \frac{\partial U_i}{\partial x_k})
     } 
     Transport_model dyn_visc;
     Transport_model therm_cond;
@@ -181,8 +172,9 @@ class Navier_stokes {
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
-	double real_turb_diss = state(i_turb_diss); //TODO: \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0}
-        mu_t_bar = alpha_s * state(i_mass) * std::max(0, state(i_turb_kin_ener)) * std::exp(-real_turb_diss);	
+	double real_turb_diss = state(i_turb_diss)/mass; //TODO: \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0}
+        double k_bar = std::max(0, state(i_turb_kin_ener)/mass);
+        mu_t_bar = alpha_s * state(i_mass) * k_bar * std::exp(-real_turb_diss);	
       }
 
       Mat<n_extrap, n_dim> gradient;
@@ -199,6 +191,7 @@ class Navier_stokes {
         Mat<n_update, n_dim> flux_diff_phys; // flux in physical space
         Mat<n_dim> veloc = mmtm/mass;
         Mat<n_dim, n_dim> veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
+	//TODO: Update Stress term with k from Bassi?
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
                                    + (bulk_av*mass - 2./3.*dyn_visc_coef)
                                      *veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
@@ -208,29 +201,26 @@ class Navier_stokes {
                                       + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
         flux_diff_phys(i_energy, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
         if constexpr (turb == k_omega) {
-          // these turbulent fluxes are wrong
           flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s*mu_t_bar)/mass*gradient(i_turb_kin_ener, all); //Needs mu_t_bar implementation
 	  flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma*mu_t_bar)/mass*gradient(i_turb_diss, all);
-	  //flux_diff_phys(i_turb_kin_ener, all) = -dyn_visc_coef/mass*gradient(i_turb_kin_ener, all);
-          //flux_diff_phys(i_turb_diss, all) = -dyn_visc_coef/mass*gradient(i_turb_diss, all);
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
       }
 
       double beta;
       void compute_scalars_source() {
-        Mat<n_dim, n_dim> omega = 0.5 * (veloc_grad - veloc_grad.tranpose());
-	Mat<n_dim, n_dim> S = 0.5 * (veloc_grad + veloc_grad.tranpose());
+        Mat<n_dim, n_dim> omega = 0.5 * (veloc_grad - veloc_grad.transpose());
+	Mat<n_dim, n_dim> S = 0.5 * (veloc_grad + veloc_grad.transpose());
 
 	double sum = 0;
-	for (int i = 0; i < n_dim; ++i){
-          for (int j = 0; j < n_dim; ++j){
+	for (int i = 0; i < n_dim; ++i) {
+          for (int j = 0; j < n_dim; ++j) {
             for (int k = 0; k < n_dim; ++k){
               sum += omega(i, j)*omega(j, k)*S(k, i);
 	    }
 	  }
 	}
-	double chi_o = std::abs(sum)/std::pow(beta_s * std::exp(state(i_turb_diss)), 3);
+	double chi_o = std::abs(sum)/std::pow(beta_s * std::exp(state(i_turb_diss)/mass), 3);
         double f_beta = (1. + 85.*chi_o)/(1. + 100.*chi_o);
         beta = beta_0 * f_beta;
       };
@@ -244,10 +234,12 @@ class Navier_stokes {
           source.setZero();
         }
         if constexpr (turb == k_omega) {
-          // these source terms are wrong
-          source(i_energy) = beta_s * state(i_mass) * std::max(0, state(i_turb_kin_ener)); //Add in exponent for dissipation
-	  source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
-          source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
+          source(i_energy) = beta_s * state(i_mass) * k_bar * std::exp(real_turb_diss);
+          source(i_turb_kin_ener) = -beta_s * mass * k_bar * std::exp(real_turb_diss); //TODO: tau_ij term
+          source(i_turb_diss) = -beta * mass * std::exp(real_turb_diss) //TODO: tau_ij term and \partial \omega / \partial x_k 
+          //these source terms are wrong
+	  //source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
+          //source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
         }
       }
 
