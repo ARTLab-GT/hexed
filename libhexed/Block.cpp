@@ -378,6 +378,7 @@ void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
         break;
       }
       _pos = orig_pos + sz*dir;
+      target = get_target(_pos);
       new_state = _compute_state();
       new_state.objective += distance_weight*(_pos - target).squaredNorm();
       sz /= 2;
