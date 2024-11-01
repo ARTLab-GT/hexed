@@ -486,10 +486,10 @@ void Accessible_mesh::_match_topo() {
     }
   }
   next::Vertex::distance_weight = 1;
-  for (int i_weight = 0; i_weight < 5; ++i_weight) {
+  for (int i_weight = 0; i_weight < 6; ++i_weight) {
     next::Vertex::distance_weight *= 10;
     std::cout << "distance weight: " << next::Vertex::distance_weight << std::endl;
-  for (int i_relax = 0; i_relax < 100; ++i_relax) {
+  for (int i_relax = 0; i_relax < 200; ++i_relax) {
     std::cout << "iteration " << i_relax << std::endl;
     auto bverts = _blocks.boundary_verts();
     #if 0
