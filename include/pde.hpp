@@ -46,27 +46,15 @@ class Navier_stokes {
     static constexpr int i_laplacian_art_visc = n_update + 1;
     static constexpr double heat_rat = 1.4;
 
-    if constexpr (turb == komega) {
-      static constexpr double alpha = 13./25.;
-      static constexpr double alpha_s = 1.; //TODO: Confirm definition of alpha_s
-      static constexpr double beta_s = 9./100.;
-      static constexpr double beta_0 = 0.0708;
-      static constexpr double sigma = 1./2.;
-      static constexpr double sigma_s = 3./5.;
-      static constexpr double sigma_do = 1./8.;
-      static constexpr double c_lim = 7./8.;
+    static constexpr double alpha = 13./25.;
+    static constexpr double alpha_s = 1.; //TODO: Confirm definition of alpha_s
+    static constexpr double beta_s = 9./100.;
+    static constexpr double beta_0 = 0.0708;
+    static constexpr double sigma = 1./2.;
+    static constexpr double sigma_s = 3./5.;
+    static constexpr double sigma_do = 1./8.;
+    static constexpr double c_lim = 7./8.;
 
-      
-      static inline double sigma_d() {
-	// This expression is not properly scaled by dividing by \rho^2 but it's being compared to 0 so should be okay
-        if (gradient(i_turb_kin_ener, all).dot(std::exp(state(i_turb_diss) * gradient(i_turb_diss, all)) > 0) {
-	  return sigma_do;
-	} else {
-	  return 0.;
-	}
-      }
-
-    } 
     Transport_model dyn_visc;
     Transport_model therm_cond;
 
@@ -162,6 +150,8 @@ class Navier_stokes {
       double therm_cond_coef;
       double energy_cond;
       double mu_t_bar;
+      double real_turb_diss;
+      double k_bar;
       //! \todo __Carter:__ Compute whatever variables you need for the turbulent fluxes
       //! which might also be needed for source terms and/or the time step calculation.
       void compute_scalars_diff() {
@@ -172,13 +162,27 @@ class Navier_stokes {
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
-	double real_turb_diss = state(i_turb_diss)/mass; //TODO: \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0}
-        double k_bar = std::max(0, state(i_turb_kin_ener)/mass);
-        mu_t_bar = alpha_s * state(i_mass) * k_bar * std::exp(-real_turb_diss);	
+	real_turb_diss = state(i_turb_diss)/mass; //TODO: \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0}
+        k_bar = std::max(0., state(i_turb_kin_ener)/mass);
+	mu_t_bar = alpha_s * state(i_turb_kin_ener) * std::exp(-real_turb_diss);
+	mu_t_bar = std::min(1e-1, mu_t_bar);
+        //mu_t_bar = alpha_s * state(i_mass) * k_bar * std::exp(-real_turb_diss);	
+	//std::cout << mu_t_bar << "\n";
+	if (std::isnan(mu_t_bar)) {
+          std::cout << "mu_t_bar is nan; Alpha_s: " << alpha_s 
+          << "; Turb_kin_ener: " << state(i_turb_kin_ener) 
+          << "; Turb diss: " << -real_turb_diss 
+          << "; Exp turb: " << std::exp(-real_turb_diss) << std::endl << std::flush;
+	  throw std::runtime_error("Mu_t_bar is nan");
+	}
+	if (std::isnan(sigma_s)) {
+	  std::cout << "sigma_s is nan\n";
+	}
       }
 
       Mat<n_extrap, n_dim> gradient;
       Mat<n_update, n_dim_flux> flux_diff;
+      Mat<n_dim, n_dim> veloc_grad;
       /*! \todo __Carter:__ modify `flux_diff` to include turbulence modeling.
        * Set `flux_diff_phys(i_turb_kin_ener)` and `flux_diff_phys(i_turb_diss)` to contain the source terms of
        * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
@@ -190,7 +194,7 @@ class Navier_stokes {
         auto mmtm = state(seq);
         Mat<n_update, n_dim> flux_diff_phys; // flux in physical space
         Mat<n_dim> veloc = mmtm/mass;
-        Mat<n_dim, n_dim> veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
+        veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
 	//TODO: Update Stress term with k from Bassi?
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
                                    + (bulk_av*mass - 2./3.*dyn_visc_coef)
@@ -201,8 +205,10 @@ class Navier_stokes {
                                       + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
         flux_diff_phys(i_energy, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
         if constexpr (turb == k_omega) {
-          flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s*mu_t_bar)/mass*gradient(i_turb_kin_ener, all); //Needs mu_t_bar implementation
-	  flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma*mu_t_bar)/mass*gradient(i_turb_diss, all);
+          flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s*mu_t_bar)/mass*gradient(i_turb_kin_ener, all);
+          flux_diff_phys(i_turb_diss, all) = -dyn_visc_coef/mass*gradient(i_turb_diss, all);
+          //flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s*mu_t_bar)/mass*gradient(i_turb_kin_ener, all); //Needs mu_t_bar implementation
+	  //flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma*mu_t_bar)/mass*gradient(i_turb_diss, all);
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
       }
@@ -234,12 +240,12 @@ class Navier_stokes {
           source.setZero();
         }
         if constexpr (turb == k_omega) {
-          source(i_energy) = beta_s * state(i_mass) * k_bar * std::exp(real_turb_diss);
-          source(i_turb_kin_ener) = -beta_s * mass * k_bar * std::exp(real_turb_diss); //TODO: tau_ij term
-          source(i_turb_diss) = -beta * mass * std::exp(real_turb_diss) //TODO: tau_ij term and \partial \omega / \partial x_k 
+          //source(i_energy) = beta_s * state(i_mass) * k_bar * std::exp(real_turb_diss);
+          //source(i_turb_kin_ener) = -beta_s * mass * k_bar * std::exp(real_turb_diss); //TODO: tau_ij term
+          //source(i_turb_diss) = -beta * mass * std::exp(real_turb_diss); //TODO: tau_ij term and \partial \omega / \partial x_k 
           //these source terms are wrong
-	  //source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
-          //source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
+	  source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
+          source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
         }
       }
 
