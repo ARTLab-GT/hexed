@@ -255,37 +255,7 @@ Vertex::_Optimization_state Vertex::_compute_state(std::vector<_Gradient_entry> 
   return state;
 }
 
-void Vertex::improve_quality() {
-  auto state = _compute_state();
-  double ns = nominal_size();
-  HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
-  if (state.gradient.norm()*ns > 1e-6*state.objective) {
-    _Optimization_state new_state;
-    double step_sz = .1*ns;
-    Mat<3> step_dir = -state.gradient.normalized();
-    Mat<3> orig_pos = _point({});
-    debug_pos = orig_pos + step_dir*.01*ns;
-    do {
-      if (step_sz < 1e-12*ns) {
-        HEXED_ASSERT(!new_state.feasible, "feasible step rejected (suspect incorrect gradient)");
-        std::cout << "  step rejected in `improve_quality`. feasible = " << new_state.feasible << " glued neighbor = " << state.glued_neighbor
-                  << " objective = " << new_state.objective << " prev objective = " << state.objective << " diff = " << new_state.objective - state.objective
-                  << " gradient = " << state.gradient.norm()*ns << std::endl;
-        set_pos(orig_pos);
-        break;
-      }
-      set_pos(orig_pos + step_sz*step_dir);
-      new_state = _compute_state();
-      step_sz /= 2;
-    } while (!(new_state.feasible && new_state.objective < state.objective));
-  }
-}
-
 void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
-  Mat<3> orig_pos = _point({});
-  auto state = _compute_state();
-  double ns = nominal_size();
-  HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
   #if 0
   Mat<3> improve_dir = -state.gradient.normalized();
   double improve_sz = .1*ns;
@@ -329,65 +299,41 @@ void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
       } while (!(new_state.feasible && new_state.objective < 10*state.objective));
     }
   } while (!(new_state.feasible && improved && (target - _pos).norm() < orig_dist + 1e-8*ns));
-  #else
-  if (0) {
-    state = _compute_state();
-    Mat<3> orig_pos = _point({});
-    Mat<3> target = get_target(orig_pos);
-    double ns = nominal_size();
-    HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
-    if (state.gradient.norm()*ns > 1e-6*state.objective) {
-      _Optimization_state new_state;
-      double step_sz = .1*ns;
-      Mat<3> step_dir = -state.gradient.normalized();
-      step_dir += (target - orig_pos).normalized();
-      step_dir.normalize();
-      debug_pos = orig_pos + step_dir*.01*ns;
-      do {
-        if (step_sz < 1e-12*ns) {
-          HEXED_ASSERT(!new_state.feasible, "feasible step rejected (suspect incorrect gradient)");
-          std::cout << "  improvement step rejected in `move_toward`. feasible = " << new_state.feasible << " glued neighbor = " << state.glued_neighbor
-                    << " objective = " << new_state.objective << " prev objective = " << state.objective << " diff = " << new_state.objective - state.objective
-                    << " gradient = " << state.gradient.norm()*ns << std::endl;
-          set_pos(orig_pos);
-          break;
-        }
-        set_pos(orig_pos + step_sz*step_dir);
-        new_state = _compute_state();
-        step_sz /= 2;
-      } while (!(new_state.feasible && new_state.objective < state.objective));
-    }
-  }
-  {
-    state = _compute_state();
-    Mat<3> target = get_target(orig_pos);
-    Mat<3> snap_vec = target - orig_pos;
-    double dist = snap_vec.norm();
-    state.objective += distance_weight*dist*dist;
-    Mat<3> dir = -state.gradient + distance_weight*2*snap_vec;
-    if (dir.norm()*ns < 1e-6*state.objective) return;
-    dir.normalize();
-    double sz = .1*ns;
-    _Optimization_state new_state;
-    do {
-      if (sz < 1e-12*ns) {
-        _pos = orig_pos;
-        std::cout << "  improvement step rejected in `move_toward`. feasible = " << new_state.feasible << " glued neighbor = " << state.glued_neighbor
-                  << " objective = " << new_state.objective << " prev objective = " << state.objective << " diff = " << new_state.objective - state.objective
-                  << " gradient = " << state.gradient.norm()*ns << std::endl;
-        break;
-      }
-      _pos = orig_pos + sz*dir;
-      target = get_target(_pos);
-      new_state = _compute_state();
-      new_state.objective += distance_weight*(_pos - target).squaredNorm();
-      sz /= 2;
-    } while (!(new_state.feasible && new_state.objective < state.objective));
-  }
   #endif
 }
 
-double Vertex::distance_weight = 0;
+void Vertex::improve_quality() {
+  improve_quality(0, [](Mat<3>){return Mat<3>::Zero();});
+}
+
+void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>)> get_target) {
+  Mat<3> orig_pos = _point({});
+  auto state = _compute_state();
+  double ns = nominal_size();
+  HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
+  Mat<3> target = get_target(orig_pos);
+  Mat<3> snap_vec = target - orig_pos;
+  state.objective += distance_weight*snap_vec.squaredNorm();
+  Mat<3> direction = -state.gradient + distance_weight*2*snap_vec;
+  if (direction.norm()*ns < 1e-6*state.objective) return;
+  direction.normalize();
+  double step_sz = .1*ns;
+  _Optimization_state new_state;
+  do {
+    if (step_sz < 1e-12*ns) {
+      _pos = orig_pos;
+      HEXED_ASSERT(!new_state.feasible, "feasible step rejected (suspect incorrect gradient)");
+      #pragma omp critical
+      std::cerr << "Warning: Vertex improvement step rejected." << std::endl;
+      break;
+    }
+    _pos = orig_pos + step_sz*direction;
+    target = get_target(_pos);
+    new_state = _compute_state();
+    new_state.objective += distance_weight*(_pos - target).squaredNorm();
+    step_sz /= 2;
+  } while (!(new_state.feasible && new_state.objective < state.objective));
+}
 
 void Vertex::set_target(Mat<3> p) {
   _target = p;

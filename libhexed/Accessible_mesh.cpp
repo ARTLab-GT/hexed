@@ -485,11 +485,11 @@ void Accessible_mesh::_match_topo() {
       if (vert.mobile()) vert.improve_quality();
     }
   }
-  next::Vertex::distance_weight = 1;
-  for (int i_weight = 0; i_weight < 6; ++i_weight) {
-    next::Vertex::distance_weight *= 10;
-    std::cout << "distance weight: " << next::Vertex::distance_weight << std::endl;
-  for (int i_relax = 0; i_relax < 200; ++i_relax) {
+  double distance_weight = 1;
+  for (int i_weight = 0; i_weight < 5; ++i_weight) {
+    distance_weight *= 10;
+    std::cout << "distance weight: " << distance_weight << std::endl;
+  for (int i_relax = 0; i_relax < 100; ++i_relax) {
     std::cout << "iteration " << i_relax << std::endl;
     auto bverts = _blocks.boundary_verts();
     #if 0
@@ -513,7 +513,7 @@ void Accessible_mesh::_match_topo() {
               pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
               return pos;
             };
-            vert.move_toward(target);
+            vert.improve_quality(distance_weight, target);
           }
         }
       }
@@ -530,7 +530,7 @@ void Accessible_mesh::_match_topo() {
             pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
             return pos;
           };
-          vert.move_toward(target);
+          vert.improve_quality(distance_weight, target);
         } else {
           auto& geom_edge = edges[vert.snapped_edge];
           Array<double> nodes{geom_edge.nodes()};
@@ -541,10 +541,10 @@ void Accessible_mesh::_match_topo() {
               HEXED_ASSERT(nearest >= 0, "Nearest point on edge not found.");
               return nodes(nearest).vector();
             };
-            vert.move_toward(target);
+            vert.improve_quality(distance_weight, target);
           } else {
             Mat<3> t = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
-            vert.move_toward([t](Mat<3>){return t;});
+            vert.improve_quality(distance_weight, [t](Mat<3>){return t;});
           }
         }
       }

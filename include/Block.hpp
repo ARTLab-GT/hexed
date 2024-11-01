@@ -123,6 +123,7 @@ class Vertex : public Block {
   void reset_pos();
   bool mobile() const;
   void improve_quality();
+  void improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>)> get_target);
   void move_toward(std::function<Mat<3>(Mat<3>)> target);
   void set_target(Mat<3> pos);
   void set_target();
@@ -174,7 +175,6 @@ class Vertex : public Block {
   double dijkstra_curve_dist_sq; //!< \brief squared distance from the curve
   double dijkstra_arc_len; //!< \brief arc length of the nearest point on the curve
   Mat<3> debug_pos;
-  static double distance_weight;
 
   private:
   struct _Gradient_entry {
