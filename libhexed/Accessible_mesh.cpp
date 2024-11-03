@@ -505,12 +505,12 @@ void Accessible_mesh::_match_topo() {
     }
   }
   double distance_weight = 1;
+  auto bverts = _blocks.boundary_verts();
   for (int i_weight = 0; i_weight < 5; ++i_weight) {
     distance_weight *= 10;
     std::cout << "distance weight: " << distance_weight << std::endl;
     for (int i_relax = 0; i_relax < 100; ++i_relax) {
       std::cout << "iteration " << i_relax << std::endl;
-      auto bverts = _blocks.boundary_verts();
       // snap vertices to extremal boundaries
       if (tree) {
         Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);
@@ -605,6 +605,9 @@ void Accessible_mesh::_match_topo() {
         printf("%i failed. RMS distance %e\n", n_failed, rms_dist);
       }
     }
+  }
+  for (auto& vert : bverts) {
+    vert.snap_to(_get_snapping_target(vert, vert.point({})));
   }
 }
 
