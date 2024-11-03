@@ -155,19 +155,6 @@ void Vertex::reset_pos() {
   if (n) _pos = p/n;
 }
 
-constexpr double ortho_tolerance = 1e-2;
-constexpr double edge_tolerance = 1e-3;
-
-double compute_badness(double value, double target, double lower_bound) {
-  return math::pow((value - target)/(value - lower_bound*target), 2);
-}
-
-double deriv_badness(double value, double target, double lower_bound) {
-  double num = value - target;
-  double denom = value - lower_bound*target;
-  return 2*num/denom*(1/denom - num/denom/denom);
-}
-
 bool Vertex::mobile() const {
   bool m = false;
   for (auto elem : _elems.theirs()) if (elem) m = m || (!elem->glued() && elem->deformed);
@@ -175,14 +162,17 @@ bool Vertex::mobile() const {
   return m;
 }
 
-Vertex::_Optimization_state Vertex::_compute_state(std::vector<_Gradient_entry> skip) {
-  set_pos(point({}));
+const double ortho_tolerance = 1e-2;
+const double edge_tolerance = 1e-3;
+
+Vertex::_Optimization_state Vertex::_compute_state() {
   _Optimization_state state;
-  state.feasible = true;
-  state.glued_neighbor = false;
-  state.objective = 0;
-  state.gradient.setZero();
-  state.skip = skip;
+  _compute_state_recursive(state, 1.);
+  return state;
+}
+
+void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight) {
+  set_pos(point({}));
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
   for (Element_shape* elem : _elems.theirs()) {
@@ -221,45 +211,24 @@ Vertex::_Optimization_state Vertex::_compute_state(std::vector<_Gradient_entry> 
         Vertex& that_vert = elem->vertex(i_that);
         double orth_diff = ma.orthogonality - ortho_tolerance;
         state.objective += (!skip_obj)*1./orth_diff;
-        state.gradient += (!skip_grad)*1.*(-1/orth_diff/orth_diff)*ma.grad_orth;
+        state.gradient += (!skip_grad)*gradient_weight*1.*(-1/orth_diff/orth_diff)*ma.grad_orth;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          #if 1
           double num = ma.edge_lengths(i_dim) - ns;
           double denom = ma.edge_lengths(i_dim) - edge_tolerance*ns;
-          #if 0
-          double num_pow = math::pow(num, 4);
-          state.objective += (!skip_obj)*num_pow/denom;
-          state.gradient += (!skip_grad)*(4*num_pow/(num*denom) - num_pow/(denom*denom))
-                            *ma.grad_lengths(i_dim, all).transpose();
-          #else
           state.objective += (!skip_obj)*num*num/denom;
-          state.gradient += (!skip_grad)*(2*num/denom - num*num/(denom*denom))
+          state.gradient += (!skip_grad)*gradient_weight*(2*num/denom - num*num/(denom*denom))
                             *ma.grad_lengths(i_dim, all).transpose();
-          #endif
-          #else
-          double len = ma.edge_lengths(i_dim)/ns;
-          double denom = len - edge_tolerance;
-          state.objective += (!skip_obj)*len*len/denom;
-          state.gradient += (!skip_grad)*(2*len/denom - len*len/denom/denom)/ns
-                            *ma.grad_lengths(i_dim, all).transpose();
-          #endif
         }
         if (!glued() && that_vert.glued()) {
           bool coupled = false;
           for (auto e : _elems.theirs()) coupled = coupled || (!e->glued() && e == that_vert._glued_to.get());
           if (coupled) {
-            state.glued_neighbor = true;
-            auto that_state = that_vert._compute_state(state.skip);
-            state.objective += that_state.objective;
-            state.gradient += .5*that_state.gradient;
-            state.feasible = state.feasible && that_state.feasible;
-            state.skip = that_state.skip;
+            that_vert._compute_state_recursive(state, .5);
           }
         }
       }
     }
   }
-  return state;
 }
 
 void Vertex::improve_quality() {

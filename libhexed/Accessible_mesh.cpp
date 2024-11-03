@@ -496,14 +496,8 @@ void Accessible_mesh::_match_topo() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
-  //for (int i_relax = 0; i_relax < 20; ++i_relax) relax(.5);
 
   auto new_verts = _blocks.verts();
-  for (int i_relax = 0; i_relax < 0; ++i_relax) {
-    for (auto& vert : new_verts) {
-      if (vert.mobile()) vert.improve_quality();
-    }
-  }
   double distance_weight = 1;
   auto bverts = _blocks.boundary_verts();
   for (int i_weight = 0; i_weight < 5; ++i_weight) {

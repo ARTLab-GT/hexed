@@ -183,13 +183,13 @@ class Vertex : public Block {
     int j;
   };
   struct _Optimization_state {
-    bool feasible = false;
-    bool glued_neighbor = false;
-    double objective = huge;
+    bool feasible = true;
+    double objective = 0;
     Mat<3> gradient = Mat<3>::Zero();
     std::vector<_Gradient_entry> skip;
   };
-  _Optimization_state _compute_state(std::vector<_Gradient_entry> skip = {});
+  _Optimization_state _compute_state();
+  void _compute_state_recursive(_Optimization_state& state, double gradient_weight);
   Mat<3> _point(const std::vector<int>&) const override;
   Mat<3> _desired_pos() const;
   int _get_index(const Element_shape&) const;
