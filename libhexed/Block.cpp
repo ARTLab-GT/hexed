@@ -220,15 +220,22 @@ Vertex::_Optimization_state Vertex::_compute_state(std::vector<_Gradient_entry> 
       if (state.feasible) {
         Vertex& that_vert = elem->vertex(i_that);
         double orth_diff = ma.orthogonality - ortho_tolerance;
-        //double factor = that_vert.is_surface() ? 10. : 1.;
-        double factor = 1;
-        state.objective += (!skip_obj)*factor*1./orth_diff;
-        state.gradient += (!skip_grad)*factor*1.*(-1/orth_diff/orth_diff)*ma.grad_orth;
+        state.objective += (!skip_obj)*1./orth_diff;
+        state.gradient += (!skip_grad)*1.*(-1/orth_diff/orth_diff)*ma.grad_orth;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
           #if 1
-          state.objective += (!skip_obj)*factor*compute_badness(ma.edge_lengths(i_dim), ns, edge_tolerance);
-          state.gradient += (!skip_grad)*factor*deriv_badness(ma.edge_lengths(i_dim), ns, edge_tolerance)
+          double num = ma.edge_lengths(i_dim) - ns;
+          double denom = ma.edge_lengths(i_dim) - edge_tolerance*ns;
+          #if 0
+          double num_pow = math::pow(num, 4);
+          state.objective += (!skip_obj)*num_pow/denom;
+          state.gradient += (!skip_grad)*(4*num_pow/(num*denom) - num_pow/(denom*denom))
                             *ma.grad_lengths(i_dim, all).transpose();
+          #else
+          state.objective += (!skip_obj)*num*num/denom;
+          state.gradient += (!skip_grad)*(2*num/denom - num*num/(denom*denom))
+                            *ma.grad_lengths(i_dim, all).transpose();
+          #endif
           #else
           double len = ma.edge_lengths(i_dim)/ns;
           double denom = len - edge_tolerance;
