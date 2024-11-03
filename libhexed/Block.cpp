@@ -255,53 +255,6 @@ Vertex::_Optimization_state Vertex::_compute_state(std::vector<_Gradient_entry> 
   return state;
 }
 
-void Vertex::move_toward(std::function<Mat<3>(Mat<3>)> get_target) {
-  #if 0
-  Mat<3> improve_dir = -state.gradient.normalized();
-  double improve_sz = .1*ns;
-  Mat<3> target = get_target(orig_pos);
-  double orig_dist = (target - orig_pos).norm();
-  bool improved = false;
-  bool set_debug = true;
-  debug_pos = orig_pos + improve_dir*.01*ns;
-  _Optimization_state new_state;
-  do {
-    if (improve_sz < 1e-12*ns) {
-      _pos = orig_pos;
-      //std::cout << "  improvement step rejected in `move_toward`" << std::endl;
-      break;
-    }
-    Mat<3> improved_pos = orig_pos + improve_sz*improve_dir;
-    _pos = improved_pos;
-    new_state = _compute_state();
-    improved = new_state.objective < state.objective;
-    improve_sz /= 2;
-    if (new_state.feasible && improved) {
-      if (!set_debug) {
-        debug_pos = improved_pos;
-        set_debug = true;
-      }
-      target = get_target(improved_pos);
-      Mat<3> snap_dir = target - improved_pos;
-      double snap_sz = snap_dir.norm();
-      double orig_snap_sz = snap_sz;
-      if (snap_sz < 1e-12*ns) continue;
-      snap_dir /= snap_sz;
-      do {
-        if (snap_sz < 1e-3*orig_snap_sz) {
-          _pos = improved_pos;
-          std::cout << "    snapping step rejected in `move_toward`" << std::endl;
-          break;
-        }
-        _pos = improved_pos + snap_sz*snap_dir;
-        new_state = _compute_state();
-        snap_sz /= 2;
-      } while (!(new_state.feasible && new_state.objective < 10*state.objective));
-    }
-  } while (!(new_state.feasible && improved && (target - _pos).norm() < orig_dist + 1e-8*ns));
-  #endif
-}
-
 void Vertex::improve_quality() {
   improve_quality(0, [](Mat<3>){return Mat<3>::Zero();});
 }
@@ -333,6 +286,14 @@ void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>
     new_state.objective += distance_weight*(_pos - target).squaredNorm();
     step_sz /= 2;
   } while (!(new_state.feasible && new_state.objective < state.objective));
+}
+
+bool Vertex::snap_to(Mat<3> target) {
+  Mat<3> orig_pos = point({});
+  _pos = target;
+  _Optimization_state state = _compute_state();
+  if (!state.feasible) _pos = orig_pos;
+  return state.feasible;
 }
 
 void Vertex::set_target(Mat<3> p) {

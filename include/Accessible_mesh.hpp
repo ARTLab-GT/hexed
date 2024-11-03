@@ -95,6 +95,7 @@ class Accessible_mesh : public Mesh {
   };
   void _record_connections();
   void _offset_vertices(double);
+  Mat<3> _get_snapping_target(next::Vertex&, Mat<3>);
   void _match_topo();
 
   public:
