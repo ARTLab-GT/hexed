@@ -1,8 +1,7 @@
 #include <History_monitor.hpp>
 #include <math.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
 History_monitor::History_monitor(double window_size, int max_samples)
 : _samples{max_samples}, _start{0}, _sz{0},
@@ -10,8 +9,7 @@ History_monitor::History_monitor(double window_size, int max_samples)
   _win_sz{window_size}, _add_threshold{1.}, _min{-huge}, _max{huge}
 {}
 
-void History_monitor::add_sample(int iteration, double value)
-{
+void History_monitor::add_sample(int iteration, double value) {
   if (_sz && iteration < _add_threshold) return;
   int end = (_start + _sz)%_samples;
   _iterations[end] = iteration;
@@ -31,13 +29,11 @@ void History_monitor::add_sample(int iteration, double value)
   while (_add_threshold <= iteration) _add_threshold *= std::pow(1/(1 - _win_sz), 1./_samples);
 }
 
-double History_monitor::min()
-{
+double History_monitor::min() {
   return _min;
 }
 
-double History_monitor::max()
-{
+double History_monitor::max() {
   return _max;
 }
 

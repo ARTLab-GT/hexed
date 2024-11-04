@@ -165,13 +165,13 @@ bool Vertex::mobile() const {
 const double ortho_tolerance = 1e-2;
 const double edge_tolerance = 1e-3;
 
-Vertex::_Optimization_state Vertex::_compute_state() {
+Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
   _Optimization_state state;
-  _compute_state_recursive(state, 1.);
+  _compute_state_recursive(state, 1., include_neighbors);
   return state;
 }
 
-void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight) {
+void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors) {
   set_pos(point({}));
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
@@ -188,12 +188,14 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
       [&](Int i_vert)->Mat<3> {return verts(all, i_vert);},
       [&]()->Int {return nv;},
     };
-    std::vector<int> i_those(nd + 1);
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      i_those[i_dim] = i_this - math::sign(i_this/vstride(nd, i_dim)%2)*vstride(nd, i_dim);
-      HEXED_ASSERT(i_those[i_dim] >= 0 && i_those[i_dim] < nv, "`i_those` out of bounds");
+    std::vector<int> i_those;
+    if (include_neighbors) {
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        i_those.push_back(i_this - math::sign(i_this/vstride(nd, i_dim)%2)*vstride(nd, i_dim));
+        HEXED_ASSERT(i_those.back() >= 0 && i_those.back() < nv, "`i_those` out of bounds");
+      }
     }
-    i_those[nd] = i_this;
+    i_those.push_back(i_this);
     for (int i_that : i_those) {
       bool skip_obj = false;
       bool skip_grad = false;
@@ -223,7 +225,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
           bool coupled = false;
           for (auto e : _elems.theirs()) coupled = coupled || (!e->glued() && e == that_vert._glued_to.get());
           if (coupled) {
-            that_vert._compute_state_recursive(state, .5);
+            that_vert._compute_state_recursive(state, .5, true);
           }
         }
       }
@@ -270,6 +272,16 @@ bool Vertex::snap_to(Mat<3> target) {
   _Optimization_state state = _compute_state();
   if (!state.feasible) _pos = orig_pos;
   return state.feasible;
+}
+
+double Vertex::quality_objective() {
+  auto state = _compute_state(false);
+  return state.objective;
+}
+
+double Vertex::quality_gradient_norm_sq() {
+  auto state = _compute_state(true);
+  return state.gradient.squaredNorm();
 }
 
 void Vertex::set_target(Mat<3> p) {

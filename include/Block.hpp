@@ -126,6 +126,8 @@ class Vertex : public Block {
   void improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>)> get_target);
   bool snap_to(Mat<3> target);
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
+  double quality_objective();
+  double quality_gradient_norm_sq();
   void set_target(Mat<3> pos);
   void set_target();
   double quality();
@@ -188,8 +190,8 @@ class Vertex : public Block {
     Mat<3> gradient = Mat<3>::Zero();
     std::vector<_Gradient_entry> skip;
   };
-  _Optimization_state _compute_state();
-  void _compute_state_recursive(_Optimization_state& state, double gradient_weight);
+  _Optimization_state _compute_state(bool include_neighbors = true);
+  void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors);
   Mat<3> _point(const std::vector<int>&) const override;
   Mat<3> _desired_pos() const;
   int _get_index(const Element_shape&) const;

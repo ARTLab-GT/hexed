@@ -8,6 +8,7 @@
 #include <hexed/erase_if.hpp>
 #include <hexed/utils.hpp>
 #include <hexed/Gauss_legendre.hpp>
+#include <hexed/History_monitor.hpp>
 #include <hexed/Visualizer.hpp> //FIXME
 
 namespace hexed {
@@ -500,11 +501,17 @@ void Accessible_mesh::_match_topo() {
   auto new_verts = _blocks.verts();
   double distance_weight = 1;
   auto bverts = _blocks.boundary_verts();
-  for (int i_weight = 0; i_weight < 5; ++i_weight) {
+  Int n_failed = new_verts.size();
+  double rms_dist = huge;
+  double prev_rms_dist = 0;
+  for (int i_weight = 0; i_weight < 2 || (n_failed != 0 && std::abs(rms_dist - prev_rms_dist) > .01*rms_dist); ++i_weight) {
+    prev_rms_dist = rms_dist;
     distance_weight *= 10;
-    std::cout << "distance weight: " << distance_weight << std::endl;
-    for (int i_relax = 0; i_relax < 100; ++i_relax) {
-      std::cout << "iteration " << i_relax << std::endl;
+    History_monitor monitor(.3, 100);
+    printers::info(format_str(200, "  Optimizing quality: Distance weight = %e;", distance_weight), false, true);
+    for (Int i_relax = 0;
+         i_relax < 10 || (n_failed != 0 && (monitor.max() - monitor.min() > .01*monitor.max()));
+         ++i_relax) {
       // snap vertices to extremal boundaries
       if (tree) {
         Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);
@@ -583,23 +590,26 @@ void Accessible_mesh::_match_topo() {
       for (auto& vert : new_verts) {
         if (vert.mobile()) if (!vert.is_surface()) vert.improve_quality();
       }
-      if (!(i_relax%10)) {
-        int n_failed = 0;
-        double rms_dist = 0;
-        for (auto& vert : bverts) {
-          Mat<3> orig_pos = vert.point({});
-          Mat<3> target = _get_snapping_target(vert, orig_pos);
-          if (!vert.snap_to(target)) {
-            ++n_failed;
-            rms_dist += (orig_pos - target).squaredNorm();
-          }
-          vert.set_pos(orig_pos);
+      n_failed = 0;
+      rms_dist = 0;
+      for (auto& vert : bverts) {
+        vert.dijkstra_point = vert.point({});
+        Mat<3> target = _get_snapping_target(vert, vert.dijkstra_point);
+        if (!vert.snap_to(target)) {
+          ++n_failed;
+          rms_dist += (vert.point({}) - target).squaredNorm();
         }
-        rms_dist = std::sqrt(rms_dist);
-        printf("%i failed. RMS distance %e\n", n_failed, rms_dist);
       }
+      for (auto& vert : bverts) {
+        vert.set_pos(vert.dijkstra_point);
+      }
+      rms_dist = std::sqrt(rms_dist/bverts.size());
+      monitor.add_sample(i_relax, rms_dist);
+      printers::info(format_str(200, "  Optimizing quality: Distance weight = %e; Iteration = %4li; Number of snaps failed = %6li; RMS surface distance = %.18e",
+                                distance_weight, i_relax, n_failed, rms_dist), false, true);
     }
   }
+  printers::info("", false, true);
   for (auto& vert : bverts) {
     vert.snap_to(_get_snapping_target(vert, vert.point({})));
   }

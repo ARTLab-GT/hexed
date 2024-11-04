@@ -5,32 +5,30 @@
 #include <vector>
 #include <memory>
 
-namespace hexed
-{
+namespace hexed {
 
 //! \brief abstract base class for handling different variations of printing things for user
 //! \details basically a slightly higher-level version of output streams
-class Printer
-{
+class Printer {
   public:
   virtual ~Printer() = default;
   //! \param message what you want to print
   //! \param emph if `true`, some form of emphasis formatting will be used, if possible
-  virtual void operator()(std::string message, bool emph = false) = 0;
+  virtual void operator()(std::string message, bool emph = false, bool replace = false) = 0;
 };
 
 //! \brief `Printer` which is just a combination of other printers.
 //! \details Anything you tell it to print will be forwarded to all of `Compound_printer::printers`
-class Compound_printer : public Printer
-{
+class Compound_printer : public Printer {
   public:
   std::vector<std::shared_ptr<Printer>> printers; //!< \brief list of printers---feel free to modify
-  inline void operator()(std::string message, bool emph = false) override {for (auto& printer : printers) (*printer)(message, emph);}
+  Compound_printer() = default;
+  Compound_printer(std::vector<std::shared_ptr<Printer>>);
+  void operator()(std::string message, bool emph = false, bool replace = false) override;
 };
 
 //! \brief prints to a `std::ostream`.
-class Stream_printer : public Printer
-{
+class Stream_printer : public Printer {
   std::ostream& _stream;
   std::string _format_code;
   std::string _reset_code;
@@ -85,12 +83,17 @@ class Stream_printer : public Printer
    */
   Stream_printer(std::ostream& stream = std::cout, Format emph_format = default_format);
 
-  void operator()(std::string, bool emph = false) override;
+  void operator()(std::string, bool emph = false, bool replace = false) override;
 };
 
+namespace printers {
+  extern Compound_printer info; //!< \brief general information
+  extern Compound_printer warn; //!< \brief (non-fatal) warnings
+  extern Compound_printer error; //!< \brief (fatal) errors
+}
+
 //! \brief A complete set of printers that support messages with various purposes
-struct Printer_set
-{
+struct Printer_set {
   Compound_printer info; //!< \brief general information
   Compound_printer warn; //!< \brief (non-fatal) warnings
   Compound_printer error; //!< \brief (fatal) errors
@@ -105,8 +108,7 @@ struct Printer_set
 };
 
 //! \brief prints messages like "message... done"
-class Task_message
-{
+class Task_message {
   Printer& _printer;
   public:
   Task_message(Printer& p, std::string message, std::string sep = " ") : _printer(p) {_printer(message + "..." + sep);}

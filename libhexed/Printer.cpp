@@ -1,8 +1,13 @@
-#include <Printer.hpp>
-#include <utils.hpp>
+#include <hexed/Printer.hpp>
+#include <hexed/utils.hpp>
 
-namespace hexed
-{
+namespace hexed {
+
+Compound_printer::Compound_printer(std::vector<std::shared_ptr<Printer>> p) : printers{p} {}
+
+void Compound_printer::operator()(std::string message, bool emph, bool replace) {
+  for (auto& printer : printers) (*printer)(message, emph, replace);
+}
 
 const Stream_printer::Format Stream_printer::default_format;
 
@@ -17,13 +22,29 @@ Stream_printer::Stream_printer(std::ostream& stream, Format emph_format)
   }
 }
 
-void Stream_printer::operator()(std::string message, bool emph)
-{
-  _stream << (emph ? _format_code : "") << message << (emph ? _reset_code : "") << std::flush;
+void Stream_printer::operator()(std::string message, bool emph, bool replace) {
+  #pragma omp critical
+  {
+    if (replace) _stream << "\x1b[G\x1b[K";
+    _stream << (emph ? _format_code : "") << message << (emph ? _reset_code : "") << std::flush;
+  }
 }
 
-Printer_set::Printer_set()
-{
+Compound_printer printers::info(std::vector<std::shared_ptr<Printer>> {
+  std::make_shared<Stream_printer>(std::cout, Stream_printer::Format {.type = Stream_printer::bold,
+                                                                      .color = Stream_printer::green})
+});
+
+Compound_printer printers::warn(std::vector<std::shared_ptr<Printer>> {
+  std::make_shared<Stream_printer>(std::cerr, Stream_printer::Format {.color = Stream_printer::yellow, .light = true})
+});
+
+Compound_printer printers::error(std::vector<std::shared_ptr<Printer>> {
+  std::make_shared<Stream_printer>(std::cerr, Stream_printer::Format {.type = Stream_printer::bold,
+                                                                      .color = Stream_printer::red})
+});
+
+Printer_set::Printer_set() {
   info.printers.emplace_back(std::make_shared<Stream_printer>(std::cout, Stream_printer::Format{.type = Stream_printer::bold,
                                                                                                 .color = Stream_printer::green}));
   warn.printers.emplace_back(std::make_shared<Stream_printer>(std::cerr, Stream_printer::Format{.color = Stream_printer::yellow, .light = true}));
