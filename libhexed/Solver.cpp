@@ -14,6 +14,7 @@
 #include <hexed/stabilizing_art_visc.hpp>
 #include <hexed/Array.hpp>
 #include <hexed/vis_variables.hpp>
+#include <hexed/Printer.hpp>
 
 namespace hexed {
 
@@ -192,7 +193,7 @@ Interpreter Solver::_interpreter() {
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
-               std::shared_ptr<Namespace> space, std::shared_ptr<Printer_set> printer, bool implicit)
+               std::shared_ptr<Namespace> space, bool implicit)
 : params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2, n_dim, row_size}
 , acc_mesh{new Accessible_mesh(params, root_mesh_size)}
 , basis{row_size}
@@ -203,7 +204,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
 , visc{viscosity_model}
 , therm_cond{thermal_conductivity_model}
 , _namespace{space}
-, _printer{printer}
 , _implicit{implicit}
 , _preti_level{0}
 {
@@ -1107,11 +1107,11 @@ bool Solver::fix_admissibility(double stability_ratio) {
     }
     if (iter == 100) visualize_field("default", wd + "severe_indamis" + std::to_string(status.iteration), vis_expr);
     if (iter == 0) {
-      _printer->warn("Warning: ", true);
-      _printer->warn(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
+      printers::warn("Warning: ", true);
+      printers::warn(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
                                 _namespace->get<int>("iteration")));
     }
-    _printer->warn(format_str(200, "    iteration %i\n", iter));
+    printers::warn(format_str(200, "    iteration %i\n", iter));
     auto& elems = acc_mesh->elements();
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1193,7 +1193,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
     }
   }
   --iter;
-  if (iter) _printer->warn("done\n");
+  if (iter) printers::warn("done\n");
   status.fix_admis_iters += iter;
   _namespace->assign("fix_iters", _namespace->get<int>("fix_iters") + iter);
   sw_fix.work_units_completed += acc_mesh->elements().size()*iter;
@@ -1452,8 +1452,8 @@ void Solver::visualize_contour(std::string format, std::string name, std::string
     }
   }
   if (!n_write) {
-    _printer->warn("Warning: ", true);
-    _printer->warn("Contour is empty. You won't be able to open it in Paraview. ");
+    printers::warn("Warning: ", true);
+    printers::warn("Contour is empty. You won't be able to open it in Paraview. ");
   }
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"]["contour"].work_units_completed += n_write;

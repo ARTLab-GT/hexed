@@ -2,6 +2,7 @@
 #include <hexed/Visualizer.hpp>
 #include <hexed/vertex_inds.hpp>
 #include <hexed/Mesh_assessment.hpp>
+#include <hexed/Printer.hpp>
 
 namespace hexed::next {
 
@@ -253,9 +254,8 @@ void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>
   do {
     if (step_sz < 1e-12*ns) {
       _pos = orig_pos;
-      HEXED_ASSERT(!new_state.feasible, "feasible step rejected (suspect incorrect gradient)");
-      #pragma omp critical
-      std::cerr << "Warning: Vertex improvement step rejected." << std::endl;
+      printers::warn("Warning: ", true);
+      printers::warn("Vertex improvement step rejected.");
       break;
     }
     _pos = orig_pos + step_sz*direction;

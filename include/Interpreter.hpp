@@ -6,7 +6,6 @@
 #include "math.hpp"
 #include "Namespace.hpp"
 #include "Lock.hpp"
-#include "Printer.hpp"
 #include "Command_input.hpp"
 
 namespace hexed {
@@ -86,7 +85,6 @@ class Interpreter {
   static const std::string builtin_file;
   static const std::string const_file;
   std::shared_ptr<Namespace> variables;
-  std::shared_ptr<Printer_set> printer;
   Interpreter(std::vector<std::string> preload = {builtin_file, const_file});
   //! safe to call in threads, but it's mutex-locked so it won't actually execute concurrently (for that, use `child()`)
   void exec(std::string commands);

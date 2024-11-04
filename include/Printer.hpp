@@ -12,8 +12,12 @@ namespace hexed {
 class Printer {
   public:
   virtual ~Printer() = default;
-  //! \param message what you want to print
-  //! \param emph if `true`, some form of emphasis formatting will be used, if possible
+  /*!
+   * \param message what you want to print
+   * \param emph If `true`, some form of emphasis formatting will be used, if possible.
+   * \param replace If `true`, `message` will *replace* the current line of text on the screen,
+   *                rather than be appended to it.
+   */
   virtual void operator()(std::string message, bool emph = false, bool replace = false) = 0;
 };
 
@@ -32,6 +36,7 @@ class Stream_printer : public Printer {
   std::ostream& _stream;
   std::string _format_code;
   std::string _reset_code;
+  std::string _replace_code;
 
   public:
   //! \brief specifies the typeface (i.e. font) to print in
@@ -77,35 +82,31 @@ class Stream_printer : public Printer {
 
   /*! \brief constructs a `Stream_printer`
    * \param stream stream to print to
-   * \param emph_format Formatting to apply to emphasized text.
-   *   This requires `stream` to support [ASCII formatting codes](https://en.wikipedia.org/wiki/ANSI_escape_code#Colors).
+   * \param use_escape_codes If `true`, [ASCII escape codes](https://en.wikipedia.org/wiki/ANSI_escape_code#Colors)
+   *   will be used to apply formatting to the text and play other tricks.
+   *   This is necessary for the `emph` and `replace` arguments of `operator()` to have any effect,
+   *   but it also requires the stream to support ASCII escape codes.
    *   `cout` and `cerr` support these codes, but ASCII files do not.
+   * \param emph_format Formatting to apply to emphasized text.
+   *   Any value other than the default will require `use_escape_codes = true`.
    */
-  Stream_printer(std::ostream& stream = std::cout, Format emph_format = default_format);
+  Stream_printer(std::ostream& stream = std::cout, bool use_escape_codes = false, Format emph_format = default_format);
 
   void operator()(std::string, bool emph = false, bool replace = false) override;
 };
 
+/*! \brief Global `Printer` objects that any function can use to print messages.
+ * \details These should be used instead of the builtin printing facilities,
+ * so that they can be used to redirect the output of the entire program.
+ * While making them global variables is conceptually ugly,
+ * the convenience benefit over passing references to `Printer`s
+ * to any code that might ever want to print something is substantial.
+ */
 namespace printers {
   extern Compound_printer info; //!< \brief general information
   extern Compound_printer warn; //!< \brief (non-fatal) warnings
   extern Compound_printer error; //!< \brief (fatal) errors
 }
-
-//! \brief A complete set of printers that support messages with various purposes
-struct Printer_set {
-  Compound_printer info; //!< \brief general information
-  Compound_printer warn; //!< \brief (non-fatal) warnings
-  Compound_printer error; //!< \brief (fatal) errors
-  /*! \brief Constructs a `Printer_set` with printers initialized to standard output/error
-   * \details You can later modify the individual printers.
-   * Specifically, the initial values are:
-   * - `info` is `std::cout` without any special formatting
-   * - `warn` is `std::cerr` with light yellow emphasis
-   * - `error` is `std::cerr` with bold red emphasis
-   */
-  Printer_set();
-};
 
 //! \brief prints messages like "message... done"
 class Task_message {

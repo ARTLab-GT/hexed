@@ -8,6 +8,7 @@
 #include <hexed/hil_properties.hpp>
 #include <hexed/Csv.hpp>
 #include <hexed/brep.hpp>
+#include <hexed/Printer.hpp>
 
 namespace hexed {
 
@@ -171,8 +172,7 @@ std::string Case::_assignment(std::string var_name) {
 }
 
 Case::Case(std::string input_script)
-: _printers{std::make_shared<Printer_set>()}
-, _start_time{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())}
+: _start_time{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())}
 {
   _inter.variables->assign("input_script", input_script);
   _inter.variables->assign("version_major", config::version_major);
@@ -186,14 +186,13 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("setup_output", new Namespace::Heisenberg<std::string>([this]() {
     _output_file.reset(new std::ofstream(_vars("working_dir") + "output.txt"));
-    for (auto* printer : {&_printers->info, &_printers->warn, &_printers->error}) {
+    for (auto* printer : {&printers::info, &printers::warn, &printers::error}) {
       printer->printers.emplace_back(std::make_shared<Stream_printer>(*_output_file));
     }
-    _inter.printer = _printers;
     char utc [100];
     std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&_start_time));
-    _printers->info(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
-                               config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, _start_time));
+    printers::info(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
+                              config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, _start_time));
     return "";
   }));
 
@@ -315,7 +314,7 @@ Case::Case(std::string input_script)
       _inter.variables->assign_default(name + "_max",  huge);
     }
     // setup actual solver
-    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, true, transport_models[0], transport_models[1], _inter.variables, _printers));
+    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, true, transport_models[0], transport_models[1], _inter.variables));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis"));
     return "";
@@ -380,47 +379,42 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("read_mesh", new Namespace::Heisenberg<std::string>([this]() {
-    _printers->info("reading mesh... ");
+    Task_message(printers::info, "reading mesh");
     Surface_geom* geom = _make_geom();
     _solver().read_mesh(_vars("input_data"), _make_extremal_bcs(), geom, geom ? _make_bc(_vars("surface_bc")) : nullptr);
-    _printers->info("done\n");
     return "";
   }));
   _inter.variables->create("read_state", new Namespace::Heisenberg<std::string>([this]() {
-    _printers->info("reading state... ");
+    Task_message(printers::info, "reading state");
     _solver().read_state(_vars("input_data"));
-    _printers->info("done\n");
     return "";
   }));
   _inter.variables->create("read_status", new Namespace::Heisenberg<std::string>([this]() {
-    _printers->info("reading status... ");
+    Task_message(printers::info, "reading status");
     auto sub = _inter.make_sub();
     sub.exec("$read {" + _vars("input_data") + ".status.hil}");
     for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
       _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_expr->names[i_monitor] + "_min"));
       _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_expr->names[i_monitor] + "_max"));
     }
-    _printers->info("done\n");
     return "";
   }));
   _inter.variables->create("write_mesh", new Namespace::Heisenberg<std::string>([this]() {
-    _printers->info("writing mesh... ");
+    Task_message(printers::info, "writing mesh");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
     _solver().mesh().write(file_name);
     force_symlink(_iteration_suffix() + ".mesh.h5", _vars("working_dir") + "latest.mesh.h5");
-    _printers->info("done\n");
     return "";
   }));
   _inter.variables->create("write_state", new Namespace::Heisenberg<std::string>([this]() {
-    _printers->info("writing state... ");
+    Task_message(printers::info, "writing state");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
     _solver().write_state(file_name);
     force_symlink(_iteration_suffix() + ".state.h5", _vars("working_dir") + "latest.state.h5");
-    _printers->info("done\n");
     return "";
   }));
   _inter.variables->create("write_status", new Namespace::Heisenberg<std::string>([this]() {
-    _printers->info("writing status... ");
+    Task_message(printers::info, "writing status");
     std::ofstream status_file(_vars("working_dir") + _iteration_suffix() + ".status.hil");
     std::vector<std::string> no_write {"working_dir", "input_data"};
     for (std::string name : _inter.variables->names()) {
@@ -430,12 +424,11 @@ Case::Case(std::string input_script)
     }
     status_file.close();
     force_symlink(_iteration_suffix() + ".status.hil", _vars("working_dir") + "latest.status.hil");
-    _printers->info("done\n");
     return "";
   }));
 
   _inter.variables->create("visualize", new Namespace::Heisenberg<std::string>([this]() {
-    _printers->info("visualizing... ");
+    Task_message(printers::info, "visualizing");
     std::string wd = _vars("working_dir");
     std::string suffix = "_" + _iteration_suffix();
     int n_sample = _vari("vis_n_sample");
@@ -478,7 +471,6 @@ Case::Case(std::string input_script)
         }
       }
     }
-    _printers->info("done\n");
     return "";
   }));
 
@@ -565,7 +557,7 @@ Case::Case(std::string input_script)
       } else if (avc) {
         _solver().set_art_visc_constant(_vard("art_visc_constant"));
       } else if (!_vari("diffusive_admissibility") && _solver().using_art_visc()) {
-        _printers->info("Turning off artificial viscosity.\n", true);
+        printers::info("Turning off artificial viscosity.\n", true);
         _solver().set_art_visc_off();
       }
       _solver().update();
@@ -606,17 +598,23 @@ Case::Case(std::string input_script)
   try {
     _inter.exec(format_str(1000, "$read {%s}", input_script.c_str()));
   } catch (const assert::User_error& except) {
-    if (_printers) _printers->error("User error: ", true);
+    printers::error("User error: ", true);
     throw except;
   } catch (const assert::Not_implemented_error& except) {
-    if (_printers) _printers->error("Error: feature not yet implemented. ", true);
+    printers::error("Error: feature not yet implemented. ", true);
     throw except;
   } catch (const assert::Numerical_exception& except) {
-    _printers->error("Numerical exception: ", true);
-    _printers->error(except.what());
-    _printers->error("\nTerminating simulation.\n", true);
+    printers::error("Numerical exception: ", true);
+    printers::error(except.what());
+    printers::error("\nTerminating simulation.\n", true);
     if (_solver_ptr) _inter.exec("write_mesh; write_state; write_status; visualize;");
     _inter.variables->assign("hexed_failed", 1);
+  }
+}
+
+Case::~Case() {
+  for (auto* printer : {&printers::info, &printers::warn, &printers::error}) {
+    printer->printers.pop_back();
   }
 }
 

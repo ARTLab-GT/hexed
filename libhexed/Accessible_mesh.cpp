@@ -9,6 +9,7 @@
 #include <hexed/utils.hpp>
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/History_monitor.hpp>
+#include <hexed/Printer.hpp>
 #include <hexed/Visualizer.hpp> //FIXME
 
 namespace hexed {
