@@ -185,6 +185,7 @@ class Navier_stokes {
       Mat<n_extrap, n_dim> gradient;
       Mat<n_update, n_dim_flux> flux_diff;
       Mat<n_dim, n_dim> veloc_grad;
+      Mat<n_dim, n_dim> turb_stress;
       /*! \todo __Carter:__ modify `flux_diff` to include turbulence modeling.
        * Set `flux_diff_phys(i_turb_kin_ener)` and `flux_diff_phys(i_turb_diss)` to contain the source terms of
        * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
@@ -197,10 +198,13 @@ class Navier_stokes {
         Mat<n_update, n_dim> flux_diff_phys; // flux in physical space
         Mat<n_dim> veloc = mmtm/mass;
         veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
-	//TODO: Update Stress term with k from Bassi?
+	turb_stress = mu_t_bar * (veloc_grad + veloc_grad.transpose() 
+                                  - 2./3. * veloc_grad.trace()*Mat<n_dim, n_dim>::Identity())
+                      - 2./3.*mass*k_bar*Mat<n_dim, n_dim>::Identity();
+
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
-                                   + (bulk_av*mass - 2./3.*dyn_visc_coef)
-                                     *veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
+                                  + (bulk_av*mass - 2./3.*dyn_visc_coef)
+                                     *veloc_grad.trace()*Mat<n_dim, n_dim>::Identity() + turb_stress;
         flux_diff_phys = -laplacian_av*gradient;
         flux_diff_phys(seq, all) -= stress;
         Mat<1, n_dim> int_ener_grad = -state(i_energy)/mass/mass*gradient(i_mass, all)
@@ -216,6 +220,8 @@ class Navier_stokes {
       }
 
       double beta;
+      double grad_diss_sum;
+      double tau_vgrad_sum;
       void compute_scalars_source() {
         Mat<n_dim, n_dim> omega = 0.5 * (veloc_grad - veloc_grad.transpose());
 	Mat<n_dim, n_dim> S = 0.5 * (veloc_grad + veloc_grad.transpose());
@@ -231,6 +237,18 @@ class Navier_stokes {
 	double chi_o = std::abs(sum)/std::pow(beta_s * std::exp(state(i_turb_diss)/mass), 3);
         double f_beta = (1. + 85.*chi_o)/(1. + 100.*chi_o);
         beta = beta_0 * f_beta;
+
+	grad_diss_sum = 0.0;
+	for (int k = 0; k < n_dim; ++k) {
+          grad_diss_sum += veloc_grad(i_turb_diss, k)^2;
+	}
+	
+	tau_vgrad_sum = 0.0;
+	for (int i = 0; i < n_dim; ++i) {
+          for (int j = 0; j < n_dim; ++j) {
+            tau_vgrad_sum += turb_stress(i, j) * veloc_grad(i, j);
+	  }
+	}
       };
       Mat<n_update> source;
       /*! \todo __Carter:__ compute the turbulent source terms.
@@ -243,11 +261,12 @@ class Navier_stokes {
         }
         if constexpr (turb == k_omega) {
           //source(i_energy) = beta_s * state(i_mass) * k_bar * std::exp(real_turb_diss);
-          source(i_turb_kin_ener) = -beta_s * mass * k_bar * std::exp(real_turb_diss); //TODO: tau_ij term
-          source(i_turb_diss) = -beta * mass * std::exp(real_turb_diss); //TODO: tau_ij term and \partial \omega / \partial x_k 
+          //source(i_turb_kin_ener) = -beta_s * mass * k_bar * std::exp(real_turb_diss);
+          source(i_turb_kin_ener) = tau_vgrad_sum - beta_s * mass * k_bar * std::exp(real_turb_diss);
+          source(i_turb_diss) = alpha/k_bar*tau_vgrad_sum - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma * mu_t_bar) * grad_diss_sum; 
           //these source terms are wrong
 	  //source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
-          source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
+          //source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
         }
       }
 
