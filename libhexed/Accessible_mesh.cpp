@@ -97,11 +97,15 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
 }
 
 void Accessible_mesh::_match_topo() {
-  for (int i_relax = 0; i_relax < 20; ++i_relax) relax(.5);
   if (!surf_geom) return;
   _blocks.edges_2d();
   _blocks.faces_3d();
   auto all_verts = _blocks.verts();
+  #pragma omp parallel for
+  for (auto& vert : all_verts) {
+    vert.reset_pos();
+  }
+  _offset_vertices(.2);
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.record.clear();
@@ -503,16 +507,14 @@ void Accessible_mesh::_match_topo() {
   double distance_weight = 1;
   auto bverts = _blocks.boundary_verts();
   Int n_failed = new_verts.size();
-  double rms_dist = huge;
-  double prev_rms_dist = 0;
-  for (int i_weight = 0; i_weight < 2 || (n_failed != 0 && std::abs(rms_dist - prev_rms_dist) > .01*rms_dist); ++i_weight) {
-    prev_rms_dist = rms_dist;
+  Int prev_n_failed = 0;
+  for (int i_weight = 0; (i_weight < 2 || std::min(n_failed, prev_n_failed - n_failed) > 0) && i_weight < 10; ++i_weight) {
+    prev_n_failed = n_failed;
     distance_weight *= 10;
     History_monitor monitor(.3, 100);
     printers::info(format_str(200, "  Optimizing quality: Distance weight = %e;", distance_weight), false, true);
-    for (Int i_relax = 0;
-         i_relax < 10 || (n_failed != 0 && (monitor.max() - monitor.min() > .01*monitor.max()));
-         ++i_relax) {
+    double rms_dist = 0;
+    for (Int i_relax = 0; i_relax < 30 || monitor.max() - monitor.min() > .01*std::abs(monitor.min()); ++i_relax) {
       // snap vertices to extremal boundaries
       if (tree) {
         Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);
@@ -605,9 +607,14 @@ void Accessible_mesh::_match_topo() {
         vert.set_pos(vert.dijkstra_point);
       }
       rms_dist = std::sqrt(rms_dist/bverts.size());
-      monitor.add_sample(i_relax, rms_dist);
-      printers::info(format_str(200, "  Optimizing quality: Distance weight = %e; Iteration = %4li; Number of snaps failed = %6li; RMS surface distance = %.18e",
-                                distance_weight, i_relax, n_failed, rms_dist), false, true);
+      double max_dist = 0;
+      for (auto& vert : bverts) {
+        Mat<3> p = vert.point({});
+        max_dist = std::max(max_dist, (p - _get_snapping_target(vert, p)).norm());
+      }
+      monitor.add_sample(i_relax, max_dist);
+      printers::info(format_str(400, "  Optimizing quality: Distance weight = %e; Iteration = %4li; Number of snaps failed = %6li; RMS surface distance = %.18e; max distance = %.18e %.18e %.18e",
+                                distance_weight, i_relax, n_failed, rms_dist, max_dist, monitor.min(), monitor.max()), false, true);
     }
   }
   printers::info("", false, true);

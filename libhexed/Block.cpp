@@ -163,8 +163,8 @@ bool Vertex::mobile() const {
   return m;
 }
 
-const double ortho_tolerance = 1e-2;
-const double edge_tolerance = 1e-3;
+const double ortho_tolerance = 1e-1;
+const double edge_tolerance = 3e-2;
 
 Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
   _Optimization_state state;
@@ -252,10 +252,8 @@ void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>
   double step_sz = .1*ns;
   _Optimization_state new_state;
   do {
-    if (step_sz < 1e-12*ns) {
+    if (step_sz < 1e-20*ns) {
       _pos = orig_pos;
-      printers::warn("Warning: ", true);
-      printers::warn("Vertex improvement step rejected.");
       break;
     }
     _pos = orig_pos + step_sz*direction;
