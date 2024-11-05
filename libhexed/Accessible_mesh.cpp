@@ -78,7 +78,7 @@ void Accessible_mesh::_offset_vertices(double offset) {
 }
 
 Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
-  if (vert.snapped_edge == -1) {
+  if (vert.snapped_edge < 0) {
     auto seq = Eigen::seqN(0, params.n_dim);
     pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
     return pos;
@@ -238,6 +238,30 @@ void Accessible_mesh::_match_topo() {
       } while (vert);
     }
   }
+  for (auto& vert : verts) {
+    if (vert.snapped_endpoint >= 0) {
+      int n_snapped_edges = 0;
+      for (auto& edge : vert.edges()) {
+        n_snapped_edges += edge.snapped_edge != -1;
+      }
+      if (n_snapped_edges == 1) {
+        for (auto& elem : vert.elements()) {
+          auto face = elem.boundary_face_3d();
+          if (face) {
+            for (int i_edge = 0; i_edge < 4; ++i_edge) {
+              auto* edge = &face->edge(i_edge);
+              if (edge->glued()) edge = edge->glued_to();
+              if (edge->snapped_edge == -1) edge->snapped_edge = -2;
+              for (int i_vert = 0; i_vert < 2; ++i_vert) {
+                if (edge->vertex(i_vert).snapped_edge == -1) edge->vertex(i_vert).snapped_edge = -2;
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
 
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -282,7 +306,7 @@ void Accessible_mesh::_match_topo() {
         std::vector<Int> matched_to(4);
         bool matched = false;
         for (int i_vert = 0; i_vert < 8; ++i_vert) if (i_vert/math::pow(2, 2 - i_dim)%2 == i_sign) {
-          matched = matched || shape->vertex(i_vert).snapped_edge >= 0;
+          matched = matched || shape->vertex(i_vert).snapped_edge != -1;
         }
         if (!matched) continue;
         for (int i_edge = 0; i_edge < 4; ++i_edge) {
@@ -322,7 +346,7 @@ void Accessible_mesh::_match_topo() {
             int k_dim = 3 - j_dim - i_dim;
             int i_edge_matched = 2*(j_dim > k_dim) + j_sign;
             Int m = matched_to[i_edge_matched];
-            if (m >= 0) {
+            if (m != -1) {
               Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, bf);
               Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
               set_vertices(match_elem);
@@ -336,7 +360,7 @@ void Accessible_mesh::_match_topo() {
                              + j_sign*math::pow(2, 2 - j_dim)
                              + k_sign*math::pow(2, 2 - k_dim);
                 int i_snapped = shape->vertex(i_vert).snapped_edge;
-                HEXED_ASSERT(i_snapped >= 0, "Vertex and edge do not agree on whether they are snapped.");
+                HEXED_ASSERT(i_snapped != -1, "Vertex and edge do not agree on whether they are snapped.");
                 auto& vert = match_elem.shape().vertex(i_vert);
                 vert.snapped_edge = i_snapped;
                 vert.snapped_endpoint = shape->vertex(i_vert).snapped_endpoint;
@@ -496,6 +520,7 @@ void Accessible_mesh::_match_topo() {
           }
         }
       }
+      printers::error(std::to_string(rotate));
       _connect(elem_arr, {dim_arr, sign_arr, rotate});
     }
   }

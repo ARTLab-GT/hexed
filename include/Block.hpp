@@ -83,6 +83,7 @@ class Vertex : public Block {
   double nominal_size() const;
   //! \brief Access the list of edges that have `this` as an endpoint
   Sequence<Edge&> edges() {return _edges.theirs().dereference();}
+  Sequence<Element_shape&> elements() {return _elems.theirs().dereference();}
   inline bool glued() const {return _glued_to;}
   void shadow(Vertex& that);
   inline void unshadow() {_shadowed.unpair();}
