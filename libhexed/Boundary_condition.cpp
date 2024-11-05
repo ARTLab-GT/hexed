@@ -386,7 +386,7 @@ void No_slip::apply_state(Boundary_face& bf) {
   if (params.n_var == params.n_dim + 4) {
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
       double spec_turb_kin_ener_wall = 1.;
-      double spec_turb_diss_wall = .01;
+      double spec_turb_diss_wall = .1;
       gh_f[(params.n_dim + 2)*nfq + i_qpoint] = spec_turb_kin_ener_wall*in_f[params.n_dim*nfq + i_qpoint];
       gh_f[(params.n_dim + 3)*nfq + i_qpoint] = std::log(spec_turb_diss_wall)*in_f[params.n_dim*nfq + i_qpoint];
     }

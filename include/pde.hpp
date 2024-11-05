@@ -165,9 +165,10 @@ class Navier_stokes {
 	real_turb_diss = state(i_turb_diss)/mass; //TODO: \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0}
         k_bar = std::max(0., state(i_turb_kin_ener)/mass);
 	mu_t_bar = alpha_s * state(i_turb_kin_ener) * std::exp(-real_turb_diss);
-	mu_t_bar = std::min(1e-1, mu_t_bar);
+	//mu_t_bar = std::min(0., mu_t_bar);
         //mu_t_bar = alpha_s * state(i_mass) * k_bar * std::exp(-real_turb_diss);	
-	//std::cout << mu_t_bar << "\n";
+	
+	#pragma omp critical
 	if (std::isnan(mu_t_bar)) {
           std::cout << "mu_t_bar is nan; Alpha_s: " << alpha_s 
           << "; Turb_kin_ener: " << state(i_turb_kin_ener) 
@@ -178,6 +179,7 @@ class Navier_stokes {
 	if (std::isnan(sigma_s)) {
 	  std::cout << "sigma_s is nan\n";
 	}
+	//std::cout << mu_t_bar << "\n";
       }
 
       Mat<n_extrap, n_dim> gradient;
@@ -205,8 +207,8 @@ class Navier_stokes {
                                       + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
         flux_diff_phys(i_energy, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
         if constexpr (turb == k_omega) {
-          flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s*mu_t_bar)/mass*gradient(i_turb_kin_ener, all);
-          flux_diff_phys(i_turb_diss, all) = -dyn_visc_coef/mass*gradient(i_turb_diss, all);
+          flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s * mu_t_bar)/mass*gradient(i_turb_kin_ener, all);
+          flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma * mu_t_bar)/mass*gradient(i_turb_diss, all);
           //flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s*mu_t_bar)/mass*gradient(i_turb_kin_ener, all); //Needs mu_t_bar implementation
 	  //flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma*mu_t_bar)/mass*gradient(i_turb_diss, all);
         }
@@ -241,10 +243,10 @@ class Navier_stokes {
         }
         if constexpr (turb == k_omega) {
           //source(i_energy) = beta_s * state(i_mass) * k_bar * std::exp(real_turb_diss);
-          //source(i_turb_kin_ener) = -beta_s * mass * k_bar * std::exp(real_turb_diss); //TODO: tau_ij term
-          //source(i_turb_diss) = -beta * mass * std::exp(real_turb_diss); //TODO: tau_ij term and \partial \omega / \partial x_k 
+          source(i_turb_kin_ener) = -beta_s * mass * k_bar * std::exp(real_turb_diss); //TODO: tau_ij term
+          source(i_turb_diss) = -beta * mass * std::exp(real_turb_diss); //TODO: tau_ij term and \partial \omega / \partial x_k 
           //these source terms are wrong
-	  source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
+	  //source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
           source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
         }
       }
