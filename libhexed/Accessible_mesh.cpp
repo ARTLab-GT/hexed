@@ -101,11 +101,19 @@ void Accessible_mesh::_match_topo() {
   _blocks.edges_2d();
   _blocks.faces_3d();
   auto all_verts = _blocks.verts();
+  auto& elems = def.elements();
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    if (!elems[i_elem].tree) elems[i_elem].active_shape().is_new = true;
+  }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.reset_pos();
   }
   _offset_vertices(.2);
+  printers::info("  Initial mesh optimization:\n");
+  _optimize();
+  printers::info("  done\n");
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.record.clear();
@@ -231,7 +239,6 @@ void Accessible_mesh::_match_topo() {
     }
   }
 
-  auto& elems = def.elements();
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     if (!elems[i_elem].tree) elems[i_elem].active_shape().is_new = true;
@@ -502,13 +509,21 @@ void Accessible_mesh::_match_topo() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
+  printers::info("  Final mesh optimization:\n");
+  _optimize();
+  printers::info("  done.:\n");
+}
 
-  auto new_verts = _blocks.verts();
-  double distance_weight = 1;
+void Accessible_mesh::_optimize() {
+  auto verts = _blocks.verts();
   auto bverts = _blocks.boundary_verts();
-  Int n_failed = new_verts.size();
+  auto edges = surf_geom->edges();
+  double distance_weight = 1;
+  Int n_failed = verts.size();
   Int prev_n_failed = 0;
-  for (int i_weight = 0; (i_weight < 2 || std::min(n_failed, prev_n_failed - n_failed) > 0) && i_weight < 10; ++i_weight) {
+  for (int i_weight = 0;
+       (i_weight < 2 || std::min(n_failed, prev_n_failed - n_failed) > 0) && i_weight < 10;
+       ++i_weight) {
     prev_n_failed = n_failed;
     distance_weight *= 10;
     History_monitor monitor(.3, 100);
@@ -590,7 +605,7 @@ void Accessible_mesh::_match_topo() {
         #pragma omp parallel for
         for (auto& block : blocks) block.reset();
       }
-      for (auto& vert : new_verts) {
+      for (auto& vert : verts) {
         if (vert.mobile()) if (!vert.is_surface()) vert.improve_quality();
       }
       n_failed = 0;
