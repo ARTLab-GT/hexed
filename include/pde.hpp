@@ -260,8 +260,7 @@ class Navier_stokes {
           source.setZero();
         }
         if constexpr (turb == k_omega) {
-          //source(i_energy) = beta_s * state(i_mass) * k_bar * std::exp(real_turb_diss);
-          //source(i_turb_kin_ener) = -beta_s * mass * k_bar * std::exp(real_turb_diss);
+          source(i_energy) = -tau_vgrad_sum + beta_s * state(i_mass) * k_bar * std::exp(real_turb_diss);
           source(i_turb_kin_ener) = tau_vgrad_sum - beta_s * mass * k_bar * std::exp(real_turb_diss);
           source(i_turb_diss) = alpha/k_bar*tau_vgrad_sum - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma * mu_t_bar) * grad_diss_sum; 
           //these source terms are wrong
