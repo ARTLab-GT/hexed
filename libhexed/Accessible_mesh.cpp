@@ -112,7 +112,7 @@ void Accessible_mesh::_match_topo() {
   }
   _offset_vertices(.2);
   printers::info("  Initial mesh optimization:\n");
-  _optimize();
+  _optimize(1, 4, false);
   printers::info("  done\n");
   #pragma omp parallel for
   for (auto& vert : all_verts) {
@@ -262,6 +262,8 @@ void Accessible_mesh::_match_topo() {
       }
     }
   }
+
+  next::Block::visualize("default", "diagnostic_faces", _blocks.faces_3d().cast<const next::Block&>());
 
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -534,22 +536,24 @@ void Accessible_mesh::_match_topo() {
     elems[i_elem].active_shape().is_new = false;
   }
   printers::info("  Final mesh optimization:\n");
-  _optimize();
+  _optimize(1, 10, true);
   printers::info("  done.:\n");
+  for (auto& vert : verts) {
+    vert.snap_to(_get_snapping_target(vert, vert.point({})));
+  }
 }
 
-void Accessible_mesh::_optimize() {
+void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   auto verts = _blocks.verts();
   auto bverts = _blocks.boundary_verts();
   auto edges = surf_geom->edges();
-  double distance_weight = 1;
   Int n_failed = verts.size();
   Int prev_n_failed = 0;
-  for (int i_weight = 0;
-       (i_weight < 2 || std::min(n_failed, prev_n_failed - n_failed) > 0) && i_weight < 10;
+  for (int i_weight = min_pow;
+       (i_weight < 2 || std::min(n_failed, prev_n_failed - n_failed) > 0 || !check_snapping) && i_weight <= max_pow;
        ++i_weight) {
     prev_n_failed = n_failed;
-    distance_weight *= 10;
+    double distance_weight = math::pow(10, i_weight);
     History_monitor monitor(.3, 100);
     printers::info(format_str(200, "  Optimizing quality: Distance weight = %e;", distance_weight), false, true);
     double rms_dist = 0;
@@ -657,9 +661,6 @@ void Accessible_mesh::_optimize() {
     }
   }
   printers::info("", false, true);
-  for (auto& vert : bverts) {
-    vert.snap_to(_get_snapping_target(vert, vert.point({})));
-  }
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {

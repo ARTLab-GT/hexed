@@ -97,7 +97,7 @@ class Accessible_mesh : public Mesh {
   void _offset_vertices(double);
   Mat<3> _get_snapping_target(next::Vertex&, Mat<3>);
   void _match_topo();
-  void _optimize();
+  void _optimize(int min_pow, int max_pow, bool check_snapping);
 
   public:
   //! \brief how far must the center of an element be from the geometry relative to the nominal size
