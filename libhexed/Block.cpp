@@ -483,11 +483,6 @@ const int Edge::no = -1;
 
 void Edge::glue(Edge& other, int half, bool reverse) {
   HEXED_ASSERT(&other != this, "cannot glue an edge to itself");
-  if (other._glued_to.get() == this) return;
-  if (other._glued_to) {
-    if (other._glued_to.get() == this) printers::error("mutually glued edges");
-    if (other._glued_to->element()->glued()) printers::error("glued to glued element");
-  }
   HEXED_ASSERT(!other._glued_to, "Cascading edge gluing is forbidden (in order to catch algorithmic bugs).");
   _glued_to.pair(other._glued);
   _half = half;
@@ -619,7 +614,6 @@ void Element_shape::_glue_edges(std::vector<Element_shape*> those) {
         auto& edge1 = _sf.value().edge(j_edge);
         for (bool reverse : {0, 1}) {
           if (&edge0.vertex(0) == &edge1.vertex(reverse) && &edge0.vertex(1) == &edge1.vertex(!reverse)) {
-            printers::error("g");
             edge0.glue(edge1, Edge::no, reverse);
           }
         }

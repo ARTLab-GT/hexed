@@ -182,7 +182,7 @@ void Accessible_mesh::_match_topo() {
       if (nearest.index >= 0 && nearest.distance <= d) {
         vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
         if (vert.snapped_edge >= 0) {
-          vert.dijkstra_curve_dist_sq *= 100.;
+          vert.dijkstra_curve_dist_sq *= 1e4;
         }
         vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
       } else {
@@ -364,11 +364,11 @@ void Accessible_mesh::_match_topo() {
                 auto& vert = match_elem.shape().vertex(i_vert);
                 vert.snapped_edge = i_snapped;
                 vert.snapped_endpoint = shape->vertex(i_vert).snapped_endpoint;
-                matched_vertices[i_snapped].emplace_back(&vert);
+                if (i_snapped >= 0) matched_vertices[i_snapped].emplace_back(&vert);
               }
               auto& matched_edge = match_elem.shape().boundary_face_3d()->edge(i_edge_matched);
               matched_edge.snapped_edge = m;
-              matched_edges[m].emplace_back(&matched_edge);
+              if (m >= 0) matched_edges[m].emplace_back(&matched_edge);
               for (int i_vert = 0; i_vert < 8; ++i_vert) {
                 HEXED_ASSERT(std::isfinite(match_elem.shape().vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
               }
@@ -520,7 +520,6 @@ void Accessible_mesh::_match_topo() {
           }
         }
       }
-      printers::error(std::to_string(rotate));
       _connect(elem_arr, {dim_arr, sign_arr, rotate});
     }
   }
@@ -653,8 +652,8 @@ void Accessible_mesh::_optimize() {
         max_dist = std::max(max_dist, (p - _get_snapping_target(vert, p)).norm());
       }
       monitor.add_sample(i_relax, max_dist);
-      printers::info(format_str(400, "  Optimizing quality: Distance weight = %e; Iteration = %4li; Number of snaps failed = %6li; RMS surface distance = %.18e; max distance = %.18e %.18e %.18e",
-                                distance_weight, i_relax, n_failed, rms_dist, max_dist, monitor.min(), monitor.max()), false, true);
+      printers::info(format_str(400, "  Optimizing quality: Distance weight = %.1e; Iteration = %4li; Number of snaps failed = %6li; RMS surface distance = %.18e; max distance = %.18e",
+                                distance_weight, i_relax, n_failed, rms_dist, max_dist), false, true);
     }
   }
   printers::info("", false, true);
