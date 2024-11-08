@@ -111,9 +111,10 @@ void Accessible_mesh::_match_topo() {
     vert.reset_pos();
   }
   _offset_vertices(.2);
-  printers::info("  Initial mesh optimization:\n");
-  _optimize(1, 4, false);
-  printers::info("  done\n");
+  {
+    Task_message message(printers::info, "Pre-edge-matching mesh optimization", "\n");
+    _optimize(1, 4, false);
+  }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.record.clear();
@@ -513,12 +514,12 @@ void Accessible_mesh::_match_topo() {
         sign_arr[i_side] = vert.record[6*i_side + 3];
       }
       int rotate = 0;
-      for (int sign : {-1, 1}) {
-        auto inds = vertex_inds(3, {dim_arr, sign_arr, sign});
+      for (int r : {-1, 1, 2}) {
+        auto inds = vertex_inds(3, {dim_arr, sign_arr, r});
         for (int i_vert = 0; i_vert < 4; ++i_vert) {
           if (   &elem_arr[0]->shape().vertex(inds[0][i_vert])
               == &elem_arr[1]->shape().vertex(inds[1][i_vert])) {
-            rotate = sign;
+            rotate = r;
           }
         }
       }
@@ -535,12 +536,19 @@ void Accessible_mesh::_match_topo() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
-  printers::info("  Final mesh optimization:\n");
-  _optimize(1, 10, true);
-  printers::info("  done.:\n");
-  for (auto& vert : verts) {
-    vert.snap_to(_get_snapping_target(vert, vert.point({})));
+  #if 0
+  {
+    Task_message message(printers::info, "Post-edge-matching mesh optimization", "\n");
+    _optimize(1, 10, true);
   }
+  Int n_failed = 0;
+  for (auto& vert : verts) {
+    n_failed += !vert.snap_to(_get_snapping_target(vert, vert.point({})));
+  }
+  if (n_failed) {
+    printers::warn(format_str(200, "%li vertices could not be snapped to the surface.\n", n_failed), true);
+  }
+  #endif
 }
 
 void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {

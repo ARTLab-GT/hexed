@@ -200,6 +200,7 @@ class Vertex : public Block {
   Mat<3> _update;
   Mat<3> _target;
   bool _has_target;
+  double _step_sz;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;
   Reciprocal_ptr<Vertex, Element_shape> _glued_to;

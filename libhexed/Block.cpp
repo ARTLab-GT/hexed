@@ -68,6 +68,7 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , _update{Mat<3>::Zero()}
 , _target{Mat<3>::Zero()}
 , _has_target{false}
+, _step_sz{-1}
 , _edges(this)
 , _elems(this)
 , _glued_to(this)
@@ -77,7 +78,7 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 {}
 
 Vertex::~Vertex() {
-  for (auto v : _shadows.theirs()) v->_pos = point({});
+  for (auto v : _shadows.theirs()) v->set_pos(point({}));
 }
 
 double Vertex::nominal_size() const {
@@ -90,7 +91,7 @@ double Vertex::nominal_size() const {
 }
 
 void Vertex::shadow(Vertex& that) {
-  that._pos = _pos = .5*(that.point({}) + point({}));
+  that.set_pos(.5*(that.point({}) + point({})));
   HEXED_ASSERT(that._shadowed.get() != this, "two `Vertex`s cannot shadow each other");
   HEXED_ASSERT(!_shadowed || !that._shadowed, "one of the vertices must not already be shadowing");
   if (_shadowed) that._shadowed.pair(_shadows);
@@ -102,7 +103,7 @@ void Vertex::eat(Vertex& that) {
   if (&that == this) return;
   // compute averaged position
   Int sz [2] {_elems.partners().size(), that._elems.partners().size()};
-  _pos = (sz[0]*point({}) + sz[1]*that.point({}))/(sz[0] + sz[1]);
+  set_pos((sz[0]*point({}) + sz[1]*that.point({}))/(sz[0] + sz[1]));
   // steal pointers
   for (Int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
   for (Int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
@@ -144,6 +145,7 @@ void Vertex::set_pos(Mat<3> p) {
       _pos(i_dim) = p(i_dim);
     }
   }
+  _step_sz = -1;
 }
 
 void Vertex::reset_pos() {
@@ -153,7 +155,7 @@ void Vertex::reset_pos() {
     p += elem->nominal_position(_get_index(*elem));
     ++n;
   }
-  if (n) _pos = p/n;
+  if (n) set_pos(p/n);
 }
 
 bool Vertex::mobile() const {
@@ -173,7 +175,7 @@ Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
 }
 
 void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors) {
-  set_pos(point({}));
+  _pos = point({});
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
   for (Element_shape* elem : _elems.theirs()) {
@@ -249,26 +251,34 @@ void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>
   Mat<3> direction = -state.gradient + distance_weight*2*snap_vec;
   if (direction.norm()*ns < 1e-6*state.objective) return;
   direction.normalize();
-  double step_sz = .1*ns;
   _Optimization_state new_state;
-  do {
-    if (step_sz < 1e-20*ns) {
-      _pos = orig_pos;
-      break;
-    }
-    _pos = orig_pos + step_sz*direction;
+  auto check_step = [&]() {
+    _pos = orig_pos + _step_sz*direction;
     target = get_target(_pos);
     new_state = _compute_state();
     new_state.objective += distance_weight*(_pos - target).squaredNorm();
-    step_sz /= 2;
-  } while (!(new_state.feasible && new_state.objective < state.objective));
+  };
+  if (_step_sz <= 0) _step_sz = .1*ns;
+  check_step();
+  while (new_state.feasible && new_state.objective < state.objective && _step_sz < .09*ns) {
+    check_step();
+    _step_sz *= 2;
+  }
+  while (!(new_state.feasible && new_state.objective < state.objective)) {
+    if (_step_sz < 1e-20*ns) {
+      _pos = orig_pos;
+      break;
+    }
+    check_step();
+    _step_sz /= 2;
+  }
 }
 
 bool Vertex::snap_to(Mat<3> target) {
   Mat<3> orig_pos = point({});
-  _pos = target;
+  set_pos(target);
   _Optimization_state state = _compute_state();
-  if (!state.feasible) _pos = orig_pos;
+  if (!state.feasible) set_pos(orig_pos);
   return state.feasible;
 }
 
