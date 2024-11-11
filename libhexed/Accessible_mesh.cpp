@@ -47,11 +47,13 @@ namespace dijkstra {
 }
 
 void Accessible_mesh::_offset_vertices(double offset) {
-  auto all_verts = _blocks.verts();
+  auto verts = _blocks.verts();
   #pragma omp parallel for
-  for (auto& vert : all_verts) {
+  for (auto& vert : verts) {
     vert.offset.setZero();
+    vert.dijkstra_dist = 0;
   }
+  int nv = params.n_vertices()/2;
   for (auto& con : def.cons) {
     auto dir = con->get_direction();
     if (dir.i_dim[0] != dir.i_dim[1]) continue;
@@ -60,20 +62,32 @@ void Accessible_mesh::_offset_vertices(double offset) {
       is_new[i_side] = con->element(i_side).active_shape().is_new;
     }
     if (is_new[0] != is_new[1]) {
-      auto i_verts = vertex_inds(3, dir)[!is_new[0]];
-      for (int i_vert : i_verts) {
-        auto& vert = con->element(!is_new[0]).active_shape().vertex(i_vert);
-        int sign = -math::sign(dir.face_sign[is_new[0]]);
-        int i_dim = dir.i_dim[is_new[0]];
-        //HEXED_ASSERT(vert.offset_dir(i_dim) != -sign, "Vertex has opposite faces.");
-        vert.offset(i_dim) = sign*con->element(!is_new[0]).nominal_size();
+      int new_elem = is_new[1];
+      auto i_verts = vertex_inds(3, dir)[0];
+      Mat<3, dyn> vert_pos(3, nv);
+      std::vector<next::Vertex*> con_verts(nv);
+      for (int i_vert = 0; i_vert < nv; ++i_vert) {
+        con_verts[i_vert] = &con->element(0).active_shape().vertex(i_verts[i_vert]);
+        vert_pos(all, i_vert) = con_verts[i_vert]->point({});
+      }
+      for (int i_vert = 0; i_vert < nv; ++i_vert) {
+        Mat<3, 2> edges;
+        edges(all, 1).setUnit(2);
+        for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
+          int stride = math::pow(2, params.n_dim - 2 - i_dim);
+          int start = i_vert - i_vert/stride%2*stride;
+          edges(all, i_dim) = vert_pos(all, start + stride) - vert_pos(all, start);
+        }
+        Mat<3> nrml = edges(all, 0).cross(edges(all, 1)).normalized()
+                      *math::sign(dir.face_sign[0])*math::sign(new_elem)*math::sign(dir.i_dim[0] == 1);
+        double dot = nrml.dot(con_verts[i_vert]->offset);
+        con_verts[i_vert]->offset += std::max(0., 1 - dot)*nrml;
       }
     }
   }
   #pragma omp parallel for
-  for (auto& vert : all_verts) {
-    vert.set_pos(vert.point({}) + offset*vert.offset);
-    vert.offset.setZero();
+  for (auto& vert : verts) {
+    vert.set_pos(vert.point({}) + offset*vert.nominal_size()*vert.offset);
   }
 }
 
@@ -111,6 +125,7 @@ void Accessible_mesh::_match_topo() {
     vert.reset_pos();
   }
   _offset_vertices(.2);
+  #if 0
   {
     Task_message message(printers::info, "Pre-edge-matching mesh optimization", "\n");
     _optimize(1, 4, false);
@@ -548,6 +563,7 @@ void Accessible_mesh::_match_topo() {
   if (n_failed) {
     printers::warn(format_str(200, "%li vertices could not be snapped to the surface.\n", n_failed), true);
   }
+  #endif
   #endif
 }
 
