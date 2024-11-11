@@ -81,7 +81,15 @@ void Accessible_mesh::_offset_vertices(double offset) {
         Mat<3> nrml = edges(all, 0).cross(edges(all, 1)).normalized()
                       *math::sign(dir.face_sign[0])*math::sign(new_elem)*math::sign(dir.i_dim[0] == 1);
         double dot = nrml.dot(con_verts[i_vert]->offset);
-        con_verts[i_vert]->offset += std::max(0., 1 - dot)*nrml;
+        Mat<3> diff = nrml;
+        if (dot < 0) {
+          double norm_sq = con_verts[i_vert]->offset.squaredNorm();
+          if (norm_sq > .1) { // `offset` should be 0 or >= 1
+            diff -= con_verts[i_vert]->offset*dot/norm_sq;
+            diff /= diff.dot(nrml);
+          }
+        }
+        con_verts[i_vert]->offset += std::max(0., 1 - dot)*diff;
       }
     }
   }
@@ -92,22 +100,21 @@ void Accessible_mesh::_offset_vertices(double offset) {
 }
 
 Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
-  if (vert.snapped_edge < 0) {
-    auto seq = Eigen::seqN(0, params.n_dim);
-    pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
-    return pos;
-  } else {
+  if (vert.snapped_edge >= 0) {
     auto& geom_edge = surf_geom->edges()[vert.snapped_edge];
     Array<double> nodes{geom_edge.nodes()};
     Int n_points = nodes.shape()[0];
     if (vert.snapped_endpoint == -1) {
       Int nearest = geom_edge.nearest_point(pos, 8*vert.nominal_size()).index;
-      HEXED_ASSERT(nearest >= 0, "Nearest point on edge not found.");
-      return nodes(nearest).vector();
+      if (nearest >= 0) return nodes(nearest).vector();
     } else {
       return nodes(vert.snapped_endpoint*(n_points - 1)).vector();
     }
   }
+  // the vertex should not or could not be snapped to an edge, so snap it to the surface
+  auto seq = Eigen::seqN(0, params.n_dim);
+  pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
+  return pos;
 }
 
 void Accessible_mesh::_match_topo() {
@@ -687,7 +694,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
                                 distance_weight, i_relax, n_failed, rms_dist, max_dist), false, true);
     }
   }
-  printers::info("", false, true);
+  printers::info("\n");
 }
 
 void Accessible_mesh::relax_and_match(int n_relax, double factor) {
