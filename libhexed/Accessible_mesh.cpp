@@ -125,7 +125,6 @@ void Accessible_mesh::_match_topo() {
     vert.reset_pos();
   }
   _offset_vertices(.2);
-  #if 0
   {
     Task_message message(printers::info, "Pre-edge-matching mesh optimization", "\n");
     _optimize(1, 4, false);
@@ -551,7 +550,6 @@ void Accessible_mesh::_match_topo() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
-  #if 0
   {
     Task_message message(printers::info, "Post-edge-matching mesh optimization", "\n");
     _optimize(1, 10, true);
@@ -563,8 +561,6 @@ void Accessible_mesh::_match_topo() {
   if (n_failed) {
     printers::warn(format_str(200, "%li vertices could not be snapped to the surface.\n", n_failed), true);
   }
-  #endif
-  #endif
 }
 
 void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
