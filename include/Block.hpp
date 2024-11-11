@@ -129,8 +129,6 @@ class Vertex : public Block {
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
   double quality_objective();
   double quality_gradient_norm_sq();
-  void set_target(Mat<3> pos);
-  void set_target();
   double quality();
   int n_elements() const; //!< \brief The number of elements sharing this vertex
   inline bool is_surface() const {return _edges.theirs().size();}
@@ -198,8 +196,6 @@ class Vertex : public Block {
   int _get_index(const Element_shape&) const;
   Mat<3> _pos;
   Mat<3> _update;
-  Mat<3> _target;
-  bool _has_target;
   double _step_sz;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;

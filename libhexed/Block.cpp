@@ -66,8 +66,6 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , snapped_endpoint{-1}
 , _pos{pos}
 , _update{Mat<3>::Zero()}
-, _target{Mat<3>::Zero()}
-, _has_target{false}
 , _step_sz{-1}
 , _edges(this)
 , _elems(this)
@@ -290,15 +288,6 @@ double Vertex::quality_objective() {
 double Vertex::quality_gradient_norm_sq() {
   auto state = _compute_state(true);
   return state.gradient.squaredNorm();
-}
-
-void Vertex::set_target(Mat<3> p) {
-  _target = p;
-  _has_target = true;
-}
-
-void Vertex::set_target() {
-  _has_target = false;
 }
 
 double Vertex::quality() {
