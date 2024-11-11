@@ -18,13 +18,24 @@ This type of error indicates a basic mistake in the input parameters
 Unlike a \ref hil_exception, this indicates that your input file is (probably) valid \ref hil code,
 but what you're specifying with that code doesn't make sense.
 
-\section not_implemented_error Not Implemented Error
+\section not_implemented_error Feature-Not-Implemented Error
 - `hexed::assert::Not_implemented_error`
 
 This one is not your fault.
 It indicates that you told Hexed to do something that it ought to be able to do,
 and that I plan for it to be capable of in future releases, but that I haven't implemented yet.
 If you encounter this error, I would appreciate feedback to help prioritize future development.
+
+\section internal_error Internal Error
+- `hexed::assert::Internal_error`
+
+This indicates that you have encountered a bug.
+The code encountered some kind of invalid state
+(a \ref HEXED_ASSERT assertion failed or an exception was explicitly thrown with \ref HEXED_THROW ).
+This may have been precipitated by a mistake you made in the input file
+(which tends to create situations I did not expect),
+but the fact that it was caught as an `Internal_error` rather than a `User_error` still indicates a bug.
+It would be appreciated if you could report it to \me.
 
 \section numerical_error Numerical Exception
 - `hexed::assert::Numerical_exception`

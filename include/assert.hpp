@@ -31,10 +31,13 @@ std::string format_str(int max_chars, std::string fstring, format_args... args) 
 namespace assert {
 
 class Exception : public std::exception {
-  std::string msg;
   public:
-  inline Exception(std::string message) : msg{message} {}
-  inline const char* what() const noexcept override {return msg.c_str();}
+  inline Exception(std::string m) : _msg{m} {}
+  virtual std::string name() const = 0;
+  std::string message() const {return _msg;}
+  inline const char* what() const noexcept override {return _msg.c_str();}
+  private:
+  std::string _msg;
 };
 
 //! \brief Represents a fatal problem in the numerics of the code (such as nonphysical values)
@@ -42,24 +45,35 @@ class Exception : public std::exception {
 //! \see \ref numerical_error
 class Numerical_exception : public Exception {
   public:
+  inline std::string name() const override {return "Numerical exception";}
   Numerical_exception(std::string message) : Exception(message) {}
 };
 
 //! \brief Represents an exception which clearly results from a mistake made by the user.
 class User_error : public Exception {
   public:
+  inline std::string name() const override {return "User error";}
   inline User_error(std::string message) : Exception(message) {}
 };
 
 //! \brief Indicates that the user invoked functionality which should be implemented in the future but isn't yet.
 class Not_implemented_error : public Exception {
   public:
+  inline std::string name() const override {return "Feature-not-implemented error";}
   inline Not_implemented_error(std::string message) : Exception(message) {}
+};
+
+//! \brief Indicates that a situation has been encountered which should not be possible, regardless of user input.
+//! \details In other words, a bug has been caught.
+class Internal_error : public Exception {
+  public:
+  inline std::string name() const override {return "Internal error";}
+  inline Internal_error(std::string message) : Exception(message) {}
 };
 
 //! throws a `std::runtime_error` with message `message`, wrapped in a `#pragma omp critical` if necessary.
 //! Used in \ref HEXED_ASSERT
-template <typename except_t = std::runtime_error>
+template <typename except_t = Internal_error>
 void throw_critical(const char* message) {
   #if HEXED_THREADED
   if (omp_get_level()) {

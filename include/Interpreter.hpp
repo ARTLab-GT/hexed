@@ -99,6 +99,7 @@ class Interpreter {
 
   class Hil_unhandled_exception : public assert::Exception {
     public:
+    inline std::string name() const override {return "Unhandled HIL exception";}
     Hil_unhandled_exception(std::string message) : Exception(message) {}
   };
 };

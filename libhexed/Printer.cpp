@@ -6,7 +6,7 @@ namespace hexed {
 Compound_printer::Compound_printer(std::vector<std::shared_ptr<Printer>> p) : printers{p} {}
 
 void Compound_printer::operator()(std::string message, bool emph, bool replace) {
-  for (auto& printer : printers) (*printer)(message, emph, replace);
+  for (auto& printer : printers) if (printer) (*printer)(message, emph, replace);
 }
 
 const Stream_printer::Format Stream_printer::default_format;

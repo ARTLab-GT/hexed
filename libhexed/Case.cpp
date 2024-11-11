@@ -596,19 +596,17 @@ Case::Case(std::string input_script)
   _inter.variables = space;
   // execute input file
   try {
-    _inter.exec(format_str(1000, "$read {%s}", input_script.c_str()));
-  } catch (const assert::User_error& except) {
-    printers::error("User error: ", true);
-    throw except;
-  } catch (const assert::Not_implemented_error& except) {
-    printers::error("Error: feature not yet implemented. ", true);
-    throw except;
-  } catch (const assert::Numerical_exception& except) {
-    printers::error("Numerical exception: ", true);
-    printers::error(except.what());
-    printers::error("\nTerminating simulation.\n", true);
-    if (_solver_ptr) _inter.exec("write_mesh; write_state; write_status; visualize;");
-    _inter.variables->assign("hexed_failed", 1);
+    try {
+      _inter.exec(format_str(1000, "$read {%s}", input_script.c_str()));
+    } catch (const assert::Numerical_exception& except) {
+      printers::error("\nTerminating simulation due to numerical exception.\n", true);
+      if (_solver_ptr) _inter.exec("write_mesh; write_state; write_status; visualize; println performance_report;");
+      _inter.variables->assign("hexed_failed", 1);
+      throw except;
+    }
+  } catch (const assert::Exception& except) {
+    printers::error("\n" + except.name() + ": ", true);
+    printers::error(except.message() + "\n");
   }
 }
 
