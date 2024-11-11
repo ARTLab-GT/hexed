@@ -173,9 +173,16 @@ void Accessible_mesh::_match_topo() {
       for (auto& vert : verts) {
         if (!vert.glued()) {
           double d = (vert.dijkstra_point - endpoint).squaredNorm();
-          if (d < dist_sq) {
-            dist_sq = d;
-            start_end[i_endpoint] = &vert;
+          if (d < dist_sq) { // don't bother to account for snapped neighbors unless d is initially < dist_sq
+            bool snapped_neighbor = false;
+            for (next::Vertex* v : vert.neighbors()) {
+              if (v) snapped_neighbor = snapped_neighbor || (v->snapped_edge != -1 && v->snapped_edge != i_geom_edge);
+            }
+            if (snapped_neighbor) d *= 10;
+            if (d < dist_sq) { // now we know d accounting for snapped neighbors, so this is the real comparison
+              dist_sq = d;
+              start_end[i_endpoint] = &vert;
+            }
           }
         }
       }
