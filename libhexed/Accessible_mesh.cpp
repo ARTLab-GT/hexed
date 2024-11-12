@@ -105,7 +105,7 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
     Array<double> nodes{geom_edge.nodes()};
     Int n_points = nodes.shape()[0];
     if (vert.snapped_endpoint == -1) {
-      Int nearest = geom_edge.nearest_point(pos, 8*vert.nominal_size()).index;
+      Int nearest = geom_edge.nearest_point(pos, 100*vert.nominal_size()).index;
       if (nearest >= 0) return nodes(nearest).vector();
     } else {
       return nodes(vert.snapped_endpoint*(n_points - 1)).vector();
@@ -180,7 +180,8 @@ void Accessible_mesh::_match_topo() {
       for (auto& vert : verts) {
         if (!vert.glued()) {
           double d = (vert.dijkstra_point - endpoint).squaredNorm();
-          if (d < dist_sq) { // don't bother to account for snapped neighbors unless d is initially < dist_sq
+          // don't bother to account for snapped neighbors unless d is initially < dist_sq
+          if (d < std::min(vert.nominal_size(), dist_sq)) {
             bool snapped_neighbor = false;
             for (next::Vertex* v : vert.neighbors()) {
               if (v) snapped_neighbor = snapped_neighbor || (v->snapped_edge != -1 && v->snapped_edge != i_geom_edge);
@@ -591,7 +592,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     History_monitor monitor(.3, 100);
     printers::info(format_str(200, "  Optimizing quality: Distance weight = %e;", distance_weight), false, true);
     double rms_dist = 0;
-    for (Int i_relax = 0; i_relax < 30 || monitor.max() - monitor.min() > .01*std::abs(monitor.min()); ++i_relax) {
+    for (Int i_relax = 0; (i_relax < 30 || monitor.max() - monitor.min() > .01*std::abs(monitor.min())) && i_relax < 1000; ++i_relax) {
       // snap vertices to extremal boundaries
       if (tree) {
         Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);

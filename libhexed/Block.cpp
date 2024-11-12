@@ -257,11 +257,8 @@ void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>
     new_state.objective += distance_weight*(_pos - target).squaredNorm();
   };
   if (_step_sz <= 0) _step_sz = .1*ns;
+  else _step_sz *= 2;
   check_step();
-  while (new_state.feasible && new_state.objective < state.objective && _step_sz < .09*ns) {
-    check_step();
-    _step_sz *= 2;
-  }
   while (!(new_state.feasible && new_state.objective < state.objective)) {
     if (_step_sz < 1e-20*ns) {
       _pos = orig_pos;
