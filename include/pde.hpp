@@ -164,7 +164,7 @@ class Navier_stokes {
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
 	real_turb_diss = state(i_turb_diss)/mass; //TODO: \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0}
         k_bar = std::max(0., state(i_turb_kin_ener)/mass);
-	mu_t_bar = alpha_s * state(i_turb_kin_ener) * std::exp(-real_turb_diss);
+	mu_t_bar = alpha_s * mass * k_bar * std::exp(-real_turb_diss);
 	//mu_t_bar = std::min(0., mu_t_bar);
         //mu_t_bar = alpha_s * state(i_mass) * k_bar * std::exp(-real_turb_diss);	
 	
@@ -202,6 +202,7 @@ class Navier_stokes {
                                   - 2./3. * veloc_grad.trace()*Mat<n_dim, n_dim>::Identity())
                       - 2./3.*mass*k_bar*Mat<n_dim, n_dim>::Identity();
 
+	//TODO: The above line is going to cause problems if not in k-w mode
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
                                   + (bulk_av*mass - 2./3.*dyn_visc_coef)
                                      *veloc_grad.trace()*Mat<n_dim, n_dim>::Identity() + turb_stress;
@@ -240,7 +241,7 @@ class Navier_stokes {
 
 	grad_diss_sum = 0.0;
 	for (int k = 0; k < n_dim; ++k) {
-          grad_diss_sum += veloc_grad(i_turb_diss, k)^2;
+          grad_diss_sum += (gradient(i_turb_diss, k)/mass)^2;
 	}
 	
 	tau_vgrad_sum = 0.0;
@@ -260,7 +261,7 @@ class Navier_stokes {
           source.setZero();
         }
         if constexpr (turb == k_omega) {
-          source(i_energy) = -tau_vgrad_sum + beta_s * state(i_mass) * k_bar * std::exp(real_turb_diss);
+          source(i_energy) = -tau_vgrad_sum + beta_s * mass * k_bar * std::exp(real_turb_diss);
           source(i_turb_kin_ener) = tau_vgrad_sum - beta_s * mass * k_bar * std::exp(real_turb_diss);
           source(i_turb_diss) = alpha/k_bar*tau_vgrad_sum - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma * mu_t_bar) * grad_diss_sum; 
           //these source terms are wrong
