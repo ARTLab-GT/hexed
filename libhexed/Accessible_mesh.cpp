@@ -143,7 +143,7 @@ void Accessible_mesh::_match_topo() {
   _offset_vertices(.2);
   {
     Task_message message(printers::info, "Pre-edge-matching mesh optimization", "\n");
-    _optimize(1, 4, false);
+    _optimize(1, 10, true);
   }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
@@ -188,9 +188,17 @@ void Accessible_mesh::_match_topo() {
       Mat<3> endpoint = geom_edge.nodes()(i_endpoint*(geom_edge.nodes().shape()[0] - 1)).vector();
       for (auto& vert : verts) {
         if (!vert.glued()) {
+          double ns = vert.nominal_size();
           double d = (vert.dijkstra_point - endpoint).squaredNorm();
+          for (int i_dim = 0; i_dim < 3; ++i_dim) {
+            for (int sign : {0, 1}) {
+              double extreme = tree->origin()(i_dim) + sign*tree->nominal_size();
+              if ((std::abs(endpoint(i_dim) - extreme) > 3e-2*ns) !=
+                  (std::abs(vert.dijkstra_point(i_dim) - extreme) > 3e-2*ns)) d = huge;
+            }
+          }
           // don't bother to account for snapped neighbors unless d is initially < dist_sq
-          if (d < std::min(vert.nominal_size(), dist_sq)) {
+          if (d < std::min(ns, dist_sq)) {
             bool snapped_neighbor = false;
             for (next::Vertex* v : vert.neighbors()) {
               if (v) snapped_neighbor = snapped_neighbor || (v->snapped_edge != -1 && v->snapped_edge != i_geom_edge);
@@ -609,79 +617,23 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     vert.record[2*params.n_dim] = 1;
   }
   Int n_failed = verts.size();
-  Int prev_n_failed = 0;
+  double max_dist = huge;
+  double prev_max_dist = 0;
   for (int i_weight = min_pow;
-       (i_weight < 2 || !(n_failed == 0 || std::abs(prev_n_failed - n_failed) == 0) || !check_snapping) && i_weight <= 3*max_pow;
+       (i_weight < 2
+        || !(n_failed == 0 || std::abs(max_dist - prev_max_dist) < .01*std::max(max_dist, prev_max_dist))
+        || !check_snapping) && i_weight <= 3*max_pow;
        ++i_weight) {
-    prev_n_failed = n_failed;
     double distance_weight = math::pow(2, i_weight);
     History_monitor monitor(.3, 100);
     printers::info(format_str(200, "  Optimizing quality: Distance weight = %e;", distance_weight), false, true);
     double starting_objective = -1;
     for (Int i_relax = 0; (i_relax < 30 || monitor.max() - monitor.min() > .01*std::abs(monitor.min())) && i_relax < 1000; ++i_relax) {
-      if (surf_geom) {
-        Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
-        // snap vertices to surface boundary
-        for (auto& vert : verts) if (vert.mobile()) {
-          HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
-          vert.improve_quality(distance_weight,
-                               [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);});
-        }
-        // snaps a `Boundary_block` to the geometry surface
-        auto snap_block = [this](next::Boundary_block& block) {
-          block.reset();
-          Array<double> interior {block.interior().reshaped({whatever, 3})};
-          for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
-            auto p = interior(i_point)(0, params.n_dim).vector();
-            Mat<> p_mat {p};
-            p = surf_geom->nearest_point(p_mat, huge, block.element()->nominal_size()/params.row_size).point();
-          }
-        };
-        // snap edges to the surface (regardless of dimensionality)
-        auto edges_2d = _blocks.edges_2d();
-        #pragma omp parallel for
-        for (auto& edge : edges_2d) snap_block(edge);
-        auto faces_3d = _blocks.faces_3d();
-        #pragma omp parallel for
-        for (auto& face : faces_3d) {
-          for (int i_edge = 0; i_edge < 4; ++i_edge) snap_block(face.edge(i_edge));
-        }
-        // Snap mesh edges to geometry edges.
-        // This has to happen after snapping edges to the surface (which would undo this)
-        // but before snapping faces to the surface
-        // (or else the `reset()` function would be called with incorrect edge data)
-        for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
-          auto& geom_edge = edges[i_geom_edge];
-          Array<double> nodes {geom_edge.nodes()};
-          for (auto& edge : matched_edges[i_geom_edge]) {
-            edge.value().reset();
-            Array<double> interior {edge.value().interior()};
-            double max_dist = .5*edge.value().element()->nominal_size();
-            for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
-              Int nearest = geom_edge.nearest_point(interior(i_point).vector(), max_dist).index;
-              if (nearest >= 0) interior(i_point) = nodes(nearest);
-            }
-          }
-        }
-        // snap face interiors (if 3D) to surface
-        #pragma omp parallel for
-        for (auto& face : faces_3d) snap_block(face);
-        _stopwatch["relax"]["surface snapping"].work_units_completed += bverts.size();
-      } else {
-        auto blocks = _blocks.boundary_sides();
-        #pragma omp parallel for
-        for (auto& block : blocks) block.reset();
-      }
-      n_failed = 0;
-      double max_dist = 0;
-      for (auto& vert : verts) {
-        vert.dijkstra_point = vert.point({});
-        Mat<3> target = _get_snapping_target(vert, vert.dijkstra_point);
-        max_dist = std::max(max_dist, (vert.dijkstra_point - target).norm());
-        n_failed += !vert.snap_to(target);
-      }
-      for (auto& vert : verts) {
-        vert.set_pos(vert.dijkstra_point);
+      // snap vertices to surface boundary
+      for (auto& vert : verts) if (vert.mobile()) {
+        HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
+        vert.improve_quality(distance_weight,
+                             [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);});
       }
       double objective = 0;
       for (auto& vert : verts) {
@@ -693,13 +645,73 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       monitor.add_sample(i_relax, reduction);
       std::string message = format_str(
         400,
-        "  Optimizing quality: Distance weight = %.1e; Iteration = %4li;"
-        " Number of snaps failed = %6li; max distance = %.18e;"
-        " Objective: %.18e; Reduction: %.18e;",
-        distance_weight, i_relax, n_failed, max_dist, objective, reduction
+        "  Distance weight = %.1e; Iteration = %4li;"
+        " Number of snaps failed = %6li; Max distance = %.5e (- %.5e);"
+        " Objective: %.18e (- %.5e);",
+        distance_weight, i_relax, n_failed, max_dist, prev_max_dist - max_dist, objective, reduction
       );
       printers::info(message, false, true);
     }
+    prev_max_dist = max_dist;
+    n_failed = 0;
+    max_dist = 0;
+    for (auto& vert : verts) {
+      vert.dijkstra_point = vert.point({});
+      Mat<3> target = _get_snapping_target(vert, vert.dijkstra_point);
+      bool failed = !vert.snap_to(target);
+      n_failed += failed;
+      if (failed) max_dist += (vert.dijkstra_point - target).norm();
+    }
+    for (auto& vert : verts) {
+      vert.set_pos(vert.dijkstra_point);
+    }
+  }
+  if (surf_geom) {
+    Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
+    // snaps a `Boundary_block` to the geometry surface
+    auto snap_block = [this](next::Boundary_block& block) {
+      block.reset();
+      Array<double> interior {block.interior().reshaped({whatever, 3})};
+      for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
+        auto p = interior(i_point)(0, params.n_dim).vector();
+        Mat<> p_mat {p};
+        p = surf_geom->nearest_point(p_mat, huge, block.element()->nominal_size()/params.row_size).point();
+      }
+    };
+    // snap edges to the surface (regardless of dimensionality)
+    auto edges_2d = _blocks.edges_2d();
+    #pragma omp parallel for
+    for (auto& edge : edges_2d) snap_block(edge);
+    auto faces_3d = _blocks.faces_3d();
+    #pragma omp parallel for
+    for (auto& face : faces_3d) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) snap_block(face.edge(i_edge));
+    }
+    // Snap mesh edges to geometry edges.
+    // This has to happen after snapping edges to the surface (which would undo this)
+    // but before snapping faces to the surface
+    // (or else the `reset()` function would be called with incorrect edge data)
+    for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+      auto& geom_edge = edges[i_geom_edge];
+      Array<double> nodes {geom_edge.nodes()};
+      for (auto& edge : matched_edges[i_geom_edge]) {
+        edge.value().reset();
+        Array<double> interior {edge.value().interior()};
+        double max_dist = .5*edge.value().element()->nominal_size();
+        for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
+          Int nearest = geom_edge.nearest_point(interior(i_point).vector(), max_dist).index;
+          if (nearest >= 0) interior(i_point) = nodes(nearest);
+        }
+      }
+    }
+    // snap face interiors (if 3D) to surface
+    #pragma omp parallel for
+    for (auto& face : faces_3d) snap_block(face);
+    _stopwatch["relax"]["surface snapping"].work_units_completed += bverts.size();
+  } else {
+    auto blocks = _blocks.boundary_sides();
+    #pragma omp parallel for
+    for (auto& block : blocks) block.reset();
   }
   printers::info("\n");
 }
