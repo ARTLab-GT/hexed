@@ -100,20 +100,29 @@ void Accessible_mesh::_offset_vertices(double offset) {
 }
 
 Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
-  if (vert.snapped_edge >= 0) {
-    auto& geom_edge = surf_geom->edges()[vert.snapped_edge];
-    Array<double> nodes{geom_edge.nodes()};
-    Int n_points = nodes.shape()[0];
-    if (vert.snapped_endpoint == -1) {
-      Int nearest = geom_edge.nearest_point(pos, 100*vert.nominal_size()).index;
-      if (nearest >= 0) return nodes(nearest).vector();
+  if (vert.record[2*params.n_dim]) {
+    if (vert.snapped_edge >= 0) {
+      auto& geom_edge = surf_geom->edges()[vert.snapped_edge];
+      Array<double> nodes{geom_edge.nodes()};
+      Int n_points = nodes.shape()[0];
+      if (vert.snapped_endpoint == -1) {
+        Int nearest = geom_edge.nearest_point(pos, 100*vert.nominal_size()).index;
+        if (nearest >= 0) pos = nodes(nearest).vector();
+      } else {
+        pos = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
+      }
     } else {
-      return nodes(vert.snapped_endpoint*(n_points - 1)).vector();
+      auto seq = Eigen::seqN(0, params.n_dim);
+      pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
     }
   }
-  // the vertex should not or could not be snapped to an edge, so snap it to the surface
-  auto seq = Eigen::seqN(0, params.n_dim);
-  pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    for (int sign : {0, 1}) {
+      if (vert.record[2*i_dim + sign]) {
+        pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+      }
+    }
+  }
   return pos;
 }
 
@@ -129,7 +138,7 @@ void Accessible_mesh::_match_topo() {
   }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
-    vert.reset_pos();
+    vert.set_pos(vert.nominal_position());
   }
   _offset_vertices(.2);
   {
@@ -301,7 +310,7 @@ void Accessible_mesh::_match_topo() {
   }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
-    vert.reset_pos();
+    vert.set_pos(vert.nominal_position());
   }
   _offset_vertices(.2);
   #pragma omp parallel for
@@ -410,7 +419,6 @@ void Accessible_mesh::_match_topo() {
             }
           }
         }
-        #if 1
         Mat<3, 8> orig_pos;
         for (int i_vert = 0; i_vert < 8; ++i_vert) {
           orig_pos(all, i_vert) = shape->vertex(i_vert).point({});
@@ -427,11 +435,6 @@ void Accessible_mesh::_match_topo() {
           }
           surface.shape().vertex(i_vert).set_pos(pos);
         }
-        #else
-        for (int i_vert = 0; i_vert < 8; ++i_vert) {
-          surface.active_shape().vertex(i_vert).set_pos(shape->vertex(i_vert).point({}));
-        }
-        #endif
         for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
           int k_dim = 3 - j_dim - i_dim;
           for (bool j_sign : {0, 1}) if (matched_elems[2*j_dim + j_sign]) {
@@ -570,7 +573,7 @@ void Accessible_mesh::_match_topo() {
     _optimize(1, 10, true);
   }
   Int n_failed = 0;
-  for (auto& vert : verts) {
+  for (auto& vert : all_verts) {
     n_failed += !vert.snap_to(_get_snapping_target(vert, vert.point({})));
   }
   if (n_failed) {
@@ -582,43 +585,44 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   auto verts = _blocks.verts();
   auto bverts = _blocks.boundary_verts();
   auto edges = surf_geom->edges();
+  // determine which vertices are on extremal boundaries
+  #pragma omp parallel for
+  for (auto& vert : verts) {
+    vert.record.resize(2*params.n_dim + 1);
+    for (int i = 0; i < 2*params.n_dim + 1; ++i) vert.record[i] = 0;
+  }
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
+    auto& con = bound_cons[i_con];
+    int bc_sn = con.bound_cond_serial_n();
+    if (bc_sn < 2*params.n_dim + 1) {
+      std::vector<int> inds = vertex_inds(params.n_dim, con.get_direction())[0];
+      for (int i_vert : inds) {
+        #pragma omp atomic write
+        con.element().active_shape().vertex(i_vert).record[bc_sn] = 1;
+      }
+    }
+  }
+  // boundary connections haven't been formed yet, so we have to do this manually
+  #pragma omp parallel for
+  for (auto& vert : bverts) {
+    vert.record[2*params.n_dim] = 1;
+  }
   Int n_failed = verts.size();
   Int prev_n_failed = 0;
   for (int i_weight = min_pow;
-       (i_weight < 2 || std::min(n_failed, prev_n_failed - n_failed) > 0 || !check_snapping) && i_weight <= max_pow;
+       (i_weight < 2 || !(n_failed == 0 || std::abs(prev_n_failed - n_failed) == 0) || !check_snapping) && i_weight <= 3*max_pow;
        ++i_weight) {
     prev_n_failed = n_failed;
-    double distance_weight = math::pow(10, i_weight);
+    double distance_weight = math::pow(2, i_weight);
     History_monitor monitor(.3, 100);
     printers::info(format_str(200, "  Optimizing quality: Distance weight = %e;", distance_weight), false, true);
-    double rms_dist = 0;
+    double starting_objective = -1;
     for (Int i_relax = 0; (i_relax < 30 || monitor.max() - monitor.min() > .01*std::abs(monitor.min())) && i_relax < 1000; ++i_relax) {
-      // snap vertices to extremal boundaries
-      if (tree) {
-        Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);
-        for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
-          auto& con = bound_cons[i_con];
-          int bc_sn = con.bound_cond_serial_n();
-          if (bc_sn < 2*params.n_dim) {
-            int i_dim = bc_sn/2;
-            bool sign = bc_sn%2;
-            std::vector<int> inds = vertex_inds(params.n_dim, {{i_dim, i_dim}, {sign, !sign}})[0];
-            for (int i_vert : inds) {
-              auto& vert = con.element().shape().vertex(i_vert);
-              auto target = [&](Mat<3> pos) {
-                pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
-                return pos;
-              };
-              vert.improve_quality(distance_weight, target);
-            }
-          }
-        }
-        _stopwatch["relax"]["extremal snapping"].work_units_completed += _n_verts;
-      }
       if (surf_geom) {
         Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
         // snap vertices to surface boundary
-        for (auto& vert : bverts) if (vert.mobile()) {
+        for (auto& vert : verts) if (vert.mobile()) {
           HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
           vert.improve_quality(distance_weight,
                                [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);});
@@ -668,31 +672,33 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         #pragma omp parallel for
         for (auto& block : blocks) block.reset();
       }
-      for (auto& vert : verts) {
-        if (vert.mobile()) if (!vert.is_surface()) vert.improve_quality();
-      }
       n_failed = 0;
-      rms_dist = 0;
-      for (auto& vert : bverts) {
+      double max_dist = 0;
+      for (auto& vert : verts) {
         vert.dijkstra_point = vert.point({});
         Mat<3> target = _get_snapping_target(vert, vert.dijkstra_point);
-        if (!vert.snap_to(target)) {
-          ++n_failed;
-          rms_dist += (vert.point({}) - target).squaredNorm();
-        }
+        max_dist = std::max(max_dist, (vert.dijkstra_point - target).norm());
+        n_failed += !vert.snap_to(target);
       }
-      for (auto& vert : bverts) {
+      for (auto& vert : verts) {
         vert.set_pos(vert.dijkstra_point);
       }
-      rms_dist = std::sqrt(rms_dist/bverts.size());
-      double max_dist = 0;
-      for (auto& vert : bverts) {
-        Mat<3> p = vert.point({});
-        max_dist = std::max(max_dist, (p - _get_snapping_target(vert, p)).norm());
+      double objective = 0;
+      for (auto& vert : verts) {
+        objective += vert.quality_objective(distance_weight,
+                                            [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);});
       }
-      monitor.add_sample(i_relax, max_dist);
-      printers::info(format_str(400, "  Optimizing quality: Distance weight = %.1e; Iteration = %4li; Number of snaps failed = %6li; RMS surface distance = %.18e; max distance = %.18e",
-                                distance_weight, i_relax, n_failed, rms_dist, max_dist), false, true);
+      if (starting_objective < 0) starting_objective = objective;
+      double reduction = starting_objective - objective;
+      monitor.add_sample(i_relax, reduction);
+      std::string message = format_str(
+        400,
+        "  Optimizing quality: Distance weight = %.1e; Iteration = %4li;"
+        " Number of snaps failed = %6li; max distance = %.18e;"
+        " Objective: %.18e; Reduction: %.18e;",
+        distance_weight, i_relax, n_failed, max_dist, objective, reduction
+      );
+      printers::info(message, false, true);
     }
   }
   printers::info("\n");

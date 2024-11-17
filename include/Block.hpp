@@ -121,13 +121,13 @@ class Vertex : public Block {
   void apply_relax();
   double badness(Mat<3> proposed_pos) const;
   void set_pos(Mat<3> p);
-  void reset_pos();
+  Mat<3> nominal_position() const;
   bool mobile() const;
   void improve_quality();
   void improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>)> get_target);
   bool snap_to(Mat<3> target);
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
-  double quality_objective();
+  double quality_objective(double distance_weight, std::function<Mat<3>(Mat<3>)> target);
   double quality_gradient_norm_sq();
   double quality();
   int n_elements() const; //!< \brief The number of elements sharing this vertex

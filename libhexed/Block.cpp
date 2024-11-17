@@ -146,14 +146,15 @@ void Vertex::set_pos(Mat<3> p) {
   _step_sz = -1;
 }
 
-void Vertex::reset_pos() {
+Mat<3> Vertex::nominal_position() const {
   Mat<3> p = Mat<3>::Zero();
   int n = 0;
   for (auto elem : _elems.theirs()) if (elem) if (!elem->glued()) {
     p += elem->nominal_position(_get_index(*elem));
     ++n;
   }
-  if (n) set_pos(p/n);
+  if (n) return p/n;
+  return point({});
 }
 
 bool Vertex::mobile() const {
@@ -277,9 +278,10 @@ bool Vertex::snap_to(Mat<3> target) {
   return state.feasible;
 }
 
-double Vertex::quality_objective() {
+double Vertex::quality_objective(double distance_weight, std::function<Mat<3>(Mat<3>)> target) {
   auto state = _compute_state(false);
-  return state.objective;
+  Mat<3> pos = point({});
+  return state.objective + distance_weight*(target(pos) - pos).squaredNorm();
 }
 
 double Vertex::quality_gradient_norm_sq() {
