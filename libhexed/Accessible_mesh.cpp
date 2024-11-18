@@ -651,17 +651,33 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       // snap vertices to surface boundary
       Mat<> o = tree->origin();
       double tns = tree->nominal_size();
-      auto satisfy = [o, tns](Mat<3> p) {
+      auto satisfy = [&](next::Vertex& vert, Mat<3> p)->Mat<3> {
         for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
           p(i_dim) = std::max(p(i_dim), o(i_dim));
           p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
+        }
+        if (vert.record[2*params.n_dim]) {
+          for (auto n : vert.neighbors()) if (n) {
+            if ((int)n->record.size() == 2*params.n_dim + 1) {
+              if (!n->record[2*params.n_dim]) {
+                Mat<> start = n->point({});
+                Mat<> end(3);
+                end = p;
+                std::vector<double> intersections = surf_geom->intersections(start, end);
+                double min_sect = 1;
+                for (double s : intersections) min_sect = std::min(min_sect, s);
+                p = start + min_sect*(p - start);
+              }
+            }
+          }
         }
         return p;
       };
       for (auto& vert : verts) if (vert.mobile()) {
         HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
         vert.improve_quality(distance_weight,
-                             [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);}, satisfy);
+                             [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);},
+                             [&vert, satisfy](Mat<3> p){return satisfy(vert, p);});
       }
       double objective = 0;
       for (auto& vert : verts) {

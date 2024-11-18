@@ -341,6 +341,15 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
   return nearest;
 }
 
+std::vector<double> Trimmed_surface::intersections(Mat<3, 2> endpoints) const {
+  std::vector<double> sects;
+  auto sect_params = _surf->intersection_params(endpoints);
+  for (auto params : sect_params) {
+    if (is_inside(params.params)) sects.push_back(params.interp_coef);
+  }
+  return sects;
+}
+
 // helper class to read an entity from an IGES file
 class Read_entity {
   public:
@@ -641,6 +650,18 @@ Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, doub
     for (auto& surf : _surfaces) nearest.merge(surf.nearest_point(p, max_dist));
     return nearest;
   });
+}
+
+std::vector<double> Geom_3d::intersections(Mat<> start, Mat<> end) {
+  Mat<3, 2> endpoints;
+  endpoints(all, 0) = start;
+  endpoints(all, 1) = end;
+  std::vector<double> sects;
+  for (auto& surf : _surfaces) {
+    std::vector<double> surf_sects = surf.intersections(endpoints);
+    sects.insert(sects.end(), surf_sects.begin(), surf_sects.end());
+  }
+  return sects;
 }
 
 next::Sequence<const Tree_curve&> Geom_3d::edges() {

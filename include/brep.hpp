@@ -286,6 +286,7 @@ class Trimmed_surface {
    * the empty `Nearest_point` is returned.
    */
   Nearest_point<3> nearest_point(Mat<3> point, double max_dist) const;
+  std::vector<double> intersections(Mat<3, 2> endpoints) const;
   private:
   // Performs the real initialization work once the curves have been discretized.
   // Discretization is performed by the constructor.
@@ -355,8 +356,7 @@ class Geom_3d : public Surface_geom {
   void visualize(std::string format, std::string file_name,
                  Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose());
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-  //! \brief Dummy implementation that returns an empty vector.
-  inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
+  std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
   next::Sequence<const Tree_curve&> edges() override;
   private:
   std::vector<Trimmed_surface> _surfaces;
