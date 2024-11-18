@@ -692,7 +692,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         "  Distance weight = %.1e;"
         " Number of snaps failed = %6li;"
         " Max distance = %.5e (- %.5e);"
-        "  Iteration = %4li;"
+        " Iteration = %4li;"
         " Objective: %.18e (- %.5e);",
         distance_weight, n_failed, max_dist, prev_max_dist - max_dist, i_relax, objective, reduction
       );
