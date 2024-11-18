@@ -55,6 +55,10 @@ void state(Namespace& space, Element& elem) {
   space.assign("bulk_art_visc", Array<double>({nq}, elem.bulk_av_coef()));
   space.assign("laplacian_art_visc", Array<double>({nq}, elem.laplacian_av_coef()));
   space.assign("tss", Array<double>({nq}, elem.time_step_scale()));
+  for (int i_var = 0; i_var < config::debug_variables; ++i_var) {
+    Array<double> data({nq}, elem.debug_variables() + i_var*params.n_qpoint());
+    space.assign("debug_var" + std::to_string(i_var), data());
+  }
 }
 
 void field(Namespace& space, Element& elem, const Basis& b) {

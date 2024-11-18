@@ -94,6 +94,7 @@ class Navier_stokes {
     class Computation {
       const Pde& _eq;
       public:
+      Mat<config::debug_variables> debug_variables; //!< \brief can be populated at any time
       Computation(const Pde& eq) : _eq{eq} {}
 
       Mat<n_state> state;
@@ -180,6 +181,7 @@ class Navier_stokes {
           std::cout << "sigma_s is nan\n";
         }
         //std::cout << mu_t_bar << "\n";
+        debug_variables(0) = 42.;
       }
 
       Mat<n_extrap, n_dim> gradient;
@@ -414,6 +416,7 @@ class Advection {
   class Computation {
     const Advection& _eq;
     public:
+    Mat<config::debug_variables> debug_variables; //!< \brief can be populated at any time
     Computation(const Advection& eq) : _eq{eq} {}
 
     Mat<n_state> state;
@@ -492,6 +495,7 @@ class Smooth_art_visc {
   class Computation {
     const Smooth_art_visc& _eq;
     public:
+    Mat<config::debug_variables> debug_variables; //!< \brief can be populated at any time
     Computation(const Smooth_art_visc& eq) : _eq{eq} {}
 
     Mat<n_state> state;
@@ -556,6 +560,7 @@ class Fix_therm_admis {
   class Computation {
     const Fix_therm_admis& _eq;
     public:
+    Mat<config::debug_variables> debug_variables; //!< \brief can be populated at any time
     Computation(const Fix_therm_admis& eq) : _eq{eq} {}
 
     Mat<n_state> state;

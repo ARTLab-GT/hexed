@@ -353,6 +353,8 @@ class Spatial {
             if (!face_nrml[i_face]) face_nrml[i_face] = cartesian_normal[i_face/2][0];
           }
         }
+        double* debug_variables = nullptr;
+        if constexpr (config::debug_variables) debug_variables = elem.debug_variables();
 
         // compute gradient (times jacobian determinant, cause that's easier)
         if constexpr (Pde::has_diffusion) {
@@ -424,6 +426,11 @@ class Spatial {
             double mult = d_pos;
             if constexpr (is_deformed) mult *= elem_det[i_qpoint];
             for (int i_var = 0; i_var < Pde::n_update; ++i_var) time_rate[1][i_var][i_qpoint] = mult*comp.source(i_var);
+          }
+          if constexpr (config::debug_variables) {
+            for (int i_var = 0; i_var < config::debug_variables; ++i_var) {
+              debug_variables[i_var*n_qpoint + i_qpoint] = comp.debug_variables(i_var);
+            }
           }
         }
 
