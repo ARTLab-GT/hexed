@@ -171,7 +171,8 @@ class Navier_stokes {
 	#pragma omp critical
 	if (std::isnan(mu_t_bar)) {
           std::cout << "mu_t_bar is nan; Alpha_s: " << alpha_s 
-          << "; Turb_kin_ener: " << state(i_turb_kin_ener) 
+          << "; Turb_kin_ener: " << k_bar
+	  << "; Real_Turb_Diss: " << real_turb_diss 
           << "; Turb diss: " << -real_turb_diss 
           << "; Exp turb: " << std::exp(-real_turb_diss) << std::endl << std::flush;
 	  throw std::runtime_error("Mu_t_bar is nan");
