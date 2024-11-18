@@ -649,10 +649,19 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     double starting_objective = -1;
     for (Int i_relax = 0; (i_relax < 30 || monitor.max() - monitor.min() > .01*std::abs(monitor.min())) && i_relax < 1000; ++i_relax) {
       // snap vertices to surface boundary
+      Mat<> o = tree->origin();
+      double tns = tree->nominal_size();
+      auto satisfy = [o, tns](Mat<3> p) {
+        for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
+          p(i_dim) = std::max(p(i_dim), o(i_dim));
+          p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
+        }
+        return p;
+      };
       for (auto& vert : verts) if (vert.mobile()) {
         HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
         vert.improve_quality(distance_weight,
-                             [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);});
+                             [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);}, satisfy);
       }
       double objective = 0;
       for (auto& vert : verts) {

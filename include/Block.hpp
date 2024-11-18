@@ -124,7 +124,9 @@ class Vertex : public Block {
   Mat<3> nominal_position() const;
   bool mobile() const;
   void improve_quality();
-  void improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>)> get_target);
+  void improve_quality(double distance_weight,
+                       std::function<Mat<3>(Mat<3>)> get_target,
+                       std::function<Mat<3>(Mat<3>)> satisfy_constraints);
   bool snap_to(Mat<3> target);
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
   double quality_objective(double distance_weight, std::function<Mat<3>(Mat<3>)> target);

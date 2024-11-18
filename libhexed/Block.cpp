@@ -236,10 +236,11 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
 }
 
 void Vertex::improve_quality() {
-  improve_quality(0, [](Mat<3>){return Mat<3>::Zero();});
+  improve_quality(0, [](Mat<3>){return Mat<3>::Zero();}, [](Mat<3> p){return p;});
 }
 
-void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>)> get_target) {
+void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>)> get_target,
+                                                     std::function<Mat<3>(Mat<3>)> satisfy_constraints) {
   Mat<3> orig_pos = _point({});
   auto state = _compute_state();
   double ns = nominal_size();
@@ -253,7 +254,7 @@ void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>
   direction.normalize();
   _Optimization_state new_state;
   auto check_step = [&]() {
-    _pos = orig_pos + _step_sz*direction;
+    _pos = satisfy_constraints(orig_pos + _step_sz*direction);
     target = get_target(_pos);
     new_state = _compute_state();
     new_state.objective += distance_weight*(_pos - target).squaredNorm();
