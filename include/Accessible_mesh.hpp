@@ -96,7 +96,7 @@ class Accessible_mesh : public Mesh {
   void _record_connections();
   void _offset_vertices(double);
   Mat<3> _get_snapping_target(next::Vertex&, Mat<3>);
-  void _match_topo();
+  void _fit_surface();
   void _optimize(int min_pow, int max_pow, bool check_snapping);
 
   public:
@@ -149,10 +149,8 @@ class Accessible_mesh : public Mesh {
 
   void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
   void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
-  void relax_and_match(int n_relax = 0, double factor = .9) override;
   void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
-  void relax(double factor = 0.9) override;
   inline int surface_bc_sn() override {return surf_bc_sn;}
   inline Surface_geom& surface_geometry() {return *surf_geom;}
 

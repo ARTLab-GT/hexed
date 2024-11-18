@@ -127,7 +127,7 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
   return pos;
 }
 
-void Accessible_mesh::_match_topo() {
+void Accessible_mesh::_fit_surface() {
   if (!surf_geom) return;
   _blocks.edges_2d();
   _blocks.faces_3d();
@@ -651,38 +651,37 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       // snap vertices to surface boundary
       Mat<> o = tree->origin();
       double tns = tree->nominal_size();
-      auto satisfy = [&](next::Vertex& vert, Mat<3> p)->Mat<3> {
-        for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
-          p(i_dim) = std::max(p(i_dim), o(i_dim));
-          p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
-        }
-        if (vert.record[2*params.n_dim]) {
-          for (auto n : vert.neighbors()) if (n) {
-            if ((int)n->record.size() == 2*params.n_dim + 1) {
-              if (!n->record[2*params.n_dim]) {
-                Mat<> start = n->point({});
-                Mat<> end(3);
-                end = p;
-                std::vector<double> intersections = surf_geom->intersections(start, end);
-                double min_sect = 1;
-                for (double s : intersections) min_sect = std::min(min_sect, s);
-                p = start + min_sect*(p - start);
+      for (auto& vert : verts) if (vert.mobile()) {
+        HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
+        auto satisfy = [&](Mat<3> p)->Mat<3> {
+          for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
+            p(i_dim) = std::max(p(i_dim), o(i_dim));
+            p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
+          }
+          if (vert.record[2*params.n_dim]) {
+            for (auto n : vert.neighbors()) if (n) {
+              if ((int)n->record.size() == 2*params.n_dim + 1) {
+                if (!n->record[2*params.n_dim]) {
+                  Mat<> start = n->point({});
+                  Mat<> end(3);
+                  end = p;
+                  std::vector<double> intersections = surf_geom->intersections(start, end);
+                  double min_sect = 1;
+                  for (double s : intersections) min_sect = std::min(min_sect, s);
+                  p = start + min_sect*(p - start);
+                }
               }
             }
           }
-        }
-        return p;
-      };
-      for (auto& vert : verts) if (vert.mobile()) {
-        HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
-        vert.improve_quality(distance_weight,
-                             [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);},
-                             [&vert, satisfy](Mat<3> p){return satisfy(vert, p);});
+          return p;
+        };
+        auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
+        vert.improve_quality(distance_weight, get_target, satisfy);
       }
       double objective = 0;
       for (auto& vert : verts) {
-        objective += vert.quality_objective(distance_weight,
-                                            [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);});
+        auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
+        objective += vert.quality_objective(distance_weight, get_target);
       }
       if (starting_objective < 0) starting_objective = objective;
       double reduction = starting_objective - objective;
@@ -760,11 +759,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     for (auto& block : blocks) block.reset();
   }
   printers::info("\n");
-}
-
-void Accessible_mesh::relax_and_match(int n_relax, double factor) {
-  for (int i_relax = 0; i_relax < n_relax/2; ++i_relax) relax(factor);
-  for (int i_relax = 0; i_relax < n_relax - n_relax/2; ++i_relax) relax(factor);
 }
 
 Storage_params incr_res_cache(Storage_params params) {
@@ -1374,7 +1368,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   connect_new<Deformed_element>(0);
   extrude(true);
   connect_rest(surf_bc_sn);
-  _match_topo();
+  _fit_surface();
   connect_rest(surf_bc_sn);
   _n_verts = _blocks.verts().size();
 }
@@ -1934,16 +1928,10 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   } while (changed);
   delete_bad_extrusions();
   deform();
-  // delete extruded elements
+  // set extruded elements to be deleted
   #pragma omp parallel for
-  for (auto con : extrude_cons) {
-    bool del = false;
-    if (con->element(1).record == 2) del = true;
-    else if (con->element(1).tree) {
-      Tree* neighbor = con->element(1).tree->find_neighbor(math::direction(nd, con->direction().i_face(1)));
-      if (neighbor) if (neighbor->elem) if (neighbor->elem->record != 2) del = true;
-    }
-    if (del) con->element(0).record = 2;
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    if (!elems[i_elem].tree) elems[i_elem].record = 2;
   }
   int n_before = elems.size();
   purge();
@@ -1959,7 +1947,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       matched_vertices[i_edge].clear();
       matched_edges[i_edge].clear();
     }
-    _match_topo();
+    _fit_surface();
     connect_rest(surf_bc_sn);
     _n_verts = _blocks.verts().size();
   }
@@ -1970,124 +1958,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
 
 void update_pos(next::Vertex& vert, Mat<3> pos) {
   if ((pos - vert.point({})).norm() < vert.nominal_size()) vert.set_pos(pos);
-}
-
-void Accessible_mesh::relax(double factor) {
-  {
-    // update `next::Vertex`s
-    Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["optimization"]);
-    _blocks.relax_vertices();
-    _stopwatch["relax"]["optimization"].work_units_completed += _n_verts;
-  }
-  #if 1
-  // snap vertices to extremal boundaries
-  if (tree) {
-    Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["extremal snapping"]);
-    #pragma omp parallel for
-    for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
-      auto& con = bound_cons[i_con];
-      int bc_sn = con.bound_cond_serial_n();
-      if (bc_sn < 2*params.n_dim) {
-        int i_dim = bc_sn/2;
-        bool sign = bc_sn%2;
-        std::vector<int> inds = vertex_inds(params.n_dim, {{i_dim, i_dim}, {sign, !sign}})[0];
-        for (int i_vert : inds) {
-          auto& vert = con.element().shape().vertex(i_vert);
-          Mat<3> pos = vert.point({});
-          pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
-          vert.set_pos(pos);
-        }
-      }
-    }
-    _stopwatch["relax"]["extremal snapping"].work_units_completed += _n_verts;
-  }
-  if (surf_geom) {
-    Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
-    auto bverts = _blocks.boundary_verts();
-    if (factor > 1e-3) {
-    // snap vertices to surface boundary
-    #pragma omp parallel for
-    for (auto& vert : bverts) {
-      HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
-      Mat<3> pos = vert.point({});
-      auto seq = Eigen::seqN(0, params.n_dim);
-      pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
-      vert.set_pos(pos);
-    }
-    }
-    // snap vertices to geometry edges
-    auto edges = surf_geom->edges();
-    auto points = surf_geom->points();
-    #if 1
-    for (Int i_point = 0; i_point < (Int)points.size(); ++i_point) {
-      if (point_matched_vertices[i_point]) point_matched_vertices[i_point]->set_pos(points[i_point]);
-    }
-    for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
-      auto& geom_edge = edges[i_geom_edge];
-      Array<double> nodes{geom_edge.nodes()};
-      Int n_points = nodes.shape()[0];
-      for (Int i_vert = 0; i_vert < (Int)matched_vertices[i_geom_edge].size(); ++i_vert) {
-        auto& vert = matched_vertices[i_geom_edge][i_vert].value();
-        if (vert.snapped_endpoint >= 0) {
-          update_pos(vert, nodes(vert.snapped_endpoint*(n_points - 1)).vector());
-        } else {
-          Int nearest = geom_edge.nearest_point(vert.point({}), 2*vert.nominal_size()).index;
-          if (nearest >= 0) update_pos(vert, nodes(nearest).vector());
-        }
-      }
-    }
-    #endif
-    // snaps a `Boundary_block` to the geometry surface
-    auto snap_block = [this](next::Boundary_block& block) {
-      block.reset();
-      Array<double> interior {block.interior().reshaped({whatever, 3})};
-      for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
-        auto p = interior(i_point)(0, params.n_dim).vector();
-        Mat<> p_mat {p};
-        p = surf_geom->nearest_point(p_mat, huge, block.element()->nominal_size()/params.row_size).point();
-      }
-    };
-    // snap edges to the surface (regardless of dimensionality)
-    auto edges_2d = _blocks.edges_2d();
-    #pragma omp parallel for
-    for (auto& edge : edges_2d) snap_block(edge);
-    auto faces_3d = _blocks.faces_3d();
-    #pragma omp parallel for
-    for (auto& face : faces_3d) {
-      for (int i_edge = 0; i_edge < 4; ++i_edge) snap_block(face.edge(i_edge));
-    }
-    // Snap mesh edges to geometry edges.
-    // This has to happen after snapping edges to the surface (which would undo this)
-    // but before snapping faces to the surface
-    // (or else the `reset()` function would be called with incorrect edge data)
-    for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
-      auto& geom_edge = edges[i_geom_edge];
-      Array<double> nodes {geom_edge.nodes()};
-      for (auto& edge : matched_edges[i_geom_edge]) {
-        edge.value().reset();
-        Array<double> interior {edge.value().interior()};
-        double max_dist = .5*edge.value().element()->nominal_size();
-        for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
-          Int nearest = geom_edge.nearest_point(interior(i_point).vector(), max_dist).index;
-          if (nearest >= 0) interior(i_point) = nodes(nearest);
-        }
-      }
-    }
-    // snap face interiors (if 3D) to surface
-    #pragma omp parallel for
-    for (auto& face : faces_3d) snap_block(face);
-    _stopwatch["relax"]["surface snapping"].work_units_completed += bverts.size();
-  } else {
-    auto blocks = _blocks.boundary_sides();
-    #pragma omp parallel for
-    for (auto& block : blocks) block.reset();
-  }
-  #else
-  auto blocks = _blocks.boundary_sides();
-  #pragma omp parallel for
-  for (auto& block : blocks) block.reset();
-  #endif
-  _stopwatch["relax"].work_units_completed += _n_verts;
 }
 
 Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& basis,

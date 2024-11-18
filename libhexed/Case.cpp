@@ -331,7 +331,6 @@ Case::Case(std::string input_script)
     if (geom) {
       _has_geom = true;
       _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc")), _get_vector("flood_fill_start", _vari("n_dim")));
-      //_solver().mesh().relax_and_match(_vari("n_smooth"), .5);
       _solver().calc_jacobian();
     }
     return "";
@@ -354,7 +353,6 @@ Case::Case(std::string input_script)
     _solver().set_uncertainty(Elem_nonsmooth(jidf));
     _solver().mesh().set_unref_locks(criteria::if_extruded);
     bool changed = _solver().mesh().update(crits[0], crits[1]);
-    _solver().mesh().relax_and_match(_vari("n_smooth"), .5);
     _solver().calc_jacobian();
     return changed;
   }));
