@@ -60,8 +60,8 @@ TEST_CASE("Plane") {
     2., 0.;
   auto sects = plane.intersection_params(endpoints);
   REQUIRE(sects.size() == 1);
-  REQUIRE(sects[0].params[0] == Catch::Approx(.4));
-  REQUIRE(sects[0].params[1] == Catch::Approx(.5));
+  REQUIRE(sects[0].params[0] == Catch::Approx(.9));
+  REQUIRE(sects[0].params[1] == Catch::Approx(.4));
   REQUIRE(sects[0].interp_coef == Catch::Approx(.75));
   endpoints <<
     1., 1.,

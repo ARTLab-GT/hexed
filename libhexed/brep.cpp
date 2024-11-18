@@ -50,7 +50,15 @@ Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_
 }
 
 std::vector<Parametric<2>::Intersection_parameters> Plane::intersection_params(Mat<3, 2> endpoints) const {
-  return {};
+  Mat<3, 3> lhs;
+  lhs(all, Eigen::seqN(0, 2)) = _vecs;
+  lhs(all, 2) = endpoints(all, 0) - endpoints(all, 1);
+  Mat<3> rhs = endpoints(all, 0) - _origin;
+  auto fact = lhs.fullPivHouseholderQr();
+  if (!fact.isInvertible()) return {};
+  Mat<3> soln = fact.solve(rhs);
+  for (int i = 0; i < 3; ++i) if (!(soln(i) >= 0 && soln(i) <= 1)) return {};
+  return {{{soln(0), soln(1)}, soln(2)}};
 }
 
 Mat<2, 2> Plane::reparameterize(Mat<2, 2> bounds) {

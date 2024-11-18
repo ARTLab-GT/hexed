@@ -148,6 +148,7 @@ class Transformed : public Parametric<n_param> {
     return _param->nearest_params(_coord.to_definition(p), is_feasible, max_distance);
   }
   std::vector<typename Parametric<n_param>::Intersection_parameters> intersection_params(Mat<3, 2> endpoints) const override {
+    for (int col = 0; col < 2; ++col) endpoints(all, col) = _coord.to_definition(endpoints(all, col));
     return _param->intersection_params(endpoints);
   }
   private:
