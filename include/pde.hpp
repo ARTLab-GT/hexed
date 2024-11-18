@@ -162,24 +162,24 @@ class Navier_stokes {
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
-	real_turb_diss = state(i_turb_diss)/mass; //TODO: \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0}
+        real_turb_diss = state(i_turb_diss)/mass; //TODO: \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0}
         k_bar = std::max(0., state(i_turb_kin_ener)/mass);
-	mu_t_bar = alpha_s * mass * k_bar * std::exp(-real_turb_diss);
-	//mu_t_bar = std::min(0., mu_t_bar);
-        //mu_t_bar = alpha_s * state(i_mass) * k_bar * std::exp(-real_turb_diss);	
-	
-	#pragma omp critical
-	if (std::isnan(mu_t_bar)) {
-          std::cout << "mu_t_bar is nan; Alpha_s: " << alpha_s 
-          << "; Turb_kin_ener: " << state(i_turb_kin_ener) 
-          << "; Turb diss: " << -real_turb_diss 
-          << "; Exp turb: " << std::exp(-real_turb_diss) << std::endl << std::flush;
-	  throw std::runtime_error("Mu_t_bar is nan");
-	}
-	if (std::isnan(sigma_s)) {
-	  std::cout << "sigma_s is nan\n";
-	}
-	//std::cout << mu_t_bar << "\n";
+        mu_t_bar = alpha_s * mass * k_bar * std::exp(-real_turb_diss);
+        //mu_t_bar = std::min(0., mu_t_bar);
+        //mu_t_bar = alpha_s * state(i_mass) * k_bar * std::exp(-real_turb_diss);
+
+        #pragma omp critical
+        if (std::isnan(mu_t_bar)) {
+                std::cout << "mu_t_bar is nan; Alpha_s: " << alpha_s 
+                << "; Turb_kin_ener: " << state(i_turb_kin_ener) 
+                << "; Turb diss: " << -real_turb_diss 
+                << "; Exp turb: " << std::exp(-real_turb_diss) << std::endl << std::flush;
+          throw std::runtime_error("Mu_t_bar is nan");
+        }
+        if (std::isnan(sigma_s)) {
+          std::cout << "sigma_s is nan\n";
+        }
+        //std::cout << mu_t_bar << "\n";
       }
 
       Mat<n_extrap, n_dim> gradient;
@@ -198,11 +198,11 @@ class Navier_stokes {
         Mat<n_update, n_dim> flux_diff_phys; // flux in physical space
         Mat<n_dim> veloc = mmtm/mass;
         veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
-	turb_stress = mu_t_bar * (veloc_grad + veloc_grad.transpose() 
+        turb_stress = mu_t_bar * (veloc_grad + veloc_grad.transpose()
                                   - 2./3. * veloc_grad.trace()*Mat<n_dim, n_dim>::Identity())
                       - 2./3.*mass*k_bar*Mat<n_dim, n_dim>::Identity();
 
-	//TODO: The above line is going to cause problems if not in k-w mode
+        //TODO: The above line is going to cause problems if not in k-w mode
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
                                   + (bulk_av*mass - 2./3.*dyn_visc_coef)
                                      *veloc_grad.trace()*Mat<n_dim, n_dim>::Identity() + turb_stress;
@@ -215,7 +215,7 @@ class Navier_stokes {
           flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s * mu_t_bar)/mass*gradient(i_turb_kin_ener, all);
           flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma * mu_t_bar)/mass*gradient(i_turb_diss, all);
           //flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s*mu_t_bar)/mass*gradient(i_turb_kin_ener, all); //Needs mu_t_bar implementation
-	  //flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma*mu_t_bar)/mass*gradient(i_turb_diss, all);
+          //flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma*mu_t_bar)/mass*gradient(i_turb_diss, all);
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
       }
@@ -225,31 +225,31 @@ class Navier_stokes {
       double tau_vgrad_sum;
       void compute_scalars_source() {
         Mat<n_dim, n_dim> omega = 0.5 * (veloc_grad - veloc_grad.transpose());
-	Mat<n_dim, n_dim> S = 0.5 * (veloc_grad + veloc_grad.transpose());
+        Mat<n_dim, n_dim> S = 0.5 * (veloc_grad + veloc_grad.transpose());
 
-	double sum = 0;
-	for (int i = 0; i < n_dim; ++i) {
+        double sum = 0;
+        for (int i = 0; i < n_dim; ++i) {
           for (int j = 0; j < n_dim; ++j) {
             for (int k = 0; k < n_dim; ++k){
               sum += omega(i, j)*omega(j, k)*S(k, i);
-	    }
-	  }
-	}
-	double chi_o = std::abs(sum)/std::pow(beta_s * std::exp(state(i_turb_diss)/mass), 3);
+            }
+          }
+        }
+        double chi_o = std::abs(sum)/std::pow(beta_s * std::exp(state(i_turb_diss)/mass), 3);
         double f_beta = (1. + 85.*chi_o)/(1. + 100.*chi_o);
         beta = beta_0 * f_beta;
 
-	grad_diss_sum = 0.0;
-	for (int k = 0; k < n_dim; ++k) {
-          grad_diss_sum += (gradient(i_turb_diss, k)/mass)^2;
-	}
-	
-	tau_vgrad_sum = 0.0;
-	for (int i = 0; i < n_dim; ++i) {
-          for (int j = 0; j < n_dim; ++j) {
-            tau_vgrad_sum += turb_stress(i, j) * veloc_grad(i, j);
-	  }
-	}
+        grad_diss_sum = 0.0;
+        for (int k = 0; k < n_dim; ++k) {
+                grad_diss_sum += (gradient(i_turb_diss, k)/mass)^2;
+        }
+
+        tau_vgrad_sum = 0.0;
+        for (int i = 0; i < n_dim; ++i) {
+                for (int j = 0; j < n_dim; ++j) {
+                  tau_vgrad_sum += turb_stress(i, j) * veloc_grad(i, j);
+          }
+        }
       };
       Mat<n_update> source;
       /*! \todo __Carter:__ compute the turbulent source terms.
@@ -265,7 +265,7 @@ class Navier_stokes {
           source(i_turb_kin_ener) = tau_vgrad_sum - beta_s * mass * k_bar * std::exp(real_turb_diss);
           source(i_turb_diss) = alpha/k_bar*tau_vgrad_sum - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma * mu_t_bar) * grad_diss_sum; 
           //these source terms are wrong
-	  //source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
+          //source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
           //source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
         }
       }
