@@ -49,6 +49,10 @@ Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_
   return {params, is_feasible(params)};
 }
 
+std::vector<Parametric<2>::Intersection_parameters> Plane::intersection_params(Mat<3, 2> endpoints) const {
+  return {};
+}
+
 Mat<2, 2> Plane::reparameterize(Mat<2, 2> bounds) {
   _origin = point(bounds(all, 0));
   _vecs = _vecs*(bounds(all, 1) - bounds(all, 0)).asDiagonal();

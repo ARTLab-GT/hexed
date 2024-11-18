@@ -63,6 +63,11 @@ class Parametric {
     bool is_feasible; //!< \brief `true` iff a feasible nearest point was found
   };
 
+  struct Intersection_parameters {
+    Mat<n_param> params;
+    double interp_coef;
+  };
+
   //! \brief Represents a constraint function for a `nearst_params()` calculation.
   typedef std::function<bool(Mat<n_param>)> Constraint;
 
@@ -99,6 +104,8 @@ class Parametric {
   Mat<3> nearest_point(Mat<3> p) const {
     return point(nearest_params(p, [](Mat<n_param>){return true;}, default_max_dist).params);
   }
+
+  virtual inline std::vector<Intersection_parameters> intersection_params(Mat<3, 2> endpoints) const {return {};}
 
   /*! \brief May reparameterize the entity to keep parameters in [0, 1].
    * \details For infinite entities (e.g., `Plane`),
@@ -139,6 +146,9 @@ class Transformed : public Parametric<n_param> {
     Mat<3> p, Parametric<n_param>::Constraint is_feasible, double max_distance
   ) const override {
     return _param->nearest_params(_coord.to_definition(p), is_feasible, max_distance);
+  }
+  std::vector<typename Parametric<n_param>::Intersection_parameters> intersection_params(Mat<3, 2> endpoints) const override {
+    return _param->intersection_params(endpoints);
   }
   private:
   std::unique_ptr<Parametric<n_param>> _param;
@@ -187,6 +197,7 @@ class Plane : public Parametric<2> {
   //! \note Does not include boundary points in search.
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
                                     double max_distance) const override;
+  std::vector<Intersection_parameters> intersection_params(Mat<3, 2> endpoints) const override;
   inline Mat<3> point(Mat<2> params) const override {return _origin + _vecs*params;}
   /*! \brief Reparameterizes the plane
    * to contain the points `point(p)` where `bounds(i, 0) <= p(i) && p(i) <= bounds(i, 1)`.
