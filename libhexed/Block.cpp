@@ -246,7 +246,8 @@ void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>
   HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
   Mat<3> target = get_target(orig_pos);
   Mat<3> snap_vec = target - orig_pos;
-  state.objective += distance_weight*snap_vec.squaredNorm();
+  double orig_dist_sq = snap_vec.squaredNorm();
+  state.objective += distance_weight*orig_dist_sq;
   Mat<3> direction = -state.gradient + distance_weight*2*snap_vec;
   if (direction.norm()*ns < 1e-6*state.objective) return;
   direction.normalize();

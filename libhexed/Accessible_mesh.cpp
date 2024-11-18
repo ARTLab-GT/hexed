@@ -100,6 +100,7 @@ void Accessible_mesh::_offset_vertices(double offset) {
 }
 
 Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
+  HEXED_ASSERT(Int(vert.record.size()) == 2*params.n_dim + 1, "Vertex record has not been set correctly.");
   if (vert.record[2*params.n_dim]) {
     if (vert.snapped_edge >= 0) {
       auto& geom_edge = surf_geom->edges()[vert.snapped_edge];
@@ -311,6 +312,26 @@ void Accessible_mesh::_match_topo() {
   }
 
   next::Block::visualize("default", "diagnostic_faces", _blocks.faces_3d().cast<const next::Block&>());
+  {
+    std::vector<std::string> names {"bc_sn"};
+    for (int i = 0; i < 7; ++i) names.push_back("b" + std::to_string(i) + "_");
+    auto vis = Visualizer::create("default", 3, 2, "boundary_status", names, 0., Visualizer::block);
+    for (auto& con : def.bound_cons) {
+      Array<double> pos({3, 2, 2});
+      Array<double> data({8, 2, 2});
+      int bc_sn = con->bound_cond_serial_n();
+      std::vector<int> inds = vertex_inds(params.n_dim, con->get_direction())[0];
+      for (int i = 0; i < 4; ++i) {
+        int i_vert = inds[i];
+        auto& vert = con->element().active_shape().vertex(i_vert);
+        Mat<3> p = vert.point({});
+        for (int i_dim = 0; i_dim < 3; ++i_dim) pos(i_dim)[i] = p(i_dim);
+        data(0)[i] = bc_sn;
+        for (int j = 0; j < 7; ++j) data(1 + j)[i] = vert.record[j];
+      }
+      vis->write_block(pos(), data());
+    }
+  }
 
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -600,14 +621,13 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     for (int i = 0; i < 2*params.n_dim + 1; ++i) vert.record[i] = 0;
   }
   #pragma omp parallel for
-  for (int i_con = 0; i_con < bound_cons.size(); ++i_con) {
-    auto& con = bound_cons[i_con];
-    int bc_sn = con.bound_cond_serial_n();
+  for (auto& con : def.bound_cons) {
+    int bc_sn = con->bound_cond_serial_n();
     if (bc_sn < 2*params.n_dim + 1) {
-      std::vector<int> inds = vertex_inds(params.n_dim, con.get_direction())[0];
+      std::vector<int> inds = vertex_inds(params.n_dim, con->get_direction())[0];
       for (int i_vert : inds) {
         #pragma omp atomic write
-        con.element().active_shape().vertex(i_vert).record[bc_sn] = 1;
+        con->element().active_shape().vertex(i_vert).record[bc_sn] = 1;
       }
     }
   }
@@ -620,13 +640,12 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   double max_dist = huge;
   double prev_max_dist = 0;
   for (int i_weight = min_pow;
-       (i_weight < 2
-        || !(n_failed == 0 || std::abs(max_dist - prev_max_dist) < .01*std::max(max_dist, prev_max_dist))
+       (i_weight < 20
+        || !(n_failed == 0 || std::abs(max_dist - prev_max_dist) < .001*std::max(max_dist, prev_max_dist))
         || !check_snapping) && i_weight <= 3*max_pow;
        ++i_weight) {
     double distance_weight = math::pow(2, i_weight);
     History_monitor monitor(.3, 100);
-    printers::info(format_str(200, "  Optimizing quality: Distance weight = %e;", distance_weight), false, true);
     double starting_objective = -1;
     for (Int i_relax = 0; (i_relax < 30 || monitor.max() - monitor.min() > .01*std::abs(monitor.min())) && i_relax < 1000; ++i_relax) {
       // snap vertices to surface boundary
@@ -645,10 +664,12 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       monitor.add_sample(i_relax, reduction);
       std::string message = format_str(
         400,
-        "  Distance weight = %.1e; Iteration = %4li;"
-        " Number of snaps failed = %6li; Max distance = %.5e (- %.5e);"
+        "  Distance weight = %.1e;"
+        " Number of snaps failed = %6li;"
+        " Max distance = %.5e (- %.5e);"
+        "  Iteration = %4li;"
         " Objective: %.18e (- %.5e);",
-        distance_weight, i_relax, n_failed, max_dist, prev_max_dist - max_dist, objective, reduction
+        distance_weight, n_failed, max_dist, prev_max_dist - max_dist, i_relax, objective, reduction
       );
       printers::info(message, false, true);
     }
