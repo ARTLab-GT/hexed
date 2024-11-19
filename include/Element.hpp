@@ -123,6 +123,7 @@ class Element : public Kernel_element {
   void destroy_shape();
   next::Element_shape& shape();
   inline next::Element_shape* fake_shape() {return _fake_shape.get();}
+  inline bool has_shape() const {return bool(_shape);}
   next::Element_shape& active_shape();
 
   double* state() override;

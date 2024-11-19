@@ -597,6 +597,7 @@ void Accessible_mesh::_fit_surface() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
+  if (all_verts.size() < 6000) {
   {
     Task_message message(printers::info, "Post-edge-matching mesh optimization", "\n");
     _optimize(1, 10, true);
@@ -607,6 +608,7 @@ void Accessible_mesh::_fit_surface() {
   }
   if (n_failed) {
     printers::warn(format_str(200, "%li vertices could not be snapped to the surface.\n", n_failed), true);
+  }
   }
 }
 
@@ -1531,6 +1533,10 @@ void Accessible_mesh::delete_bad_extrusions() {
   int nd = params.n_dim;
   auto& elems = elements();
   bool changed;
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    if (elems[i_elem].has_shape()) elems[i_elem].active_shape().record = 0;
+  }
   do {
     changed = false;
     #pragma omp parallel for reduction(||:changed)
@@ -1642,7 +1648,42 @@ void Accessible_mesh::delete_bad_extrusions() {
         }
       }
     }
+    // delete elements that would create pathological offset geometry
+    auto verts = _blocks.verts();
+    for (auto& vert : verts) vert.record.clear();
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (!elem.tree || !elem.has_shape() || elem.record == 2) continue;
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        for (bool sign : {0, 1}) {
+          if (!exists(elem.tree->find_neighbor(math::sign(sign)*Eigen::VectorXi::Unit(params.n_dim, i_dim)))) {
+            auto inds = vertex_inds(params.n_dim, {{i_dim, i_dim}, {sign, !sign}})[0];
+            for (int i_vert : inds) {
+              elem.active_shape().vertex(i_vert).record.push_back(2*i_dim + sign);
+            }
+          }
+        }
+      }
+    }
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (!elem.tree || !elem.has_shape() || elem.record == 2) continue;
+      for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+        auto& vert = elem.active_shape().vertex(i_vert);
+        for (int i = 0; i < Int(vert.record.size()); ++i) {
+          for (int j = 0; j < Int(vert.record.size()); ++j) if (i != j) {
+            if (vert.record[i]/2 == vert.record[j]/2 && vert.record[i]%2 != vert.record[j]%2) {
+              changed = true;
+              elem.record = 2;
+              vert.record.clear();
+            }
+          }
+        }
+      }
+    }
   } while (changed);
+  auto verts = _blocks.verts();
+  for (auto& vert : verts) vert.record.clear();
 }
 
 void Accessible_mesh::deform() {
@@ -1926,6 +1967,10 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
     }
     for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
   } while (changed);
+  // connect new elements
+  purge();
+  connect_new<         Element>(0);
+  connect_new<Deformed_element>(0);
   delete_bad_extrusions();
   deform();
   // set extruded elements to be deleted
@@ -1936,7 +1981,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   int n_before = elems.size();
   purge();
   int n_after = elems.size();
-  // connect new elements
   connect_new<         Element>(0);
   connect_new<Deformed_element>(0);
   extrude(true);

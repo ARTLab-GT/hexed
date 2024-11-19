@@ -80,10 +80,10 @@ Vertex::~Vertex() {
 }
 
 double Vertex::nominal_size() const {
-  double nom_sz = 0;
+  double nom_sz = huge;
   for (auto elem : _elems.theirs()) {
     HEXED_ASSERT("elem", "element is null");
-    nom_sz = std::max(nom_sz, elem->nominal_size());
+    nom_sz = std::min(nom_sz, elem->nominal_size());
   }
   return nom_sz;
 }
@@ -627,6 +627,7 @@ Element_shape::Element_shape(int nd, const Basis& b)
 , deformed{false}
 , extruded_direction{Mesh_blocks::no_face}
 , is_new{false}
+, record{0}
 , _basis{&b}
 , _i_bf{6}
 , _bf(this)

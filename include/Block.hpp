@@ -388,6 +388,7 @@ class Element_shape : public Block {
   bool deformed;
   int extruded_direction;
   bool is_new;
+  int record;
 
   private:
   Element_shape(int nd, const Basis&);
