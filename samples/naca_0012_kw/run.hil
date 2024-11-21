@@ -43,15 +43,17 @@ freestream_direction0 = 1.0
 freestream_direction1 = 0.0
 freestream_density = target_reynolds*1.716e-5/sqrt(specific_gas_air * 1.4 * freestream_temperature)/freestream_mach
 
-freestream_specific_turbulent_kinetic_energy = 1e-1
-freestream_specific_turbulent_dissipation = 1e1
+domain_length = mesh_extreme01 - mesh_extreme00
+freestream_specific_turbulent_kinetic_energy = 1e-4*(freestream_mach*340.)^2/(target_reynolds*domain_length/1.)
+freestream_specific_turbulent_dissipation = freestream_mach*340./domain_length
+println({turbulent viscosity: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation + { Pa s})
 
 {attack = 0*degree}
 
 surface_bc = {no_slip}
 diffusive_admissibility = false
 fix_therm_admis = false
-max_safety = 0.1
+max_safety = 0.7
 
 {iteration parameters}
 print_freq = 10
@@ -61,6 +63,7 @@ done = {iteration > 5000 & (drag_coef_max - drag_coef_min < 5e-3*(drag_coef_min 
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
+working_dir = {hexed_out_change_bcs}
 
 vis_field_vars = vis_field_vars + {specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density; turbulent_dissipation_bassi = turbulent_dissipation_bassi; specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density); debug_var0 = debug_var0}
 
