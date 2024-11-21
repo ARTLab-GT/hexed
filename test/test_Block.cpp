@@ -524,9 +524,9 @@ TEST_CASE("Block") {
     auto elem11 = blocks3.create_element({1, 0, 1}, 1.);
     elem10.connect(elem11, {{2, 2}, {1, 0}});
     std::array<std::vector<hexed::next::Element_shape*>, 2> elems;
-    elems[0] = {&elem00, &elem01};
-    elems[1] = {&elem10, &elem11};
-    hexed::next::Element_shape::connect(elems);
+    elems[0] = {&elem00, &elem00, &elem01, &elem01};
+    elems[1] = {&elem10, &elem11, &elem10, &elem11};
+    hexed::next::Element_shape::connect(elems, {{0, 0}, {1, 0}});
     REQUIRE_THAT(elem00.vertex(4).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
     REQUIRE_THAT(elem00.vertex(5).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
     REQUIRE_THAT(elem00.vertex(6).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.75, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
@@ -535,13 +535,13 @@ TEST_CASE("Block") {
     REQUIRE_THAT(elem01.vertex(5).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.75, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
     REQUIRE_THAT(elem01.vertex(6).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
     REQUIRE_THAT(elem01.vertex(7).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
-    REQUIRE_THAT(elem10.vertex(4).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
-    REQUIRE_THAT(elem10.vertex(5).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 0.75}, hexed::math::Approx_equal(0., 1e-6)));
-    REQUIRE_THAT(elem10.vertex(6).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
-    REQUIRE_THAT(elem10.vertex(7).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 0.75}, hexed::math::Approx_equal(0., 1e-6)));
-    REQUIRE_THAT(elem11.vertex(4).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 0.75}, hexed::math::Approx_equal(0., 1e-6)));
-    REQUIRE_THAT(elem11.vertex(5).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
-    REQUIRE_THAT(elem11.vertex(6).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 0.75}, hexed::math::Approx_equal(0., 1e-6)));
-    REQUIRE_THAT(elem11.vertex(7).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem10.vertex(0).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem10.vertex(1).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 0.75}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem10.vertex(2).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem10.vertex(3).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 0.75}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem11.vertex(0).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 0.75}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem11.vertex(1).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem11.vertex(2).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 0.75}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem11.vertex(3).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
   }
 }

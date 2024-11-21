@@ -376,7 +376,7 @@ class Element_shape : public Block {
    * Any permutation that might be necessary to reconcile different face dimensions will be performed automatically.
    */
   void connect(std::vector<Element_shape*> those, Connection_direction);
-  static void connect(std::array<std::vector<Element_shape*>, 2>);
+  static void connect(std::array<std::vector<Element_shape*>, 2>, Connection_direction);
 
   void glue(Element_shape& that, std::array<std::vector<double>, 2> corners);
   inline std::array<std::vector<double>, 2> glued_corners() const {return _glued_corners;}

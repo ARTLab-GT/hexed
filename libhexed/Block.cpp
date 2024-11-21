@@ -750,7 +750,60 @@ void Element_shape::connect(std::vector<Element_shape*> those, Connection_direct
   _glue_edges(those);
 }
 
-void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems) {
+void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Connection_direction dir) {
+  int nd = math::log(2, elems[0].size()) + 1;
+  int nv = math::pow(2, nd - 1);
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    HEXED_ASSERT(Int(elems[i_side].size()) == nv, "wrong number of elements supplied");
+    for (Element_shape* elem : elems[i_side]) {
+      HEXED_ASSERT(elem, "Element pointer is null.");
+      HEXED_ASSERT(elem->n_dim() == nd, "Element dimensionality does not match number of elements supplied");
+    }
+  }
+  std::array<std::vector<int>, 2> face_inds;
+  std::array<std::vector<int>, 2> inds;
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    Connection_direction side_dir {{dir.i_dim[i_side], dir.i_dim[!i_side]},
+                                   {dir.face_sign[i_side], dir.face_sign[!i_side]},
+                                   dir.rotate*math::sign(!i_side)};
+    face_inds[i_side] = face_vertex_inds(nd, side_dir);
+    inds[i_side] = vertex_inds(nd, side_dir)[0];
+  }
+  for (int i_elem = 0; i_elem < nv; ++i_elem) {
+    for (int i_vert = 0; i_vert < nv; ++i_vert) {
+      for (int i_side = 0; i_side < 2; ++i_side) {
+        bool redundant = false;
+        bool glue = false;
+        std::vector<double> coords(nd);
+        coords[dir.i_dim[i_side]] = dir.face_sign[i_side];
+        for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+          int vert_coord = math::row_coordinate(nd - 1, 2, i_dim, i_vert);
+          int elem_coord = math::row_coordinate(nd - 1, 2, i_dim, i_elem);
+          int diff = vert_coord - elem_coord;
+          int coord_dim = i_dim + (i_dim >= dir.i_dim[i_side]);
+          coords[coord_dim] = vert_coord;
+          if (diff != 0) {
+            if (elems[!i_side][face_inds[i_side][i_elem + diff*math::stride(nd - 1, 2, i_dim)]]
+                == elems[!i_side][face_inds[i_side][i_elem]]) {
+              redundant = true;
+            } else if (elems[i_side][face_inds[!i_side][i_elem + diff*math::stride(nd - 1, 2, i_dim)]]
+                       == elems[i_side][face_inds[i_side][i_elem]]) {
+              glue = true;
+              coords[coord_dim] = .5;
+            }
+          }
+        }
+        if (!redundant) {
+          Vertex& vert = elems[!i_side][face_inds[i_side][i_elem]]->vertex(inds[!i_side][face_inds[i_side][i_vert]]);
+          if (glue) {
+            vert.glue(*elems[i_side][i_elem], coords);
+          } else {
+            vert.eat(elems[i_side][i_elem]->vertex(inds[i_side][i_vert]));
+          }
+        }
+      }
+    }
+  }
 }
 
 void Element_shape::glue(Element_shape& that, std::array<std::vector<double>, 2> corners) {

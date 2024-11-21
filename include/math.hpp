@@ -55,6 +55,14 @@ constexpr int sign(bool condition) {
   return 2*condition - 1;
 }
 
+constexpr Int stride(int n_dim, Int row_size, int i_dim) {
+  return math::pow(row_size, n_dim - 1 - i_dim);
+}
+
+constexpr Int row_coordinate(int n_dim, Int row_size, int i_dim, Int index) {
+  return index/stride(n_dim, row_size, i_dim)%row_size;
+}
+
 //! \brief returns `angle0 - angle1`, where the difference is in \f$ [0, 2\pi) \f$
 double angle_diff(double angle0, double angle1);
 
