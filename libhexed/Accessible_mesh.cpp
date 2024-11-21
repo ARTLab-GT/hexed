@@ -506,9 +506,11 @@ void Accessible_mesh::_fit_surface() {
     }
   }
   extrude_cons.clear();
-  Int cons_sz = def.cons.size();
   _blocks.boundary_sides();
-  for (int i_con = 0; i_con < cons_sz; ++i_con) {
+  Int cons_sz = def.cons.size();
+  Int ref_cons_sz = def.ref_face_cons[1].size();
+  Int bound_cons_sz = def.bound_cons.size();
+  for (Int i_con = 0; i_con < cons_sz; ++i_con) {
     auto& con = def.cons[i_con];
     if (!con) continue;
     auto dir = con->direction();
@@ -551,8 +553,44 @@ void Accessible_mesh::_fit_surface() {
       }
     }
   }
-  Int bound_cons_sz = def.bound_cons.size();
-  for (int i_con = 0; i_con < bound_cons_sz; ++i_con) {
+  for (Int i_con = 0; i_con < ref_cons_sz; ++i_con) {
+    auto& con = def.ref_face_cons[1][i_con];
+    if (!con) continue;
+    auto dir = con->direction();
+    bool reverse = con->order_reversed();
+    Deformed_element* coarse;
+    std::vector<Deformed_element*> fine;
+    coarse = &con->coarse_element();
+    bool replace = false;
+    Int rec = coarse->face_record[dir.i_face(reverse)];
+    if (rec >= 0) {
+      coarse = &def.elems.at(coarse->refinement_level(), rec);
+      replace = true;
+    }
+    bool any_fine = false;
+    bool all_fine = true;
+    for (int i_fine = 0; i_fine < con->n_fine_elements(); ++i_fine) {
+      Deformed_element* f = &con->connection(i_fine).element(!reverse);
+      rec = f->face_record[dir.i_face(!reverse)];
+      if (rec >= 0) {
+        f = &def.elems.at(f->refinement_level(), rec);
+        any_fine = any_fine || f->fake_shape();
+        all_fine = all_fine && f->fake_shape();
+        replace = true;
+      }
+      fine.push_back(f);
+    }
+    #if 0
+    if (replace && (any_fine == all_fine)) {
+      Con_dir<Deformed_element> new_dir {{dir.i_dim[reverse], dir.i_dim[!reverse]},
+                                         {dir.face_sign[reverse], dir.face_sign[!reverse]}};
+      auto stretch = con->stretch();
+      con.reset();
+      _connect(coarse, fine, new_dir, stretch);
+    }
+    #endif
+  }
+  for (Int i_con = 0; i_con < bound_cons_sz; ++i_con) {
     auto& con = def.bound_cons[i_con];
     if (!con) continue;
     auto dir = con->direction();

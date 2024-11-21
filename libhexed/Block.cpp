@@ -607,14 +607,25 @@ Mat<3> Element_shape::_point(const std::vector<int>& coords) const {
 
 void Element_shape::_glue_edges(std::vector<Element_shape*> those) {
   if (n_dim() != 3 || !_sf) return;
-  for (Element_shape* that : those) if (that->_sf) {
+  for (int i_that = 0; i_that < Int(those.size()); ++i_that) {
+    Element_shape* that = those[i_that];
+    if (!that->_sf) continue;
     for (int i_edge = 0; i_edge < 4; ++i_edge) {
       auto& edge0 = that->_sf.value().edge(i_edge);
       for (int j_edge = 0; j_edge < 4; ++j_edge) {
         auto& edge1 = _sf.value().edge(j_edge);
         for (bool reverse : {0, 1}) {
-          if (&edge0.vertex(0) == &edge1.vertex(reverse) && &edge0.vertex(1) == &edge1.vertex(!reverse)) {
+          if (&edge0.vertex(reverse) == &edge1.vertex(0) && &edge0.vertex(!reverse) == &edge1.vertex(1)) {
             edge0.glue(edge1, Edge::no, reverse);
+          } else {
+            for (int j_that = i_that + 1; j_that < Int(those.size()); ++j_that) if (those[j_that]->_sf) {
+              Edge* edges [2] {&edge0, &those[j_that]->_sf.value().edge(i_edge)};
+              if (   &edges[ reverse]->vertex( reverse) == &edge1.vertex(0)
+                  && &edges[!reverse]->vertex(!reverse) == &edge1.vertex(1)) {
+                edges[ reverse]->glue(edge1, 0, reverse);
+                edges[!reverse]->glue(edge1, 1, reverse);
+              }
+            }
           }
         }
       }
@@ -717,7 +728,6 @@ void Element_shape::connect(std::vector<Element_shape*> those, Connection_direct
   auto face_inds = face_vertex_inds(n_dim(), dir);
   int nv = math::pow(2, n_dim() - 1);
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
-    HEXED_ASSERT(those[face_inds[i_vert]], "foo");
     // eat the non-hanging vertices of the fine elements
     vertex(inds[0][i_vert]).eat(those[face_inds[i_vert]]->vertex(inds[1][i_vert]));
     // glue the hanging vertices
@@ -738,6 +748,9 @@ void Element_shape::connect(std::vector<Element_shape*> those, Connection_direct
     }
   }
   _glue_edges(those);
+}
+
+void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems) {
 }
 
 void Element_shape::glue(Element_shape& that, std::array<std::vector<double>, 2> corners) {

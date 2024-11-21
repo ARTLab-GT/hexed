@@ -202,6 +202,7 @@ class Mesh_by_type : public View_by_type<element_t>
     });
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
       auto pred = [predicate](std::unique_ptr<Refined_connection<element_t>>& con){
+        if (!con) return true;
         bool result = predicate(con->coarse_element());
         for (int i_fine = 0; i_fine < con->n_fine_elements(); ++i_fine) {
           result = result || predicate(con->connection(i_fine).element(!con->order_reversed()));

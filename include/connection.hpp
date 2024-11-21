@@ -240,8 +240,7 @@ class Refined_connection {
   //! delete copy semantics which would mess up `Fine_connection`. Can implement later if we really need it.
   Refined_connection(const Refined_connection&) = delete;
   Refined_connection& operator=(const Refined_connection&) = delete;
-  virtual ~Refined_connection()
-  {
+  virtual ~Refined_connection() {
     c.set_face(dir.i_face(rev), nullptr);
     disconnect_normal();
   }

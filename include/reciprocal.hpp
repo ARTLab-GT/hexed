@@ -29,8 +29,8 @@ public:
   operator bool() const {return get() != nullptr;} //!< \brief returns `true` iff `this` is not null
 
   #define ACCESS(CONST) \
-    /* \brief points to the `mine` of the `partner()` of `this` */ \
-    /* \details if not paired, returns `nullptr` */ \
+    /*! \brief points to the `mine` of the `partner()` of `this` */ \
+    /*! \details if not paired, returns `nullptr` */ \
     CONST U* get() CONST { \
       if (this->paired()) return this->_yours(*this->partner()); \
       return nullptr; \
