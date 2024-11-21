@@ -62,7 +62,7 @@ iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
 
-vis_field_vars = vis_field_vars + {specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density; turbulent_dissipation_bassi = turbulent_dissipation_bassi; specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density);}
+vis_field_vars = vis_field_vars + {specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density; turbulent_dissipation_bassi = turbulent_dissipation_bassi; specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density); debug_var0 = debug_var0}
 
 {run simulation}
 $start
