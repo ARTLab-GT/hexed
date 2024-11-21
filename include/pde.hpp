@@ -214,8 +214,9 @@ class Navier_stokes {
                                       + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
         flux_diff_phys(i_energy, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
         if constexpr (turb == k_omega) {
-          flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s * mu_t_bar)/mass*gradient(i_turb_kin_ener, all);
-          flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma * mu_t_bar)/mass*gradient(i_turb_diss, all);
+          // fixed product rule
+          flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s * mu_t_bar)*(gradient(i_turb_kin_ener, all)/mass - state(i_turb_kin_ener)/mass/mass*gradient(i_mass, all));
+          flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma * mu_t_bar)*(gradient(i_turb_diss, all)/mass - state(i_turb_diss)/mass/mass*gradient(i_mass, all));
           //flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s*mu_t_bar)/mass*gradient(i_turb_kin_ener, all); //Needs mu_t_bar implementation
           //flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma*mu_t_bar)/mass*gradient(i_turb_diss, all);
         }
