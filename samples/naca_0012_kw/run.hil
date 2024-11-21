@@ -57,13 +57,13 @@ max_safety = 0.7
 
 {iteration parameters}
 print_freq = 10
-vis_freq = 100
+vis_freq = 10^3
 {done = {iteration > 20000}}
 done = {iteration > 5000 & (drag_coef_max - drag_coef_min < 5e-3*(drag_coef_min + drag_coef_max)/2) & (lift_coef_max - lift_coef_min < 5e-3*(lift_coef_min + lift_coef_max)/2)}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_change_bcs}
+working_dir = {hexed_out_fix_pde}
 
 vis_field_vars = vis_field_vars + {specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density; turbulent_dissipation_bassi = turbulent_dissipation_bassi; specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density); debug_var0 = debug_var0}
 

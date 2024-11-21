@@ -162,7 +162,7 @@ class Navier_stokes {
                               *(heat_rat - 1)/constants::specific_gas_air);
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
-        energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
+        energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air; //! \todo add turbulent conductivity
         real_turb_diss = state(i_turb_diss)/mass; //TODO: \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0}
         k_bar = std::max(0., state(i_turb_kin_ener)/mass);
         mu_t_bar = alpha_s * mass * k_bar * std::exp(-real_turb_diss);
@@ -237,19 +237,22 @@ class Navier_stokes {
             }
           }
         }
+        //! \todo add divergence to s hat
         double chi_o = std::abs(sum)/std::pow(beta_s * std::exp(state(i_turb_diss)/mass), 3);
         double f_beta = (1. + 85.*chi_o)/(1. + 100.*chi_o);
         beta = beta_0 * f_beta;
 
         grad_diss_sum = 0.0;
         for (int k = 0; k < n_dim; ++k) {
-                grad_diss_sum += (gradient(i_turb_diss, k)/mass)^2;
+          //! fixed: gradient of omega tilde and power operator
+          double grad_diss = gradient(i_turb_diss, k)/mass - state(i_turb_diss)/mass/mass*gradient(i_mass, k);
+          grad_diss_sum += grad_diss*grad_diss;
         }
 
         tau_vgrad_sum = 0.0;
         for (int i = 0; i < n_dim; ++i) {
-                for (int j = 0; j < n_dim; ++j) {
-                  tau_vgrad_sum += turb_stress(i, j) * veloc_grad(i, j);
+          for (int j = 0; j < n_dim; ++j) {
+            tau_vgrad_sum += turb_stress(i, j)*veloc_grad(i, j);
           }
         }
       };
@@ -265,7 +268,7 @@ class Navier_stokes {
         if constexpr (turb == k_omega) {
           source(i_energy) = -tau_vgrad_sum + beta_s * mass * k_bar * std::exp(real_turb_diss);
           source(i_turb_kin_ener) = tau_vgrad_sum - beta_s * mass * k_bar * std::exp(real_turb_diss);
-          source(i_turb_diss) = alpha/k_bar*tau_vgrad_sum - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma * mu_t_bar) * grad_diss_sum; 
+          source(i_turb_diss) = alpha/k_bar*tau_vgrad_sum - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma * mu_t_bar) * grad_diss_sum;
           //these source terms are wrong
           //source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
           //source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
