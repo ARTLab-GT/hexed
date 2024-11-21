@@ -37,27 +37,27 @@ geom0 = {auto.csv}
 
 {freestream conditions}
 freestream_temperature = zero_celsius
-freestream_mach = 0.5
+freestream_mach = 0.4
 target_reynolds = 500000
-freestream_direction0 = 1.0
-freestream_direction1 = 0.0
+freestream_direction0 = 0.99619469809
+freestream_direction1 = 0.08715574274
 freestream_density = target_reynolds*1.716e-5/sqrt(specific_gas_air * 1.4 * freestream_temperature)/freestream_mach
 
-freestream_specific_turbulent_kinetic_energy = 1e-1
-freestream_specific_turbulent_dissipation = 1e1
+freestream_specific_turbulent_kinetic_energy = 5.e-6
+freestream_specific_turbulent_dissipation = 0.1
 
 {attack = 0*degree}
 
 surface_bc = {no_slip}
 diffusive_admissibility = false
 fix_therm_admis = false
-max_safety = 0.1
+max_safety = 0.7
 
 {iteration parameters}
-print_freq = 10
-vis_freq = 100
+print_freq = 1
+vis_freq = 1625
 {done = {iteration > 20000}}
-done = {iteration > 5000 & (drag_coef_max - drag_coef_min < 5e-3*(drag_coef_min + drag_coef_max)/2) & (lift_coef_max - lift_coef_min < 5e-3*(lift_coef_min + lift_coef_max)/2)}
+done = {iteration > 30000 & (drag_coef_max - drag_coef_min < 5e-3*(drag_coef_min + drag_coef_max)/2) & (lift_coef_max - lift_coef_min < 5e-3*(lift_coef_min + lift_coef_max)/2)}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
