@@ -704,49 +704,20 @@ Mat<3> Element_shape::nominal_center() const {
 };
 
 void Element_shape::connect(Element_shape& that, Connection_direction dir) {
-  HEXED_ASSERT(that.n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
   HEXED_ASSERT(that._basis == _basis, "attempt to connect elements with different basis");
   if (&that == this) return;
-  // eat vertices
-  auto inds = vertex_inds(n_dim(), dir);
-  for (int i_vert = 0; i_vert < math::pow(2, n_dim() - 1); ++i_vert) {
-    vertex(inds[0][i_vert]).eat(that.vertex(inds[1][i_vert]));
-  }
+  std::vector<Element_shape*> these(math::pow(2, n_dim() - 1), this);
+  std::vector<Element_shape*> those(math::pow(2, n_dim() - 1), &that);
+  connect({these, those}, dir);
   _glue_edges({&that});
 }
 
 void Element_shape::connect(std::vector<Element_shape*> those, Connection_direction dir) {
-  HEXED_ASSERT(those.size() == math::pow(std::size_t(2), n_dim() - 1), "wrong number of fine elements");
   for (Element_shape* that : those) {
-    HEXED_ASSERT(that, "fine element pointer is null");
     HEXED_ASSERT(that != this, "Self-connections must be conforming.");
-    HEXED_ASSERT(that->n_dim() == n_dim(), "attempt to connect elements with different dimensionality");
-    HEXED_ASSERT(that->_basis == _basis, "attempt to connect elements with different basis");
   }
-  // eat/glue vertices
-  auto inds = vertex_inds(n_dim(), dir);
-  auto face_inds = face_vertex_inds(n_dim(), dir);
-  int nv = math::pow(2, n_dim() - 1);
-  for (int i_vert = 0; i_vert < nv; ++i_vert) {
-    // eat the non-hanging vertices of the fine elements
-    vertex(inds[0][i_vert]).eat(those[face_inds[i_vert]]->vertex(inds[1][i_vert]));
-    // glue the hanging vertices
-    for (int j_vert = 0; j_vert < nv; ++j_vert) if (j_vert != i_vert) {
-      std::vector<double> coords(n_dim());
-      bool do_it = true;
-      for (int i_dim = 0, face_dim = 0; i_dim < n_dim(); ++i_dim) {
-        if (i_dim == dir.i_dim[0]) coords[i_dim] = dir.face_sign[0];
-        else {
-          int vs = vstride(n_dim() - 1, face_dim++);
-          int c = i_vert/vs%2 + j_vert/vs%2;
-          do_it = do_it && !(c == 1 &&    those[face_inds[i_vert - i_vert/vs%2*vs]]
-                                       == those[face_inds[i_vert + (1 - i_vert/vs%2)*vs]]);
-          coords[i_dim] = .5*c;
-        }
-      }
-      if (do_it) those[face_inds[i_vert]]->vertex(inds[1][j_vert]).glue(*this, coords);
-    }
-  }
+  std::vector<Element_shape*> these(math::pow(2, n_dim() - 1), this);
+  connect({these, those}, dir);
   _glue_edges(those);
 }
 

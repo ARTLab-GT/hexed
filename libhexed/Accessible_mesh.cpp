@@ -567,28 +567,36 @@ void Accessible_mesh::_fit_surface() {
       coarse = &def.elems.at(coarse->refinement_level(), rec);
       replace = true;
     }
-    bool any_fine = false;
-    bool all_fine = true;
-    for (int i_fine = 0; i_fine < con->n_fine_elements(); ++i_fine) {
-      Deformed_element* f = &con->connection(i_fine).element(!reverse);
-      rec = f->face_record[dir.i_face(!reverse)];
-      if (rec >= 0) {
-        f = &def.elems.at(f->refinement_level(), rec);
-        any_fine = any_fine || f->fake_shape();
-        all_fine = all_fine && f->fake_shape();
-        replace = true;
+    std::vector<next::Element_shape*> coarse_shapes(4, &coarse->active_shape());
+    rec = coarse->face_record[dir.i_face(reverse)];
+    if (rec >= 0) {
+      Deformed_element* surface = &def.elems.at(coarse->refinement_level(), rec);
+      for (int i_elem = 0; i_elem < 4; ++i_elem) {
+        int bf = coarse->active_shape().boundary_face();
+        if (math::row_coordinate(2, 2, bf/2, i_elem) == bf%2) coarse_shapes[i_elem] = &surface->active_shape();
       }
-      fine.push_back(f);
     }
-    #if 0
-    if (replace && (any_fine == all_fine)) {
+    auto stretch = con->stretch();
+    std::vector<next::Element_shape*> fine_shapes;
+    for (int i = 0; i < 1 + stretch[0]; ++i) {
+      for (int i_fine = 0; i_fine < con->n_fine_elements(); ++i_fine) {
+        Deformed_element* f = &con->connection(i_fine).element(!reverse);
+        rec = f->face_record[dir.i_face(!reverse)];
+        if (rec >= 0) {
+          f = &def.elems.at(f->refinement_level(), rec);
+          replace = true;
+        }
+        for (int j = 0; j < 1 + stretch[1]; ++j) {
+          fine_shapes.push_back(&f->active_shape());
+        }
+      }
+    }
+    if (replace) {
       Con_dir<Deformed_element> new_dir {{dir.i_dim[reverse], dir.i_dim[!reverse]},
                                          {dir.face_sign[reverse], dir.face_sign[!reverse]}};
-      auto stretch = con->stretch();
       con.reset();
-      _connect(coarse, fine, new_dir, stretch);
+      next::Element_shape::connect({coarse_shapes, fine_shapes}, new_dir);
     }
-    #endif
   }
   for (Int i_con = 0; i_con < bound_cons_sz; ++i_con) {
     auto& con = def.bound_cons[i_con];
