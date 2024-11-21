@@ -722,6 +722,7 @@ void Element_shape::connect(std::vector<Element_shape*> those, Connection_direct
 }
 
 void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Connection_direction dir) {
+  printers::info("[6\n");
   int nd = math::log(2, elems[0].size()) + 1;
   int nv = math::pow(2, nd - 1);
   for (int i_side = 0; i_side < 2; ++i_side) {
@@ -731,6 +732,8 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
       HEXED_ASSERT(elem->n_dim() == nd, "Element dimensionality does not match number of elements supplied");
     }
   }
+  printers::info("6]\n");
+  printers::info("[4\n");
   std::array<std::vector<int>, 2> face_inds;
   std::array<std::vector<int>, 2> inds;
   for (int i_side = 0; i_side < 2; ++i_side) {
@@ -740,6 +743,8 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
     face_inds[i_side] = face_vertex_inds(nd, side_dir);
     inds[i_side] = vertex_inds(nd, side_dir)[0];
   }
+  printers::info("4]\n");
+  printers::info("[5\n");
   for (int i_elem = 0; i_elem < nv; ++i_elem) {
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
       for (int i_side = 0; i_side < 2; ++i_side) {
@@ -775,6 +780,7 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
       }
     }
   }
+  printers::info("5]\n");
 }
 
 void Element_shape::glue(Element_shape& that, std::array<std::vector<double>, 2> corners) {
