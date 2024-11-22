@@ -256,23 +256,22 @@ class Navier_stokes {
             tau_vgrad_sum += turb_stress(i, j)*veloc_grad(i, j);
           }
         }
-      };
+      }
+
       Mat<n_update> source;
       /*! \todo __Carter:__ compute the turbulent source terms.
        * Set `source(i_turb_kin_ener)` and `source(i_turb_diss)` to contain the source terms of
        * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
        */
       void compute_source() {
+        compute_scalars_source();
         if constexpr (has_source) {
           source.setZero();
         }
         if constexpr (turb == k_omega) {
           source(i_energy) = -tau_vgrad_sum + beta_s * mass * k_bar * std::exp(real_turb_diss);
           source(i_turb_kin_ener) = tau_vgrad_sum - beta_s * mass * k_bar * std::exp(real_turb_diss);
-          source(i_turb_diss) = alpha/k_bar*tau_vgrad_sum - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma * mu_t_bar) * grad_diss_sum;
-          //these source terms are wrong
-          //source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
-          //source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
+          source(i_turb_diss) = alpha/std::max(k_bar, 1e-8)*tau_vgrad_sum - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma * mu_t_bar) * grad_diss_sum;
         }
       }
 
