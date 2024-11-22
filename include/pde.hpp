@@ -150,9 +150,9 @@ class Navier_stokes {
       double dyn_visc_coef;
       double therm_cond_coef;
       double energy_cond;
-      double mu_t_bar;
       double real_turb_diss;
       double k_bar;
+      double tv_per_k;
       //! \todo __Carter:__ Compute whatever variables you need for the turbulent fluxes
       //! which might also be needed for source terms and/or the time step calculation.
       void compute_scalars_diff() {
@@ -165,10 +165,11 @@ class Navier_stokes {
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air; //! \todo add turbulent conductivity
         real_turb_diss = state(i_turb_diss)/mass; //TODO: \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0}
         k_bar = std::max(0., state(i_turb_kin_ener)/mass);
-        mu_t_bar = alpha_s * mass * k_bar * std::exp(-real_turb_diss);
+        tv_per_k = alpha_s*mass*std::exp(-real_turb_diss);
         //mu_t_bar = std::min(0., mu_t_bar);
         //mu_t_bar = alpha_s * state(i_mass) * k_bar * std::exp(-real_turb_diss);
 
+        #if 0
         #pragma omp critical
         if (std::isnan(mu_t_bar)) {
                 std::cout << "mu_t_bar is nan; Alpha_s: " << alpha_s
@@ -177,17 +178,17 @@ class Navier_stokes {
                 << "; Exp turb: " << std::exp(-real_turb_diss) << std::endl << std::flush;
           throw std::runtime_error("Mu_t_bar is nan");
         }
+        #endif
         if (std::isnan(sigma_s)) {
           std::cout << "sigma_s is nan\n";
         }
-        //std::cout << mu_t_bar << "\n";
         debug_variables(0) = 42.;
       }
 
       Mat<n_extrap, n_dim> gradient;
       Mat<n_update, n_dim_flux> flux_diff;
       Mat<n_dim, n_dim> veloc_grad;
-      Mat<n_dim, n_dim> turb_stress;
+      Mat<n_dim, n_dim> turb_stress_per_k;
       /*! \todo __Carter:__ modify `flux_diff` to include turbulence modeling.
        * Set `flux_diff_phys(i_turb_kin_ener)` and `flux_diff_phys(i_turb_diss)` to contain the source terms of
        * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
@@ -200,14 +201,14 @@ class Navier_stokes {
         Mat<n_update, n_dim> flux_diff_phys; // flux in physical space
         Mat<n_dim> veloc = mmtm/mass;
         veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
-        turb_stress = mu_t_bar * (veloc_grad + veloc_grad.transpose()
-                                  - 2./3. * veloc_grad.trace()*Mat<n_dim, n_dim>::Identity())
-                      - 2./3.*mass*k_bar*Mat<n_dim, n_dim>::Identity();
+        turb_stress_per_k = tv_per_k * (veloc_grad + veloc_grad.transpose()
+                                     - 2./3. * veloc_grad.trace()*Mat<n_dim, n_dim>::Identity())
+                      - 2./3.*mass*Mat<n_dim, n_dim>::Identity();
 
         //TODO: The above line is going to cause problems if not in k-w mode
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
                                   + (bulk_av*mass - 2./3.*dyn_visc_coef)
-                                     *veloc_grad.trace()*Mat<n_dim, n_dim>::Identity() + turb_stress;
+                                     *veloc_grad.trace()*Mat<n_dim, n_dim>::Identity() + k_bar*turb_stress_per_k;
         flux_diff_phys = -laplacian_av*gradient;
         flux_diff_phys(seq, all) -= stress;
         Mat<1, n_dim> int_ener_grad = -state(i_energy)/mass/mass*gradient(i_mass, all)
@@ -215,17 +216,15 @@ class Navier_stokes {
         flux_diff_phys(i_energy, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
         if constexpr (turb == k_omega) {
           // fixed product rule
-          flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s * mu_t_bar)*(gradient(i_turb_kin_ener, all)/mass - state(i_turb_kin_ener)/mass/mass*gradient(i_mass, all));
-          flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma * mu_t_bar)*(gradient(i_turb_diss, all)/mass - state(i_turb_diss)/mass/mass*gradient(i_mass, all));
-          //flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s*mu_t_bar)/mass*gradient(i_turb_kin_ener, all); //Needs mu_t_bar implementation
-          //flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma*mu_t_bar)/mass*gradient(i_turb_diss, all);
+          flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s * k_bar*tv_per_k)*(gradient(i_turb_kin_ener, all)/mass - state(i_turb_kin_ener)/mass/mass*gradient(i_mass, all));
+          flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma * k_bar*tv_per_k)*(gradient(i_turb_diss, all)/mass - state(i_turb_diss)/mass/mass*gradient(i_mass, all));
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
       }
 
       double beta;
       double grad_diss_sum;
-      double tau_vgrad_sum;
+      double tau_vgrad_sum_per_k;
       void compute_scalars_source() {
         Mat<n_dim, n_dim> omega = 0.5 * (veloc_grad - veloc_grad.transpose());
         Mat<n_dim, n_dim> S = 0.5 * (veloc_grad + veloc_grad.transpose());
@@ -250,10 +249,10 @@ class Navier_stokes {
           grad_diss_sum += grad_diss*grad_diss;
         }
 
-        tau_vgrad_sum = 0.0;
+        tau_vgrad_sum_per_k = 0.0;
         for (int i = 0; i < n_dim; ++i) {
           for (int j = 0; j < n_dim; ++j) {
-            tau_vgrad_sum += turb_stress(i, j)*veloc_grad(i, j);
+            tau_vgrad_sum_per_k += turb_stress_per_k(i, j)*veloc_grad(i, j);
           }
         }
       }
@@ -269,9 +268,9 @@ class Navier_stokes {
           source.setZero();
         }
         if constexpr (turb == k_omega) {
-          source(i_energy) = -tau_vgrad_sum + beta_s * mass * k_bar * std::exp(real_turb_diss);
-          source(i_turb_kin_ener) = tau_vgrad_sum - beta_s * mass * k_bar * std::exp(real_turb_diss);
-          source(i_turb_diss) = alpha/std::max(k_bar, 1e-8)*tau_vgrad_sum - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma * mu_t_bar) * grad_diss_sum;
+          source(i_energy) = -k_bar*tau_vgrad_sum_per_k + beta_s * mass * k_bar * std::exp(real_turb_diss);
+          source(i_turb_kin_ener) = k_bar*tau_vgrad_sum_per_k - beta_s * state(i_turb_kin_ener) * std::exp(real_turb_diss);
+          source(i_turb_diss) = alpha*tau_vgrad_sum_per_k - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma * k_bar*tv_per_k) * grad_diss_sum;
         }
       }
 

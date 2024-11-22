@@ -53,10 +53,10 @@ println({turbulent viscosity: } + freestream_density*freestream_specific_turbule
 surface_bc = {no_slip}
 diffusive_admissibility = false
 fix_therm_admis = false
-max_safety = 1e-6
+max_safety = 1e-5
 
 {iteration parameters}
-print_freq = 10
+print_freq = 100
 vis_freq = 10^3
 {done = {iteration > 20000}}
 done = {iteration > 5000 & (drag_coef_max - drag_coef_min < 5e-3*(drag_coef_min + drag_coef_max)/2) & (lift_coef_max - lift_coef_min < 5e-3*(lift_coef_min + lift_coef_max)/2)}
