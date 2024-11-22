@@ -217,7 +217,7 @@ class Navier_stokes {
         if constexpr (turb == k_omega) {
           // fixed product rule
           flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s * k_bar*tv_per_k)*(gradient(i_turb_kin_ener, all)/mass - state(i_turb_kin_ener)/mass/mass*gradient(i_mass, all));
-          flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma * k_bar*tv_per_k)*(gradient(i_turb_diss, all)/mass - state(i_turb_diss)/mass/mass*gradient(i_mass, all));
+          flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma * k_bar*tv_per_k)*std::exp(real_turb_diss)*(gradient(i_turb_diss, all)/mass - state(i_turb_diss)/mass/mass*gradient(i_mass, all));
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
       }
@@ -270,7 +270,7 @@ class Navier_stokes {
         if constexpr (turb == k_omega) {
           source(i_energy) = -k_bar*tau_vgrad_sum_per_k + beta_s * mass * k_bar * std::exp(real_turb_diss);
           source(i_turb_kin_ener) = k_bar*tau_vgrad_sum_per_k - beta_s * state(i_turb_kin_ener) * std::exp(real_turb_diss);
-          source(i_turb_diss) = alpha*tau_vgrad_sum_per_k - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma * k_bar*tv_per_k) * grad_diss_sum;
+          source(i_turb_diss) = alpha*tau_vgrad_sum_per_k - beta * mass * std::exp(real_turb_diss);
         }
       }
 
