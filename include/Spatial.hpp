@@ -808,6 +808,10 @@ class Spatial {
             comp.compute_diffusivity();
             scale += comp.diffusivity/max_cfl_d/spacing/spacing;
           }
+          if constexpr (Pde::has_source) {
+            comp.compute_decay();
+            scale += comp.decay; // should be comp.decay/2, but i'm nervervous
+          }
           if (_is_local) tss[i_qpoint] = 1./scale;
           else {
             tss[i_qpoint] = 1.;

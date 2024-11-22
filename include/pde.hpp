@@ -217,7 +217,7 @@ class Navier_stokes {
         if constexpr (turb == k_omega) {
           // fixed product rule
           flux_diff_phys(i_turb_kin_ener, all) = -(dyn_visc_coef + sigma_s * k_bar*tv_per_k)*(gradient(i_turb_kin_ener, all)/mass - state(i_turb_kin_ener)/mass/mass*gradient(i_mass, all));
-          flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma * k_bar*tv_per_k)*std::exp(real_turb_diss)*(gradient(i_turb_diss, all)/mass - state(i_turb_diss)/mass/mass*gradient(i_mass, all));
+          flux_diff_phys(i_turb_diss, all) = -(dyn_visc_coef + sigma * k_bar*tv_per_k)*(gradient(i_turb_diss, all)/mass - state(i_turb_diss)/mass/mass*gradient(i_mass, all));
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
       }
@@ -270,7 +270,7 @@ class Navier_stokes {
         if constexpr (turb == k_omega) {
           source(i_energy) = -k_bar*tau_vgrad_sum_per_k + beta_s * mass * k_bar * std::exp(real_turb_diss);
           source(i_turb_kin_ener) = k_bar*tau_vgrad_sum_per_k - beta_s * state(i_turb_kin_ener) * std::exp(real_turb_diss);
-          source(i_turb_diss) = alpha*tau_vgrad_sum_per_k - beta * mass * std::exp(real_turb_diss);
+          source(i_turb_diss) = alpha*tau_vgrad_sum_per_k - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma*k_bar*tv_per_k)*grad_diss_sum;
         }
       }
 
@@ -290,7 +290,19 @@ class Navier_stokes {
       void compute_diffusivity() {
         compute_scalars_conv();
         compute_scalars_diff();
-        diffusivity = std::abs(laplacian_av) + std::max(std::abs(bulk_av) + dyn_visc_coef/mass, energy_cond/mass);
+        double turb_visc = (turb == laminar) ? 0 : math::max(1, sigma, sigma_s)*k_bar*tv_per_k;
+        diffusivity = std::abs(laplacian_av) + math::max(
+          std::abs(bulk_av) + (dyn_visc_coef + turb_visc)/mass,
+          energy_cond/mass + turb_visc/mass
+        );
+      }
+
+      double decay;
+      void compute_decay() {
+        decay = 0;
+        if constexpr (turb == k_omega) {
+          decay = math::max(beta_s, beta)*std::exp(real_turb_diss);
+        }
       }
     };
 
@@ -454,6 +466,11 @@ class Advection {
     void compute_char_speed() {
       char_speed = std::max(1., state(Eigen::seqN(0, n_dim)).norm());
     }
+
+    double decay;
+    void compute_decay() {
+      decay = 0;
+    }
   };
 };
 
@@ -527,6 +544,11 @@ class Smooth_art_visc {
         double f = std::abs(state(i_var));
         source(i_var) = ((i_var == 1) ? std::sqrt(f) : f)/_eq._diff_time;
       }
+    }
+
+    double decay;
+    void compute_decay() {
+      decay = 0;
     }
   };
 };
