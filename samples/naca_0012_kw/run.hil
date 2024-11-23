@@ -23,6 +23,7 @@ max_refinement_iters = 20
 max_ref_level = 13
 vis_field_vars = vis_field_vars + {size = nom_sz;}
 refine_if = {(center0 > -1.5 & center0 < 1.5 & center1 < 1.0 & center1 > -1.0 & ref_level < 6 & is_extruded) | (center0 > 0.8 & center0 < 1.3 & center1 < 0.2 & center1 > -0.2 & ref_level < 8 & is_extruded)}
+refine_if = {(center0 > -1.5 & center0 < 1.5 & center1 < 1.0 & center1 > -1.0 & ref_level < 6 & is_extruded) }
 init_layer_splits = 4
 {$set_geometry_refinement}
 {$set_subsonic_bl_multirate}
@@ -38,7 +39,7 @@ geom0 = {auto.csv}
 {freestream conditions}
 freestream_temperature = zero_celsius
 freestream_mach = 0.5
-target_reynolds = 5e5
+target_reynolds = 5e3
 freestream_direction0 = 1.0
 freestream_direction1 = 0.0
 freestream_density = target_reynolds*1.716e-5/sqrt(specific_gas_air * 1.4 * freestream_temperature)/freestream_mach
@@ -53,7 +54,7 @@ println({turbulent viscosity: } + freestream_density*freestream_specific_turbule
 surface_bc = {no_slip}
 diffusive_admissibility = false
 fix_therm_admis = false
-max_safety = 1e-3
+max_safety = 1e-2
 
 {iteration parameters}
 print_freq = 100

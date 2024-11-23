@@ -2,12 +2,10 @@
 #include <Row_rw.hpp>
 #include <constants.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
 template <int n_dim, int row_size>
-class Stab_art_visc : public Kernel<Kernel_element&>
-{
+class Stab_art_visc : public Kernel<Kernel_element&> {
   static constexpr int n_qpoint = math::pow(row_size, n_dim);
   double _char_speed;
   double _ramp_center;
@@ -20,24 +18,24 @@ class Stab_art_visc : public Kernel<Kernel_element&>
   public:
   Stab_art_visc(const Basis& basis, double char_speed) :
     _char_speed{char_speed},
-    _ramp_center{-4.25*std::log(row_size - 1)/std::log(10)},
+    _ramp_center{-5.25*std::log(row_size - 1)/std::log(10)},
     _row_weights{basis.node_weights()},
     _qpoint_weights{math::pow_outer(_row_weights, n_dim)},
     _face_weights{math::pow_outer(_row_weights, n_dim - 1)},
     _proj{basis.orthogonal(row_size - 1).cwiseProduct(_row_weights)}
   {}
 
-  void operator()(Sequence<Kernel_element&>& elements)
-  {
+  void operator()(Sequence<Kernel_element&>& elements) {
     #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
-    {
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* state = elements[i_elem].state();
+      bool turb = false;
       // compute the indicator variable (specific volume) and it's L^2 norm
       double indicator_var [n_qpoint];
       double norm_sq = 0;
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         indicator_var[i_qpoint] = 1./state[n_dim*n_qpoint + i_qpoint];
+        if (turb) indicator_var[i_qpoint] += 1/state[(n_dim + 2)*n_qpoint + i_qpoint];
         norm_sq += indicator_var[i_qpoint]*indicator_var[i_qpoint]*_qpoint_weights(i_qpoint);
       }
       // compute the normalized (non)smoothness indicator
@@ -60,8 +58,7 @@ class Stab_art_visc : public Kernel<Kernel_element&>
   }
 };
 
-void stabilizing_art_visc(Kernel_mesh mesh, double char_speed)
-{
+void stabilizing_art_visc(Kernel_mesh mesh, double char_speed) {
   (*kernel_factory<Stab_art_visc>(mesh.n_dim, mesh.row_size, mesh.basis, char_speed))(mesh.elems);
 }
 
