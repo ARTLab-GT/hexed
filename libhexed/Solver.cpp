@@ -480,6 +480,15 @@ void Solver::initialize(std::string(expr)) {
     auto sub = inter.make_sub();
     vis_variables::element(*sub.variables, elem);
     vis_variables::position(*sub.variables, elem, basis);
+    Array<double> dist({nq});
+    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+      Mat<> p(params.n_dim);
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        p(i_dim) = sub.variables->get<Array<double>>("pos" + std::to_string(i_dim))[i_qpoint];
+      }
+      dist[i_qpoint] = (p - acc_mesh->surface_geometry().nearest_point(p).point()).norm();
+    }
+    sub.variables->assign("wall_distance", dist);
     sub.exec(expr);
     Array<double> state({n_var, nq}, elem.state());
     for (int i_var = 0; i_var < n_var; ++i_var) {

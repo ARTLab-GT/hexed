@@ -52,9 +52,9 @@ println({turbulent viscosity: } + freestream_density*freestream_specific_turbule
 {attack = 0*degree}
 
 surface_bc = {no_slip}
-diffusive_admissibility = true
+diffusive_admissibility = false
 fix_therm_admis = false
-max_safety = 2e-4
+max_safety = 2e-1
 
 {iteration parameters}
 print_freq = 100
