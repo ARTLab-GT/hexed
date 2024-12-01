@@ -164,7 +164,7 @@ class Navier_stokes {
         k_bar = std::max(0., state(i_turb_kin_ener)/mass);
         tv_per_k = alpha_s*mass*std::exp(-real_turb_diss);
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
-        therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) /*+ k_bar*tv_per_k/.9*/;
+        therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) + k_bar*tv_per_k/.9;
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
         //mu_t_bar = std::min(0., mu_t_bar);
         //mu_t_bar = alpha_s * state(i_mass) * k_bar * std::exp(-real_turb_diss);
@@ -208,7 +208,7 @@ class Navier_stokes {
         //TODO: The above line is going to cause problems if not in k-w mode
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
                                   + (bulk_av*mass - 2./3.*dyn_visc_coef)
-                                     *veloc_grad.trace()*Mat<n_dim, n_dim>::Identity() /*+ k_bar*turb_stress_per_k*/;
+                                     *veloc_grad.trace()*Mat<n_dim, n_dim>::Identity() + k_bar*turb_stress_per_k;
         flux_diff_phys = -laplacian_av*gradient;
         flux_diff_phys(seq, all) -= stress;
         Mat<1, n_dim> int_ener_grad = -state(i_energy)/mass/mass*gradient(i_mass, all)
@@ -271,11 +271,8 @@ class Navier_stokes {
         compute_scalars_source();
         source.setZero();
         if constexpr (turb == k_omega) {
-          #if 0
           source(i_energy) = -k_bar*tau_vgrad_sum_per_k + beta_s * mass * k_bar * std::exp(real_turb_diss);
           source(i_turb_kin_ener) = k_bar*tau_vgrad_sum_per_k - beta_s * state(i_turb_kin_ener) * std::exp(real_turb_diss);
-          source(i_turb_diss) = alpha*tau_vgrad_sum_per_k - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma*k_bar*tv_per_k)*grad_diss_sum;
-          #endif
           source(i_turb_diss) = alpha*tau_vgrad_sum_per_k - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma*k_bar*tv_per_k)*grad_diss_sum;
         }
       }
@@ -298,8 +295,8 @@ class Navier_stokes {
         compute_scalars_diff();
         double turb_visc = (turb == laminar) ? 0 : math::max(1, sigma, sigma_s)*k_bar*tv_per_k;
         diffusivity = std::abs(laplacian_av) + math::max(
-          std::abs(bulk_av) + (dyn_visc_coef /*+ turb_visc)/mass*/),
-          energy_cond/mass /*+ turb_visc/mass*/
+          std::abs(bulk_av) + (dyn_visc_coef + turb_visc)/mass,
+          energy_cond/mass + turb_visc/mass
         );
       }
 

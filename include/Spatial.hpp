@@ -496,7 +496,7 @@ class Spatial {
                 }
               }
             }
-            u *= mult;
+            u *= mult*(i_var < n_dim + 2 ? 1 : 1e-1);
             if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
             else update(i_var) = u;
           }
@@ -589,7 +589,7 @@ class Spatial {
           double mult = _update*tss[i_qpoint]/d_pos*(!fringe);
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-            update(i_var) = time_rate[i_var][i_qpoint]*mult;
+            update(i_var) = time_rate[i_var][i_qpoint]*mult*(i_var < n_dim + 2 ? 1 : 1e-1);
             if constexpr (is_deformed) if (_conv_substep) res_cache[(Pde::n_update + i_var)*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint];
           }
           _eq.write_update(update, n_qpoint, to_update + i_qpoint, true);
