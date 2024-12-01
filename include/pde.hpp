@@ -160,28 +160,12 @@ class Navier_stokes {
         laplacian_av = std::abs(state(i_laplacian_art_visc));
         sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)
                               *(heat_rat - 1)/constants::specific_gas_air);
-        real_turb_diss = state(i_turb_diss)/mass; //TODO: \tilde{\omega}_r = max(\tilde{\omega}, \tilde{\omega}_{r0}
+        real_turb_diss = std::max(state(i_turb_diss)/mass, 8.5);
         k_bar = std::max(0., state(i_turb_kin_ener)/mass);
-        tv_per_k = alpha_s*mass*std::exp(-real_turb_diss);
+        tv_per_k = alpha_s*mass/real_turb_diss;
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) + k_bar*tv_per_k/.9;
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
-        //mu_t_bar = std::min(0., mu_t_bar);
-        //mu_t_bar = alpha_s * state(i_mass) * k_bar * std::exp(-real_turb_diss);
-
-        #if 0
-        #pragma omp critical
-        if (std::isnan(mu_t_bar)) {
-                std::cout << "mu_t_bar is nan; Alpha_s: " << alpha_s
-                << "; Turb_kin_ener: " << state(i_turb_kin_ener)
-                << "; Turb diss: " << -real_turb_diss
-                << "; Exp turb: " << std::exp(-real_turb_diss) << std::endl << std::flush;
-          throw std::runtime_error("Mu_t_bar is nan");
-        }
-        #endif
-        if (std::isnan(sigma_s)) {
-          std::cout << "sigma_s is nan\n";
-        }
         debug_variables(0) = 42.;
       }
 
@@ -229,7 +213,7 @@ class Navier_stokes {
 
       double beta;
       double grad_diss_sum;
-      double tau_vgrad_sum_per_k;
+      double production_per_k;
       void compute_scalars_source() {
         Mat<n_dim, n_dim> omega = 0.5 * (veloc_grad - veloc_grad.transpose());
         Mat<n_dim, n_dim> S = 0.5 * (veloc_grad + veloc_grad.transpose());
@@ -243,9 +227,9 @@ class Navier_stokes {
           }
         }
         //! \todo add divergence to s hat
-        double chi_o = std::abs(sum)/std::pow(beta_s * std::exp(state(i_turb_diss)/mass), 3);
+        double chi_o = std::abs(sum)/math::pow(beta_s*real_turb_diss, 3);
         double f_beta = (1. + 85.*chi_o)/(1. + 100.*chi_o);
-        beta = beta_0 * f_beta;
+        beta = beta_0*f_beta;
 
         grad_diss_sum = 0.0;
         for (int k = 0; k < n_dim; ++k) {
@@ -254,10 +238,10 @@ class Navier_stokes {
           grad_diss_sum += grad_diss*grad_diss;
         }
 
-        tau_vgrad_sum_per_k = 0.0;
+        production_per_k = 0.0;
         for (int i = 0; i < n_dim; ++i) {
           for (int j = 0; j < n_dim; ++j) {
-            tau_vgrad_sum_per_k += turb_stress_per_k(i, j)*veloc_grad(i, j);
+            production_per_k += turb_stress_per_k(i, j)*veloc_grad(i, j);
           }
         }
       }
@@ -271,9 +255,9 @@ class Navier_stokes {
         compute_scalars_source();
         source.setZero();
         if constexpr (turb == k_omega) {
-          source(i_energy) = -k_bar*tau_vgrad_sum_per_k + beta_s * mass * k_bar * std::exp(real_turb_diss);
-          source(i_turb_kin_ener) = k_bar*tau_vgrad_sum_per_k - beta_s * state(i_turb_kin_ener) * std::exp(real_turb_diss);
-          source(i_turb_diss) = alpha*tau_vgrad_sum_per_k - beta * mass * std::exp(real_turb_diss) + (dyn_visc_coef + sigma*k_bar*tv_per_k)*grad_diss_sum;
+          source(i_turb_kin_ener) = std::min(k_bar*(production_per_k - beta_s*mass*real_turb_diss), 1e-6);
+          source(i_energy) = -source(i_turb_kin_ener);
+          source(i_turb_diss) = (alpha*production_per_k - beta*mass*real_turb_diss)*real_turb_diss;
         }
       }
 
@@ -304,7 +288,7 @@ class Navier_stokes {
       void compute_decay() {
         decay = 0;
         if constexpr (turb == k_omega) {
-          decay = math::max(beta_s, beta)*std::exp(real_turb_diss);
+          decay = math::max(beta_s, beta)*real_turb_diss;
         }
       }
     };

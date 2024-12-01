@@ -255,7 +255,7 @@ do = {
 $loop
 
 init_cond = {
-    wall_interp = 1 - exp(-wall_distance)
+    wall_interp = 1 - 0.*exp(-wall_distance)
     momentum0 = freestream_density*freestream_velocity0*wall_interp + 0*pos0
     momentum1 = freestream_density*freestream_velocity1*wall_interp + 0*pos0
     momentum2 = freestream_density*freestream_velocity2*wall_interp + 0*pos0
@@ -264,7 +264,7 @@ init_cond = {
     case0 = {}
     case1 = {
         turbulent_kinetic_energy = freestream_density*freestream_specific_turbulent_kinetic_energy*wall_interp
-        turbulent_dissipation_bassi = freestream_density*(wall_interp*log(freestream_specific_turbulent_dissipation) + (1 - wall_interp)*12.87)
+        turbulent_dissipation_bassi = freestream_density*(wall_interp*freestream_specific_turbulent_dissipation + (1 - wall_interp)*12.87)
     }
     $$({case} + (turbulence_model == {k-omega}))
 }

@@ -35,7 +35,9 @@ class Stab_art_visc : public Kernel<Kernel_element&> {
       double norm_sq [2] {};
       for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
         indicator_var[0][i_qpoint] = 1./state[n_dim*n_qpoint + i_qpoint];
-        if (turb) indicator_var[1][i_qpoint] += std::exp(state[(n_dim + 3)*n_qpoint + i_qpoint]/state[n_dim*n_qpoint + i_qpoint]);
+        if (turb) {
+          indicator_var[1][i_qpoint] += state[n_dim*n_qpoint + i_qpoint]/state[(n_dim + 3)*n_qpoint + i_qpoint];
+        }
         for (int i_var = 0; i_var < 1 + turb; ++i_var) {
           norm_sq[i_var] += indicator_var[i_var][i_qpoint]*indicator_var[i_var][i_qpoint]*_qpoint_weights(i_qpoint);
         }
