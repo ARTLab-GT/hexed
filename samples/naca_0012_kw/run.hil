@@ -14,7 +14,7 @@ mesh_extreme01 =  10.
 mesh_extreme11 =  10.
 
 extremal_bc00 = {freestream}
-extremal_bc01 = {freestream}
+extremal_bc01 = {pressure_outflow}
 extremal_bc10 = {freestream}
 extremal_bc11 = {freestream}
 
@@ -54,7 +54,7 @@ println({turbulent viscosity: } + freestream_density*freestream_specific_turbule
 surface_bc = {no_slip}
 diffusive_admissibility = false
 fix_therm_admis = true
-max_safety = 2e-2
+max_safety = 2e-1
 
 {iteration parameters}
 print_freq = 100

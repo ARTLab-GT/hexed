@@ -161,8 +161,7 @@ class Navier_stokes {
         laplacian_av = std::abs(state(i_laplacian_art_visc));
         sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)
                               *(heat_rat - 1)/constants::specific_gas_air);
-        //real_turb_diss = std::max(1e-3, state(i_turb_diss)/mass);
-        real_turb_diss = 8.;
+        real_turb_diss = std::max(1e-3, state(i_turb_diss)/mass);
         k_bar = std::max(0., state(i_turb_kin_ener)/mass);
         tv_per_k = alpha_s/real_turb_diss;
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
@@ -239,7 +238,12 @@ class Navier_stokes {
             production_per_k += turb_stress_per_k(i, j)*veloc_grad(i, j);
           }
         }
-        production_per_k = std::min(production_per_k, 20*beta_s*real_turb_diss);
+        #if 0
+        double prod_lim = 20*beta_s*real_turb_diss;
+        production_per_k = prod_lim*production_per_k/(prod_lim + production_per_k);
+        #endif
+        debug_variables(0) = production_per_k;
+        production_per_k = 0;
         production(0) = k_bar*production_per_k - beta_s*real_turb_diss*state(i_turb_kin_ener);
         production(1) = (alpha*production_per_k/mass - beta*real_turb_diss)*state(i_turb_diss);
         HEXED_ASSERT(std::isfinite(veloc_grad.norm()), "velocity gradient is not finite", assert::Numerical_exception);
@@ -247,7 +251,6 @@ class Navier_stokes {
         HEXED_ASSERT(std::isfinite(k_bar), "TKE is not finite", assert::Numerical_exception);
         HEXED_ASSERT(std::isfinite(real_turb_diss), "dissipation is not finite", assert::Numerical_exception);
         HEXED_ASSERT(std::isfinite(production_per_k), "production is not finite", assert::Numerical_exception);
-        debug_variables(0) = production_per_k;
       }
 
       Mat<n_update> source;

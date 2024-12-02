@@ -956,7 +956,7 @@ void Solver::update() {
                 .conv_substep = (sub_iters > 1) && use_ldg(),
               };
               apply_state_bcs();
-              if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->get<int>("iteration")%1000 == 0 && _namespace->get<int>("iteration") != 0);
+              if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
               else compute_euler(km, opts);
               // note that function call must come first to ensure it is evaluated despite short-circuiting
               fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
