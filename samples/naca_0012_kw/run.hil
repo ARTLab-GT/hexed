@@ -23,9 +23,9 @@ max_refinement_iters = 20
 max_ref_level = 13
 vis_field_vars = vis_field_vars + {size = nom_sz;}
 refine_if = {(center0 > -1.5 & center0 < 1.5 & center1 < 1.0 & center1 > -1.0 & ref_level < 6 & is_extruded) | (center0 > 0.8 & center0 < 1.3 & center1 < 0.2 & center1 > -0.2 & ref_level < 8 & is_extruded)}
-refine_if = {(center0 > -1.5 & center0 < 1.5 & center1 < 1.0 & center1 > -1.0 & ref_level < 6 & is_extruded) }
-init_layer_splits = 6
+refine_if = {(center0 > -1.5 - .5*nom_sz & abs(center1) < .5 + .5*nom_sz & ref_level < 6)}
 {$set_geometry_refinement}
+init_layer_splits = 6
 {$set_subsonic_bl_multirate}
 
 viscosity_model = air_viscosity
@@ -45,7 +45,7 @@ freestream_direction1 = 0.0
 freestream_density = target_reynolds*1.716e-5/sqrt(specific_gas_air * 1.4 * freestream_temperature)/freestream_mach
 
 domain_length = mesh_extreme01 - mesh_extreme00
-freestream_specific_turbulent_kinetic_energy = 1e-4*(freestream_mach*340.)^2/(target_reynolds*domain_length/1.)
+freestream_specific_turbulent_kinetic_energy = 1e-6*(freestream_mach*340.)^2/(target_reynolds*domain_length/1.)
 freestream_specific_turbulent_dissipation = freestream_mach*340./domain_length
 println({turbulent viscosity: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation + { Pa s})
 
@@ -53,14 +53,14 @@ println({turbulent viscosity: } + freestream_density*freestream_specific_turbule
 
 surface_bc = {no_slip}
 diffusive_admissibility = false
-fix_therm_admis = false
-max_safety = 2e-1
+fix_therm_admis = true
+max_safety = 2e-2
 
 {iteration parameters}
 print_freq = 100
 vis_freq = 10^4
-done = {iteration > 20000}
 done = {iteration > 5000 & (drag_coef_max - drag_coef_min < 5e-3*(drag_coef_min + drag_coef_max)/2) & (lift_coef_max - lift_coef_min < 5e-3*(lift_coef_min + lift_coef_max)/2)}
+done = {iteration >= 17000}
 done = {false}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}

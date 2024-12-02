@@ -161,13 +161,13 @@ class Navier_stokes {
         laplacian_av = std::abs(state(i_laplacian_art_visc));
         sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)
                               *(heat_rat - 1)/constants::specific_gas_air);
-        real_turb_diss = std::max(8., state(i_turb_diss)/mass);
+        //real_turb_diss = std::max(1e-3, state(i_turb_diss)/mass);
+        real_turb_diss = 8.;
         k_bar = std::max(0., state(i_turb_kin_ener)/mass);
         tv_per_k = alpha_s/real_turb_diss;
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) + k_bar*tv_per_k/.9;
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
-        debug_variables(0) = 42.;
       }
 
       Mat<n_extrap, n_dim> gradient;
@@ -186,9 +186,9 @@ class Navier_stokes {
         Mat<n_update, n_dim> flux_diff_phys; // flux in physical space
         Mat<n_dim> veloc = mmtm/mass;
         veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
-        turb_stress_per_k = tv_per_k * (veloc_grad + veloc_grad.transpose()
-                                     - 2./3. * veloc_grad.trace()*Mat<n_dim, n_dim>::Identity())
-                      - 2./3.*mass*Mat<n_dim, n_dim>::Identity();
+        turb_stress_per_k = tv_per_k*(veloc_grad + veloc_grad.transpose()
+                                      - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity())
+                            - 2./3.*mass*Mat<n_dim, n_dim>::Identity();
 
         //TODO: The above line is going to cause problems if not in k-w mode
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
@@ -239,10 +239,15 @@ class Navier_stokes {
             production_per_k += turb_stress_per_k(i, j)*veloc_grad(i, j);
           }
         }
+        production_per_k = std::min(production_per_k, 20*beta_s*real_turb_diss);
         production(0) = k_bar*production_per_k - beta_s*real_turb_diss*state(i_turb_kin_ener);
-        production(0) = 0.;
-        production(1) = (/*alpha*production_per_k/mass*/ - beta*real_turb_diss)*state(i_turb_diss);
-        production(1) = 0.;
+        production(1) = (alpha*production_per_k/mass - beta*real_turb_diss)*state(i_turb_diss);
+        HEXED_ASSERT(std::isfinite(veloc_grad.norm()), "velocity gradient is not finite", assert::Numerical_exception);
+        HEXED_ASSERT(std::isfinite(tv_per_k), "eddy viscosity is not finite", assert::Numerical_exception);
+        HEXED_ASSERT(std::isfinite(k_bar), "TKE is not finite", assert::Numerical_exception);
+        HEXED_ASSERT(std::isfinite(real_turb_diss), "dissipation is not finite", assert::Numerical_exception);
+        HEXED_ASSERT(std::isfinite(production_per_k), "production is not finite", assert::Numerical_exception);
+        debug_variables(0) = production_per_k;
       }
 
       Mat<n_update> source;
@@ -255,7 +260,7 @@ class Navier_stokes {
         if constexpr (turb == k_omega) {
           source(i_turb_kin_ener) = production(0);
           source(i_energy) = -source(i_turb_kin_ener);
-          source(i_turb_diss) = production(1);
+          source(i_turb_diss) = state(i_turb_diss) < 0 && production(1) < 0 ? 0. : production(1);
         }
       }
 

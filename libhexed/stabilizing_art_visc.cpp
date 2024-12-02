@@ -29,7 +29,7 @@ class Stab_art_visc : public Kernel<Kernel_element&> {
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
       double* state = elements[i_elem].state();
-      bool turb = true;
+      bool turb = false;
       // compute the indicator variable (specific volume) and it's L^2 norm
       double indicator_var [2][n_qpoint] {};
       double norm_sq [2] {};
