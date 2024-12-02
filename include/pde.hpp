@@ -35,14 +35,15 @@ class Navier_stokes {
     static constexpr bool has_diffusion = visc;
     static constexpr bool has_convection = true;
     static constexpr bool has_source = visc && (turb != laminar);
-    static constexpr int n_update = n_dim + 2 + 2*(turb == k_omega);
-    static constexpr int n_state = n_dim + 4 + 2*(turb == k_omega);
-    static constexpr int n_extrap = n_dim + 2 + 2*(turb == k_omega);
+    static constexpr int n_update = n_dim + 2 + 3*(turb == k_omega);
+    static constexpr int n_state = n_dim + 4 + 3*(turb == k_omega);
+    static constexpr int n_extrap = n_dim + 2 + 3*(turb == k_omega);
     static constexpr int n_production = 2*(turb == k_omega);
     static constexpr int i_mass = n_dim;
     static constexpr int i_energy = n_dim + 1;
     static constexpr int i_turb_kin_ener = n_dim + 2;
     static constexpr int i_turb_diss = n_dim + 3;
+    static constexpr int i_prod = n_dim + 4;
     static constexpr int i_bulk_art_visc = n_update;
     static constexpr int i_laplacian_art_visc = n_update + 1;
     static constexpr double heat_rat = 1.4;
@@ -138,6 +139,7 @@ class Navier_stokes {
             // these convective fluxes for the turbulent variables should be correct
             flux_conv(i_turb_kin_ener, i_dim) = state(i_turb_kin_ener)*vol_flux;
             flux_conv(i_turb_diss, i_dim) = state(i_turb_diss)*vol_flux;
+            flux_conv(i_prod, i_dim) = 0;
           }
           for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
             flux_conv(j_dim, i_dim) = state(j_dim)*vol_flux + pressure*normal(j_dim, i_dim);
@@ -162,7 +164,7 @@ class Navier_stokes {
         sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)
                               *(heat_rat - 1)/constants::specific_gas_air);
         real_turb_diss = std::max(1e-3, state(i_turb_diss)/mass);
-        k_bar = std::max(0., state(i_turb_kin_ener)/mass);
+        k_bar = std::max(2e-10, state(i_turb_kin_ener)/mass);
         tv_per_k = alpha_s/real_turb_diss;
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) + k_bar*tv_per_k/.9;
@@ -207,6 +209,7 @@ class Navier_stokes {
           flux_diff_phys(i_turb_diss, all) -= (dyn_visc_coef + sigma*k_bar*tv_per_k)
                                               *(gradient(i_turb_diss, all)/mass
                                                 - state(i_turb_diss)/mass/mass*gradient(i_mass, all));
+          flux_diff_phys(i_prod, all) -= (dyn_visc_coef + sigma*k_bar*tv_per_k)*gradient(i_prod, all);
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
         if constexpr (has_source) compute_scalars_source();
@@ -243,9 +246,8 @@ class Navier_stokes {
         production_per_k = prod_lim*production_per_k/(prod_lim + production_per_k);
         #endif
         debug_variables(0) = production_per_k;
-        production_per_k = 0;
-        production(0) = k_bar*production_per_k - beta_s*real_turb_diss*state(i_turb_kin_ener);
-        production(1) = (alpha*production_per_k/mass - beta*real_turb_diss)*state(i_turb_diss);
+        production(0) = state(i_prod)/real_turb_diss - beta_s*real_turb_diss*state(i_turb_kin_ener);
+        production(1) = alpha*state(i_prod)/k_bar - beta*real_turb_diss*state(i_turb_diss);
         HEXED_ASSERT(std::isfinite(veloc_grad.norm()), "velocity gradient is not finite", assert::Numerical_exception);
         HEXED_ASSERT(std::isfinite(tv_per_k), "eddy viscosity is not finite", assert::Numerical_exception);
         HEXED_ASSERT(std::isfinite(k_bar), "TKE is not finite", assert::Numerical_exception);
@@ -264,6 +266,7 @@ class Navier_stokes {
           source(i_turb_kin_ener) = production(0);
           source(i_energy) = -source(i_turb_kin_ener);
           source(i_turb_diss) = state(i_turb_diss) < 0 && production(1) < 0 ? 0. : production(1);
+          source(i_prod) = .001*(production_per_k*k_bar*real_turb_diss - state(i_prod));
         }
       }
 
@@ -295,6 +298,7 @@ class Navier_stokes {
         decay = 0;
         if constexpr (turb == k_omega) {
           //decay = math::max(beta_s, beta)*real_turb_diss;
+          decay = .001;
         }
       }
     };

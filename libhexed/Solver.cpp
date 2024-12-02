@@ -194,7 +194,7 @@ Interpreter Solver::_interpreter() {
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model, Turbulence_model turbulence_model,
                std::shared_ptr<Namespace> space, std::shared_ptr<Printer_set> printer, bool implicit)
-: params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2 + 2*(turbulence_model == k_omega), n_dim, row_size}
+: params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2 + 3*(turbulence_model == k_omega), n_dim, row_size}
 , acc_mesh{new Accessible_mesh(params, root_mesh_size)}
 , basis{row_size}
 , stopwatch{"(element*update)"}
@@ -466,9 +466,10 @@ void Solver::initialize(std::string(expr)) {
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) state_vars.push_back("momentum" + std::to_string(i_dim));
   state_vars.push_back("density");
   state_vars.push_back("energy");
-  if (params.n_var == params.n_dim + 4) {
+  if (params.n_var == params.n_dim + 5) {
     state_vars.push_back("turbulent_kinetic_energy");
     state_vars.push_back("turbulent_dissipation_bassi");
+    state_vars.push_back("turbulent_production");
   }
   auto inter = _interpreter();
   int n_var = state_vars.size();

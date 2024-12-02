@@ -265,6 +265,7 @@ init_cond = {
     case1 = {
         turbulent_kinetic_energy = freestream_density*freestream_specific_turbulent_kinetic_energy*wall_interp
         turbulent_dissipation_bassi = freestream_density*(wall_interp*freestream_specific_turbulent_dissipation + (1 - wall_interp)*12.87)
+        turbulent_production = 0*pos0;
     }
     $$({case} + (turbulence_model == {k-omega}))
 }
