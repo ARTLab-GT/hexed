@@ -175,7 +175,7 @@ double* Element::production_terms() {return data.data() + params.n_dof_numeric()
 
 double* Element::debug_variables() {
   HEXED_ASSERT(config::debug_variables, "Attempt to access nonexistant dummy variables.");
-  return data.data() + data.size() - config::debug_variables*params.n_qpoint();
+  return data.data() + params.n_dof_numeric();
 }
 
 double& Element::uncert() {return uncertainty;}

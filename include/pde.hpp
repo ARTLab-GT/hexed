@@ -163,7 +163,7 @@ class Navier_stokes {
                               *(heat_rat - 1)/constants::specific_gas_air);
         real_turb_diss = std::max(8., state(i_turb_diss)/mass);
         k_bar = std::max(0., state(i_turb_kin_ener)/mass);
-        tv_per_k = alpha_s*mass/real_turb_diss;
+        tv_per_k = alpha_s/real_turb_diss;
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) + k_bar*tv_per_k/.9;
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
@@ -202,10 +202,10 @@ class Navier_stokes {
         if constexpr (turb == k_omega) {
           // fixed product rule
           // also changed `= -` to `-=` so that laplacian artificial viscosity flux (above) will be included
-          flux_diff_phys(i_turb_kin_ener, all) -= (dyn_visc_coef + sigma_s * k_bar*tv_per_k)
+          flux_diff_phys(i_turb_kin_ener, all) -= (dyn_visc_coef + sigma_s*k_bar*tv_per_k)
                                                   *(gradient(i_turb_kin_ener, all)/mass
                                                     - state(i_turb_kin_ener)/mass/mass*gradient(i_mass, all));
-          flux_diff_phys(i_turb_diss, all) -= (dyn_visc_coef + sigma * k_bar*tv_per_k)
+          flux_diff_phys(i_turb_diss, all) -= (dyn_visc_coef + sigma*k_bar*tv_per_k)
                                               *(gradient(i_turb_diss, all)/mass
                                                 - state(i_turb_diss)/mass/mass*gradient(i_mass, all));
         }
@@ -287,7 +287,6 @@ class Navier_stokes {
         decay = 0;
         if constexpr (turb == k_omega) {
           //decay = math::max(beta_s, beta)*real_turb_diss;
-          decay = .01;
         }
       }
     };
