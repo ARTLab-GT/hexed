@@ -38,6 +38,7 @@ class Navier_stokes {
     static constexpr int n_update = n_dim + 2 + 2*(turb == k_omega);
     static constexpr int n_state = n_dim + 4 + 2*(turb == k_omega);
     static constexpr int n_extrap = n_dim + 2 + 2*(turb == k_omega);
+    static constexpr int n_production = 2*(turb == k_omega);
     static constexpr int i_mass = n_dim;
     static constexpr int i_energy = n_dim + 1;
     static constexpr int i_turb_kin_ener = n_dim + 2;
@@ -160,7 +161,7 @@ class Navier_stokes {
         laplacian_av = std::abs(state(i_laplacian_art_visc));
         sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)
                               *(heat_rat - 1)/constants::specific_gas_air);
-        real_turb_diss = std::max(state(i_turb_diss)/mass, 8.5);
+        real_turb_diss = std::max(8., state(i_turb_diss)/mass);
         k_bar = std::max(0., state(i_turb_kin_ener)/mass);
         tv_per_k = alpha_s*mass/real_turb_diss;
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
@@ -209,20 +210,21 @@ class Navier_stokes {
                                                 - state(i_turb_diss)/mass/mass*gradient(i_mass, all));
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
+        if constexpr (has_source) compute_scalars_source();
       }
 
       double beta;
-      double grad_diss_sum;
       double production_per_k;
+      Mat<n_production> production;
       void compute_scalars_source() {
-        Mat<n_dim, n_dim> omega = 0.5 * (veloc_grad - veloc_grad.transpose());
-        Mat<n_dim, n_dim> S = 0.5 * (veloc_grad + veloc_grad.transpose());
+        Mat<n_dim, n_dim> omega = 0.5*(veloc_grad - veloc_grad.transpose());
+        Mat<n_dim, n_dim> S_hat = 0.5*(veloc_grad + veloc_grad.transpose()) - .5*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
 
         double sum = 0;
         for (int i = 0; i < n_dim; ++i) {
           for (int j = 0; j < n_dim; ++j) {
             for (int k = 0; k < n_dim; ++k){
-              sum += omega(i, j)*omega(j, k)*S(k, i);
+              sum += omega(i, j)*omega(j, k)*S_hat(k, i);
             }
           }
         }
@@ -231,19 +233,16 @@ class Navier_stokes {
         double f_beta = (1. + 85.*chi_o)/(1. + 100.*chi_o);
         beta = beta_0*f_beta;
 
-        grad_diss_sum = 0.0;
-        for (int k = 0; k < n_dim; ++k) {
-          //! fixed: gradient of omega tilde and power operator
-          double grad_diss = gradient(i_turb_diss, k)/mass - state(i_turb_diss)/mass/mass*gradient(i_mass, k);
-          grad_diss_sum += grad_diss*grad_diss;
-        }
-
         production_per_k = 0.0;
         for (int i = 0; i < n_dim; ++i) {
           for (int j = 0; j < n_dim; ++j) {
             production_per_k += turb_stress_per_k(i, j)*veloc_grad(i, j);
           }
         }
+        production(0) = k_bar*production_per_k - beta_s*real_turb_diss*state(i_turb_kin_ener);
+        production(0) = 0.;
+        production(1) = (/*alpha*production_per_k/mass*/ - beta*real_turb_diss)*state(i_turb_diss);
+        production(1) = 0.;
       }
 
       Mat<n_update> source;
@@ -252,12 +251,11 @@ class Navier_stokes {
        * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
        */
       void compute_source() {
-        compute_scalars_source();
         source.setZero();
         if constexpr (turb == k_omega) {
-          source(i_turb_kin_ener) = std::min(k_bar*(production_per_k - beta_s*mass*real_turb_diss), 1e-6);
+          source(i_turb_kin_ener) = production(0);
           source(i_energy) = -source(i_turb_kin_ener);
-          source(i_turb_diss) = (alpha*production_per_k - beta*mass*real_turb_diss)*real_turb_diss;
+          source(i_turb_diss) = production(1);
         }
       }
 
@@ -288,7 +286,8 @@ class Navier_stokes {
       void compute_decay() {
         decay = 0;
         if constexpr (turb == k_omega) {
-          decay = math::max(beta_s, beta)*real_turb_diss;
+          //decay = math::max(beta_s, beta)*real_turb_diss;
+          decay = .01;
         }
       }
     };
@@ -389,6 +388,7 @@ class Advection {
   static constexpr bool has_diffusion = false;
   static constexpr bool has_convection = true;
   static constexpr bool has_source = true;
+  static constexpr int n_production = 0;
   static constexpr int n_state = n_dim + _n_adv;
   static constexpr int n_extrap = n_dim + _n_adv;
   static constexpr int n_update = _n_adv;
@@ -445,6 +445,7 @@ class Advection {
     }
 
     Mat<n_update> source;
+    Mat<0> production;
     void compute_source() {
       source.setConstant(2/_eq._advect_length);
     }
@@ -472,6 +473,7 @@ class Smooth_art_visc {
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
   static constexpr bool has_source = true;
+  static constexpr int n_production = 0;
   static constexpr int n_state = 4;
   static constexpr int n_extrap = 3;
   static constexpr int n_update = 3;
@@ -526,6 +528,7 @@ class Smooth_art_visc {
     }
 
     Mat<n_update> source;
+    Mat<0> production;
     void compute_source() {
       for (int i_var = 0; i_var < n_update; ++i_var) {
         double f = std::abs(state(i_var));
@@ -551,6 +554,7 @@ class Fix_therm_admis {
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
   static constexpr bool has_source = false;
+  static constexpr int n_production = 0;
   static constexpr int n_state = n_dim + 2;
   static constexpr int n_update = n_state;
   static constexpr int n_extrap = n_state;

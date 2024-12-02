@@ -42,6 +42,7 @@ class Kernel_element {
   //! \brief where the extrapolated face area-weighted normal vectors are stored
   //! \details for Cartesian elements, returns `nullptr`
   virtual double* kernel_face_normal(int i_face) = 0;
+  virtual double* production_terms() = 0;
   //! \brief Pointer to any debug variables that can be populated by the kernels to visualize arbitrary quantities.
   //! \details This will be a valid pointer iff `config::debug_variables` > 0.
   virtual double* debug_variables() = 0;

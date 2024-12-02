@@ -130,6 +130,7 @@ class Element : public Kernel_element {
   double* reference_level_normals() override;
   double* jacobian_determinant() override;
   double* kernel_face_normal(int i_face) override;
+  double* production_terms() override;
   double* debug_variables() override;
   double& uncert() override;
 };

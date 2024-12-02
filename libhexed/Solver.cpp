@@ -956,7 +956,7 @@ void Solver::update() {
                 .conv_substep = (sub_iters > 1) && use_ldg(),
               };
               apply_state_bcs();
-              if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+              if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->get<int>("iteration")%1000 == 999);
               else compute_euler(km, opts);
               // note that function call must come first to ensure it is evaluated despite short-circuiting
               fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
@@ -1004,7 +1004,7 @@ void Solver::compute_residual() {
     true,
     bool(_namespace->get<int>("use_filter")),
   };
-  if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+  if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, false);
   else compute_euler(_kernel_mesh(), opts);
 }
 
