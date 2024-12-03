@@ -8,10 +8,10 @@ Note: strings are enclosed in `{}`, and strings which are not assigned to anythi
 {domain and mesh parameters}
 n_dim = 2
 row_size = 6
-mesh_extreme00 = -10.
-mesh_extreme10 = -10.
-mesh_extreme01 =  10.
-mesh_extreme11 =  10.
+mesh_extreme00 = -2.6
+mesh_extreme10 = -2.6
+mesh_extreme01 =  2.6
+mesh_extreme11 =  2.6
 
 extremal_bc00 = {freestream}
 extremal_bc01 = {pressure_outflow}
@@ -23,7 +23,7 @@ max_refinement_iters = 20
 max_ref_level = 13
 vis_field_vars = vis_field_vars + {size = nom_sz;}
 refine_if = {(center0 > -1.5 & center0 < 1.5 & center1 < 1.0 & center1 > -1.0 & ref_level < 6 & is_extruded) | (center0 > 0.8 & center0 < 1.3 & center1 < 0.2 & center1 > -0.2 & ref_level < 8 & is_extruded)}
-refine_if = {(center0 > -1.5 - .5*nom_sz & abs(center1) < .5 + .5*nom_sz & ref_level < 6)}
+refine_if = {(((center0 - .8 > -.9 & abs(center1) < .2) | is_extruded) & ref_level < 4) | (center0^2 + center1^2 < .1^2 + .5*nom_sz^2 & ref_level < 6) | ((center0 - 1.04)^2 + center1^2 < .05^2 + .5*nom_sz^2 & ref_level < 8)}
 {$set_geometry_refinement}
 init_layer_splits = 6
 {$set_subsonic_bl_multirate}
@@ -38,7 +38,7 @@ geom0 = {auto.csv}
 
 {freestream conditions}
 freestream_temperature = zero_celsius
-freestream_mach = 0.5
+freestream_mach = 0.3
 target_reynolds = 5e5
 freestream_direction0 = 1.0
 freestream_direction1 = 0.0
@@ -52,7 +52,7 @@ println({turbulent viscosity: } + freestream_density*freestream_specific_turbule
 {attack = 0*degree}
 
 surface_bc = {no_slip}
-diffusive_admissibility = false
+diffusive_admissibility = true
 fix_therm_admis = true
 max_safety = 2e-1
 

@@ -167,7 +167,7 @@ class Navier_stokes {
         k_bar = std::max(2e-10, state(i_turb_kin_ener)/mass);
         tv_per_k = alpha_s/real_turb_diss;
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
-        therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) + k_bar*tv_per_k/.9;
+        therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) /*+ k_bar*tv_per_k/.9*/;
         energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
       }
 
@@ -187,10 +187,10 @@ class Navier_stokes {
         Mat<n_update, n_dim> flux_diff_phys; // flux in physical space
         Mat<n_dim> veloc = mmtm/mass;
         veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
-        turb_stress_per_k = tv_per_k*(veloc_grad + veloc_grad.transpose()
+        turb_stress_per_k = 0.*tv_per_k*(veloc_grad + veloc_grad.transpose()
                                       - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity())
-                            - 2./3.*mass*Mat<n_dim, n_dim>::Identity();
-
+                            - 0.*2./3.*mass*Mat<n_dim, n_dim>::Identity();
+        turb_stress_per_k.setZero();
         //TODO: The above line is going to cause problems if not in k-w mode
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
                                   + (bulk_av*mass - 2./3.*dyn_visc_coef)
@@ -203,13 +203,13 @@ class Navier_stokes {
         if constexpr (turb == k_omega) {
           // fixed product rule
           // also changed `= -` to `-=` so that laplacian artificial viscosity flux (above) will be included
-          flux_diff_phys(i_turb_kin_ener, all) -= (dyn_visc_coef + sigma_s*k_bar*tv_per_k)
+          flux_diff_phys(i_turb_kin_ener, all) -= (dyn_visc_coef /*+ sigma_s*k_bar*tv_per_k*/)
                                                   *(gradient(i_turb_kin_ener, all)/mass
                                                     - state(i_turb_kin_ener)/mass/mass*gradient(i_mass, all));
-          flux_diff_phys(i_turb_diss, all) -= (dyn_visc_coef + sigma*k_bar*tv_per_k)
+          flux_diff_phys(i_turb_diss, all) -= (dyn_visc_coef /*+ sigma*k_bar*tv_per_k*/)
                                               *(gradient(i_turb_diss, all)/mass
                                                 - state(i_turb_diss)/mass/mass*gradient(i_mass, all));
-          //flux_diff_phys(i_prod, all) -= 1e-5*veloc.norm()*gradient(i_prod, all);
+          flux_diff_phys(i_prod, all) -= 1e-5*veloc.norm()*gradient(i_prod, all);
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
         if constexpr (has_source) compute_scalars_source();
@@ -263,13 +263,15 @@ class Navier_stokes {
       void compute_source() {
         source.setZero();
         if constexpr (turb == k_omega) {
+          #if 0
           source(i_turb_kin_ener) = production(0);
           if (state(i_turb_kin_ener) < 0 && source(i_turb_kin_ener) < 0) source(i_turb_kin_ener) *= -1;
           source(i_energy) = -source(i_turb_kin_ener);
-          source(i_turb_diss) = state(i_turb_diss);
+          source(i_turb_diss) = production(1);
           if (state(i_turb_diss) < 0 && source(i_turb_diss) < 0) source(i_turb_diss) *= -1;
           double scale = std::abs(production_per_k*k_bar*real_turb_diss) > std::abs(state(i_prod)) ? .001 : .1;
           source(i_prod) = scale*(production_per_k*k_bar*real_turb_diss - state(i_prod));
+          #endif
         }
       }
 
@@ -291,9 +293,8 @@ class Navier_stokes {
         compute_scalars_diff();
         double turb_visc = (turb == laminar) ? 0 : math::max(1, sigma, sigma_s)*k_bar*tv_per_k;
         diffusivity = std::abs(laplacian_av) + math::max(
-          std::abs(bulk_av) + (dyn_visc_coef + turb_visc)/mass,
-          energy_cond/mass + turb_visc/mass,
-          1e-5*state(Eigen::seqN(0, n_dim)).norm()/state(i_mass)
+          std::abs(bulk_av) + (dyn_visc_coef /*+ turb_visc*/)/mass,
+          energy_cond/mass /*+ turb_visc/mass*/
         );
       }
 
@@ -302,7 +303,7 @@ class Navier_stokes {
         decay = 0;
         if constexpr (turb == k_omega) {
           //decay = math::max(beta_s, beta)*real_turb_diss;
-          decay = math::max(.1, 100*state(i_prod)/(math::max(2e-10, state(i_turb_kin_ener)/state(i_mass))*math::max(1e-3, state(i_turb_diss)/state(i_mass))));
+          decay = math::max(1., 100*beta_s*math::max(1e-3, state(i_turb_diss)/state(i_mass)));
         }
       }
     };
