@@ -27,9 +27,9 @@ refine_if = {(center0 > -1.5 & center0 < 1.5 & center1 < 1.0 & center1 > -1.0 & 
 refine_if = {(((center0 - .8 > -.9 & abs(center1) < .2) | is_extruded) & ref_level < 4) | (center0^2 + center1^2 < .1^2 + .5*nom_sz^2 & ref_level < 6) | ((center0 - 1.04)^2 + center1^2 < .05^2 + .5*nom_sz^2 & ref_level < 8)}
 }
 init_ref_level = 4
-refine_if = {(center0 - .5)^2 + center1^2 < 1.^2 & ref_level < 9}
+refine_if = {(center0 - .7)^2 + 4*center1^2 < 1.^2 + nom_sz^2 & ref_level < 9}
 {$set_geometry_refinement}
-init_layer_splits = 4
+init_layer_splits = 7
 {$set_subsonic_bl_multirate}
 
 viscosity_model = air_viscosity
@@ -43,15 +43,17 @@ geom0 = {auto.csv}
 {freestream conditions}
 freestream_temperature = zero_celsius
 freestream_mach = 0.3
-target_reynolds = 5e5
+target_reynolds = 5e7
 freestream_direction0 = 1.0
 freestream_direction1 = 0.0
-freestream_density = target_reynolds*1.716e-5/sqrt(specific_gas_air * 1.4 * freestream_temperature)/freestream_mach
+dyn_visc = 1.716e-5
+freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air * 1.4 * freestream_temperature)/freestream_mach
 
 domain_length = mesh_extreme01 - mesh_extreme00
-freestream_specific_turbulent_kinetic_energy = 1e-6*(freestream_mach*340.)^2/(target_reynolds*domain_length/1.)
+freestream_specific_turbulent_kinetic_energy = 1e-3*(freestream_mach*340.)^2/(target_reynolds*domain_length/1.)
 freestream_specific_turbulent_dissipation = freestream_mach*340./domain_length
 println({turbulent viscosity: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation + { Pa s})
+println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation/dyn_visc)
 
 {attack = 0*degree}
 
@@ -62,8 +64,7 @@ max_safety = 2e-1
 
 {iteration parameters}
 print_freq = 100
-vis_freq = 2*10^2
-vis_freq = 10^3
+vis_freq = 10^4
 done = {iteration > 5000 & (drag_coef_max - drag_coef_min < 5e-3*(drag_coef_min + drag_coef_max)/2) & (lift_coef_max - lift_coef_min < 5e-3*(lift_coef_min + lift_coef_max)/2)}
 done = {iteration >= 96000}
 done = {false}
