@@ -161,13 +161,12 @@ class Navier_stokes {
       void compute_scalars_diff() {
         bulk_av = std::abs(state(i_bulk_art_visc));
         laplacian_av = std::abs(state(i_laplacian_art_visc));
-        sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)
-                              *(heat_rat - 1)/constants::specific_gas_air);
+        double spec_heat_v = constants::specific_gas_air/(heat_rat - 1.);
+        double spec_heat_p = heat_rat*constants::specific_gas_air;
+        sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)/spec_heat_v);
         real_turb_diss = std::abs(state(i_turb_diss)/mass);
         k_bar = std::abs(state(i_turb_kin_ener)/mass);
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
-        double spec_heat_v = constants::specific_gas_air/(heat_rat - 1.);
-        double spec_heat_p = heat_rat*constants::specific_gas_air;
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) + state(i_turb_visc)*spec_heat_p/.9;
         energy_cond = therm_cond_coef/spec_heat_v;
       }
@@ -176,6 +175,7 @@ class Navier_stokes {
       Mat<n_update, n_dim_flux> flux_diff;
       Mat<n_dim, n_dim> veloc_grad;
       Mat<n_dim, n_dim> turb_stress;
+      double grad_k_omega_source;
       /*! \todo __Carter:__ modify `flux_diff` to include turbulence modeling.
        * Set `flux_diff_phys(i_turb_kin_ener)` and `flux_diff_phys(i_turb_diss)` to contain the source terms of
        * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
@@ -185,7 +185,6 @@ class Navier_stokes {
         compute_scalars_diff();
         auto seq = Eigen::seqN(0, n_dim);
         auto mmtm = state(seq);
-        Mat<n_update, n_dim> flux_diff_phys; // flux in physical space
         Mat<n_dim> veloc = mmtm/mass;
         veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
         turb_stress = state(i_turb_visc)*(veloc_grad + veloc_grad.transpose()
@@ -195,7 +194,7 @@ class Navier_stokes {
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
                                   + (bulk_av*mass - 2./3.*dyn_visc_coef)
                                      *veloc_grad.trace()*Mat<n_dim, n_dim>::Identity() + turb_stress;
-        flux_diff_phys = -laplacian_av*gradient;
+        Mat<n_update, n_dim> flux_diff_phys = -laplacian_av*gradient; // flux in physical space
         flux_diff_phys(seq, all) -= stress;
         Mat<1, n_dim> int_ener_grad = -state(i_energy)/mass/mass*gradient(i_mass, all)
                                       + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
@@ -203,21 +202,22 @@ class Navier_stokes {
         if constexpr (turb == k_omega) {
           // fixed product rule
           // also changed `= -` to `-=` so that laplacian artificial viscosity flux (above) will be included
-          flux_diff_phys(i_turb_kin_ener, all) -= (dyn_visc_coef + sigma_s*state(i_turb_visc))
-                                                  *(gradient(i_turb_kin_ener, all)/mass
-                                                    - state(i_turb_kin_ener)/mass/mass*gradient(i_mass, all));
-          flux_diff_phys(i_turb_diss, all) -= (dyn_visc_coef + sigma*state(i_turb_visc))
-                                              *(gradient(i_turb_diss, all)/mass
-                                                - state(i_turb_diss)/mass/mass*gradient(i_mass, all));
-          //flux_diff_phys(i_prod, all) -= 1e-5*veloc.norm()*gradient(i_prod, all);
+          Mat<n_dim> grad_k = gradient(i_turb_kin_ener, all)/mass
+                              - state(i_turb_kin_ener)/mass/mass*gradient(i_mass, all);
+          Mat<n_dim> grad_omega = gradient(i_turb_diss, all)/mass
+                                  - state(i_turb_diss)/mass/mass*gradient(i_mass, all);
+          flux_diff_phys(i_turb_kin_ener, all) -= (dyn_visc_coef + sigma_s*state(i_turb_visc))*grad_k;
+          flux_diff_phys(i_turb_diss, all) -= (dyn_visc_coef + sigma*state(i_turb_visc))*grad_omega;
+          double dot = grad_k.dot(grad_omega);
+          grad_k_omega_source = dot > 0. ? 1./8.*mass/real_turb_diss*dot : 0.;
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
-        if constexpr (has_source) compute_scalars_source();
-      }
 
-      void compute_scalars_source() {
         Mat<n_dim, n_dim> omega = 0.5*(veloc_grad - veloc_grad.transpose());
-        Mat<n_dim, n_dim> S_hat = 0.5*(veloc_grad + veloc_grad.transpose()) - .5*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
+        Mat<n_dim, n_dim> S = 0.5*(veloc_grad + veloc_grad.transpose());
+        Mat<n_dim, n_dim> S_hat = S - .5*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
+        Mat<n_dim, n_dim> S_bar = S - 1./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
+
 
         double sum = 0;
         for (int i = 0; i < n_dim; ++i) {
@@ -238,12 +238,15 @@ class Navier_stokes {
             prod += turb_stress(i, j)*veloc_grad(i, j);
           }
         }
-        double lim = 1e3*k_bar*real_turb_diss;
+        double lim = 1e3*mass*k_bar*real_turb_diss;
         double lim_factor = lim/std::sqrt(lim*lim + prod*prod);
         debug_variables(0) = lim_factor;
         prod = lim_factor*prod;
+        //double lim_sq = 7.*7./8./8.*S_hat.squaredNorm()/beta_s;
+        //double omega_hat = std::sqrt(lim_sq + real_turb_diss*real_turb_diss);
+        double omega_hat = real_turb_diss;
         production(0) = prod/k_bar;
-        production(1) = 1.*mass*k_bar/real_turb_diss;
+        production(1) = 1.*mass*k_bar/omega_hat;
       }
 
       Mat<n_update> source;
@@ -255,7 +258,7 @@ class Navier_stokes {
         source.setZero();
         if constexpr (turb == k_omega) {
           source(i_turb_kin_ener) = (state(i_prod) - beta_s*real_turb_diss)*state(i_turb_kin_ener);
-          source(i_turb_diss) = alpha*state(i_prod) - beta*real_turb_diss*state(i_turb_diss);
+          source(i_turb_diss) = (alpha*state(i_prod) - beta*real_turb_diss)*state(i_turb_diss) + grad_k_omega_source;
           if (state(i_turb_kin_ener) < 0 && source(i_turb_kin_ener) < 0) source(i_turb_kin_ener) *= -1;
           if (state(i_turb_diss) < 0 && source(i_turb_diss) < 0) source(i_turb_diss) *= -1;
           source(i_energy) = -source(i_turb_kin_ener);
