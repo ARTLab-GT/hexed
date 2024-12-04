@@ -52,7 +52,7 @@ println({turbulent viscosity: } + freestream_density*freestream_specific_turbule
 {attack = 0*degree}
 
 surface_bc = {no_slip}
-diffusive_admissibility = true
+diffusive_admissibility = false
 fix_therm_admis = true
 max_safety = 2e-1
 
@@ -72,6 +72,7 @@ vis_field_vars = vis_field_vars + {
     turbulent_dissipation_bassi = turbulent_dissipation_bassi
     specific_turbulent_dissipation = turbulent_dissipation_bassi/density
     turbulent_production = turbulent_production
+    turbulent_viscosity = turbulent_viscosity
     debug_var0 = debug_var0
     uncertainty = uncertainty
 }
