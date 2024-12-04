@@ -161,13 +161,16 @@ class Navier_stokes {
       void compute_scalars_diff() {
         bulk_av = std::abs(state(i_bulk_art_visc));
         laplacian_av = std::abs(state(i_laplacian_art_visc));
+        laplacian_av = 1e-1;
         sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)
                               *(heat_rat - 1)/constants::specific_gas_air);
-        real_turb_diss = std::max(1e-3, state(i_turb_diss)/mass);
-        k_bar = std::max(1e-20, state(i_turb_kin_ener)/mass);
+        real_turb_diss = std::abs(state(i_turb_diss)/mass);
+        k_bar = std::abs(state(i_turb_kin_ener)/mass);
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
-        therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) + state(i_turb_visc)/.9;
-        energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
+        double spec_heat_v = constants::specific_gas_air/(heat_rat - 1.);
+        double spec_heat_p = heat_rat*constants::specific_gas_air;
+        therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) + state(i_turb_visc)*spec_heat_p/.9;
+        energy_cond = therm_cond_coef/spec_heat_v;
       }
 
       Mat<n_extrap, n_dim> gradient;
@@ -188,7 +191,7 @@ class Navier_stokes {
         veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
         turb_stress = state(i_turb_visc)*(veloc_grad + veloc_grad.transpose()
                                           - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity())
-                      - 0.*2./3.*mass*Mat<n_dim, n_dim>::Identity();
+                      - 0.*2./3.*mass*k_bar*Mat<n_dim, n_dim>::Identity();
         //TODO: The above line is going to cause problems if not in k-w mode
         Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
                                   + (bulk_av*mass - 2./3.*dyn_visc_coef)
@@ -236,10 +239,11 @@ class Navier_stokes {
             prod += turb_stress(i, j)*veloc_grad(i, j);
           }
         }
-        prod = std::min(prod, 1000*beta_s*state(i_mass)*k_bar*real_turb_diss);
         debug_variables(0) = prod;
-        production(0) = prod;
-        production(1) = 1.*k_bar/real_turb_diss;
+        double lim = 1e3*k_bar*real_turb_diss;
+        prod = lim*prod/std::sqrt(lim*lim + prod*prod);
+        production(0) = prod/k_bar;
+        production(1) = 1.*mass*k_bar/real_turb_diss;
         HEXED_ASSERT(std::isfinite(veloc_grad.norm()), "velocity gradient is not finite", assert::Numerical_exception);
         HEXED_ASSERT(std::isfinite(k_bar), "TKE is not finite", assert::Numerical_exception);
         HEXED_ASSERT(std::isfinite(real_turb_diss), "dissipation is not finite", assert::Numerical_exception);
@@ -253,8 +257,8 @@ class Navier_stokes {
       void compute_source() {
         source.setZero();
         if constexpr (turb == k_omega) {
-          source(i_turb_kin_ener) = state(i_prod)/real_turb_diss - beta_s*real_turb_diss*state(i_turb_kin_ener);
-          source(i_turb_diss) = alpha*state(i_prod)/k_bar - beta*real_turb_diss*state(i_turb_diss);
+          source(i_turb_kin_ener) = (state(i_prod) - beta_s*real_turb_diss)*state(i_turb_kin_ener);
+          source(i_turb_diss) = alpha*state(i_prod) - beta*real_turb_diss*state(i_turb_diss);
           if (state(i_turb_kin_ener) < 0 && source(i_turb_kin_ener) < 0) source(i_turb_kin_ener) *= -1;
           if (state(i_turb_diss) < 0 && source(i_turb_diss) < 0) source(i_turb_diss) *= -1;
           source(i_energy) = -source(i_turb_kin_ener);
@@ -280,7 +284,7 @@ class Navier_stokes {
         double turb_visc = (turb == laminar) ? 0 : math::max(1, sigma, sigma_s)*state(i_turb_visc);
         diffusivity = std::abs(laplacian_av) + math::max(
           std::abs(bulk_av) + (dyn_visc_coef + turb_visc)/mass,
-          energy_cond/mass + turb_visc/mass
+          (dyn_visc_coef + turb_visc)/mass + energy_cond/mass
         );
       }
 
@@ -288,8 +292,9 @@ class Navier_stokes {
       void compute_decay() {
         decay = 0;
         if constexpr (turb == k_omega) {
-          //decay = math::max(beta_s, beta)*real_turb_diss;
-          decay = math::max(100*beta_s*math::max(1e-3, state(i_turb_diss)/state(i_mass)));
+          k_bar = std::max(1e-20, state(i_turb_kin_ener)/state(i_mass));
+          real_turb_diss = std::max(1e-3, state(i_turb_diss)/state(i_mass));
+          decay = 1000*math::max(state(i_prod)*k_bar, state(i_prod), beta_s*real_turb_diss);
         }
       }
     };
