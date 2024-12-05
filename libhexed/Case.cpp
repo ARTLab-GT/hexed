@@ -209,7 +209,7 @@ Case::Case(std::string input_script)
     HEXED_ASSERT(row_size >= 2 && row_size <= config::max_row_size,
                  format_str(300, "`row_size` must be between 2 and %i", config::max_row_size), assert::User_error);
     // compute freestream
-    int n_var = n_dim + 2 + 4*(_vars("turbulence_model") == "k-omega");
+    int n_var = n_dim + 2 + 5*(_vars("turbulence_model") == "k-omega");
     _inter.variables->assign("n_var", n_var);
     Mat<> freestream(n_var);
     if (_inter.variables->lookup<double>("freestream0")) freestream = _get_vector("freestream", n_dim + 2);
@@ -273,7 +273,8 @@ Case::Case(std::string input_script)
         freestream(n_dim + 2) = _vard("freestream_density")*_vard("freestream_specific_turbulent_kinetic_energy");
         freestream(n_dim + 3) = _vard("freestream_density")*_vard("freestream_specific_turbulent_dissipation");
         freestream(n_dim + 4) = 0.;
-        freestream(n_dim + 5) = 1.*_vard("freestream_specific_turbulent_kinetic_energy")/_vard("freestream_specific_turbulent_dissipation");
+        freestream(n_dim + 5) = 0.;
+        freestream(n_dim + 6) = 1.*_vard("freestream_specific_turbulent_kinetic_energy")/_vard("freestream_specific_turbulent_dissipation");
       }
       _set_vector("freestream_direction", full_direction);
       double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*_vard("freestream_density")*veloc.squaredNorm();

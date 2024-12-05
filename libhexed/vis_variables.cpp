@@ -48,11 +48,12 @@ void state(Namespace& space, Element& elem) {
   }
   assign_state("density", params.n_dim);
   assign_state("energy", params.n_dim + 1);
-  if (params.n_var == params.n_dim + 6) {
+  if (params.n_var == params.n_dim + 7) {
     assign_state("turbulent_kinetic_energy", params.n_dim + 2);
     assign_state("turbulent_dissipation_bassi", params.n_dim + 3);
-    assign_state("turbulent_production", params.n_dim + 4);
-    assign_state("turbulent_viscosity", params.n_dim + 5);
+    assign_state("turbulent_production_k", params.n_dim + 4);
+    assign_state("turbulent_production_omega", params.n_dim + 5);
+    assign_state("turbulent_viscosity", params.n_dim + 6);
   }
   space.assign("bulk_art_visc", Array<double>({nq}, elem.bulk_av_coef()));
   space.assign("laplacian_art_visc", Array<double>({nq}, elem.laplacian_av_coef()));
