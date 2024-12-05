@@ -389,8 +389,12 @@ void No_slip::apply_state(Boundary_face& bf) {
       double spec_turb_diss_wall = 4e7;
       gh_f[(params.n_dim + 2)*nfq + i_qpoint] = 2*spec_turb_kin_ener_wall*in_f[params.n_dim*nfq + i_qpoint]
                                                 - in_f[(params.n_dim + 2)*nfq + i_qpoint];
+      #if 0
       gh_f[(params.n_dim + 3)*nfq + i_qpoint] = 2*spec_turb_diss_wall*in_f[params.n_dim*nfq + i_qpoint]
                                                 - in_f[(params.n_dim + 3)*nfq + i_qpoint];
+      #else
+      gh_f[(params.n_dim + 3)*nfq + i_qpoint] = in_f[(params.n_dim + 3)*nfq + i_qpoint];
+      #endif
       gh_f[(params.n_dim + 4)*nfq + i_qpoint] = in_f[(params.n_dim + 4)*nfq + i_qpoint];
       gh_f[(params.n_dim + 5)*nfq + i_qpoint] = in_f[(params.n_dim + 5)*nfq + i_qpoint];
       gh_f[(params.n_dim + 6)*nfq + i_qpoint] = in_f[(params.n_dim + 6)*nfq + i_qpoint];
@@ -429,7 +433,7 @@ void No_slip::apply_flux(Boundary_face& bf) {
   }
   // set turbulence variables
   for (int i_dof = (params.n_dim + 2)*nfq; i_dof < params.n_var*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
-  for (int i_dof = (params.n_dim + 4)*nfq; i_dof < params.n_var*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  for (int i_dof = (params.n_dim + 3)*nfq; i_dof < params.n_var*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
 }
 
 void No_slip::apply_advection(Boundary_face& bf) {

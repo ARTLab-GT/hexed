@@ -75,7 +75,7 @@ done = {false}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_4e7}
+working_dir = {hexed_out_zero_flux}
 
 vis_field_vars = vis_field_vars + {
     specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
