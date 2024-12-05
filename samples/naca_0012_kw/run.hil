@@ -29,7 +29,7 @@ refine_if = {(((center0 - .8 > -.9 & abs(center1) < .2) | is_extruded) & ref_lev
 init_ref_level = 4
 refine_if = {(center0 - .7)^2 + 4*center1^2 < 1.^2 + nom_sz^2 & ref_level < 9}
 {$set_geometry_refinement}
-init_layer_splits = 7
+init_layer_splits = 6
 {$set_subsonic_bl_multirate}
 
 viscosity_model = air_viscosity
@@ -43,7 +43,7 @@ geom0 = {auto.csv}
 {freestream conditions}
 freestream_temperature = zero_celsius
 freestream_mach = 0.3
-target_reynolds = 5e7
+target_reynolds = 5e5
 freestream_direction0 = 1.0
 freestream_direction1 = 0.0
 dyn_visc = 1.716e-5
