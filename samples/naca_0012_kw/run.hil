@@ -27,7 +27,11 @@ refine_if = {(center0 > -1.5 & center0 < 1.5 & center1 < 1.0 & center1 > -1.0 & 
 refine_if = {(((center0 - .8 > -.9 & abs(center1) < .2) | is_extruded) & ref_level < 4) | (center0^2 + center1^2 < .1^2 + .5*nom_sz^2 & ref_level < 6) | ((center0 - 1.04)^2 + center1^2 < .05^2 + .5*nom_sz^2 & ref_level < 8)}
 }
 init_ref_level = 4
-refine_if = {(center0 - .7)^2 + 4*center1^2 < 1.^2 + nom_sz^2 & ref_level < 9}
+{
+unrefine_if = {!is_extruded}
+refine_if = {is_extruded & ref_level < 9}
+}
+refine_if = {(center0 - .6)^2 + 4*center1^2 < .7^2 + 1.5*nom_sz^2 & ref_level < 9}
 {$set_geometry_refinement}
 init_layer_splits = 6
 {$set_subsonic_bl_multirate}
@@ -43,7 +47,7 @@ geom0 = {auto.csv}
 {freestream conditions}
 freestream_temperature = zero_celsius
 freestream_mach = 0.3
-target_reynolds = 5e5
+target_reynolds = 5e6
 freestream_direction0 = 1.0
 freestream_direction1 = 0.0
 dyn_visc = 1.716e-5
@@ -58,9 +62,9 @@ println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_ene
 {attack = 0*degree}
 
 surface_bc = {no_slip}
-diffusive_admissibility = false
+diffusive_admissibility = true
 fix_therm_admis = true
-max_safety = 2e-1
+max_safety = 5e-1
 
 {iteration parameters}
 print_freq = 100
@@ -71,7 +75,7 @@ done = {false}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_test}
+working_dir = {hexed_out_4e7}
 
 vis_field_vars = vis_field_vars + {
     specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
