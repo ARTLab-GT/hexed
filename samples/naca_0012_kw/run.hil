@@ -88,7 +88,6 @@ vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
     uncertainty = uncertainty
 }
-contour0 = {density}
 
 {run simulation}
 $start
