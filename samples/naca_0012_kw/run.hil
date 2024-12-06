@@ -31,8 +31,8 @@ init_ref_level = 4
 unrefine_if = {!is_extruded}
 refine_if = {is_extruded & ref_level < 9}
 }
-refine_if = {(center0 - .6)^2 + 4*center1^2 < .7^2 + 1.5*nom_sz^2 & ref_level < 9}
-refine_if = {((center0 - .6)^2 + 4*center1^2 < 1.^2 + 1.5*nom_sz^2 & ref_level < 8) | (center0^2 + center1^2 < .15^2 & ref_level < 9) | ((center0 - 1.)^2 + center1^2 < .02^2 + nom_sz^2 & ref_level < 12)}
+refine_if = {(center0 - .6)^2 + 4*center1^2 < .7^2 + 1.5*nom_sz^2 & ref_level < 8}
+refine_if = {((center0 - .6)^2 + 4*center1^2 < 1.^2 + 1.5*nom_sz^2 & ref_level < 8) | (center0^2 + center1^2 < .15^2 & ref_level < 9) | ((center0 - 1.01)^2 + center1^2 < .02^2 + nom_sz^2 & ref_level < 12)}
 {$set_geometry_refinement}
 init_layer_splits = 7
 {$set_subsonic_bl_multirate}
@@ -66,6 +66,10 @@ surface_bc = {no_slip}
 diffusive_admissibility = true
 fix_therm_admis = true
 max_safety = 5e-1
+{
+$set_ramping
+ramping_final_safety = 5e-1
+}
 
 {iteration parameters}
 print_freq = 100
@@ -76,7 +80,7 @@ done = {false}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_4e5_nonuniform1}
+working_dir = {hexed_out_4e5_nonuniform2}
 
 vis_field_vars = vis_field_vars + {
     specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density

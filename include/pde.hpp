@@ -195,9 +195,11 @@ class Navier_stokes {
         Mat<n_dim, n_dim> omega = 0.5*(veloc_grad - veloc_grad.transpose());
         Mat<n_dim, n_dim> S = 0.5*(veloc_grad + veloc_grad.transpose());
         Mat<n_dim, n_dim> S_hat = S - .5*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
-        Mat<n_dim, n_dim> S_bar = S - 1./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
-        double lim_sq = c_lim*c_lim*2*S_hat.squaredNorm()/beta_s;
+        //Mat<n_dim, n_dim> S_bar = S - 1./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
+        //double lim_sq = c_lim*c_lim*2*S_bar.squaredNorm()/beta_s;
+        double lim_sq = math::pow(38., 2);
         double omega_hat = std::sqrt(lim_sq + real_turb_diss*real_turb_diss);
+        //double omega_hat = real_turb_diss;
         state(i_turb_visc) = mass*k_bar/omega_hat;
 
         turb_stress = state(i_turb_visc)*(veloc_grad + veloc_grad.transpose()
@@ -250,7 +252,6 @@ class Navier_stokes {
         double lim_factor = lim/std::sqrt(lim*lim + prod*prod);
         debug_variables(0) = lim_factor;
         prod = lim_factor*std::max(0., prod);
-        //double omega_hat = real_turb_diss;
         production(0) = prod;
         production(1) = alpha*prod*real_turb_diss/k_bar + grad_k_omega_source;
         production(2) = 1.*mass*k_bar/omega_hat;
@@ -297,7 +298,7 @@ class Navier_stokes {
       void compute_decay() {
         decay = 0;
         if constexpr (turb == k_omega) {
-          real_turb_diss = std::max(.01, state(i_turb_diss)/mass);
+          real_turb_diss = std::abs(state(i_turb_diss)/mass);
           decay = beta_s*real_turb_diss;
         }
       }
