@@ -58,6 +58,7 @@ class Navier_stokes {
     static constexpr double sigma_s = 3./5.;
     static constexpr double sigma_do = 1./8.;
     static constexpr double c_lim = 7./8.;
+    static constexpr double turb_prandtl = .9;
 
     Transport_model dyn_visc;
     Transport_model therm_cond;
@@ -165,10 +166,12 @@ class Navier_stokes {
         double spec_heat_v = constants::specific_gas_air/(heat_rat - 1.);
         double spec_heat_p = heat_rat*constants::specific_gas_air;
         sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)/spec_heat_v);
-        real_turb_diss = std::max(.01, state(i_turb_diss)/mass);
-        k_bar = std::max(1e-11, state(i_turb_kin_ener)/mass);
+        // taking abs ensures that they will never be negative
+        // and makes the probability that they are exactly 0 very low, which is good cause we have to divide by them
+        real_turb_diss = std::abs(state(i_turb_diss)/mass);
+        k_bar = std::abs(state(i_turb_kin_ener)/mass);
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
-        therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) + state(i_turb_visc)*spec_heat_p/.9;
+        therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp) + state(i_turb_visc)*spec_heat_p/turb_prandtl;
         energy_cond = therm_cond_coef/spec_heat_v;
       }
 
@@ -193,9 +196,9 @@ class Navier_stokes {
         Mat<n_dim, n_dim> S = 0.5*(veloc_grad + veloc_grad.transpose());
         Mat<n_dim, n_dim> S_hat = S - .5*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
         Mat<n_dim, n_dim> S_bar = S - 1./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
-        double lim_sq = 7.*7./8./8.*S_hat.squaredNorm()/beta_s;
+        double lim_sq = c_lim*c_lim*2*S_hat.squaredNorm()/beta_s;
         double omega_hat = std::sqrt(lim_sq + real_turb_diss*real_turb_diss);
-        state(i_turb_visc) = 1.*mass*k_bar/omega_hat;
+        state(i_turb_visc) = mass*k_bar/omega_hat;
 
         turb_stress = state(i_turb_visc)*(veloc_grad + veloc_grad.transpose()
                                           - 2./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity())
@@ -216,10 +219,11 @@ class Navier_stokes {
                               - state(i_turb_kin_ener)/mass/mass*gradient(i_mass, all);
           Mat<n_dim> grad_omega = gradient(i_turb_diss, all)/mass
                                   - state(i_turb_diss)/mass/mass*gradient(i_mass, all);
-          flux_diff_phys(i_turb_kin_ener, all) -= (dyn_visc_coef + sigma_s*state(i_turb_visc))*grad_k;
-          flux_diff_phys(i_turb_diss, all) -= (dyn_visc_coef + sigma*state(i_turb_visc))*grad_omega;
+          // note that unlike in the turbulent viscosity, here we do _not_ use `omega_hat`
+          flux_diff_phys(i_turb_kin_ener, all) -= (dyn_visc_coef + sigma_s*mass*k_bar/real_turb_diss)*grad_k;
+          flux_diff_phys(i_turb_diss, all) -= (dyn_visc_coef + sigma*mass*k_bar/real_turb_diss)*grad_omega;
           double dot = grad_k.dot(grad_omega);
-          grad_k_omega_source = dot > 0. ? 1./8.*mass/real_turb_diss*dot : 0.;
+          grad_k_omega_source = dot > 0. ? sigma_do*mass/real_turb_diss*dot : 0.;
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
 
@@ -262,8 +266,6 @@ class Navier_stokes {
         if constexpr (turb == k_omega) {
           source(i_turb_kin_ener) = state(i_prod_k) - beta_s*real_turb_diss*state(i_turb_kin_ener);
           source(i_turb_diss) = state(i_prod_omega) - beta*real_turb_diss*state(i_turb_diss);
-          if (state(i_turb_kin_ener) < 0 && source(i_turb_kin_ener) < 0) source(i_turb_kin_ener) *= -1;
-          if (state(i_turb_diss) < 0 && source(i_turb_diss) < 0) source(i_turb_diss) *= -1;
           source(i_energy) = -source(i_turb_kin_ener);
         }
       }
@@ -296,7 +298,7 @@ class Navier_stokes {
         decay = 0;
         if constexpr (turb == k_omega) {
           real_turb_diss = std::max(.01, state(i_turb_diss)/mass);
-          decay = math::max(beta_s*real_turb_diss);
+          decay = beta_s*real_turb_diss;
         }
       }
     };

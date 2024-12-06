@@ -24,7 +24,7 @@ max_refinement_iters = 20
 max_ref_level = 13
 vis_field_vars = vis_field_vars + {size = nom_sz;}
 refine_if = {(center0 > -1.5 & center0 < 1.5 & center1 < 1.0 & center1 > -1.0 & ref_level < 6 & is_extruded) | (center0 > 0.8 & center0 < 1.3 & center1 < 0.2 & center1 > -0.2 & ref_level < 8 & is_extruded)}
-refine_if = {(((center0 - .8 > -.9 & abs(center1) < .2) | is_extruded) & ref_level < 4) | (center0^2 + center1^2 < .1^2 + .5*nom_sz^2 & ref_level < 6) | ((center0 - 1.04)^2 + center1^2 < .05^2 + .5*nom_sz^2 & ref_level < 8)}
+refine_if = {(((center0 - .8 > -.9 & abs(center1) < .2) | is_extruded) & ref_level < 4) | (center0^2 + center1^2 < .1^2 + .5*nom_sz^2 & ref_level < 6) | ((center0 - 1.04)^2 + center1^2 < .7*nom_sz^2 & ref_level < 11)}
 }
 init_ref_level = 4
 {
@@ -32,8 +32,9 @@ unrefine_if = {!is_extruded}
 refine_if = {is_extruded & ref_level < 9}
 }
 refine_if = {(center0 - .6)^2 + 4*center1^2 < .7^2 + 1.5*nom_sz^2 & ref_level < 9}
+refine_if = {((center0 - .6)^2 + 4*center1^2 < 1.^2 + 1.5*nom_sz^2 & ref_level < 8) | (center0^2 + center1^2 < .15^2 & ref_level < 9) | ((center0 - 1.)^2 + center1^2 < .02^2 + nom_sz^2 & ref_level < 12)}
 {$set_geometry_refinement}
-init_layer_splits = 6
+init_layer_splits = 7
 {$set_subsonic_bl_multirate}
 
 viscosity_model = air_viscosity
@@ -75,7 +76,7 @@ done = {false}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_zero_flux}
+working_dir = {hexed_out_4e5_nonuniform1}
 
 vis_field_vars = vis_field_vars + {
     specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
@@ -87,6 +88,7 @@ vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
     uncertainty = uncertainty
 }
+contour0 = {density}
 
 {run simulation}
 $start
