@@ -27,14 +27,11 @@ refine_if = {(center0 > -1.5 & center0 < 1.5 & center1 < 1.0 & center1 > -1.0 & 
 refine_if = {(((center0 - .8 > -.9 & abs(center1) < .2) | is_extruded) & ref_level < 4) | (center0^2 + center1^2 < .1^2 + .5*nom_sz^2 & ref_level < 6) | ((center0 - 1.04)^2 + center1^2 < .7*nom_sz^2 & ref_level < 11)}
 }
 init_ref_level = 4
-{
+refine_if = {((center0 - .6)^2 + 4*center1^2 < 1.^2 + 1.5*nom_sz^2 & ref_level < 8) | (center0^2 + center1^2 < .15^2 & ref_level < 9) | ((center0 - 1.01)^2 + center1^2 < .02^2 + nom_sz^2 & ref_level < 11)}
 unrefine_if = {!is_extruded}
 refine_if = {is_extruded & ref_level < 9}
-}
-refine_if = {(center0 - .6)^2 + 4*center1^2 < .7^2 + 1.5*nom_sz^2 & ref_level < 8}
-refine_if = {((center0 - .6)^2 + 4*center1^2 < 1.^2 + 1.5*nom_sz^2 & ref_level < 8) | (center0^2 + center1^2 < .15^2 & ref_level < 9) | ((center0 - 1.01)^2 + center1^2 < .02^2 + nom_sz^2 & ref_level < 11)}
 {$set_geometry_refinement}
-init_layer_splits = 7
+init_layer_splits = 6
 {$set_subsonic_bl_multirate}
 
 viscosity_model = air_viscosity
@@ -80,7 +77,7 @@ done = {false}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_log2}
+working_dir = {hexed_out_test}
 
 vis_field_vars = vis_field_vars + {
     specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density

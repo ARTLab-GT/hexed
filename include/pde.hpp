@@ -197,9 +197,7 @@ class Navier_stokes {
         Mat<n_dim, n_dim> S_hat = S - .5*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
         Mat<n_dim, n_dim> S_bar = S - 1./3.*veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
         double lim_sq = c_lim*c_lim*2*S_bar.squaredNorm()/beta_s;
-        //double lim_sq = math::pow(38., 2);
-        double omega_hat = std::sqrt(lim_sq + real_turb_diss*real_turb_diss);
-        //double omega_hat = real_turb_diss;
+        double omega_hat = std::pow(lim_sq*lim_sq + math::pow(real_turb_diss, 4), .25);
         state(i_turb_visc) = mass*k_bar/omega_hat;
 
         turb_stress = state(i_turb_visc)*(veloc_grad + veloc_grad.transpose()
@@ -289,8 +287,9 @@ class Navier_stokes {
       void compute_diffusivity() {
         compute_scalars_conv();
         compute_scalars_diff();
-        double turb_visc = (turb == laminar) ? 0 : math::max(1, sigma, sigma_s)*state(i_turb_visc);
+        double turb_visc = (turb == k_omega) ? state(i_turb_kin_ener)*std::exp(-state(i_turb_diss)/state(i_mass)) : 0.;
         diffusivity = std::abs(laplacian_av) + math::max(
+          (dyn_visc_coef + math::max(1, sigma, sigma_s)*turb_visc)/mass,
           std::abs(bulk_av) + (dyn_visc_coef + turb_visc)/mass,
           (dyn_visc_coef + turb_visc)/mass + energy_cond/mass
         );
