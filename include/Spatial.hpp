@@ -427,7 +427,7 @@ class Spatial {
           if constexpr (Pde::has_source) if (!_stage) {
             if constexpr (Pde::n_production) for (int i_var = 0; i_var < Pde::n_production; ++i_var) {
               double& s = state[(Pde::i_prod_k + i_var)*n_qpoint + i_qpoint];
-              s += (i_var == 2 ? 1. : 1e-5)*(comp.production(i_var) - s);
+              s += (i_var == 2 ? 1. : 1e-4)*(comp.production(i_var) - s);
             }
             #if 0
             for (int i_var = 0; i_var < _eq.n_production; ++i_var) {

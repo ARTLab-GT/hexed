@@ -80,12 +80,12 @@ done = {false}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_4e5_nonuniform2}
+working_dir = {hexed_out_log}
 
 vis_field_vars = vis_field_vars + {
     specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
     turbulent_dissipation_bassi = turbulent_dissipation_bassi
-    specific_turbulent_dissipation = turbulent_dissipation_bassi/density
+    specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density)
     turbulent_production_k = turbulent_production_k
     turbulent_production_omega = turbulent_production_omega
     turbulent_viscosity = turbulent_viscosity
