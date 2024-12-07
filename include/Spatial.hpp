@@ -290,7 +290,6 @@ class Spatial {
     const bool _use_filter;
     int _mask;
     bool _conv_substep;
-    bool _update_prod;
     // weights for different parameters when assembling the updated state
 
     public:
@@ -308,7 +307,6 @@ class Spatial {
     , _use_filter{use_filter}
     , _mask{mask}
     , _conv_substep{conv_substep}
-    , _update_prod{update_production}
     {
       HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
       HEXED_ASSERT(!(_stage && _compute_residual), "residual calculation is a single-stage operation");
@@ -337,7 +335,6 @@ class Spatial {
         std::array<double*, 6> visc_faces;
         for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face, true);
         double* tss = elem.time_step_scale();
-        double* prod_terms = elem.production_terms();
         double d_pos = elem.nominal_size();
         double time_rate [2][std::max(Pde::n_update, Pde::n_extrap - Pde::n_extrap/2)][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
         // only need the next 2 for deformed elements
@@ -427,17 +424,8 @@ class Spatial {
           if constexpr (Pde::has_source) if (!_stage) {
             if constexpr (Pde::n_production) for (int i_var = 0; i_var < Pde::n_production; ++i_var) {
               double& s = state[(Pde::i_prod_k + i_var)*n_qpoint + i_qpoint];
-              s += (i_var == 2 ? 1. : 1e-3)*(comp.production(i_var) - s);
+              s += 1e-3*(comp.production(i_var) - s);
             }
-            #if 0
-            for (int i_var = 0; i_var < _eq.n_production; ++i_var) {
-              if (_update_prod) {
-                prod_terms[i_var*n_qpoint + i_qpoint] = comp.production(i_var);
-              } else {
-                comp.production(i_var) = prod_terms[i_var*n_qpoint + i_qpoint];
-              }
-            }
-            #endif
             comp.compute_source();
             double mult = d_pos;
             if constexpr (is_deformed) mult *= elem_det[i_qpoint];

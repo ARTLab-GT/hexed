@@ -383,7 +383,7 @@ void No_slip::apply_state(Boundary_face& bf) {
   // turbulence variables
   //! \todo __Carter:__ Set the correct wall boundary conditions for the turbulence variables.
   //! Right now, they're set to \f$ k = 1 \f$ and \f$ \omega = 0.01 \f$.
-  if (params.n_var == params.n_dim + 7) {
+  if (params.n_var == params.n_dim + 6) {
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
       double spec_turb_kin_ener_wall = 0.;
       double spec_turb_diss_wall = 4e8;
