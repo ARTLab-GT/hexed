@@ -83,10 +83,7 @@ vis_field_vars = vis_field_vars + {
     specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
     turbulent_dissipation_bassi = turbulent_dissipation_bassi
     specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density)
-    turbulent_production_k = turbulent_production_k
-    turbulent_production_omega = turbulent_production_omega
     debug_var0 = debug_var0
-    uncertainty = uncertainty
 }
 
 {run simulation}

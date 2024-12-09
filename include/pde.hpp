@@ -36,17 +36,14 @@ class Navier_stokes {
     static constexpr bool has_convection = true;
     static constexpr bool has_source = visc && (turb != laminar);
     static constexpr int n_update = n_dim + 2 + 2*(turb == k_omega);
-    static constexpr int n_state = n_dim + 4 + 4*(turb == k_omega);
+    static constexpr int n_state = n_dim + 4 + 2*(turb == k_omega);
     static constexpr int n_extrap = n_dim + 2 + 2*(turb == k_omega);
-    static constexpr int n_production = 2*(turb == k_omega);
     static constexpr int i_mass = n_dim;
     static constexpr int i_energy = n_dim + 1;
     static constexpr int i_turb_kin_ener = n_dim + 2;
     static constexpr int i_turb_diss = n_dim + 3;
-    static constexpr int i_prod_k = n_dim + 4;
-    static constexpr int i_prod_omega = n_dim + 5;
-    static constexpr int i_bulk_art_visc = n_update + 2*(turb == k_omega);
-    static constexpr int i_laplacian_art_visc = n_update + 2*(turb == k_omega) + 1;
+    static constexpr int i_bulk_art_visc = n_update;
+    static constexpr int i_laplacian_art_visc = n_update + 1;
     static constexpr double heat_rat = 1.4;
 
     static constexpr double alpha = 13./25.;
@@ -156,7 +153,6 @@ class Navier_stokes {
       double real_turb_diss;
       double k_bar;
       double beta;
-      Mat<n_production> production;
       //! \todo __Carter:__ Compute whatever variables you need for the turbulent fluxes
       //! which might also be needed for source terms and/or the time step calculation.
       void compute_scalars_diff() {
@@ -209,6 +205,7 @@ class Navier_stokes {
                                       + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
         flux_diff_phys(i_energy, all) -= veloc.transpose()*stress
                                          + (energy_cond + heat_rat*mass*k_bar/omega_hat/turb_prandtl)*int_ener_grad;
+        source.setZero();
         if constexpr (turb == k_omega) {
           Mat<n_dim> grad_k = gradient(i_turb_kin_ener, all)/mass
                               - state(i_turb_kin_ener)/mass/mass*gradient(i_mass, all);
@@ -240,29 +237,21 @@ class Navier_stokes {
           double lim = 1e3*mass*real_turb_diss;
           double lim_factor = lim/std::sqrt(lim*lim + prod_per_k*prod_per_k);
           debug_variables(0) = mass*k_bar/omega_hat;
-          prod_per_k = lim_factor*std::max(0., prod_per_k);
+          prod_per_k = lim_factor*prod_per_k;
           double dot = grad_k.dot(grad_omega);
           double grad_k_omega_source = std::max(sigma_do*mass/real_turb_diss*grad_k.dot(grad_omega), 0.);
           double grad_omega_source = (dyn_visc_coef + sigma*mass*k_bar/omega_hat)*grad_omega.squaredNorm();
-          production(0) = prod_per_k*k_bar;
-          production(1) = alpha*prod_per_k + grad_omega_source + grad_k_omega_source;
+          source(i_turb_kin_ener) = prod_per_k*k_bar - beta_s*real_turb_diss*state(i_turb_kin_ener);
+          source(i_turb_diss) = alpha*prod_per_k + grad_omega_source + grad_k_omega_source - beta*mass*real_turb_diss;
+          source(i_energy) = -source(i_turb_kin_ener);
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
       }
 
       Mat<n_update> source;
-      /*! \todo __Carter:__ compute the turbulent source terms.
-       * Set `source(i_turb_kin_ener)` and `source(i_turb_diss)` to contain the source terms of
-       * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
-       */
-      void compute_source() {
-        source.setZero();
-        if constexpr (turb == k_omega) {
-          source(i_turb_kin_ener) = production(0) - beta_s*real_turb_diss*state(i_turb_kin_ener);
-          source(i_turb_diss) = production(1) - beta*mass*real_turb_diss;
-          source(i_energy) = -source(i_turb_kin_ener);
-        }
-      }
+      //! \brief does nothing---source terms are computed in `compute_diffusion`
+      //! \details because they need access to gradients
+      void compute_source() {}
 
       double char_speed;
       void compute_char_speed() {
@@ -395,7 +384,6 @@ class Advection {
   static constexpr bool has_diffusion = false;
   static constexpr bool has_convection = true;
   static constexpr bool has_source = true;
-  static constexpr int n_production = 0;
   static constexpr int n_state = n_dim + _n_adv;
   static constexpr int n_extrap = n_dim + _n_adv;
   static constexpr int n_update = _n_adv;
@@ -452,7 +440,6 @@ class Advection {
     }
 
     Mat<n_update> source;
-    Mat<0> production;
     void compute_source() {
       source.setConstant(2/_eq._advect_length);
     }
@@ -480,7 +467,6 @@ class Smooth_art_visc {
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
   static constexpr bool has_source = true;
-  static constexpr int n_production = 0;
   static constexpr int n_state = 4;
   static constexpr int n_extrap = 3;
   static constexpr int n_update = 3;
@@ -535,7 +521,6 @@ class Smooth_art_visc {
     }
 
     Mat<n_update> source;
-    Mat<0> production;
     void compute_source() {
       for (int i_var = 0; i_var < n_update; ++i_var) {
         double f = std::abs(state(i_var));
@@ -561,7 +546,6 @@ class Fix_therm_admis {
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
   static constexpr bool has_source = false;
-  static constexpr int n_production = 0;
   static constexpr int n_state = n_dim + 2;
   static constexpr int n_update = n_state;
   static constexpr int n_extrap = n_state;

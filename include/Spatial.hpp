@@ -422,10 +422,6 @@ class Spatial {
             }
           }
           if constexpr (Pde::has_source) if (!_stage) {
-            if constexpr (Pde::n_production) for (int i_var = 0; i_var < Pde::n_production; ++i_var) {
-              double& s = state[(Pde::i_prod_k + i_var)*n_qpoint + i_qpoint];
-              s += 1e-3*(comp.production(i_var) - s);
-            }
             comp.compute_source();
             double mult = d_pos;
             if constexpr (is_deformed) mult *= elem_det[i_qpoint];
