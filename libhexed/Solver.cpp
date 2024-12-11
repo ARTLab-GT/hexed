@@ -1326,6 +1326,10 @@ void Solver::bounds_surface(std::string expr, int bc_sn, int n_sample = 20) {
   compute_write_face(_kernel_mesh());
   // compute the integral
   Array<double> bounds({2, n_var});
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    bounds(0)[i_var] = huge;
+    bounds(1)[i_var] = -huge;
+  }
   //#pragma omp parallel for reduction(+:integral)
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     auto& con {bc_cons[i_con]};

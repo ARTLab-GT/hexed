@@ -612,6 +612,10 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  _inter.variables->create<std::string>("bounds_surface", new Namespace::Heisenberg<std::string>([this]() {
+    _solver().bounds_surface(_vars("bounds_surface_vars"), _solver().mesh().surface_bc_sn(), _vari("vis_n_sample"));
+    return "";
+  }));
   _inter.variables->create<std::string>("integrate_field", new Namespace::Heisenberg<std::string>([this]() {
     _solver().integrate_field(_vars("integrand_field"));
     return "";
