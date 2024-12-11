@@ -24,9 +24,8 @@ unrefine_if = {!is_extruded}
 {$set_geometry_refinement}
 init_layer_splits = 8
 bl_multirate = true
-flow_iters = 2
-bl_iters = 2
-{n_cheby_bl = 5}
+flow_iters = 10
+bl_iters = 10
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -55,14 +54,12 @@ diffusive_admissibility = true
 fix_therm_admis = true
 ramping_initial_safety = .1
 ramping_final_safety = .7
-ramp_if = {iteration >= 15000}
+ramp_if = {iteration >= 3000}
 $set_ramping
-update_omega_freq = 10^4
-working_dir = {hexed_out_cheby}
 
 {iteration parameters}
 print_freq = 100
-vis_freq = 10^4
+vis_freq = 10^3
 done = {iteration > 5000 & (drag_coef_max - drag_coef_min < 5e-3*(drag_coef_min + drag_coef_max)/2)}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}

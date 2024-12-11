@@ -591,17 +591,6 @@ Case::Case(std::string input_script)
       _inter.variables->assign(_monitor_expr->names[i_monitor] + "_min", _monitors[i_monitor].min());
       _inter.variables->assign(_monitor_expr->names[i_monitor] + "_max", _monitors[i_monitor].max());
     }
-    if (_vars("turbulence_model") == "k-omega" && iter%_vari("update_omega_freq") == 0) {
-      _solver().bounds_surface(
-        "inv_roughness = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)*density/(dyn_visc*max_roughness_plus);",
-        2*_vari("n_dim"),
-        20
-      );
-      std::cout << "surface roughness height: " << 1./_vard("max_surface_inv_roughness") << std::endl;
-      for (double* r : _roughness) {
-        *r = 1./_vard("max_surface_inv_roughness");
-      }
-    }
     return "";
   }));
   _inter.variables->create<int>("n_elements", new Namespace::Heisenberg<int>([this]() {
@@ -609,6 +598,18 @@ Case::Case(std::string input_script)
   }));
   _inter.variables->create<std::string>("performance_report", new Namespace::Heisenberg<std::string>([this]() {
     return _solver().stopwatch_tree().report() + _solver().mesh().stopwatch_tree().report();
+  }));
+
+  _inter.variables->create<std::string>("update_roughness", new Namespace::Heisenberg<std::string>([this]() {
+    _solver().bounds_surface(
+      "inv_roughness = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)*density/(dyn_visc*max_roughness_plus);",
+      2*_vari("n_dim"),
+      20
+    );
+    double rough = 1./_vard("max_surface_inv_roughness");
+    _inter.variables->assign("surface_roughness", rough);
+    for (double* r : _roughness) *r = rough;
+    return "";
   }));
 
   _inter.variables->create<std::string>("integrate_field", new Namespace::Heisenberg<std::string>([this]() {

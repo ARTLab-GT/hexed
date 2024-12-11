@@ -198,7 +198,7 @@ vis_freq = 10^4
 write_freq = 10^4
 iter_width = 10
 print_freq = 100
-update_omega_freq = 10^4
+update_roughness_freq = 10^3
 surface_roughness = 1e-6
 max_roughness_plus = 4.
 refine_if = {false}
@@ -354,6 +354,12 @@ iterate = {
     }
     $$({case} + !residual_init)
     println report
+    case0 = {}
+    case1 = {
+        update_roughness
+        println({surface roughness: } + surface_roughness)
+    }
+    $$({case} + (iteration%update_roughness_freq == 0))
     $write_iter
     $vis_iter
     hexed_prev_except = except
