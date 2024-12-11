@@ -203,6 +203,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
 , av_rs{row_size}
 , visc{viscosity_model}
 , therm_cond{thermal_conductivity_model}
+, turb{turbulence_model}
 , _namespace{space}
 , _printer{printer}
 , _implicit{implicit}
@@ -466,7 +467,7 @@ void Solver::initialize(std::string(expr)) {
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) state_vars.push_back("momentum" + std::to_string(i_dim));
   state_vars.push_back("density");
   state_vars.push_back("energy");
-  if (params.n_var == params.n_dim + 4) {
+  if (turb == k_omega) {
     state_vars.push_back("turbulent_kinetic_energy");
     state_vars.push_back("turbulent_dissipation_bassi");
   }
@@ -1306,6 +1307,45 @@ class Vis_evaluator {
   std::vector<std::string> _var_names;
 };
 //! \endcond
+
+void Solver::bounds_surface(std::string expr, int bc_sn, int n_sample = 20) {
+  // setup
+  const int nd = params.n_dim;
+  const int nq = params.n_qpoint();
+  const int nfq = nq/basis.row_size;
+  auto& bc_cons {acc_mesh->boundary_connections()};
+  if (!bc_cons.size()) return;
+  Vis_evaluator<Boundary_connection> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
+    expr, bc_cons[0], params.n_dim - 1
+  );
+  std::vector<std::string> var_names = evaluator.var_names();
+  Int n_var = var_names.size();
+  Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
+  // write the state to the faces so that the BCs can access it
+  compute_write_face(_kernel_mesh());
+  // compute the integral
+  Array<double> bounds({2, n_var});
+  //#pragma omp parallel for reduction(+:integral)
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con {bc_cons[i_con]};
+    if (con.bound_cond_serial_n() != bc_sn) continue;
+    Array<double> qpoints{evaluator.evaluate(con)};
+    Vis_data vis_dat(qpoints(nd, end), basis);
+    Array<double> interior = vis_dat.interior(n_sample);
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int i_point = 0; i_point < interior(i_var).size(); ++i_point) {
+        bounds(0)[i_var] = std::min(bounds(0)[i_var], interior(i_var)[i_point]);
+        bounds(1)[i_var] = std::max(bounds(1)[i_var], interior(i_var)[i_point]);
+      }
+    }
+  }
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    _namespace->assign("min_surface_" + var_names[i_var], bounds(0)[i_var]);
+    _namespace->assign("max_surface_" + var_names[i_var], bounds(1)[i_var]);
+  }
+}
 
 void Solver::integrate_field(std::string expr) {
   Stopwatch_tree::Starter sw_starter(stopwatch["integrals"]["field"]);

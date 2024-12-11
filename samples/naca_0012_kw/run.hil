@@ -22,7 +22,7 @@ init_ref_level = 4
 refine_if = {is_extruded & ref_level < 9}
 unrefine_if = {!is_extruded}
 {$set_geometry_refinement}
-init_layer_splits = 6
+init_layer_splits = 8
 $set_subsonic_bl_multirate
 
 viscosity_model = air_viscosity
@@ -50,7 +50,14 @@ println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_ene
 surface_bc = {no_slip}
 diffusive_admissibility = true
 fix_therm_admis = true
-max_safety = 7e-1
+max_safety = .1
+{
+ramping_final_safety = 7e-2
+ramp_if = {iteration >= 2000}
+$set_ramping
+}
+update_omega_freq = 2000
+working_dir = {hexed_out_new_bc2}
 
 {iteration parameters}
 print_freq = 100

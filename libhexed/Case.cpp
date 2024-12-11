@@ -71,7 +71,10 @@ Flow_bc* Case::_make_bc(std::string name) {
       thermal = std::make_shared<Prescribed_energy>(energy);
     }
     HEXED_ASSERT(thermal, "thermal BC specification not understood", assert::User_error);
-    return new No_slip(thermal, _vard("heat_flux_coercion"));
+    auto bc = new No_slip(thermal, _vard("surface_roughness"), heat_rat,
+                          _solver().viscosity_model(), _solver().turbulence_model(), _vard("heat_flux_coercion"));
+    _roughness.push_back(&bc->roughness);
+    return bc;
   } else if (name == "expression") {
     HEXED_ASSERT(   _inter.variables->lookup<std::string>("surface_bc_state")
                  && _inter.variables->lookup<std::string>("surface_bc_flux"),
@@ -587,6 +590,17 @@ Case::Case(std::string input_script)
       _monitors[i_monitor].add_sample(iter, vals[i_monitor]);
       _inter.variables->assign(_monitor_expr->names[i_monitor] + "_min", _monitors[i_monitor].min());
       _inter.variables->assign(_monitor_expr->names[i_monitor] + "_max", _monitors[i_monitor].max());
+    }
+    if (_vars("turbulence_model") == "k-omega" && iter%_vari("update_omega_freq") == 0) {
+      _solver().bounds_surface(
+        "inv_roughness = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)*density/(dyn_visc*max_roughness_plus);",
+        2*_vari("n_dim"),
+        20
+      );
+      std::cout << "surface roughness height: " << 1./_vard("max_surface_inv_roughness") << std::endl;
+      for (double* r : _roughness) {
+        *r = 1./_vard("max_surface_inv_roughness");
+      }
     }
     return "";
   }));

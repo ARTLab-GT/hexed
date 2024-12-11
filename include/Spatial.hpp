@@ -810,7 +810,7 @@ class Spatial {
           }
           if constexpr (Pde::has_source) {
             comp.compute_decay();
-            scale += comp.decay; // should be comp.decay/2, but i'm nervervous
+            scale += comp.decay; // should be comp.decay/2, but i'm nervous
           }
           if (_is_local) tss[i_qpoint] = 1./scale;
           else {
