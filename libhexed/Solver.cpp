@@ -1048,7 +1048,8 @@ bool Solver::is_admissible() {
                 && (data[(nd + 1)*n_qpoint + i_qpoint] > 0.);
       for (int i_var = 0; i_var < n_var; ++i_var) {
         HEXED_ASSERT(std::isfinite(data[i_var*n_qpoint + i_qpoint]),
-                     format_str(200, "variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]));
+                     format_str(200, "variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]),
+                     assert::Numerical_exception);
       }
     }
     return adm;
@@ -1311,8 +1312,6 @@ class Vis_evaluator {
 void Solver::bounds_surface(std::string expr, int bc_sn, int n_sample = 20) {
   // setup
   const int nd = params.n_dim;
-  const int nq = params.n_qpoint();
-  const int nfq = nq/basis.row_size;
   auto& bc_cons {acc_mesh->boundary_connections()};
   if (!bc_cons.size()) return;
   Vis_evaluator<Boundary_connection> evaluator(

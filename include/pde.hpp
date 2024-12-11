@@ -262,10 +262,6 @@ class Navier_stokes {
       }
 
       double diffusivity;
-      /*! \todo __Carter:__ Modify the diffusivity estimate to keep the time step stable for turbulent flows.
-       * This is can come later.
-       * To start off, you can just reduce \ref max_safety until it's stable.
-       */
       void compute_diffusivity() {
         compute_scalars_conv();
         compute_scalars_diff();
