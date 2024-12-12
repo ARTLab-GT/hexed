@@ -489,21 +489,6 @@ class Spatial {
         }
 
         bool fringe = elem.mask() < _mask;
-        if (Pde::n_update == n_dim + 4 && Pde::n_state == n_dim + 6) {
-          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            for (int i_var = n_dim; i_var < Pde::n_update; ++i_var) {
-              double mult = _update*tss[i_qpoint]/d_pos*(!fringe);
-              if constexpr (is_deformed) mult /= elem_det[i_qpoint];
-              double s = state[i_var*n_qpoint + i_qpoint];
-              double u = time_rate[0][i_var][i_qpoint] + time_rate[1][i_var][i_qpoint];
-              if (i_var == n_dim + 4) u = std::exp(u/state[n_dim*n_qpoint + i_qpoint]) - 1.;
-              else u /= state[i_var*n_qpoint + i_qpoint];
-              double lim = 1e-1;
-              if (u < -lim) tss[i_qpoint] *= -lim/u;
-            }
-          }
-        }
-
         // write update to interior
         double* ref_state = elem.residual_cache();
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {

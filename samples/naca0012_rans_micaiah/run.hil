@@ -25,8 +25,7 @@ unrefine_if = {!is_extruded}
 init_layer_splits = 8
 bl_multirate = true
 flow_iters = 10
-bl_iters = 1
-n_cheby_bl = 5
+bl_iters = 2
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -51,12 +50,15 @@ println({turbulent viscosity: } + freestream_density*freestream_specific_turbule
 println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation/dyn_visc)
 
 surface_bc = {no_slip}
-diffusive_admissibility = true
+diffusive_admissibility = false
 fix_therm_admis = true
+{
 ramping_initial_safety = .1
 ramping_final_safety = .7
 ramp_if = {iteration >= 3000}
 $set_ramping
+}
+max_safety = .7
 
 {iteration parameters}
 print_freq = 100

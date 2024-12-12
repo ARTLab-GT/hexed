@@ -163,7 +163,7 @@ class Navier_stokes {
         sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)/spec_heat_v);
         // taking abs ensures that they will never be negative
         // and makes the probability that they are exactly 0 very low, which is good cause we have to divide by them
-        real_turb_diss = std::exp(state(i_turb_diss)/mass);
+        real_turb_diss = std::max(10., std::exp(state(i_turb_diss)/mass));
         k_bar = std::abs(state(i_turb_kin_ener)/mass);
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
@@ -195,7 +195,7 @@ class Navier_stokes {
         double lim_sq = c_lim*c_lim*2*(strain_rate - 1./3.*divergence*identity).squaredNorm()/beta_s;
         double omega_hat = std::pow(math::pow(real_turb_diss, 4) + lim_sq*lim_sq, .25);
 
-        Mat<n_dim, n_dim> turb_stress_per_k = 2*mass/omega_hat*strain_rate - 2./3.*mass*(1. + 1./omega_hat)*identity;
+        Mat<n_dim, n_dim> turb_stress_per_k = 2*mass/omega_hat*strain_rate /*- 2./3.*mass*(1. + 1./omega_hat)*identity*/;
         Mat<n_dim, n_dim> stress = 2*dyn_visc_coef*strain_rate + (bulk_av*mass - 2./3.*dyn_visc_coef)*identity
                                    + turb_stress_per_k*k_bar;
         Mat<n_update, n_dim> flux_diff_phys = -laplacian_av*gradient; // flux in physical space
@@ -240,8 +240,8 @@ class Navier_stokes {
           double dot = grad_k.dot(grad_omega);
           double grad_k_omega_source = std::max(sigma_do*mass/real_turb_diss*grad_k.dot(grad_omega), 0.);
           double grad_omega_source = (dyn_visc_coef + sigma*mass*k_bar/omega_hat)*grad_omega.squaredNorm();
-          source(i_turb_kin_ener) = prod_per_k*k_bar - beta_s*real_turb_diss*state(i_turb_kin_ener);
-          source(i_turb_diss) = alpha*prod_per_k + grad_omega_source + grad_k_omega_source - beta*mass*real_turb_diss;
+          source(i_turb_kin_ener) = /*prod_per_k*k_bar - beta_s*real_turb_diss*state(i_turb_kin_ener)*/0.;
+          source(i_turb_diss) = /*alpha*prod_per_k + grad_omega_source + grad_k_omega_source - beta*mass*real_turb_diss*/0.;
           source(i_energy) = -source(i_turb_kin_ener);
           HEXED_ASSERT(std::isfinite(source.norm()),
             format_str(200, "source term is not finite %e %e %e %e %e %e %e", state(i_turb_diss), mass, real_turb_diss, omega_hat, prod_per_k, grad_omega_source, grad_k_omega_source),
