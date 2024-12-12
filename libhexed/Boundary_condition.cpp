@@ -348,7 +348,15 @@ void Nonpenetration::apply_advection(Boundary_face& bf) {
   }
 }
 
-No_slip::No_slip(std::shared_ptr<Thermal_bc> thermal, double coercion) : _coercion{coercion}, _thermal{thermal} {}
+No_slip::No_slip(std::shared_ptr<Thermal_bc> thermal, double r, double heat_rat, Transport_model visc,
+                 Turbulence_model turb, double coercion)
+: _coercion{coercion}
+, _thermal{thermal}
+, _viscosity{visc}
+, _turb{turb}
+, _heat_rat{heat_rat}
+, roughness{r}
+{}
 
 double Thermal_equilibrium::ghost_heat_flux(Mat<> state, double) {
   double temp = state(last)*.4/state(state.size() - 2)/constants::specific_gas_air;
@@ -380,15 +388,20 @@ void No_slip::apply_state(Boundary_face& bf) {
     for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) state(i_var) = in_f[i_var*nfq + i_qpoint];
     gh_f[(params.n_dim + 1)*nfq + i_qpoint] = math::pow(_thermal->ghost_energy(state), 2)/state(last);
   }
-  // turbulence variables
-  //! \todo __Carter:__ Set the correct wall boundary conditions for the turbulence variables.
-  //! Right now, they're set to \f$ k = 1 \f$ and \f$ \omega = 0.01 \f$.
-  if (params.n_var == params.n_dim + 4) {
+  if (_turb == k_omega) {
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-      double spec_turb_kin_ener_wall = 1.;
-      double spec_turb_diss_wall = .01;
-      gh_f[(params.n_dim + 2)*nfq + i_qpoint] = spec_turb_kin_ener_wall*in_f[params.n_dim*nfq + i_qpoint];
-      gh_f[(params.n_dim + 3)*nfq + i_qpoint] = std::log(spec_turb_diss_wall)*in_f[params.n_dim*nfq + i_qpoint];
+      // set turbulent kinetic energy to 0
+      gh_f[(params.n_dim + 2)*nfq + i_qpoint] = -in_f[(params.n_dim + 2)*nfq + i_qpoint];
+      // set dissipation based on wall roughness
+      double mass = in_f[params.n_dim*nfq + i_qpoint];
+      double energy = in_f[(params.n_dim + 1)*nfq + i_qpoint]/mass;
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        energy -= .5*math::pow(in_f[i_dim*nfq + i_qpoint]/mass, 2);
+      }
+      double dyn_visc = _viscosity.coefficient(std::sqrt(energy*(_heat_rat - 1.)/constants::specific_gas_air));
+      double omega_wall = 4e4*dyn_visc/(mass*roughness*roughness);
+      gh_f[(params.n_dim + 3)*nfq + i_qpoint] = 2*std::log(omega_wall)*in_f[params.n_dim*nfq + i_qpoint]
+                                                - in_f[(params.n_dim + 3)*nfq + i_qpoint];
     }
   }
   // prime `state_cache` with average state for use in emissivity BC

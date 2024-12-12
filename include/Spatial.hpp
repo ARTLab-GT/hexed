@@ -294,7 +294,7 @@ class Spatial {
 
     public:
     template <typename... pde_args>
-    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, pde_args... args)
+    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, bool update_production, pde_args... args)
     : _eq(args...)
     , derivative{basis}
     , boundary{basis.boundary()}
@@ -353,6 +353,8 @@ class Spatial {
             if (!face_nrml[i_face]) face_nrml[i_face] = cartesian_normal[i_face/2][0];
           }
         }
+        double* debug_variables = nullptr;
+        if constexpr (config::debug_variables) debug_variables = elem.debug_variables();
 
         // compute gradient (times jacobian determinant, cause that's easier)
         if constexpr (Pde::has_diffusion) {
@@ -424,6 +426,11 @@ class Spatial {
             double mult = d_pos;
             if constexpr (is_deformed) mult *= elem_det[i_qpoint];
             for (int i_var = 0; i_var < Pde::n_update; ++i_var) time_rate[1][i_var][i_qpoint] = mult*comp.source(i_var);
+          }
+          if constexpr (config::debug_variables) {
+            for (int i_var = 0; i_var < config::debug_variables; ++i_var) {
+              debug_variables[i_var*n_qpoint + i_qpoint] = comp.debug_variables(i_var);
+            }
           }
         }
 
@@ -800,6 +807,10 @@ class Spatial {
           if constexpr (Pde::has_diffusion) {
             comp.compute_diffusivity();
             scale += comp.diffusivity/max_cfl_d/spacing/spacing;
+          }
+          if constexpr (Pde::has_source) {
+            comp.compute_decay();
+            scale += comp.decay; // should be comp.decay/2, but i'm nervous
           }
           if (_is_local) tss[i_qpoint] = 1./scale;
           else {

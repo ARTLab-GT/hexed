@@ -203,6 +203,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
 , av_rs{row_size}
 , visc{viscosity_model}
 , therm_cond{thermal_conductivity_model}
+, turb{turbulence_model}
 , _namespace{space}
 , _printer{printer}
 , _implicit{implicit}
@@ -466,7 +467,7 @@ void Solver::initialize(std::string(expr)) {
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) state_vars.push_back("momentum" + std::to_string(i_dim));
   state_vars.push_back("density");
   state_vars.push_back("energy");
-  if (params.n_var == params.n_dim + 4) {
+  if (turb == k_omega) {
     state_vars.push_back("turbulent_kinetic_energy");
     state_vars.push_back("turbulent_dissipation_bassi");
   }
@@ -947,7 +948,7 @@ void Solver::update() {
                 .conv_substep = (sub_iters > 1) && use_ldg(),
               };
               apply_state_bcs();
-              if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+              if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
               else compute_euler(km, opts);
               // note that function call must come first to ensure it is evaluated despite short-circuiting
               fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
@@ -995,7 +996,7 @@ void Solver::compute_residual() {
     true,
     bool(_namespace->get<int>("use_filter")),
   };
-  if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+  if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, false);
   else compute_euler(_kernel_mesh(), opts);
 }
 
@@ -1040,18 +1041,15 @@ bool Solver::is_admissible() {
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
   bool admiss = 1;
-  bool finite = 1;
-  auto check_admis = [&](double* data, int n_qpoint) {
-    const int n_var = params.n_var;
+  auto check_admis = [&](double* data, int n_qpoint, int n_var) {
     bool adm = true;
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       adm = adm && (data[nd*n_qpoint + i_qpoint] > 0.)
                 && (data[(nd + 1)*n_qpoint + i_qpoint] > 0.);
       for (int i_var = 0; i_var < n_var; ++i_var) {
-        if (!std::isfinite(data[i_var*n_qpoint + i_qpoint])) {
-          #pragma omp atomic write
-          finite = false;
-        }
+        HEXED_ASSERT(std::isfinite(data[i_var*n_qpoint + i_qpoint]),
+                     format_str(200, "variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]),
+                     assert::Numerical_exception);
       }
     }
     return adm;
@@ -1064,9 +1062,9 @@ bool Solver::is_admissible() {
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     bool elem_admis = true;
-    elem_admis = elem_admis && check_admis(elem.state(), nq);
+    elem_admis = elem_admis && check_admis(elem.state(), nq, params.n_var);
     for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
-      elem_admis = elem_admis && check_admis(elem.face(i_face, false), nq/rs);
+      elem_admis = elem_admis && check_admis(elem.face(i_face, false), nq/rs, nd + 2);
     }
     if (!elem_admis) elem.record = 1;
     admiss = admiss && elem_admis;
@@ -1079,10 +1077,9 @@ bool Solver::is_admissible() {
     int n_fine = params.n_vertices()/2;
     for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
     for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-      refined_admiss = refined_admiss && check_admis(ref.fine[i_fine], nq/rs);
+      refined_admiss = refined_admiss && check_admis(ref.fine[i_fine], nq/rs, nd + 2);
     }
   }
-  HEXED_ASSERT(finite, "non-finite state encountered", assert::Numerical_exception);
   sw.work_units_completed += acc_mesh->elements().size();
   sw.stopwatch.pause();
   return admiss && refined_admiss;
@@ -1311,6 +1308,47 @@ class Vis_evaluator {
   std::vector<std::string> _var_names;
 };
 //! \endcond
+
+void Solver::bounds_surface(std::string expr, int bc_sn, int n_sample = 20) {
+  // setup
+  const int nd = params.n_dim;
+  auto& bc_cons {acc_mesh->boundary_connections()};
+  if (!bc_cons.size()) return;
+  Vis_evaluator<Boundary_connection> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
+    expr, bc_cons[0], params.n_dim - 1
+  );
+  std::vector<std::string> var_names = evaluator.var_names();
+  Int n_var = var_names.size();
+  Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
+  // write the state to the faces so that the BCs can access it
+  compute_write_face(_kernel_mesh());
+  // compute the integral
+  Array<double> bounds({2, n_var});
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    bounds(0)[i_var] = huge;
+    bounds(1)[i_var] = -huge;
+  }
+  //#pragma omp parallel for reduction(+:integral)
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con {bc_cons[i_con]};
+    if (con.bound_cond_serial_n() != bc_sn) continue;
+    Array<double> qpoints{evaluator.evaluate(con)};
+    Vis_data vis_dat(qpoints(nd, end), basis);
+    Array<double> interior = vis_dat.interior(n_sample);
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int i_point = 0; i_point < interior(i_var).size(); ++i_point) {
+        bounds(0)[i_var] = std::min(bounds(0)[i_var], interior(i_var)[i_point]);
+        bounds(1)[i_var] = std::max(bounds(1)[i_var], interior(i_var)[i_point]);
+      }
+    }
+  }
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    _namespace->assign("min_surface_" + var_names[i_var], bounds(0)[i_var]);
+    _namespace->assign("max_surface_" + var_names[i_var], bounds(1)[i_var]);
+  }
+}
 
 void Solver::integrate_field(std::string expr) {
   Stopwatch_tree::Starter sw_starter(stopwatch["integrals"]["field"]);

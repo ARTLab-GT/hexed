@@ -5,6 +5,7 @@
 #include "Surface_geom.hpp"
 #include "Boundary_face.hpp"
 #include "Interpreter.hpp"
+#include "Transport_model.hpp"
 
 namespace hexed {
 
@@ -162,8 +163,13 @@ class Thermal_equilibrium : public Thermal_bc {
 class No_slip : public Flow_bc {
   double _coercion;
   std::shared_ptr<Thermal_bc> _thermal;
+  Transport_model _viscosity;
+  Turbulence_model _turb;
+  double _heat_rat;
   public:
-  No_slip(std::shared_ptr<Thermal_bc> = std::make_shared<Prescribed_heat_flux>(), double heat_flux_coercion = 2.);
+  double roughness; //! \brief set and update this as desired
+  No_slip(std::shared_ptr<Thermal_bc>, double roughness, double heat_rat,
+          Transport_model viscosity, Turbulence_model, double heat_flux_coercion = 2.);
   void apply_advection(Boundary_face&) override;
   //! \note `apply_state` must be called before `apply_flux` to prime `state_cache`
   void apply_state(Boundary_face&) override;

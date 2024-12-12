@@ -71,7 +71,10 @@ Flow_bc* Case::_make_bc(std::string name) {
       thermal = std::make_shared<Prescribed_energy>(energy);
     }
     HEXED_ASSERT(thermal, "thermal BC specification not understood", assert::User_error);
-    return new No_slip(thermal, _vard("heat_flux_coercion"));
+    auto bc = new No_slip(thermal, _vard("surface_roughness"), heat_rat,
+                          _solver().viscosity_model(), _solver().turbulence_model(), _vard("heat_flux_coercion"));
+    _roughness.push_back(&bc->roughness);
+    return bc;
   } else if (name == "expression") {
     HEXED_ASSERT(   _inter.variables->lookup<std::string>("surface_bc_state")
                  && _inter.variables->lookup<std::string>("surface_bc_flux"),
@@ -272,7 +275,6 @@ Case::Case(std::string input_script)
       if (_vars("turbulence_model") == "k-omega") {
         freestream(n_dim + 2) = _vard("freestream_density")*_vard("freestream_specific_turbulent_kinetic_energy");
         freestream(n_dim + 3) = _vard("freestream_density")*std::log(_vard("freestream_specific_turbulent_dissipation"));
-        HEXED_ASSERT(std::isfinite(freestream(n_dim + 3)), "invalid `freestream_turbulent_dissipation`");
       }
       _set_vector("freestream_direction", full_direction);
       double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*_vard("freestream_density")*veloc.squaredNorm();
@@ -563,6 +565,7 @@ Case::Case(std::string input_script)
     HEXED_ASSERT(_vari("mesh_init"), "attempt to update flow when mesh has not been created", assert::User_error);
     bool avw = _vard("art_visc_width") > 0;
     bool avc = _vard("art_visc_constant") > 0;
+    for (double* r : _roughness) *r = _vard("surface_roughness");
     int iter = _vari("iteration");
     int print_freq = _vari("print_freq");
     int n = iter ? print_freq - iter%print_freq : 1;
@@ -598,6 +601,20 @@ Case::Case(std::string input_script)
     return _solver().stopwatch_tree().report() + _solver().mesh().stopwatch_tree().report();
   }));
 
+  _inter.variables->create<std::string>("update_roughness", new Namespace::Heisenberg<std::string>([this]() {
+    _solver().bounds_surface(
+      "inv_roughness = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)*density/(dyn_visc*max_roughness_plus);",
+      2*_vari("n_dim"),
+      20
+    );
+    _inter.variables->assign("surface_roughness", 1./_vard("max_surface_inv_roughness"));
+    return "";
+  }));
+
+  _inter.variables->create<std::string>("bounds_surface", new Namespace::Heisenberg<std::string>([this]() {
+    _solver().bounds_surface(_vars("bounds_surface_vars"), _solver().mesh().surface_bc_sn(), _vari("vis_n_sample"));
+    return "";
+  }));
   _inter.variables->create<std::string>("integrate_field", new Namespace::Heisenberg<std::string>([this]() {
     _solver().integrate_field(_vars("integrand_field"));
     return "";

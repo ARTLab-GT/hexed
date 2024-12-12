@@ -45,6 +45,17 @@ class Navier_stokes {
     static constexpr int i_bulk_art_visc = n_update;
     static constexpr int i_laplacian_art_visc = n_update + 1;
     static constexpr double heat_rat = 1.4;
+
+    static constexpr double alpha = 13./25.;
+    static constexpr double alpha_s = 1.; //TODO: Confirm definition of alpha_s
+    static constexpr double beta_s = 9./100.;
+    static constexpr double beta_0 = 0.0708;
+    static constexpr double sigma = 1./2.;
+    static constexpr double sigma_s = 3./5.;
+    static constexpr double sigma_do = 1./8.;
+    static constexpr double c_lim = 7./8.;
+    static constexpr double turb_prandtl = .9;
+
     Transport_model dyn_visc;
     Transport_model therm_cond;
 
@@ -84,19 +95,19 @@ class Navier_stokes {
     class Computation {
       const Pde& _eq;
       public:
+      Mat<config::debug_variables> debug_variables; //!< \brief can be populated at any time
       Computation(const Pde& eq) : _eq{eq} {}
 
       Mat<n_state> state;
       void fetch_state(int stride, const double* data) {
-        for (int i_var = 0; i_var < n_update; ++i_var) state(i_var) = data[i_var*stride];
+        for (int i_var = 0; i_var < n_state - 2; ++i_var) state(i_var) = data[i_var*stride];
         state(i_bulk_art_visc) = data[bulk_av_offset(_eq._n_var)*stride];
         state(i_laplacian_art_visc) = data[laplacian_av_offset(_eq._n_var)*stride];
       }
       Mat<n_update> update_state;
       void fetch_extrap_state(int stride, const double* data) {
+        state.setZero();
         for (int i_var = 0; i_var < n_extrap; ++i_var) state(i_var) = data[i_var*stride];
-        state(i_bulk_art_visc) = 0.;
-        state(i_laplacian_art_visc) = 0.;
         update_state = state(Eigen::seqN(0, n_update));
       }
 
@@ -139,16 +150,24 @@ class Navier_stokes {
       double dyn_visc_coef;
       double therm_cond_coef;
       double energy_cond;
+      double real_turb_diss;
+      double k_bar;
+      double beta;
       //! \todo __Carter:__ Compute whatever variables you need for the turbulent fluxes
       //! which might also be needed for source terms and/or the time step calculation.
       void compute_scalars_diff() {
         bulk_av = std::abs(state(i_bulk_art_visc));
         laplacian_av = std::abs(state(i_laplacian_art_visc));
-        sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)
-                              *(heat_rat - 1)/constants::specific_gas_air);
+        double spec_heat_v = constants::specific_gas_air/(heat_rat - 1.);
+        double spec_heat_p = heat_rat*constants::specific_gas_air;
+        sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)/spec_heat_v);
+        // taking abs ensures that they will never be negative
+        // and makes the probability that they are exactly 0 very low, which is good cause we have to divide by them
+        real_turb_diss = std::exp(state(i_turb_diss)/mass);
+        k_bar = std::abs(state(i_turb_kin_ener)/mass);
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
-        energy_cond = therm_cond_coef*(heat_rat - 1)/constants::specific_gas_air;
+        energy_cond = therm_cond_coef/spec_heat_v;
       }
 
       Mat<n_extrap, n_dim> gradient;
@@ -162,40 +181,77 @@ class Navier_stokes {
         compute_scalars_diff();
         auto seq = Eigen::seqN(0, n_dim);
         auto mmtm = state(seq);
-        Mat<n_update, n_dim> flux_diff_phys; // flux in physical space
         Mat<n_dim> veloc = mmtm/mass;
         Mat<n_dim, n_dim> veloc_grad = (gradient(seq, all) - veloc*gradient(i_mass, all))/mass;
-        Mat<n_dim, n_dim> stress = dyn_visc_coef*(veloc_grad + veloc_grad.transpose())
-                                   + (bulk_av*mass - 2./3.*dyn_visc_coef)
-                                     *veloc_grad.trace()*Mat<n_dim, n_dim>::Identity();
-        flux_diff_phys = -laplacian_av*gradient;
+        double divergence = veloc_grad.trace();
+        Mat<n_dim, n_dim> rotation = .5*(veloc_grad - veloc_grad.transpose());
+        Mat<n_dim, n_dim> strain_rate = .5*(veloc_grad + veloc_grad.transpose());
+        Mat<n_dim, n_dim> identity = Mat<n_dim, n_dim>::Identity();
+
+        /*! \note instead of \f$ \hat{\omega} = \max(\omega, C_{lim} \sqrt{2 \bar{S}_{ij} \bar{S}_{ij}/\beta^*}) \f$,
+         * do \f$ \hat{\omega} = (\omega^4 + (C_{lim} \sqrt{2 \bar{S}_{ij} \bar{S}_{ij}/\beta^*})^4)^{1/4} \f$
+         * for a smoother transition.
+         */
+        double lim_sq = c_lim*c_lim*2*(strain_rate - 1./3.*divergence*identity).squaredNorm()/beta_s;
+        double omega_hat = std::pow(math::pow(real_turb_diss, 4) + lim_sq*lim_sq, .25);
+        double total_visc = dyn_visc_coef + mass*k_bar/omega_hat;
+
+        Mat<n_dim, n_dim> turb_stress_per_k = 2*mass/omega_hat*strain_rate - 2./3.*mass*(1. + 1./omega_hat)*identity;
+        Mat<n_dim, n_dim> stress = 2*dyn_visc_coef*strain_rate + (bulk_av*mass - 2./3.*dyn_visc_coef)*identity
+                                   + turb_stress_per_k*k_bar;
+        Mat<n_update, n_dim> flux_diff_phys = -laplacian_av*gradient; // flux in physical space
         flux_diff_phys(seq, all) -= stress;
         Mat<1, n_dim> int_ener_grad = -state(i_energy)/mass/mass*gradient(i_mass, all)
                                       + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
-        flux_diff_phys(i_energy, all) -= veloc.transpose()*stress + energy_cond*int_ener_grad;
+        flux_diff_phys(i_energy, all) -= veloc.transpose()*stress
+                                         + (energy_cond + heat_rat*mass*k_bar/omega_hat/turb_prandtl)*int_ener_grad;
+        source.setZero();
         if constexpr (turb == k_omega) {
-          // these turbulent fluxes are wrong
-          flux_diff_phys(i_turb_kin_ener, all) = -dyn_visc_coef/mass*gradient(i_turb_kin_ener, all);
-          flux_diff_phys(i_turb_diss, all) = -dyn_visc_coef/mass*gradient(i_turb_diss, all);
+          Mat<n_dim> grad_k = gradient(i_turb_kin_ener, all)/mass
+                              - state(i_turb_kin_ener)/mass/mass*gradient(i_mass, all);
+          Mat<n_dim> grad_omega = gradient(i_turb_diss, all)/mass
+                                  - state(i_turb_diss)/mass/mass*gradient(i_mass, all);
+          // note that unlike in the turbulent viscosity, here we do _not_ use `omega_hat`
+          flux_diff_phys(i_turb_kin_ener, all) -= (dyn_visc_coef + sigma_s*mass*k_bar/real_turb_diss)*grad_k;
+          flux_diff_phys(i_turb_diss, all) -= (dyn_visc_coef + sigma*mass*k_bar/real_turb_diss)*grad_omega;
+
+          Mat<n_dim, n_dim> S_hat = strain_rate - .5*divergence*identity;
+          double sum = 0;
+          for (int i = 0; i < n_dim; ++i) {
+            for (int j = 0; j < n_dim; ++j) {
+              for (int k = 0; k < n_dim; ++k){
+                sum += rotation(i, j)*rotation(j, k)*S_hat(k, i);
+              }
+            }
+          }
+          double chi_o = std::abs(sum)/math::pow(beta_s*real_turb_diss, 3);
+          double f_beta = (1. + 85.*chi_o)/(1. + 100.*chi_o);
+          beta = beta_0*f_beta;
+
+          double prod_per_k = 0.0;
+          for (int i = 0; i < n_dim; ++i) {
+            for (int j = 0; j < n_dim; ++j) {
+              prod_per_k += turb_stress_per_k(i, j)*veloc_grad(i, j);
+            }
+          }
+          double lim = 1e3*mass*real_turb_diss;
+          double lim_factor = lim/std::sqrt(lim*lim + prod_per_k*prod_per_k);
+          debug_variables(0) = mass*k_bar/omega_hat;
+          prod_per_k = lim_factor*prod_per_k;
+          double dot = grad_k.dot(grad_omega);
+          double grad_k_omega_source = std::max(sigma_do*mass/real_turb_diss*grad_k.dot(grad_omega), 0.);
+          double grad_omega_source = (dyn_visc_coef + sigma*mass*k_bar/omega_hat)*grad_omega.squaredNorm();
+          source(i_turb_kin_ener) = prod_per_k*k_bar - beta_s*real_turb_diss*state(i_turb_kin_ener);
+          source(i_turb_diss) = alpha*prod_per_k + grad_omega_source + grad_k_omega_source - beta*mass*real_turb_diss;
+          source(i_energy) = -source(i_turb_kin_ener);
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
       }
 
       Mat<n_update> source;
-      /*! \todo __Carter:__ compute the turbulent source terms.
-       * Set `source(i_turb_kin_ener)` and `source(i_turb_diss)` to contain the source terms of
-       * \f$ \rho k \f$ and \f$ \rho \tilde{\omega} \f$, respectively.
-       */
-      void compute_source() {
-        if constexpr (has_source) {
-          source.setZero();
-        }
-        if constexpr (turb == k_omega) {
-          // these source terms are wrong
-          source(i_turb_kin_ener) = -1e1*dyn_visc_coef/mass*state(i_turb_kin_ener);
-          source(i_turb_diss) = -1e1*dyn_visc_coef/mass*state(i_turb_diss);
-        }
-      }
+      //! \brief does nothing---source terms are computed in `compute_diffusion`
+      //! \details because they need access to gradients
+      void compute_source() {}
 
       double char_speed;
       void compute_char_speed() {
@@ -206,14 +262,25 @@ class Navier_stokes {
       }
 
       double diffusivity;
-      /*! \todo __Carter:__ Modify the diffusivity estimate to keep the time step stable for turbulent flows.
-       * This is can come later.
-       * To start off, you can just reduce \ref max_safety until it's stable.
-       */
       void compute_diffusivity() {
         compute_scalars_conv();
         compute_scalars_diff();
-        diffusivity = std::abs(laplacian_av) + std::max(std::abs(bulk_av) + dyn_visc_coef/mass, energy_cond/mass);
+        // this is a conservative estimate for `dyn_visc_turb` because `omega_hat` is not available
+        double dyn_visc_turb = (turb == k_omega) ? state(i_turb_kin_ener)*std::exp(-state(i_turb_diss)/state(i_mass)) : 0.;
+        diffusivity = std::abs(laplacian_av) + math::max(
+          (dyn_visc_coef + math::max(1, sigma, sigma_s)*dyn_visc_turb)/mass,
+          std::abs(bulk_av) + (dyn_visc_coef + dyn_visc_turb)/mass,
+          (dyn_visc_coef + dyn_visc_turb)/mass + (energy_cond + heat_rat*dyn_visc_turb/turb_prandtl)/mass
+        );
+      }
+
+      double decay;
+      void compute_decay() {
+        decay = 0;
+        if constexpr (turb == k_omega) {
+          real_turb_diss = std::abs(state(i_turb_diss)/mass);
+          decay = std::max(beta_s*real_turb_diss, beta_s); // note: beta <= beta_s
+        }
       }
     };
 
@@ -341,6 +408,7 @@ class Advection {
   class Computation {
     const Advection& _eq;
     public:
+    Mat<config::debug_variables> debug_variables; //!< \brief can be populated at any time
     Computation(const Advection& eq) : _eq{eq} {}
 
     Mat<n_state> state;
@@ -375,6 +443,11 @@ class Advection {
     double char_speed;
     void compute_char_speed() {
       char_speed = std::max(1., state(Eigen::seqN(0, n_dim)).norm());
+    }
+
+    double decay;
+    void compute_decay() {
+      decay = 0;
     }
   };
 };
@@ -419,6 +492,7 @@ class Smooth_art_visc {
   class Computation {
     const Smooth_art_visc& _eq;
     public:
+    Mat<config::debug_variables> debug_variables; //!< \brief can be populated at any time
     Computation(const Smooth_art_visc& eq) : _eq{eq} {}
 
     Mat<n_state> state;
@@ -448,6 +522,11 @@ class Smooth_art_visc {
         double f = std::abs(state(i_var));
         source(i_var) = ((i_var == 1) ? std::sqrt(f) : f)/_eq._diff_time;
       }
+    }
+
+    double decay;
+    void compute_decay() {
+      decay = 0;
     }
   };
 };
@@ -483,6 +562,7 @@ class Fix_therm_admis {
   class Computation {
     const Fix_therm_admis& _eq;
     public:
+    Mat<config::debug_variables> debug_variables; //!< \brief can be populated at any time
     Computation(const Fix_therm_admis& eq) : _eq{eq} {}
 
     Mat<n_state> state;
