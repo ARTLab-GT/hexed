@@ -565,6 +565,7 @@ Case::Case(std::string input_script)
     HEXED_ASSERT(_vari("mesh_init"), "attempt to update flow when mesh has not been created", assert::User_error);
     bool avw = _vard("art_visc_width") > 0;
     bool avc = _vard("art_visc_constant") > 0;
+    for (double* r : _roughness) *r = _vard("surface_roughness");
     int iter = _vari("iteration");
     int print_freq = _vari("print_freq");
     int n = iter ? print_freq - iter%print_freq : 1;
@@ -606,9 +607,7 @@ Case::Case(std::string input_script)
       2*_vari("n_dim"),
       20
     );
-    double rough = 1./_vard("max_surface_inv_roughness");
-    _inter.variables->assign("surface_roughness", rough);
-    for (double* r : _roughness) *r = rough;
+    _inter.variables->assign("surface_roughness", 1./_vard("max_surface_inv_roughness"));
     return "";
   }));
 

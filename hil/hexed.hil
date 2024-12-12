@@ -199,7 +199,7 @@ write_freq = 10^4
 iter_width = 10
 print_freq = 100
 update_roughness_freq = 10^3
-surface_roughness = 1e-6
+surface_roughness = -1.
 max_roughness_plus = 4.
 refine_if = {false}
 unrefine_if = {false}
@@ -357,9 +357,9 @@ iterate = {
     case0 = {}
     case1 = {
         update_roughness
-        println({surface roughness: } + surface_roughness)
+        println({updating surface roughness to } + surface_roughness)
     }
-    $$({case} + (iteration%update_roughness_freq == 0))
+    $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0))
     $write_iter
     $vis_iter
     hexed_prev_except = except
@@ -428,9 +428,15 @@ mesh = {
     } + min_surface_position0 + { } + max_surface_position0 + {
     } + min_surface_position1 + { } + max_surface_position1 + {
     } + min_surface_position2 + { } + max_surface_position2 + {
-    })
+})
     geom_length = sqrt((max_surface_position0 - min_surface_position0)^2 + (max_surface_position1 - min_surface_position1)^2 + (max_surface_position2 - min_surface_position2)^2)
     println({geometry length: } + geom_length)
+    case0 = {}
+    case1 = {
+        surface_roughness = 1e-6*geom_length
+        println({initializing surface roughness height to } + surface_roughness)
+    }
+    $$({case} + (surface_roughness < 0))
     print_emph = true; println({meshing complete with } + n_elements + { elements} + newline)
 }
 
