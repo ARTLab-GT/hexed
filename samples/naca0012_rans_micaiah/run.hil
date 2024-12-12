@@ -64,6 +64,7 @@ done = {iteration > 5000 & (drag_coef_max - drag_coef_min < 5e-3*(drag_coef_min 
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
+working_dir = {hexed_out_speedup}
 
 vis_field_vars = vis_field_vars + {
     specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
