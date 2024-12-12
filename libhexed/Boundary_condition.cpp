@@ -398,8 +398,8 @@ void No_slip::apply_state(Boundary_face& bf) {
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         energy -= .5*math::pow(in_f[i_dim*nfq + i_qpoint]/mass, 2);
       }
-      double dyn_visc = _viscosity.coefficient(std::sqrt(energy*(_heat_rat - 1.)/constants::specific_gas_air));
-      double omega_wall = 4e4*dyn_visc/(mass*roughness*roughness);
+      double dyn_visc = _viscosity.coefficient(std::sqrt(std::abs(energy*(_heat_rat - 1.)/constants::specific_gas_air)));
+      double omega_wall = std::max(4e4*dyn_visc/(mass*roughness*roughness), 100.);
       gh_f[(params.n_dim + 3)*nfq + i_qpoint] = 2*std::log(omega_wall)*in_f[params.n_dim*nfq + i_qpoint]
                                                 - in_f[(params.n_dim + 3)*nfq + i_qpoint];
     }

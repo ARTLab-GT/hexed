@@ -13,6 +13,10 @@
 
 namespace hexed {
 
+inline bool effectively_finite(double x) {
+  return std::isfinite(x) && std::abs(x) < std::sqrt(std::numeric_limits<double>::max());
+}
+
 //! class to contain all the kernels in a scope
 //! parameterized by the type of element (deformed/cartesian) and the PDE
 template <template<int, int> typename Pde_templ, bool is_deformed>
@@ -426,6 +430,7 @@ class Spatial {
             double mult = d_pos;
             if constexpr (is_deformed) mult *= elem_det[i_qpoint];
             for (int i_var = 0; i_var < Pde::n_update; ++i_var) time_rate[1][i_var][i_qpoint] = mult*comp.source(i_var);
+            for (int i_var = 0; i_var < Pde::n_update; ++i_var) HEXED_ASSERT(effectively_finite(mult*comp.source(i_var)), "source " + std::to_string(i_var) + " is not finite", assert::Numerical_exception);
           }
           if constexpr (config::debug_variables) {
             for (int i_var = 0; i_var < config::debug_variables; ++i_var) {
@@ -442,8 +447,18 @@ class Spatial {
             if constexpr (Pde::has_convection) {
               // fetch row data
               row_f = Row_rw<Pde::n_update, row_size>::read_row(flux[i_dim][0], ind);
+              for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+                for (int i_node = 0; i_node < row_size; ++i_node) {
+                  HEXED_ASSERT(effectively_finite(row_f(i_node, i_var)), format_str(200, "flux %i %i %i is not finite", i_dim, i_var, i_node));
+                }
+              }
               // fetch face data
               face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
+              for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+                for (int i_side = 0; i_side < 2; ++i_side) {
+                  HEXED_ASSERT(effectively_finite(face_f(i_side, i_var)), format_str(200, "face flux %i %i %i is not finite (%e)", i_dim, i_var, i_side, face_f(i_side, i_var)));
+                }
+              }
               // differentiate and write to temporary storage
               Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f, face_f), time_rate[0][0], ind, 1.);
             }
@@ -474,6 +489,21 @@ class Spatial {
         }
 
         bool fringe = elem.mask() < _mask;
+        if (Pde::n_update == n_dim + 4 && Pde::n_state == n_dim + 6) {
+          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+            for (int i_var = n_dim; i_var < Pde::n_update; ++i_var) {
+              double mult = _update*tss[i_qpoint]/d_pos*(!fringe);
+              if constexpr (is_deformed) mult /= elem_det[i_qpoint];
+              double s = state[i_var*n_qpoint + i_qpoint];
+              double u = time_rate[0][i_var][i_qpoint] + time_rate[1][i_var][i_qpoint];
+              if (i_var == n_dim + 4) u = std::exp(u/state[n_dim*n_qpoint + i_qpoint]) - 1.;
+              else u /= state[i_var*n_qpoint + i_qpoint];
+              double lim = 1e-1;
+              if (u < -lim) tss[i_qpoint] *= -lim/u;
+            }
+          }
+        }
+
         // write update to interior
         double* ref_state = elem.residual_cache();
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
@@ -496,6 +526,7 @@ class Spatial {
                 }
               }
             }
+            HEXED_ASSERT(std::isfinite(u), "update " + std::to_string(i_var) + " is not finite", assert::Numerical_exception);
             u *= mult;
             if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
             else update(i_var) = u;

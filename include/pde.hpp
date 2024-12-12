@@ -194,7 +194,6 @@ class Navier_stokes {
          */
         double lim_sq = c_lim*c_lim*2*(strain_rate - 1./3.*divergence*identity).squaredNorm()/beta_s;
         double omega_hat = std::pow(math::pow(real_turb_diss, 4) + lim_sq*lim_sq, .25);
-        double total_visc = dyn_visc_coef + mass*k_bar/omega_hat;
 
         Mat<n_dim, n_dim> turb_stress_per_k = 2*mass/omega_hat*strain_rate - 2./3.*mass*(1. + 1./omega_hat)*identity;
         Mat<n_dim, n_dim> stress = 2*dyn_visc_coef*strain_rate + (bulk_av*mass - 2./3.*dyn_visc_coef)*identity
@@ -244,6 +243,9 @@ class Navier_stokes {
           source(i_turb_kin_ener) = prod_per_k*k_bar - beta_s*real_turb_diss*state(i_turb_kin_ener);
           source(i_turb_diss) = alpha*prod_per_k + grad_omega_source + grad_k_omega_source - beta*mass*real_turb_diss;
           source(i_energy) = -source(i_turb_kin_ener);
+          HEXED_ASSERT(std::isfinite(source.norm()),
+            format_str(200, "source term is not finite %e %e %e %e %e %e %e", state(i_turb_diss), mass, real_turb_diss, omega_hat, prod_per_k, grad_omega_source, grad_k_omega_source),
+            assert::Numerical_exception);
         }
         flux_diff = flux_diff_phys*normal; // flux in reference space
       }

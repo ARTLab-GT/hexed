@@ -25,7 +25,8 @@ unrefine_if = {!is_extruded}
 init_layer_splits = 8
 bl_multirate = true
 flow_iters = 10
-bl_iters = 10
+bl_iters = 1
+n_cheby_bl = 5
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
