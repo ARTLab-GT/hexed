@@ -23,9 +23,11 @@ refine_if = {is_extruded & ref_level < 9}
 unrefine_if = {!is_extruded}
 {$set_geometry_refinement}
 init_layer_splits = 8
+{
 bl_multirate = true
 flow_iters = 10
 bl_iters = 2
+}
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
