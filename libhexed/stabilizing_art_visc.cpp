@@ -18,7 +18,7 @@ class Stab_art_visc : public Kernel<Kernel_element&> {
   public:
   Stab_art_visc(const Basis& basis, double char_speed) :
     _char_speed{char_speed},
-    _ramp_center{-4.25*std::log(row_size - 1)/std::log(10)},
+    _ramp_center{-6.25*std::log(row_size - 1)/std::log(10)},
     _row_weights{basis.node_weights()},
     _qpoint_weights{math::pow_outer(_row_weights, n_dim)},
     _face_weights{math::pow_outer(_row_weights, n_dim - 1)},

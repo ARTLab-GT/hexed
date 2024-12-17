@@ -233,7 +233,7 @@ class Navier_stokes {
               prod_per_k += turb_stress_per_k(i, j)*veloc_grad(i, j);
             }
           }
-          double lim = 20*mass*real_turb_diss;
+          double lim = 1e4*mass*real_turb_diss;
           double lim_factor = lim/std::sqrt(lim*lim + prod_per_k*prod_per_k);
           debug_variables(0) = mass*k_bar/omega_hat;
           prod_per_k = lim_factor*prod_per_k;
@@ -268,8 +268,8 @@ class Navier_stokes {
         compute_scalars_conv();
         compute_scalars_diff();
         // this is a conservative estimate for `dyn_visc_turb` because `omega_hat` is not available
-        double dyn_visc_turb = (turb == k_omega) ? state(i_turb_kin_ener)*std::exp(-state(i_turb_diss)/state(i_mass)) : 0.;
-        diffusivity = std::abs(laplacian_av) + math::max(
+        double dyn_visc_turb = (turb == k_omega) ? std::abs(state(i_turb_kin_ener))*std::exp(-state(i_turb_diss)/state(i_mass)) : 0.;
+        diffusivity = 10*std::abs(laplacian_av) + math::max(
           (dyn_visc_coef + math::max(1, sigma, sigma_s)*dyn_visc_turb)/mass,
           std::abs(bulk_av) + (dyn_visc_coef + dyn_visc_turb)/mass,
           (dyn_visc_coef + dyn_visc_turb)/mass + (energy_cond + heat_rat*dyn_visc_turb/turb_prandtl)/mass
@@ -280,7 +280,7 @@ class Navier_stokes {
       void compute_decay() {
         decay = 0;
         if constexpr (turb == k_omega) {
-          real_turb_diss = std::abs(state(i_turb_diss)/mass);
+          real_turb_diss = std::exp(state(i_turb_diss)/mass);
           decay = std::max(beta_s*real_turb_diss, beta_s); // note: beta <= beta_s
         }
       }
