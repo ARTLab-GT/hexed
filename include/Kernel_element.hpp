@@ -14,7 +14,6 @@ class Kernel_element {
   public:
   virtual ~Kernel_element() = default;
   int record = 0; //!< for algorithms to book-keep general information
-  double min_laplacian_av = 0;
   virtual int mask() const = 0;
   //! \brief pointer to the data where the state variables are stored
   //! \details includes any non-conservation variables such as artificial viscosity coefficient

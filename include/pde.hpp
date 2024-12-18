@@ -100,7 +100,7 @@ class Navier_stokes {
 
       Mat<n_state> state;
       void fetch_state(int stride, const double* data) {
-        for (int i_var = 0; i_var < n_extrap; ++i_var) state(i_var) = data[i_var*stride];
+        for (int i_var = 0; i_var < n_state - 2; ++i_var) state(i_var) = data[i_var*stride];
         state(i_bulk_art_visc) = data[bulk_av_offset(_eq._n_var)*stride];
         state(i_laplacian_art_visc) = data[laplacian_av_offset(_eq._n_var)*stride];
       }

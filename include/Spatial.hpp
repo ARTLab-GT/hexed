@@ -564,7 +564,8 @@ class Spatial {
 
     virtual void operator()(Sequence<Kernel_element&>& elements) {
       #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
+      {
         auto& elem = elements[i_elem];
         double* state = elem.state();
         std::array<double*, 6> visc_faces;
@@ -638,8 +639,6 @@ class Spatial {
       for (int i_con = 0; i_con < connections.size(); ++i_con) {
         auto& con = connections[i_con];
         auto dir = con.get_direction();
-        int sns [] {1000, 996};
-        bool print = (con.elem_record(0) == sns[0] && con.elem_record(1) == sns[1]) || (con.elem_record(0) == sns[1] && con.elem_record(1) == sns[0]);
         double face [2 + 2*Pde::has_diffusion][Pde::n_extrap*n_fqpoint] {}; // copying face data to temporary stack storage improves efficiency
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -655,8 +654,7 @@ class Spatial {
         }
         Face_permutation<n_dim, row_size> perm(dir, face[1]); // only used for deformed
         if constexpr (is_deformed) {
-          // if order of quadrature points on both faces does not match, reorder face 1 to match face 0
-          perm.match_faces();
+          perm.match_faces(); // if order of quadrature points on both faces does not match, reorder face 1 to match face 0
           for (int i_side : {0, 1}) sign[i_side] = 1 - 2*dir.flip_normal(i_side);
           double* n = con.normal();
           for (int i_dof = 0; i_dof < n_dim*n_fqpoint; ++i_dof) {
@@ -693,17 +691,8 @@ class Spatial {
             }
             Mat<Pde::n_update> flux = .5*(
               comp[0].flux_conv + comp[1].flux_conv
-              + std::max(comp[0].char_speed, comp[1].char_speed)*comp[0].normal.norm()
-                *(comp[0].update_state - comp[1].update_state)
+              + std::max(comp[0].char_speed, comp[1].char_speed)*comp[0].normal.norm()*(comp[0].update_state - comp[1].update_state)
             );
-            if (print) {
-              #pragma omp critical
-              std::cout << "state: " << comp[0].state[n_dim] << " " << comp[1].state[n_dim] << std::endl;
-              #pragma omp critical
-              std::cout << "conv flux: " << comp[0].flux_conv[n_dim]
-                        << " " << comp[1].flux_conv[n_dim]
-                        << " " << flux[n_dim] << std::endl;
-            }
             for (int i_side = 0; i_side < 2; ++i_side) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
                 face[i_side][i_var*n_fqpoint + i_qpoint] = sign[i_side]*flux(i_var);
@@ -750,8 +739,6 @@ class Spatial {
       #pragma omp parallel for
       for (int i_con = 0; i_con < connections.size(); ++i_con) {
         auto& con = connections[i_con];
-        int sns [] {1000, 996};
-        bool print = (con.elem_record(0) == sns[0] && con.elem_record(1) == sns[1]) || (con.elem_record(0) == sns[1] && con.elem_record(1) == sns[0]);
         auto dir = con.get_direction();
         double face [2][Pde::n_update*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
@@ -770,12 +757,6 @@ class Spatial {
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             double avg = 0;
             for (int i_side = 0; i_side < 2; ++i_side) avg += .5*sign[i_side]*face[i_side][i_var*n_fqpoint + i_qpoint];
-            if (print && i_var == n_dim) {
-              #pragma omp critical
-              std::cout << "diff flux: " << sign[0]*face[0][n_dim*n_fqpoint + i_qpoint] << " "
-                        << sign[1]*face[1][n_dim*n_fqpoint + i_qpoint] << " "
-                        << avg << std::endl;
-            }
             for (int i_side = 0; i_side < 2; ++i_side) face[i_side][i_var*n_fqpoint + i_qpoint] = sign[i_side]*avg;
           }
         }
