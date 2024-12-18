@@ -61,7 +61,7 @@ class Stab_art_visc : public Kernel<Kernel_element&> {
       else if (indicator < _ramp_center + _half_width) indicator = .5*(1 + std::sin(constants::pi*(indicator - _ramp_center)/2/_half_width));
       else indicator = 1;
       // add dimensional scaling and write to the element
-      elements[i_elem].uncert() = std::max(.99*elements[i_elem].uncert(), (row_size - 1)*_char_speed*elements[i_elem].nominal_size()*indicator);
+      elements[i_elem].min_laplacian_av = std::max(.99*elements[i_elem].min_laplacian_av, (row_size - 1)*_char_speed*elements[i_elem].nominal_size()*indicator);
     }
   }
 };

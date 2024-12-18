@@ -141,6 +141,7 @@ class Accessible_mesh : public Mesh {
   void cleanup() override;
   next::Sequence<next::Vertex&> shape_vertices() {return _blocks.verts();}
   next::Sequence<next::Vertex&> shape_boundary_vertices() {return _blocks.boundary_verts();}
+  void set_record_sn(); // sets the `Element::record` of each element to its serial number
 
   void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
   void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;

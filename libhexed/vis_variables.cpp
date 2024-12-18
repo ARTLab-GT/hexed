@@ -12,6 +12,7 @@ void element(Namespace& space, Element& elem) {
   space.assign("nom_sz", elem.nominal_size());
   space.assign("uncertainty", elem.uncertainty);
   space.assign("snapping_problem", int(elem.snapping_problem));
+  space.assign("record", elem.record);
   auto params = elem.storage_params();
   Mat<3> center;
   center.setZero();

@@ -723,7 +723,7 @@ void Solver::set_art_visc_admis() {
   double char_speed = _namespace->get<double>("freestream_speed") + _namespace->get<double>("freestream_sound_speed");
   stabilizing_art_visc(_kernel_mesh(), char_speed);
   // enforce C^0 continuity
-  share_vertex_data([](Element& elem, int){return elem.uncertainty;},
+  share_vertex_data([](Element& elem, int){return elem.min_laplacian_av;},
                     [](Element& elem, int i_vert)->double&{return elem.vertex_elwise_av(i_vert);},
                     {-huge, &max_fun});
   Mat<dyn, dyn> interp = Gauss_lobatto(2).interpolate(basis.nodes());
@@ -1462,6 +1462,7 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
   HEXED_ASSERT(params.n_dim > wireframe, "can only visualize field wireframes in > 1D");
   auto& elems = acc_mesh->elements();
   if (!elems.size()) return;
+  acc_mesh->set_record_sn();
   Vis_evaluator<Element> evaluator(
     _interpreter(),
     [&](Namespace& space, Element& elem) {vis_variables::field(space, elem, basis);},

@@ -322,6 +322,11 @@ void Accessible_mesh::cleanup() {
   purge();
 }
 
+void Accessible_mesh::set_record_sn() {
+  car.elems.write_sns();
+  def.elems.write_sns();
+}
+
 Mesh::Connection_validity Accessible_mesh::valid() {
   auto& elems = elements();
   const int n_faces = 2*params.n_dim;

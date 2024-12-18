@@ -1,11 +1,9 @@
 #ifndef HEXED_KERNEL_CONNECTION_HPP_
 #define HEXED_KERNEL_CONNECTION_HPP_
 
-namespace hexed
-{
+namespace hexed {
 
-class Connection_direction
-{
+class Connection_direction {
   public:
   std::array<int, 2> i_dim;
   std::array<bool, 2> face_sign;
@@ -19,8 +17,7 @@ class Connection_direction
    * Answers the question: Is it neccesary to flip axis `face_index(0).i_dim` of element 1
    * to match the coordinate systems?
    */
-  bool flip_tangential() const
-  {
+  bool flip_tangential() const {
     //! if you're swapping two axes, you have to flip one of them to make a valid rotation. If you're not
     //! flipping a normal (or flipping both of them) then you have to flip a tangential
     return (i_dim[0] != i_dim[1]) && (flip_normal(0) == flip_normal(1));
@@ -30,22 +27,19 @@ class Connection_direction
    * quadrature points of element 1 to match element 0? Only applicable to 3D, where some
    * face combinations can create a row vs column major mismatch. If 2D, always returns `false`.
    */
-  bool transpose() const
-  {
+  bool transpose() const {
     return ((i_dim[0] == 0) && (i_dim[1] == 2)) || ((i_dim[0] == 2) && (i_dim[1] == 0));
   }
 };
 
-class Connection
-{
+class Connection {
   public:
   virtual Connection_direction get_direction() = 0;
 };
 
 //! \brief Represents a connection between elements as the kernel sees it.
 //! \details Similar idea to `Kernel_element`.
-class Kernel_connection : virtual public Connection
-{
+class Kernel_connection : virtual public Connection {
   public:
   //! \brief state data for one side and for either the extrapolated state or the LDG storage
   //! \details layout: [i_var][i_face_qpoint]
@@ -53,6 +47,7 @@ class Kernel_connection : virtual public Connection
   virtual double* normal() = 0; //!< \brief face normal vector \details `nullptr` for Cartesian
   virtual int mask(int i_side) = 0; //!< \brief whether the element on side `i_side` is included in mesh masking
   int mask() {return std::max(mask(0), mask(1));}
+  virtual int elem_record(int i_side) {return -1;}
 };
 
 }

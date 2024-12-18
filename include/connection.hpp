@@ -113,6 +113,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
   Connection_direction get_direction() override {return dir;}
   element_t& element(int i_side) override {return *elems[i_side];}
   int mask(int i_side) override {return element(i_side).mask();}
+  int elem_record(int i_side) override {return element(i_side).record;}
 };
 
 template <>
