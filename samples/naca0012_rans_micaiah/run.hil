@@ -19,16 +19,13 @@ extremal_bc10 = {freestream}
 extremal_bc11 = {freestream}
 
 init_ref_level = 4
-refine_if = {is_extruded & ref_level < 9}
-unrefine_if = {!is_extruded}
+refine_if = {(is_extruded & ref_level < 7) | ((center0^2 + center1^2)^.5 < .3 & ref_level < 8) | ((center0^2 + center1^2)^.5 < .1 & ref_level < 9)}
+unrefine_if = {false}
 {$set_geometry_refinement}
-init_layer_splits = 8
+init_layer_splits = 9
 bl_multirate = true
 flow_iters = 10
-bl_iters = 5
-{
-n_cheby_bl = 6
-}
+bl_iters = 6
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -55,12 +52,6 @@ println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_ene
 surface_bc = {no_slip}
 diffusive_admissibility = false
 fix_therm_admis = true
-{
-ramping_initial_safety = .1
-ramping_final_safety = .7
-ramp_if = {iteration >= 3000}
-$set_ramping
-}
 max_safety = .7
 
 {iteration parameters}
@@ -70,13 +61,14 @@ done = {iteration > 5000 & (drag_coef_max - drag_coef_min < 5e-3*(drag_coef_min 
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_speedup}
+working_dir = {hexed_out_nonuniform}
 
 vis_field_vars = vis_field_vars + {
     specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
     turbulent_dissipation_bassi = turbulent_dissipation_bassi
     specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density)
     debug_var0 = debug_var0
+    residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)/tss
 }
 
 {run simulation}
