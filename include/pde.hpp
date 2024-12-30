@@ -191,8 +191,8 @@ class Navier_stokes {
          * do \f$ \hat{\omega} = (\omega^4 + (C_{lim} \sqrt{2 \bar{S}_{ij} \bar{S}_{ij}/\beta^*})^4)^{1/4} \f$
          * for a smoother transition.
          */
-        double lim_sq = c_lim*c_lim*2*(strain_rate - 1./3.*divergence*identity).squaredNorm()/beta_s;
-        double omega_hat = std::pow(math::pow(real_turb_diss, 4) + lim_sq*lim_sq, .25);
+        double strain_term = (strain_rate - 1./3.*divergence*identity).squaredNorm() + (3 - n_dim)*divergence*divergence/9;
+        double omega_hat = std::max(real_turb_diss, c_lim*std::sqrt(2*strain_term/beta_s));
 
         Mat<n_dim, n_dim> turb_stress_per_k = 2*mass/omega_hat*strain_rate - 2./3.*mass*(1. + divergence/omega_hat)*identity;
         Mat<n_dim, n_dim> stress = 2*dyn_visc_coef*strain_rate + (bulk_av*mass - 2./3.*dyn_visc_coef)*divergence*identity
@@ -236,7 +236,6 @@ class Navier_stokes {
           double lim_factor = lim/std::sqrt(lim*lim + prod_per_k*prod_per_k);
           debug_variables(0) = mass*k_bar/omega_hat;
           prod_per_k = lim_factor*prod_per_k;
-          double dot = grad_k.dot(grad_omega);
           double grad_k_omega_source = std::max(sigma_do*mass/real_turb_diss*grad_k.dot(grad_omega), 0.);
           double grad_omega_source = (dyn_visc_coef + sigma*mass*k_bar/real_turb_diss)*grad_omega.squaredNorm();
           source(i_turb_kin_ener) = prod_per_k*k_bar - beta_s*real_turb_diss*state(i_turb_kin_ener);
