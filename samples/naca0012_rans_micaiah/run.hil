@@ -38,7 +38,7 @@ geom0 = {auto.csv}
 {freestream conditions}
 freestream_temperature = zero_celsius
 freestream_mach = 0.3
-attack = 10*degree
+attack = 3*degree
 target_reynolds = 6e6
 dyn_visc = 1.716e-5
 freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air * 1.4 * freestream_temperature)/freestream_mach
