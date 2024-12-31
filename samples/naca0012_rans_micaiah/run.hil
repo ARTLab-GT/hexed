@@ -7,7 +7,7 @@ Note: strings are enclosed in `{}`, and strings which are not assigned to anythi
 
 {domain and mesh parameters}
 n_dim = 2
-row_size = 5
+row_size = 6
 mesh_extreme00 = -10.
 mesh_extreme10 = -10.
 mesh_extreme01 =  10.
@@ -19,13 +19,13 @@ extremal_bc10 = {freestream}
 extremal_bc11 = {freestream}
 
 init_ref_level = 4
-refine_if = {is_extruded & ref_level < 9}
-unrefine_if = {!is_extruded}
+refine_if = {(is_extruded & ref_level < 7) | ((center0^2 + center1^2)^.5 < .3 & ref_level < 8) | ((center0^2 + center1^2)^.5 < .1 & ref_level < 9)}
+unrefine_if = {false}
 {$set_geometry_refinement}
-init_layer_splits = 8
+init_layer_splits = 9
 bl_multirate = true
 flow_iters = 10
-bl_iters = 10
+bl_iters = 6
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -38,7 +38,7 @@ geom0 = {auto.csv}
 {freestream conditions}
 freestream_temperature = zero_celsius
 freestream_mach = 0.3
-attack = 0*degree
+attack = 3*degree
 target_reynolds = 6e6
 dyn_visc = 1.716e-5
 freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air * 1.4 * freestream_temperature)/freestream_mach
@@ -50,12 +50,9 @@ println({turbulent viscosity: } + freestream_density*freestream_specific_turbule
 println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation/dyn_visc)
 
 surface_bc = {no_slip}
-diffusive_admissibility = true
+diffusive_admissibility = false
 fix_therm_admis = true
-ramping_initial_safety = .1
-ramping_final_safety = .7
-ramp_if = {iteration >= 3000}
-$set_ramping
+max_safety = .7
 
 {iteration parameters}
 print_freq = 100
@@ -64,12 +61,14 @@ done = {iteration > 5000 & (drag_coef_max - drag_coef_min < 5e-3*(drag_coef_min 
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
+working_dir = {hexed_out_alpha10}
 
 vis_field_vars = vis_field_vars + {
     specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
     turbulent_dissipation_bassi = turbulent_dissipation_bassi
     specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density)
     debug_var0 = debug_var0
+    residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)/tss
 }
 
 {run simulation}
