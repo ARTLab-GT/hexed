@@ -18,7 +18,7 @@ class Stab_art_visc : public Kernel<Kernel_element&> {
   public:
   Stab_art_visc(const Basis& basis, double char_speed) :
     _char_speed{char_speed},
-    _ramp_center{-6.25*std::log(row_size - 1)/std::log(10)},
+    _ramp_center{-4.25*std::log(row_size - 1)/std::log(10)},
     _row_weights{basis.node_weights()},
     _qpoint_weights{math::pow_outer(_row_weights, n_dim)},
     _face_weights{math::pow_outer(_row_weights, n_dim - 1)},
@@ -61,7 +61,7 @@ class Stab_art_visc : public Kernel<Kernel_element&> {
       else if (indicator < _ramp_center + _half_width) indicator = .5*(1 + std::sin(constants::pi*(indicator - _ramp_center)/2/_half_width));
       else indicator = 1;
       // add dimensional scaling and write to the element
-      elements[i_elem].uncert() = std::max(.99*elements[i_elem].uncert(), (row_size - 1)*_char_speed*elements[i_elem].nominal_size()*indicator);
+      elements[i_elem].uncert() = (row_size - 1)*_char_speed*elements[i_elem].nominal_size()*indicator;
     }
   }
 };

@@ -911,9 +911,6 @@ void Solver::synch_extruded_uncert() {
 void Solver::update() {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   double safety = _namespace->get<double>("max_safety");
-  double max_change = _namespace->get<double>("max_change");
-  double lim = .1;
-  //if (max_change > lim) safety *= lim/max_change;
   double cheby_safety = _namespace->get<double>("cheby_safety");
   for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
     // compute time step
@@ -1001,32 +998,6 @@ void Solver::compute_residual() {
   };
   if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, false);
   else compute_euler(_kernel_mesh(), opts);
-  double max_change = 0;
-  auto& elems = acc_mesh->elements();
-  int nq = params.n_qpoint();
-  int nd = params.n_dim;
-  int nv = params.n_var;
-  #pragma omp parallel for reduction(max:max_change)
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    double* state = elem.state();
-    double* res = elem.residual_cache();
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      double change = 0;
-      for (int i_var = nd; i_var < nd + 2; ++i_var) {
-        change += std::abs(res[i_var*nq + i_qpoint]/state[i_var*nq + i_qpoint]);
-      }
-      change += std::abs(res[(nd + 3)*nq + i_qpoint]/state[(nd + 3)*nq + i_qpoint]);
-      //change += std::max(0., .1*res[(nd + 3)*nq + i_qpoint]/state[(nd + 3)*nq + i_qpoint]);
-      change += std::abs(1. - std::exp(res[(nd + 3)*nq + i_qpoint]/state[nd*nq + i_qpoint]));
-      //change += std::max(0., .1*(std::exp(res[(nd + 3)*nq + i_qpoint]/state[nd*nq + i_qpoint])));
-      max_change = std::max(max_change, change);
-    }
-  }
-  int n_cheby = std::max(_namespace->get<double>("n_cheby_bl"), _namespace->get<double>("n_cheby_flow"));
-  max_change *= _namespace->get<double>("max_safety")*math::chebyshev_step(n_cheby, n_cheby - 1, _namespace->get<double>("cheby_safety"));
-  max_change = std::max(max_change, .9*_namespace->get<double>("max_change"));
-  _namespace->assign("max_change", max_change);
 }
 
 void Solver::compute_lts_constraints() {

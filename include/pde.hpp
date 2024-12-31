@@ -162,7 +162,7 @@ class Navier_stokes {
         sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)/spec_heat_v);
         // taking abs ensures that they will never be negative
         // and makes the probability that they are exactly 0 very low, which is good cause we have to divide by them
-        real_turb_diss = std::max(10., std::exp(state(i_turb_diss)/mass));
+        real_turb_diss = std::exp(state(i_turb_diss)/mass);
         k_bar = std::abs(state(i_turb_kin_ener)/mass);
         dyn_visc_coef = _eq.dyn_visc.coefficient(sqrt_temp);
         therm_cond_coef = _eq.therm_cond.coefficient(sqrt_temp);
@@ -263,8 +263,8 @@ class Navier_stokes {
         compute_scalars_conv();
         compute_scalars_diff();
         // this is a conservative estimate for `dyn_visc_turb` because `omega_hat` is not available
-        double dyn_visc_turb = (turb == k_omega) ? std::abs(state(i_turb_kin_ener))*std::exp(-state(i_turb_diss)/state(i_mass)) : 0.;
-        diffusivity = 10*std::abs(laplacian_av) + math::max(
+        double dyn_visc_turb = (turb == k_omega) ? mass*k_bar/real_turb_diss : 0.;
+        diffusivity = std::abs(laplacian_av) + math::max(
           (dyn_visc_coef + math::max(1, sigma, sigma_s)*dyn_visc_turb)/mass,
           std::abs(bulk_av) + (dyn_visc_coef + dyn_visc_turb)/mass,
           (dyn_visc_coef + dyn_visc_turb)/mass + (energy_cond + heat_rat*dyn_visc_turb/turb_prandtl)/mass
@@ -274,10 +274,7 @@ class Navier_stokes {
       double decay;
       void compute_decay() {
         decay = 0;
-        if constexpr (turb == k_omega) {
-          real_turb_diss = std::exp(state(i_turb_diss)/mass);
-          decay = std::max(beta_s*real_turb_diss, beta_s); // note: beta <= beta_s
-        }
+        if constexpr (turb == k_omega) decay = std::max(beta_s*real_turb_diss, beta_s); // note: beta <= beta_s
       }
     };
 
