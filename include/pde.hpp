@@ -334,7 +334,8 @@ class Navier_stokes {
        * Column `j` should be an eigenvector of the Jacobian with eigenvalue `eigvals()(j)`
        * and the sum of the columns should be `state`.
        */
-      Mat<n_var_euler, 3> decomp(Mat<n_var_euler> state) {
+      Mat<dyn, 3> decomp(Mat<dyn> state) {
+        HEXED_ASSERT(state.size() >= n_var_euler, "not enough variables provided");
         Mat<n_dim> mmtm = state(Eigen::seqN(0, n_dim));
         // component of tangential momentum perturbation which is not induced by mass perturbation
         Mat<n_dim> mmtm_correction = tang(mmtm) - state(i_mass)*tang(veloc);
@@ -348,11 +349,14 @@ class Navier_stokes {
         Mat<1, 3> eig_basis = fact.solve(state_1d).transpose();
         Mat<3, 3> eig_decomp = vecs.array().rowwise()*eig_basis.array();
         // ND eigenvector decomposition
-        Mat<n_var_euler, 3> d(state.rows(), 3);
+        Mat<dyn, 3> d(state.rows(), 3);
+        d.setZero();
         d(Eigen::seqN(n_dim, 2), Eigen::all) = eig_decomp(Eigen::seqN(1, 2), Eigen::all);
         d(Eigen::seqN(0, n_dim), Eigen::all) = dir*eig_decomp(0, Eigen::all) + tang(veloc)*eig_basis; // second term accounts for tangential momentum induced by mass perturbation
         d(Eigen::seqN(0, n_dim), 2) += mmtm_correction;
         d(i_energy, 2) += veloc.dot(mmtm_correction); // correct energy to account for tangential momentum perturbation
+        auto seq = Eigen::seqN(n_dim + 2, state.size() - n_dim - 2);
+        d(seq, 2) = state(seq);
         return d;
       }
     };

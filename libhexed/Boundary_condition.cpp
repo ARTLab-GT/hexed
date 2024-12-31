@@ -104,7 +104,8 @@ void Riemann_invariants::apply_state(Boundary_face& bf) {
     // compute characteristics
     switch (params.n_dim) {
       case 1:
-        state = apply_char<1>(inside, n, sign, inside, fs); // set incoming characteristics to zero and leave outgoing alone
+        // set incoming characteristics to zero and leave outgoing alone
+        state = apply_char<1>(inside, n, sign, inside, fs);
         break;
       case 2:
         state = apply_char<2>(inside, n, sign, inside, fs);
@@ -119,7 +120,8 @@ void Riemann_invariants::apply_state(Boundary_face& bf) {
     state(params.n_dim) = std::max(state(params.n_dim), inside(params.n_dim)/2);
     double kin_ener = .5*state(Eigen::seqN(0, params.n_dim)).squaredNorm()/state(params.n_dim);
     double inside_kin_ener = .5*inside(Eigen::seqN(0, params.n_dim)).squaredNorm()/inside(params.n_dim);
-    state(params.n_dim + 1) = std::max(kin_ener + std::max(state(params.n_dim + 1) - kin_ener, (inside(params.n_dim + 1) - inside_kin_ener)/2), 0.);
+    state(params.n_dim + 1) = std::max(kin_ener + std::max(state(params.n_dim + 1) - kin_ener,
+                                                           (inside(params.n_dim + 1) - inside_kin_ener)/2), 0.);
     // write to ghost state
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
       gh_f[i_var*nfq + i_qpoint] = state(i_var);
