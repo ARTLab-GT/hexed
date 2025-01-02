@@ -156,7 +156,7 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 , _n_verts{0}
 , _stopwatch("mesh")
 , _turb{turb}
-, buffer_dist{2.*std::sqrt(params.n_dim)/2}
+, buffer_dist{std::sqrt(params.n_dim)/2} // if you're getting snapping problems, try multiplying this by 2
 {
   def.face_con_v = def_face_cons;
   _stopwatch.emplace("relax", "vertex update");

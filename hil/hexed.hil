@@ -436,7 +436,7 @@ mesh = {
         surface_roughness = 1e-6*geom_length
         println({initializing surface roughness height to } + surface_roughness)
     }
-    $$({case} + (surface_roughness < 0 & turbulence_model == {k-omega}))
+    $$({case} + (surface_roughness < 0 & viscosity_model != {}))
     print_emph = true; println({meshing complete with } + n_elements + { elements} + newline)
 }
 

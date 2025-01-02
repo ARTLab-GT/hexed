@@ -23,9 +23,11 @@ namespace hexed {
   (*kernel_factory<Spatial<Pde_templ,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var))(mesh.ref_faces, opts.sw_pr); \
 }
 
+typedef pde::Navier_stokes<true, laminar> ns;
 typedef pde::Navier_stokes<true, k_omega> rans;
 void compute_navier_stokes(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, Transport_model visc, Transport_model therm_cond, bool update_prod) {
-  COMPUTE_DIFFUSION(rans::Pde, visc, therm_cond)
+  if (mesh.turb_model == k_omega) COMPUTE_DIFFUSION(rans::Pde, visc, therm_cond)
+  else COMPUTE_DIFFUSION(ns::Pde, visc, therm_cond)
 }
 void compute_smooth_av(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, double diff_time, double cheby_step) {
   bool update_prod = false;
