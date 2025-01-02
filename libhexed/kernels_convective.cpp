@@ -15,30 +15,46 @@ const bool update_prod = false;
   (*kernel_factory<Spatial<Pde_templ, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var))(mesh.ref_faces, opts.sw_pr); \
 }
 
-typedef pde::Navier_stokes<false, k_omega> turb_euler;
-void compute_euler(Kernel_mesh mesh, Kernel_options opts) COMPUTE_CONVECTION(turb_euler::Pde)
+typedef pde::Navier_stokes<false, laminar> euler;
+typedef pde::Navier_stokes<false, k_omega> k_omega_euler;
+void compute_euler(Kernel_mesh mesh, Kernel_options opts) {
+  if (mesh.turb_model == k_omega) COMPUTE_CONVECTION(k_omega_euler::Pde)
+  else COMPUTE_CONVECTION(euler::Pde)
+}
 void compute_advection(Kernel_mesh mesh, Kernel_options opts, double advect_length) COMPUTE_CONVECTION(pde::Advection, advect_length)
 
 #undef COMPUTE_CONVECTION
 
 void compute_prolong(Kernel_mesh mesh, bool scale, bool offset) {
-  (*kernel_factory<Spatial<turb_euler::Pde, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var, scale, offset))(mesh.ref_faces);
+  #define COMPUTE(pde_class) (*kernel_factory<Spatial<pde_class::Pde, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var, scale, offset))(mesh.ref_faces);
+  if (mesh.turb_model == k_omega) COMPUTE(k_omega_euler)
+  else COMPUTE(euler)
+  #undef COMPUTE
 }
 
 void compute_restrict(Kernel_mesh mesh, bool scale, bool offset) {
-  (*kernel_factory<Spatial<turb_euler::Pde, false>::Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var, scale, offset))(mesh.ref_faces);
+  #define COMPUTE(pde_class) (*kernel_factory<Spatial<pde_class::Pde, false>::Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var, scale, offset))(mesh.ref_faces);
+  if (mesh.turb_model == k_omega) COMPUTE(k_omega_euler)
+  else COMPUTE(euler)
+  #undef COMPUTE
 }
 
 void compute_prolong_advection(Kernel_mesh mesh) {
   (*kernel_factory<Spatial<pde::Advection, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var, false, false))(mesh.ref_faces);
 }
 
-std::unique_ptr<Face_permutation_dynamic> face_permutation(int n_dim, int row_size, Connection_direction dir, double* data) {
-  return kernel_factory<Spatial<turb_euler::Pde, true>::Face_permutation>(n_dim, row_size, dir, data);
+std::unique_ptr<Face_permutation_dynamic> face_permutation(int n_dim, int row_size, Connection_direction dir, double* data, Turbulence_model model) {
+  #define COMPUTE(pde_class) return kernel_factory<Spatial<pde_class::Pde, true>::Face_permutation>(n_dim, row_size, dir, data);
+  if (model == k_omega) COMPUTE(k_omega_euler)
+  else COMPUTE(euler)
+  #undef COMPUTE
 }
 
 void compute_write_face(Kernel_mesh mesh) {
-  (*kernel_factory<Spatial<turb_euler::Pde, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var))(mesh.elems);
+  #define COMPUTE(pde_class) (*kernel_factory<Spatial<pde_class::Pde, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var))(mesh.elems);
+  if (mesh.turb_model == k_omega) COMPUTE(k_omega_euler)
+  else COMPUTE(euler)
+  #undef COMPUTE
 }
 
 void compute_write_face_advection(Kernel_mesh mesh) {

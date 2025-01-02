@@ -24,6 +24,7 @@ Kernel_mesh Solver::_kernel_mesh() {
     params.n_var,
     0,
     basis,
+    turb,
     acc_mesh->cartesian().kernel_connections(),
     acc_mesh->deformed ().kernel_connections(),
     acc_mesh->cartesian().kernel_elements(),
@@ -192,10 +193,13 @@ Interpreter Solver::_interpreter() {
 }
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
-               Transport_model viscosity_model, Transport_model thermal_conductivity_model, Turbulence_model turbulence_model,
+               Transport_model viscosity_model, Transport_model thermal_conductivity_model,
+               Turbulence_model turbulence_model,
                std::shared_ptr<Namespace> space, std::shared_ptr<Printer_set> printer, bool implicit)
-: params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2 + 2*(turbulence_model == k_omega), n_dim, row_size}
-, acc_mesh{new Accessible_mesh(params, root_mesh_size)}
+: params{implicit ? Linearized::storage_start + Linearized::n_storage
+                  : 2, n_dim + 2 + 2*(turbulence_model == k_omega),
+         n_dim, row_size}
+, acc_mesh{new Accessible_mesh(params, root_mesh_size, turbulence_model)}
 , basis{row_size}
 , stopwatch{"(element*update)"}
 , use_art_visc{false}
@@ -298,7 +302,7 @@ const Stopwatch_tree& Solver::stopwatch_tree() {return stopwatch;}
 
 void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs,
                        Surface_geom* geom, Flow_bc* surface_bc) {
-  acc_mesh.reset(new Accessible_mesh(file_name, extremal_bcs, geom, surface_bc));
+  acc_mesh.reset(new Accessible_mesh(file_name, extremal_bcs, turb, geom, surface_bc));
   HEXED_ASSERT(acc_mesh->storage_params().n_stage == params.n_stage,
                "attempt to read a mesh file with a different `n_stage`");
   HEXED_ASSERT(acc_mesh->storage_params().n_var == params.n_var,
@@ -387,7 +391,7 @@ void Solver::calc_jacobian(bool snap) {
     for (int i_fine = 0; i_fine < ref.n_fine_elements(); ++i_fine) {
       auto& fine = ref.connection(i_fine);
       double* face [2] {fine.state(rev, false), fine.state(!rev, false)};
-      auto fp = face_permutation(n_dim, rs, dir, face[1]);
+      auto fp = face_permutation(n_dim, rs, dir, face[1], turb);
       fp->match_faces();
       for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
         face[1][i_data] = sign*face[0][i_data];
@@ -411,7 +415,7 @@ void Solver::calc_jacobian(bool snap) {
     double* elem_nrml [2] {con.state(0, false), con.state(1, false)};
     auto dir = con.direction();
     // permute face 1 so that quadrature points match up
-    auto fp = face_permutation(n_dim, rs, dir, elem_nrml[1]);
+    auto fp = face_permutation(n_dim, rs, dir, elem_nrml[1], turb);
     fp->match_faces();
     // take average of element face normals with appropriate flipping
     int sign [2];
@@ -841,7 +845,7 @@ void Solver::set_uncert_surface_rep(int bc_sn) {
   #pragma omp parallel for
   for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
     auto& con = def_cons[i_con];
-    auto permute = face_permutation(nd, params.row_size, con.direction(), con.state(1, false));
+    auto permute = face_permutation(nd, params.row_size, con.direction(), con.state(1, false), turb);
     permute->match_faces();
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {

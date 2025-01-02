@@ -43,6 +43,7 @@ class Accessible_mesh : public Mesh {
   std::vector<Mortal_ptr<next::Vertex>> point_matched_vertices;
   std::vector<std::vector<Mortal_ptr<next::Vertex>>> matched_vertices;
   std::vector<std::vector<Mortal_ptr<next::Edge>>> matched_edges;
+  Turbulence_model _turb;
 
   // masked sequences
   template <typename view_t, typename storage_t>
@@ -102,18 +103,20 @@ class Accessible_mesh : public Mesh {
    * \param params parameters specifying what data is stored in each Element (row size, number of dimensions, etc.)
    * \param root_size defines the \ref root_size of the mesh.
    */
-  Accessible_mesh(Storage_params params, double root_size);
+  Accessible_mesh(Storage_params params, double root_size, Turbulence_model);
   /*! \brief Reads mesh from a file created by `Mesh::write`.
    * \details Acquires ownership of boundary condition pointers.
    * This variant is only for tree meshing.
-   * The surface boundary condition and geometry arguments must be specified iff the original mesh had a surface geometry (else exception).
+   * The surface boundary condition and geometry arguments must be specified
+   * iff the original mesh had a surface geometry (else exception).
    */
-  Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Surface_geom* = nullptr, Flow_bc* surface_bc = nullptr);
+  Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Turbulence_model,
+                  Surface_geom* = nullptr, Flow_bc* surface_bc = nullptr);
   /*! \brief Reads mesh from a file created by `Mesh::write`.
    * \details Acquires ownership of boundary condition pointers.
    * This variant is not for tree meshing.
    */
-  Accessible_mesh(std::string file_name, std::vector<Flow_bc*>);
+  Accessible_mesh(std::string file_name, std::vector<Flow_bc*>, Turbulence_model);
   virtual ~Accessible_mesh();
   inline double root_size() override {return root_sz;}
   inline Storage_params storage_params() {return params;}
