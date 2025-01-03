@@ -58,11 +58,11 @@ void compute_write_face(Kernel_mesh mesh) {
 }
 
 void compute_write_face_advection(Kernel_mesh mesh) {
-  (*kernel_factory<Spatial<pde::Advection, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, 1., mesh.n_var))(mesh.elems);
+  (*kernel_factory<Spatial<pde::Advection, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var, 1.))(mesh.elems);
 }
 
 void compute_write_face_smooth_av(Kernel_mesh mesh) {
-  (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, 1., 1., mesh.n_var))(mesh.elems);
+  (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var, 1., 1.))(mesh.elems);
 }
 
 }

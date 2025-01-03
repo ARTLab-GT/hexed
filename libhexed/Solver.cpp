@@ -490,6 +490,11 @@ void Solver::initialize(std::string(expr)) {
     for (int i_var = 0; i_var < n_var; ++i_var) {
       sub.variables->assign_array(state(i_var), state_vars[i_var]);
     }
+    for (int i_adv = 0; i_adv < params.n_advection(params.row_size); ++i_adv) {
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        elem.advection_state()[i_adv*nq + i_qpoint] = 1.;
+      }
+    }
   }
   _init_face_state();
 }
@@ -585,8 +590,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   // perform pseudotime iteration
-  for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter)
-  {
+  for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter) {
     sw_adv["setup"].stopwatch.start();
     // evaluate advection operator
     compute_write_face_advection(_kernel_mesh());

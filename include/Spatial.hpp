@@ -427,7 +427,7 @@ class Spatial {
             if constexpr (is_deformed) mult *= elem_det[i_qpoint];
             for (int i_var = 0; i_var < Pde::n_update; ++i_var) time_rate[1][i_var][i_qpoint] = mult*comp.source(i_var);
           }
-          if constexpr (config::debug_variables) {
+          if constexpr (config::debug_variables) if (comp.debug_vars_set) {
             for (int i_var = 0; i_var < config::debug_variables; ++i_var) {
               debug_variables[i_var*n_qpoint + i_qpoint] = comp.debug_variables(i_var);
             }
