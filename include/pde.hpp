@@ -72,24 +72,6 @@ class Navier_stokes {
       for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
     }
 
-    /*! \todo __Carter:__ This is the class you have to modify to implement the \f$ k\text{-}\omega \f$ equations.
-     * Currently, to test that the numerical kernel is capable of handling the extra equations,
-     * I've set it to solve the arbitrary equations:
-     * \f$
-     * \frac{\partial \rho k}{\partial t}
-     * + \frac{\partial}{\partial x_j}
-     *   \left( \rho u_j k - \frac{\mu}{\rho} \frac{\partial \rho k}{\partial x_j} \right)
-     * = -0.1 \mu k
-     * \f$
-     * and
-     * \f$
-     * \frac{\partial \rho \tilde{\omega}}{\partial t}
-     * + \frac{\partial}{\partial x_j}
-     *   \left( \rho u_j \tilde{\omega} - \frac{\mu}{\rho} \frac{\partial \rho \tilde{\omega}}{\partial x_j} \right)
-     * = -0.1 \mu \tilde{\omega}
-     * \f$
-     * (Einstein summation convention)
-     */
     template <int n_dim_flux>
     class Computation {
       const Pde& _eq;
