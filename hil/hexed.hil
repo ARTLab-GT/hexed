@@ -359,7 +359,7 @@ iterate = {
         update_roughness
         println({updating surface roughness to } + surface_roughness)
     }
-    $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0))
+    $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
     $write_iter
     $vis_iter
     hexed_prev_except = except
@@ -436,7 +436,7 @@ mesh = {
         surface_roughness = 1e-6*geom_length
         println({initializing surface roughness height to } + surface_roughness)
     }
-    $$({case} + (surface_roughness < 0))
+    $$({case} + (surface_roughness < 0 & viscosity_model != {}))
     print_emph = true; println({meshing complete with } + n_elements + { elements} + newline)
 }
 

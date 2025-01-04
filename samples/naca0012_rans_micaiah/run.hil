@@ -13,11 +13,6 @@ mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
 
-extremal_bc00 = {freestream}
-extremal_bc01 = {pressure_outflow}
-extremal_bc10 = {freestream}
-extremal_bc11 = {freestream}
-
 init_ref_level = 4
 refine_if = {(is_extruded & ref_level < 7) | ((center0^2 + center1^2)^.5 < .3 & ref_level < 8) | ((center0^2 + center1^2)^.5 < .1 & ref_level < 9)}
 unrefine_if = {false}
