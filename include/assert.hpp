@@ -71,6 +71,17 @@ class Internal_error : public Exception {
   inline Internal_error(std::string message) : Exception(message) {}
 };
 
+/*! \brief Indicates an exception caused by some kind of fixed-size resource has been exhausted.
+ * \details For example, a buffer has been overflowed or recursion depth cap exceeded.
+ * This implies that the error can, in principle be avoided by allocating more resources,
+ * but most likely the underlying cause is a bug.
+ */
+class Overflow_error : public Internal_error {
+  public:
+  inline std::string name() const override {return "Internal error (overflow)";}
+  inline Overflow_error(std::string message) : Internal_error(message) {}
+};
+
 //! throws a `std::runtime_error` with message `message`, wrapped in a `#pragma omp critical` if necessary.
 //! Used in \ref HEXED_ASSERT
 template <typename except_t = Internal_error>

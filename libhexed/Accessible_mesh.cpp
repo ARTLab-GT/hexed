@@ -566,23 +566,17 @@ void Accessible_mesh::_fit_surface() {
       coarse = &def.elems.at(coarse->refinement_level(), rec);
       replace = true;
     }
-    std::cout << "[0" << std::endl;
     std::vector<next::Element_shape*> coarse_shapes(4, &coarse->active_shape());
     rec = coarse->face_record[dir.i_face(reverse)];
     if (rec >= 0) {
       Deformed_element* surface = &def.elems.at(coarse->refinement_level(), rec);
-      std::cout << "[1" << std::endl;
       int bf = surface->active_shape().boundary_face();
-      std::cout << "1]" << std::endl;
       for (int i_elem = 0; i_elem < 4; ++i_elem) {
-        std::cout << "[3" << std::endl;
         if (math::row_coordinate(2, 2, bf/2 > 3 - bf/2 - dir.i_dim[reverse], i_elem) == bf%2) {
           coarse_shapes[i_elem] = &surface->active_shape();
         }
-        std::cout << "3]" << std::endl;
       }
     }
-    std::cout << "0]" << std::endl;
     auto stretch = con->stretch();
     std::vector<next::Element_shape*> fine_shapes;
     for (int i = 0; i < 1 + stretch[0]; ++i) {
@@ -607,14 +601,12 @@ void Accessible_mesh::_fit_surface() {
         }
       }
     }
-    std::cout << "[2" << std::endl;
     if (replace) {
       Con_dir<Deformed_element> new_dir {{dir.i_dim[reverse], dir.i_dim[!reverse]},
                                          {dir.face_sign[reverse], dir.face_sign[!reverse]}};
       con.reset();
       next::Element_shape::connect({coarse_shapes, fine_shapes}, new_dir);
     }
-    std::cout << "2]" << std::endl;
   }
   for (Int i_con = 0; i_con < bound_cons_sz; ++i_con) {
     auto& con = def.bound_cons[i_con];

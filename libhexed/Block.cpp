@@ -45,7 +45,14 @@ Mat<3> Block::point(const std::vector<int>& node_coords, Int recursion_depth) co
     HEXED_ASSERT(0 <= coord && coord < _row_size, format_str(1000, "node index %i is out of bounds", coord));
   }
   #endif
-  HEXED_ASSERT(recursion_depth < max_recursion_depth, "Max recursion depth exceeded.");
+  #if 1
+  HEXED_ASSERT(recursion_depth <= max_recursion_depth, "Max recursion depth exceeded.", assert::Overflow_error);
+  #else
+  if (recursion_depth > max_recursion_depth) {
+    printers::warn("Warning: max recursion depth exceeded in `Block::point`. Returning zero.");
+    return Mat<3>::Zero();
+  }
+  #endif
   return _point(node_coords, recursion_depth);
 }
 
@@ -100,29 +107,18 @@ void Vertex::shadow(Vertex& that) {
 void Vertex::eat(Vertex& that) {
   HEXED_ASSERT(alive() && that.alive(), "both vertices must be alive (at least at the start...)");
   if (&that == this) return;
-  printers::info("eating...");
-  printers::info(std::to_string(_elems.partners().size()) + "\n");
-  printers::info(std::to_string(that._elems.partners().size()) + "\n");
-  Mat<3> p = that.point({});
-  printers::info(format_str(100, "%e %e %e\n", p(0), p(1), p(2)));
-  printers::info(format_str(100, "%i %i\n", int(bool(_shadowed)), int(bool(_glued_to))));
-  if (_glued_to) printers::info(std::to_string(_glued_to->nominal_size()));
-  p = point({});
-  printers::info(format_str(100, "%e %e %e\n", p(0), p(1), p(2)));
   // compute averaged position
   Int sz [2] {_elems.partners().size(), that._elems.partners().size()};
+  // if this line throws an Overflow_error, it exits `eat` safely and there is not harm done
   set_pos((sz[0]*point({}) + sz[1]*that.point({}))/(sz[0] + sz[1]));
-  printers::info("[7\n");
   // steal pointers
   for (Int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
   for (Int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
-  printers::info("7]\n");
   record.insert(record.end(), that.record.begin(), that.record.end());
   if (that.snapped_endpoint >= 0 && snapped_endpoint < 0) {
     snapped_edge = that.snapped_edge;
     snapped_endpoint = that.snapped_endpoint;
   }
-  printers::info("eaten\n");
 }
 
 void Vertex::glue(Element_shape& to, std::vector<double> coords) {
@@ -735,7 +731,6 @@ void Element_shape::connect(std::vector<Element_shape*> those, Connection_direct
 }
 
 void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Connection_direction dir) {
-  printers::info("[6\n");
   int nd = math::log(2, elems[0].size()) + 1;
   int nv = math::pow(2, nd - 1);
   for (int i_side = 0; i_side < 2; ++i_side) {
@@ -745,8 +740,13 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
       HEXED_ASSERT(elem->n_dim() == nd, "Element dimensionality does not match number of elements supplied");
     }
   }
-  printers::info("6]\n");
-  printers::info("[4\n");
+  bool same [2] {true, true};
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    for (Element_shape* elem : elems[i_side]) {
+      same[i_side] = same[i_side] && elem == elems[i_side][0];
+    }
+  }
+  bool dangerous = !same[0] && !same[1];
   std::array<std::vector<int>, 2> face_inds;
   std::array<std::vector<int>, 2> inds;
   for (int i_side = 0; i_side < 2; ++i_side) {
@@ -756,8 +756,6 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
     face_inds[i_side] = face_vertex_inds(nd, side_dir);
     inds[i_side] = vertex_inds(nd, side_dir)[0];
   }
-  printers::info("4]\n");
-  printers::info("[5\n");
   for (int i_elem = 0; i_elem < nv; ++i_elem) {
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
       for (int i_side = 0; i_side < 2; ++i_side) {
@@ -785,21 +783,20 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
         if (!redundant) {
           Vertex& vert = elems[!i_side][face_inds[i_side][i_elem]]->vertex(inds[!i_side][face_inds[i_side][i_vert]]);
           if (glue) {
-            vert.glue(*elems[i_side][i_elem], coords);
+            if (!dangerous) vert.glue(*elems[i_side][i_elem], coords);
           } else {
-            printers::info(format_str(100, "[%i %i %i %i]", i_side, i_elem, i_vert, inds[i_side][i_vert]));
-            printers::info(format_str(100, "(%i)", elems[i_side][i_elem]->vertex(inds[i_side][i_vert]).n_elements()));
-            //HEXED_ASSERT(elems[i_side][i_elem]->vertex(inds[i_side][i_vert]).n_elements() < 20);
             HEXED_ASSERT(elems[i_side][i_elem], "elem is null");
-            printers::info("[6\n");
-            vert.eat(elems[i_side][i_elem]->vertex(inds[i_side][i_vert]));
-            printers::info("6]\n");
+            try {
+              vert.eat(elems[i_side][i_elem]->vertex(inds[i_side][i_vert]));
+            } catch (const assert::Overflow_error& e) {
+              printers::warn("Warning: skipping Vertex::eat due to Overflow_error: ", true);
+              printers::warn(e.message() + "\n");
+            }
           }
         }
       }
     }
   }
-  printers::info("5]\n");
 }
 
 void Element_shape::glue(Element_shape& that, std::array<std::vector<double>, 2> corners) {
