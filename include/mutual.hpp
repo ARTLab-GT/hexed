@@ -38,6 +38,8 @@ namespace hexed::mutual {
 template <typename T, typename U>
 class Base {
   friend class Base<U, T>;
+  public:
+  virtual ~Base() = default;
   protected:
   //! \brief takes the necessary steps to connect `this` to `that`, without worrying about anything on `that`'s end
   virtual void _set(Base<U, T>& that) = 0;
@@ -73,7 +75,7 @@ class Single : public Base<T, U> {
   Single(const Single&) = delete;
   //! \brief steals `that`'s partner, if it has one, leaving `that` unpaired
   Single(Single&& that) : _partner{nullptr} {*this = std::move(that);}
-  ~Single() {unpair();}
+  virtual ~Single() {unpair();}
   Single& operator=(const Single&) = delete;
 
   //! \brief disconnects `this` from its partner, if it has one, and steals `that`'s, if it has one
@@ -124,7 +126,7 @@ class Multiple : public Base<T, U> {
   Multiple(const Multiple&) = delete;
   //! \brief steals all of `that`'s partners, leaving `that` unconnected
   Multiple(Multiple&& that) {*this = std::move(that);}
-  ~Multiple() {for (int i = _partners.size() - 1; i >= 0; --i) this->_disconnect(*_partners[i]);}
+  virtual ~Multiple() {for (int i = _partners.size() - 1; i >= 0; --i) this->_disconnect(*_partners[i]);}
   Multiple& operator=(const Multiple&) = delete;
 
   //! \brief steals all of `that`'s partners, leaving `that` unconnected

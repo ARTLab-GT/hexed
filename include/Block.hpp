@@ -29,11 +29,16 @@ class Block : public Mortal {
   inline int n_dim() const {return _n_dim;} //!< \brief number of _topological_ dimensions.
   //! \brief number nodes along each dimension \see \ref basis_row_size "row size"
   inline int row_size() const {return _row_size;}
-  //! \brief Obtains the node with array indices specified by `node_coords`.
-  //! \details `node_coords` must have `n_dim()` entries and each entry must be in [0, `row_size()`).
-  Mat<3> point(const std::vector<int>& node_coords) const;
+  /*! \brief Obtains the node with array indices specified by `node_coords`.
+   * \details `node_coords` must have `n_dim()` entries and each entry must be in [0, `row_size()`).
+   * If `recursion_depth > Block::max_recursion_depth`, throws.
+   * If any implementations of `Block::_point` call `Block::point`, they should increment `recursion_depth`
+   * to help catch infinite recursion bugs, which would otherwise result in a stack overflow.
+   */
+  Mat<3> point(const std::vector<int>& node_coords, Int recursion_depth = 0) const;
   //! \brief Obtains the node with flat index `i_point`
-  Mat<3> point(int i_point) const;
+  //! \see `Block::point`
+  Mat<3> point(int i_point, Int recursion_depth = 0) const;
   /*! \brief Obtains all the nodes as a multidimensional array
    * \details This is not a reference.
    * Calling this function allocates memory for the points
@@ -48,9 +53,11 @@ class Block : public Mortal {
   //! \brief Visualizes the nodes of a single `Block`.
   void visualize(std::string format, std::string file_name, double time = 0.) const;
 
+  static constexpr Int max_recursion_depth = 100;
+
   protected:
   //! \brief Derived classes must override this function to define the nodes.
-  virtual Mat<3> _point(const std::vector<int>& node_coords) const = 0;
+  virtual Mat<3> _point(const std::vector<int>& node_coords, Int recursion_depth = 0) const = 0;
 
   private:
   int _n_dim;
@@ -193,7 +200,7 @@ class Vertex : public Block {
   };
   _Optimization_state _compute_state(bool include_neighbors = true);
   void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors);
-  Mat<3> _point(const std::vector<int>&) const override;
+  Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   Mat<3> _desired_pos() const;
   int _get_index(const Element_shape&) const;
   Mat<3> _pos;
@@ -293,7 +300,7 @@ class Edge : public Boundary_block {
   Int snapped_edge;
 
   private:
-  Mat<3> _point(const std::vector<int>&) const override;
+  Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   std::array<Reciprocal_ptr<Edge, Vertex>, 2> _verts;
   Reciprocal_ptr<Edge, Edge> _glued_to;
   Reciprocal_list<Edge, Edge> _glued;
@@ -329,7 +336,7 @@ class Face : public Boundary_block {
   void reset() override;
 
   private:
-  Mat<3> _point(const std::vector<int>&) const override;
+  Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   std::vector<Edge> _edges;
 };
 
@@ -360,7 +367,7 @@ class Element_shape : public Block {
   inline const Vertex& vertex(int i_vert) const {return *_verts[i_vert];}
   inline const Basis& basis() const {return *_basis;}
   inline bool glued() const {return _glued_to;}
-  Mat<3> interpolate(std::vector<double> coords) const;
+  Mat<3> interpolate(std::vector<double> coords, Int recursion_depth) const;
 
   /*! \brief Stipulates that 1 face of `this` is conformally connected to 1 face of `that`.
    * \details Which faces are involved is determined by the `Connection_direction`.
@@ -393,8 +400,8 @@ class Element_shape : public Block {
 
   private:
   Element_shape(int nd, const Basis&);
-  Mat<3> _vertex_point(const std::vector<int>&) const;
-  Mat<3> _point(const std::vector<int>&) const override;
+  Mat<3> _vertex_point(const std::vector<int>&, Int recursion_depth = 0) const;
+  Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   void _glue_edges(std::vector<Element_shape*> those);
   const Basis* _basis;
   double _nom_sz;

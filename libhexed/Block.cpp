@@ -38,17 +38,18 @@ void Block::visualize(std::string format, std::string file_name, next::Sequence<
   }
 }
 
-Mat<3> Block::point(const std::vector<int>& node_coords) const {
+Mat<3> Block::point(const std::vector<int>& node_coords, Int recursion_depth) const {
   #ifdef DEBUG
   HEXED_ASSERT(int(node_coords.size()) == _n_dim, "wrong number of node coordinates");
   for (int coord : node_coords) {
     HEXED_ASSERT(0 <= coord && coord < _row_size, format_str(1000, "node index %i is out of bounds", coord));
   }
   #endif
-  return _point(node_coords);
+  HEXED_ASSERT(recursion_depth < max_recursion_depth, "Max recursion depth exceeded.");
+  return _point(node_coords, recursion_depth);
 }
 
-Mat<3> Block::point(int i_point) const {
+Mat<3> Block::point(int i_point, Int recursion_depth) const {
   #ifdef DEBUG
   HEXED_ASSERT(0 <= i_point && i_point < math::pow(_row_size, _n_dim),
                format_str(1000, "node index %i is out of bounds", i_point));
@@ -57,7 +58,7 @@ Mat<3> Block::point(int i_point) const {
   for (int i_dim = _n_dim - 1, stride = 1; i_dim >= 0; --i_dim, stride *= _row_size) {
     node_coords[i_dim] = (i_point/stride)%_row_size;
   }
-  return point(node_coords);
+  return point(node_coords, recursion_depth);
 }
 
 Vertex::Vertex(Mat<3> pos, int row_size)
@@ -99,17 +100,29 @@ void Vertex::shadow(Vertex& that) {
 void Vertex::eat(Vertex& that) {
   HEXED_ASSERT(alive() && that.alive(), "both vertices must be alive (at least at the start...)");
   if (&that == this) return;
+  printers::info("eating...");
+  printers::info(std::to_string(_elems.partners().size()) + "\n");
+  printers::info(std::to_string(that._elems.partners().size()) + "\n");
+  Mat<3> p = that.point({});
+  printers::info(format_str(100, "%e %e %e\n", p(0), p(1), p(2)));
+  printers::info(format_str(100, "%i %i\n", int(bool(_shadowed)), int(bool(_glued_to))));
+  if (_glued_to) printers::info(std::to_string(_glued_to->nominal_size()));
+  p = point({});
+  printers::info(format_str(100, "%e %e %e\n", p(0), p(1), p(2)));
   // compute averaged position
   Int sz [2] {_elems.partners().size(), that._elems.partners().size()};
   set_pos((sz[0]*point({}) + sz[1]*that.point({}))/(sz[0] + sz[1]));
+  printers::info("[7\n");
   // steal pointers
   for (Int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
   for (Int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
+  printers::info("7]\n");
   record.insert(record.end(), that.record.begin(), that.record.end());
   if (that.snapped_endpoint >= 0 && snapped_endpoint < 0) {
     snapped_edge = that.snapped_edge;
     snapped_endpoint = that.snapped_endpoint;
   }
+  printers::info("eaten\n");
 }
 
 void Vertex::glue(Element_shape& to, std::vector<double> coords) {
@@ -350,9 +363,9 @@ void Vertex::Shared_value::set(double value) {
   if (_acquire) _vert._shared_value = value;
 }
 
-Mat<3> Vertex::_point(const std::vector<int>&) const {
+Mat<3> Vertex::_point(const std::vector<int>&, Int recursion_depth) const {
   // usually, the vertex will not be glued or a shadow and we can just return the `_pos`
-  if (_shadowed) return _shadowed.value().point({});
+  if (_shadowed) return _shadowed.value().point({}, recursion_depth + 1);
   if (!_glued_to) {
     Mat<3> p;
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
@@ -361,7 +374,7 @@ Mat<3> Vertex::_point(const std::vector<int>&) const {
     }
     return p;
   }
-  return _glued_to.value().interpolate(_glued_coords);
+  return _glued_to.value().interpolate(_glued_coords, recursion_depth + 1);
 }
 
 Mat<3> Vertex::_desired_pos() const {
@@ -440,22 +453,22 @@ Boundary_block::Boundary_block(int n_dim, const Basis& b)
 , _elem(this)
 {}
 
-Mat<3> Edge::_point(const std::vector<int>& coords) const {
+Mat<3> Edge::_point(const std::vector<int>& coords, Int recursion_depth) const {
   int coord = coords[0];
   if (glued()) {
     if (_glued_reverse) {
       coord = row_size() - 1 - coord;
     }
     if (_half == no) {
-      return _glued_to.value()._point({coord});
+      return _glued_to.value()._point({coord}, recursion_depth + 1);
     } else {
       Mat<3, dyn> pts(3, row_size());
-      for (int c = 0; c < row_size(); ++c) pts(all, c) = _glued_to.value().point({c});
+      for (int c = 0; c < row_size(); ++c) pts(all, c) = _glued_to.value().point({c}, recursion_depth + 1);
       return pts*basis().prolong(_half)(coord, all).transpose();
     }
   }
-  if (coord ==       0) return _verts[0].value().point({});
-  if (coord == row_size() - 1) return _verts[1].value().point({});
+  if (coord ==       0) return _verts[0].value().point({}, recursion_depth + 1);
+  if (coord == row_size() - 1) return _verts[1].value().point({}, recursion_depth + 1);
   return _interior(coord - 1).vector();
 }
 
@@ -502,11 +515,11 @@ std::vector<Element_shape*> Edge::contacted_elements() {
   return elems;
 }
 
-Mat<3> Face::_point(const std::vector<int>& coords) const {
+Mat<3> Face::_point(const std::vector<int>& coords, Int recursion_depth) const {
   // if the point is on the boundary of the node array, forward to one of the edges
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
-    if (coords[i_dim] ==              0) return _edges[2*i_dim    ].point({coords[!i_dim]});
-    if (coords[i_dim] == row_size() - 1) return _edges[2*i_dim + 1].point({coords[!i_dim]});
+    if (coords[i_dim] ==              0) return _edges[2*i_dim    ].point({coords[!i_dim]}, recursion_depth + 1);
+    if (coords[i_dim] == row_size() - 1) return _edges[2*i_dim + 1].point({coords[!i_dim]}, recursion_depth + 1);
   }
   // otherwise, return an interior node
   return _interior(coords[0] - 1)(coords[1] - 1).vector();
@@ -562,8 +575,8 @@ void Face::reset() {
   _interior = soln.data();
 }
 
-Mat<3> Element_shape::_vertex_point(const std::vector<int>& coords) const {
-  // computes a point via order-1 interpolation between the vertices,
+Mat<3> Element_shape::_vertex_point(const std::vector<int>& coords, Int recursion_depth) const {
+  // computes a point via order 1 interpolation between the vertices,
   // without accounting for boundary-side warping
   Mat<3> point = Mat<3>::Zero();
   for (int i_vert = 0; i_vert < math::pow(2, n_dim()); ++i_vert) {
@@ -574,12 +587,12 @@ Mat<3> Element_shape::_vertex_point(const std::vector<int>& coords) const {
       skip = skip || (coords[i_dim] == (row_size() - 1)*!sign);
       weight *= !sign + math::sign(sign)*_basis->node(coords[i_dim]);
     }
-    if (!skip) point += weight*_verts[i_vert].value().point({});
+    if (!skip) point += weight*_verts[i_vert].value().point({}, recursion_depth);
   }
   return point;
 }
 
-Mat<3> Element_shape::_point(const std::vector<int>& coords) const {
+Mat<3> Element_shape::_point(const std::vector<int>& coords, Int recursion_depth) const {
   if (glued()) {
     Int nc = coords.size();
     std::vector<double> new_coords(nc);
@@ -587,10 +600,10 @@ Mat<3> Element_shape::_point(const std::vector<int>& coords) const {
       double diff = _glued_corners[1][i_dim] - _glued_corners[0][i_dim];
       new_coords[i_dim] = _glued_corners[0][i_dim] + _basis->node(coords[i_dim])*diff;
     }
-    return _glued_to->interpolate(new_coords);
+    return _glued_to->interpolate(new_coords, recursion_depth + 1);
   }
   // first compute point by interpolating between vertices
-  Mat<3> point = _vertex_point(coords);
+  Mat<3> point = _vertex_point(coords, recursion_depth + 1);
   // then, if `this` has a side on the boundary, adjust it to account for the actual position of the boundary nodes
   if (_i_bf != Mesh_blocks::no_face) {
     std::vector<int> c(coords);
@@ -598,7 +611,7 @@ Mat<3> Element_shape::_point(const std::vector<int>& coords) const {
     int i_dim = _i_bf/2;
     double interp_coef = !sign + math::sign(sign)*_basis->node(c[i_dim]);
     c[i_dim] = sign*(row_size() - 1);
-    Mat<3> uncorrected = _vertex_point(c);
+    Mat<3> uncorrected = _vertex_point(c, recursion_depth + 1);
     c.erase(c.begin() + i_dim);
     point += interp_coef*(_bf.value().point(c) - uncorrected);
   }
@@ -648,7 +661,7 @@ Element_shape::Element_shape(int nd, const Basis& b)
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
 }
 
-Mat<3> Element_shape::interpolate(std::vector<double> ref_coords) const {
+Mat<3> Element_shape::interpolate(std::vector<double> ref_coords, Int recursion_depth) const {
   int nd = n_dim();
   int rs = row_size();
   std::vector<Int> shape(nd + 1, rs);
@@ -664,7 +677,7 @@ Mat<3> Element_shape::interpolate(std::vector<double> ref_coords) const {
       skip = skip || (ref_coords[i_dim] == 1 && coords[i_dim] != (rs - 1));
     }
     if (!skip) {
-      points.reshaped({3, whatever}).column(i_point).vector() = point(coords);
+      points.reshaped({3, whatever}).column(i_point).vector() = point(coords, recursion_depth);
     }
   }
   Mat<3> p; // this is where we will put the computed position
@@ -774,7 +787,13 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
           if (glue) {
             vert.glue(*elems[i_side][i_elem], coords);
           } else {
+            printers::info(format_str(100, "[%i %i %i %i]", i_side, i_elem, i_vert, inds[i_side][i_vert]));
+            printers::info(format_str(100, "(%i)", elems[i_side][i_elem]->vertex(inds[i_side][i_vert]).n_elements()));
+            //HEXED_ASSERT(elems[i_side][i_elem]->vertex(inds[i_side][i_vert]).n_elements() < 20);
+            HEXED_ASSERT(elems[i_side][i_elem], "elem is null");
+            printers::info("[6\n");
             vert.eat(elems[i_side][i_elem]->vertex(inds[i_side][i_vert]));
+            printers::info("6]\n");
           }
         }
       }

@@ -2,22 +2,19 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/reciprocal.hpp>
 
-class Derived0 : public hexed::Mortal
-{
+class Derived0 : public hexed::Mortal {
   public:
   std::string s;
   Derived0(std::string s_) : s{s_} {}
 };
 
-class Derived1 : public hexed::Mortal
-{
+class Derived1 : public hexed::Mortal {
   public:
   int i;
   Derived1(int i_) : i{i_} {}
 };
 
-TEST_CASE("reciprocal")
-{
+TEST_CASE("reciprocal") {
   Derived0 d00("ubiquitous");
   Derived0 d01("mendacious");
   Derived1 d10(1903);
