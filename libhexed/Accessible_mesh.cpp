@@ -568,6 +568,7 @@ void Accessible_mesh::_fit_surface() {
     }
     std::vector<next::Element_shape*> coarse_shapes(4, &coarse->active_shape());
     rec = coarse->face_record[dir.i_face(reverse)];
+    #if 1
     if (rec >= 0) {
       Deformed_element* surface = &def.elems.at(coarse->refinement_level(), rec);
       int bf = surface->active_shape().boundary_face();
@@ -577,24 +578,26 @@ void Accessible_mesh::_fit_surface() {
         }
       }
     }
+    #endif
     auto stretch = con->stretch();
     std::vector<next::Element_shape*> fine_shapes;
     for (int i = 0; i < 1 + stretch[0]; ++i) {
       for (int i_fine = 0; i_fine < con->n_fine_elements(); ++i_fine) {
         Deformed_element* fine = &con->connection(i_fine).element(!reverse);
-        rec = fine->face_record[dir.i_face(!reverse)];
-        if (rec >= 0) {
-          fine = &def.elems.at(fine->refinement_level(), rec);
-          replace = true;
-        }
         for (int j = 0; j < 1 + stretch[1]; ++j) {
+          int i_elem = i + i_fine + j;
+          rec = fine->face_record[dir.i_face(!reverse)];
+          if (rec >= 0) {
+            fine = &def.elems.at(fine->refinement_level(), rec);
+            replace = true;
+          }
           Deformed_element* f = fine;
-          #if 0
+          #if 1
           rec = f->face_record[dir.i_face(!reverse)];
           if (rec >= 0) {
             Deformed_element* surface = &def.elems.at(fine->refinement_level(), rec);
             int bf = surface->active_shape().boundary_face();
-            if (math::row_coordinate(2, 2, bf/2, fine_shapes.size()) == bf%2) f = surface;
+            if (bf >= 0) if (math::row_coordinate(2, 2, bf/2 > 3 - bf/2 - dir.i_dim[!reverse], i_elem) == bf%2) f = surface;
           }
           #endif
           fine_shapes.push_back(&f->active_shape());
