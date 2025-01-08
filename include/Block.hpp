@@ -276,6 +276,7 @@ class Edge : public Boundary_block {
    */
   Edge(Vertex& vertex0, Vertex& vertex1, const Basis&);
   inline Vertex& vertex(int i_vert) {return _verts[i_vert].value();} //!< \brief access the vertices (index 0 or 1)
+  inline const Vertex& vertex(int i_vert) const {return _verts[i_vert].value();} //!< \overload
   void reset() override; //!< \brief sets `interior()` to linear interpolation between vertices
 
   /*! \brief Glues the edge to another edge (or half of it).

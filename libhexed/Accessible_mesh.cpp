@@ -378,6 +378,13 @@ void Accessible_mesh::_fit_surface() {
         for (int i_vert = 0; i_vert < 8; ++i_vert) if (i_vert/math::pow(2, 2 - i_dim)%2 == i_sign) {
           matched = matched || shape->vertex(i_vert).snapped_edge != -1;
         }
+        for (int i_edge = 0; i_edge < 4; ++i_edge) {
+          if (face->edge(i_edge).glued()) {
+            for (int i_vert = 0; i_vert < 2; ++i_vert) {
+              matched = matched || face->edge(i_edge).glued_to()->vertex(i_vert).snapped_edge != -1;
+            }
+          }
+        }
         if (!matched) continue;
         for (int i_edge = 0; i_edge < 4; ++i_edge) {
           auto& edge = face->edge(i_edge);
@@ -581,16 +588,15 @@ void Accessible_mesh::_fit_surface() {
     #endif
     auto stretch = con->stretch();
     std::vector<next::Element_shape*> fine_shapes;
-    for (int i = 0; i < 1 + stretch[0]; ++i) {
+    for (int i = 0, i_elem = 0; i < 1 + stretch[0]; ++i) {
       for (int i_fine = 0; i_fine < con->n_fine_elements(); ++i_fine) {
         Deformed_element* fine = &con->connection(i_fine).element(!reverse);
+        rec = fine->face_record[dir.i_face(!reverse)];
+        if (rec >= 0) {
+          fine = &def.elems.at(fine->refinement_level(), rec);
+          replace = true;
+        }
         for (int j = 0; j < 1 + stretch[1]; ++j) {
-          int i_elem = i + i_fine + j;
-          rec = fine->face_record[dir.i_face(!reverse)];
-          if (rec >= 0) {
-            fine = &def.elems.at(fine->refinement_level(), rec);
-            replace = true;
-          }
           Deformed_element* f = fine;
           #if 1
           rec = f->face_record[dir.i_face(!reverse)];
@@ -601,6 +607,7 @@ void Accessible_mesh::_fit_surface() {
           }
           #endif
           fine_shapes.push_back(&f->active_shape());
+          ++i_elem;
         }
       }
     }
