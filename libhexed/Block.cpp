@@ -740,18 +740,13 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
       HEXED_ASSERT(elem->n_dim() == nd, "Element dimensionality does not match number of elements supplied");
     }
   }
-  bool same [2] {true, true};
-  for (int i_side = 0; i_side < 2; ++i_side) {
-    for (Element_shape* elem : elems[i_side]) {
-      same[i_side] = same[i_side] && elem == elems[i_side][0];
-    }
-  }
   std::array<std::vector<int>, 2> face_inds;
   std::array<std::vector<int>, 2> inds;
   for (int i_side = 0; i_side < 2; ++i_side) {
+    int rotation_sign = math::sign(dir.face_sign[i_side] == dir.face_sign[0]);
     Connection_direction side_dir {{dir.i_dim[i_side], dir.i_dim[!i_side]},
                                    {dir.face_sign[i_side], dir.face_sign[!i_side]},
-                                   dir.rotate*math::sign(!i_side)};
+                                   dir.rotate*rotation_sign};
     face_inds[i_side] = face_vertex_inds(nd, side_dir);
     inds[i_side] = vertex_inds(nd, side_dir)[0];
   }
