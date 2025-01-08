@@ -199,7 +199,8 @@ class Vertex : public Block {
     std::vector<_Gradient_entry> skip;
   };
   _Optimization_state _compute_state(bool include_neighbors = true);
-  void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors);
+  void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
+                                Element_shape* coupling_element = nullptr);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   Mat<3> _desired_pos() const;
   int _get_index(const Element_shape&) const;

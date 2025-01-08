@@ -182,7 +182,8 @@ Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
   return state;
 }
 
-void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors) {
+void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
+                                      Element_shape* coupling_element) {
   _pos = point({});
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
@@ -232,11 +233,19 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
           state.gradient += (!skip_grad)*gradient_weight*(2*num/denom - num*num/(denom*denom))
                             *ma.grad_lengths(i_dim, all).transpose();
         }
-        if (!glued() && that_vert.glued()) {
-          bool coupled = false;
-          for (auto e : _elems.theirs()) coupled = coupled || (!e->glued() && e == that_vert._glued_to.get());
+        if (gradient_weight > .25 && that_vert.glued()) {
+          bool coupled = that_vert._glued_to.get() == coupling_element;
+          Element_shape* that_coupling_elem = nullptr;
+          for (auto e : _elems.theirs()) {
+            if (!e->glued() && e == that_vert._glued_to.get()) {
+              coupled = true;
+              that_coupling_elem = that_vert._glued_to.get();
+            }
+          }
           if (coupled) {
-            that_vert._compute_state_recursive(state, .5, true);
+            // this makes the weight 1/8 for center vertices on a 4:1 refined face
+            // which is necessary because such vertices will end up being counted twice
+            that_vert._compute_state_recursive(state, .5*gradient_weight*gradient_weight, true, that_coupling_elem);
           }
         }
       }
