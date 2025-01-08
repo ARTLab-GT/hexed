@@ -746,8 +746,6 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
       same[i_side] = same[i_side] && elem == elems[i_side][0];
     }
   }
-  bool dangerous = !same[0] && !same[1];
-  if (dangerous) printers::info(format_str(100, "%i %i; %i %i\n", dir.i_dim[0], dir.i_dim[1], dir.face_sign[0], dir.face_sign[1]));
   std::array<std::vector<int>, 2> face_inds;
   std::array<std::vector<int>, 2> inds;
   for (int i_side = 0; i_side < 2; ++i_side) {
@@ -783,10 +781,9 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
         if (!redundant) {
           Vertex& vert = elems[!i_side][face_inds[i_side][i_elem]]->vertex(inds[!i_side][face_inds[i_side][i_vert]]);
           if (glue) {
-            if (dangerous) printers::info(format_str(100, "%i %i %i %i %i %i\n", coords[0] == 0, coords[0] == 1, coords[1] == 0, coords[1] == 1, coords[2] == 0, coords[2] == 1));
             vert.glue(*elems[i_side][i_elem], coords);
           } else {
-            if (!dangerous) vert.eat(elems[i_side][i_elem]->vertex(inds[i_side][i_vert]));
+            vert.eat(elems[i_side][i_elem]->vertex(inds[i_side][i_vert]));
           }
         }
       }
