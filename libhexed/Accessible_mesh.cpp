@@ -753,7 +753,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       }
       if (starting_objective < 0) starting_objective = objective;
       double reduction = starting_objective - objective;
-      HEXED_ASSERT(!i_relax || reduction >= monitor.max(), "objective increased (suspect incorrect gradient)");
+      HEXED_ASSERT(!i_relax || reduction >= monitor.max(),
+                   "objective increased (suspect incorrect local objective/gradient)");
       monitor.add_sample(i_relax, reduction);
       std::string message = format_str(
         400,

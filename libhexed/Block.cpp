@@ -174,7 +174,7 @@ bool Vertex::mobile() const {
 }
 
 const double ortho_tolerance = 3e-2;
-const double edge_tolerance = 3e-2;
+const double edge_tolerance = 1e-3;
 
 Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
   _Optimization_state state;
@@ -183,7 +183,8 @@ Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
 }
 
 void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                      Element_shape* coupling_element) {
+                                      Vertex* orig_vertex) {
+  if (!orig_vertex) orig_vertex = this;
   _pos = point({});
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
@@ -218,8 +219,10 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
       if (!skip_grad) state.skip.emplace_back(elem, i_that, i_this);
       Mesh_assessment ma(vert_seq, i_that, i_this);
       state.feasible = state.feasible && ma.orthogonality > ortho_tolerance;
+      state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         state.feasible = state.feasible && ma.edge_lengths(i_dim) > edge_tolerance*ns;
+        state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim));
       }
       if (state.feasible) {
         Vertex& that_vert = elem->vertex(i_that);
@@ -233,19 +236,19 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
           state.gradient += (!skip_grad)*gradient_weight*(2*num/denom - num*num/(denom*denom))
                             *ma.grad_lengths(i_dim, all).transpose();
         }
-        if (gradient_weight > .25 && that_vert.glued()) {
-          bool coupled = that_vert._glued_to.get() == coupling_element;
-          Element_shape* that_coupling_elem = nullptr;
-          for (auto e : _elems.theirs()) {
-            if (!e->glued() && e == that_vert._glued_to.get()) {
-              coupled = true;
-              that_coupling_elem = that_vert._glued_to.get();
-            }
+        // note: the valid values for `gradient_weight` are 1., .5, and .25
+        if (gradient_weight > .3 && that_vert.glued()) {
+          bool coupled = false;
+          for (auto e : orig_vertex->_elems.theirs()) {
+            coupled = coupled || (!e->glued() && e == that_vert._glued_to.get());
+          }
+          if (gradient_weight < .9) {
+            int n_on_face = 0;
+            for (double c : that_vert._glued_coords) n_on_face += (c == 0 || c == 1);
+            coupled = coupled && n_on_face == 1;
           }
           if (coupled) {
-            // this makes the weight 1/8 for center vertices on a 4:1 refined face
-            // which is necessary because such vertices will end up being counted twice
-            that_vert._compute_state_recursive(state, .5*gradient_weight*gradient_weight, true, that_coupling_elem);
+            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex);
           }
         }
       }
@@ -262,7 +265,8 @@ void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>
   Mat<3> orig_pos = _point({});
   auto state = _compute_state();
   double ns = nominal_size();
-  HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
+  HEXED_ASSERT(state.feasible, format_str(200, "Vertex state violates quality criteria (ortho = %e; edge = %e).",
+                                          state.worst_ortho, state.worst_edge));
   Mat<3> target = get_target(orig_pos);
   Mat<3> snap_vec = target - orig_pos;
   double orig_dist_sq = snap_vec.squaredNorm();
@@ -300,6 +304,7 @@ bool Vertex::snap_to(Mat<3> target) {
 
 double Vertex::quality_objective(double distance_weight, std::function<Mat<3>(Mat<3>)> target) {
   auto state = _compute_state(false);
+  if (glued()) return state.objective;
   Mat<3> pos = point({});
   return state.objective + distance_weight*(target(pos) - pos).squaredNorm();
 }
