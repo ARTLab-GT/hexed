@@ -663,7 +663,6 @@ void Accessible_mesh::_fit_surface() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
-  if (all_verts.size() < 6000) {
   {
     Task_message message(printers::info, "Post-edge-matching mesh optimization", "\n");
     _optimize(1, 10, true);
@@ -674,7 +673,6 @@ void Accessible_mesh::_fit_surface() {
   }
   if (n_failed) {
     printers::warn(format_str(200, "%li vertices could not be snapped to the surface.\n", n_failed), true);
-  }
   }
 }
 

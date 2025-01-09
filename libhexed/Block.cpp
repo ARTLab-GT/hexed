@@ -174,7 +174,7 @@ bool Vertex::mobile() const {
 }
 
 const double ortho_tolerance = 3e-2;
-const double edge_tolerance = 1e-3;
+const double edge_tolerance = 1e-2;
 
 Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
   _Optimization_state state;
@@ -222,7 +222,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
       state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         state.feasible = state.feasible && ma.edge_lengths(i_dim) > edge_tolerance*ns;
-        state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim));
+        state.worst_edge = std::min(state.worst_edge/ns, ma.edge_lengths(i_dim));
       }
       if (state.feasible) {
         Vertex& that_vert = elem->vertex(i_that);
@@ -265,8 +265,9 @@ void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>
   Mat<3> orig_pos = _point({});
   auto state = _compute_state();
   double ns = nominal_size();
-  HEXED_ASSERT(state.feasible, format_str(200, "Vertex state violates quality criteria (ortho = %e; edge = %e).",
-                                          state.worst_ortho, state.worst_edge));
+  HEXED_ASSERT(state.feasible, format_str(200,
+               "Vertex state violates quality criteria (ortho = %e; edge = %e; coords = (%e %e %e)).",
+               state.worst_ortho, state.worst_edge, orig_pos(0), orig_pos(1), orig_pos(2)));
   Mat<3> target = get_target(orig_pos);
   Mat<3> snap_vec = target - orig_pos;
   double orig_dist_sq = snap_vec.squaredNorm();
