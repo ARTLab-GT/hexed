@@ -717,8 +717,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       // snap vertices to surface boundary
       Mat<> o = tree->origin();
       double tns = tree->nominal_size();
+      double objective_diff = 0;
       for (auto& vert : verts) if (vert.mobile()) {
-        HEXED_ASSERT(vert.alive(), "boundary vertices should all be alive");
         auto satisfy = [&](Mat<3> p)->Mat<3> {
           for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
             p(i_dim) = std::max(p(i_dim), o(i_dim));
@@ -742,7 +742,9 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
           return p;
         };
         auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
-        vert.improve_quality(distance_weight, get_target, satisfy);
+        objective_diff += vert.improve_quality(distance_weight, get_target, satisfy);
+      } else {
+        vert.debug_target = vert.point({});
       }
       double objective = 0;
       for (auto& vert : verts) {
@@ -751,8 +753,13 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       }
       if (starting_objective < 0) starting_objective = objective;
       double reduction = starting_objective - objective;
+      if (i_relax) {
+        if (std::abs(objective_diff + (reduction - monitor.max())) > 1e-2*std::abs(objective_diff)) {
+          printers::warn(format_str(100, "inaccurate objective change: %e vs %e\n", -objective_diff, reduction - monitor.max()), true);
+        }
+      }
       HEXED_ASSERT(!i_relax || reduction >= monitor.max(),
-                   "objective increased (suspect incorrect local objective/gradient)");
+                   "objective increased (suspect incorrect local objective calculation)");
       monitor.add_sample(i_relax, reduction);
       std::string message = format_str(
         400,

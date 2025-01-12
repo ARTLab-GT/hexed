@@ -45,14 +45,7 @@ Mat<3> Block::point(const std::vector<int>& node_coords, Int recursion_depth) co
     HEXED_ASSERT(0 <= coord && coord < _row_size, format_str(1000, "node index %i is out of bounds", coord));
   }
   #endif
-  #if 1
   HEXED_ASSERT(recursion_depth <= max_recursion_depth, "Max recursion depth exceeded.", assert::Overflow_error);
-  #else
-  if (recursion_depth > max_recursion_depth) {
-    printers::warn("Warning: max recursion depth exceeded in `Block::point`. Returning zero.");
-    return Mat<3>::Zero();
-  }
-  #endif
   return _point(node_coords, recursion_depth);
 }
 
@@ -72,6 +65,7 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 : Block(0, row_size)
 , snapped_edge{-1}
 , snapped_endpoint{-1}
+, debug_target{-1, -1, -1}
 , _pos{pos}
 , _update{Mat<3>::Zero()}
 , _step_sz{-1}
@@ -244,7 +238,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
           }
           if (gradient_weight < .9) {
             int n_on_face = 0;
-            for (double c : that_vert._glued_coords) n_on_face += (c == 0 || c == 1);
+            for (double c : that_vert._glued_coords) n_on_face += (c < .1 || c > .9);
             coupled = coupled && n_on_face == 1;
           }
           if (coupled) {
@@ -256,12 +250,12 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
   }
 }
 
-void Vertex::improve_quality() {
-  improve_quality(0, [](Mat<3>){return Mat<3>::Zero();}, [](Mat<3> p){return p;});
+double Vertex::improve_quality() {
+  return improve_quality(0, [](Mat<3>){return Mat<3>::Zero();}, [](Mat<3> p){return p;});
 }
 
-void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>)> get_target,
-                                                     std::function<Mat<3>(Mat<3>)> satisfy_constraints) {
+double Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>)> get_target,
+                                                       std::function<Mat<3>(Mat<3>)> satisfy_constraints) {
   Mat<3> orig_pos = _point({});
   auto state = _compute_state();
   double ns = nominal_size();
@@ -269,11 +263,12 @@ void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>
                "Vertex state violates quality criteria (ortho = %e; edge = %e; coords = (%e %e %e)).",
                state.worst_ortho, state.worst_edge, orig_pos(0), orig_pos(1), orig_pos(2)));
   Mat<3> target = get_target(orig_pos);
+  debug_target = target;
   Mat<3> snap_vec = target - orig_pos;
   double orig_dist_sq = snap_vec.squaredNorm();
   state.objective += distance_weight*orig_dist_sq;
   Mat<3> direction = -state.gradient + distance_weight*2*snap_vec;
-  if (direction.norm()*ns < 1e-6*state.objective) return;
+  if (direction.norm()*ns < 1e-6*state.objective) return 0;
   direction.normalize();
   _Optimization_state new_state;
   auto check_step = [&]() {
@@ -288,11 +283,13 @@ void Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>
   while (!(new_state.feasible && new_state.objective < state.objective)) {
     if (_step_sz < 1e-20*ns) {
       _pos = orig_pos;
-      break;
+      return 0;
     }
     check_step();
     _step_sz /= 2;
   }
+  debug_target = target;
+  return new_state.objective - state.objective;
 }
 
 bool Vertex::snap_to(Mat<3> target) {
@@ -305,8 +302,14 @@ bool Vertex::snap_to(Mat<3> target) {
 
 double Vertex::quality_objective(double distance_weight, std::function<Mat<3>(Mat<3>)> target) {
   auto state = _compute_state(false);
+  HEXED_ASSERT(state.feasible, "infeasible state");
   if (glued()) return state.objective;
   Mat<3> pos = point({});
+  Mat<3> t = target(pos);
+  HEXED_ASSERT((debug_target - t).norm() < 1e-10,
+               format_str(200, "target changed (%e %e %e; %e %e %e)",
+                          debug_target(0), debug_target(1), debug_target(2),
+                          t(0), t(1), t(2)));
   return state.objective + distance_weight*(target(pos) - pos).squaredNorm();
 }
 
