@@ -356,12 +356,30 @@ class Subprocess(Buildable):
             self.builder.subproc(comm, **self._kwargs)
 
 class Wget(Subprocess):
-    def __init__(self, builder, url):
-        self.file_name = url.split("/")[-1]
-        super().__init__(builder, ["wget", url], self.file_name, depends=[])
+    def __init__(self, builder, url, file_name=None, prefix="."):
+        if file_name is None:
+            self.file_name = url.split("/")[-1]
+        else:
+            self.file_name = file_name
+        self.file_name = absolute(self.file_name, prefix)
+        super().__init__(builder, ["wget", "-P", prefix, url], self.file_name, depends=[])
     def build(self):
         assert self.builder.options["internet"], "`Wget` requires internet access. (You passed `--internet=False`.)"
         super().build()
+
+class Internet_mirror(Wget):
+    def __init__(self, builder, url, update_freq=24*60^2, **kwargs):
+        self._update_freq = update_freq
+        super().__init__(builder, url, **kwargs)
+    def up_to_date(self):
+        cwd = os.getcwd()
+        utd = super().up_to_date()
+        if utd:
+            if time.time() < self.found_output.earliest_mtime + self._update_freq:
+                return True
+            else:
+                os.remove(self.file_name)
+        return False
 
 class Extract(Buildable):
     def __init__(self, builder, archive, outputs=None):
@@ -891,6 +909,9 @@ class Builder:
             self._python = "python3"
         if self.options["internet"]:
             self.python("-m", "pip", "install", "--upgrade", "pip")
+        # get index of pypi packages
+        self.mkdir(self.build_dir + "pypi")
+        self[Internet_mirror]("https://pypi.org/simple/", file_name="index.html", prefix=self.build_dir + "pypi").do
         self.prefices = Prefices(self.env)
         self.prefices.add("bin", env_vars=["PATH"])
         self.prefices.add("lib", env_vars=["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"],
@@ -917,7 +938,7 @@ class Builder:
             p = Prefices.remove_suffix(p, "sbin")
             cmake_paths += (p, p + "lib/")
         self.prefices["cmake"] = cmake_paths + tuple(self.prefices["cmake"])
-        self[Pip](["cmake", "pypisearch"]).do
+        self[Pip](["cmake"]).do
 
     def site_packages(self, python=None):
         if not python:
@@ -980,9 +1001,14 @@ class Builder:
 
     def in_pypi(self, package):
         self.message("searching PyPI...", end="")
-        output = self.python("-m", "pypisearch", package, capture_output=True).stdout.decode()
-        self.message("done", start="")
-        return f"\n{package} " in "\n" + output
+        with open(self.build_dir + "pypi/index.html", "r") as index:
+            text = index.read()
+        found = bool(re.search(f"/{package}/", text))
+        if found:
+            self.message(f"found {package}", start="")
+        else:
+            self.message(f"did not find {package}", start="")
+        return found
 
     def cmake(self, source_dir, opts=[], build_dir="build"):
         self.assert_command("g++", "build-essential")
