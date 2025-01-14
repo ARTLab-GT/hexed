@@ -368,7 +368,7 @@ class Wget(Subprocess):
         super().build()
 
 class Internet_mirror(Wget):
-    def __init__(self, builder, url, update_freq=24*60^2, **kwargs):
+    def __init__(self, builder, url, update_freq=24*60**2, **kwargs):
         self._update_freq = update_freq
         super().__init__(builder, url, **kwargs)
     def up_to_date(self):
