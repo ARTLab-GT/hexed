@@ -312,12 +312,13 @@ void Accessible_mesh::_fit_surface() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
+  Int elems_sz = elems.size();
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < elems_sz; ++i_elem) elems[i_elem].record = 0;
 
   if (params.n_dim == 3) {
-    Int elems_sz = elems.size();
     for (Int i_element = 0; i_element < elems_sz; ++i_element) {
       auto& elem = elems[i_element];
-      elem.record = 0;
       for (int i_face = 0; i_face < 6; ++i_face) elem.face_record[i_face] = -1;
       const next::Element_shape* shape = elem.fake_shape();
       if (shape) {
@@ -611,7 +612,6 @@ void Accessible_mesh::_fit_surface() {
     }
   }
 
-  #if 0
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.record.clear();
@@ -622,7 +622,6 @@ void Accessible_mesh::_fit_surface() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
-  #endif
   for (auto& block : _blocks.boundary_sides()) {
     block.reset();
   }
