@@ -103,7 +103,9 @@ void Accessible_mesh::_offset_vertices(double offset) {
 Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
   HEXED_ASSERT(Int(vert.record.size()) == 2*params.n_dim + 1, "Vertex record has not been set correctly.");
   if (vert.record[2*params.n_dim]) {
-    if (vert.snapped_edge >= 0) {
+    if (vert.snapped_point >= 0) {
+      return surf_geom->points()[vert.snapped_point];
+    } else if (vert.snapped_edge >= 0) {
       auto& geom_edge = surf_geom->edges()[vert.snapped_edge];
       Array<double> nodes{geom_edge.nodes()};
       Int n_points = nodes.shape()[0];
@@ -156,6 +158,7 @@ void Accessible_mesh::_fit_surface() {
   for (next::Vertex& vert : verts) {
     Mat<3> point = vert.point({});
     vert.dijkstra_point = point;
+    vert.snapped_point = -1;
     vert.snapped_edge = -1;
     vert.snapped_endpoint = -1;
   }
@@ -166,46 +169,52 @@ void Accessible_mesh::_fit_surface() {
       face.edge(i_edge).snapped_edge = -1;
     }
   }
-  auto edges = surf_geom->edges();
-  for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
-    auto& geom_edge = edges[i_geom_edge];
-    std::array<next::Vertex*, 2> start_end {nullptr, nullptr};
-    for (int i_endpoint = 0; i_endpoint < 2; ++i_endpoint) {
-      double dist_sq = huge;
-      Mat<3> endpoint = geom_edge.nodes()(i_endpoint*(geom_edge.nodes().shape()[0] - 1)).vector();
-      for (auto& vert : verts) {
-        if (!vert.glued()) {
-          double ns = vert.nominal_size();
-          double d = (vert.dijkstra_point - endpoint).squaredNorm();
-          for (int i_dim = 0; i_dim < 3; ++i_dim) {
-            for (int sign : {0, 1}) {
-              double extreme = tree->origin()(i_dim) + sign*tree->nominal_size();
-              if ((std::abs(endpoint(i_dim) - extreme) > 3e-2*ns) !=
-                  (std::abs(vert.dijkstra_point(i_dim) - extreme) > 3e-2*ns)) d = huge;
-            }
+  auto find_nearest_vert = [&](Mat<3> point, int i_geom_edge = -1)->next::Vertex* {
+    next::Vertex* nearest_vert = nullptr;
+    double dist_sq = huge;
+    for (auto& vert : verts) {
+      if (!vert.glued()) {
+        double ns = vert.nominal_size();
+        double d = (vert.dijkstra_point - point).squaredNorm();
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          for (int sign : {0, 1}) {
+            double extreme = tree->origin()(i_dim) + sign*tree->nominal_size();
+            if ((std::abs(point(i_dim) - extreme) > 3e-2*ns) !=
+                (std::abs(vert.dijkstra_point(i_dim) - extreme) > 3e-2*ns)) d = huge;
           }
-          // don't bother to account for snapped neighbors unless d is initially < dist_sq
-          if (d < std::min(ns, dist_sq)) {
-            bool snapped_neighbor = false;
-            for (next::Vertex* v : vert.neighbors()) {
-              if (v) snapped_neighbor = snapped_neighbor || (v->snapped_edge != -1 && v->snapped_edge != i_geom_edge);
-            }
-            if (snapped_neighbor) d *= 10;
-            if (d < dist_sq) { // now we know d accounting for snapped neighbors, so this is the real comparison
-              dist_sq = d;
-              start_end[i_endpoint] = &vert;
-            }
+        }
+        // don't bother to account for snapped neighbors unless d is initially < dist_sq
+        if (d < std::min(ns, dist_sq)) {
+          bool snapped_neighbor = false;
+          for (next::Vertex* v : vert.neighbors()) {
+            if (v) snapped_neighbor = snapped_neighbor || (v->snapped_edge != -1 && v->snapped_edge != i_geom_edge);
+          }
+          if (snapped_neighbor) d *= 10;
+          if (d < dist_sq) { // now we know d accounting for snapped neighbors, so this is the real comparison
+            dist_sq = d;
+            nearest_vert = &vert;
           }
         }
       }
-      if (start_end[i_endpoint]) {
-        start_end[i_endpoint]->dijkstra_point = endpoint;
-        start_end[i_endpoint]->snapped_edge = i_geom_edge;
-        start_end[i_endpoint]->snapped_endpoint = i_endpoint;
-      }
     }
-    if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
-    if (params.n_dim == 3) {
+    return nearest_vert;
+  };
+
+  auto edges = surf_geom->edges();
+  if (params.n_dim == 3) {
+    for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+      auto& geom_edge = edges[i_geom_edge];
+      std::array<next::Vertex*, 2> start_end {nullptr, nullptr};
+      for (int i_endpoint = 0; i_endpoint < 2; ++i_endpoint) {
+        Mat<3> endpoint = geom_edge.nodes()(i_endpoint*(geom_edge.nodes().shape()[0] - 1)).vector();
+        start_end[i_endpoint] = find_nearest_vert(endpoint, i_geom_edge);
+        if (start_end[i_endpoint]) {
+          start_end[i_endpoint]->dijkstra_point = endpoint;
+          start_end[i_endpoint]->snapped_edge = i_geom_edge;
+          start_end[i_endpoint]->snapped_endpoint = i_endpoint;
+        }
+      }
+      if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
       #pragma omp parallel for
       for (next::Vertex& vert : verts) {
         vert.dijkstra_dist = huge;
@@ -272,6 +281,13 @@ void Accessible_mesh::_fit_surface() {
           vert = vert->dijkstra_prev_vert;
         } while (vert);
       }
+    }
+  } else if (params.n_dim == 2) {
+    auto points = surf_geom->points();
+    for (int i_point = 0; i_point < points.size(); ++i_point) {
+      Mat<3> point {points[i_point][0], points[i_point][1], 0.};
+      next::Vertex* vert = find_nearest_vert(point);
+      if (vert) vert->snapped_point = i_point;
     }
   }
   for (auto& vert : verts) {
@@ -622,10 +638,6 @@ void Accessible_mesh::_fit_surface() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
-  for (auto& block : _blocks.boundary_sides()) {
-    block.reset();
-  }
-  return;
   {
     Task_message message(printers::info, "Post-edge-matching mesh optimization", "\n");
     _optimize(1, 10, true);
@@ -636,6 +648,9 @@ void Accessible_mesh::_fit_surface() {
   }
   if (n_failed) {
     printers::warn(format_str(200, "%li vertices could not be snapped to the surface.\n", n_failed), true);
+  }
+  for (auto& block : _blocks.boundary_sides()) {
+    block.reset();
   }
 }
 
@@ -691,13 +706,13 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
             for (auto n : vert.neighbors()) if (n) {
               if ((int)n->record.size() == 2*params.n_dim + 1) {
                 if (!n->record[2*params.n_dim]) {
-                  Mat<> start = n->point({});
-                  Mat<> end(3);
-                  end = p;
+                  auto seq = Eigen::seqN(0, params.n_dim);
+                  Mat<> start = n->point({})(seq);
+                  Mat<> end = p(Eigen::seqN(0, params.n_dim));
                   std::vector<double> intersections = surf_geom->intersections(start, end);
                   double min_sect = 1;
                   for (double s : intersections) min_sect = std::min(min_sect, s);
-                  p = start + min_sect*(p - start);
+                  p(seq) = start + min_sect*(p(seq) - start);
                 }
               }
             }

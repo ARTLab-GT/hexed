@@ -176,6 +176,7 @@ class Vertex : public Block {
   std::vector<Int> record; //!< for algorithms to keep notes as they please
 
   Mat<3> offset;
+  Int snapped_point;
   Int snapped_edge;
   Int snapped_endpoint;
   Mat<3> dijkstra_point; //!< \brief nominal location of this vertex used in Dijkstra's algorithm
