@@ -65,7 +65,6 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 : Block(0, row_size)
 , snapped_edge{-1}
 , snapped_endpoint{-1}
-, debug_target{-1, -1, -1}
 , _pos{pos}
 , _update{Mat<3>::Zero()}
 , _step_sz{-1}
@@ -263,7 +262,6 @@ double Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<
                "Vertex state violates quality criteria (ortho = %e; edge = %e; coords = (%e %e %e)).",
                state.worst_ortho, state.worst_edge, orig_pos(0), orig_pos(1), orig_pos(2)));
   Mat<3> target = get_target(orig_pos);
-  debug_target = target;
   Mat<3> snap_vec = target - orig_pos;
   double orig_dist_sq = snap_vec.squaredNorm();
   state.objective += distance_weight*orig_dist_sq;
@@ -288,7 +286,6 @@ double Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<
     check_step();
     _step_sz /= 2;
   }
-  debug_target = target;
   return new_state.objective - state.objective;
 }
 
@@ -305,11 +302,6 @@ double Vertex::quality_objective(double distance_weight, std::function<Mat<3>(Ma
   HEXED_ASSERT(state.feasible, "infeasible state");
   if (glued()) return state.objective;
   Mat<3> pos = point({});
-  Mat<3> t = target(pos);
-  HEXED_ASSERT((debug_target - t).norm() < 1e-10,
-               format_str(200, "target changed (%e %e %e; %e %e %e)",
-                          debug_target(0), debug_target(1), debug_target(2),
-                          t(0), t(1), t(2)));
   return state.objective + distance_weight*(target(pos) - pos).squaredNorm();
 }
 

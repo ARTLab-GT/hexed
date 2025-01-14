@@ -185,7 +185,6 @@ class Vertex : public Block {
   Edge* dijkstra_prev_edge; //!< \brief holds the previous node in the shortest path to this node in Dijkstra's algorithm
   double dijkstra_curve_dist_sq; //!< \brief squared distance from the curve
   double dijkstra_arc_len; //!< \brief arc length of the nearest point on the curve
-  Mat<3> debug_target;
 
   private:
   struct _Gradient_entry {

@@ -691,11 +691,11 @@ class Python_package(Buildable):
     def output(self):
         return any_([f for f in contents(self._dist) if f.endswith(".whl")])
     def build(self):
-        self[Pip]("build").do
+        self[Pip](["build", "hatchling"]).do
         if os.path.exists(self._dist):
             shutil.rmtree(self._dist)
         os.chdir(self._source)
-        self.builder.python("-m", "build")
+        self.builder.python("-m", "build", "--no-isolation", "--wheel")
     def __str__(self):
         return f"local Python package `{self._source}`"
 
