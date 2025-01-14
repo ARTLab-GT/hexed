@@ -554,6 +554,7 @@ class Occt(C_project):
 class Pip(Buildable):
     fake_names = {
         "gitpython": "git",
+        "datetime": "DateTime",
     }
     def __init__(self, builder, package_names):
         self._names = package_names
