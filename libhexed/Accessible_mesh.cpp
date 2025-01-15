@@ -102,6 +102,7 @@ void Accessible_mesh::_offset_vertices(double offset) {
 
 Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
   HEXED_ASSERT(Int(vert.record.size()) == 2*params.n_dim + 1, "Vertex record has not been set correctly.");
+  auto seq = Eigen::seqN(0, params.n_dim);
   if (vert.record[2*params.n_dim]) {
     if (vert.snapped_point >= 0) {
       return surf_geom->points()[vert.snapped_point];
@@ -110,13 +111,12 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
       Array<double> nodes{geom_edge.nodes()};
       Int n_points = nodes.shape()[0];
       if (vert.snapped_endpoint == -1) {
-        Int nearest = geom_edge.nearest_point(pos, 100*vert.nominal_size()).index;
+        Int nearest = geom_edge.nearest_point(pos(seq), 100*vert.nominal_size()).index;
         if (nearest >= 0) pos = nodes(nearest).vector();
       } else {
         pos = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
       }
     } else {
-      auto seq = Eigen::seqN(0, params.n_dim);
       pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
     }
   }
@@ -155,7 +155,7 @@ void Accessible_mesh::_fit_surface() {
   }
   auto verts = _blocks.boundary_verts();
   #pragma omp parallel for
-  for (next::Vertex& vert : verts) {
+  for (next::Vertex& vert : all_verts) {
     Mat<3> point = vert.point({});
     vert.dijkstra_point = point;
     vert.snapped_point = -1;
@@ -807,12 +807,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     #pragma omp parallel for
     for (auto& face : faces_3d) snap_block(face);
     _stopwatch["relax"]["surface snapping"].work_units_completed += bverts.size();
-  } else {
-    auto blocks = _blocks.boundary_sides();
-    #pragma omp parallel for
-    for (auto& block : blocks) block.reset();
   }
-  printers::info("\n");
 }
 
 Storage_params incr_res_cache(Storage_params params) {

@@ -63,6 +63,7 @@ Mat<3> Block::point(int i_point, Int recursion_depth) const {
 
 Vertex::Vertex(Mat<3> pos, int row_size)
 : Block(0, row_size)
+, snapped_point{-1}
 , snapped_edge{-1}
 , snapped_endpoint{-1}
 , _pos{pos}
