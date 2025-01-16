@@ -14,6 +14,17 @@
 
 namespace hexed {
 
+// makes an assertion and if it fails, visualizes the mesh before throwing
+#define VIS_ASSERT(expression, message, ...) \
+    HEXED_ASSERT(expression, \
+                 _vis_return(message + std::string(" Writing diagnostic visualization to `meshing_diagnostic.*`")) \
+                 __VA_OPT__(,) __VA_ARGS__) \
+
+std::string Accessible_mesh::_vis_return(std::string str) {
+  visualize("default", "meshing_diagnostic");
+  return str;
+}
+
 Element_container& Accessible_mesh::container(bool is_deformed) {
   Element_container* containers [] {&car.elems, &def.elems};
   return *containers[is_deformed];
@@ -1026,6 +1037,14 @@ Mesh::Connection_validity Accessible_mesh::valid() {
     }
   }
   return {n_redundant, n_missing};
+}
+
+void Accessible_mesh::assert_valid() {
+  auto v = valid();
+  VIS_ASSERT(v.n_redundant == 0 && v.n_missing == 0, format_str(200,
+    "invalid mesh connectivity with %i redundancies and %i unconnected faces",
+    v.n_redundant, v.n_missing
+  ));
 }
 
 //! \cond helper classes and functions for Accessible_mesh::extrude

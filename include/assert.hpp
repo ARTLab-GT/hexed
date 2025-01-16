@@ -127,7 +127,7 @@ void throw_critical(const char* message) {
   if (!(expression)) { \
     HEXED_THROW(hexed::format_str(1000, \
       "%s\n" \
-      "  Assertion `%s` failed in `%s`.\n", \
+      "  Assertion `%s` failed in `%s`.", \
       std::string(message).c_str(), #expression, __FUNCTION__) \
       __VA_OPT__(,) __VA_ARGS__ \
     ); \

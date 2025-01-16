@@ -459,7 +459,7 @@ void Solver::calc_jacobian(bool snap) {
 }
 
 void Solver::initialize(std::string(expr)) {
-  acc_mesh->valid().assert_valid();
+  acc_mesh->assert_valid();
   std::vector<std::string> state_vars;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) state_vars.push_back("momentum" + std::to_string(i_dim));
   state_vars.push_back("density");
