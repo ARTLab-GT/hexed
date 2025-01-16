@@ -117,9 +117,9 @@ Surface_geom* Case::_make_geom() {
       auto data = read_csv(*geom);
       HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns", assert::User_error);
       Simplex_geom<2>* geom = new Simplex_geom<2>(segments(data.transpose()));
-      if (data.cols() >= 2) {
-        geom->add_snap_point({data(0, 0), data(1, 0), 0.});
-        geom->add_snap_point({data(0, data.cols() - 1), data(1, data.cols() - 1), 0.});
+      if (data.rows() >= 2) {
+        geom->add_snap_point({data(0, 0), data(0, 1), 0.});
+        geom->add_snap_point({data(data.rows() - 1, 0), data(data.rows() - 1, 1), 0.});
       }
       geoms.emplace_back(geom);
     } else if ((ext == "igs" || ext == "iges") && !(HEXED_USE_OCCT && _vari("prefer_occt"))) {

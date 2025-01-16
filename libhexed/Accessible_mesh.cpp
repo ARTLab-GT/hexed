@@ -187,7 +187,8 @@ void Accessible_mesh::_fit_surface() {
         if (d < std::min(ns, dist_sq)) {
           bool snapped_neighbor = false;
           for (next::Vertex* v : vert.neighbors()) {
-            if (v) snapped_neighbor = snapped_neighbor || (v->snapped_edge != -1 && v->snapped_edge != i_geom_edge);
+            if (v) snapped_neighbor = snapped_neighbor || (v->snapped_edge != -1 && v->snapped_edge != i_geom_edge)
+                                                       || v->snapped_point != -1;
           }
           if (snapped_neighbor) d *= 10;
           if (d < dist_sq) { // now we know d accounting for snapped neighbors, so this is the real comparison
@@ -649,9 +650,8 @@ void Accessible_mesh::_fit_surface() {
   if (n_failed) {
     printers::warn(format_str(200, "%li vertices could not be snapped to the surface.\n", n_failed), true);
   }
-  for (auto& block : _blocks.boundary_sides()) {
-    block.reset();
-  }
+  #pragma omp parallel for
+  for (auto& vert : verts) vert.record.clear();
 }
 
 void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
