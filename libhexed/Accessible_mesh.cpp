@@ -21,6 +21,9 @@ namespace hexed {
                  __VA_OPT__(,) __VA_ARGS__) \
 
 std::string Accessible_mesh::_vis_return(std::string str) {
+  auto blocks = _blocks.boundary_sides();
+  #pragma omp parallel for
+  for (auto& b : blocks) b.reset();
   visualize("default", "meshing_diagnostic");
   return str;
 }
