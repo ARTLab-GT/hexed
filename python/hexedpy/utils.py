@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+from scipy.optimize import fsolve
 import os
 import time
 import re
@@ -25,6 +26,11 @@ def naca(desig, n_points = 1000, closure = "warp"):
         - `"warp"`: Close the trailing edge by adding a 4th-degree polyomial of \f$ x_0 \f$ to \f$ x_1 \f$.
         - `"segment"`: Close the trailing edge by adding a line segment connecting the last point to the first point,
             causing the array to be `(n_points + 1)*2` instead of `n_points*2`.
+        - `"extend"`: Extends the \f$ x_0 \f$ domain until the point where the upper and lower surface meet
+            and then rescales the whole airfoil to keep the chord equal to 1.
+            This stays faithful to the original polynomial profile, but slightly decreases the thickness.
+            This is the method used in the classic [NASA validation case](https://turbmodels.larc.nasa.gov/naca0012_val.html).
+            Extension and rescaling are applied __after__ the camber addition.
         - `"none"`, `None`, or `False`: Don't close the trailing edge.
     """
     try:
@@ -36,10 +42,15 @@ def naca(desig, n_points = 1000, closure = "warp"):
     camber_loc = int(desig[1])
     thickness = int(desig[2:])*1e-2
     coords = np.zeros((n_points, 2))
-    param = np.linspace(-1., 1., n_points)
+    def sym_profile(p):
+        ap = np.abs(p)
+        return 5*thickness*p*(.2969 - .1260*ap - .3516*ap**3 + .2843*ap**5 - .1015*ap**7)
+    max_param = 1.
+    if (closure == "extend"):
+        max_param = fsolve(sym_profile, 1., xtol=1e-12)[0]
+    param = np.linspace(-max_param, max_param, n_points)
     coords[:, 0] = param**2
-    ap = np.abs(param)
-    coords[:, 1] = 5*thickness*param*(.2969 - .1260*ap - .3516*ap**3 + .2843*ap**5 - .1015*ap**7)
+    coords[:, 1] = sym_profile(param)
     if camber_loc > 0:
         camber_max *= 1e-2
         camber_loc *= 1e-1
@@ -48,9 +59,11 @@ def naca(desig, n_points = 1000, closure = "warp"):
         s = coords[:, 0] >= camber_loc
         coords[s, 1] += camber_max/(1 - camber_loc)**2*(1 - 2*camber_loc + 2*camber_loc*param[s]**2 - param[s]**4)
     if closure == "warp":
-        coords[:, 1] -= param*ap**7*coords[-1, 1]
+        coords[:, 1] -= param*np.abs(param)**7*coords[-1, 1]
     elif closure == "segment":
         coords = np.concatenate([coords, coords[[0], :]])
+    elif closure == "extend":
+        coords /= max_param**2
     elif closure and closure.lower() != "none":
         raise User_error("unrecognized value of `closure` parameter")
     return coords
