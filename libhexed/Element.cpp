@@ -1,5 +1,6 @@
-#include <Element.hpp>
-#include <math.hpp>
+#include <hexed/Element.hpp>
+#include <hexed/math.hpp>
+#include <hexed/Face.hpp>
 
 namespace hexed {
 
@@ -21,6 +22,7 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
 , tree(this)
 , origin{origin_arg(Eigen::seqN(0, params.n_dim))}
 {
+  for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) _faces.emplace_back(this);
   face_record.fill(0);
   faces.fill(nullptr);
   // initialize local time step scaling to 1.
@@ -130,6 +132,11 @@ void Element::set_face(int i_face, double* data) {
   faces[i_face] = data;
 }
 bool Element::is_connected(int i_face) {return faces[i_face];}
+
+void Element::associate_face(Reciprocal_ptr<Face, Element>& ptr) {
+  HEXED_ASSERT(ptr.mine, "`Face` pointer has no `Face`");
+  _faces[2*ptr.mine->i_dim() + ptr.mine->sign()].pair(ptr);
+}
 
 Mat<3> Element::_compute_pos() const {
   Mat<3> pos = Mat<3>::Zero();
