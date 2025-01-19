@@ -125,7 +125,10 @@ double& Element::vertex_fix_admis_coef(int i_vertex) {
   return _vertex_data(2)[i_vertex];
 }
 
-void Element::set_face(int i_face, double* data) {faces[i_face] = data;}
+void Element::set_face(int i_face, double* data) {
+  HEXED_ASSERT(!faces[i_face] || !data, "connecting an already-connected face");
+  faces[i_face] = data;
+}
 bool Element::is_connected(int i_face) {return faces[i_face];}
 
 Mat<3> Element::_compute_pos() const {

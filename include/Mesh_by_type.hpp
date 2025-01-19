@@ -152,6 +152,9 @@ class Mesh_by_type : public View_by_type<element_t>
     // boundary connections
     for (unsigned i_con = 0; i_con < bound_cons.size(); ++i_con) {
       ++bound_cons[i_con]->element().face_record[bound_cons[i_con]->direction().i_face(0)];
+      if (bound_cons[i_con]->bound_cond_serial_n() < 2*par.n_dim) {
+        HEXED_ASSERT(bound_cons[i_con]->element().tree, "extruded element is connected to extremal boundary");
+      }
     }
     // hanging node connections
     for (int i_n_fine = 0; i_n_fine < 3; ++i_n_fine) {

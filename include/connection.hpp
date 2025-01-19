@@ -323,6 +323,10 @@ class Typed_bound_connection : public Boundary_connection {
   , cache{Mat<>::Zero(2*state_size)}
   , _prescribed_data({n_prescribed, params.n_qpoint()/params.row_size})
   {
+    if (bc_serial_n < 2*params.n_dim) {
+      HEXED_ASSERT(elem.tree, "connecting an extruded element to an extremal boundary");
+      HEXED_ASSERT(bc_serial_n == 2*i_dim_arg + inside_face_sign_arg, "connecting to a mismatched extremal boundary");
+    }
     connect_normal();
     elem.set_face(direction().i_face(0), state(0, false));
     _prescribed_data = 0.;

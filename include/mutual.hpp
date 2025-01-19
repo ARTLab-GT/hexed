@@ -45,7 +45,7 @@ class Base {
   virtual void _set(Base<U, T>& that) = 0;
   //! \brief takes the necessary steps to disconnect `this` from `that`, without worrying about anything on `that`'s end
   virtual void _unset(Base<U, T>& that) = 0;
-  //! \brief may be overridden by derrived classes to provide partners to data of some arbitrary type `T`
+  //! \brief may be overridden by derived classes to provide partners to data of some arbitrary type `T`
   virtual T* _mine() {return nullptr;}
   virtual const T* _mine() const {return nullptr;} //!< \overload
 
