@@ -1110,29 +1110,14 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     }
   }
   // count up the number of connections for each face
-  printers::info("[0\n");
   car.record_connections();
   def.record_connections();
-  printers::info("0]\n");
-  { // initialize number of connections of each face to 0
-    auto& elems = elements();
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      for (int i_face = 0; i_face < n_faces; ++i_face) {
-        int rec = elems[i_elem].face_record[i_face];
-        VIS_ASSERT(rec >= 0 && rec < 2, "face with duplicate connections: " + std::to_string(rec));
-      }
-    }
-  }
   // record which faces have boundary conditions
   auto& bc_cons {boundary_connections()};
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     auto& con {bc_cons[i_con]};
     // no face has more than one connection (I really hope!) so use numbers greater than one to indentify boundary conditions
     con.element().face_record[2*con.i_dim() + con.inside_face_sign()] = 2 + con.bound_cond_serial_n();
-    int bc_sn = con.bound_cond_serial_n();
-    if (bc_sn < 2*params.n_dim) {
-      HEXED_ASSERT(bc_sn == 2*con.i_dim() + con.inside_face_sign(), "bc/face mismatch");
-    }
   }
 
   // request connections for existing extruded elements
@@ -1177,7 +1162,6 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
   }
   // create extruded elements
   const int n_record = 4;
-  printers::info("[1\n");
   for (auto face : empty_faces) {
     auto nom_pos = face.elem.nominal_position();
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
@@ -1206,9 +1190,6 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
       for (int face_sign = 0; face_sign < 2; ++face_sign) {
         int face_rec = face.elem.face_record[2*j_dim + face_sign];
         if (face_rec >= 2) {
-          HEXED_ASSERT(face_rec - 2 == 2*j_dim + face_sign, "boundary condition doesn't match the face it's on");
-          auto coords = face.elem.nominal_position();
-          HEXED_ASSERT(coords[j_dim] == face_sign*(math::pow(2, face.elem.refinement_level()) - 1), "interior element has extremal face record");
           // if parent element has boundary connections on other faces
           def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(
             elem, j_dim, face_sign, face_rec - 2, bound_conds[face_rec - 2]->n_prescribed(nd)
@@ -1231,7 +1212,6 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
       }
     }
   }
-  printers::info("1]\n");
   {
     auto verts = _blocks.verts();
     for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
@@ -1475,13 +1455,11 @@ void Accessible_mesh::set_unref_locks(std::function<bool(Element&)> lock_if) {
 // forms connections for new tree elements of type `element_t` starting with the `starting_at`th one
 template<typename element_t>
 void Accessible_mesh::connect_new(int start_at) {
-  printers::info("[2\n");
   auto& m = mbt<element_t>();
   auto elems = m.elems.elements();
   int nd = params.n_dim;
   // helper function for connecting refined elements
   auto connect_refined = [&](Element& elem, int i_dim, int sign, std::vector<Tree*> neighbors) {
-    printers::info("[3\n");
     HEXED_ASSERT(int(neighbors.size()) == math::pow(2, nd - 1), format_str(100, "bad number of neighbors %lu (thanks for nothing, ref level smoother)", neighbors.size()))
     bool is_def = elem.get_is_deformed();
     for (Tree* neighbor : neighbors) {
@@ -1498,10 +1476,7 @@ void Accessible_mesh::connect_new(int start_at) {
       for (Tree* neighbor : neighbors) fine.push_back(neighbor->elem.get());
       _connect(&elem, fine, dir);
     }
-    printers::info("3]\n");
   };
-  for (auto& con : car.cons) HEXED_ASSERT(con->neighbor_connection().alive(), "connection is dead")
-  for (auto& con : def.cons) HEXED_ASSERT(con->neighbor_connection().alive(), "connection is dead")
   for (int i_elem = start_at; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     if (elem.tree) {
@@ -1513,13 +1488,9 @@ void Accessible_mesh::connect_new(int start_at) {
             auto neighbors = elem.tree->find_neighbors(direction);
             // if this element is at the boundary of the tree (as opposed to a surface geometry boundary) set an extremal boundary condition
             if (neighbors.empty()) {
-              printers::info("[4\n");
-              Eigen::VectorXi coords = elem.tree->coordinates();
-              HEXED_ASSERT(coords(i_dim) == sign*(math::pow(2, elem.refinement_level()) - 1), "interior element has no neighbors");
               m.bound_cons.emplace_back(new Typed_bound_connection<element_t>(
                 elem, i_dim, sign, tree_bcs[2*i_dim + sign], bound_conds[tree_bcs[2*i_dim + sign]]->n_prescribed(nd)
               ));
-              printers::info("4]\n");
             }
             // otherwise, if the element has not only a tree neighbor but also an element neighbor...
             else if (neighbors[0]->elem) {
@@ -1528,22 +1499,13 @@ void Accessible_mesh::connect_new(int start_at) {
                 // if ref levels are the same, make a conformal connection
                 if (other.refinement_level() == elem.refinement_level()) {
                   if (elem.get_is_deformed() && other.get_is_deformed()) {
-                    printers::info("[5\n");
-                    HEXED_ASSERT(!elem.face(2*i_dim + sign).connected(), "foo");
-                    if (other.face(2*i_dim + !sign).connected()) {
-                      auto con = other.face(2*i_dim + !sign).neighbor_connection();
-                      printers::info(format_str(100, "has tree?%i\n", int(bool(con->face(0).element()->tree))));
-                    }
                     std::array<Deformed_element*, 2> el_ar {elem.tree->def_elem, neighbors[0]->def_elem};
                     _connect(el_ar, Con_dir<Deformed_element>{{i_dim, i_dim}, {bool(sign), !sign}});
-                    printers::info("5]\n");
                   } else {
-                    printers::info("[6\n");
                     std::array<Element*, 2> el_ar;
                     el_ar[!sign] = &elem;
                     el_ar[sign] = &other;
                     _connect(el_ar, Con_dir<Element>{i_dim});
-                    printers::info("6]\n");
                   }
                 } else {
                   // if neighbor is coarser, form a hanging node connection
@@ -1564,7 +1526,6 @@ void Accessible_mesh::connect_new(int start_at) {
       }
     }
   }
-  printers::info("2]\n");
 }
 
 void Accessible_mesh::refine_set_status(Tree* t) {
