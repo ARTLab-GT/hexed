@@ -82,11 +82,16 @@ class Element_connection : virtual public Connection {
   virtual Element& element(int i_side) = 0;
 };
 
+inline int get_i_dim(const Connection_direction& dir, int i_side) {return dir.i_dim[i_side];}
+inline int get_i_dim(const Con_dir<Element>& dir, int i_side) {return dir.i_dim;}
+inline int get_face_sign(const Connection_direction& dir, int i_side) {return dir.face_sign[i_side];}
+inline int get_face_sign(const Con_dir<Element>& dir, int i_side) {return !i_side;}
+
 /*!
  * Represents a connection between specific faces of two elements of the same refinement level.
  */
 template <typename element_t>
-class Element_face_connection : public Element_connection, public Face_connection<element_t> {
+class Element_face_connection : public Element_connection, public Face_connection<element_t>, public Mortal {
   Con_dir<element_t> dir;
   std::array<element_t*, 2> elems;
   void connect_normal();
@@ -94,7 +99,9 @@ class Element_face_connection : public Element_connection, public Face_connectio
 
   public:
   Element_face_connection(std::array<element_t*, 2> elements, Con_dir<element_t> con_dir)
-  : Face_connection<element_t>{elements[0]->storage_params()}, dir{con_dir}, elems{elements}
+  : Face_connection<element_t>{elements[0]->storage_params()}
+  , dir{con_dir}
+  , elems{elements}
   {
     for (int i_side : {0, 1}) {
       elements[i_side]->set_face(dir.i_face(i_side), Face_connection<element_t>::state(i_side, false));

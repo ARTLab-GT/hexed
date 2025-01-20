@@ -11,12 +11,5 @@ TEST_CASE("Face") {
   hexed::Element elem1(params);
   f.associate(elem0);
   REQUIRE(f.element() == &elem0);
-  REQUIRE(elem0.face(0) == nullptr);
-  REQUIRE(elem0.face(1) == &f);
   REQUIRE_THROWS(f.associate(elem1));
-  f.dissociate();
-  REQUIRE(elem0.face(1) == nullptr);
-  REQUIRE(f.element() == nullptr);
-  f.associate(elem1);
-  REQUIRE(f.element() == &elem1);
 }

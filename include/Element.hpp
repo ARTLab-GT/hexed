@@ -12,12 +12,12 @@
 #include "Lock.hpp"
 #include "Mutual_ptr.hpp"
 #include "Block.hpp"
+#include "Face.hpp"
 
 namespace hexed {
 
 class Tree;
 class Accessible_mesh;
-class Face;
 
 /*! \brief Stores data associated with one mesh element.
  * \details Container only---does not have implementations of or information about the basis and algorithms.
@@ -49,7 +49,7 @@ class Element : public Kernel_element, public Mortal {
   int _mask;
   // may contain a fake element that `this` is a subset of
   std::shared_ptr<next::Element_shape> _fake_shape;
-  std::vector<Reciprocal_ptr<Element, Face>> _faces;
+  std::vector<Face> _faces;
   friend Accessible_mesh; // necessary for `Accessible_mesh::set_mask`... need a better way to do this
 
   public:
@@ -118,8 +118,7 @@ class Element : public Kernel_element, public Mortal {
   double& vertex_fix_admis_coef(int i_vertex);
   void set_face(int i_face, double* data);
   bool is_connected(int i_face);
-  void associate_face(Reciprocal_ptr<Face, Element>&);
-  inline Face* face(int i_face) {return _faces[i_face].get();}
+  inline Face& face(int i_face) {return _faces[i_face];}
 
   void create_shape(next::Mesh_blocks&, int boundary_face = next::Mesh_blocks::no_face);
   void create_fake(next::Mesh_blocks&);

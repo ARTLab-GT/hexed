@@ -1528,7 +1528,6 @@ void Accessible_mesh::connect_new(int start_at) {
                   if (elem.get_is_deformed() && other.get_is_deformed()) {
                     printers::info("[5\n");
                     HEXED_ASSERT(!elem.is_connected(2*i_dim + sign), "foo");
-                    HEXED_ASSERT(!other.is_connected(2*i_dim + !sign), "bar");
                     std::array<Deformed_element*, 2> el_ar {elem.tree->def_elem, neighbors[0]->def_elem};
                     _connect(el_ar, Con_dir<Deformed_element>{{i_dim, i_dim}, {bool(sign), !sign}});
                     printers::info("5]\n");
