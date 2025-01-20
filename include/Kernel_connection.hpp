@@ -35,7 +35,7 @@ class Connection_direction {
 
 class Connection {
   public:
-  virtual Connection_direction get_direction() = 0;
+  virtual Connection_direction get_direction() const = 0;
 };
 
 //! \brief Represents a connection between elements as the kernel sees it.

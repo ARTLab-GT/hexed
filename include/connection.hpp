@@ -49,7 +49,7 @@ class Face_connection : public Kernel_connection {
     _face_sz{std::max(2*_state_sz, (params.n_dim + params.n_advection(params.row_size))*params.n_face_qpoint())},
     _data(2*_face_sz)
     {}
-  virtual Con_dir<element_t> direction() = 0;
+  virtual Con_dir<element_t> direction() const = 0;
   double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}
   double* normal() override {return nullptr;}
 };
@@ -67,7 +67,7 @@ class Face_connection<Deformed_element> : public Kernel_connection {
     _face_sz{std::max(2*_state_sz, (params.n_dim + params.n_advection(params.row_size))*params.n_face_qpoint())},
     _data(2*(_nrml_sz + _face_sz))
   {}
-  virtual Con_dir<Deformed_element> direction() = 0;
+  virtual Con_dir<Deformed_element> direction() const = 0;
   double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}
   double* normal(int i_side) {return _data.data() + 2*_face_sz + i_side*_nrml_sz;}
   double* normal() override {return _data.data() + 2*_face_sz;} //!< area-weighted face normal vector. layout: [i_dim][i_face_qpoint]
@@ -116,8 +116,8 @@ class Element_face_connection : public Element_connection, public Face_connectio
     }
     disconnect_normal();
   }
-  Con_dir<element_t> direction() override {return dir;}
-  Connection_direction get_direction() override {return dir;}
+  Con_dir<element_t> direction() const override {return dir;}
+  Connection_direction get_direction() const override {return dir;}
   element_t& element(int i_side) override {return *elems[i_side];}
   int mask(int i_side) override {return element(i_side).mask();}
 };
@@ -165,8 +165,8 @@ class Refined_connection {
     virtual ~Fine_connection() {
       fine_elem.set_face(ref_con.dir.i_face(!ref_con.rev), nullptr);
     }
-    Con_dir<element_t> direction() override {return ref_con.direction();}
-    Connection_direction get_direction() override {return ref_con.direction();}
+    Con_dir<element_t> direction() const override {return ref_con.direction();}
+    Connection_direction get_direction() const override {return ref_con.direction();}
     element_t& element(int i_side) override {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
     int mask(int i_side) override {return element(i_side).mask();}
   };
@@ -251,7 +251,7 @@ class Refined_connection {
     c.set_face(dir.i_face(rev), nullptr);
     disconnect_normal();
   }
-  Con_dir<element_t> direction() {return dir;}
+  Con_dir<element_t> direction() const {return dir;}
   //! fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return *fine_cons[i_fine];}
   bool order_reversed() {return rev;}
@@ -353,8 +353,8 @@ class Typed_bound_connection : public Boundary_connection {
   double* surface_position() override {return pos.data();}
   double* state_cache() override {return cache.data();}
   double* flux_cache() override {return cache.data() + state_size;}
-  Con_dir<Deformed_element> direction() override {return {{i_d, i_d}, {ifs, !ifs}};}
-  Connection_direction get_direction() override {return direction();}
+  Con_dir<Deformed_element> direction() const override {return {{i_d, i_d}, {ifs, !ifs}};}
+  Connection_direction get_direction() const override {return direction();}
   int bound_cond_serial_n() override {return bc_sn;}
   element_t& element() override {return elem;}
   int mask(int i_side) override {return i_side ? -1 : element().mask();}
