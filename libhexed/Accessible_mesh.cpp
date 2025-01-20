@@ -677,20 +677,24 @@ void Accessible_mesh::_fit_surface() {
     bool failed = false;
     int i_face = block.element()->boundary_face();
     for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
-      #if 0
-      std::vector<double> coords(params.n_dim);
+      std::vector<int> coords(params.n_dim - 1);
       for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
-        coords[i_dim + (i_dim >= i_face/2)] = basis.node(math::row_coordinate(params.n_dim, basis.row_size, i_dim));
+        coords[i_dim] = math::row_coordinate(params.n_dim - 1, b.row_size - 1, i_dim, i_point) + 1;
       }
-      coords[i_face/2] = 1. - i_face%2;
-      Mat<3> p0 = b.element().interpolate(coords);
-      coords[i_face/2] = i_face%2;
-      Mat<3> p1 = b.element().interpolate(coords);
-      #endif
-      auto p = interior(i_point)(0, params.n_dim).vector();
-      Mat<> p_mat {p};
-      p = surf_geom->nearest_point(p_mat, huge, block.element()->nominal_size()/params.row_size).point();
+      std::vector<int> elem_coords = block.element_coords(coords);
+      Mat<3> p1 = block.element()->point(elem_coords);
+      elem_coords[i_face/2] = b.row_size - 1 - elem_coords[i_face/2];
+      Mat<3> p0 = block.element()->point(elem_coords);
+      auto sects = surf_geom->intersections(p0, p1);
+      double sect = huge;
+      for (double s : sects) if (s > 0.) sect = std::min(sect, s);
+      if (sect < 2.) {
+        interior(i_point).vector() = p0*(1 - sect) + p1*sect;
+      } else {
+        failed = true;
+      }
     }
+    if (failed) block.reset();
   };
   // snap edges to the surface (regardless of dimensionality)
   auto edges_2d = _blocks.edges_2d();
