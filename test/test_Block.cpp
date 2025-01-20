@@ -161,6 +161,13 @@ TEST_CASE("Block") {
     }
   }
 
+  SECTION("2D edges") {
+    auto elem0 = blocks2.create_element(hexed::Mat<3>::Zero(), 1., 0);
+    auto elem1 = blocks2.create_element(hexed::Mat<3>::Zero(), 1., 3);
+    REQUIRE_THAT(elem0.boundary_block()->element_coords({3}), Catch::Matchers::RangeEquals(std::vector<int>{0, 3}));
+    REQUIRE_THAT(elem1.boundary_block()->element_coords({3}), Catch::Matchers::RangeEquals(std::vector<int>{3, 4}));
+  }
+
   SECTION("Face") {
     std::vector<hexed::next::Vertex> verts;
     verts.emplace_back(hexed::Mat<3>{1., 1.5, 1.}, 5);

@@ -492,6 +492,21 @@ Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
   reset();
 }
 
+std::vector<int> Edge::element_coords(std::vector<int> coords) const {
+  HEXED_ASSERT(element(), "must have an `element()` to call `element_coords`");
+  HEXED_ASSERT(coords.size() == 1, "wrong number of edge coordinates");
+  int nd = element()->n_dim();
+  std::vector<int> elem_coords(nd);
+  if (nd == 2) {
+    int i_face = element()->boundary_face();
+    elem_coords[i_face/2] = i_face%2*(row_size() - 1);
+    elem_coords[!(i_face/2)] = coords[0];
+  } else {
+    HEXED_THROW("`n_dim` for and `Edge` must be 2 or 3");
+  }
+  return elem_coords;
+}
+
 void Edge::reset() {
   for (int i = 1; i < row_size() - 1; ++i) {
     double n = basis().node(i);
@@ -539,6 +554,11 @@ Face::Face(std::array<Vertex*, 4> verts, const Basis& b) : Boundary_block(2, b) 
     }
   }
   reset();
+}
+
+std::vector<int> Face::element_coords(std::vector<int> coords) const {
+  HEXED_THROW("not implemented for `Face`", assert::Not_implemented_error);
+  return {};
 }
 
 void Face::reset() {

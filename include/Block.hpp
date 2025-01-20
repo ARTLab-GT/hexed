@@ -236,6 +236,13 @@ class Boundary_block : public Block {
   inline void pair(mutual::Base<Element_shape, Boundary_block>& elem) {_elem.pair(elem);}
   //! \brief Get the element `this` is `pair()`d with (`nullptr` if not paired).
   inline Element_shape* element() {return _elem.get();}
+  inline const Element_shape* element() const {return _elem.get();}
+
+  /*! \brief Transforms node coordinates from the space of the `Block` to its `Element_shape`
+   * \details That is, `element()->point(elemement_coords(coords))`
+   * should give the same result as `point(coords)`.
+   */
+  virtual std::vector<int> element_coords(std::vector<int> coords) const = 0;
 
   /*! \brief Resets the interior nodes to a minimal interpolation of the boundary nodes.
    * \details In what sense the interpolation is minimal is to be determined by derived classes.
@@ -281,6 +288,7 @@ class Edge : public Boundary_block {
   Edge(Vertex& vertex0, Vertex& vertex1, const Basis&);
   inline Vertex& vertex(int i_vert) {return _verts[i_vert].value();} //!< \brief access the vertices (index 0 or 1)
   inline const Vertex& vertex(int i_vert) const {return _verts[i_vert].value();} //!< \overload
+  std::vector<int> element_coords(std::vector<int>) const override;
   void reset() override; //!< \brief sets `interior()` to linear interpolation between vertices
 
   /*! \brief Glues the edge to another edge (or half of it).
@@ -333,6 +341,7 @@ class Face : public Boundary_block {
   //! \details The order of the edges is \f$ \{\xi_0 = 0\}, \{\xi_0 = 1\}, \{\xi_1 = 0\}, \{\xi_1 = 1\} \f$.
   inline Edge& edge(int i) {return _edges[i];}
   inline const Edge& edge(int i) const {return _edges[i];}
+  std::vector<int> element_coords(std::vector<int>) const override;
 
   /*! \brief sets `interior()` to minimize the Laplacian.
    * \details Specifically, the Laplacian of each physical coordinate as a function of the reference coordinates
@@ -372,7 +381,7 @@ class Element_shape : public Block {
   inline const Vertex& vertex(int i_vert) const {return *_verts[i_vert];}
   inline const Basis& basis() const {return *_basis;}
   inline bool glued() const {return _glued_to;}
-  Mat<3> interpolate(std::vector<double> coords, Int recursion_depth) const;
+  Mat<3> interpolate(std::vector<double> coords, Int recursion_depth = 0) const;
 
   /*! \brief Stipulates that 1 face of `this` is conformally connected to 1 face of `that`.
    * \details Which faces are involved is determined by the `Connection_direction`.
@@ -396,6 +405,8 @@ class Element_shape : public Block {
   inline void unglue() {_glued_to.set();}
   inline Face* boundary_face_3d() {return _sf.get();}
   inline const Face* boundary_face_3d() const {return _sf.get();}
+  inline Boundary_block* boundary_block() {return _bf.get();}
+  inline const Boundary_block* boundary_block() const {return _bf.get();}
   inline int boundary_face() const {return _i_bf;}
 
   bool deformed;
