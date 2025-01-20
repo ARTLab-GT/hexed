@@ -8,6 +8,7 @@
 #include "math.hpp"
 #include "Refined_face.hpp"
 #include "vertex_inds.hpp"
+#include "Neighbor_connection.hpp"
 
 namespace hexed {
 
@@ -86,6 +87,8 @@ inline int get_i_dim(const Connection_direction& dir, int i_side) {return dir.i_
 inline int get_i_dim(const Con_dir<Element>& dir, int i_side) {return dir.i_dim;}
 inline int get_face_sign(const Connection_direction& dir, int i_side) {return dir.face_sign[i_side];}
 inline int get_face_sign(const Con_dir<Element>& dir, int i_side) {return !i_side;}
+inline int get_rotate(const Connection_direction& dir) {return dir.rotate;}
+inline int get_rotate(const Con_dir<Element>& dir) {return 0;}
 
 /*!
  * Represents a connection between specific faces of two elements of the same refinement level.
@@ -94,6 +97,7 @@ template <typename element_t>
 class Element_face_connection : public Element_connection, public Face_connection<element_t>, public Mortal {
   Con_dir<element_t> dir;
   std::array<element_t*, 2> elems;
+  Neighbor_connection _neighbor_con;
   void connect_normal();
   void disconnect_normal();
 
@@ -102,6 +106,14 @@ class Element_face_connection : public Element_connection, public Face_connectio
   : Face_connection<element_t>{elements[0]->storage_params()}
   , dir{con_dir}
   , elems{elements}
+  , _neighbor_con(
+    elements[0]->storage_params(),
+    {
+      &elements[0]->face(2*get_i_dim(con_dir, 0) + get_face_sign(con_dir, 0)),
+      &elements[1]->face(2*get_i_dim(con_dir, 1) + get_face_sign(con_dir, 1)),
+    },
+    get_rotate(con_dir)
+  )
   {
     for (int i_side : {0, 1}) {
       elements[i_side]->set_face(dir.i_face(i_side), Face_connection<element_t>::state(i_side, false));
@@ -120,6 +132,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
   Connection_direction get_direction() const override {return dir;}
   element_t& element(int i_side) override {return *elems[i_side];}
   int mask(int i_side) override {return element(i_side).mask();}
+  Neighbor_connection& neighbor_connection() {return _neighbor_con;}
 };
 
 template <>

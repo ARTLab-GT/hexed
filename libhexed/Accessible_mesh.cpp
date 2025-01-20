@@ -1500,6 +1500,8 @@ void Accessible_mesh::connect_new(int start_at) {
     }
     printers::info("3]\n");
   };
+  for (auto& con : car.cons) HEXED_ASSERT(con->neighbor_connection().alive(), "connection is dead")
+  for (auto& con : def.cons) HEXED_ASSERT(con->neighbor_connection().alive(), "connection is dead")
   for (int i_elem = start_at; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     if (elem.tree) {
@@ -1527,7 +1529,11 @@ void Accessible_mesh::connect_new(int start_at) {
                 if (other.refinement_level() == elem.refinement_level()) {
                   if (elem.get_is_deformed() && other.get_is_deformed()) {
                     printers::info("[5\n");
-                    HEXED_ASSERT(!elem.is_connected(2*i_dim + sign), "foo");
+                    HEXED_ASSERT(!elem.face(2*i_dim + sign).connected(), "foo");
+                    if (other.face(2*i_dim + !sign).connected()) {
+                      auto con = other.face(2*i_dim + !sign).neighbor_connection();
+                      printers::info(format_str(100, "has tree?%i\n", int(bool(con->face(0).element()->tree))));
+                    }
                     std::array<Deformed_element*, 2> el_ar {elem.tree->def_elem, neighbors[0]->def_elem};
                     _connect(el_ar, Con_dir<Deformed_element>{{i_dim, i_dim}, {bool(sign), !sign}});
                     printers::info("5]\n");
@@ -2069,17 +2075,17 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
     }
     for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
   } while (changed);
-  // connect new elements
-  purge();
-  connect_new<         Element>(0);
-  connect_new<Deformed_element>(0);
-  delete_bad_extrusions();
-  deform();
   // set extruded elements to be deleted
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     if (!elems[i_elem].tree) elems[i_elem].record = 2;
   }
+  purge();
+  // connect new elements
+  connect_new<         Element>(0);
+  connect_new<Deformed_element>(0);
+  delete_bad_extrusions();
+  deform();
   int n_before = elems.size();
   purge();
   int n_after = elems.size();

@@ -16,8 +16,10 @@ class Face : public Mortal {
   inline int sign() const {return _sign;}
   void associate(Element&);
   inline Element* element() {return _element.get();}
+  inline bool associated() const {return _element;}
   void connect(Reciprocal_ptr<Neighbor_connection, Face>&);
   inline Neighbor_connection* neighbor_connection() {return _neighbor_connection.get();}
+  inline bool connected() const {return _neighbor_connection;}
 
   private:
   int _i_dim;
