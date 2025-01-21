@@ -171,18 +171,27 @@ const double ortho_tolerance = 3e-2;
 const double edge_tolerance = 1e-2;
 
 Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
-  _Optimization_state state;
-  _compute_state_recursive(state, 1., include_neighbors);
-  return state;
+  _Optimization_state state0;
+  _compute_state_recursive(state0, 1., include_neighbors, nullptr, false);
+  _Optimization_state state1;
+  _compute_state_recursive(state1, 1., include_neighbors, nullptr, true);
+  HEXED_ASSERT(!state0.feasible || state0.objective == 0 || std::abs(state0.objective - state1.objective)/(state0.objective + state1.objective) < 1e-8,
+               format_str(100, "objective depends on order: %.18e %.18e", state0.objective, state1.objective));
+  return state0;
 }
 
 void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                      Vertex* orig_vertex) {
+                                      Vertex* orig_vertex, bool reverse) {
   if (!orig_vertex) orig_vertex = this;
   _pos = point({});
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
+  std::vector<Element_shape*> elems;
   for (Element_shape* elem : _elems.theirs()) {
+    elems.push_back(elem);
+  }
+  if (reverse) std::reverse(elems.begin(), elems.end());
+  for (Element_shape* elem : elems) {
     HEXED_ASSERT(elem, "element is null");
     if (elem->glued()) continue;
     int i_this = _get_index(*elem);
@@ -242,7 +251,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
             coupled = coupled && n_on_face == 1;
           }
           if (coupled) {
-            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex);
+            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex, reverse);
           }
         }
       }
