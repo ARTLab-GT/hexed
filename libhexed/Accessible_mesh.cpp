@@ -758,15 +758,13 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   double max_dist = huge;
   double prev_max_dist = 0;
   for (int i_weight = min_pow;
-       (i_weight < 20
-        || !(n_failed == 0 || std::abs(max_dist - prev_max_dist) < .001*std::max(max_dist, prev_max_dist))
-        || !check_snapping) && i_weight <= 3*max_pow;
+       i_weight < math::log(2, 4e2);
        ++i_weight) {
     double distance_weight = math::pow(2, i_weight);
     History_monitor monitor(.3, 100);
     double starting_objective = -1;
     double objective = 0;
-    for (Int i_relax = 0; (i_relax < 30 || monitor.max() - monitor.min() > .01*std::abs(monitor.min())) && i_relax < 1000; ++i_relax) {
+    for (Int i_relax = 0; (i_relax < 30 || monitor.max() - monitor.min() > 1e-3*std::abs(monitor.min())) && i_relax < 10000; ++i_relax) {
       // snap vertices to surface boundary
       Mat<> o = tree->origin();
       double tns = tree->nominal_size();
@@ -822,7 +820,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         " Objective: %.18e (- %.5e);",
         distance_weight, n_failed, max_dist, prev_max_dist - max_dist, i_relax, objective, reduction
       );
-      printers::info(message, false, true);
+      if (i_relax%100 == 0) printers::info(message, false, true);
     }
     prev_max_dist = max_dist;
     n_failed = 0;
