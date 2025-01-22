@@ -170,19 +170,18 @@ bool Vertex::mobile() const {
 const double ortho_tolerance = 3e-2;
 const double edge_tolerance = 1e-2;
 
-Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
+Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) const {
   _Optimization_state state;
   _compute_state_recursive(state, 1., include_neighbors);
   return state;
 }
 
 void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                      Vertex* orig_vertex) {
+                                      const Vertex* orig_vertex) const {
   if (!orig_vertex) orig_vertex = this;
-  _pos = point({});
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
-  for (Element_shape* elem : _elems.theirs()) {
+  for (const Element_shape* elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
     if (elem->glued()) continue;
     int i_this = _get_index(*elem);
@@ -219,7 +218,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         state.worst_edge = std::min(state.worst_edge/ns, ma.edge_lengths(i_dim));
       }
       if (state.feasible) {
-        Vertex& that_vert = elem->vertex(i_that);
+        const Vertex& that_vert = elem->vertex(i_that);
         double orth_diff = ma.orthogonality - ortho_tolerance;
         state.objective += (!skip_obj)*1./orth_diff;
         state.gradient += (!skip_grad)*gradient_weight*1.*(-1/orth_diff/orth_diff)*ma.grad_orth;

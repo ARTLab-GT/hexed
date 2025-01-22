@@ -189,7 +189,7 @@ class Vertex : public Block {
 
   private:
   struct _Gradient_entry {
-    Element_shape* elem;
+    const Element_shape* elem;
     int i;
     int j;
   };
@@ -201,9 +201,9 @@ class Vertex : public Block {
     double worst_ortho = 1;
     double worst_edge = 1;
   };
-  _Optimization_state _compute_state(bool include_neighbors = true);
+  _Optimization_state _compute_state(bool include_neighbors = true) const;
   void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                Vertex* orig_vertex = nullptr);
+                                const Vertex* orig_vertex = nullptr) const;
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   Mat<3> _desired_pos() const;
   int _get_index(const Element_shape&) const;
