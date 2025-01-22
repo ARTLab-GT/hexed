@@ -765,6 +765,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     double distance_weight = math::pow(2, i_weight);
     History_monitor monitor(.3, 100);
     double starting_objective = -1;
+    double objective = 0;
     for (Int i_relax = 0; (i_relax < 30 || monitor.max() - monitor.min() > .01*std::abs(monitor.min())) && i_relax < 1000; ++i_relax) {
       // snap vertices to surface boundary
       Mat<> o = tree->origin();
@@ -796,7 +797,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
         objective_diff += vert.improve_quality(distance_weight, get_target, satisfy);
       }
-      double objective = 0;
+      double prev_obj = objective;
+      objective = 0;
       for (auto& vert : verts) {
         auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
         objective += vert.quality_objective(distance_weight, get_target);
@@ -804,14 +806,11 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       if (starting_objective < 0) starting_objective = objective;
       double reduction = starting_objective - objective;
       if (i_relax) {
-        if (std::abs(objective_diff + (reduction - monitor.max())) > 1e-2*std::abs(objective_diff)) {
-          printers::warn("Warning: ", true);
-          printers::warn(format_str(100, "inaccurate objective change: %e vs %e\n", -objective_diff, reduction - monitor.max()));
+        if (std::abs(objective_diff - (objective - prev_obj)) > 1e-4*verts.size()) {
+          printers::warn(" Warning: ", true);
+          printers::warn(format_str(100, "inaccurate objective change: %e vs %e (please report as bug)\n",
+                                    -objective_diff, reduction - monitor.max()));
         }
-      }
-      if (i_relax && reduction < monitor.max()) {
-        printers::warn("Warning: ", true);
-        printers::warn("objective increased (suspect incorrect local objective calculation)\n");
       }
       monitor.add_sample(i_relax, reduction);
       std::string message = format_str(
@@ -839,6 +838,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       vert.set_pos(vert.dijkstra_point);
     }
   }
+  printers::info("\n");
 }
 
 Storage_params incr_res_cache(Storage_params params) {

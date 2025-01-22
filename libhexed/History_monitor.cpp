@@ -1,5 +1,5 @@
-#include <History_monitor.hpp>
-#include <math.hpp>
+#include <hexed/History_monitor.hpp>
+#include <hexed/math.hpp>
 
 namespace hexed {
 
