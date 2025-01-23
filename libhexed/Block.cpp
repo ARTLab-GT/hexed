@@ -264,7 +264,7 @@ double Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<
   Mat<3> direction = -state.gradient;
   Mat<3> target = get_target(_pos);
   bool check_direction = false;
-  #if 0
+  #if 1
   if (distance_weight > 0.5) {
     Mat<3> diff = target - _pos;
     double norm_sq = diff.squaredNorm();
@@ -301,6 +301,7 @@ double Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<
   }
   if (distance_weight > 0.5) {
     orig_pos = _pos;
+    target = get_target(_pos);
     Mat<3> step = target - _pos;
     if ((target - Mat<3>{1., 0., 0.}).norm() < 1e-6) {
       std::cout << _pos.transpose() << std::endl;
