@@ -24,6 +24,10 @@ TEST_CASE("Tree_curve") {
     }
   }
   REQUIRE(curve.segments(3)[0].segments.size() == 0);
+  // note x_2 coordinate ignored
+  std::vector<double> sects = curve.intersections_2d(hexed::Mat<3>{.5, 0., 2.}, hexed::Mat<3>{.5, 1., 1.});
+  REQUIRE_THAT(sects, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{.25},
+                                                            hexed::math::Approx_equal(1e-3)));
 
   hexed::Array<double> circle_nodes({1025, 3});
   for (int i = 0; i < 1025; ++i) {
@@ -43,4 +47,8 @@ TEST_CASE("Tree_curve") {
                Catch::Matchers::RangeEquals(hexed::Mat<3>{std::sqrt(.5), std::sqrt(.5), 1.},
                                             hexed::math::Approx_equal(0., 2e-3)));
   REQUIRE(circle.nearest_point(point, .1).index == -1);
+  // note x_2 coordinate ignored
+  sects = curve.intersections_2d(hexed::Mat<3>{.5, 0., 2.}, hexed::Mat<3>{.5, 1., 1.});
+  REQUIRE_THAT(sects, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-std::sqrt(.75), std::sqrt(.75)},
+                                                            hexed::math::Approx_equal(1e-3)));
 }

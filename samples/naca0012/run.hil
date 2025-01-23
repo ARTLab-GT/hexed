@@ -9,8 +9,8 @@ Note: strings are enclosed in `{}`, and strings which are not assigned to anythi
 n_dim = 2
 mesh_extreme00 = -2.
 mesh_extreme10 = -2.
-mesh_extreme01 =  2.
-mesh_extreme11 =  2.
+mesh_extreme01 =  2.1
+mesh_extreme11 =  2.1
 max_ref_level = 13
 init_ref_level = 5
 $set_geometry_refinement

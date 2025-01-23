@@ -70,4 +70,9 @@ void Tree_curve::_recursive_nearest(Mat<3> point, Nearest_index& nearest, const 
   }
 }
 
+std::vector<double> Tree_curve::intersections_2d(Mat<3> p0, Mat<3> p1) const {
+  std::vector<double> sections;
+  return sections;
+}
+
 }
