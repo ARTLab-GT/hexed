@@ -7,5 +7,5 @@ This script is executed by the input file `run.hil`.
 import numpy as np
 from hexedpy.utils import naca
 
-data = naca("0012")
+data = naca("0012", 10**5)
 np.savetxt("auto.csv", data, delimiter = ", ")

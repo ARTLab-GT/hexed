@@ -254,26 +254,32 @@ double Vertex::improve_quality() {
 }
 
 double Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>)> get_target,
-                                                       std::function<Mat<3>(Mat<3>)> satisfy_constraints) {
+                               std::function<Mat<3>(Mat<3>)> satisfy_constraints) {
   Mat<3> orig_pos = _point({});
   auto state = _compute_state();
   double ns = nominal_size();
   HEXED_ASSERT(state.feasible, format_str(200,
                "Vertex state violates quality criteria (ortho = %e; edge = %e; coords = (%e %e %e)).",
                state.worst_ortho, state.worst_edge, orig_pos(0), orig_pos(1), orig_pos(2)));
-  Mat<3> target = get_target(orig_pos);
-  Mat<3> snap_vec = target - orig_pos;
-  double orig_dist_sq = snap_vec.squaredNorm();
-  state.objective += distance_weight*orig_dist_sq;
-  Mat<3> direction = -state.gradient + distance_weight*2*snap_vec;
+  Mat<3> direction = -state.gradient;
+  Mat<3> target = get_target(_pos);
+  bool check_direction = false;
+  #if 0
+  if (distance_weight > 0.5) {
+    Mat<3> diff = target - _pos;
+    double norm_sq = diff.squaredNorm();
+    if (norm_sq > math::pow(1e-6*ns, 2)) {
+      check_direction = true;
+      direction -= direction.dot(diff)/norm_sq*diff;
+    }
+  }
+  #endif
   if (direction.norm()*ns < 1e-6*state.objective) return 0;
   direction.normalize();
   _Optimization_state new_state;
   auto check_step = [&]() {
     _pos = satisfy_constraints(orig_pos + _step_sz*direction);
-    target = get_target(_pos);
     new_state = _compute_state();
-    new_state.objective += distance_weight*(_pos - target).squaredNorm();
   };
   if (_step_sz <= 0) _step_sz = .1*ns;
   else _step_sz *= 2;
@@ -281,10 +287,34 @@ double Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<
   while (!(new_state.feasible && new_state.objective < state.objective)) {
     if (_step_sz < 1e-20*ns) {
       _pos = orig_pos;
-      return 0;
+      new_state.objective = state.objective;
+      break;
     }
     check_step();
+    #if 0
+    if (check_direction) {
+      Mat<3> new_target = get_target(_pos);
+      new_state.feasible = new_state.feasible && (new_target - _pos).normalized().dot((target - orig_pos).normalized()) > .8;
+    }
+    #endif
     _step_sz /= 2;
+  }
+  if (distance_weight > 0.5) {
+    orig_pos = _pos;
+    Mat<3> step = target - _pos;
+    if ((target - Mat<3>{1., 0., 0.}).norm() < 1e-6) {
+      std::cout << _pos.transpose() << std::endl;
+    }
+    do {
+      if (step.norm() < 1e-20*ns) {
+        _pos = orig_pos;
+        new_state.objective = state.objective;
+        break;
+      }
+      _pos = satisfy_constraints(orig_pos + step);
+      new_state = _compute_state();
+      step /= 2;
+    } while (!new_state.feasible);
   }
   return new_state.objective - state.objective;
 }

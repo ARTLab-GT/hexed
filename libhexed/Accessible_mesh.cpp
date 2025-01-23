@@ -119,8 +119,10 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
   auto seq = Eigen::seqN(0, params.n_dim);
   if (vert.record[2*params.n_dim]) {
     if (vert.snapped_point >= 0) {
+      HEXED_THROW("NOT NOW");
       return surf_geom->points()[vert.snapped_point];
     } else if (vert.snapped_edge >= 0) {
+      HEXED_THROW("NOT NOW");
       auto& geom_edge = surf_geom->edges()[vert.snapped_edge];
       Array<double> nodes{geom_edge.nodes()};
       Int n_points = nodes.shape()[0];
@@ -653,6 +655,7 @@ void Accessible_mesh::_fit_surface() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
+  throw;
   {
     Task_message message(printers::info, "Post-edge-matching mesh optimization", "\n");
     _optimize(1, 10, true);
@@ -757,14 +760,20 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   Int n_failed = verts.size();
   double max_dist = huge;
   double prev_max_dist = 0;
-  for (int i_weight = min_pow;
-       i_weight < math::log(2, 4e2);
+  for (int i_weight = 0;
+       i_weight < 1;
        ++i_weight) {
     double distance_weight = math::pow(2, i_weight);
     History_monitor monitor(.3, 100);
     double starting_objective = -1;
     double objective = 0;
-    for (Int i_relax = 0; (i_relax < 30 || monitor.max() - monitor.min() > 1e-3*std::abs(monitor.min())) && i_relax < 10000; ++i_relax) {
+    for (Int i_relax = 0; i_relax < 100; ++i_relax) {
+      if (i_relax%1 == 0) {
+        auto blocks = _blocks.boundary_sides();
+        #pragma omp parallel for
+        for (auto& b : blocks) b.reset();
+        visualize("default", format_str(100, "fuz%03i", i_relax), i_relax);
+      }
       // snap vertices to surface boundary
       Mat<> o = tree->origin();
       double tns = tree->nominal_size();
@@ -793,7 +802,9 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
           return p;
         };
         auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
-        objective_diff += vert.improve_quality(distance_weight, get_target, satisfy);
+        bool on_surface = false;
+        for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert.record[i];
+        objective_diff += vert.improve_quality((double)on_surface, get_target, satisfy);
       }
       double prev_obj = objective;
       objective = 0;
@@ -806,7 +817,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       if (i_relax) {
         if (std::abs(objective_diff - (objective - prev_obj)) > 1e-4*verts.size()) {
           printers::warn(" Warning: ", true);
-          printers::warn(format_str(100, "inaccurate objective change: %e vs %e (please report as bug)\n",
+          printers::warn(format_str(100, "inaccurate objective change: %e vs %e (please report as a bug)\n",
                                     -objective_diff, reduction - monitor.max()));
         }
       }
@@ -2663,12 +2674,12 @@ void Accessible_mesh::export_polymesh(std::string dir_name) {
   write_polymesh_file(dir_name, "neighbour", "labelList", n_internal, [&](int i_entry){return format_str(100, "%i", neighbors[i_entry]);}, face_note);
 }
 
-void Accessible_mesh::visualize(std::string format, std::string file_name) {
+void Accessible_mesh::visualize(std::string format, std::string file_name, double time) {
   next::Sequence<const next::Block&> shapes(
     [this](std::size_t index)->const next::Block& {return elements()[index].shape();},
     [this]()->std::size_t {return elements().size();}
   );
-  next::Block::visualize(format, file_name, shapes);
+  next::Block::visualize(format, file_name, shapes, time);
 }
 
 }
