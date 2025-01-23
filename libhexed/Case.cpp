@@ -9,6 +9,7 @@
 #include <hexed/Csv.hpp>
 #include <hexed/brep.hpp>
 #include <hexed/Printer.hpp>
+#include <hexed/Tree_curve_geom.hpp>
 
 namespace hexed {
 
@@ -114,13 +115,12 @@ Surface_geom* Case::_make_geom() {
     for (char& c : ext) c = tolower(c);
     if (ext == "csv") {
       HEXED_ASSERT(nd == 2, "3D geometry in CSV format is not supported", assert::User_error);
-      auto data = read_csv(*geom);
-      HEXED_ASSERT(data.cols() >= nd, "CSV geometry file must have at least n_dim columns", assert::User_error);
-      Simplex_geom<2>* geom = new Simplex_geom<2>(segments(data.transpose()));
-      if (data.rows() >= 2) {
-        geom->add_snap_point({data(0, 0), data(0, 1), 0.});
-        geom->add_snap_point({data(data.rows() - 1, 0), data(data.rows() - 1, 1), 0.});
-      }
+      Mat<dyn, dyn> data = read_csv(*geom).transpose();
+      HEXED_ASSERT(data.rows() >= nd, "CSV geometry file must have at least n_dim columns", assert::User_error);
+      Array<double> data_arr({data.cols(), 3});
+      data_arr = 0;
+      for (int row = 0; row < data.cols(); ++row) data_arr(row)(0, 2).vector() = data(all, row);
+      Tree_curve_geom* geom = new Tree_curve_geom(data_arr.copy(), 4);
       geoms.emplace_back(geom);
     } else if ((ext == "igs" || ext == "iges") && !(HEXED_USE_OCCT && _vari("prefer_occt"))) {
       if (nd == 3) {

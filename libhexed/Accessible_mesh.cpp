@@ -119,10 +119,8 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
   auto seq = Eigen::seqN(0, params.n_dim);
   if (vert.record[2*params.n_dim]) {
     if (vert.snapped_point >= 0) {
-      HEXED_THROW("NOT NOW");
       return surf_geom->points()[vert.snapped_point];
     } else if (vert.snapped_edge >= 0) {
-      HEXED_THROW("NOT NOW");
       auto& geom_edge = surf_geom->edges()[vert.snapped_edge];
       Array<double> nodes{geom_edge.nodes()};
       Int n_points = nodes.shape()[0];
@@ -655,7 +653,6 @@ void Accessible_mesh::_fit_surface() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
-  throw;
   {
     Task_message message(printers::info, "Post-edge-matching mesh optimization", "\n");
     _optimize(1, 10, true);
