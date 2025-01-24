@@ -802,9 +802,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     }
     double prev_obj = objective;
     objective = 0;
-    for (auto& vert : verts) {
-      objective += vert.quality_objective();
-    }
+    for (auto& vert : verts) objective += vert.quality_objective();
     if (starting_objective < 0) starting_objective = objective;
     if (i_relax) {
       if (std::abs(objective_diff - (objective - prev_obj)) > 1e-4*verts.size()) {

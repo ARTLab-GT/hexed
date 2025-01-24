@@ -278,7 +278,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
     if (norm_sq > math::pow(1e-6*ns, 2)) direction -= direction.dot(diff)/norm_sq*diff;
   }
   direction.normalize();
-  _Optimization_state new_state;
+  _Optimization_state new_state = state;
   if (direction.norm()*ns > 1e-6*state.objective) {
     if (_step_sz <= 0) _step_sz = .1*ns;
     else _step_sz *= 2;
