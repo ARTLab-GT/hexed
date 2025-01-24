@@ -754,95 +754,69 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   for (auto& vert : bverts) {
     vert.record[2*params.n_dim] = 1;
   }
-  Int n_failed = verts.size();
-  double max_dist = huge;
-  double prev_max_dist = 0;
-  for (int i_weight = 0;
-       i_weight < 1;
-       ++i_weight) {
-    double distance_weight = math::pow(2, i_weight);
-    History_monitor monitor(.3, 100);
-    double starting_objective = -1;
-    double objective = 0;
-    for (Int i_relax = 0; i_relax < 100; ++i_relax) {
-      if (i_relax%1 == 0) {
-        auto blocks = _blocks.boundary_sides();
-        #pragma omp parallel for
-        for (auto& b : blocks) b.reset();
-        visualize("default", format_str(100, "fuz%03i", i_relax), i_relax);
-      }
-      // snap vertices to surface boundary
-      Mat<> o = tree->origin();
-      double tns = tree->nominal_size();
-      double objective_diff = 0;
-      for (auto& vert : verts) if (vert.mobile()) {
-        auto satisfy = [&](Mat<3> p)->Mat<3> {
-          for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
-            p(i_dim) = std::max(p(i_dim), o(i_dim));
-            p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
-          }
-          if (vert.record[2*params.n_dim]) {
-            for (auto n : vert.neighbors()) if (n) {
-              if ((int)n->record.size() == 2*params.n_dim + 1) {
-                if (!n->record[2*params.n_dim]) {
-                  auto seq = Eigen::seqN(0, params.n_dim);
-                  Mat<> start = n->point({})(seq);
-                  Mat<> end = p(Eigen::seqN(0, params.n_dim));
-                  std::vector<double> intersections = surf_geom->intersections(start, end);
-                  double min_sect = 1;
-                  for (double s : intersections) min_sect = std::min(min_sect, s);
-                  p(seq) = start + min_sect*(p(seq) - start);
-                }
+  History_monitor monitor(.3, 100);
+  double starting_objective = -1;
+  double objective = 0;
+  for (Int i_relax = 0;
+       i_relax < 30 || monitor.max() - monitor.min() > 1e-3*(std::abs(monitor.max()) + std::abs(monitor.min()));
+       ++i_relax) {
+    // snap vertices to surface boundary
+    Mat<> o = tree->origin();
+    double tns = tree->nominal_size();
+    double objective_diff = 0;
+    for (auto& vert : verts) if (vert.mobile()) {
+      auto satisfy = [&](Mat<3> p)->Mat<3> {
+        for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
+          p(i_dim) = std::max(p(i_dim), o(i_dim));
+          p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
+        }
+        if (vert.record[2*params.n_dim]) {
+          for (auto n : vert.neighbors()) if (n) {
+            if ((int)n->record.size() == 2*params.n_dim + 1) {
+              if (!n->record[2*params.n_dim]) {
+                auto seq = Eigen::seqN(0, params.n_dim);
+                Mat<> start = n->point({})(seq);
+                Mat<> end = p(Eigen::seqN(0, params.n_dim));
+                std::vector<double> intersections = surf_geom->intersections(start, end);
+                double min_sect = 1;
+                for (double s : intersections) min_sect = std::min(min_sect, s);
+                p(seq) = start + min_sect*(p(seq) - start);
               }
             }
           }
-          return p;
-        };
-        auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
-        bool on_surface = false;
-        for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert.record[i];
-        objective_diff += vert.improve_quality((double)on_surface, get_target, satisfy);
-      }
-      double prev_obj = objective;
-      objective = 0;
-      for (auto& vert : verts) {
-        auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
-        objective += vert.quality_objective(distance_weight, get_target);
-      }
-      if (starting_objective < 0) starting_objective = objective;
-      double reduction = starting_objective - objective;
-      if (i_relax) {
-        if (std::abs(objective_diff - (objective - prev_obj)) > 1e-4*verts.size()) {
-          printers::warn(" Warning: ", true);
-          printers::warn(format_str(100, "inaccurate objective change: %e vs %e (please report as a bug)\n",
-                                    -objective_diff, reduction - monitor.max()));
         }
+        return p;
+      };
+      auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
+      bool on_surface = false;
+      for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert.record[i];
+      if (on_surface) {
+        objective_diff += vert.improve_quality(get_target, satisfy);
+      } else {
+        objective_diff += vert.improve_quality();
       }
-      monitor.add_sample(i_relax, reduction);
-      std::string message = format_str(
-        400,
-        "  Distance weight = %.1e;"
-        " Number of snaps failed = %6li;"
-        " Max distance = %.5e (- %.5e);"
-        " Iteration = %4li;"
-        " Objective: %.18e (- %.5e);",
-        distance_weight, n_failed, max_dist, prev_max_dist - max_dist, i_relax, objective, reduction
-      );
-      if (i_relax%100 == 0) printers::info(message, false, true);
     }
-    prev_max_dist = max_dist;
-    n_failed = 0;
-    max_dist = 0;
+    double prev_obj = objective;
+    objective = 0;
     for (auto& vert : verts) {
-      vert.dijkstra_point = vert.point({});
-      Mat<3> target = _get_snapping_target(vert, vert.dijkstra_point);
-      bool failed = !vert.snap_to(target);
-      n_failed += failed;
-      if (failed) max_dist += (vert.dijkstra_point - target).norm();
+      objective += vert.quality_objective();
     }
-    for (auto& vert : verts) {
-      vert.set_pos(vert.dijkstra_point);
+    if (starting_objective < 0) starting_objective = objective;
+    if (i_relax) {
+      if (std::abs(objective_diff - (objective - prev_obj)) > 1e-4*verts.size()) {
+        printers::warn(" Warning: ", true);
+        printers::warn(format_str(100, "inaccurate objective change: %e vs %e (please report as a bug)\n",
+                                  -objective_diff, objective - prev_obj));
+      }
     }
+    monitor.add_sample(i_relax, objective - starting_objective);
+    std::string message = format_str(
+      400,
+      " Iteration = %4li;"
+      " Objective: %.18e (%+.5e);",
+      i_relax, objective, objective - starting_objective
+    );
+    printers::info(message, false, true);
   }
   printers::info("\n");
 }

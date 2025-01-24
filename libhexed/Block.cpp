@@ -250,11 +250,18 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
 }
 
 double Vertex::improve_quality() {
-  return improve_quality(0, [](Mat<3>){return Mat<3>::Zero();}, [](Mat<3> p){return p;});
+  return _improve_quality([](Mat<3>){return Mat<3>::Zero();}, [](Mat<3> p){return p;}, false, false);
 }
 
-double Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<3>)> get_target,
-                               std::function<Mat<3>(Mat<3>)> satisfy_constraints) {
+double Vertex::improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
+                               std::function<Mat<3>(Mat<3>)> satisfy_constraints,
+                               bool limit_direction) {
+  return _improve_quality(get_target, satisfy_constraints, true, limit_direction);
+}
+
+double Vertex::_improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
+                                std::function<Mat<3>(Mat<3>)> satisfy_constraints,
+                                bool has_target, bool limit_direction) {
   Mat<3> orig_pos = _point({});
   auto state = _compute_state();
   double ns = nominal_size();
@@ -262,50 +269,41 @@ double Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<
                "Vertex state violates quality criteria (ortho = %e; edge = %e; coords = (%e %e %e)).",
                state.worst_ortho, state.worst_edge, orig_pos(0), orig_pos(1), orig_pos(2)));
   Mat<3> direction = -state.gradient;
-  Mat<3> target = get_target(_pos);
-  bool check_direction = false;
-  #if 1
-  if (distance_weight > 0.5) {
-    Mat<3> diff = target - _pos;
+  Mat<3> target = orig_pos;
+  if (has_target) {
+    target = get_target(orig_pos);
+    Mat<3> diff = target - orig_pos;
     double norm_sq = diff.squaredNorm();
-    if (norm_sq > math::pow(1e-6*ns, 2)) {
-      check_direction = true;
-      direction -= direction.dot(diff)/norm_sq*diff;
-    }
+    if (norm_sq > math::pow(1e-6*ns, 2)) direction -= direction.dot(diff)/norm_sq*diff;
   }
-  #endif
   if (direction.norm()*ns < 1e-6*state.objective) return 0;
   direction.normalize();
-  _Optimization_state new_state;
-  auto check_step = [&]() {
-    _pos = satisfy_constraints(orig_pos + _step_sz*direction);
-    new_state = _compute_state();
-  };
   if (_step_sz <= 0) _step_sz = .1*ns;
   else _step_sz *= 2;
-  check_step();
+  _Optimization_state new_state;
+  _pos = satisfy_constraints(orig_pos + _step_sz*direction);
+  new_state = _compute_state();
   while (!(new_state.feasible && new_state.objective < state.objective)) {
     if (_step_sz < 1e-20*ns) {
       _pos = orig_pos;
       new_state.objective = state.objective;
       break;
     }
-    check_step();
-    #if 1
-    if (check_direction) {
+    _pos = satisfy_constraints(orig_pos + _step_sz*direction);
+    new_state = _compute_state();
+    if (limit_direction) {
       Mat<3> new_target = get_target(_pos);
-      new_state.feasible = new_state.feasible && (new_target - _pos).normalized().dot((target - orig_pos).normalized()) > .8;
+      double dist = (new_target - _pos).norm();
+      new_state.feasible = new_state.feasible
+                           && (dist > 1e-6*ns ||
+                               (target - orig_pos).normalized().dot((target - _pos)/dist) > .8);
     }
-    #endif
     _step_sz /= 2;
   }
-  if (distance_weight > 0.5) {
+  if (has_target) {
     orig_pos = _pos;
     target = get_target(_pos);
     Mat<3> step = target - _pos;
-    if ((target - Mat<3>{1., 0., 0.}).norm() < 1e-6) {
-      std::cout << _pos.transpose() << std::endl;
-    }
     do {
       if (step.norm() < 1e-20*ns) {
         _pos = orig_pos;
@@ -328,12 +326,10 @@ bool Vertex::snap_to(Mat<3> target) {
   return state.feasible;
 }
 
-double Vertex::quality_objective(double distance_weight, std::function<Mat<3>(Mat<3>)> target) {
+double Vertex::quality_objective() {
   auto state = _compute_state(false);
   HEXED_ASSERT(state.feasible, "infeasible state");
-  if (glued()) return state.objective;
-  Mat<3> pos = point({});
-  return state.objective + distance_weight*(target(pos) - pos).squaredNorm();
+  return state.objective;
 }
 
 double Vertex::quality_gradient_norm_sq() {
