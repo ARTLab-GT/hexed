@@ -32,6 +32,7 @@ class Tree_curve {
 
   private:
   void _recursive_nearest(Mat<3> point, Nearest_index&, const Segment&, std::array<double, 2> arc_len_bounds) const;
+  void _recursive_intersections(Mat<3> p0, Mat<3> p1, std::vector<double>&, const Segment&) const;
   Array<double> _nodes;
   Array<double> _arc_length;
   int _skip;

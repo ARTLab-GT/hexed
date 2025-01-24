@@ -72,7 +72,31 @@ void Tree_curve::_recursive_nearest(Mat<3> point, Nearest_index& nearest, const 
 
 std::vector<double> Tree_curve::intersections_2d(Mat<3> p0, Mat<3> p1) const {
   std::vector<double> sections;
+  _recursive_intersections(p0, p1, sections, root());
   return sections;
+}
+
+void Tree_curve::_recursive_intersections(Mat<3> p0, Mat<3> p1, std::vector<double>& vec, const Segment& seg) const {
+  auto seq = Eigen::seqN(0, 2);
+  Mat<2> diff = p1(seq) - p0(seq);
+  Mat<2> center_diff = seg.center(seq) - p0(seq);
+  double distance_sq = (center_diff - center_diff.dot(diff)/diff.squaredNorm()*diff).squaredNorm();
+  if (distance_sq <= seg.radius*seg.radius) {
+    if (seg.segments.size()) {
+      for (int i_segment = 0; i_segment < 2; ++i_segment) {
+        _recursive_intersections(p0, p1, vec, seg.segments[i_segment]);
+      }
+    } else {
+      for (int i_node = 0; i_node < seg.nodes.shape()[0] - 1; ++i_node) {
+        Mat<2, 2> lhs;
+        lhs(all, 0) = diff;
+        lhs(all, 1) = (seg.nodes(i_node)(0, 2) - seg.nodes(i_node + 1)(0, 2)).vector();
+        Mat<2> rhs = seg.nodes(i_node)(0, 2).vector() - p0(seq);
+        Mat<2> soln = lhs.householderQr().solve(rhs);
+        if (0 <= soln(1) && soln(1) <= 1) vec.push_back(soln(0));
+      }
+    }
+  }
 }
 
 }
