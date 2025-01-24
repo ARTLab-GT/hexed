@@ -291,7 +291,7 @@ double Vertex::improve_quality(double distance_weight, std::function<Mat<3>(Mat<
       break;
     }
     check_step();
-    #if 0
+    #if 1
     if (check_direction) {
       Mat<3> new_target = get_target(_pos);
       new_state.feasible = new_state.feasible && (new_target - _pos).normalized().dot((target - orig_pos).normalized()) > .8;

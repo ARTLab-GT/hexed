@@ -16,8 +16,14 @@ Nearest_point<dyn> Tree_curve_geom::nearest_point(Mat<> point, double max_distan
   return nearest;
 }
 
-std::vector<double> Tree_curve_geom::intersections(Mat<>, Mat<>) {
-  return {};
+std::vector<double> Tree_curve_geom::intersections(Mat<> point0, Mat<> point1) {
+  Mat<3> p0 = Mat<3>::Zero();
+  Mat<3> p1 = Mat<3>::Zero();
+  for (int i = 0; i < std::min<int>(3, std::min(point0.size(), point1.size())); ++i) {
+    p0(i) = point0(i);
+    p1(i) = point1(i);
+  }
+  return _curve.intersections_2d(p0, p1);
 }
 
 next::Sequence<Mat<3>> Tree_curve_geom::points() {
