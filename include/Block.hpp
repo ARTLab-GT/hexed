@@ -130,10 +130,14 @@ class Vertex : public Block {
   void set_pos(Mat<3> p);
   Mat<3> nominal_position() const;
   bool mobile() const;
-  double improve_quality();
-  double improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                         std::function<Mat<3>(Mat<3>)> satisfy_constraints,
-                         bool limit_direction = true);
+  struct Improve_quality_result {
+    double objective_diff;
+    bool snap_failed;
+  };
+  Improve_quality_result improve_quality();
+  Improve_quality_result improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
+                                         std::function<Mat<3>(Mat<3>)> satisfy_constraints,
+                                         bool limit_direction = true);
   bool snap_to(Mat<3> target);
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
   double quality_objective();
@@ -204,9 +208,9 @@ class Vertex : public Block {
   _Optimization_state _compute_state(bool include_neighbors = true) const;
   void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
                                 const Vertex* orig_vertex = nullptr) const;
-  double _improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                          std::function<Mat<3>(Mat<3>)> satisfy_constraints,
-                          bool has_target, bool limit_direction);
+  Improve_quality_result _improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
+                                          std::function<Mat<3>(Mat<3>)> satisfy_constraints,
+                                          bool has_target, bool limit_direction);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   Mat<3> _desired_pos() const;
   int _get_index(const Element_shape&) const;

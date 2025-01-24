@@ -758,12 +758,13 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   double starting_objective = -1;
   double objective = 0;
   for (Int i_relax = 0;
-       i_relax < 30 || monitor.max() - monitor.min() > 1e-3*(std::abs(monitor.max()) + std::abs(monitor.min()));
+       i_relax < 1000 && (i_relax < 30 || monitor.max() - monitor.min() > 1e-3*(std::abs(monitor.max()) + std::abs(monitor.min())));
        ++i_relax) {
     // snap vertices to surface boundary
     Mat<> o = tree->origin();
     double tns = tree->nominal_size();
     double objective_diff = 0;
+    Int snaps_failed = 0;
     for (auto& vert : verts) if (vert.mobile()) {
       auto satisfy = [&](Mat<3> p)->Mat<3> {
         for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
@@ -790,11 +791,14 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
       bool on_surface = false;
       for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert.record[i];
+      next::Vertex::Improve_quality_result iqr;
       if (on_surface) {
-        objective_diff += vert.improve_quality(get_target, satisfy);
+        iqr = vert.improve_quality(get_target, satisfy);
       } else {
-        objective_diff += vert.improve_quality();
+        iqr = vert.improve_quality();
       }
+      objective_diff += iqr.objective_diff;
+      snaps_failed += iqr.snap_failed;
     }
     double prev_obj = objective;
     objective = 0;
@@ -812,9 +816,10 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     monitor.add_sample(i_relax, objective - starting_objective);
     std::string message = format_str(
       400,
-      " Iteration = %4li;"
-      " Objective: %.18e (%+.5e);",
-      i_relax, objective, objective - starting_objective
+      "  Iteration = %4li;"
+      " Number of vertex snaps failed = %li;"
+      " Objective = %.18e (%+.5e);",
+      i_relax, snaps_failed, objective, objective - starting_objective
     );
     printers::info(message, false, true);
   }

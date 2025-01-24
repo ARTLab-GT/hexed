@@ -12,9 +12,8 @@ mesh_extreme10 = -2.
 mesh_extreme01 =  2.1
 mesh_extreme11 =  2.1
 max_ref_level = 13
-init_ref_level = 5
 $set_geometry_refinement
-max_refinement_iters = 0
+max_refinement_iters = 3
 
 {generate geometry with external script}
 shell {python3 make_geom.py}

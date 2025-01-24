@@ -249,20 +249,21 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
   }
 }
 
-double Vertex::improve_quality() {
+Vertex::Improve_quality_result Vertex::improve_quality() {
   return _improve_quality([](Mat<3>){return Mat<3>::Zero();}, [](Mat<3> p){return p;}, false, false);
 }
 
-double Vertex::improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                               std::function<Mat<3>(Mat<3>)> satisfy_constraints,
-                               bool limit_direction) {
+Vertex::Improve_quality_result Vertex::improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
+                                                       std::function<Mat<3>(Mat<3>)> satisfy_constraints,
+                                                       bool limit_direction) {
   return _improve_quality(get_target, satisfy_constraints, true, limit_direction);
 }
 
-double Vertex::_improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                                std::function<Mat<3>(Mat<3>)> satisfy_constraints,
-                                bool has_target, bool limit_direction) {
-  Mat<3> orig_pos = _point({});
+Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
+                                                        std::function<Mat<3>(Mat<3>)> satisfy_constraints,
+                                                        bool has_target, bool limit_direction) {
+  _pos = _point({});
+  Mat<3> orig_pos = _pos;
   auto state = _compute_state();
   double ns = nominal_size();
   HEXED_ASSERT(state.feasible, format_str(200,
@@ -276,30 +277,32 @@ double Vertex::_improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
     double norm_sq = diff.squaredNorm();
     if (norm_sq > math::pow(1e-6*ns, 2)) direction -= direction.dot(diff)/norm_sq*diff;
   }
-  if (direction.norm()*ns < 1e-6*state.objective) return 0;
   direction.normalize();
-  if (_step_sz <= 0) _step_sz = .1*ns;
-  else _step_sz *= 2;
   _Optimization_state new_state;
-  _pos = satisfy_constraints(orig_pos + _step_sz*direction);
-  new_state = _compute_state();
-  while (!(new_state.feasible && new_state.objective < state.objective)) {
-    if (_step_sz < 1e-20*ns) {
-      _pos = orig_pos;
-      new_state.objective = state.objective;
-      break;
-    }
+  if (direction.norm()*ns > 1e-6*state.objective) {
+    if (_step_sz <= 0) _step_sz = .1*ns;
+    else _step_sz *= 2;
     _pos = satisfy_constraints(orig_pos + _step_sz*direction);
     new_state = _compute_state();
-    if (limit_direction) {
-      Mat<3> new_target = get_target(_pos);
-      double dist = (new_target - _pos).norm();
-      new_state.feasible = new_state.feasible
-                           && (dist > 1e-6*ns ||
-                               (target - orig_pos).normalized().dot((target - _pos)/dist) > .8);
+    while (!(new_state.feasible && new_state.objective < state.objective)) {
+      if (_step_sz < 1e-20*ns) {
+        _pos = orig_pos;
+        new_state.objective = state.objective;
+        break;
+      }
+      _pos = satisfy_constraints(orig_pos + _step_sz*direction);
+      new_state = _compute_state();
+      if (limit_direction) {
+        Mat<3> new_target = get_target(_pos);
+        double dist = (new_target - _pos).norm();
+        new_state.feasible = new_state.feasible
+                             && (dist > 1e-6*ns ||
+                                 (target - orig_pos).normalized().dot((target - _pos)/dist) > .8);
+      }
+      _step_sz /= 2;
     }
-    _step_sz /= 2;
   }
+  int snap_iters = 0;
   if (has_target) {
     orig_pos = _pos;
     target = get_target(_pos);
@@ -313,9 +316,10 @@ double Vertex::_improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
       _pos = satisfy_constraints(orig_pos + step);
       new_state = _compute_state();
       step /= 2;
+      ++snap_iters;
     } while (!new_state.feasible);
   }
-  return new_state.objective - state.objective;
+  return {new_state.objective - state.objective, snap_iters > 1};
 }
 
 bool Vertex::snap_to(Mat<3> target) {
