@@ -281,7 +281,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
     _Optimization_state test_state = _compute_state();
     if (std::abs(test_state.objective - state.objective + state.gradient.norm()*1e-8*ns)
         > 1e-1*std::abs(test_state.objective - state.objective)) {
-      printers::warn("inaccurate gradient" + std::to_string(state.has_glued_neighbor) + "\n");
+      printers::warn("badGradient" + std::to_string(state.has_glued_neighbor), true);
     }
     _step_sz = ns;
     for (double factor : {10., 2.}) if (_step_sz > min_step) {

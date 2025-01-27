@@ -759,8 +759,13 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   double objective = 0;
   int id = rand()%1000;
   printers::info("id: " + std::to_string(id) + "\n");
+  Int snaps_failed = 0;
+  Stopwatch watch;
+  watch.start();
+  double last_time = 0;
+  std::string message;
   for (Int i_relax = 0;
-       i_relax < 1000 && (i_relax < 30 || monitor.max() - monitor.min() > 1e-3*(std::abs(monitor.max()) + std::abs(monitor.min())));
+       i_relax < 1000 && (i_relax < 30 || monitor.max() - monitor.min() > 1e-3*(std::abs(monitor.max()) + std::abs(monitor.min())) || snaps_failed > 0);
        ++i_relax) {
     #if 0
     {
@@ -774,7 +779,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     Mat<> o = tree->origin();
     double tns = tree->nominal_size();
     double objective_diff = 0;
-    Int snaps_failed = 0;
+    snaps_failed = 0;
     for (auto& vert : verts) if (vert.mobile()) {
       auto satisfy = [&](Mat<3> p)->Mat<3> {
         for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
@@ -822,15 +827,19 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       }
     }
     monitor.add_sample(i_relax, objective - starting_objective);
-    std::string message = format_str(
+    message = format_str(
       400,
       "  Iteration = %4li;"
       " Number of vertex snaps failed = %li;"
       " Objective = %.18e (%+.5e);",
       i_relax, snaps_failed, objective, objective - starting_objective
     );
-    printers::info(message, false, true);
+    if (watch.time() > last_time) {
+      last_time += .1;
+      printers::info(message, false, true);
+    }
   }
+  printers::info(message, false, true);
   printers::info("\n");
 }
 
