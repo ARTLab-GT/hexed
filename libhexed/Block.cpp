@@ -283,17 +283,14 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
         > 1e-1*std::abs(test_state.objective - state.objective)) {
       printers::warn("inaccurate gradient" + std::to_string(state.has_glued_neighbor) + "\n");
     }
-    if (_step_sz < min_step) _step_sz = .1*ns;
-    else _step_sz *= 2;
+    _step_sz = .1*ns;
     do {
       if (_step_sz < min_step) {
-        //if (new_state.feasible) printers::warn("step rejected\n");
         _pos = orig_pos;
         new_state.objective = state.objective;
         break;
       }
       _pos = satisfy_constraints(orig_pos + _step_sz*direction);
-      //if ((_pos - orig_pos).norm() < 1e-2*_step_sz) printers::warn("infeasible direction\n");
       Mat<3> new_target = get_target(_pos);
       double dist = (new_target - _pos).norm();
       if (dist > orig_dist) _pos += (dist - orig_dist)/dist*(new_target - _pos);
@@ -772,6 +769,13 @@ Mat<3> Element_shape::nominal_center() const {
   }
   return c;
 };
+
+Mat<3> Element_shape::vertex_center() const {
+  Mat<3> c = Mat<3>::Zero();
+  for (auto& v : _verts) c += v->point({});
+  c /= _verts.size();
+  return c;
+}
 
 void Element_shape::connect(Element_shape& that, Connection_direction dir) {
   HEXED_ASSERT(that._basis == _basis, "attempt to connect elements with different basis");

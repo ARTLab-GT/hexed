@@ -384,6 +384,7 @@ class Element_shape : public Block {
   //! \brief What the position of vertex `i_vert` _would_ be supposed to be if this were a Cartesian element.
   Mat<3> nominal_position(int i_vert = 0) const;
   Mat<3> nominal_center() const;
+  Mat<3> vertex_center() const; //!< \brief average of the vertices' positions
   //! \brief Accesses the `i_vert`th vertex (in standard row-major order)
   inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
   inline const Vertex& vertex(int i_vert) const {return *_verts[i_vert];}
