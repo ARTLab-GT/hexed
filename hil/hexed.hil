@@ -390,7 +390,7 @@ mesh = {
     keep_refining = true
     while = {keep_refining & i_refinement < max_refinement_iters}
     do = {
-        print({    geometry-based refinement sweep } + i_refinement + {... })
+        print({geometry-based refinement sweep } + i_refinement + {... } + newline)
         keep_refining = keep_refining & refine
         i_refinement = i_refinement + 1
         println {done}

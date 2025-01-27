@@ -279,26 +279,28 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   }
   direction.normalize();
   _Optimization_state new_state = state;
+  auto update_pos = [&]() {
+    _pos = satisfy_constraints(orig_pos + _step_sz*direction);
+    if (has_target) {
+      Mat<3> new_target = get_target(_pos);
+      double dist = (new_target - _pos).norm();
+      double orig_dist = (target - orig_pos).norm();
+      if (dist > orig_dist) _pos += (dist - orig_dist)/dist*(new_target - _pos);
+      _pos = satisfy_constraints(_pos);
+    }
+    new_state = _compute_state();
+  };
   if (direction.norm()*ns > 1e-6*state.objective) {
     if (_step_sz <= 0) _step_sz = .1*ns;
     else _step_sz *= 2;
-    _pos = satisfy_constraints(orig_pos + _step_sz*direction);
-    new_state = _compute_state();
+    update_pos();
     while (!(new_state.feasible && new_state.objective < state.objective)) {
       if (_step_sz < 1e-20*ns) {
         _pos = orig_pos;
         new_state.objective = state.objective;
         break;
       }
-      _pos = satisfy_constraints(orig_pos + _step_sz*direction);
-      new_state = _compute_state();
-      if (limit_direction) {
-        Mat<3> new_target = get_target(_pos);
-        double dist = (new_target - _pos).norm();
-        new_state.feasible = new_state.feasible
-                             && (dist > 1e-6*ns ||
-                                 (target - orig_pos).normalized().dot((target - _pos)/dist) > .8);
-      }
+      update_pos();
       _step_sz /= 2;
     }
   }
@@ -307,17 +309,18 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
     orig_pos = _pos;
     target = get_target(_pos);
     Mat<3> step = target - _pos;
+    double orig_objective = new_state.objective;
     do {
       if (step.norm() < 1e-20*ns) {
         _pos = orig_pos;
-        new_state.objective = state.objective;
+        new_state.objective = orig_objective;
         break;
       }
       _pos = satisfy_constraints(orig_pos + step);
       new_state = _compute_state();
       step /= 2;
       ++snap_iters;
-    } while (!new_state.feasible);
+    } while (!new_state.feasible || new_state.objective > 2*state.objective);
   }
   return {new_state.objective - state.objective, snap_iters > 1};
 }
