@@ -780,17 +780,31 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
           p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
         }
         if (vert.record[2*params.n_dim]) {
+          std::vector<Mat<3>> inside_points;
           for (auto n : vert.neighbors()) if (n) {
             if ((int)n->record.size() == 2*params.n_dim + 1) {
               if (!n->record[2*params.n_dim]) {
-                auto seq = Eigen::seqN(0, params.n_dim);
-                Mat<> start = n->point({})(seq);
-                Mat<> end = p(Eigen::seqN(0, params.n_dim));
-                std::vector<double> intersections = surf_geom->intersections(start, end);
-                double min_sect = 1;
-                for (double s : intersections) min_sect = std::min(min_sect, s);
-                p(seq) = start + min_sect*(p(seq) - start);
+                inside_points.push_back(n->point({}));
               }
+            }
+          }
+          for (const next::Element_shape& e : vert.elements()) if (!e.glued()) {
+            inside_points.push_back(e.vertex_center());
+          }
+          double dist = huge;
+          for (Mat<3> inside_point : inside_points) {
+            auto seq = Eigen::seqN(0, params.n_dim);
+            Mat<> start = inside_point(seq);
+            Mat<> end = p(Eigen::seqN(0, params.n_dim));
+            std::vector<double> intersections = surf_geom->intersections(start, end);
+            double min_sect = 1;
+            for (double s : intersections) min_sect = std::min(min_sect, s);
+            Mat<3> candidate = p;
+            candidate(seq) = start + min_sect*(candidate(seq) - start);
+            double cand_dist = (candidate - p).norm();
+            if (cand_dist < dist) {
+              p = candidate;
+              dist = cand_dist;
             }
           }
         }
