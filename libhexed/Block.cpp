@@ -275,7 +275,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   Mat<3> target = get_target(orig_pos);
   double orig_dist = (target - orig_pos).norm();
   _Optimization_state new_state = state;
-  const double min_step = 1e-15*ns;
+  const double min_step = 1e-8*ns;
   if (state.gradient.norm()*ns > 1e-6*state.objective) {
     _pos = orig_pos + 1e-8*ns*direction;
     _Optimization_state test_state = _compute_state();
@@ -283,20 +283,23 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
         > 1e-1*std::abs(test_state.objective - state.objective)) {
       printers::warn("inaccurate gradient" + std::to_string(state.has_glued_neighbor) + "\n");
     }
-    _step_sz = .1*ns;
-    do {
-      if (_step_sz < min_step) {
-        _pos = orig_pos;
-        new_state.objective = state.objective;
-        break;
-      }
-      _pos = satisfy_constraints(orig_pos + _step_sz*direction);
-      Mat<3> new_target = get_target(_pos);
-      double dist = (new_target - _pos).norm();
-      if (dist > orig_dist) _pos += (dist - orig_dist)/dist*(new_target - _pos);
-      new_state = _compute_state();
-      _step_sz /= 2;
-    } while (!(new_state.feasible && new_state.objective < state.objective));
+    _step_sz = ns;
+    for (double factor : {10., 2.}) if (_step_sz > min_step) {
+      do {
+        if (_step_sz < min_step) {
+          _pos = orig_pos;
+          new_state.objective = state.objective;
+          break;
+        }
+        _step_sz /= factor;
+        _pos = satisfy_constraints(orig_pos + _step_sz*direction);
+        Mat<3> new_target = get_target(_pos);
+        double dist = (new_target - _pos).norm();
+        if (dist > orig_dist) _pos += (dist - orig_dist)/dist*(new_target - _pos);
+        new_state = _compute_state();
+      } while (!(new_state.feasible && new_state.objective < state.objective));
+      _step_sz *= factor;
+    }
   }
   int snap_iters = 0;
   if (has_target) {
