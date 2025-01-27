@@ -210,6 +210,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         skip_grad = skip_grad || (s.i == i_that && s.j == i_this);
       }
       if (!skip_grad) state.skip.emplace_back(elem, i_that, i_this);
+      HEXED_ASSERT(!skip_grad, "gradient calculation shouldn't actually be skipped");
       Mesh_assessment ma(vert_seq, i_that, i_this);
       state.feasible = state.feasible && ma.orthogonality > ortho_tolerance;
       state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality);
@@ -230,7 +231,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
                             *ma.grad_lengths(i_dim, all).transpose();
         }
         // note: the valid values for `gradient_weight` are 1., .5, and .25
-        if (gradient_weight > .3 && that_vert.glued()) {
+        if (gradient_weight > .3 && that_vert.glued() && i_this != i_that) {
           bool coupled = false;
           for (auto e : orig_vertex->_elems.theirs()) {
             coupled = coupled || (!e->glued() && e == that_vert._glued_to.get());
@@ -241,6 +242,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
             coupled = coupled && n_on_face == 1;
           }
           if (coupled) {
+            state.has_glued_neighbor = true;
             that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex);
           }
         }
@@ -273,17 +275,25 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   Mat<3> target = get_target(orig_pos);
   double orig_dist = (target - orig_pos).norm();
   _Optimization_state new_state = state;
-  const double min_step = 1e-6*ns;
+  const double min_step = 1e-15*ns;
   if (state.gradient.norm()*ns > 1e-6*state.objective) {
+    _pos = orig_pos + 1e-8*ns*direction;
+    _Optimization_state test_state = _compute_state();
+    if (std::abs(test_state.objective - state.objective + state.gradient.norm()*1e-8*ns)
+        > 1e-1*std::abs(test_state.objective - state.objective)) {
+      printers::warn("inaccurate gradient" + std::to_string(state.has_glued_neighbor) + "\n");
+    }
     if (_step_sz < min_step) _step_sz = .1*ns;
     else _step_sz *= 2;
     do {
       if (_step_sz < min_step) {
+        //if (new_state.feasible) printers::warn("step rejected\n");
         _pos = orig_pos;
         new_state.objective = state.objective;
         break;
       }
       _pos = satisfy_constraints(orig_pos + _step_sz*direction);
+      //if ((_pos - orig_pos).norm() < 1e-2*_step_sz) printers::warn("infeasible direction\n");
       Mat<3> new_target = get_target(_pos);
       double dist = (new_target - _pos).norm();
       if (dist > orig_dist) _pos += (dist - orig_dist)/dist*(new_target - _pos);

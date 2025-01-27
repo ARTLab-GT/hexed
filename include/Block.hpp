@@ -204,6 +204,7 @@ class Vertex : public Block {
     std::vector<_Gradient_entry> skip;
     double worst_ortho = 1;
     double worst_edge = 1;
+    bool has_glued_neighbor = false;
   };
   _Optimization_state _compute_state(bool include_neighbors = true) const;
   void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,

@@ -757,9 +757,17 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   History_monitor monitor(.3, 100);
   double starting_objective = -1;
   double objective = 0;
+  int id = rand()%1000;
+  printers::info("id: " + std::to_string(id) + "\n");
   for (Int i_relax = 0;
        i_relax < 1000 && (i_relax < 30 || monitor.max() - monitor.min() > 1e-3*(std::abs(monitor.max()) + std::abs(monitor.min())));
        ++i_relax) {
+    {
+      auto blocks = _blocks.boundary_sides();
+      #pragma omp parallel for
+      for (auto& b : blocks) b.reset();
+      visualize("default", "meshing_diagnostic" + std::to_string(id) + "_" + std::to_string(i_relax), (double)i_relax);
+    }
     // snap vertices to surface boundary
     Mat<> o = tree->origin();
     double tns = tree->nominal_size();
