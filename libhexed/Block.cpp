@@ -284,21 +284,23 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
       printers::warn("badGradient" + std::to_string(state.has_glued_neighbor), true);
     }
     _step_sz = ns;
-    for (double factor : {10., 2.}) if (_step_sz > min_step) {
+    double repeat_factor [] {10., 2., 2.};
+    double end_factor [] {10., .9, 1.};
+    for (int i = 0; i < 3; ++i) if (_step_sz > min_step) {
       do {
         if (_step_sz < min_step) {
           _pos = orig_pos;
           new_state.objective = state.objective;
           break;
         }
-        _step_sz /= factor;
+        _step_sz /= repeat_factor[i];
         _pos = satisfy_constraints(orig_pos + _step_sz*direction);
         Mat<3> new_target = get_target(_pos);
         double dist = (new_target - _pos).norm();
         if (dist > orig_dist) _pos += (dist - orig_dist)/dist*(new_target - _pos);
         new_state = _compute_state();
       } while (!(new_state.feasible && new_state.objective < state.objective));
-      _step_sz *= factor;
+      _step_sz *= end_factor[i];
     }
   }
   int snap_iters = 0;
@@ -317,7 +319,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
       new_state = _compute_state();
       step /= 2;
       ++snap_iters;
-    } while (!new_state.feasible);
+    } while (!new_state.feasible || new_state.objective > 2*state.objective);
   }
   return {new_state.objective - state.objective, snap_iters > 1};
 }
