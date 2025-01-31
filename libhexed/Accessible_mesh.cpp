@@ -117,6 +117,7 @@ void Accessible_mesh::_offset_vertices(double offset) {
 Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
   HEXED_ASSERT(Int(vert.record.size()) == 2*params.n_dim + 1, "Vertex record has not been set correctly.");
   auto seq = Eigen::seqN(0, params.n_dim);
+  Mat<3> orig_pos = pos;
   if (vert.record[2*params.n_dim]) {
     if (vert.snapped_point >= 0) {
       return surf_geom->points()[vert.snapped_point];
@@ -132,6 +133,9 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
       }
     } else {
       pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
+      if ((pos - Mat<3>::Unit(0)).norm() < 1e-4) {
+        printers::info(format_str(100, "%p %e %e | %e %e\n", (void*)&vert, orig_pos(0), orig_pos(1), pos(0), pos(1)));
+      }
     }
   }
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -767,7 +771,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   for (Int i_relax = 0;
        i_relax < 1000 && (i_relax < 30 || monitor.max() - monitor.min() > 1e-3*(std::abs(monitor.max()) + std::abs(monitor.min())) || snaps_failed > 0);
        ++i_relax) {
-    #if 0
+    #if 1
     {
       auto blocks = _blocks.boundary_sides();
       #pragma omp parallel for
