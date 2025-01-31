@@ -54,32 +54,11 @@ Tree_curve::Nearest_index Tree_curve::nearest_point(Mat<3> point, double max_dis
 
 void Tree_curve::_recursive_nearest(Mat<3> point, Nearest_index& nearest, const Segment& s, std::array<double, 2> bounds) const {
   if ((s.center - point).norm() - s.radius <= nearest.distance) {
-    if ((point - Mat<3>{1., -4e-5, 0}).norm() < 2e-5) {
-      printers::info(format_str(200, "TC: %e %e | %li %e\n", point(0), point(1), s.nodes_start, s.radius));
-    }
     if (s.segments.size()) {
       for (int i_segment = 0; i_segment < 2; ++i_segment) {
         _recursive_nearest(point, nearest, s.segments[i_segment], bounds);
       }
     } else {
-      #if 0
-      for (Int i_node = 0; i_node < s.nodes.shape()[0]; ++i_node) {
-        double d = (point - s.nodes(i_node).vector()).norm();
-        if ((d < nearest.distance) && bounds[0] <= _arc_length[s.nodes_start + i_node]
-                                   && _arc_length[s.nodes_start + i_node] <= bounds[1]) {
-          nearest.index = s.nodes_start + i_node;
-          nearest.distance = d;
-        }
-        if ((point - Mat<3>{1., 4e-5, 0}).norm() < 2e-5) {
-          printers::info(format_str(200, "    TC: %e %e | %li %e %e | %e %e | %e %e %e | %i %i %i\n",
-                                    point(0), point(1),
-                                    nearest.index, s.nodes(i_node)[0], s.nodes(i_node)[1],
-                                    nearest.distance, d,
-                                    _arc_length[s.nodes_start + i_node], bounds[0], bounds[1],
-                                    int(d < nearest.distance), int(bounds[0] <= _arc_length[s.nodes_start + i_node]), int(_arc_length[s.nodes_start + i_node] <= bounds[1])));
-        }
-      }
-      #else
       HEXED_ASSERT(s.nodes.shape()[0] >= 2, "`Segment` should have at least 2 nodes");
       for (Int i_node = 0; i_node < s.nodes.shape()[0] - 1; ++i_node) {
         Mat<3> diff = s.nodes(i_node + 1).vector() - s.nodes(i_node).vector();
@@ -93,20 +72,12 @@ void Tree_curve::_recursive_nearest(Mat<3> point, Nearest_index& nearest, const 
           nearest.index = std::round(nearest.interp_index);
           nearest.distance = d;
         }
-        if ((point - Mat<3>{1., -4e-5, 0}).norm() < 2e-5) {
-          Mat<3> p = interp_point(s.nodes_start + i_node + interp);
-          printers::info(format_str(200, "    TC: %e %e | %li %e; %e %e | %e %e | %e %e\n",
-                                    point(0), point(1),
-                                    nearest.index, s.nodes_start + i_node + interp, s.nodes(i_node)[0], s.nodes(i_node)[1],
-                                    nearest.distance, d,
-                                    p(0), p(1)));
-        }
       }
-      #endif
     }
   }
 }
 
+//! \todo test this
 Mat<3> Tree_curve::interp_point(double interp_index) const {
   Int index = std::floor(interp_index);
   double interp = interp_index - index;
