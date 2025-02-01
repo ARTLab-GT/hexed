@@ -368,7 +368,7 @@ class Wget(Subprocess):
         super().build()
 
 class Internet_mirror(Wget):
-    def __init__(self, builder, url, update_freq=24*60**2, **kwargs):
+    def __init__(self, builder, url, update_freq=7*24*60**2, **kwargs):
         self._update_freq = update_freq
         super().__init__(builder, url, **kwargs)
     def up_to_date(self):
@@ -908,8 +908,6 @@ class Builder:
         else:
             self.venv_dir = None
             self._python = "python3"
-        if self.options["internet"]:
-            self.python("-m", "pip", "install", "--upgrade", "pip")
         # get index of pypi packages
         self.mkdir(self.build_dir + "pypi")
         self[Internet_mirror]("https://pypi.org/simple/", file_name="index.html", prefix=self.build_dir + "pypi").do
@@ -939,6 +937,11 @@ class Builder:
             p = Prefices.remove_suffix(p, "sbin")
             cmake_paths += (p, p + "lib/")
         self.prefices["cmake"] = cmake_paths + tuple(self.prefices["cmake"])
+        pip_exec = self.find_in("bin", "pip").find();
+        assert pip_exec.found, "no pip"
+        if self.options["internet"] and pip_exec.earliest_mtime < time.time() - 24*60**2:
+            self.python("-m", "pip", "install", "--upgrade", "pip")
+            os.utime(pip_exec.assets[0])
         self[Pip](["cmake"]).do
 
     def site_packages(self, python=None):
