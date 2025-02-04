@@ -24,6 +24,7 @@ class Hexed(bu.C_project):
             "threaded": bu.Option(True, convert=bu.as_bool),
             "n_threads": bu.Option(os.cpu_count(), convert=int, assertions=bu.assert_nonneg),
             "profile": bu.Option(False, convert=bu.as_bool),
+            "global_hacks": bu.Option(False, convert=bu.as_bool),
             "use_xdmf": bu.Option(True, convert=bu.as_bool),
             "use_tecio": bu.Option(False, convert=bu.as_bool),
             "use_occt": bu.Option(False, convert=bu.as_bool),
@@ -98,6 +99,8 @@ class Hexed(bu.C_project):
         if self.builder.options["profile"]:
             bu.Compiler.debug = 3
             bu.Compiler.profile = True
+        if self.builder.options["global_hacks"]:
+            bu.Compiler.extra_flags.append("-DHEXED_USE_GLOBAL_HACKS");
         #### compile and link
         self.builder.prefices["include"] = (self.bdir + "include/hexed",) + self.builder.prefices["include"]
         self.builder.mkdir(self.bdir + "libhexed")
