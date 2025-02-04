@@ -6,25 +6,25 @@ Lock::Acquire::Acquire(Lock& ref)
 : lock{ref}
 {
   #if HEXED_THREADED
-  omp_set_lock(&lock.l);
+  omp_set_nest_lock(&lock.l);
   #endif
 }
 
 Lock::Acquire::~Acquire() {
   #if HEXED_THREADED
-  omp_unset_lock(&lock.l);
+  omp_unset_nest_lock(&lock.l);
   #endif
 }
 
 Lock::Lock() {
   #if HEXED_THREADED
-  omp_init_lock(&l);
+  omp_init_nest_lock(&l);
   #endif
 }
 
 Lock::~Lock() {
   #if HEXED_THREADED
-  omp_destroy_lock(&l);
+  omp_destroy_nest_lock(&l);
   #endif
 }
 
