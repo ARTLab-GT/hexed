@@ -110,6 +110,7 @@ void throw_critical(const char* message) {
  * If desired, supply the type of exception as the third argument.
  * Exception type must be constructible from a string.
  * Defaults to `std::runtime_error`.
+ * \note This macro expands to a block enclosed in `{}`, so it does not require a `;` after it.
  */
 #define HEXED_THROW(message, ...) { \
   hexed::assert::throw_critical<__VA_ARGS__>(hexed::format_str(1000, \
@@ -122,6 +123,7 @@ void throw_critical(const char* message) {
 /*! \brief Assert something with an informative error message.
  * \details If `expression` is false, throws an exception with `HEXED_THROW`.
  * `message` and an optional third argument are passed to `HEXED_THROW`.
+ * \note This macro expands to a block enclosed in `{}`, so it does not require a `;` after it.
  */
 #define HEXED_ASSERT(expression, message, ...) { \
   if (!(expression)) { \
