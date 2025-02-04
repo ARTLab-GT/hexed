@@ -356,6 +356,8 @@ class Subprocess(Buildable):
             self.builder.subproc(comm, **self._kwargs)
 
 class Wget(Subprocess):
+    n_tries = 10
+    wait_seconds = 5
     def __init__(self, builder, url, file_name=None, prefix="."):
         if file_name is None:
             self.file_name = url.split("/")[-1]
@@ -365,7 +367,14 @@ class Wget(Subprocess):
         super().__init__(builder, ["wget", "-P", prefix, url], self.file_name, depends=[])
     def build(self):
         assert self.builder.options["internet"], "`Wget` requires internet access. (You passed `--internet=False`.)"
-        super().build()
+        for i in range(self.n_tries):
+            try:
+                super().build()
+                break
+            except AssertionError:
+                print(f"`wget` failed. Waiting {self.wait_seconds} and retrying " +
+                      f"({self.n_tries - i - 1} tries remaining)...")
+                time.sleep(self.wait_seconds)
 
 class Internet_mirror(Wget):
     def __init__(self, builder, url, update_freq=7*24*60**2, **kwargs):
