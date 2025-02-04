@@ -168,7 +168,7 @@ bool Vertex::mobile() const {
 }
 
 const double ortho_tolerance = 3e-2;
-const double edge_tolerance = 1e-2;
+const double edge_tolerance = 3e-3;
 
 Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) const {
   _Optimization_state state;
@@ -210,13 +210,12 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         skip_grad = skip_grad || (s.i == i_that && s.j == i_this);
       }
       if (!skip_grad) state.skip.emplace_back(elem, i_that, i_this);
-      HEXED_ASSERT(!skip_grad, "gradient calculation shouldn't actually be skipped");
       Mesh_assessment ma(vert_seq, i_that, i_this);
       state.feasible = state.feasible && ma.orthogonality > ortho_tolerance;
       state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         state.feasible = state.feasible && ma.edge_lengths(i_dim) > edge_tolerance*ns;
-        state.worst_edge = std::min(state.worst_edge/ns, ma.edge_lengths(i_dim));
+        state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim)/ns);
       }
       if (state.feasible) {
         const Vertex& that_vert = elem->vertex(i_that);

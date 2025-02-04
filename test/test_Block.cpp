@@ -28,9 +28,11 @@ TEST_CASE("Block") {
     hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr0(nullptr);
     vert0.pair(ptr0);
     REQUIRE(vert0.alive());
-    REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2},
+                 hexed::math::Approx_equal()));
     vert0.apply_relax(); // before first call to `calc_relax`, `apply_update` should do nothing
-    REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2},
+                 hexed::math::Approx_equal()));
     hexed::next::Vertex vert1({.3, -.1, .4}, 4);
     hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr1(nullptr);
     vert1.pair(ptr1);
