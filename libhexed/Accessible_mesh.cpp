@@ -125,7 +125,7 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
       Array<double> nodes{geom_edge.nodes()};
       Int n_points = nodes.shape()[0];
       if (vert.snapped_endpoint == -1) {
-        Int nearest = geom_edge.nearest_point(pos(seq), 100*vert.nominal_size()).index;
+        Int nearest = geom_edge.nearest_point(pos(seq), 2*vert.nominal_size()).index;
         if (nearest >= 0) pos = nodes(nearest).vector();
       } else {
         pos = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
@@ -158,7 +158,7 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) {
     vert.set_pos(vert.nominal_position());
   }
-  _offset_vertices(.2);
+  _offset_vertices(.1);
   {
     Task_message message(printers::info, "Pre-edge-matching mesh optimization", "\n");
     _optimize(1, 10, true);
@@ -648,11 +648,12 @@ void Accessible_mesh::_fit_surface() {
     vert.record.clear();
   }
   purge();
-  _offset_vertices(.05);
+  _offset_vertices(.01);
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
+  _vis_return("");
   {
     Task_message message(printers::info, "Post-edge-matching mesh optimization", "\n");
     _optimize(1, 10, true);
@@ -665,7 +666,7 @@ void Accessible_mesh::_fit_surface() {
     printers::warn(format_str(200, "%li vertices could not be snapped to the surface.\n", n_failed), true);
   }
   #pragma omp parallel for
-  for (auto& vert : verts) vert.record.clear();
+  for (auto& vert : all_verts) vert.record.clear();
 
   // snaps faces and edges to the surface
   Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
