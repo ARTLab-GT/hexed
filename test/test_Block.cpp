@@ -4,7 +4,8 @@
 #include <hexed/Equidistant.hpp>
 #include <hexed/Gauss_lobatto.hpp>
 
-#define REQ_VEC_EQ(vec0, ...) REQUIRE_THAT(vec0, Catch::Matchers::RangeEquals(__VA_ARGS__, hexed::math::Approx_equal()))
+#define REQ_VEC_EQ(vec0, ...) \
+  REQUIRE_THAT(vec0, Catch::Matchers::RangeEquals(__VA_ARGS__, hexed::math::Approx_equal()))
 
 void warp(hexed::next::Edge& e) {
   for (int i_node = 0; i_node < 3; ++i_node) {
@@ -45,7 +46,7 @@ TEST_CASE("Block") {
     REQUIRE(!edge0.alive());
     auto test_interp = [&](hexed::next::Edge& edge){
       for (int i = 0; i < 4; ++i) {
-        REQUIRE_THAT(edge.point({i}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2} + i*hexed::Mat<3>::Constant(.2/3.), hexed::math::Approx_equal()));
+        REQ_VEC_EQ(edge.point({i}), hexed::Mat<3>{.1, -.3, .2} + i*hexed::Mat<3>::Constant(.2/3.));
       }
     };
     test_interp(edge0);

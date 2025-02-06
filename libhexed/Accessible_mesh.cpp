@@ -11,6 +11,7 @@
 #include <hexed/History_monitor.hpp>
 #include <hexed/Printer.hpp>
 #include <hexed/Visualizer.hpp> //FIXME
+#include <hexed/global_hacks.hpp> //! \todo delete this
 
 namespace hexed {
 
@@ -117,6 +118,7 @@ void Accessible_mesh::_offset_vertices(double offset) {
 Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
   HEXED_ASSERT(Int(vert.record.size()) == 2*params.n_dim + 1, "Vertex record has not been set correctly.");
   auto seq = Eigen::seqN(0, params.n_dim);
+  double ns = vert.nominal_size();
   if (vert.record[2*params.n_dim]) {
     if (vert.snapped_point >= 0) {
       return surf_geom->points()[vert.snapped_point];
@@ -125,13 +127,13 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
       Array<double> nodes{geom_edge.nodes()};
       Int n_points = nodes.shape()[0];
       if (vert.snapped_endpoint == -1) {
-        Int nearest = geom_edge.nearest_point(pos(seq), 2*vert.nominal_size()).index;
+        Int nearest = geom_edge.nearest_point(pos(seq), huge).index;
         if (nearest >= 0) pos = nodes(nearest).vector();
       } else {
         pos = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
       }
     } else {
-      pos(seq) = surf_geom->nearest_point(pos(seq), huge, vert.nominal_size()/2).point();
+      pos(seq) = surf_geom->nearest_point(pos(seq), huge, ns/2).point();
     }
   }
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -733,6 +735,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   auto verts = _blocks.verts();
   auto bverts = _blocks.boundary_verts();
   auto edges = surf_geom->edges();
+  printers::info(std::to_string(global_hacks::debug_message["check"]) + "\n");
   // determine which vertices are on extremal boundaries
   #pragma omp parallel for
   for (auto& vert : verts) {
@@ -766,6 +769,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   Stopwatch watch;
   watch.start();
   double last_time = 0;
+  for (auto& vert : verts) vert.dijkstra_point = vert.point({});
   std::string message;
   for (Int i_relax = 0;
        i_relax < 1000 && (i_relax < 30 || monitor.max() - monitor.min() > 1e-3*(std::abs(monitor.max()) + std::abs(monitor.min())) || snaps_failed > 0);
@@ -817,6 +821,18 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       }
       objective_diff += iqr.objective_diff;
       snaps_failed += iqr.snap_failed;
+      #if 0
+      if (global_hacks::debug_message["check"] == 3) for (auto& v : verts) {
+        try {v.quality_objective();}
+        catch (const assert::Internal_error& e) {
+          Mat<3> p0 = vert.point({});
+          Mat<3> p1 = v.point({});
+          Mat<3> q0 = vert.dijkstra_point;
+          Mat<3> q1 = v.dijkstra_point;
+          HEXED_THROW(format_str(200, "%p %e %e %e; %e %e %e %p %e %e %e; %e %e %e", (void*)&vert, q0(0), q0(1), q0(2), p0(0), p0(1), p0(2), (void*)&v, q1(0), q1(1), q1(2), p1(0), p1(1), p1(2)))
+        }
+      }
+      #endif
     }
     double prev_obj = objective;
     objective = 0;
@@ -844,6 +860,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   }
   printers::info(message, false, true);
   printers::info("\n");
+  ++global_hacks::debug_message["check"];
 }
 
 Storage_params incr_res_cache(Storage_params params) {
@@ -882,6 +899,7 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   _stopwatch["relax"].emplace("legacy", "vertex update");
   _stopwatch.emplace("update", "update");
   _stopwatch.work_units_completed = 1;
+  global_hacks::debug_message["check"] = 0;
 }
 
 Accessible_mesh::~Accessible_mesh() {

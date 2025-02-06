@@ -3,6 +3,7 @@
 #include <hexed/vertex_inds.hpp>
 #include <hexed/Mesh_assessment.hpp>
 #include <hexed/Printer.hpp>
+#include <hexed/global_hacks.hpp> //! \todo remove this
 
 namespace hexed::next {
 
@@ -179,8 +180,13 @@ Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) const
 void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
                                       const Vertex* orig_vertex) const {
   if (!orig_vertex) orig_vertex = this;
+  #if 0
+  std::size_t p0 = 0x5957275f1a10;
+  std::size_t p1 = 0x72e6d18506e8;
+  #endif
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
+  bool print = include_neighbors && global_hacks::debug_message["check"] == 3 && false;
   for (const Element_shape* elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
     if (elem->glued()) continue;
@@ -203,6 +209,9 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
     }
     i_those.push_back(i_this);
     for (int i_that : i_those) {
+      if (print) {
+        std::cout << orig_vertex << " " << this << " " << dijkstra_point.transpose() << ";" << _pos.transpose() << " " << &elem->vertex(i_that) << " " << elem->vertex(i_that).dijkstra_point.transpose() << ";" << elem->vertex(i_that).point({}).transpose() << std::endl;
+      }
       bool skip_obj = false;
       bool skip_grad = false;
       for (auto s : state.skip) if (s.elem == elem) {
@@ -232,13 +241,10 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         // note: the valid values for `gradient_weight` are 1., .5, and .25
         if (gradient_weight > .3 && that_vert.glued() && i_this != i_that) {
           bool coupled = false;
-          for (auto e : orig_vertex->_elems.theirs()) {
-            coupled = coupled || (!e->glued() && e == that_vert._glued_to.get());
-          }
-          if (gradient_weight < .9) {
-            int n_on_face = 0;
-            for (double c : that_vert._glued_coords) n_on_face += (c < .1 || c > .9);
-            coupled = coupled && n_on_face == 1;
+          for (const Vertex* v : {this, orig_vertex}) {
+            for (auto e : v->_elems.theirs()) {
+              coupled = coupled || (!e->glued() && e == that_vert._glued_to.get());
+            }
           }
           if (coupled) {
             state.has_glued_neighbor = true;
@@ -248,6 +254,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
       }
     }
   }
+  if (print && orig_vertex == this) std::cout << "\n";
 }
 
 Vertex::Improve_quality_result Vertex::improve_quality() {
@@ -267,9 +274,13 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   Mat<3> orig_pos = _pos;
   auto state = _compute_state();
   double ns = nominal_size();
+  bool gn = false;
+  for (Vertex* n : neighbors()) gn = gn || n->glued();
   HEXED_ASSERT(state.feasible, format_str(200,
-               "Vertex state violates quality criteria (ortho = %e; edge = %e; coords = (%e %e %e)).",
-               state.worst_ortho, state.worst_edge, orig_pos(0), orig_pos(1), orig_pos(2)));
+               "Vertex state violates quality criteria "
+               "(ortho = %e; edge = %e; coords = (%e %e %e); glued neighbor = %i).",
+               state.worst_ortho, state.worst_edge, orig_pos(0), orig_pos(1), orig_pos(2),
+               int(gn)))
   Mat<3> direction = -state.gradient.normalized();
   Mat<3> target = get_target(orig_pos);
   double orig_dist = (target - orig_pos).norm();
@@ -278,10 +289,12 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   if (state.gradient.norm()*ns > 1e-6*state.objective) {
     _pos = orig_pos + 1e-8*ns*direction;
     _Optimization_state test_state = _compute_state();
+    #if 0
     if (std::abs(test_state.objective - state.objective + state.gradient.norm()*1e-8*ns)
         > 1e-1*std::abs(test_state.objective - state.objective)) {
       printers::warn("badGradient" + std::to_string(state.has_glued_neighbor), true);
     }
+    #endif
     _step_sz = ns;
     double repeat_factor [] {10., 2., 2.};
     double end_factor [] {10., .9, 1.};
@@ -320,6 +333,8 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
       ++snap_iters;
     } while (!new_state.feasible || new_state.objective > 2*state.objective);
   }
+  new_state = _compute_state();
+  HEXED_ASSERT(new_state.feasible, "something changed");
   return {new_state.objective - state.objective, snap_iters > 1};
 }
 
