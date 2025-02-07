@@ -11,7 +11,6 @@
 #include <hexed/History_monitor.hpp>
 #include <hexed/Printer.hpp>
 #include <hexed/Visualizer.hpp> //FIXME
-#include <hexed/global_hacks.hpp> //! \todo delete this
 
 namespace hexed {
 
@@ -148,6 +147,7 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
 
 void Accessible_mesh::_fit_surface() {
   if (!surf_geom) return;
+  Stopwatch_tree::Starter sw_fit(_stopwatch["update"]["fit surface"]);
   _blocks.edges_2d();
   _blocks.faces_3d();
   auto all_verts = _blocks.verts();
@@ -671,7 +671,6 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) vert.record.clear();
 
   // snaps faces and edges to the surface
-  Stopwatch_tree::Starter sw_update(_stopwatch["relax"]["surface snapping"]);
   // snaps a `Boundary_block` to the geometry surface
   auto snap_block = [this](next::Boundary_block& block) {
     block.reset();
@@ -728,14 +727,14 @@ void Accessible_mesh::_fit_surface() {
   // snap face interiors (if 3D) to surface
   #pragma omp parallel for
   for (auto& face : faces_3d) snap_block(face);
-  _stopwatch["relax"]["surface snapping"].work_units_completed += verts.size();
+  ++_stopwatch["update"]["fit surface"].work_units_completed;
 }
 
 void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
+  Stopwatch_tree::Starter sw_opt(_stopwatch["update"]["fit surface"]["optimization"]);
   auto verts = _blocks.verts();
   auto bverts = _blocks.boundary_verts();
   auto edges = surf_geom->edges();
-  printers::info(std::to_string(global_hacks::debug_message["check"]) + "\n");
   // determine which vertices are on extremal boundaries
   #pragma omp parallel for
   for (auto& vert : verts) {
@@ -769,7 +768,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   Stopwatch watch;
   watch.start();
   double last_time = 0;
-  for (auto& vert : verts) vert.dijkstra_point = vert.point({});
   std::string message;
   for (Int i_relax = 0;
        i_relax < 1000 && (i_relax < 30 || monitor.max() - monitor.min() > 1e-3*(std::abs(monitor.max()) + std::abs(monitor.min())) || snaps_failed > 0);
@@ -787,56 +785,52 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     double tns = tree->nominal_size();
     double objective_diff = 0;
     snaps_failed = 0;
-    for (auto& vert : verts) if (vert.mobile()) {
-      auto satisfy = [&](Mat<3> p)->Mat<3> {
-        for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
-          p(i_dim) = std::max(p(i_dim), o(i_dim));
-          p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
-        }
-        if (vert.record[2*params.n_dim]) {
-          for (auto n : vert.neighbors()) if (n) {
-            if ((int)n->record.size() == 2*params.n_dim + 1) {
-              if (!n->record[2*params.n_dim]) {
-                auto seq = Eigen::seqN(0, params.n_dim);
-                Mat<> start = n->point({})(seq);
-                Mat<> end = p(Eigen::seqN(0, params.n_dim));
-                std::vector<double> intersections = surf_geom->intersections(start, end);
-                double min_sect = 1;
-                for (double s : intersections) min_sect = std::min(min_sect, s);
-                p(seq) = start + min_sect*(p(seq) - start);
+    {
+      Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
+      for (auto& vert : verts) if (vert.mobile()) {
+        auto satisfy = [&](Mat<3> p)->Mat<3> {
+          for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
+            p(i_dim) = std::max(p(i_dim), o(i_dim));
+            p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
+          }
+          if (vert.record[2*params.n_dim]) {
+            for (auto n : vert.neighbors()) if (n) {
+              if ((int)n->record.size() == 2*params.n_dim + 1) {
+                if (!n->record[2*params.n_dim]) {
+                  auto seq = Eigen::seqN(0, params.n_dim);
+                  Mat<> start = n->point({})(seq);
+                  Mat<> end = p(Eigen::seqN(0, params.n_dim));
+                  std::vector<double> intersections = surf_geom->intersections(start, end);
+                  double min_sect = 1;
+                  for (double s : intersections) min_sect = std::min(min_sect, s);
+                  p(seq) = start + min_sect*(p(seq) - start);
+                }
               }
             }
           }
+          return p;
+        };
+        auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
+        bool on_surface = false;
+        for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert.record[i];
+        next::Vertex::Improve_quality_result iqr;
+        if (on_surface) {
+          iqr = vert.improve_quality(get_target, satisfy);
+        } else {
+          iqr = vert.improve_quality();
         }
-        return p;
-      };
-      auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
-      bool on_surface = false;
-      for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert.record[i];
-      next::Vertex::Improve_quality_result iqr;
-      if (on_surface) {
-        iqr = vert.improve_quality(get_target, satisfy);
-      } else {
-        iqr = vert.improve_quality();
+        objective_diff += iqr.objective_diff;
+        snaps_failed += iqr.snap_failed;
+        ++_stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed;
       }
-      objective_diff += iqr.objective_diff;
-      snaps_failed += iqr.snap_failed;
-      #if 0
-      if (global_hacks::debug_message["check"] == 3) for (auto& v : verts) {
-        try {v.quality_objective();}
-        catch (const assert::Internal_error& e) {
-          Mat<3> p0 = vert.point({});
-          Mat<3> p1 = v.point({});
-          Mat<3> q0 = vert.dijkstra_point;
-          Mat<3> q1 = v.dijkstra_point;
-          HEXED_THROW(format_str(200, "%p %e %e %e; %e %e %e %p %e %e %e; %e %e %e", (void*)&vert, q0(0), q0(1), q0(2), p0(0), p0(1), p0(2), (void*)&v, q1(0), q1(1), q1(2), p1(0), p1(1), p1(2)))
-        }
-      }
-      #endif
     }
     double prev_obj = objective;
     objective = 0;
-    for (auto& vert : verts) objective += vert.quality_objective();
+    {
+      Stopwatch_tree::Starter sw_assess(_stopwatch["update"]["fit surface"]["optimization"]["assessment"]);
+      for (auto& vert : verts) objective += vert.quality_objective();
+      _stopwatch["update"]["fit surface"]["optimization"]["assessment"].work_units_completed += verts.size();
+    }
     if (starting_objective < 0) starting_objective = objective;
     if (i_relax) {
       if (std::abs(objective_diff - (objective - prev_obj)) > 1e-4*verts.size()) {
@@ -860,7 +854,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   }
   printers::info(message, false, true);
   printers::info("\n");
-  ++global_hacks::debug_message["check"];
+  ++_stopwatch["update"]["fit surface"]["optimization"].work_units_completed;
 }
 
 Storage_params incr_res_cache(Storage_params params) {
@@ -892,14 +886,14 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 , buffer_dist{std::sqrt(params.n_dim)/2}
 {
   def.face_con_v = def_face_cons;
-  _stopwatch.emplace("relax", "vertex update");
-  _stopwatch["relax"].emplace("optimization", "vertex update");
-  _stopwatch["relax"].emplace("extremal snapping", "vertex update");
-  _stopwatch["relax"].emplace("surface snapping", "vertex update");
-  _stopwatch["relax"].emplace("legacy", "vertex update");
   _stopwatch.emplace("update", "update");
+  _stopwatch["update"].emplace("refinement", "refinement");
+  _stopwatch["update"].emplace("extrusion", "extrusion");
+  _stopwatch["update"].emplace("fit surface", "fit");
+  _stopwatch["update"]["fit surface"].emplace("optimization", "optimization");
+  _stopwatch["update"]["fit surface"]["optimization"].emplace("relaxation", "vertex update");
+  _stopwatch["update"]["fit surface"]["optimization"].emplace("assessment", "vertex assessment");
   _stopwatch.work_units_completed = 1;
-  global_hacks::debug_message["check"] = 0;
 }
 
 Accessible_mesh::~Accessible_mesh() {
@@ -1133,6 +1127,7 @@ void request_connection(Element& elem, int n_dim, int i_dim, bool i_sign, int j_
 }
 
 void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
+  Stopwatch_tree::Starter sw_extrude(_stopwatch["update"]["extrusion"]);
   const int nd = params.n_dim;
   const int n_faces = 2*nd;
   { // initialize number of connections of each face to 0
@@ -1366,6 +1361,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     connect_deformed(con_plan.ref_level, con_plan.serial_ns, con_plan.dir);
   }
   _n_verts = _blocks.verts().size();
+  ++_stopwatch["update"]["extrusion"].work_units_completed;
 }
 
 void Accessible_mesh::connect_rest(int bc_sn) {
@@ -1919,179 +1915,183 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   Stopwatch_tree::Starter sw_update(_stopwatch["update"]);
   int nd = params.n_dim;
   auto& elems = elements();
-  // decide which elements to (un)refine
-  #pragma omp parallel for // parallelize this part since `predicate` could be expensive
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    elem.record = 0;
-    bool ref = refine_criterion(elem);
-    bool unref = unrefine_criterion(elem);
-    if (ref && !unref) elem.record = 1;
-    else if (unref && !ref) elem.record = -1;
-  }
-  // pass refinement requests of extruded elements to their extrusion parents
-  #pragma omp parallel for
-  for (auto con : extrude_cons) {
-    auto& inside = con->element(1);
-    Lock::Acquire a(inside.lock);
-    if (inside.record == 0) inside.record = con->element(0).record;
-    else inside.record = std::max(inside.record, con->element(0).record);
-    inside.unrefinement_locked = inside.unrefinement_locked || con->element(0).unrefinement_locked;
-  }
-  int n_orig [2];
-  // refine elements
-  for (bool is_deformed : {0, 1}) n_orig[is_deformed] = container(is_deformed).element_view().size(); // count how many elements there are before adding, so we know where the new ones start
-  for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, n_orig[is_deformed]);
-  bool changed;
-  // unrefinement
-  do {
-    changed = false;
+  bool anything_changed = false;
+  {
+    Stopwatch_tree::Starter sw_refine(_stopwatch["update"]["refinement"]);
+    // decide which elements to (un)refine
+    #pragma omp parallel for // parallelize this part since `predicate` could be expensive
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      elem.record = 0;
+      bool ref = refine_criterion(elem);
+      bool unref = unrefine_criterion(elem);
+      if (ref && !unref) elem.record = 1;
+      else if (unref && !ref) elem.record = -1;
+      anything_changed = anything_changed || elem.record != 0;
+    }
+    // pass refinement requests of extruded elements to their extrusion parents
+    #pragma omp parallel for
+    for (auto con : extrude_cons) {
+      auto& inside = con->element(1);
+      Lock::Acquire a(inside.lock);
+      if (inside.record == 0) inside.record = con->element(0).record;
+      else inside.record = std::max(inside.record, con->element(0).record);
+      inside.unrefinement_locked = inside.unrefinement_locked || con->element(0).unrefinement_locked;
+    }
+    int n_orig [2];
+    // refine elements
+    for (bool is_deformed : {0, 1}) n_orig[is_deformed] = container(is_deformed).element_view().size(); // count how many elements there are before adding, so we know where the new ones start
+    for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, n_orig[is_deformed]);
+    bool changed;
+    // unrefinement
+    do {
+      changed = false;
+      for (bool is_deformed : {0, 1}) {
+        auto& cont_elems = container(is_deformed).element_view();
+        for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) {
+          auto& elem = cont_elems[i_elem];
+          if (elem.record == -1 && elem.tree) {
+            bool unref = false;
+            bool is_def = false; // whether the putative unrefined element will be deformed
+            Tree* parent;
+            if (!elem.tree->is_root()) { // can't unrefine the root
+              unref = !elem.unrefinement_locked;
+              parent = elem.tree->parent();
+              // only unrefine if all the existing siblings agree and have the same ref level
+              for (Tree* child : parent->children()) {
+                if (!child->is_leaf() && has_existent_children(child)) unref = false;
+                else if (child->elem) if (child->elem->record != 2) {
+                  unref = unref && child->elem->record == -1;
+                  is_def = is_def || child->elem->get_is_deformed();
+                }
+              }
+              if (unref) unref = unref && !needs_refine(parent); // don't unrefine if it would violate ref level smoothness
+              else elem.record = 0; // if we didn't unrefine because of one of the siblings, set the record to 0 to avoid redundant checks in future sweeps
+            }
+            // perform unrefinement
+            if (unref) {
+              changed = true;
+              for (Tree* child : parent->children()) {
+                if (child->elem) {
+                  child->elem->record = 2;
+                }
+              }
+              parent->unrefine();
+              add_elem(is_def, *parent).record = 0;
+            }
+          }
+        }
+      }
+    } while (changed);
+    // set the record straight for any elements denied refinement
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      if (elems[i_elem].record == -1) elems[i_elem].record = 0;
+    }
+    // un-flood-fill any new surface elements
     for (bool is_deformed : {0, 1}) {
       auto& cont_elems = container(is_deformed).element_view();
-      for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) {
+      #pragma omp parallel for
+      for (int i_elem = n_orig[is_deformed]; i_elem < cont_elems.size(); ++i_elem) {
         auto& elem = cont_elems[i_elem];
-        if (elem.record == -1 && elem.tree) {
-          bool unref = false;
-          bool is_def = false; // whether the putative unrefined element will be deformed
-          Tree* parent;
-          if (!elem.tree->is_root()) { // can't unrefine the root
-            unref = !elem.unrefinement_locked;
-            parent = elem.tree->parent();
-            // only unrefine if all the existing siblings agree and have the same ref level
-            for (Tree* child : parent->children()) {
-              if (!child->is_leaf() && has_existent_children(child)) unref = false;
-              else if (child->elem) if (child->elem->record != 2) {
-                unref = unref && child->elem->record == -1;
-                is_def = is_def || child->elem->get_is_deformed();
-              }
-            }
-            if (unref) unref = unref && !needs_refine(parent); // don't unrefine if it would violate ref level smoothness
-            else elem.record = 0; // if we didn't unrefine because of one of the siblings, set the record to 0 to avoid redundant checks in future sweeps
-          }
-          // perform unrefinement
-          if (unref) {
-            changed = true;
-            for (Tree* child : parent->children()) {
-              if (child->elem) {
-                child->elem->record = 2;
-              }
-            }
-            parent->unrefine();
-            add_elem(is_def, *parent).record = 0;
-          }
-        }
+        if (elem.tree && elem.record != 2) if (is_surface(elem.tree.get())) elem.record = 2;
       }
     }
-  } while (changed);
-  // set the record straight for any elements denied refinement
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    if (elems[i_elem].record == -1) elems[i_elem].record = 0;
-  }
-  // un-flood-fill any new surface elements
-  for (bool is_deformed : {0, 1}) {
-    auto& cont_elems = container(is_deformed).element_view();
-    #pragma omp parallel for
-    for (int i_elem = n_orig[is_deformed]; i_elem < cont_elems.size(); ++i_elem) {
-      auto& elem = cont_elems[i_elem];
-      if (elem.tree && elem.record != 2) if (is_surface(elem.tree.get())) elem.record = 2;
-    }
-  }
-  // incremental flood fill
-  do {
-    changed = false;
-    // synchronize refinement level of surface elements with their non-surface neighbors
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      if (exists(elem.tree.get())) {
-        for (int i_face = 0; i_face < 2*nd; ++i_face) {
-          Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
-          if (neighbor) {
-            if (!exists(neighbor)) {
-              if (neighbor->refinement_level() > elem.refinement_level()) {
-                Tree* p = neighbor->parent();
-                bool can_unref = true;
-                for (Tree* child : p->children()) can_unref = can_unref && !exists(child);
-                if (can_unref && !needs_refine(p)) {
-                  changed = true;
-                  for (Tree* child : p->children()) {
-                    if (child->elem) {
-                      child->elem->record = 2;
-                    }
-                  }
-                  p->unrefine();
-                }
-              } else if (neighbor->refinement_level() < elem.refinement_level() - 1) {
-                changed = true;
-                refine_set_status(neighbor);
-              } else if (neighbor->refinement_level() < elem.refinement_level()) {
-                int min_rl = std::numeric_limits<int>::max();
-                for (int j_face = 0; j_face < 2*nd; ++j_face) {
-                  Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
-                  if (exists(n)) min_rl = std::min(min_rl, n->refinement_level());
-                }
-                if (neighbor->refinement_level() < min_rl) {
-                  changed = true;
-                  refine_set_status(neighbor);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    // add new elements
-    for (bool is_deformed : {0, 1}) {
-      auto& cont = container(is_deformed);
-      auto& cont_elems = cont.element_view();
-      int sz = cont_elems.size();
-      for (int i_elem = 0; i_elem < sz; ++i_elem) {
-        auto& elem = cont_elems[i_elem];
+    // incremental flood fill
+    do {
+      changed = false;
+      // synchronize refinement level of surface elements with their non-surface neighbors
+      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+        auto& elem = elems[i_elem];
         if (exists(elem.tree.get())) {
           for (int i_face = 0; i_face < 2*nd; ++i_face) {
-            for (Tree* neighbor : elem.tree->find_neighbors(math::direction(nd, i_face))) {
-              if (!exists(neighbor)) if (!is_surface(neighbor)) {
-                changed = true;
-                add_elem(is_deformed, *neighbor).record = 0;
-                neighbor->set_status(1);
+            Tree* neighbor = elem.tree->find_neighbor(math::direction(nd, i_face));
+            if (neighbor) {
+              if (!exists(neighbor)) {
+                if (neighbor->refinement_level() > elem.refinement_level()) {
+                  Tree* p = neighbor->parent();
+                  bool can_unref = true;
+                  for (Tree* child : p->children()) can_unref = can_unref && !exists(child);
+                  if (can_unref && !needs_refine(p)) {
+                    changed = true;
+                    for (Tree* child : p->children()) {
+                      if (child->elem) {
+                        child->elem->record = 2;
+                      }
+                    }
+                    p->unrefine();
+                  }
+                } else if (neighbor->refinement_level() < elem.refinement_level() - 1) {
+                  changed = true;
+                  refine_set_status(neighbor);
+                } else if (neighbor->refinement_level() < elem.refinement_level()) {
+                  int min_rl = std::numeric_limits<int>::max();
+                  for (int j_face = 0; j_face < 2*nd; ++j_face) {
+                    Tree* n = neighbor->find_neighbor(math::direction(nd, j_face));
+                    if (exists(n)) min_rl = std::min(min_rl, n->refinement_level());
+                  }
+                  if (neighbor->refinement_level() < min_rl) {
+                    changed = true;
+                    refine_set_status(neighbor);
+                  }
+                }
               }
             }
           }
         }
       }
-    }
-  } while (changed);
-  // ref level smoothing: refine elements to satisfy solver requirements on neighbors
-  do {
-    changed = false;
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      if (elem.record != 2 && elem.tree) {
-        if (needs_refine(elem.tree.get())) {
-          changed = true;
-          elem.record = 1;
+      // add new elements
+      for (bool is_deformed : {0, 1}) {
+        auto& cont = container(is_deformed);
+        auto& cont_elems = cont.element_view();
+        int sz = cont_elems.size();
+        for (int i_elem = 0; i_elem < sz; ++i_elem) {
+          auto& elem = cont_elems[i_elem];
+          if (exists(elem.tree.get())) {
+            for (int i_face = 0; i_face < 2*nd; ++i_face) {
+              for (Tree* neighbor : elem.tree->find_neighbors(math::direction(nd, i_face))) {
+                if (!exists(neighbor)) if (!is_surface(neighbor)) {
+                  changed = true;
+                  add_elem(is_deformed, *neighbor).record = 0;
+                  neighbor->set_status(1);
+                }
+              }
+            }
+          }
         }
       }
+    } while (changed);
+    // ref level smoothing: refine elements to satisfy solver requirements on neighbors
+    do {
+      changed = false;
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+        auto& elem = elems[i_elem];
+        if (elem.record != 2 && elem.tree) {
+          if (needs_refine(elem.tree.get())) {
+            changed = true;
+            elem.record = 1;
+          }
+        }
+      }
+      for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
+    } while (changed);
+    // set extruded elements to be deleted
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      if (!elems[i_elem].tree) elems[i_elem].record = 2;
     }
-    for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
-  } while (changed);
-  // set extruded elements to be deleted
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    if (!elems[i_elem].tree) elems[i_elem].record = 2;
+    purge();
+    // connect new elements
+    connect_new<         Element>(0);
+    connect_new<Deformed_element>(0);
+    delete_bad_extrusions();
+    deform();
+    purge();
+    connect_new<         Element>(0);
+    connect_new<Deformed_element>(0);
+    ++_stopwatch["update"]["refinement"].work_units_completed;
   }
-  purge();
-  // connect new elements
-  connect_new<         Element>(0);
-  connect_new<Deformed_element>(0);
-  delete_bad_extrusions();
-  deform();
-  int n_before = elems.size();
-  purge();
-  int n_after = elems.size();
-  connect_new<         Element>(0);
-  connect_new<Deformed_element>(0);
   extrude(true);
   if (surf_geom) {
     connect_rest(surf_bc_sn);
@@ -2106,7 +2106,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   }
   _n_verts = _blocks.verts().size();
   _stopwatch["update"].work_units_completed += 1;
-  return n_before > n_after; // any change to the element structure (including adding elements!) will cause `purge` to reduce the size of `elems`
+  return anything_changed;
 }
 
 void update_pos(next::Vertex& vert, Mat<3> pos) {

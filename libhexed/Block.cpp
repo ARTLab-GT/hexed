@@ -180,13 +180,8 @@ Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) const
 void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
                                       const Vertex* orig_vertex) const {
   if (!orig_vertex) orig_vertex = this;
-  #if 0
-  std::size_t p0 = 0x5957275f1a10;
-  std::size_t p1 = 0x72e6d18506e8;
-  #endif
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
-  bool print = include_neighbors && global_hacks::debug_message["check"] == 3 && false;
   for (const Element_shape* elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
     if (elem->glued()) continue;
@@ -209,9 +204,6 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
     }
     i_those.push_back(i_this);
     for (int i_that : i_those) {
-      if (print) {
-        std::cout << orig_vertex << " " << this << " " << dijkstra_point.transpose() << ";" << _pos.transpose() << " " << &elem->vertex(i_that) << " " << elem->vertex(i_that).dijkstra_point.transpose() << ";" << elem->vertex(i_that).point({}).transpose() << std::endl;
-      }
       bool skip_obj = false;
       bool skip_grad = false;
       for (auto s : state.skip) if (s.elem == elem) {
@@ -254,7 +246,6 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
       }
     }
   }
-  if (print && orig_vertex == this) std::cout << "\n";
 }
 
 Vertex::Improve_quality_result Vertex::improve_quality() {
