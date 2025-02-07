@@ -52,26 +52,32 @@ Tree_curve::Nearest_index Tree_curve::nearest_point(Mat<3> point, double max_dis
   return nearest;
 }
 
-void Tree_curve::_recursive_nearest(Mat<3> point, Nearest_index& nearest, const Segment& s, std::array<double, 2> bounds) const {
-  if ((s.center - point).norm() - s.radius <= nearest.distance) {
-    if (s.segments.size()) {
-      for (int i_segment = 0; i_segment < 2; ++i_segment) {
-        _recursive_nearest(point, nearest, s.segments[i_segment], bounds);
-      }
-    } else {
-      HEXED_ASSERT(s.nodes.shape()[0] >= 2, "`Segment` should have at least 2 nodes");
-      for (Int i_node = 0; i_node < s.nodes.shape()[0] - 1; ++i_node) {
-        Mat<3> diff = s.nodes(i_node + 1).vector() - s.nodes(i_node).vector();
-        Mat<3> relative_point = point - s.nodes(i_node).vector();
-        double interp = std::max(0., std::min(1., relative_point.dot(diff)/diff.squaredNorm()));
-        double d = (relative_point - interp*diff).norm();
-        double arc = (1 - interp)*_arc_length[s.nodes_start + i_node]
-                         + interp*_arc_length[s.nodes_start + i_node + 1];
-        if (d < nearest.distance && bounds[0] < arc && arc < bounds[1]) {
-          nearest.interp_index = s.nodes_start + i_node + interp;
-          nearest.index = std::round(nearest.interp_index);
-          nearest.distance = d;
-        }
+void Tree_curve::_recursive_nearest(Mat<3> point, Nearest_index& nearest, const Segment& s,
+                                    std::array<double, 2> bounds) const {
+  if (s.segments.size()) {
+    // call _recursive_nearest on both of the child segments if they are close enough
+    // that they could possibly contain the nearest point
+    double dist [2];
+    for (int i_segment = 0; i_segment < 2; ++i_segment) {
+      dist[i_segment] = (s.segments[i_segment].center - point).norm() - s.segments[i_segment].radius;
+    }
+    // do the closer segment first in hopes that we can find a point close enough to justify skipping the farther one
+    for (bool i_segment : {dist[1] < dist[0], !(dist[1] < dist[0])}) {
+      if (dist[i_segment] < nearest.distance) _recursive_nearest(point, nearest, s.segments[i_segment], bounds);
+    }
+  } else {
+    HEXED_ASSERT(s.nodes.shape()[0] >= 2, "`Segment` should have at least 2 nodes");
+    for (Int i_node = 0; i_node < s.nodes.shape()[0] - 1; ++i_node) {
+      Mat<3> diff = s.nodes(i_node + 1).vector() - s.nodes(i_node).vector();
+      Mat<3> relative_point = point - s.nodes(i_node).vector();
+      double interp = std::max(0., std::min(1., relative_point.dot(diff)/diff.squaredNorm()));
+      double d = (relative_point - interp*diff).norm();
+      double arc = (1 - interp)*_arc_length[s.nodes_start + i_node]
+                       + interp*_arc_length[s.nodes_start + i_node + 1];
+      if (d < nearest.distance && bounds[0] < arc && arc < bounds[1]) {
+        nearest.interp_index = s.nodes_start + i_node + interp;
+        nearest.index = std::round(nearest.interp_index);
+        nearest.distance = d;
       }
     }
   }
