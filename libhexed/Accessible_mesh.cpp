@@ -907,7 +907,6 @@ int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<In
   int sn = container(is_deformed).emplace(ref_level, position, origin, aniso_ref_level);
   Element& elem = element(ref_level, is_deformed, sn);
   elem.create_shape(_blocks, surface_face);
-  elem.shape().deformed = is_deformed;
   return sn;
 }
 
@@ -1535,7 +1534,7 @@ void Accessible_mesh::connect_new(int start_at) {
                 auto& other = *neighbors[0]->elem;
                 // if ref levels are the same, make a conformal connection
                 if (other.refinement_level() == elem.refinement_level()) {
-                  if (elem.get_is_deformed() && other.get_is_deformed()) {
+                  if (elem.deformed() && other.deformed()) {
                     std::array<Deformed_element*, 2> el_ar {elem.tree->def_elem, neighbors[0]->def_elem};
                     _connect(el_ar, Con_dir<Deformed_element>{{i_dim, i_dim}, {bool(sign), !sign}});
                   } else {
@@ -2108,6 +2107,9 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   _stopwatch["update"].work_units_completed += 1;
   Int n_after = elems.size();
   printers::info(format_str(100, "  %li net elements created\n", n_after - n_before));
+  for (auto& con : car.cons) {
+    HEXED_ASSERT(!con->element(0).deformed() || !con->element(1).deformed(), "cartesian connection between deformed elements");
+  }
   return n_after - n_before;
 }
 

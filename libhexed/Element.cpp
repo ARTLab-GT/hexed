@@ -148,12 +148,14 @@ void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
   HEXED_ASSERT(blocks.n_dim == params.n_dim, "Dimensionality of `this` and `blocks` does not match.");
   _fake_shape.reset();
   _shape = std::make_unique<next::Element_shape>(blocks.create_element(_compute_pos(), nominal_size(), boundary_face));
+  _shape->deformed = deformed();
 }
 
 void Element::create_fake(next::Mesh_blocks& blocks) {
   _fake_shape.reset(_shape.release());
   _shape = std::make_unique<next::Element_shape>(blocks.create_element(_compute_pos(), nominal_size()));
   _shape->glue(*_fake_shape, {std::vector<double>(params.n_dim, 0.), std::vector<double>(params.n_dim, 1.)});
+  _shape->deformed = deformed();
 }
 
 void Element::split_shape(next::Mesh_blocks& blocks, Element& split_from, double at, int from_face) {

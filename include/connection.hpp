@@ -66,7 +66,7 @@ class Face_connection<Deformed_element> : public Kernel_connection {
   : _nrml_sz{params.n_dim*params.n_face_qpoint()},
     _state_sz{params.n_dof()/params.row_size},
     _face_sz{std::max(2*_state_sz, (params.n_dim + params.n_advection(params.row_size))*params.n_face_qpoint())},
-    _data(2*(_nrml_sz + _face_sz))
+    _data{Eigen::VectorXd::Zero(2*(_nrml_sz + _face_sz))}
   {}
   virtual Con_dir<Deformed_element> direction() const = 0;
   double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}

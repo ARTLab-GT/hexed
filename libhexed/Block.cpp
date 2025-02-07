@@ -162,10 +162,13 @@ Mat<3> Vertex::nominal_position() const {
 }
 
 bool Vertex::mobile() const {
-  bool m = false;
-  for (auto elem : _elems.theirs()) if (elem) m = m || (!elem->glued() && elem->deformed);
-  m = m && !glued();
-  return m;
+  bool has_unglued = false;
+  bool has_cartesian = false;
+  for (auto elem : _elems.theirs()) if (elem) {
+    has_unglued = has_unglued || !elem->glued();
+    has_cartesian = has_cartesian || !(elem->glued() || elem->deformed);
+  }
+  return has_unglued && !has_cartesian && !glued();
 }
 
 const double ortho_tolerance = 3e-2;

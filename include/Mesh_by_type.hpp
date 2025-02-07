@@ -198,7 +198,7 @@ class Mesh_by_type : public View_by_type<element_t>
     erase_if(bound_cons, bound_predicate);
     erase_if(cons, [predicate](std::unique_ptr<Element_face_connection<element_t>>& con) {
       if (!con) return true;
-      return predicate(con->element(0)) || predicate(con->element(1));
+      return predicate(con->element(0)) || predicate(con->element(1)) || !con->neighbor_connection().alive();
     });
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
       auto pred = [predicate](std::unique_ptr<Refined_connection<element_t>>& con){
