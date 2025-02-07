@@ -338,9 +338,11 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
   auto params = _surf->nearest_params(point, [this](Mat<2> params){return is_inside(params);}, max_dist);
   if (params.is_feasible) nearest.merge(_surf->point(params.params));
   // then check the nearest point on all the boundary curves
-  for (auto& curve : _curves) {
-    auto index = curve.nearest_point(point, max_dist);
-    if (index.index > -1) nearest.merge(curve.nodes()(index.index).vector());
+  if (nearest.empty() || _surf->must_check_boundary()) {
+    for (auto& curve : _curves) {
+      auto index = curve.nearest_point(point, 1.01*std::sqrt(nearest.dist_squared()));
+      if (index.index > -1) nearest.merge(curve.nodes()(index.index).vector());
+    }
   }
   return nearest;
 }

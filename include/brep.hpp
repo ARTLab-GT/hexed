@@ -128,6 +128,13 @@ class Parametric {
     bounds(all, 1).setOnes();
     return bounds;
   }
+
+  /*! \brief whether it is necessary to check the boundary curves of a `Trimmed_surface` of this surface
+   * even if a feasible nearest point was found.
+   * \details The default implementation returns `true`,
+   * which should be correct for most derived classes.
+   */
+  virtual inline bool must_check_boundary() const {return true;}
 };
 
 /*! \brief A parametric entity obtained by applying a `Coordinate_change` to another parametric entity
@@ -151,6 +158,8 @@ class Transformed : public Parametric<n_param> {
     for (int col = 0; col < 2; ++col) endpoints(all, col) = _coord.to_definition(endpoints(all, col));
     return _param->intersection_params(endpoints);
   }
+  //! \brief forwards to transformed entity
+  inline bool must_check_boundary() const override {return _param->must_check_boundary();}
   private:
   std::unique_ptr<Parametric<n_param>> _param;
   Coordinate_change _coord;
@@ -206,6 +215,8 @@ class Plane : public Parametric<2> {
    * \see `Parametric::reparameterize`
    */
   Mat<2, 2> reparameterize(Mat<2, 2> bounds) override;
+  //! \brief returns `false`; if the nearest point on the plane is feasible, there is no need to check the boundary
+  inline bool must_check_boundary() const override {return false;}
   private:
   Mat<3> _origin;
   Mat<3, 2> _vecs;
