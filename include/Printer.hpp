@@ -111,9 +111,10 @@ namespace printers {
 //! \brief prints messages like "message... done"
 class Task_message {
   Printer& _printer;
+  std::string _sep1;
   public:
-  Task_message(Printer& p, std::string message, std::string sep = " ") : _printer(p) {_printer(message + "..." + sep);}
-  ~Task_message() {_printer("done\n");}
+  Task_message(Printer& p, std::string message, std::string sep0 = " ", std::string sep1 = "");
+  ~Task_message();
 };
 
 }

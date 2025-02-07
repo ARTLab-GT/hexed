@@ -162,7 +162,7 @@ void Accessible_mesh::_fit_surface() {
   }
   _offset_vertices(.1);
   {
-    Task_message message(printers::info, "Pre-edge-matching mesh optimization", "\n");
+    Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
     _optimize(1, 10, true);
   }
   #pragma omp parallel for
@@ -657,7 +657,7 @@ void Accessible_mesh::_fit_surface() {
   }
   _vis_return("");
   {
-    Task_message message(printers::info, "Post-edge-matching mesh optimization", "\n");
+    Task_message message(printers::info, "  Post-edge-matching mesh optimization", "\n", "  ");
     _optimize(1, 10, true);
   }
   Int n_failed = 0;
@@ -842,7 +842,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     monitor.add_sample(i_relax, objective - starting_objective);
     message = format_str(
       400,
-      "  Iteration = %4li;"
+      "   "
+      " Iteration = %4li;"
       " Number of vertex snaps failed = %li;"
       " Objective = %.18e (%+.5e);",
       i_relax, snaps_failed, objective, objective - starting_objective
@@ -1915,7 +1916,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   Stopwatch_tree::Starter sw_update(_stopwatch["update"]);
   int nd = params.n_dim;
   auto& elems = elements();
-  bool anything_changed = false;
+  Int n_before = elems.size();
   {
     Stopwatch_tree::Starter sw_refine(_stopwatch["update"]["refinement"]);
     // decide which elements to (un)refine
@@ -1927,7 +1928,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       bool unref = unrefine_criterion(elem);
       if (ref && !unref) elem.record = 1;
       else if (unref && !ref) elem.record = -1;
-      anything_changed = anything_changed || elem.record != 0;
     }
     // pass refinement requests of extruded elements to their extrusion parents
     #pragma omp parallel for
@@ -2106,7 +2106,9 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   }
   _n_verts = _blocks.verts().size();
   _stopwatch["update"].work_units_completed += 1;
-  return anything_changed;
+  Int n_after = elems.size();
+  printers::info(format_str(100, "  %li net elements created\n", n_after - n_before));
+  return n_after - n_before;
 }
 
 void update_pos(next::Vertex& vert, Mat<3> pos) {

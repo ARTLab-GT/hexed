@@ -17,7 +17,8 @@ Stream_printer::Stream_printer(std::ostream& stream, bool use_escape_codes, Form
   if (use_escape_codes) {
     std::string type_format = emph_format.type == unspecified_type ? "" : std::to_string(emph_format.type);
     if (emph_format.color == unspecified_color) emph_format.color = default_color;
-    _format_code = format_str(100, "\x1b[%s;%i%im", type_format.c_str(), 3 + 6*emph_format.light + emph_format.background, emph_format.color);
+    _format_code = format_str(100, "\x1b[%s;%i%im", type_format.c_str(),
+                              3 + 6*emph_format.light + emph_format.background, emph_format.color);
     _reset_code = "\x1b[0m";
     _replace_code = "\x1b[G\x1b[K";
   }
@@ -45,5 +46,16 @@ Compound_printer printers::error(std::vector<std::shared_ptr<Printer>> {
   std::make_shared<Stream_printer>(std::cerr, true, Stream_printer::Format {.type = Stream_printer::bold,
                                                                             .color = Stream_printer::red})
 });
+
+Task_message::Task_message(Printer& p, std::string message, std::string sep0, std::string sep1)
+: _printer(p)
+, _sep1{sep1}
+{
+  _printer(message + "..." + sep0);
+}
+
+Task_message::~Task_message() {
+  _printer(_sep1 + "done\n");
+}
 
 }
