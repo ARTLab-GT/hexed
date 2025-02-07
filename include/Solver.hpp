@@ -177,6 +177,8 @@ class Solver {
    * Thus, use this function rather than just `sample(ref_level, is_deformed, serial_n, func)` directly.
    */
   void set_uncertainty(const Element_func& func);
+  //! \brief set `Element::uncertainty` to a uniform constant
+  void set_uncertainty(double);
   /*! \brief Set uncertainty metric based on surface representation quality.
    * \details For all deformed elements contacting the boundary specified by `bc_sn`, computes the
    * unit surface normals at the faces and compares to neighboring elements.

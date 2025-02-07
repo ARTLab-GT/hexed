@@ -750,6 +750,14 @@ void Solver::set_uncertainty(const Element_func& func) {
   }
 }
 
+void Solver::set_uncertainty(double value) {
+  auto& elems = acc_mesh->elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].uncertainty = value;
+  }
+}
+
 void Solver::set_uncert_surface_rep(int bc_sn) {
   const int nv = params.n_var;
   const int nd = params.n_dim;
