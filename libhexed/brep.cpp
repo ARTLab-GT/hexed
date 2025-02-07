@@ -152,28 +152,32 @@ class Revolution_surface::_Find_nearest {
   // for the nearest point.
   // Any candidates for the nearest point in this area will be `merge`d with `cand`.
   void find(const Tree_curve::Segment& segment) {
-    // if the entire bounding sphere of `segment` exceeds the current best distance,
-    // ignore the entire segment
-    if ((best_point(segment.center) - point).norm() - segment.radius < cand.dist) {
-      if (segment.segments.size()) {
-        // if this segment is not a leaf, recursively search its child segments
-        for (auto& seg : segment.segments) find(seg);
-      } else {
-        // this segment is a leaf, so search its nodes
-        Int n_nodes = segment.nodes.shape()[0];
-        for (Int i_node = 0; i_node < n_nodes; ++i_node) {
-          // find the parameters of the neares point on the arc subtended by this node
-          Candidate c;
-          Mat<3> node = segment.nodes(i_node).vector();
-          c.np.params(0) = double(segment.nodes_start + i_node)/surf._n_div;
-          double angle = best_angle(node);
-          c.np.params(1) = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
-          // check if the computed nearest parameters are feasible
-          c.np.is_feasible = is_feasible(c.np.params);
-          c.dist = (surf.rotate(node, angle) - point).norm();
-          // merge candidates
-          cand = merge(cand, c);
-        }
+    if (segment.segments.size()) {
+      // if this segment is not a leaf, recursively search its child segments
+      double dist [2];
+      for (int i_segment = 0; i_segment < 2; ++i_segment) {
+        dist[i_segment] = (best_point(segment.segments[i_segment].center) - point).norm();
+      }
+      // do the closer segment first in hopes that we can find a point close enough
+      // to justify skipping the farther one
+      for (bool i_segment : {dist[1] < dist[0], !(dist[1] < dist[0])}) {
+        if (dist[i_segment] - segment.segments[i_segment].radius < cand.dist) find(segment.segments[i_segment]);
+      }
+    } else {
+      // this segment is a leaf, so search its nodes
+      Int n_nodes = segment.nodes.shape()[0];
+      for (Int i_node = 0; i_node < n_nodes; ++i_node) {
+        // find the parameters of the neares point on the arc subtended by this node
+        Candidate c;
+        Mat<3> node = segment.nodes(i_node).vector();
+        c.np.params(0) = double(segment.nodes_start + i_node)/surf._n_div;
+        double angle = best_angle(node);
+        c.np.params(1) = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
+        // check if the computed nearest parameters are feasible
+        c.np.is_feasible = is_feasible(c.np.params);
+        c.dist = (surf.rotate(node, angle) - point).norm();
+        // merge candidates
+        cand = merge(cand, c);
       }
     }
   }

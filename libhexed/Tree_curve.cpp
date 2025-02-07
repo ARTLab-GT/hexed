@@ -59,11 +59,13 @@ void Tree_curve::_recursive_nearest(Mat<3> point, Nearest_index& nearest, const 
     // that they could possibly contain the nearest point
     double dist [2];
     for (int i_segment = 0; i_segment < 2; ++i_segment) {
-      dist[i_segment] = (s.segments[i_segment].center - point).norm() - s.segments[i_segment].radius;
+      dist[i_segment] = (s.segments[i_segment].center - point).norm();
     }
     // do the closer segment first in hopes that we can find a point close enough to justify skipping the farther one
     for (bool i_segment : {dist[1] < dist[0], !(dist[1] < dist[0])}) {
-      if (dist[i_segment] < nearest.distance) _recursive_nearest(point, nearest, s.segments[i_segment], bounds);
+      if (dist[i_segment] - s.segments[i_segment].radius < nearest.distance) {
+        _recursive_nearest(point, nearest, s.segments[i_segment], bounds);
+      }
     }
   } else {
     HEXED_ASSERT(s.nodes.shape()[0] >= 2, "`Segment` should have at least 2 nodes");
