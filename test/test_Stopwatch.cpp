@@ -2,8 +2,7 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Stopwatch.hpp>
 
-TEST_CASE("Stopwatch")
-{
+TEST_CASE("Stopwatch", "[.slow]") {
   hexed::Stopwatch watch;
   REQUIRE(watch.n_calls() == 0);
   REQUIRE(watch.time() == 0.);
