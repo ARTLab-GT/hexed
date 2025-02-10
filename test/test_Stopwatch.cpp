@@ -2,7 +2,7 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Stopwatch.hpp>
 
-TEST_CASE("Stopwatch", "[.slow]") {
+TEST_CASE("Stopwatch") {
   hexed::Stopwatch watch;
   REQUIRE(watch.n_calls() == 0);
   REQUIRE(watch.time() == 0.);
@@ -12,7 +12,7 @@ TEST_CASE("Stopwatch", "[.slow]") {
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   REQUIRE(watch.running());
   REQUIRE(watch.n_calls() == 0);
-  REQUIRE(watch.time() == Catch::Approx(0).margin(.01));
+  REQUIRE(watch.time() == Catch::Approx(.1).epsilon(1e-1));
   watch.pause();
   REQUIRE(!watch.running());
   REQUIRE_THROWS(watch.pause()); // can only pause a running pausewatch
