@@ -347,7 +347,7 @@ TEST_CASE("extruded hanging node connection validity")
   REQUIRE(mesh.valid().n_missing == 2*(4 + 8) + 4);
 }
 
-TEST_CASE("Tree meshing") {
+TEST_CASE("Tree meshing", "[.slow]") {
   hexed::Accessible_mesh mesh({1, 5, 3, hexed::config::max_row_size}, .7);
   REQUIRE_THROWS(mesh.update(hexed::criteria::always));
   SECTION("wrong number of BCs") {

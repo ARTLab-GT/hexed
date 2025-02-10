@@ -686,7 +686,7 @@ void Accessible_mesh::_fit_surface() {
       Mat<3> p1 = block.element()->point(elem_coords);
       elem_coords[i_face/2] = b.row_size - 1 - elem_coords[i_face/2];
       Mat<3> p0 = block.element()->point(elem_coords);
-      auto sects = surf_geom->intersections(p0, p1);
+      auto sects = surf_geom->intersections(math::resize(p0, params.n_dim), math::resize(p1, params.n_dim));
       double sect = huge;
       for (double s : sects) if (s > 0.) sect = std::min(sect, s);
       if (sect < 2.) {
