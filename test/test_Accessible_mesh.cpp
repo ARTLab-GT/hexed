@@ -3,6 +3,7 @@
 #include <hexed/Accessible_mesh.hpp>
 #include <hexed/Simplex_geom.hpp>
 #include <hexed/Gauss_legendre.hpp>
+#include <hexed/Printer.hpp>
 
 TEST_CASE("Accessible_mesh") {
   const int row_size = hexed::config::max_row_size;
@@ -437,6 +438,7 @@ TEST_CASE("Tree meshing", "[.slow]") {
 }
 
 TEST_CASE("mesh I/O") {
+  hexed::printers::info.printers.clear();
   hexed::Mat<3> correct_sum_vertices = hexed::Mat<3>::Zero();
   int correct_n_car_after = 0;
   int correct_n_def_after = 0;
