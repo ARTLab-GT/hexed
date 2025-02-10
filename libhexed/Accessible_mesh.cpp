@@ -678,7 +678,7 @@ void Accessible_mesh::_fit_surface() {
     bool failed = false;
     int i_face = block.element()->boundary_face();
     for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
-      std::vector<int> coords(params.n_dim - 1);
+      std::vector<int> coords(block.n_dim());
       for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
         coords[i_dim] = math::row_coordinate(params.n_dim - 1, b.row_size - 1, i_dim, i_point) + 1;
       }

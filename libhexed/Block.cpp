@@ -536,15 +536,23 @@ std::vector<int> Edge::element_coords(std::vector<int> coords) const {
   HEXED_ASSERT(element(), "must have an `element()` to call `element_coords`");
   HEXED_ASSERT(coords.size() == 1, "wrong number of edge coordinates");
   int nd = element()->n_dim();
-  std::vector<int> elem_coords(nd);
   if (nd == 2) {
     int i_face = element()->boundary_face();
-    elem_coords[i_face/2] = i_face%2*(row_size() - 1);
-    elem_coords[!(i_face/2)] = coords[0];
+    coords.insert(coords.begin() + i_face/2, i_face%2*(row_size() - 1));
+  } else if (nd == 3) {
+    const Face* face = element()->boundary_face_3d();
+    HEXED_ASSERT(face, "element has no face");
+    for (int i_edge = 0; i_edge < 4; ++i_edge) {
+      if (&face->edge(i_edge) == this) {
+        coords.insert(coords.begin() + i_edge/2, i_edge%2*(row_size() - 1));
+        return face->element_coords(coords);
+      }
+    }
+    HEXED_THROW("`this` doesn't appear to be an edge of `face`");
   } else {
-    HEXED_THROW("`n_dim` for and `Edge` must be 2 or 3");
+    HEXED_THROW("`n_dim` for an `Edge` must be 2 or 3")
   }
-  return elem_coords;
+  return coords;
 }
 
 void Edge::reset() {
@@ -597,8 +605,11 @@ Face::Face(std::array<Vertex*, 4> verts, const Basis& b) : Boundary_block(2, b) 
 }
 
 std::vector<int> Face::element_coords(std::vector<int> coords) const {
-  HEXED_THROW("not implemented for `Face`", assert::Not_implemented_error);
-  return {};
+  HEXED_ASSERT(element(), "must have an `element()` to call `element_coords`");
+  HEXED_ASSERT(coords.size() == 2, "wrong number of edge coordinates");
+  int i_face = element()->boundary_face();
+  coords.insert(coords.begin() + i_face/2, i_face%2*(row_size() - 1));
+  return coords;
 }
 
 void Face::reset() {
