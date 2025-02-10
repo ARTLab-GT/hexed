@@ -59,7 +59,9 @@ TEST_CASE("Refined_connection<Deformed_element>") {
   hexed::Deformed_element elem2 (params);
   hexed::Deformed_element elem3 (params);
   std::vector<hexed::Deformed_element*> elem_ptrs {&elem0, &elem1};
-  REQUIRE_THROWS(hexed::Refined_connection<hexed::Deformed_element>(&coarse, elem_ptrs, hexed::Con_dir<hexed::Deformed_element>{{0, 2}, {1, 1}}));
+  SECTION("wrong number of elements") {
+    REQUIRE_THROWS(hexed::Refined_connection<hexed::Deformed_element>(&coarse, elem_ptrs, hexed::Con_dir<hexed::Deformed_element>{{0, 2}, {1, 1}}));
+  }
   elem_ptrs.push_back(&elem2);
   elem_ptrs.push_back(&elem3);
   SECTION("not reversed") {
