@@ -58,8 +58,7 @@ TEST_CASE("Accessible_mesh") {
   int def2 = mesh.add_element(2, true, {0, 0});
   int def3 = mesh.add_element(2, true, {0, 0});
 
-  SECTION("cartesian-cartesian connection")
-  {
+  SECTION("cartesian-cartesian connection") {
     mesh.connect_cartesian(0, {sn1, sn0}, {2});
     auto& con = mesh.cartesian().face_connections()[0];
     REQUIRE(con.direction().i_dim == 2);
@@ -70,8 +69,7 @@ TEST_CASE("Accessible_mesh") {
     REQUIRE(&elem_con.element(1) == &mesh.element(0, false, sn0));
   }
 
-  SECTION("deformed-cartesian connection")
-  {
+  SECTION("deformed-cartesian connection") {
     mesh.connect_cartesian(3, {sn2, sn3}, {1}, {true, false});
     auto& con = mesh.cartesian().face_connections()[0];
     REQUIRE(con.direction().i_dim == 1);
@@ -79,18 +77,15 @@ TEST_CASE("Accessible_mesh") {
     REQUIRE(con.state(1, false) == mesh.element(3, false, sn3).face(1*2 + 0, false));
   }
 
-  SECTION("refined face connection")
-  {
+  SECTION("refined face connection") {
     // check that it can't find elements with the wrong deformedness
     REQUIRE_THROWS(mesh.connect_hanging(1, car0, {def0, def1, def2, def3}, {{2, 2}, {1, 0}}, false, {true, true, true, false}));
-    SECTION("cartesian")
-    {
+    SECTION("cartesian") {
       mesh.connect_hanging(1, car0, {def0, def1, def2, def3}, {{2, 2}, {1, 0}}, false, {true, true, true, true});
       auto& ref_face {mesh.cartesian().refined_faces()[0]};
       REQUIRE(ref_face.coarse == mesh.element(1, false, car0).face(2*2 + 1, false));
     }
-    SECTION("deformed")
-    {
+    SECTION("deformed") {
       int coarse = mesh.add_element(1, true, {0, 0});
       mesh.connect_hanging(1, coarse, {def0, def1, def2, def3}, {{1, 0}, {1, 0}}, true, {true, true, true, true});
       auto& ref_face {mesh.deformed().refined_faces()[0]};
@@ -98,8 +93,7 @@ TEST_CASE("Accessible_mesh") {
     }
   }
 
-  SECTION("deformed-deformed connection")
-  {
+  SECTION("deformed-deformed connection") {
     // if dimension is same, positivity must be different
     REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {{0, 0}, {0, 0}}));
     REQUIRE_THROWS(mesh.connect_deformed(3, {sn2, sn4}, {{0, 0}, {1, 1}}));
@@ -157,8 +151,7 @@ TEST_CASE("Accessible_mesh") {
       REQUIRE(mesh.boundary_connections().size() == 1);
       REQUIRE(mesh.boundary_connections()[0].bound_cond_serial_n() == nonpen);
     }
-    SECTION("deformed")
-    {
+    SECTION("deformed") {
       mesh.connect_boundary(3, true, sn2, 0, 1, nonpen);
       auto& cons {mesh.deformed().face_connections()};
       REQUIRE(cons.size() == 1);
@@ -166,8 +159,7 @@ TEST_CASE("Accessible_mesh") {
     }
   }
 
-  SECTION("view with multiple connections")
-  {
+  SECTION("view with multiple connections") {
     int sn5 = mesh.add_element(0, false, {0, 0});
     mesh.connect_cartesian(0, {sn1, sn0}, {0});
     mesh.connect_cartesian(0, {sn1, sn5}, {1});
@@ -208,8 +200,7 @@ TEST_CASE("Accessible_mesh") {
     REQUIRE(elem_cons.size() == 7);
   }
 
-  SECTION("connection validity testing")
-  {
+  SECTION("connection validity testing") {
     hexed::Storage_params params1 {3, 4, 2, row_size};
     hexed::Accessible_mesh mesh1 {params1, 0.64};
     // serial numbers:
@@ -288,8 +279,7 @@ TEST_CASE("Accessible_mesh") {
     REQUIRE_THROWS(mesh1.connect_cartesian(0, {coarse[0], coarse[1]}, {1}));
     REQUIRE_THROWS(mesh1.connect_cartesian(0, {coarse[0], coarse[1]}, {1}));
   }
-  SECTION("vertices")
-  {
+  SECTION("vertices") {
     // check that the number of vertices is correct
     auto vertices {mesh.shape_vertices()};
     REQUIRE(vertices.size() == 8*mesh.elements().size());
@@ -305,8 +295,7 @@ TEST_CASE("Accessible_mesh") {
   }
 }
 
-TEST_CASE("extruded BCs")
-{
+TEST_CASE("extruded BCs") {
   hexed::Storage_params params {2, 4, 2, 2};
   hexed::Accessible_mesh mesh {params, 1.};
   int elem_sn = mesh.add_element(0, true, {0, 0});
@@ -321,8 +310,7 @@ TEST_CASE("extruded BCs")
   mesh.valid().assert_valid();
 }
 
-TEST_CASE("extruded hanging node connection validity")
-{
+TEST_CASE("extruded hanging node connection validity") {
   // note: this tests for a bug originally discovered on the NASCART-GT side
   hexed::Storage_params params {2, 5, 3, 2};
   hexed::Accessible_mesh mesh {params, 1.};
@@ -426,8 +414,7 @@ TEST_CASE("Tree meshing", "[.slow]") {
       mesh1.valid().assert_valid();
     }
   }
-  SECTION("no diagonally-connected elements")
-  {
+  SECTION("no diagonally-connected elements") {
     mesh.update();
     mesh.update();
     std::vector<hexed::Mat<3, 3>> triangles(2);
@@ -449,8 +436,7 @@ TEST_CASE("Tree meshing", "[.slow]") {
   }
 }
 
-TEST_CASE("mesh I/O")
-{
+TEST_CASE("mesh I/O") {
   hexed::Mat<3> correct_sum_vertices = hexed::Mat<3>::Zero();
   int correct_n_car_after = 0;
   int correct_n_def_after = 0;
