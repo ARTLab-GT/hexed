@@ -10,7 +10,7 @@
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/History_monitor.hpp>
 #include <hexed/Printer.hpp>
-#include <hexed/Visualizer.hpp> //FIXME
+#include <hexed/Visualizer.hpp>
 
 namespace hexed {
 
@@ -655,7 +655,6 @@ void Accessible_mesh::_fit_surface() {
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
   }
-  _vis_return("");
   {
     Task_message message(printers::info, "  Post-edge-matching mesh optimization", "\n", "  ");
     _optimize(1, 10, true);

@@ -11,8 +11,8 @@ const double grad_scale = 1e-6;
       double orth = ma.orthogonality; \
       hexed::Mat<3> lengths = ma.edge_lengths; \
       hexed::Array<double> old_pos {flat_arr(j).copy()}; \
-      hexed::Mat<3> vec = hexed::Mat<3>::Zero(); \
-      vec.setRandom(); \
+      hexed::Mat<3> vec; \
+      for (int i = 0; i < 3; ++i) vec(i) = (rand()%2000 - 1000)*1e-3; \
       flat_arr(j).vector() += grad_scale*vec; \
       ma = hexed::Mesh_assessment(vert_seq, i, j); \
       REQUIRE((ma.orthogonality - orth)/grad_scale == Catch::Approx(vec.dot(ma.grad_orth)).margin(1e-4)); \
