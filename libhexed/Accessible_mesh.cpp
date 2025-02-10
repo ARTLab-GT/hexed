@@ -2475,8 +2475,9 @@ void Accessible_mesh::read_file(std::string file_name) {
     elem_ptrs[i_elem] = &elem;
     if (is_def) def_elem_ptrs[i_elem] = &def.elems.at(ref_level, sn);
     for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
-      Mat<3> p = elem.shape().vertex(i_vert).point({});
+      Mat<3> p;
       h5_read_row(vert_pos_dset, params.n_dim, vert_inds[i_vert], p.data());
+      elem.shape().vertex(i_vert).set_pos(p);
     }
   }
   // read tree

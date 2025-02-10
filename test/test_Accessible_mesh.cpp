@@ -449,12 +449,14 @@ TEST_CASE("mesh I/O") {
     mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] != elem.nominal_position()[1];});
     mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), new hexed::Nonpenetration);
     mesh.write("io_test");
-    // compute the sum of the vertex coordinates of all elements (counting each vertex once for each element using it) to check vertex position
+    // compute the sum of the vertex coordinates of all elements (counting each vertex once for each element using it)
+    // to check vertex position
     auto& elems = mesh.elements();
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       for (int i_vert = 0; i_vert < 4; ++i_vert) correct_sum_vertices += elems[i_elem].shape().vertex(i_vert).point({});
     }
-    // refine the mesh again and count the number of Cartesian and deformed elements to make sure the recreated mesh behaves the same way
+    // refine the mesh again and count the number of Cartesian and deformed elements
+    // to make sure the recreated mesh behaves the same way
     mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 2;});
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       if (elems[i_elem].get_is_deformed()) ++correct_n_def_after;
@@ -464,7 +466,8 @@ TEST_CASE("mesh I/O") {
   { // read the above mesh from the file and check that it's the same
     std::vector<hexed::Flow_bc*> extr_bcs;
     for (int i = 0; i < 4; ++i) extr_bcs.push_back(new hexed::Copy);
-    hexed::Accessible_mesh mesh("io_test", extr_bcs, new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), new hexed::Nonpenetration);
+    hexed::Accessible_mesh mesh("io_test", extr_bcs, new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1),
+                                new hexed::Nonpenetration);
     REQUIRE(mesh.root_size() == Catch::Approx(0.8));
     REQUIRE(mesh.cartesian().elements().size() == 6);
     REQUIRE(mesh.deformed().elements().size() == 5);
