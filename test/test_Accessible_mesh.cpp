@@ -285,15 +285,8 @@ TEST_CASE("Accessible_mesh") {
       con_val.assert_valid();
     }
     // check that it can detect redundant connections
-    mesh1.connect_cartesian(0, {coarse[0], coarse[1]}, {1});
-    mesh1.connect_cartesian(0, {coarse[0], coarse[1]}, {1});
-    {
-      auto con_val = mesh1.valid();
-      REQUIRE(con_val.n_missing == 0);
-      REQUIRE(con_val.n_redundant == 4);
-      REQUIRE(!con_val);
-      REQUIRE_THROWS(con_val.assert_valid());
-    }
+    REQUIRE_THROWS(mesh1.connect_cartesian(0, {coarse[0], coarse[1]}, {1}));
+    REQUIRE_THROWS(mesh1.connect_cartesian(0, {coarse[0], coarse[1]}, {1}));
   }
   SECTION("vertices")
   {
