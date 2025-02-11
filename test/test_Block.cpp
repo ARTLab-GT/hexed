@@ -215,12 +215,14 @@ TEST_CASE("Block") {
     face.visualize("default", "vertex_interp_face1");
   }
 
-  SECTION("element_coords") {
+  SECTION("`Boundary_block`-`Element_shape` interaction") {
     SECTION("2D") {
       auto elem0 = blocks2.create_element(hexed::Mat<3>::Zero(), 1., 0);
       auto elem1 = blocks2.create_element(hexed::Mat<3>::Zero(), 1., 3);
       REQUIRE_THAT(elem0.boundary_block()->element_coords({3}), Catch::Matchers::RangeEquals(std::vector<int>{0, 3}));
       REQUIRE_THAT(elem1.boundary_block()->element_coords({3}), Catch::Matchers::RangeEquals(std::vector<int>{3, 4}));
+      REQUIRE_THAT(elem0.boundary_block()->dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{&elem0}));
     }
     SECTION("3D") {
       auto elem0 = blocks3.create_element(hexed::Mat<3>::Zero(), 1., 1);
@@ -238,6 +240,21 @@ TEST_CASE("Block") {
                    Catch::Matchers::RangeEquals(std::vector<int>{4, 2, 4}));
       REQUIRE_THAT(elem2.boundary_face_3d()->edge(1).element_coords({2}),
                    Catch::Matchers::RangeEquals(std::vector<int>{4, 2, 0}));
+      REQUIRE_THAT(elem0.boundary_block()->dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{&elem0}));
+      elem1.boundary_face_3d()->edge(3).glue(elem0.boundary_face_3d()->edge(0));
+      elem1.boundary_face_3d()->edge(0).glue(elem0.boundary_face_3d()->edge(1), 0);
+      elem2.boundary_face_3d()->edge(2).glue(elem0.boundary_face_3d()->edge(1), 1);
+      REQUIRE_THAT(elem0.boundary_face_3d()->edge(0).dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{&elem0, &elem1}));
+      REQUIRE_THAT(elem0.boundary_face_3d()->edge(1).dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{&elem0, &elem1, &elem2}));
+      REQUIRE_THAT(elem1.boundary_face_3d()->edge(1).dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{&elem1}));
+      REQUIRE_THAT(elem1.boundary_face_3d()->edge(3).dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{}));
+      REQUIRE_THAT(elem1.boundary_face_3d()->edge(0).dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{}));
     }
   }
 

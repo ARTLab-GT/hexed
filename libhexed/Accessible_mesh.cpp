@@ -677,15 +677,20 @@ void Accessible_mesh::_fit_surface() {
     const Basis& b = block.basis();
     bool failed = false;
     int i_face = block.element()->boundary_face();
+    Array<double> line_points({2, interior.shape()[0], 3});
     for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
       std::vector<int> coords(block.n_dim());
       for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
         coords[i_dim] = math::row_coordinate(params.n_dim - 1, b.row_size - 1, i_dim, i_point) + 1;
       }
       std::vector<int> elem_coords = block.element_coords(coords);
-      Mat<3> p1 = block.element()->point(elem_coords);
+      line_points(1)(i_point).vector() = block.element()->point(elem_coords);
       elem_coords[i_face/2] = b.row_size - 1 - elem_coords[i_face/2];
-      Mat<3> p0 = block.element()->point(elem_coords);
+      line_points(0)(i_point).vector() = block.element()->point(elem_coords);
+    }
+    for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
+      Mat<3> p0 = line_points(0)(i_point).vector();
+      Mat<3> p1 = line_points(1)(i_point).vector();
       auto sects = surf_geom->intersections(math::resize(p0, params.n_dim), math::resize(p1, params.n_dim));
       double sect = huge;
       for (double s : sects) if (s > 0.) sect = std::min(sect, s);

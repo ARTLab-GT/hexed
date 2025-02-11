@@ -245,7 +245,9 @@ class Boundary_block : public Block {
   inline void pair(mutual::Base<Element_shape, Boundary_block>& elem) {_elem.pair(elem);}
   //! \brief Get the element `this` is `pair()`d with (`nullptr` if not paired).
   inline Element_shape* element() {return _elem.get();}
-  inline const Element_shape* element() const {return _elem.get();}
+  inline const Element_shape* element() const {return _elem.get();} //!< \overload
+  //! \brief Obtains all the `Element_shape`s whose `point()` depends on `this`
+  virtual std::vector<Element_shape*> dependent_elements() = 0;
 
   /*! \brief Transforms node coordinates from the space of the `Block` to its `Element_shape`
    * \details That is, `element()->point(elemement_coords(coords))`
@@ -297,6 +299,7 @@ class Edge : public Boundary_block {
   Edge(Vertex& vertex0, Vertex& vertex1, const Basis&);
   inline Vertex& vertex(int i_vert) {return _verts[i_vert].value();} //!< \brief access the vertices (index 0 or 1)
   inline const Vertex& vertex(int i_vert) const {return _verts[i_vert].value();} //!< \overload
+  std::vector<Element_shape*> dependent_elements() override;
   std::vector<int> element_coords(std::vector<int>) const override;
   void reset() override; //!< \brief sets `interior()` to linear interpolation between vertices
 
@@ -350,6 +353,7 @@ class Face : public Boundary_block {
   //! \details The order of the edges is \f$ \{\xi_0 = 0\}, \{\xi_0 = 1\}, \{\xi_1 = 0\}, \{\xi_1 = 1\} \f$.
   inline Edge& edge(int i) {return _edges[i];}
   inline const Edge& edge(int i) const {return _edges[i];}
+  std::vector<Element_shape*> dependent_elements() override;
   std::vector<int> element_coords(std::vector<int>) const override;
 
   /*! \brief sets `interior()` to minimize the Laplacian.

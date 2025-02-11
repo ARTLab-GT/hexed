@@ -534,6 +534,10 @@ Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
   reset();
 }
 
+std::vector<Element_shape*> Edge::dependent_elements() {
+  return {};
+}
+
 std::vector<int> Edge::element_coords(std::vector<int> coords) const {
   HEXED_ASSERT(element(), "must have an `element()` to call `element_coords`");
   HEXED_ASSERT(coords.size() == 1, "wrong number of edge coordinates");
@@ -604,6 +608,10 @@ Face::Face(std::array<Vertex*, 4> verts, const Basis& b) : Boundary_block(2, b) 
     }
   }
   reset();
+}
+
+std::vector<Element_shape*> Face::dependent_elements() {
+  return {};
 }
 
 std::vector<int> Face::element_coords(std::vector<int> coords) const {
