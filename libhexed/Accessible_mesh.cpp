@@ -1539,10 +1539,12 @@ void Accessible_mesh::connect_new(int start_at) {
   int nd = params.n_dim;
   // helper function for connecting refined elements
   auto connect_refined = [&](Element& elem, int i_dim, int sign, std::vector<Tree*> neighbors) {
-    HEXED_ASSERT(int(neighbors.size()) == math::pow(2, nd - 1), format_str(100, "bad number of neighbors %lu (thanks for nothing, ref level smoother)", neighbors.size()))
+    VIS_ASSERT(int(neighbors.size()) == math::pow(2, nd - 1),
+               format_str(100, "bad number of neighbors %lu (thanks for nothing, ref level smoother)",
+                          neighbors.size()))
     bool is_def = elem.get_is_deformed();
     for (Tree* neighbor : neighbors) {
-      HEXED_ASSERT(neighbor->elem, "hanging-node connection with nonexistant elements");
+      VIS_ASSERT(neighbor->elem, "hanging-node connection with nonexistant elements");
       is_def = is_def && neighbor->elem->get_is_deformed();
     }
     Con_dir<Deformed_element> dir {{i_dim, i_dim}, {!sign, bool(sign)}};
@@ -1565,7 +1567,8 @@ void Accessible_mesh::connect_new(int start_at) {
             Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
             direction(i_dim) = math::sign(sign);
             auto neighbors = elem.tree->find_neighbors(direction);
-            // if this element is at the boundary of the tree (as opposed to a surface geometry boundary) set an extremal boundary condition
+            // if this element is at the boundary of the tree (as opposed to a surface geometry boundary),
+            // set an extremal boundary condition
             if (neighbors.empty()) {
               m.bound_cons.emplace_back(new Typed_bound_connection<element_t>(
                 elem, i_dim, sign, tree_bcs[2*i_dim + sign], bound_conds[tree_bcs[2*i_dim + sign]]->n_prescribed(nd)
@@ -1588,7 +1591,8 @@ void Accessible_mesh::connect_new(int start_at) {
                   }
                 } else {
                   // if neighbor is coarser, form a hanging node connection
-                  // but only if this is the fine element with the lowest coordinates, to prevent redundant connections from all the fine elements
+                  // but only if this is the fine element with the lowest coordinates,
+                  // to prevent redundant connections from all the fine elements
                   bool is_min_corner = true;
                   for (int j_dim = 0; j_dim < nd; ++j_dim) if (j_dim != i_dim) {
                     is_min_corner = is_min_corner && elem.tree->coordinates()[j_dim]%2 == 0;
@@ -2124,10 +2128,11 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       if (!elems[i_elem].tree) elems[i_elem].record = 2;
     }
     purge();
+    delete_bad_extrusions();
+    purge();
     // connect new elements
     connect_new<         Element>(0);
     connect_new<Deformed_element>(0);
-    delete_bad_extrusions();
     deform();
     purge();
     connect_new<         Element>(0);
