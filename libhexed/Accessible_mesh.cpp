@@ -756,7 +756,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   for (auto& vert : bverts) {
     vert.record[2*params.n_dim] = 1;
   }
-  History_monitor monitor(.3, 100);
+  History_monitor obj_monitor(.3, 100);
+  History_monitor dist_monitor(.3, 100);
   double starting_objective = -1;
   double objective = 0;
   #if HEXED_VIS_MESH_OPT
@@ -769,7 +770,10 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   double last_time = 0;
   std::string message;
   for (Int i_relax = 0;
-       i_relax < 1000 && (i_relax < 30 || monitor.max() - monitor.min() > 1e-3*(std::abs(monitor.max()) + std::abs(monitor.min())) || snaps_failed > 0);
+       i_relax < 1000 && (i_relax < 30
+                          || (snaps_failed == 0 && obj_monitor.max() - obj_monitor.min()
+                                                   > 1e-3*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
+                          || dist_monitor.max() - dist_monitor.min() > 1e-3*dist_monitor.min());
        ++i_relax) {
     #if HEXED_VIS_MESH_OPT
     {
@@ -784,6 +788,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     double tns = tree->nominal_size();
     double objective_diff = 0;
     snaps_failed = 0;
+    double total_dist = 0;
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
       for (auto& vert : verts) if (vert.mobile()) {
@@ -820,6 +825,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         }
         objective_diff += iqr.objective_diff;
         snaps_failed += iqr.snap_failed;
+        total_dist += iqr.target_dist;
         ++_stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed;
       }
     }
@@ -838,14 +844,16 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
                                   -objective_diff, objective - prev_obj));
       }
     }
-    monitor.add_sample(i_relax, objective - starting_objective);
+    obj_monitor.add_sample(i_relax, objective - starting_objective);
+    dist_monitor.add_sample(i_relax, total_dist);
     message = format_str(
       400,
       "   "
       " Iteration = %4li;"
+      " Objective = %.18e (%+.5e);"
       " Number of vertex snaps failed = %li;"
-      " Objective = %.18e (%+.5e);",
-      i_relax, snaps_failed, objective, objective - starting_objective
+      " Total distance from surface = %.5e;"
+      , i_relax, objective, objective - starting_objective, snaps_failed, total_dist
     );
     if (watch.time() > last_time) {
       last_time += .1;

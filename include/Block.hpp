@@ -133,6 +133,7 @@ class Vertex : public Block {
   struct Improve_quality_result {
     double objective_diff;
     bool snap_failed;
+    double target_dist;
   };
   Improve_quality_result improve_quality();
   Improve_quality_result improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
