@@ -535,7 +535,10 @@ Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
 }
 
 std::vector<Element_shape*> Edge::dependent_elements() {
-  return {};
+  std::vector<Element_shape*> depend;
+  if (alive() && !glued()) depend.push_back(element());
+  for (Edge* e : _glued.theirs()) if (e) if (e->alive()) depend.push_back(e->element());
+  return depend;
 }
 
 std::vector<int> Edge::element_coords(std::vector<int> coords) const {
@@ -611,7 +614,9 @@ Face::Face(std::array<Vertex*, 4> verts, const Basis& b) : Boundary_block(2, b) 
 }
 
 std::vector<Element_shape*> Face::dependent_elements() {
-  return {};
+  std::vector<Element_shape*> depend;
+  if (alive()) depend.push_back(element());
+  return depend;
 }
 
 std::vector<int> Face::element_coords(std::vector<int> coords) const {
