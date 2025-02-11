@@ -672,6 +672,10 @@ void Accessible_mesh::_fit_surface() {
   // snaps faces and edges to the surface
   // snaps a `Boundary_block` to the geometry surface
   auto snap_block = [this](next::Boundary_block& block) {
+    std::vector<next::Element_shape*> dependent_elems = block.dependent_elements();
+    std::sort(dependent_elems.begin(), dependent_elems.end(), std::less());
+    std::vector<std::unique_ptr<Lock::Acquire>> acquires;
+    for (next::Element_shape* e : dependent_elems) acquires.emplace_back(new Lock::Acquire(e->lock));
     block.reset();
     Array<double> interior {block.interior().reshaped({whatever, 3})};
     const Basis& b = block.basis();
@@ -698,6 +702,33 @@ void Accessible_mesh::_fit_surface() {
         interior(i_point).vector() = p0*(1 - sect) + p1*sect;
       } else {
         failed = true;
+      }
+    }
+    for (next::Element_shape* e : dependent_elems) {
+      Array<double> points = e->points();
+      int nd = params.n_dim;
+      int n_check_point = math::pow(_basis.row_size + 1, nd);
+      Array<double> check_points({nd, n_check_point});
+      Gauss_lobatto check_basis(_basis.row_size + 1);
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        check_points(i_dim).vector() = math::hypercube_matvec(_basis.interpolate(check_basis.nodes()),
+                                                              points(i_dim).vector());
+      }
+      Array<double> jacobian({nd, nd, n_check_point});
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        for (int j_dim = 0; j_dim < nd; ++j_dim) {
+          jacobian(i_dim)(j_dim).vector() = math::dimension_matvec(check_basis.diff_mat(),
+                                                                   check_points(i_dim).vector(), j_dim);
+        }
+      }
+      for (int i_check_point = 0; i_check_point < n_check_point; ++i_check_point) {
+        Mat<dyn, dyn> point_jac(nd, nd);
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          for (int j_dim = 0; j_dim < nd; ++j_dim) {
+            point_jac(i_dim, j_dim) = jacobian(i_dim)(j_dim)[i_check_point];
+          }
+        }
+        if (!(point_jac.determinant() > 0)) failed = true;
       }
     }
     if (failed) block.reset();

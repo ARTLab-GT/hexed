@@ -427,6 +427,7 @@ class Element_shape : public Block {
   int extruded_direction;
   bool is_new;
   int record;
+  Lock lock;
 
   private:
   Element_shape(int nd, const Basis&);
