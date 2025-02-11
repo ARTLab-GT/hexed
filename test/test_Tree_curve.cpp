@@ -51,4 +51,10 @@ TEST_CASE("Tree_curve") {
   sects = circle.intersections_2d(hexed::Mat<3>{.5, 0., 2.}, hexed::Mat<3>{.5, 1., 1.});
   REQUIRE_THAT(sects, Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-std::sqrt(.75), std::sqrt(.75)},
                                                             hexed::math::Approx_equal(1e-3)));
+
+  hexed::Array<double> nodes2({2, 3});
+  nodes2.vector() << 0., 0., 0., 1., 0., 0.;
+  hexed::Tree_curve curve2(nodes2.copy(), 3);
+  REQUIRE(curve2.nearest_point({-1., 0., 0.}).index == 0);
+  REQUIRE(curve2.nearest_point({ 2., 0., 0.}).index == 1);
 }

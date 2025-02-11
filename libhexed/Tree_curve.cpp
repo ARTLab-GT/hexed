@@ -14,7 +14,7 @@ Tree_curve::Tree_curve(Array<double>&& nodes, int skip)
 : _nodes(std::move(check(nodes)))
 , _arc_length({_nodes.shape()[0]})
 , _skip{skip}
-, _levels{math::log(2, _nodes.shape()[0] - 1) - skip}
+, _levels{std::max<Int>(1, math::log(2, _nodes.shape()[0] - 1) - _skip)}
 , _segments({math::pow(2, _levels) - 1})
 {
   _arc_length[0] = 0.;
