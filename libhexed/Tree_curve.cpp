@@ -87,9 +87,9 @@ void Tree_curve::_recursive_nearest(Mat<3> point, Nearest_index& nearest, const 
 
 //! \todo test this
 Mat<3> Tree_curve::interp_point(double interp_index) const {
-  Int index = std::floor(interp_index);
+  Int index = std::max<Int>(0, std::min<Int>(_nodes.shape()[0] - 2, std::floor(interp_index)));
   double interp = interp_index - index;
-  return (1 - interp)*nodes()(index).vector() + interp*nodes()(index + 1).vector();
+  return (1 - interp)*_nodes(index).vector() + interp*_nodes(index + 1).vector();
 }
 
 Mat<3> Tree_curve::interp_point(Nearest_index near) const {
