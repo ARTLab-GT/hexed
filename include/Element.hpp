@@ -12,6 +12,7 @@
 #include "Lock.hpp"
 #include "Mutual_ptr.hpp"
 #include "Block.hpp"
+#include "Face.hpp"
 
 namespace hexed {
 
@@ -23,7 +24,7 @@ class Accessible_mesh;
  * This class represents a Cartesian (i.e., regular) element.
  * See also derived class `Deformed_element`.
  */
-class Element : public Kernel_element {
+class Element : public Kernel_element, public Mortal {
   protected:
   // constructor that allows the vertices to be created as mobile, for the  benefit of `Deformed_element`
   Element(Storage_params, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
@@ -48,6 +49,7 @@ class Element : public Kernel_element {
   int _mask;
   // may contain a fake element that `this` is a subset of
   std::shared_ptr<next::Element_shape> _fake_shape;
+  std::vector<Face> _faces;
   friend Accessible_mesh; // necessary for `Accessible_mesh::set_mask`... need a better way to do this
 
   public:
@@ -116,12 +118,16 @@ class Element : public Kernel_element {
   double& vertex_fix_admis_coef(int i_vertex);
   void set_face(int i_face, double* data);
   bool is_connected(int i_face);
+  inline Face& face(int i_face) {return _faces[i_face];}
 
   void create_shape(next::Mesh_blocks&, int boundary_face = next::Mesh_blocks::no_face);
   void create_fake(next::Mesh_blocks&);
   void split_shape(next::Mesh_blocks&, Element& split_from, double at, int from_face);
+  void destroy_shape();
   next::Element_shape& shape();
   inline next::Element_shape* fake_shape() {return _fake_shape.get();}
+  inline bool has_shape() const {return bool(_shape);}
+  next::Element_shape& active_shape();
 
   double* state() override;
   double* residual_cache() override;

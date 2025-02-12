@@ -3,8 +3,7 @@
 
 #include <vector>
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief monitors the history of some variable over iterations and computes the bounds over a specified window
  * \details The class user supplies the value of the desired variable at certain iterations.
@@ -13,8 +12,7 @@ namespace hexed
  * and the `History_monitor` will only record a fraction of the supplied data points at a frequency chosen to maintain the specified buffer size.
  * Of course, values outside of the window are also forgotten.
  */
-class History_monitor
-{
+class History_monitor {
   int _samples;
   int _start;
   int _sz;

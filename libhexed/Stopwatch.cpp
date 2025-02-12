@@ -31,7 +31,12 @@ int Stopwatch::n_calls() const {
 }
 
 double Stopwatch::time() const {
-  return t;
+  double result = t;
+  if (r) {
+    auto now = std::chrono::steady_clock::now();
+    result += std::chrono::duration_cast<std::chrono::nanoseconds>(now - time_started).count()/1e9;
+  }
+  return result;
 }
 
 Stopwatch Stopwatch::operator+(Stopwatch other) const {

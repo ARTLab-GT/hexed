@@ -29,11 +29,16 @@ class Block : public Mortal {
   inline int n_dim() const {return _n_dim;} //!< \brief number of _topological_ dimensions.
   //! \brief number nodes along each dimension \see \ref basis_row_size "row size"
   inline int row_size() const {return _row_size;}
-  //! \brief Obtains the node with array indices specified by `node_coords`.
-  //! \details `node_coords` must have `n_dim()` entries and each entry must be in [0, `row_size()`).
-  Mat<3> point(const std::vector<int>& node_coords) const;
+  /*! \brief Obtains the node with array indices specified by `node_coords`.
+   * \details `node_coords` must have `n_dim()` entries and each entry must be in [0, `row_size()`).
+   * If `recursion_depth > Block::max_recursion_depth`, throws.
+   * If any implementations of `Block::_point` call `Block::point`, they should increment `recursion_depth`
+   * to help catch infinite recursion bugs, which would otherwise result in a stack overflow.
+   */
+  Mat<3> point(const std::vector<int>& node_coords, Int recursion_depth = 0) const;
   //! \brief Obtains the node with flat index `i_point`
-  Mat<3> point(int i_point) const;
+  //! \see `Block::point`
+  Mat<3> point(int i_point, Int recursion_depth = 0) const;
   /*! \brief Obtains all the nodes as a multidimensional array
    * \details This is not a reference.
    * Calling this function allocates memory for the points
@@ -48,9 +53,11 @@ class Block : public Mortal {
   //! \brief Visualizes the nodes of a single `Block`.
   void visualize(std::string format, std::string file_name, double time = 0.) const;
 
+  static constexpr Int max_recursion_depth = 100;
+
   protected:
   //! \brief Derived classes must override this function to define the nodes.
-  virtual Mat<3> _point(const std::vector<int>& node_coords) const = 0;
+  virtual Mat<3> _point(const std::vector<int>& node_coords, Int recursion_depth = 0) const = 0;
 
   private:
   int _n_dim;
@@ -83,6 +90,7 @@ class Vertex : public Block {
   double nominal_size() const;
   //! \brief Access the list of edges that have `this` as an endpoint
   Sequence<Edge&> edges() {return _edges.theirs().dereference();}
+  Sequence<Element_shape&> elements() {return _elems.theirs().dereference();}
   inline bool glued() const {return _glued_to;}
   void shadow(Vertex& that);
   inline void unshadow() {_shadowed.unpair();}
@@ -120,6 +128,31 @@ class Vertex : public Block {
   void apply_relax();
   double badness(Mat<3> proposed_pos) const;
   void set_pos(Mat<3> p);
+  Mat<3> nominal_position() const;
+  bool mobile() const;
+  struct Improve_quality_result {
+    double objective_diff;
+    bool snap_failed;
+    double target_dist;
+  };
+  Improve_quality_result improve_quality();
+  Improve_quality_result improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
+                                         std::function<Mat<3>(Mat<3>)> satisfy_constraints,
+                                         bool limit_direction = true);
+  bool snap_to(Mat<3> target);
+  bool snap_to(std::function<Mat<3>(Mat<3>)> target);
+  double quality_objective();
+  double quality_gradient_norm_sq();
+  double quality();
+  int n_elements() const; //!< \brief The number of elements sharing this vertex
+  inline bool is_surface() const {return _edges.theirs().size();}
+  /*! \brief The list of vertices that share an edge with `this`.
+   * \details By "share an edge" I mean that they are connected by a geometric edge of an element,
+   * not necessarily and actual `Edge` object.
+   * The latter would only ever be true for boundary vertices, whereas the former can be true in the interior.
+   */
+  std::vector<Vertex*> neighbors();
+  std::vector<const Vertex*> neighbors() const; //!< \overload
 
   /*! \brief Accesses a `double` value used for transmitting shared data between elements.
    * \details There are several cases where elements have some data which needs to match their vertex neighbors.
@@ -147,17 +180,51 @@ class Vertex : public Block {
   //! \details `Block::point` will return this value, unless the vertes is currently `glue()`d.
   std::vector<Int> record; //!< for algorithms to keep notes as they please
 
+  Mat<3> offset;
+  Int snapped_point;
+  Int snapped_edge;
+  Int snapped_endpoint;
+  Mat<3> dijkstra_point; //!< \brief nominal location of this vertex used in Dijkstra's algorithm
+  double dijkstra_dist; //!< \brief the "distance" from the start node to this node in Dijkstra's algorithm
+  int dijkstra_updates; //!< \brief number of times `dijkstra_dist` has been updated in Dijkstra's algorithm
+  Vertex* dijkstra_prev_vert; //!< \brief holds the previous node in the shortest path to this node in Dijkstra's algorithm
+  Edge* dijkstra_prev_edge; //!< \brief holds the previous node in the shortest path to this node in Dijkstra's algorithm
+  double dijkstra_curve_dist_sq; //!< \brief squared distance from the curve
+  double dijkstra_arc_len; //!< \brief arc length of the nearest point on the curve
+
   private:
+  struct _Gradient_entry {
+    const Element_shape* elem;
+    int i;
+    int j;
+  };
+  struct _Optimization_state {
+    bool feasible = true;
+    double objective = 0;
+    Mat<3> gradient = Mat<3>::Zero();
+    std::vector<_Gradient_entry> skip;
+    double worst_ortho = 1;
+    double worst_edge = 1;
+    bool has_glued_neighbor = false;
+  };
+  _Optimization_state _compute_state(bool include_neighbors = true) const;
+  void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
+                                const Vertex* orig_vertex = nullptr) const;
+  Improve_quality_result _improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
+                                          std::function<Mat<3>(Mat<3>)> satisfy_constraints,
+                                          bool has_target, bool limit_direction);
+  Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
+  Mat<3> _desired_pos() const;
+  int _get_index(const Element_shape&) const;
   Mat<3> _pos;
-  Mat<3> _point(const std::vector<int>&) const override;
   Mat<3> _update;
+  double _step_sz;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;
   Reciprocal_ptr<Vertex, Element_shape> _glued_to;
   Reciprocal_ptr<Vertex, Vertex> _shadowed;
   Reciprocal_list<Vertex, Vertex> _shadows;
   std::vector<double> _glued_coords;
-  Mat<3> _desired_pos() const;
   double _shared_value;
   Lock _shared_value_lock;
 };
@@ -178,6 +245,15 @@ class Boundary_block : public Block {
   inline void pair(mutual::Base<Element_shape, Boundary_block>& elem) {_elem.pair(elem);}
   //! \brief Get the element `this` is `pair()`d with (`nullptr` if not paired).
   inline Element_shape* element() {return _elem.get();}
+  inline const Element_shape* element() const {return _elem.get();} //!< \overload
+  //! \brief Obtains all the `Element_shape`s whose `point()` depends on `this`
+  virtual std::vector<Element_shape*> dependent_elements() = 0;
+
+  /*! \brief Transforms node coordinates from the space of the `Block` to its `Element_shape`
+   * \details That is, `element()->point(elemement_coords(coords))`
+   * should give the same result as `point(coords)`.
+   */
+  virtual std::vector<int> element_coords(std::vector<int> coords) const = 0;
 
   /*! \brief Resets the interior nodes to a minimal interpolation of the boundary nodes.
    * \details In what sense the interpolation is minimal is to be determined by derived classes.
@@ -222,6 +298,9 @@ class Edge : public Boundary_block {
    */
   Edge(Vertex& vertex0, Vertex& vertex1, const Basis&);
   inline Vertex& vertex(int i_vert) {return _verts[i_vert].value();} //!< \brief access the vertices (index 0 or 1)
+  inline const Vertex& vertex(int i_vert) const {return _verts[i_vert].value();} //!< \overload
+  std::vector<Element_shape*> dependent_elements() override;
+  std::vector<int> element_coords(std::vector<int>) const override;
   void reset() override; //!< \brief sets `interior()` to linear interpolation between vertices
 
   /*! \brief Glues the edge to another edge (or half of it).
@@ -235,18 +314,23 @@ class Edge : public Boundary_block {
    * If `that` is destroyed, this edge is no longer glued and `Block::point` once again respects `interior()`.
    * Unlike in the case of `Vertex::glue`, `interior()` is not updated to match the latest value of `point()`.
    */
-  void glue(Edge& that, int half = no);
+  void glue(Edge& that, int half = no, bool reverse = false);
 
   void unglue() {_glued_to.unpair();} //!< \brief If this edge is currently `glue()`d, unglue it.
   bool glued() const; //!< \brief `true` iff `this` is currently `glue()`d to another edge
   std::vector<Element_shape*> contacted_elements();
+  Edge* glued_to() {return _glued_to.get();}
+  const Edge* glued_to() const {return _glued_to.get();}
+
+  Int snapped_edge;
 
   private:
-  Mat<3> _point(const std::vector<int>&) const override;
+  Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   std::array<Reciprocal_ptr<Edge, Vertex>, 2> _verts;
   Reciprocal_ptr<Edge, Edge> _glued_to;
   Reciprocal_list<Edge, Edge> _glued;
   int _half;
+  bool _glued_reverse;
 };
 
 /*! \brief A 2-dimensional `Block` bounded by 4 `Edge`s.
@@ -268,6 +352,9 @@ class Face : public Boundary_block {
   //! \brief Access the `i`th edge.
   //! \details The order of the edges is \f$ \{\xi_0 = 0\}, \{\xi_0 = 1\}, \{\xi_1 = 0\}, \{\xi_1 = 1\} \f$.
   inline Edge& edge(int i) {return _edges[i];}
+  inline const Edge& edge(int i) const {return _edges[i];}
+  std::vector<Element_shape*> dependent_elements() override;
+  std::vector<int> element_coords(std::vector<int>) const override;
 
   /*! \brief sets `interior()` to minimize the Laplacian.
    * \details Specifically, the Laplacian of each physical coordinate as a function of the reference coordinates
@@ -276,7 +363,7 @@ class Face : public Boundary_block {
   void reset() override;
 
   private:
-  Mat<3> _point(const std::vector<int>&) const override;
+  Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   std::vector<Edge> _edges;
 };
 
@@ -297,17 +384,18 @@ class Element_shape : public Block {
   friend void Vertex::glue(Element_shape&, std::vector<double>);
 
   public:
-  bool deformed = false;
   //! \brief Obtains the edge length of this element before any vertex adjustment.
   inline double nominal_size() const {return _nom_sz;}
   //! \brief What the position of vertex `i_vert` _would_ be supposed to be if this were a Cartesian element.
   Mat<3> nominal_position(int i_vert = 0) const;
+  Mat<3> nominal_center() const;
+  Mat<3> vertex_center() const; //!< \brief average of the vertices' positions
   //! \brief Accesses the `i_vert`th vertex (in standard row-major order)
   inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
   inline const Vertex& vertex(int i_vert) const {return *_verts[i_vert];}
   inline const Basis& basis() const {return *_basis;}
   inline bool glued() const {return _glued_to;}
-  Mat<3> interpolate(std::vector<double> coords) const;
+  Mat<3> interpolate(std::vector<double> coords, Int recursion_depth = 0) const;
 
   /*! \brief Stipulates that 1 face of `this` is conformally connected to 1 face of `that`.
    * \details Which faces are involved is determined by the `Connection_direction`.
@@ -323,16 +411,29 @@ class Element_shape : public Block {
    * Any permutation that might be necessary to reconcile different face dimensions will be performed automatically.
    */
   void connect(std::vector<Element_shape*> those, Connection_direction);
+  static void connect(std::array<std::vector<Element_shape*>, 2>, Connection_direction);
 
   void glue(Element_shape& that, std::array<std::vector<double>, 2> corners);
   inline std::array<std::vector<double>, 2> glued_corners() const {return _glued_corners;}
   inline void set_glued_corners(std::array<std::vector<double>, 2> corners) {_glued_corners = corners;}
   inline void unglue() {_glued_to.set();}
+  inline Face* boundary_face_3d() {return _sf.get();}
+  inline const Face* boundary_face_3d() const {return _sf.get();}
+  inline Boundary_block* boundary_block() {return _bf.get();}
+  inline const Boundary_block* boundary_block() const {return _bf.get();}
+  inline int boundary_face() const {return _i_bf;}
+
+  bool deformed;
+  int extruded_direction;
+  bool is_new;
+  int record;
+  Lock lock;
 
   private:
   Element_shape(int nd, const Basis&);
-  Mat<3> _vertex_point(const std::vector<int>&) const;
-  Mat<3> _point(const std::vector<int>&) const override;
+  Mat<3> _vertex_point(const std::vector<int>&, Int recursion_depth = 0) const;
+  Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
+  void _glue_edges(std::vector<Element_shape*> those);
   const Basis* _basis;
   double _nom_sz;
   Mat<3> _nom_pos;

@@ -18,18 +18,24 @@ class Tree_curve {
   struct Nearest_index {
     Int index;
     double distance;
+    double interp_index;
   };
   Tree_curve(Array<double>&& nodes, int skip_levels = 0);
   inline int skip_levels() const {return _skip;}
+  inline Int n_points() const {return _nodes.shape()[0];}
   inline const Array<double> nodes() const {return _nodes();}
   inline const Array<double> arc_length() const {return _arc_length();}
   const Array<Segment> segments(int level) const;
   inline const Segment& root() const {return _segments[0];}
   Nearest_index nearest_point(Mat<3> point, double max_dist = std::sqrt(huge),
                               std::array<double, 2> arc_len_bounds = {-huge, huge}) const;
+  Mat<3> interp_point(double interp_index) const;
+  Mat<3> interp_point(Nearest_index) const;
+  std::vector<double> intersections_2d(Mat<3> p0, Mat<3> p1) const;
 
   private:
   void _recursive_nearest(Mat<3> point, Nearest_index&, const Segment&, std::array<double, 2> arc_len_bounds) const;
+  void _recursive_intersections(Mat<3> p0, Mat<3> p1, std::vector<double>&, const Segment&) const;
   Array<double> _nodes;
   Array<double> _arc_length;
   int _skip;

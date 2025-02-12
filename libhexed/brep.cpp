@@ -49,6 +49,18 @@ Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_
   return {params, is_feasible(params)};
 }
 
+std::vector<Parametric<2>::Intersection_parameters> Plane::intersection_params(Mat<3, 2> endpoints) const {
+  Mat<3, 3> lhs;
+  lhs(all, Eigen::seqN(0, 2)) = _vecs;
+  lhs(all, 2) = endpoints(all, 0) - endpoints(all, 1);
+  Mat<3> rhs = endpoints(all, 0) - _origin;
+  auto fact = lhs.fullPivHouseholderQr();
+  if (!fact.isInvertible()) return {};
+  Mat<3> soln = fact.solve(rhs);
+  for (int i = 0; i < 3; ++i) if (!(soln(i) >= 0 && soln(i) <= 1)) return {};
+  return {{{soln(0), soln(1)}, soln(2)}};
+}
+
 Mat<2, 2> Plane::reparameterize(Mat<2, 2> bounds) {
   _origin = point(bounds(all, 0));
   _vecs = _vecs*(bounds(all, 1) - bounds(all, 0)).asDiagonal();
@@ -140,28 +152,32 @@ class Revolution_surface::_Find_nearest {
   // for the nearest point.
   // Any candidates for the nearest point in this area will be `merge`d with `cand`.
   void find(const Tree_curve::Segment& segment) {
-    // if the entire bounding sphere of `segment` exceeds the current best distance,
-    // ignore the entire segment
-    if ((best_point(segment.center) - point).norm() - segment.radius < cand.dist) {
-      if (segment.segments.size()) {
-        // if this segment is not a leaf, recursively search its child segments
-        for (auto& seg : segment.segments) find(seg);
-      } else {
-        // this segment is a leaf, so search its nodes
-        Int n_nodes = segment.nodes.shape()[0];
-        for (Int i_node = 0; i_node < n_nodes; ++i_node) {
-          // find the parameters of the neares point on the arc subtended by this node
-          Candidate c;
-          Mat<3> node = segment.nodes(i_node).vector();
-          c.np.params(0) = double(segment.nodes_start + i_node)/surf._n_div;
-          double angle = best_angle(node);
-          c.np.params(1) = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
-          // check if the computed nearest parameters are feasible
-          c.np.is_feasible = is_feasible(c.np.params);
-          c.dist = (surf.rotate(node, angle) - point).norm();
-          // merge candidates
-          cand = merge(cand, c);
-        }
+    if (segment.segments.size()) {
+      // if this segment is not a leaf, recursively search its child segments
+      double dist [2];
+      for (int i_segment = 0; i_segment < 2; ++i_segment) {
+        dist[i_segment] = (best_point(segment.segments[i_segment].center) - point).norm();
+      }
+      // do the closer segment first in hopes that we can find a point close enough
+      // to justify skipping the farther one
+      for (bool i_segment : {dist[1] < dist[0], !(dist[1] < dist[0])}) {
+        if (dist[i_segment] - segment.segments[i_segment].radius < cand.dist) find(segment.segments[i_segment]);
+      }
+    } else {
+      // this segment is a leaf, so search its nodes
+      Int n_nodes = segment.nodes.shape()[0];
+      for (Int i_node = 0; i_node < n_nodes; ++i_node) {
+        // find the parameters of the neares point on the arc subtended by this node
+        Candidate c;
+        Mat<3> node = segment.nodes(i_node).vector();
+        c.np.params(0) = double(segment.nodes_start + i_node)/surf._n_div;
+        double angle = best_angle(node);
+        c.np.params(1) = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
+        // check if the computed nearest parameters are feasible
+        c.np.is_feasible = is_feasible(c.np.params);
+        c.dist = (surf.rotate(node, angle) - point).norm();
+        // merge candidates
+        cand = merge(cand, c);
       }
     }
   }
@@ -192,13 +208,22 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
     auto& param_nodes = discrete_curves.back();
     for (auto& curve : composite) {
       Array<double> phys_nodes({_n_div + 1, 3});
+      Mat<3> start = curve->point(Mat<1>{0.});
+      double mean_squared_dist = 0;
       for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
         Mat<3> pt = curve->point(Mat<1>{i_node*_sz});
+        mean_squared_dist += (pt - start).squaredNorm();
         phys_nodes(i_node).vector() = pt;
         Mat<2> params = _surf->nearest_params(pt, [](Mat<2>){return true;}, default_max_dist).params;
         param_nodes.push_back(params);
       }
-      _curves.emplace_back(phys_nodes.copy(), 4);
+      mean_squared_dist /= n_div + 1;
+      if ((curve->point(Mat<1>{1.}) - start).squaredNorm() < .1*mean_squared_dist) {
+        _curves.emplace_back(phys_nodes(0, n_div/2 + 1).copy(), 4);
+        _curves.emplace_back(phys_nodes(n_div/2, n_div + 1).copy(), 4);
+      } else {
+        _curves.emplace_back(phys_nodes.copy(), 4);
+      }
     }
     if (!param_nodes.empty()) param_nodes.push_back(param_nodes.front());
   }
@@ -313,11 +338,22 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
   auto params = _surf->nearest_params(point, [this](Mat<2> params){return is_inside(params);}, max_dist);
   if (params.is_feasible) nearest.merge(_surf->point(params.params));
   // then check the nearest point on all the boundary curves
-  for (auto& curve : _curves) {
-    auto index = curve.nearest_point(point, max_dist);
-    if (index.index > -1) nearest.merge(curve.nodes()(index.index).vector());
+  if (nearest.empty() || _surf->must_check_boundary()) {
+    for (auto& curve : _curves) {
+      auto index = curve.nearest_point(point, 1.01*std::sqrt(nearest.dist_squared()));
+      if (index.index > -1) nearest.merge(curve.nodes()(index.index).vector());
+    }
   }
   return nearest;
+}
+
+std::vector<double> Trimmed_surface::intersections(Mat<3, 2> endpoints) const {
+  std::vector<double> sects;
+  auto sect_params = _surf->intersection_params(endpoints);
+  for (auto params : sect_params) {
+    if (is_inside(params.params)) sects.push_back(params.interp_coef);
+  }
+  return sects;
 }
 
 // helper class to read an entity from an IGES file
@@ -620,6 +656,18 @@ Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, doub
     for (auto& surf : _surfaces) nearest.merge(surf.nearest_point(p, max_dist));
     return nearest;
   });
+}
+
+std::vector<double> Geom_3d::intersections(Mat<> start, Mat<> end) {
+  Mat<3, 2> endpoints;
+  endpoints(all, 0) = start;
+  endpoints(all, 1) = end;
+  std::vector<double> sects;
+  for (auto& surf : _surfaces) {
+    std::vector<double> surf_sects = surf.intersections(endpoints);
+    sects.insert(sects.end(), surf_sects.begin(), surf_sects.end());
+  }
+  return sects;
 }
 
 next::Sequence<const Tree_curve&> Geom_3d::edges() {

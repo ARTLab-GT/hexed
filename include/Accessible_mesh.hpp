@@ -63,15 +63,20 @@ class Accessible_mesh : public Mesh {
     }
   };
 
+  // visualizes the mesh and returns the same string (used to manipulate `HEXED_ASSERT`)
+  std::string _vis_return(std::string);
   Element_container& container(bool is_deformed);
   int add_element(int ref_level, bool is_deformed, std::vector<Int> position, Mat<> origin,
                   int aniso_ref_level = 0, int surface_face = next::Mesh_blocks::no_face);
   Element& add_elem(bool is_deformed, Tree&);
   bool intersects_surface(Tree*);
   bool is_surface(Tree*);
-  template<typename element_t> Mesh_by_type<element_t>& mbt(); // gets either `car` or `def`
-  template<typename element_t> void connect_new(int start_at); // connects new elements in `mbt<element_t>()`. helper function for `refine`
-  void refine_set_status(Tree*); // refines a tree and sets the flood fill status for any children that intersect the surface
+  // gets either `car` or `def`
+  template<typename element_t> Mesh_by_type<element_t>& mbt();
+  // connects new elements in `mbt<element_t>()`. helper function for `refine`
+  template<typename element_t> void connect_new(int start_at);
+  // refines a tree and sets the flood fill status for any children that intersect the surface
+  void refine_set_status(Tree*);
   void refine_by_record(bool is_deformed, int start, int end);
   bool needs_refine(Tree*);
   void purge();
@@ -93,6 +98,11 @@ class Accessible_mesh : public Mesh {
     Mortal_ptr<next::Edge> edge;
     std::array<Geom_edge::Node, 2> nodes;
   };
+  void _record_connections();
+  void _offset_vertices(double);
+  Mat<3> _get_snapping_target(next::Vertex&, Mat<3>);
+  void _fit_surface();
+  void _optimize(int min_pow, int max_pow, bool check_snapping);
 
   public:
   //! \brief how far must the center of an element be from the geometry relative to the nominal size
@@ -144,10 +154,8 @@ class Accessible_mesh : public Mesh {
 
   void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
   void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
-  void relax_and_match(int n_relax = 0, double factor = .9) override;
   void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
-  void relax(double factor = 0.9) override;
   inline int surface_bc_sn() override {return surf_bc_sn;}
   inline Surface_geom& surface_geometry() {return *surf_geom;}
 
@@ -201,6 +209,8 @@ class Accessible_mesh : public Mesh {
   inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}
   inline int n_elements() override {return elements().size();}
   Connection_validity valid() override;
+  //! \brief if any invalid mesh connections are found, throws an exception with a diagnostic visualization
+  void assert_valid();
   //! convenience typedef for the Vector_view used to access Vertex objects
   void extrude(bool collapse = false, double offset = 0, bool force = false) override; // note: test for this is in `test_Solver.cpp` so that the result can be visualized
   void connect_rest(int bc_sn) override;
@@ -210,7 +220,7 @@ class Accessible_mesh : public Mesh {
                      ptr_convert<Element_connection&, Element_face_connection<Deformed_element>*>> extruded_connections() {return {extrude_cons};}
   void write(std::string file_name) override;
   void export_polymesh(std::string dir_name) override;
-  void visualize(std::string format, std::string file_name) override;
+  void visualize(std::string format, std::string file_name, double time = 0) override;
   inline const Stopwatch_tree& stopwatch_tree() const override {return _stopwatch;}
 
   protected:

@@ -330,6 +330,7 @@ class Array {
       if (i_whatever >= 0) { \
         HEXED_ARRAY_ASSERT(size()%sz == 0, "`whatever` dimension is not an integer"); \
         s[i_whatever] = size()/sz; \
+        sz *= s[i_whatever]; \
       } \
       HEXED_ARRAY_ASSERT(sz <= size(), "`new_shape` is larger than current shape"); \
       Array r(s, _data); \

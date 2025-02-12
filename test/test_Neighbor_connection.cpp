@@ -1,0 +1,24 @@
+#include <catch2/catch_all.hpp>
+#include <hexed/Neighbor_connection.hpp>
+
+TEST_CASE("Neighbor_connection") {
+  hexed::Storage_params params {2, 4, 2, 2};
+  hexed::Face f0(params, 0, 0);
+  hexed::Face f1(params, 1, 0);
+  std::unique_ptr<hexed::Face> f2 {new hexed::Face(params, 1, 1)};
+  {
+    hexed::Neighbor_connection con(params, {&f0, f2.get()});
+    REQUIRE(con.alive());
+    REQUIRE(&con.face(0) == &f0);
+    REQUIRE(&con.face(1) == f2.get());
+    REQUIRE(f0.neighbor_connection() == &con);
+    REQUIRE(f2->neighbor_connection() == &con);
+    f2.reset();
+    REQUIRE(!con.alive());
+    REQUIRE(&con.face(0) == &f0);
+    REQUIRE_THROWS(con.face(1));
+    REQUIRE_THROWS(hexed::Neighbor_connection (params, {&f0, &f1}));
+  }
+  hexed::Neighbor_connection con(params, {&f0, &f1});
+  REQUIRE(con.alive());
+}

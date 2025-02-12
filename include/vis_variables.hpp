@@ -21,8 +21,8 @@ namespace hexed::vis_variables {
  */
 void element(Namespace&, Element& elem);
 
-/*! \brief Assigns the variables `pos0`, `pos1`, `pos2`
- * \details to the position of the `i_qpoint`th quadrature point.
+/*! \brief Assigns the variables `pos0`, `pos1`, `pos2` and `jacobian_det`.
+ * \details to the position of the `i_qpoint`th quadrature point and the Jacobian determinant.
  * Trailing dimensions are set to 0.
  */
 void position(Namespace&, Element&, const Basis&);

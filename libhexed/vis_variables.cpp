@@ -32,6 +32,12 @@ void position(Namespace& space, Element& elem, const Basis& basis) {
   for (int i_dim = pos.shape()[0]; i_dim < 3; ++i_dim) {
     space.assign(index("pos", i_dim), 0.);
   }
+  double* jac = elem.jacobian_determinant();
+  if (jac) {
+    space.assign("jacobian_det", Array<double>({elem.storage_params().n_qpoint()}, jac));
+  } else {
+    space.assign("jacobian_det", 1);
+  }
 }
 
 void state(Namespace& space, Element& elem) {

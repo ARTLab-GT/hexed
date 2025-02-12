@@ -6,8 +6,7 @@
 #include "Element.hpp"
 #include "Deformed_element.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Bin/quad/octree data structure.
  * \details Used to compute the mesh topology, i.e. which cells are connected to which and how.
@@ -33,8 +32,7 @@ namespace hexed
  * However, concurrent attempts to modify the same element (directly or indirectly)
  * or modifying elements and calling a traversing function concurrently may result in data races.
  */
-class Tree
-{
+class Tree {
   Mat<> orig;
   double root_sz;
   int ref_level;

@@ -356,12 +356,39 @@ class Subprocess(Buildable):
             self.builder.subproc(comm, **self._kwargs)
 
 class Wget(Subprocess):
-    def __init__(self, builder, url):
-        self.file_name = url.split("/")[-1]
-        super().__init__(builder, ["wget", url], self.file_name, depends=[])
+    n_tries = 10
+    wait_seconds = 5
+    def __init__(self, builder, url, file_name=None, prefix="."):
+        if file_name is None:
+            self.file_name = url.split("/")[-1]
+        else:
+            self.file_name = file_name
+        self.file_name = absolute(self.file_name, prefix)
+        super().__init__(builder, ["wget", "-P", prefix, url], self.file_name, depends=[])
     def build(self):
         assert self.builder.options["internet"], "`Wget` requires internet access. (You passed `--internet=False`.)"
-        super().build()
+        for i in range(self.n_tries):
+            try:
+                super().build()
+                break
+            except AssertionError:
+                print(f"`wget` failed. Waiting {self.wait_seconds} and retrying " +
+                      f"({self.n_tries - i - 1} tries remaining)...")
+                time.sleep(self.wait_seconds)
+
+class Internet_mirror(Wget):
+    def __init__(self, builder, url, update_freq=7*24*60**2, **kwargs):
+        self._update_freq = update_freq
+        super().__init__(builder, url, **kwargs)
+    def up_to_date(self):
+        cwd = os.getcwd()
+        utd = super().up_to_date()
+        if utd:
+            if time.time() < self.found_output.earliest_mtime + self._update_freq:
+                return True
+            else:
+                os.remove(self.file_name)
+        return False
 
 class Extract(Buildable):
     def __init__(self, builder, archive, outputs=None):
@@ -536,6 +563,7 @@ class Occt(C_project):
 class Pip(Buildable):
     fake_names = {
         "gitpython": "git",
+        "datetime": "DateTime",
     }
     def __init__(self, builder, package_names):
         self._names = package_names
@@ -673,11 +701,11 @@ class Python_package(Buildable):
     def output(self):
         return any_([f for f in contents(self._dist) if f.endswith(".whl")])
     def build(self):
-        self[Pip]("build").do
+        self[Pip](["build", "hatchling"]).do
         if os.path.exists(self._dist):
             shutil.rmtree(self._dist)
         os.chdir(self._source)
-        self.builder.python("-m", "build")
+        self.builder.python("-m", "build", "--no-isolation", "--wheel")
     def __str__(self):
         return f"local Python package `{self._source}`"
 
@@ -889,8 +917,9 @@ class Builder:
         else:
             self.venv_dir = None
             self._python = "python3"
-        if self.options["internet"]:
-            self.python("-m", "pip", "install", "--upgrade", "pip")
+        # get index of pypi packages
+        self.mkdir(self.build_dir + "pypi")
+        self[Internet_mirror]("https://pypi.org/simple/", file_name="index.html", prefix=self.build_dir + "pypi").do
         self.prefices = Prefices(self.env)
         self.prefices.add("bin", env_vars=["PATH"])
         self.prefices.add("lib", env_vars=["LIBRARY_PATH", "LD_LIBRARY_PATH", "DT_RPATH"],
@@ -917,7 +946,12 @@ class Builder:
             p = Prefices.remove_suffix(p, "sbin")
             cmake_paths += (p, p + "lib/")
         self.prefices["cmake"] = cmake_paths + tuple(self.prefices["cmake"])
-        self[Pip](["cmake", "pypisearch"]).do
+        pip_exec = self.find_in("bin", "pip").find();
+        assert pip_exec.found, "no pip"
+        if self.options["internet"] and pip_exec.earliest_mtime < time.time() - 24*60**2:
+            self.python("-m", "pip", "install", "--upgrade", "pip")
+            os.utime(pip_exec.assets[0])
+        self[Pip](["cmake"]).do
 
     def site_packages(self, python=None):
         if not python:
@@ -980,9 +1014,14 @@ class Builder:
 
     def in_pypi(self, package):
         self.message("searching PyPI...", end="")
-        output = self.python("-m", "pypisearch", package, capture_output=True).stdout.decode()
-        self.message("done", start="")
-        return f"\n{package} " in "\n" + output
+        with open(self.build_dir + "pypi/index.html", "r") as index:
+            text = index.read()
+        found = bool(re.search(f"/{package}/", text))
+        if found:
+            self.message(f"found {package}", start="")
+        else:
+            self.message(f"did not find {package}", start="")
+        return found
 
     def cmake(self, source_dir, opts=[], build_dir="build"):
         self.assert_command("g++", "build-essential")

@@ -63,6 +63,11 @@ class Parametric {
     bool is_feasible; //!< \brief `true` iff a feasible nearest point was found
   };
 
+  struct Intersection_parameters {
+    Mat<n_param> params;
+    double interp_coef;
+  };
+
   //! \brief Represents a constraint function for a `nearst_params()` calculation.
   typedef std::function<bool(Mat<n_param>)> Constraint;
 
@@ -100,6 +105,8 @@ class Parametric {
     return point(nearest_params(p, [](Mat<n_param>){return true;}, default_max_dist).params);
   }
 
+  virtual inline std::vector<Intersection_parameters> intersection_params(Mat<3, 2> endpoints) const {return {};}
+
   /*! \brief May reparameterize the entity to keep parameters in [0, 1].
    * \details For infinite entities (e.g., `Plane`),
    * it is not always known _a priori_ what parameterization makes sense,
@@ -121,6 +128,13 @@ class Parametric {
     bounds(all, 1).setOnes();
     return bounds;
   }
+
+  /*! \brief whether it is necessary to check the boundary curves of a `Trimmed_surface` of this surface
+   * even if a feasible nearest point was found.
+   * \details The default implementation returns `true`,
+   * which should be correct for most derived classes.
+   */
+  virtual inline bool must_check_boundary() const {return true;}
 };
 
 /*! \brief A parametric entity obtained by applying a `Coordinate_change` to another parametric entity
@@ -140,6 +154,12 @@ class Transformed : public Parametric<n_param> {
   ) const override {
     return _param->nearest_params(_coord.to_definition(p), is_feasible, max_distance);
   }
+  std::vector<typename Parametric<n_param>::Intersection_parameters> intersection_params(Mat<3, 2> endpoints) const override {
+    for (int col = 0; col < 2; ++col) endpoints(all, col) = _coord.to_definition(endpoints(all, col));
+    return _param->intersection_params(endpoints);
+  }
+  //! \brief forwards to transformed entity
+  inline bool must_check_boundary() const override {return _param->must_check_boundary();}
   private:
   std::unique_ptr<Parametric<n_param>> _param;
   Coordinate_change _coord;
@@ -187,6 +207,7 @@ class Plane : public Parametric<2> {
   //! \note Does not include boundary points in search.
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
                                     double max_distance) const override;
+  std::vector<Intersection_parameters> intersection_params(Mat<3, 2> endpoints) const override;
   inline Mat<3> point(Mat<2> params) const override {return _origin + _vecs*params;}
   /*! \brief Reparameterizes the plane
    * to contain the points `point(p)` where `bounds(i, 0) <= p(i) && p(i) <= bounds(i, 1)`.
@@ -194,6 +215,8 @@ class Plane : public Parametric<2> {
    * \see `Parametric::reparameterize`
    */
   Mat<2, 2> reparameterize(Mat<2, 2> bounds) override;
+  //! \brief returns `false`; if the nearest point on the plane is feasible, there is no need to check the boundary
+  inline bool must_check_boundary() const override {return false;}
   private:
   Mat<3> _origin;
   Mat<3, 2> _vecs;
@@ -274,6 +297,7 @@ class Trimmed_surface {
    * the empty `Nearest_point` is returned.
    */
   Nearest_point<3> nearest_point(Mat<3> point, double max_dist) const;
+  std::vector<double> intersections(Mat<3, 2> endpoints) const;
   private:
   // Performs the real initialization work once the curves have been discretized.
   // Discretization is performed by the constructor.
@@ -343,8 +367,7 @@ class Geom_3d : public Surface_geom {
   void visualize(std::string format, std::string file_name,
                  Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose());
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-  //! \brief Dummy implementation that returns an empty vector.
-  inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
+  std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
   next::Sequence<const Tree_curve&> edges() override;
   private:
   std::vector<Trimmed_surface> _surfaces;

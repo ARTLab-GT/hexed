@@ -44,14 +44,40 @@ TEST_CASE("Circular_arc") {
 TEST_CASE("Plane") {
   hexed::Mat<3> origin {.1, .1, .1};
   hexed::Mat<3, 2> coords;
-  coords << 1., 0.,
-            0., 1.,
-            0., 1.;
+  coords <<
+    1., 0.,
+    0., 1.,
+    0., 1.;
   hexed::brep::Plane plane(origin, coords);
   REQUIRE_THAT(plane.point(hexed::Mat<2>{.1, .2}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{.2, .3, .3}, hexed::math::Approx_equal()));
   REQUIRE_THAT(plane.nearest_point(hexed::Mat<3>{.5, 0.1, 1.1}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, .6, .6}, hexed::math::Approx_equal()));
+  hexed::Mat<3, 2> endpoints;
+  endpoints <<
+    1., 1.,
+    .5, .5,
+    2., 0.;
+  auto sects = plane.intersection_params(endpoints);
+  REQUIRE(sects.size() == 1);
+  REQUIRE(sects[0].params[0] == Catch::Approx(.9));
+  REQUIRE(sects[0].params[1] == Catch::Approx(.4));
+  REQUIRE(sects[0].interp_coef == Catch::Approx(.75));
+  endpoints <<
+    1., 1.,
+    .5, .5,
+    2., 1.;
+  REQUIRE(plane.intersection_params(endpoints).size() == 0);
+  endpoints <<
+    -1., -1.,
+    .5, .5,
+    2., 0.;
+  REQUIRE(plane.intersection_params(endpoints).size() == 0);
+  endpoints <<
+    1., 1.,
+    5., 5.,
+    2., 0.;
+  REQUIRE(plane.intersection_params(endpoints).size() == 0);
   hexed::Mat<2, 2> bounds;
   bounds << .4, .8,
             .4, 1.;

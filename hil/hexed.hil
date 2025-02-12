@@ -178,7 +178,7 @@ plot_history = {shell({python3 -c "from hexedpy.utils import History_plot;Histor
 row_size = 6
 init_ref_level = 3
 max_ref_level = 10
-geometry_uncertainty = 1e-2
+geometry_uncertainty = 1e-3
 viscosity_model = {}
 conductivity_model = {}
 thermal_bc = {heat_flux = 0.}
@@ -232,7 +232,7 @@ heat_flux_coercion = 2.
 min_elem_size = 0.
 elementwise_art_visc_pde = false
 prefer_occt = false
-geom_subdivision_levels = 13
+geom_subdivision_levels = 15
 geom_vis_subdivisions = 100
 
 {array parameters}
@@ -390,7 +390,7 @@ mesh = {
     keep_refining = true
     while = {keep_refining & i_refinement < max_refinement_iters}
     do = {
-        print({    geometry-based refinement sweep } + i_refinement + {... })
+        print({geometry-based refinement sweep } + i_refinement + {... } + newline)
         keep_refining = keep_refining & refine
         i_refinement = i_refinement + 1
         println {done}
