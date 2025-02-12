@@ -110,7 +110,7 @@ class Hexed(bu.C_project):
         self[bu.Python_script](
             ["libhexed/Gauss_legendre.cpp", "libhexed/Gauss_lobatto.cpp"],
             self.sdir + "script/install/auto_generate.py",
-            args=[self.bdir + "libhexed", str(self.builder.options['max_row_size'])],
+            args=[self.bdir + "libhexed", str(self.builder.options['max_row_size'] + 1)],
         ).do
         sources = bu.contents(self.sdir + "libhexed") + bu.contents(self.sdir + "execs") + [
             f"{self.bdir}libhexed/Gauss_legendre.cpp",
