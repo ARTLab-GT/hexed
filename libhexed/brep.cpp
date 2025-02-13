@@ -17,7 +17,18 @@ Parametric<1>::Nearest_parameters Line_segment::nearest_params(Mat<3> p, Constra
 }
 
 std::vector<Parametric<1>::Intersection_parameters> Line_segment::intersection_params(Mat<3, 2> points) const {
-  return {};
+  Mat<3, 2> lhs;
+  lhs(all, 0) = _endpoints(all, 1) - _endpoints(all, 0);
+  lhs(all, 1) = points(all, 0) - points(all, 1);
+  lhs(2, all).setZero();
+  Mat<3> rhs = points(all, 0) - _endpoints(all, 0);
+  rhs(2) = 0;
+  Mat<2> soln = lhs.householderQr().solve(rhs);
+  if (0 <= soln(0) && soln(0) <= 1) {
+    return {{Mat<1>{soln(0)}, soln(1)}};
+  } else {
+    return {};
+  }
 }
 
 Circular_arc::Circular_arc(Mat<3> center, double radius, double start_angle, double end_angle)
@@ -52,7 +63,8 @@ std::vector<Parametric<1>::Intersection_parameters> Circular_arc::intersection_p
   return {};
 }
 
-Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_feasible, double max_distance) const {
+Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_feasible,
+                                                        double max_distance) const {
   Mat<2> params = _vecs.colPivHouseholderQr().solve(p - _origin);
   return {params, is_feasible(params)};
 }
@@ -78,7 +90,9 @@ Mat<2, 2> Plane::reparameterize(Mat<2, 2> bounds) {
 // discretizes a curve into `n_div` polygonal segments and returns their `n_div + 1` endpoints
 Array<double> discretize(Parametric<1>& curve, Int n_div) {
   Array<double> nodes({n_div + 1, 3});
-  for (Int i_node = 0; i_node < n_div + 1; ++i_node) nodes(i_node).vector() = curve.point(Mat<1>{i_node/double(n_div)});
+  for (Int i_node = 0; i_node < n_div + 1; ++i_node) {
+    nodes(i_node).vector() = curve.point(Mat<1>{i_node/double(n_div)});
+  }
   return nodes;
 }
 
