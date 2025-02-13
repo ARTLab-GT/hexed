@@ -15,6 +15,14 @@ TEST_CASE("Line_segment") {
                Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., 1.}, hexed::math::Approx_equal(0., 1e-12)));
   REQUIRE_THAT(seg.nearest_point(hexed::Mat<3>{2., 1., 1.}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 1., 1.}, hexed::math::Approx_equal(0., 1e-12)));
+  hexed::Mat<3, 2> points;
+  points << 0., .5,
+            .6, .6,
+            1., 1.;
+  auto inter_points = seg.intersection_params(points);
+  REQUIRE(inter_points.size() == 1);
+  REQUIRE(inter_points[0].params(0) == Catch::Approx(.6));
+  REQUIRE(inter_points[0].interp_coef == Catch::Approx(1.2));
 }
 
 TEST_CASE("Circular_arc") {
@@ -39,6 +47,22 @@ TEST_CASE("Circular_arc") {
     Catch::Matchers::RangeEquals(hexed::Mat<3>{-9.9, .1, .1},
     hexed::math::Approx_equal())
   );
+  hexed::Mat<3, 2> points;
+  points <<  -4.9,  -4.9,
+             10.1,    .1,
+               .1,    .1;
+  auto inter_points = arc.intersection_params(points);
+  REQUIRE(inter_points.size() == 1);
+  REQUIRE(inter_points[0].params(0) == Catch::Approx(std::acos(.5)));
+  REQUIRE(inter_points[0].interp_coef == Catch::Approx(std::sqrt(.75)));
+  points << -10.9,    .1,
+               .1,  11.1,
+               .1,    .1;
+  REQUIRE(arc.intersection_params(points).size() == 2);
+  points << -19.9,    .1,
+               .1,  20.1,
+               .1,    .1;
+  REQUIRE(arc.intersection_params(points).size() == 0);
 }
 
 TEST_CASE("Plane") {
@@ -111,7 +135,8 @@ TEST_CASE("Revolution_surface") {
   );
   REQUIRE_THAT(
     surf.nearest_point(hexed::Mat<3>{1.01, 1.01, .71}),
-    Catch::Matchers::RangeEquals(hexed::Mat<3>{std::sqrt(.5) + .01, std::sqrt(.5) + .01, .71}, hexed::math::Approx_equal(0, 1e-3))
+    Catch::Matchers::RangeEquals(hexed::Mat<3>{std::sqrt(.5) + .01, std::sqrt(.5) + .01, .71},
+                                 hexed::math::Approx_equal(0, 1e-3))
   );
   REQUIRE_THAT(
     surf.nearest_point(hexed::Mat<3>{-.99, -.99, .71}),
@@ -129,6 +154,24 @@ TEST_CASE("Revolution_surface") {
   REQUIRE(!std::isnan(n(0)));
   REQUIRE(!std::isnan(n(1)));
   REQUIRE(n(2) == Catch::Approx(.11).epsilon(1e-2));
+  SECTION("intersections") {
+    hexed::Mat<3, 2> endpoints;
+    endpoints <<
+      -0.99, 1.01,
+      .51, .51,
+      .01, 1.01;
+    auto sections = surf.intersection_params(endpoints);
+    REQUIRE(sections.size() == 2);
+    std::vector<double> test {sections[0].params(0), sections[1].params(0)};
+    std::vector<double> correct {.5*(1 - std::sqrt(.75)), .5*(1 + std::sqrt(.75))};
+    REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
+    test = std::vector<double>{sections[0].params(1), sections[1].params(1)};
+    correct = std::vector<double>{std::asin(.5), hexed::constants::pi - std::asin(.5)};
+    REQUIRE_THAT(test,  Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
+    test = std::vector<double>{sections[0].interp_coef, sections[1].interp_coef};
+    correct = std::vector<double>{.5*(1 - std::sqrt(.75)), .5*(1 + std::sqrt(.75))};
+    REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
+  }
 }
 
 TEST_CASE("Trimmed_surface") {

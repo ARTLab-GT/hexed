@@ -16,6 +16,10 @@ Parametric<1>::Nearest_parameters Line_segment::nearest_params(Mat<3> p, Constra
   return {params, is_feasible(params)};
 }
 
+std::vector<Parametric<1>::Intersection_parameters> Line_segment::intersection_params(Mat<3, 2> points) const {
+  return {};
+}
+
 Circular_arc::Circular_arc(Mat<3> center, double radius, double start_angle, double end_angle)
 : _center{center}
 , _radius{radius}
@@ -42,6 +46,10 @@ Parametric<1>::Nearest_parameters Circular_arc::nearest_params(Mat<3> p, Constra
   double angle = limited_angle(std::atan2(p(1) - _center(1), p(0) - _center(0)), _start_angle, _end_angle);
   Mat<1> params {math::angle_diff(angle, _start_angle)/(_end_angle - _start_angle)};
   return {params, is_feasible(params)};
+}
+
+std::vector<Parametric<1>::Intersection_parameters> Circular_arc::intersection_params(Mat<3, 2> points) const {
+  return {};
 }
 
 Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_feasible, double max_distance) const {
@@ -188,6 +196,10 @@ Parametric<2>::Nearest_parameters Revolution_surface::nearest_params(Mat<3> p, C
   _Find_nearest finder(*this, p, is_feasible, max_distance);
   finder.find(_tree.root());
   return finder.cand.np;
+}
+
+std::vector<Parametric<2>::Intersection_parameters> Revolution_surface::intersection_params(Mat<3, 2> pnts) const {
+ return {};
 }
 
 Coordinate_change::Coordinate_change(Mat<3> translate, Mat<3, 3> transform)
