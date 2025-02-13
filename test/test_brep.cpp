@@ -53,8 +53,8 @@ TEST_CASE("Circular_arc") {
                .1,    .1;
   auto inter_points = arc.intersection_params(points);
   REQUIRE(inter_points.size() == 1);
-  REQUIRE(inter_points[0].params(0) == Catch::Approx(std::acos(.5)));
-  REQUIRE(inter_points[0].interp_coef == Catch::Approx(std::sqrt(.75)));
+  REQUIRE(inter_points[0].params(0) == Catch::Approx(1./3.));
+  REQUIRE(inter_points[0].interp_coef == Catch::Approx(1. - std::sqrt(.75)));
   points << -10.9,    .1,
                .1,  11.1,
                .1,    .1;
@@ -166,7 +166,7 @@ TEST_CASE("Revolution_surface") {
     std::vector<double> correct {.5*(1 - std::sqrt(.75)), .5*(1 + std::sqrt(.75))};
     REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
     test = std::vector<double>{sections[0].params(1), sections[1].params(1)};
-    correct = std::vector<double>{std::asin(.5), hexed::constants::pi - std::asin(.5)};
+    correct = std::vector<double>{2./3., 1./3.};
     REQUIRE_THAT(test,  Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
     test = std::vector<double>{sections[0].interp_coef, sections[1].interp_coef};
     correct = std::vector<double>{.5*(1 - std::sqrt(.75)), .5*(1 + std::sqrt(.75))};

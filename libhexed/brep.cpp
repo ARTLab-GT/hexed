@@ -24,11 +24,8 @@ std::vector<Parametric<1>::Intersection_parameters> Line_segment::intersection_p
   Mat<3> rhs = points(all, 0) - _endpoints(all, 0);
   rhs(2) = 0;
   Mat<2> soln = lhs.householderQr().solve(rhs);
-  if (0 <= soln(0) && soln(0) <= 1) {
-    return {{Mat<1>{soln(0)}, soln(1)}};
-  } else {
-    return {};
-  }
+  if (0 <= soln(0) && soln(0) <= 1) return {{Mat<1>{soln(0)}, soln(1)}};
+  return {};
 }
 
 Circular_arc::Circular_arc(Mat<3> center, double radius, double start_angle, double end_angle)
@@ -60,7 +57,28 @@ Parametric<1>::Nearest_parameters Circular_arc::nearest_params(Mat<3> p, Constra
 }
 
 std::vector<Parametric<1>::Intersection_parameters> Circular_arc::intersection_params(Mat<3, 2> points) const {
-  return {};
+  Mat<3> start = points(all, 0) - _center;
+  Mat<3> diff = points(all, 1) - points(all, 0);
+  // radius^2 = coefs[0] + coefs[1]*interp_coef + coefs[2]*interp_coef^2
+  double coefs [3] {
+    start(0)*start(0) + start(1)*start(1),
+    2*(start(0)*diff(0) + start(1)*diff(1)),
+    diff(0)*diff(0) + diff(1)*diff(1),
+  };
+  double descrim = coefs[1]*coefs[1] - 4*coefs[2]*(coefs[0] - _radius*_radius);
+  std::vector<Parametric<1>::Intersection_parameters> sects;
+  // skip the single intersection case---no one's actually going to care
+  if (descrim > 0) {
+    double root = std::sqrt(descrim);
+    for (int sign : {-1, 1}) {
+      double interp = (-coefs[1] + sign*root)/(2*coefs[2]);
+      Mat<3> sect_point = start + interp*diff;
+      double param = math::angle_diff(std::atan2(sect_point(1), sect_point(0)), _start_angle)
+                     /(_end_angle - _start_angle);
+      if (0 <= param && param <= 1) sects.push_back({Mat<1>{param}, interp});
+    }
+  }
+  return sects;
 }
 
 Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_feasible,
