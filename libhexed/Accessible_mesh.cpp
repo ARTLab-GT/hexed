@@ -643,6 +643,13 @@ void Accessible_mesh::_fit_surface() {
         _connect(elem_arr, {dim_arr, sign_arr, rotate});
       }
     }
+    // rebuild `extrude_cons`
+    for (int i_con = 0; i_con < (Int)def.cons.size(); ++i_con) {
+      auto& con = def.cons[i_con];
+      if (def.cons[i_con]) {
+        if (def.cons[i_con]->element(1).tree && !def.cons[i_con]->element(0).tree) extrude_cons.push_back(con.get());
+      }
+    }
   }
 
   #pragma omp parallel for
