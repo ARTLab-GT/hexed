@@ -9,6 +9,11 @@ namespace hexed::brep {
 
 //! \cond
 
+Line_segment::Line_segment(Mat<3, 2> endpoints)
+: _endpoints{endpoints}
+, _length{(_endpoints(all, 1) - _endpoints(all, 0)).norm()}
+{}
+
 Parametric<1>::Nearest_parameters Line_segment::nearest_params(Mat<3> p, Constraint is_feasible,
                                                                double max_distance) const {
   Mat<3> diff = _endpoints(all, 1) - _endpoints(all, 0);
@@ -117,6 +122,7 @@ Array<double> discretize(Parametric<1>& curve, Int n_div) {
 Revolution_surface::Revolution_surface(Parametric<1>* g, Line_segment ax, Int n_div, double sa, double ea)
 : _generatrix{g}
 , _axis{ax}
+, _unit_axis{(_axis.point(Mat<1>{1.}) - _axis.point(Mat<1>{0.})).normalized()}
 , _n_div{n_div}
 , _start_angle{sa}
 , _end_angle{ea}
@@ -154,7 +160,6 @@ class Revolution_surface::_Find_nearest {
   const Revolution_surface& surf;
   Constraint is_feasible;
   Mat<3> point; // point we want to compute the nearest point to
-  Mat<3> unit_axis; // normalized rotation axis
   Mat<3> from_start; // displacement of `point` relative to first axis endpoint
   Mat<3> radius; // component of `from_start` orthogonal to axis
   Candidate cand;
@@ -162,9 +167,8 @@ class Revolution_surface::_Find_nearest {
   : surf{s}
   , is_feasible{is_f}
   , point{p}
-  , unit_axis{(surf._axis.point(Mat<1>{1.}) - surf._axis.point(Mat<1>{0.})).normalized()}
   , from_start{p - surf._axis.point(Mat<1>{0.})}
-  , radius{(from_start - from_start.dot(unit_axis)*unit_axis).normalized()}
+  , radius{(from_start - from_start.dot(surf._unit_axis)*surf._unit_axis).normalized()}
   // initialize `cand` to a non-point but set the distance to `max_distance`
   // so that any farther candidates will be ignored
   , cand{{Mat<2>{std::nan(""), std::nan("")}, false}, max_distance}
@@ -173,8 +177,8 @@ class Revolution_surface::_Find_nearest {
   // on the arc of points on the surface obtained by rotating `arc_point`
   double best_angle(Mat<3> arc_point) {
     arc_point -= surf._axis.point(Mat<1>{0.});
-    Mat<3> arc_radius = (arc_point - arc_point.dot(unit_axis)*unit_axis).normalized();
-    double angle = std::atan2(arc_radius.cross(radius).dot(unit_axis), arc_radius.dot(radius));
+    Mat<3> arc_radius = (arc_point - arc_point.dot(surf._unit_axis)*surf._unit_axis).normalized();
+    double angle = std::atan2(arc_radius.cross(radius).dot(surf._unit_axis), arc_radius.dot(radius));
     return limited_angle(angle, surf._start_angle, surf._end_angle);
   }
   // given a point `arc_point` which is nominally on the genratrix, compute the nearst point
@@ -223,6 +227,72 @@ class Revolution_surface::_Find_nearest {
   }
 };
 
+class Revolution_surface::_Find_intersects {
+  public:
+  const Revolution_surface& surf;
+  std::vector<Intersection_parameters> intersects;
+  struct Coefs {
+    Mat<3> radial_coefs;
+    Mat<3> axial_coefs;
+    Coefs(const Revolution_surface& surf, Mat<3, 2> points) {
+      Mat<3> rsq_start = points(all, 0) - surf._axis.point(Mat<1>{0.});
+      axial_coefs[0] = rsq_start.dot(surf._unit_axis);
+      rsq_start -= axial_coefs[0]*surf._unit_axis;
+      Mat<3> rsq_diff = points(all, 1) - points(all, 0);
+      axial_coefs[1] = rsq_diff.dot(surf._unit_axis);
+      rsq_diff -= axial_coefs[1]*surf._unit_axis;
+      radial_coefs[0] = rsq_start.squaredNorm();
+      radial_coefs[1] = 2*rsq_start.dot(rsq_diff);
+      radial_coefs[2] = rsq_diff.squaredNorm();
+    }
+    Coefs() {
+      radial_coefs.setZero();
+      axial_coefs.setZero();
+    }
+  };
+  Coefs points_coefs;
+  _Find_intersects(const Revolution_surface& s, Mat<3, 2> points)
+  : surf{s}, points_coefs{s, points}
+  {}
+  void find(const Tree_curve::Segment& segment) {
+    Int n_nodes = segment.nodes.shape()[0];
+    Coefs coefs [2];
+    coefs[0] = points_coefs;
+    for (Int i_node = 0; i_node < n_nodes - 1; ++i_node) {
+      Mat<3, 2> gener_points;
+      for (int col = 0; col < 2; ++col) gener_points(all, col) = segment.nodes(i_node + col).vector();
+      coefs[1] = Coefs(surf, gener_points);
+      int i_transform = coefs[0].axial_coefs[1] < coefs[1].axial_coefs[1];
+      Mat<2> transform {
+        (coefs[!i_transform].axial_coefs[0] - coefs[i_transform].axial_coefs[0])/coefs[i_transform].axial_coefs[1],
+        coefs[!i_transform].axial_coefs[1]/coefs[i_transform].axial_coefs[1],
+      };
+      Mat<3> quad_coefs = coefs[i_transform].radial_coefs;
+      quad_coefs(0) += transform(0)*(quad_coefs(1) + transform(0)*quad_coefs(2));
+      quad_coefs(2) += transform(0)*quad_coefs(2);
+      for (int pow = 0; pow < 3; ++pow) quad_coefs(pow) *= math::pow(transform(1), pow);
+      quad_coefs -= coefs[!i_transform].radial_coefs;
+      if (quad_coefs(2) != 0) {
+        double descrim = quad_coefs(1)*quad_coefs(1) - 4*quad_coefs(2)*quad_coefs(0);
+        std::cout << "descrim: " << descrim << std::endl;
+        if (descrim > 0) {
+          for (int sign : {-1, 1}) {
+            double soln = -(quad_coefs(1) + sign*std::sqrt(descrim))/(2*quad_coefs(2));
+            double node_interp = i_transform ? transform(0) + transform(1)*soln : soln;
+            std::cout << "node_interp: " << std::to_string(node_interp) << std::endl;
+            if (0 <= node_interp && node_interp <= 1) {
+              intersects.push_back({
+                {(coefs[1].axial_coefs[0] + node_interp*coefs[1].axial_coefs[1])/surf._axis.length(), 0.},
+                0,
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
 Parametric<2>::Nearest_parameters Revolution_surface::nearest_params(Mat<3> p, Constraint is_feasible,
                                                                      double max_distance) const {
   _Find_nearest finder(*this, p, is_feasible, max_distance);
@@ -231,7 +301,9 @@ Parametric<2>::Nearest_parameters Revolution_surface::nearest_params(Mat<3> p, C
 }
 
 std::vector<Parametric<2>::Intersection_parameters> Revolution_surface::intersection_params(Mat<3, 2> pnts) const {
- return {};
+  _Find_intersects finder(*this, pnts);
+  finder.find(_tree.root());
+  return finder.intersects;
 }
 
 Coordinate_change::Coordinate_change(Mat<3> translate, Mat<3, 3> transform)

@@ -174,13 +174,15 @@ class Line_segment : public Parametric<1> {
   public:
   //! \details Each column of `endpoints` is an endpoint of the segment.
   //! They can be retrieved by `point({0.})` and `point({1.})`, respectively.
-  inline Line_segment(Mat<3, 2> endpoints) : _endpoints{endpoints} {}
+  Line_segment(Mat<3, 2> endpoints);
   inline Mat<3> point(Mat<1> params) const override {return _endpoints*Mat<2>{1. - params(0), params(0)};}
+  inline double length() const {return _length;}
   //! \details Endpoints are included in nearest point search.
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
   std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
   private:
   Mat<3, 2> _endpoints;
+  double _length;
 };
 
 //! \brief A circular arc in the \f$ x_0, x_1 \f$ plane.
@@ -259,8 +261,10 @@ class Revolution_surface : public Parametric<2> {
   std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
   private:
   class _Find_nearest;
+  class _Find_intersects;
   std::unique_ptr<Parametric<1>> _generatrix;
   Line_segment _axis;
+  Mat<3> _unit_axis;
   Int _n_div;
   double _start_angle;
   double _end_angle;
