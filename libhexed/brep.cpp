@@ -269,20 +269,19 @@ class Revolution_surface::_Find_intersects {
       };
       Mat<3> quad_coefs = coefs[i_transform].radial_coefs;
       quad_coefs(0) += transform(0)*(quad_coefs(1) + transform(0)*quad_coefs(2));
-      quad_coefs(2) += transform(0)*quad_coefs(2);
+      quad_coefs(1) += 2*transform(0)*quad_coefs(2);
       for (int pow = 0; pow < 3; ++pow) quad_coefs(pow) *= math::pow(transform(1), pow);
       quad_coefs -= coefs[!i_transform].radial_coefs;
-      if (quad_coefs(2) != 0) {
+      if (quad_coefs(2) != 0 && std::isfinite(transform(1))) {
         double descrim = quad_coefs(1)*quad_coefs(1) - 4*quad_coefs(2)*quad_coefs(0);
-        std::cout << "descrim: " << descrim << std::endl;
         if (descrim > 0) {
           for (int sign : {-1, 1}) {
-            double soln = -(quad_coefs(1) + sign*std::sqrt(descrim))/(2*quad_coefs(2));
+            double soln = (-quad_coefs(1) + sign*std::sqrt(descrim))/(2*quad_coefs(2));
             double node_interp = i_transform ? transform(0) + transform(1)*soln : soln;
-            std::cout << "node_interp: " << std::to_string(node_interp) << std::endl;
             if (0 <= node_interp && node_interp <= 1) {
+              std::cout << i_node << " " << node_interp << std::endl;
               intersects.push_back({
-                {(coefs[1].axial_coefs[0] + node_interp*coefs[1].axial_coefs[1])/surf._axis.length(), 0.},
+                {(segment.nodes_start + i_node + node_interp)/(segment.nodes().shape()[0] - 1), 0.},
                 0,
               });
             }
