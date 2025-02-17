@@ -1,5 +1,6 @@
-#include <Element.hpp>
-#include <math.hpp>
+#include <hexed/Element.hpp>
+#include <hexed/math.hpp>
+#include <hexed/Face.hpp>
 
 namespace hexed {
 
@@ -21,6 +22,12 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
 , tree(this)
 , origin{origin_arg(Eigen::seqN(0, params.n_dim))}
 {
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    for (int sign = 0; sign < 2; ++sign) {
+      _faces.emplace_back(params, i_dim, sign);
+      _faces.back().associate(*this);
+    }
+  }
   face_record.fill(0);
   faces.fill(nullptr);
   // initialize local time step scaling to 1.
@@ -125,7 +132,10 @@ double& Element::vertex_fix_admis_coef(int i_vertex) {
   return _vertex_data(2)[i_vertex];
 }
 
-void Element::set_face(int i_face, double* data) {faces[i_face] = data;}
+void Element::set_face(int i_face, double* data) {
+  HEXED_ASSERT(!faces[i_face] || !data, "connecting an already-connected face");
+  faces[i_face] = data;
+}
 bool Element::is_connected(int i_face) {return faces[i_face];}
 
 Mat<3> Element::_compute_pos() const {
@@ -138,12 +148,14 @@ void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
   HEXED_ASSERT(blocks.n_dim == params.n_dim, "Dimensionality of `this` and `blocks` does not match.");
   _fake_shape.reset();
   _shape = std::make_unique<next::Element_shape>(blocks.create_element(_compute_pos(), nominal_size(), boundary_face));
+  _shape->deformed = deformed();
 }
 
 void Element::create_fake(next::Mesh_blocks& blocks) {
   _fake_shape.reset(_shape.release());
   _shape = std::make_unique<next::Element_shape>(blocks.create_element(_compute_pos(), nominal_size()));
   _shape->glue(*_fake_shape, {std::vector<double>(params.n_dim, 0.), std::vector<double>(params.n_dim, 1.)});
+  _shape->deformed = deformed();
 }
 
 void Element::split_shape(next::Mesh_blocks& blocks, Element& split_from, double at, int from_face) {
@@ -159,9 +171,19 @@ void Element::split_shape(next::Mesh_blocks& blocks, Element& split_from, double
   _shape->glue(*_fake_shape, split_corners);
 }
 
+void Element::destroy_shape() {
+  _shape.reset();
+  _fake_shape.reset();
+}
+
 next::Element_shape& Element::shape() {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
   return *_shape;
+}
+
+next::Element_shape& Element::active_shape() {
+  if (fake_shape()) return *fake_shape();
+  return shape();
 }
 
 double* Element::state() {return data.data();}

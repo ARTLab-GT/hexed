@@ -11,7 +11,6 @@
 #include "Mesh.hpp"
 #include "Accessible_mesh.hpp"
 #include "Namespace.hpp"
-#include "Printer.hpp"
 #include "Linear_equation.hpp"
 #include "Visualizer.hpp"
 #include "kernels.hpp"
@@ -48,7 +47,6 @@ class Solver {
   Turbulence_model turb;
   int last_fix_vis_iter = std::numeric_limits<int>::min();
   std::shared_ptr<Namespace> _namespace;
-  std::shared_ptr<Printer_set> _printer;
   bool _implicit;
   std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> _preti_masks;
   int _preti_level;
@@ -113,7 +111,6 @@ class Solver {
    * \param space `Namespace` containing any user-defined parameters affecting the behavior of the solver.
    *        If no namespace is provided, a new blank namespace is creqated.
    *        Any optional parameters which are not found in the namespace shall be created with their default values.
-   * \param printer what to do with any information the solver wants to print for the user to see
    * \param implicit if `true`, allocate storage for solving with an implicit method
    *        (experimental feature---not ready for production use)
    * \details If `viscosity_model` and `thermal_conductivity_model` are both `inviscid`
@@ -127,7 +124,7 @@ class Solver {
          Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
          Turbulence_model turbulence_model = laminar,
          std::shared_ptr<Namespace> space = std::make_shared<Namespace>(),
-         std::shared_ptr<Printer_set> printer = std::make_shared<Printer_set>(), bool implicit = false);
+         bool implicit = false);
 
   //! \name setup
   //!\{
@@ -183,6 +180,8 @@ class Solver {
    * Thus, use this function rather than just `sample(ref_level, is_deformed, serial_n, func)` directly.
    */
   void set_uncertainty(const Element_func& func);
+  //! \brief set `Element::uncertainty` to a uniform constant
+  void set_uncertainty(double);
   /*! \brief Set uncertainty metric based on surface representation quality.
    * \details For all deformed elements contacting the boundary specified by `bc_sn`, computes the
    * unit surface normals at the faces and compares to neighboring elements.

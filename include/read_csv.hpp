@@ -3,8 +3,7 @@
 
 #include "math.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Reads a CSV file to a matrix.
  * \details Reads a table of data from an ASCII file in Comma Separated Value format.

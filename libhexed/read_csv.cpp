@@ -1,11 +1,9 @@
 #include <fstream>
 #include <read_csv.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
-Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> read_csv(std::string file_name)
-{
+Eigen::Matrix<double, dyn, dyn, Eigen::RowMajor> read_csv(std::string file_name) {
   std::vector<double> data; // use a vector for accumulating the data as i suspect it may handle reallocation more efficiently
   std::ifstream file(file_name);
   HEXED_ASSERT(file.good(), format_str(1000, "failed to open file `%s`", file_name.c_str()));

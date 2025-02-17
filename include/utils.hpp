@@ -12,7 +12,7 @@ template <typename T> constexpr bool always_false() {return false;}
 //! \brief prints its argument and then returns it
 //! \details you can wrap this around an expression to print it without computing it again
 template <typename T>
-T& printed(T& t) {
+T printed(T t) {
   std::cout << t << std::endl;
   return t;
 }

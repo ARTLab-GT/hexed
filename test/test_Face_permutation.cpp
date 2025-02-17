@@ -10,7 +10,6 @@ void test_mesh(hexed::Accessible_mesh& mesh) {
   // and then extruding all its faces
   mesh.add_element(0, 1, {});
   mesh.extrude();
-  mesh.relax(0.);
   auto& elems = mesh.elements();
   auto params = elems[0].storage_params();
   const int n_face_qpoint = params.n_qpoint()/params.row_size;

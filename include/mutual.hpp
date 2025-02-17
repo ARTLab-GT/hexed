@@ -4,6 +4,7 @@
 #include <vector>
 #include "assert.hpp"
 #include "Sequence.hpp"
+#include "Lock.hpp"
 
 /*! \brief a namespace for mutually-connected objects
  * \details When implementing adaptive meshing, there are many situations where:
@@ -17,6 +18,12 @@
  * This namespace provides the fundamental base classes to meet this need.
  */
 namespace hexed::mutual {
+
+#define LOCK \
+  Lock* locks [2] {&this->_lock, &that._lock}; \
+  bool less = std::less<void*>()(this, &that); \
+  Lock::Acquire aq0(*locks[ less]); \
+  Lock::Acquire aq1(*locks[!less]); \
 
 /*! \brief abstract base class for all mutually-connected objects
  * \details Implements the basic mechanics of mutual connection and disconnection.
@@ -38,23 +45,27 @@ namespace hexed::mutual {
 template <typename T, typename U>
 class Base {
   friend class Base<U, T>;
+  public:
+  virtual ~Base() = default;
   protected:
   //! \brief takes the necessary steps to connect `this` to `that`, without worrying about anything on `that`'s end
   virtual void _set(Base<U, T>& that) = 0;
   //! \brief takes the necessary steps to disconnect `this` from `that`, without worrying about anything on `that`'s end
   virtual void _unset(Base<U, T>& that) = 0;
-  //! \brief may be overridden by derrived classes to provide partners to data of some arbitrary type `T`
+  //! \brief may be overridden by derived classes to provide partners to data of some arbitrary type `T`
   virtual T* _mine() {return nullptr;}
   virtual const T* _mine() const {return nullptr;} //!< \overload
 
   //! \brief mutually connects `this` and `that` by calling both of their `_set()` member functions
   void _connect(Base<U, T>& that) {
+    LOCK
     _set(that);
     that._set(*this);
   }
 
   //! \brief mutually disconnects `this` and `that` by calling both of their `_unset()` member functions
   void _disconnect(Base<U, T>& that) {
+    LOCK
     that._unset(*this);
     _unset(that);
   }
@@ -62,6 +73,7 @@ class Base {
   //! \brief Accesses the `_mine()` of `that`
   static U* _yours(Base<U, T>& that) {return that._mine();}
   static const U* _yours(const Base<U, T>& that) {return that._mine();} //!< \overload
+  Lock _lock;
 };
 
 //! \brief an object which is mutually connected ("paired") with only one other object
@@ -73,12 +85,13 @@ class Single : public Base<T, U> {
   Single(const Single&) = delete;
   //! \brief steals `that`'s partner, if it has one, leaving `that` unpaired
   Single(Single&& that) : _partner{nullptr} {*this = std::move(that);}
-  ~Single() {unpair();}
+  virtual ~Single() {unpair();}
   Single& operator=(const Single&) = delete;
 
   //! \brief disconnects `this` from its partner, if it has one, and steals `that`'s, if it has one
   //! \details leaves `that` unpaired
   Single& operator=(Single&& that) {
+    LOCK
     unpair();
     if (that._partner) {
       pair(*that._partner);
@@ -124,12 +137,16 @@ class Multiple : public Base<T, U> {
   Multiple(const Multiple&) = delete;
   //! \brief steals all of `that`'s partners, leaving `that` unconnected
   Multiple(Multiple&& that) {*this = std::move(that);}
-  ~Multiple() {for (int i = _partners.size() - 1; i >= 0; --i) this->_disconnect(*_partners[i]);}
+  virtual ~Multiple() {
+    Lock::Acquire aq(Base<T, U>::_lock);
+    for (int i = _partners.size() - 1; i >= 0; --i) this->_disconnect(*_partners[i]);
+  }
   Multiple& operator=(const Multiple&) = delete;
 
   //! \brief steals all of `that`'s partners, leaving `that` unconnected
   //! \details `this` is first disconnected from all its own partners
   Multiple& operator=(Multiple&& that) {
+    LOCK
     for (int i = _partners.size() - 1; i >= 0; --i) this->_disconnect(*_partners[i]);
     for (int i = that._partners.size() - 1; i >= 0; --i) {
       Base<U, T>* p = that._partners[i];
@@ -160,6 +177,8 @@ class Multiple : public Base<T, U> {
   }
   void _unset(Base<U, T>& that) override {std::erase(_partners, &that);}
 };
+
+#undef LOCK
 
 }
 #endif

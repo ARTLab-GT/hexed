@@ -24,6 +24,7 @@ class Hexed(bu.C_project):
             "threaded": bu.Option(True, convert=bu.as_bool),
             "n_threads": bu.Option(os.cpu_count(), convert=int, assertions=bu.assert_nonneg),
             "profile": bu.Option(False, convert=bu.as_bool),
+            "global_hacks": bu.Option(False, convert=bu.as_bool),
             "use_xdmf": bu.Option(True, convert=bu.as_bool),
             "use_tecio": bu.Option(False, convert=bu.as_bool),
             "use_occt": bu.Option(False, convert=bu.as_bool),
@@ -98,6 +99,8 @@ class Hexed(bu.C_project):
         if self.builder.options["profile"]:
             bu.Compiler.debug = 3
             bu.Compiler.profile = True
+        if self.builder.options["global_hacks"]:
+            bu.Compiler.extra_flags.append("-DHEXED_USE_GLOBAL_HACKS");
         #### compile and link
         self.builder.prefices["include"] = (self.bdir + "include/hexed",) + self.builder.prefices["include"]
         self.builder.mkdir(self.bdir + "libhexed")
@@ -107,7 +110,7 @@ class Hexed(bu.C_project):
         self[bu.Python_script](
             ["libhexed/Gauss_legendre.cpp", "libhexed/Gauss_lobatto.cpp"],
             self.sdir + "script/install/auto_generate.py",
-            args=[self.bdir + "libhexed", str(self.builder.options['max_row_size'])],
+            args=[self.bdir + "libhexed", str(self.builder.options['max_row_size'] + 1)],
         ).do
         sources = bu.contents(self.sdir + "libhexed") + bu.contents(self.sdir + "execs") + [
             f"{self.bdir}libhexed/Gauss_legendre.cpp",

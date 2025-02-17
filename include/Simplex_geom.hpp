@@ -68,6 +68,10 @@ class Simplex_geom : public Simplex_geom_nd {
     sort_simplices(_tree);
   }
 
+  void add_snap_point(Mat<3> point) {
+    _snap_points.push_back(point);
+  }
+
   const std::vector<Mat<n_dim, n_dim>>& simplices() const {return _simplices;}
   const std::vector<Mat<n_dim - 1, n_dim>>& parameters() const {return _parameters;}
   const std::vector<int>& faces() const {return _faces;}
@@ -123,6 +127,8 @@ class Simplex_geom : public Simplex_geom_nd {
    */
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return simplex_intersections(point0, point1).points;}
 
+  next::Sequence<Mat<3>> points() override {return next::Sequence<Mat<3>>::vector_view(_snap_points);}
+
   void visualize(std::string format, std::string file_name) override;
 
   void add_edge(Array<double> points) {_geom_edges.emplace_back(points);}
@@ -134,6 +140,7 @@ class Simplex_geom : public Simplex_geom_nd {
   Mat<n_dim, 2> _bounding_box;
   Tree _tree;
   std::vector<Geom_edge> _geom_edges;
+  std::vector<Mat<3>> _snap_points;
 
   void merge(Nearest_point<n_dim>& nearest, Mat<n_dim, n_dim> sim, Mat<n_dim> point); // helper for `nearest_point`
 

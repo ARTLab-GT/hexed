@@ -6,7 +6,7 @@
 
 namespace hexed {
 
-/*! \brief wrapper for [OpenMP lock routines](https://www.openmp.org/spec-html/5.0/openmpse31.html).
+/*! \brief wrapper for [OpenMP **nested** lock routines](https://www.openmp.org/spec-html/5.0/openmpse31.html).
  * \details This class can be used to prevent data races by OpenMP threads.
  * It contains an OpenMP lock variable.
  * To acquire (aka set) the lock, construct an `Acquire` object from it.
@@ -24,7 +24,7 @@ namespace hexed {
  */
 class Lock {
   #if HEXED_THREADED
-  omp_lock_t l;
+  omp_nest_lock_t l;
   #endif
   public:
   //! acquires the lock when constructed and releases when destroyed

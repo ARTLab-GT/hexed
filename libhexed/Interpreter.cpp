@@ -4,8 +4,9 @@
 #include <fstream>
 #include <cstdlib>
 #include <chrono>
-#include <Interpreter.hpp>
-#include <Path.hpp>
+#include <hexed/Interpreter.hpp>
+#include <hexed/Path.hpp>
+#include <hexed/Printer.hpp>
 
 namespace hexed {
 
@@ -296,13 +297,13 @@ Interpreter::Interpreter(std::vector<std::string> preload)
       auto s = _general_add({""}, val);
       Printer* p;
       std::string print_type = variables->get<std::string>("print_type");
-      if (print_type == "warn") p = &printer->warn;
-      else if (print_type == "error") p = &printer->error;
+      if (print_type == "warn") p = &printers::warn;
+      else if (print_type == "error") p = &printers::error;
       else {
-        p = &printer->info;
+        p = &printers::info;
         if (print_type != "info") {
-          printer->warn("Warning: ", true);
-          printer->warn(format_str(1000, "Invalid `print_type` `{%s}`. Defaulting to `{info}`\n", print_type.c_str()));
+          printers::warn("Warning: ", true);
+          printers::warn(format_str(1000, "Invalid `print_type` `{%s}`. Defaulting to `{info}`\n", print_type.c_str()));
         }
       }
       (*p)(s.s.value(), variables->get<int>("print_emph"));
@@ -341,7 +342,6 @@ Interpreter::Interpreter(std::vector<std::string> preload)
   }
 , _input(100)
 , variables{std::make_shared<Namespace>()}
-, printer{std::make_shared<Printer_set>()}
 {
   // create some Heisenberg variables
   variables->create("ask", new Namespace::Heisenberg<std::string>([this]() {return _input.get();}));

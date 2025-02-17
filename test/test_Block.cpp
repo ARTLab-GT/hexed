@@ -4,7 +4,8 @@
 #include <hexed/Equidistant.hpp>
 #include <hexed/Gauss_lobatto.hpp>
 
-#define REQ_VEC_EQ(vec0, ...) REQUIRE_THAT(vec0, Catch::Matchers::RangeEquals(__VA_ARGS__, hexed::math::Approx_equal()))
+#define REQ_VEC_EQ(vec0, ...) \
+  REQUIRE_THAT(vec0, Catch::Matchers::RangeEquals(__VA_ARGS__, hexed::math::Approx_equal()))
 
 void warp(hexed::next::Edge& e) {
   for (int i_node = 0; i_node < 3; ++i_node) {
@@ -28,9 +29,11 @@ TEST_CASE("Block") {
     hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr0(nullptr);
     vert0.pair(ptr0);
     REQUIRE(vert0.alive());
-    REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2},
+                 hexed::math::Approx_equal()));
     vert0.apply_relax(); // before first call to `calc_relax`, `apply_update` should do nothing
-    REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2},
+                 hexed::math::Approx_equal()));
     hexed::next::Vertex vert1({.3, -.1, .4}, 4);
     hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr1(nullptr);
     vert1.pair(ptr1);
@@ -43,7 +46,7 @@ TEST_CASE("Block") {
     REQUIRE(!edge0.alive());
     auto test_interp = [&](hexed::next::Edge& edge){
       for (int i = 0; i < 4; ++i) {
-        REQUIRE_THAT(edge.point({i}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2} + i*hexed::Mat<3>::Constant(.2/3.), hexed::math::Approx_equal()));
+        REQ_VEC_EQ(edge.point({i}), hexed::Mat<3>{.1, -.3, .2} + i*hexed::Mat<3>::Constant(.2/3.));
       }
     };
     test_interp(edge0);
@@ -212,6 +215,49 @@ TEST_CASE("Block") {
     face.visualize("default", "vertex_interp_face1");
   }
 
+  SECTION("`Boundary_block`-`Element_shape` interaction") {
+    SECTION("2D") {
+      auto elem0 = blocks2.create_element(hexed::Mat<3>::Zero(), 1., 0);
+      auto elem1 = blocks2.create_element(hexed::Mat<3>::Zero(), 1., 3);
+      REQUIRE_THAT(elem0.boundary_block()->element_coords({3}), Catch::Matchers::RangeEquals(std::vector<int>{0, 3}));
+      REQUIRE_THAT(elem1.boundary_block()->element_coords({3}), Catch::Matchers::RangeEquals(std::vector<int>{3, 4}));
+      REQUIRE_THAT(elem0.boundary_block()->dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{&elem0}));
+    }
+    SECTION("3D") {
+      auto elem0 = blocks3.create_element(hexed::Mat<3>::Zero(), 1., 1);
+      auto elem1 = blocks3.create_element(hexed::Mat<3>::Zero(), 1., 3);
+      auto elem2 = blocks3.create_element(hexed::Mat<3>::Zero(), 1., 4);
+      REQUIRE_THAT(elem0.boundary_face_3d()->element_coords({1, 2}),
+                   Catch::Matchers::RangeEquals(std::vector<int>{4, 1, 2}));
+      REQUIRE_THAT(elem1.boundary_face_3d()->element_coords({1, 2}),
+                   Catch::Matchers::RangeEquals(std::vector<int>{1, 4, 2}));
+      REQUIRE_THAT(elem2.boundary_face_3d()->element_coords({1, 2}),
+                   Catch::Matchers::RangeEquals(std::vector<int>{1, 2, 0}));
+      REQUIRE_THAT(elem0.boundary_face_3d()->edge(0).element_coords({2}),
+                   Catch::Matchers::RangeEquals(std::vector<int>{4, 0, 2}));
+      REQUIRE_THAT(elem0.boundary_face_3d()->edge(3).element_coords({2}),
+                   Catch::Matchers::RangeEquals(std::vector<int>{4, 2, 4}));
+      REQUIRE_THAT(elem2.boundary_face_3d()->edge(1).element_coords({2}),
+                   Catch::Matchers::RangeEquals(std::vector<int>{4, 2, 0}));
+      REQUIRE_THAT(elem0.boundary_block()->dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{&elem0}));
+      elem1.boundary_face_3d()->edge(3).glue(elem0.boundary_face_3d()->edge(0));
+      elem1.boundary_face_3d()->edge(0).glue(elem0.boundary_face_3d()->edge(1), 0);
+      elem2.boundary_face_3d()->edge(2).glue(elem0.boundary_face_3d()->edge(1), 1);
+      REQUIRE_THAT(elem0.boundary_face_3d()->edge(0).dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{&elem0, &elem1}));
+      REQUIRE_THAT(elem0.boundary_face_3d()->edge(1).dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{&elem0, &elem1, &elem2}));
+      REQUIRE_THAT(elem1.boundary_face_3d()->edge(1).dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{&elem1}));
+      REQUIRE_THAT(elem1.boundary_face_3d()->edge(3).dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{}));
+      REQUIRE_THAT(elem1.boundary_face_3d()->edge(0).dependent_elements(),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::next::Element_shape*>{}));
+    }
+  }
+
   SECTION("Element_shape/Mesh_blocks") {
     SECTION("2D conformal") {
       std::vector<hexed::next::Element_shape> elems;
@@ -250,6 +296,7 @@ TEST_CASE("Block") {
       REQUIRE_THAT(edges[0].interior()(1), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.9, .65, .1}, hexed::math::Approx_equal()));
       edges[0].interior()(1)[0] = -.8;
       REQUIRE_THAT(elems[1].point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.5, .65, .1}, hexed::math::Approx_equal()));
+      REQUIRE(elems[0].vertex(0).n_elements() == 1);
       elems[0].connect(elems[1], {{0, 0}, {0, 1}});
       {
         auto interior = blocks2.interior_verts();
@@ -258,6 +305,7 @@ TEST_CASE("Block") {
         REQUIRE(&elems[0].vertex(0) == &elems[1].vertex(2));
         REQUIRE(&elems[0].vertex(1) == &elems[1].vertex(3));
       }
+      REQUIRE(elems[0].vertex(0).n_elements() == 2);
     }
 
     SECTION("3D conformal") {
@@ -307,6 +355,12 @@ TEST_CASE("Block") {
         REQUIRE(&elems[1].vertex(4) == &elems[3].vertex(4));
         REQUIRE(&elems[1].vertex(6) == &elems[3].vertex(6));
       }
+      REQUIRE_THAT(elems[1].vertex(4).neighbors(), Catch::Matchers::UnorderedRangeEquals(std::vector<hexed::next::Vertex*> {
+        &elems[1].vertex(0),
+        &elems[1].vertex(6),
+        &elems[1].vertex(5),
+        &elems[3].vertex(0),
+      }));
       REQUIRE_THAT(faces[2].edge(1).point({1}), Catch::Matchers::RangeEquals(faces[0].edge(2).point({1}), hexed::math::Approx_equal()));
       elems[2].connect(elems[1], {{0, 1}, {1, 0}});
       elems[3].connect(elems[2], {{1, 2}, {0, 0}});
@@ -504,5 +558,36 @@ TEST_CASE("Block") {
     REQUIRE_THAT(elem1.point({0, 0}), Catch::Matchers::RangeEquals(std::vector<double>{.3, .3, 0.}, hexed::math::Approx_equal(0., 1e-6)));
     REQUIRE_THAT(elem1.point({4, 2}), Catch::Matchers::RangeEquals(std::vector<double>{.7, .5, 0.}, hexed::math::Approx_equal(0., 1e-6)));
     REQUIRE_THAT(elem1.point({4, 4}), Catch::Matchers::RangeEquals(std::vector<double>{.7, .7, 0.}, hexed::math::Approx_equal(0., 1e-6)));
+  }
+
+  SECTION("arbitrary refined connections") {
+    std::vector<hexed::next::Element_shape> elems0;
+    auto elem00 = blocks3.create_element({0, 0, 0}, 1.);
+    auto elem01 = blocks3.create_element({0, 1, 0}, 1.);
+    elem00.connect(elem01, {{1, 1}, {1, 0}});
+    std::vector<hexed::next::Element_shape> elems1;
+    auto elem10 = blocks3.create_element({1, 0, 0}, 1.);
+    auto elem11 = blocks3.create_element({1, 0, 1}, 1.);
+    elem10.connect(elem11, {{2, 2}, {1, 0}});
+    std::array<std::vector<hexed::next::Element_shape*>, 2> elems;
+    elems[0] = {&elem00, &elem00, &elem01, &elem01};
+    elems[1] = {&elem10, &elem11, &elem10, &elem11};
+    hexed::next::Element_shape::connect(elems, {{0, 0}, {1, 0}});
+    REQUIRE_THAT(elem00.vertex(4).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem00.vertex(5).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem00.vertex(6).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.75, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem00.vertex(7).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.75, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem01.vertex(4).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.75, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem01.vertex(5).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.75, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem01.vertex(6).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem01.vertex(7).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem10.vertex(0).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem10.vertex(1).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 0.75}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem10.vertex(2).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 0.00}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem10.vertex(3).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 0.75}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem11.vertex(0).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 0.75}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem11.vertex(1).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 0.00, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem11.vertex(2).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 0.75}, hexed::math::Approx_equal(0., 1e-6)));
+    REQUIRE_THAT(elem11.vertex(3).point({}), Catch::Matchers::RangeEquals(std::vector<double>{1.00, 1.50, 1.50}, hexed::math::Approx_equal(0., 1e-6)));
   }
 }

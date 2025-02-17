@@ -188,6 +188,7 @@ class Mesh_by_type : public View_by_type<element_t>
   void purge_connections(std::function<bool(Element&)> predicate = [](Element& elem){return elem.record != 0;})
   {
     auto bound_predicate = [&](std::unique_ptr<Typed_bound_connection<element_t>>& con){
+      if (!con) return true;
       if (con->element().tree) {
         Tree* neighbor = con->element().tree->find_neighbor(math::direction(par.n_dim, con->i_dim(), con->inside_face_sign()));
         if (neighbor) if (neighbor->elem) return true; // remember that either all neighbors exist or none
@@ -195,9 +196,13 @@ class Mesh_by_type : public View_by_type<element_t>
       return predicate(con->element());
     };
     erase_if(bound_cons, bound_predicate);
-    erase_if(cons, [predicate](std::unique_ptr<Element_face_connection<element_t>>& con){return predicate(con->element(0)) || predicate(con->element(1));});
+    erase_if(cons, [predicate](std::unique_ptr<Element_face_connection<element_t>>& con) {
+      if (!con) return true;
+      return predicate(con->element(0)) || predicate(con->element(1)) || !con->neighbor_connection().alive();
+    });
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
       auto pred = [predicate](std::unique_ptr<Refined_connection<element_t>>& con){
+        if (!con) return true;
         bool result = predicate(con->coarse_element());
         for (int i_fine = 0; i_fine < con->n_fine_elements(); ++i_fine) {
           result = result || predicate(con->connection(i_fine).element(!con->order_reversed()));

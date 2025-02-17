@@ -31,10 +31,13 @@ std::string format_str(int max_chars, std::string fstring, format_args... args) 
 namespace assert {
 
 class Exception : public std::exception {
-  std::string msg;
   public:
-  inline Exception(std::string message) : msg{message} {}
-  inline const char* what() const noexcept override {return msg.c_str();}
+  inline Exception(std::string m) : _msg{m} {}
+  virtual std::string name() const = 0;
+  std::string message() const {return _msg;}
+  inline const char* what() const noexcept override {return _msg.c_str();}
+  private:
+  std::string _msg;
 };
 
 //! \brief Represents a fatal problem in the numerics of the code (such as nonphysical values)
@@ -42,24 +45,46 @@ class Exception : public std::exception {
 //! \see \ref numerical_error
 class Numerical_exception : public Exception {
   public:
+  inline std::string name() const override {return "Numerical exception";}
   Numerical_exception(std::string message) : Exception(message) {}
 };
 
 //! \brief Represents an exception which clearly results from a mistake made by the user.
 class User_error : public Exception {
   public:
+  inline std::string name() const override {return "User error";}
   inline User_error(std::string message) : Exception(message) {}
 };
 
 //! \brief Indicates that the user invoked functionality which should be implemented in the future but isn't yet.
 class Not_implemented_error : public Exception {
   public:
+  inline std::string name() const override {return "Feature-not-implemented error";}
   inline Not_implemented_error(std::string message) : Exception(message) {}
+};
+
+//! \brief Indicates that a situation has been encountered which should not be possible, regardless of user input.
+//! \details In other words, a bug has been caught.
+class Internal_error : public Exception {
+  public:
+  inline std::string name() const override {return "Internal error";}
+  inline Internal_error(std::string message) : Exception(message) {}
+};
+
+/*! \brief Indicates an exception caused by some kind of fixed-size resource has been exhausted.
+ * \details For example, a buffer has been overflowed or recursion depth cap exceeded.
+ * This implies that the error can, in principle be avoided by allocating more resources,
+ * but most likely the underlying cause is a bug.
+ */
+class Overflow_error : public Internal_error {
+  public:
+  inline std::string name() const override {return "Internal error (overflow)";}
+  inline Overflow_error(std::string message) : Internal_error(message) {}
 };
 
 //! throws a `std::runtime_error` with message `message`, wrapped in a `#pragma omp critical` if necessary.
 //! Used in \ref HEXED_ASSERT
-template <typename except_t = std::runtime_error>
+template <typename except_t = Internal_error>
 void throw_critical(const char* message) {
   #if HEXED_THREADED
   if (omp_get_level()) {
@@ -85,9 +110,10 @@ void throw_critical(const char* message) {
  * If desired, supply the type of exception as the third argument.
  * Exception type must be constructible from a string.
  * Defaults to `std::runtime_error`.
+ * \note This macro expands to a block enclosed in `{}`, so it does not require a `;` after it.
  */
 #define HEXED_THROW(message, ...) { \
-  assert::throw_critical<__VA_ARGS__>(format_str(1000, \
+  hexed::assert::throw_critical<__VA_ARGS__>(hexed::format_str(1000, \
     "%s\n" \
     "  At: line %d of `%s`\n" \
     "  In: %s", \
@@ -97,12 +123,13 @@ void throw_critical(const char* message) {
 /*! \brief Assert something with an informative error message.
  * \details If `expression` is false, throws an exception with `HEXED_THROW`.
  * `message` and an optional third argument are passed to `HEXED_THROW`.
+ * \note This macro expands to a block enclosed in `{}`, so it does not require a `;` after it.
  */
 #define HEXED_ASSERT(expression, message, ...) { \
   if (!(expression)) { \
-    HEXED_THROW(format_str(1000, \
+    HEXED_THROW(hexed::format_str(1000, \
       "%s\n" \
-      "  Assertion `%s` failed in `%s`.\n", \
+      "  Assertion `%s` failed in `%s`.", \
       std::string(message).c_str(), #expression, __FUNCTION__) \
       __VA_OPT__(,) __VA_ARGS__ \
     ); \

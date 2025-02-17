@@ -41,7 +41,7 @@ class Mortal : public mutual::Multiple<void, void> {};
  */
 template <typename T>
 class Mortal_ptr : protected mutual::Single<void, void>, public Pointer<T> {
-public:
+  public:
   //! \brief constructs a `Mortal_ptr` that points to `data`
   Mortal_ptr(T* data = nullptr) {set(data);}
 
@@ -51,6 +51,9 @@ public:
     if (data) pair(*data);
     else unpair();
   }
+
+  //! \brief Checks whether `this` points to the same object as `that`.
+  bool operator==(const T* that) const {return that == get();}
 
   #define ACCESS(CONST) \
     CONST T* get() CONST { \

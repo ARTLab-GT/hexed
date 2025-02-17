@@ -65,17 +65,28 @@ constexpr int sign(bool condition) {
   return 2*condition - 1;
 }
 
+constexpr Int stride(int n_dim, Int row_size, int i_dim) {
+  return math::pow(row_size, n_dim - 1 - i_dim);
+}
+
+constexpr Int row_coordinate(int n_dim, Int row_size, int i_dim, Int index) {
+  return index/stride(n_dim, row_size, i_dim)%row_size;
+}
+
 //! \brief returns `angle0 - angle1`, where the difference is in \f$ [0, 2\pi) \f$
 double angle_diff(double angle0, double angle1);
 
-//! the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element to the face described by `i_dim` and `sign`
+//! \brief the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element
+//! to the face described by `i_dim` and `sign`
 Eigen::VectorXi direction(int n_dim, int i_dim, bool is_positive);
-//! the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element to the `i_face`th face
+//! \brief the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element
+//! to the `i_face`th face
 Eigen::VectorXi direction(int n_dim, int i_face);
 
 //! \brief provides a convenient way to pass options to root-finding algorithms
 struct Root_options {
-  //! \brief the algorithm should terminate if the absolute value of the _residual_ (the value of the error function) is less than this
+  //! \brief the algorithm should terminate if the absolute value of the _residual_ (the value of the error function)
+  //! is less than this
   double ftol = 0;
   //! \brief the algorithm should terminate if its best estimate of the _error_ is less than this
   //! \details error is usually estimated by the distance between the solution guess at consecutive iterations
@@ -112,8 +123,7 @@ double bisection(std::function<double(double)> error, std::array<double, 2> boun
 Mat<> newton(std::function<Mat<dyn, dyn>(Mat<>)> error_jacobian, Mat<> guess, Root_options options);
 
 /*! \brief Multiply every dimension of a (flattened) N-dimensional array by a matrix.
- *
- * Size of array along each dimension must be equal
+ * \details Size of array along each dimension must be equal
  * (i.e. the array is hypercube-shaped, or in my terminology, "hypercubic").
  * Matrix does not have to be square.
  * Dimensionality of the array is inferred automatically
@@ -123,8 +133,7 @@ Mat<> newton(std::function<Mat<dyn, dyn>(Mat<>)> error_jacobian, Mat<> guess, Ro
 Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&);
 
 /*! \brief Multiply a single dimension of a hypercubic ND array by a matrix.
- *
- * C.f. \ref hypercube_matvec.
+ * \details C.f. \ref hypercube_matvec.
  * If matrix is square, the shape of the output array will match the input.
  * If matrix is a row vector, the output will still be hypercubic, but with one less dimension than the input.
  * Otherwise, the resulting array will no longer be hypercubic.
@@ -132,15 +141,13 @@ Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&)
 Eigen::VectorXd dimension_matvec(const Eigen::MatrixXd&, const Eigen::VectorXd&, int i_dim);
 
 /*! \brief Raises a vector to a power via ND outer products.
- *
- * That is, takes an outer product with the vector `{1}` `n_dim` times along different dimensions
+ * \details That is, takes an outer product with the vector `{1}` `n_dim` times along different dimensions
  * to produce an `n_dim`-dimensional hypercubic array.
  */
 Eigen::VectorXd pow_outer(const Eigen::VectorXd&, int n_dim);
 
 /*! \brief Orthonormalize a vector basis (with dimension \f$\le 3\f$).
- *
- * Assumes `basis` is invertible.
+ * \details Assumes `basis` is invertible.
  * Returns a matrix with the following properties:
  * - Unitary.
  * - Span of columns excluding the `i_dim`th is the same as for `basis`.
@@ -180,7 +187,7 @@ Eigen::Matrix<double, n_dim, n_dim> orthonormal (Eigen::Matrix<double, n_dim, n_
 
 Eigen::MatrixXd orthonormal (Eigen::MatrixXd basis, int i_dim);
 
-//! for indexing faces/vertices in \ref Refined_face s with possible stretching
+//! \brief for indexing faces/vertices in \ref Refined_face s with possible stretching
 inline int stretched_ind(int n_dim, int ind, std::array<bool, 2> stretch) {
   int stride = 1;
   int stretched = 0;
@@ -210,8 +217,8 @@ double interp(Mat<pow(2, n_dim)> values, Mat<n_dim> coords) {
   return values(0);
 }
 
-//! Finds the nearest point to `target` on the line segment defined by `endpoints`.
-//! Works for 2D or 3D.
+//! \brief Finds the nearest point to `target` on the line segment defined by `endpoints`.
+//! \details Works for 2D or 3D.
 template <typename vec_t>
 vec_t proj_to_segment(std::array<vec_t, 2> endpoints, vec_t target) {
   vec_t diff = endpoints[1] - endpoints[0];
@@ -220,7 +227,7 @@ vec_t proj_to_segment(std::array<vec_t, 2> endpoints, vec_t target) {
   return endpoints[0] + proj*diff;
 }
 
-//! functor to compare whether values are approximately equal
+//! \brief functor to compare whether values are approximately equal
 class Approx_equal {
   double a;
   double r;
@@ -229,7 +236,7 @@ class Approx_equal {
   inline bool operator()(double x, double y) const {return std::abs(x - y) < a + r*std::abs(x + y)/2;}
 };
 
-//! Constructs an `Eigen::VectorXd` from iterators `begin()` and `end()` to arithmetic types.
+//! \brief Constructs an `Eigen::VectorXd` from iterators `begin()` and `end()` to arithmetic types.
 template <typename T>
 Mat<> to_mat(T begin, T end) {
   Mat<> vec(end - begin);
@@ -238,11 +245,18 @@ Mat<> to_mat(T begin, T end) {
   return vec;
 }
 
-//! Constructs an `Eigen::VectorXd` from any object supporting `begin()` and `end()` members.
+//! \brief Constructs an `Eigen::VectorXd` from any object supporting `begin()` and `end()` members.
 template <typename T>
 Mat<> to_mat(const T& range) {
   return to_mat(range.begin(), range.end());
 }
+
+/*! \brief Returns a copy of `vec` resized to `size`.
+ * \details If `size` is less than `vec.size()`, the trailing entries are deleted.
+ * If `size` is greater than `vec.size()`, trailing zeros are appended.
+ * Otherwise, entries are preserved.
+ */
+Mat<> resize(const Mat<>& vec, Int size);
 
 //! \brief minimal representation of an `n_dim`-dimensional ball
 template <int n_dim = dyn>

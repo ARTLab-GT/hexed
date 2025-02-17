@@ -37,7 +37,8 @@ double broyden(std::function<double(double)> error, double init_guess, Root_opti
 double bisection(std::function<double(double)> error, std::array<double, 2> bounds, Root_options opts) {
   double midpoint = 0;
   std::array<double, 2> err_bounds {error(bounds[0]), error(bounds[1])};
-  HEXED_ASSERT(!(err_bounds[0]*err_bounds[1] > 0), format_str(300, "bounds do not bracket a root (f = {%e, %e})", err_bounds[0], err_bounds[1]));
+  HEXED_ASSERT(!(err_bounds[0]*err_bounds[1] > 0),
+               format_str(300, "bounds do not bracket a root (f = {%e, %e})", err_bounds[0], err_bounds[1]));
   HEXED_ASSERT(!(std::isnan(err_bounds[0]) && std::isnan(err_bounds[1])),
                "`err` evaluates to NaN at bouth bounds");
   for (int iter = 0; iter < opts.max_iters; ++iter) {
@@ -98,7 +99,8 @@ Eigen::VectorXd hypercube_matvec(const Eigen::MatrixXd& mat, const Eigen::Vector
     const int row_size = prod_size/mat.rows();
     Eigen::VectorXd fact {mat.cols()*row_size};
     for (int i_row = 0; i_row < mat.cols(); ++i_row) {
-      fact(Eigen::seqN(i_row*row_size, row_size)) = hypercube_matvec(mat, vec(Eigen::seqN(i_row*vec_row_size, vec_row_size)));
+      fact(Eigen::seqN(i_row*row_size, row_size))
+        = hypercube_matvec(mat, vec(Eigen::seqN(i_row*vec_row_size, vec_row_size)));
     }
     Eigen::VectorXd prod {prod_size};
     for (int i_col = 0; i_col < row_size; ++i_col) {
@@ -179,6 +181,13 @@ std::vector<double> correct_values(std::vector<double> estimates, std::vector<do
     } else break;
   }
   return estimates;
+}
+
+Mat<> resize(const Mat<>& vec, Int size) {
+  Mat<> resized = Mat<>::Zero(size);
+  auto seq = Eigen::seqN(0, std::min<Int>(vec.size(), size));
+  resized(seq) = vec(seq);
+  return resized;
 }
 
 }

@@ -1,16 +1,14 @@
 #ifndef HEXED_POINTER_HPP_
 #define HEXED_POINTER_HPP_
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Abstract base class for implementing pointer objects.
  * \details Derived classes must implement a `get()` member function that returns a raw pointer,
  * and `Pointer` implements the rest of the usual pointer interface semantics in terms of `get()`.
  */
 template <typename T>
-class Pointer
-{
+class Pointer {
   public:
   //! \brief obtains the raw address of the variable `this` points to
   virtual T* get() = 0;

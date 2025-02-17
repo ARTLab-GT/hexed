@@ -1,14 +1,12 @@
 #include <hexed/vertex_inds.hpp>
 #include <hexed/math.hpp>
 
-namespace hexed
-{
+namespace hexed {
 
-std::vector<int> face_vertex_inds(int n_dim, const Connection_direction& direction)
-{
+std::vector<int> face_vertex_inds(int n_dim, const Connection_direction& direction) {
   int n_vert = math::pow(2, n_dim - 1);
-  std::vector<int> inds;
-  for (int i_vert = 0; i_vert < n_vert; ++i_vert) inds.push_back(i_vert);
+  std::vector<int> inds(n_vert);
+  for (int i_vert = 0; i_vert < n_vert; ++i_vert) inds[i_vert] = i_vert;
   // reorder as necessary
   if (direction.flip_tangential()) {
     // if there is a dimension not involved in the connection which is greater than `i_dim[0]`
@@ -24,11 +22,19 @@ std::vector<int> face_vertex_inds(int n_dim, const Connection_direction& directi
     }
   }
   if (direction.transpose()) std::swap(inds[1], inds[2]); // only possible for this to happen if `n_dim == 3`
+  int r = direction.rotate;
+  while (n_dim == 3 && r != 0) {
+    std::swap(inds[1], inds[2]);
+    int stride = 1 + ((r > 0) == (direction.i_dim[1] != 1));
+    for (int i = 0; i < 2; ++i) {
+      std::swap(inds[i*(2/stride)], inds[i*(2/stride) + stride]);
+    }
+    r -= math::sign(r > 0);
+  }
   return inds;
 }
 
-std::array<std::vector<int>, 2> vertex_inds(int n_dim, const Connection_direction& direction)
-{
+std::array<std::vector<int>, 2> vertex_inds(int n_dim, const Connection_direction& direction) {
   // get vertices involved
   std::array<std::vector<int>, 2> inds;
   int n_vert = math::pow(2, n_dim - 1);
