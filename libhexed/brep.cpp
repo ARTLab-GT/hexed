@@ -152,17 +152,20 @@ Mat<3> Revolution_surface::point(Mat<2> params) const {
 
 // given a point `arc_point` which is nominally on the genratrix, compute the rotation angle of the nearest point
 // on the arc of points on the surface obtained by rotating `arc_point`
-double Revolution_surface::_best_angle(Mat<3> arc_point, Mat<3> radius) const {
+double Revolution_surface::_unlimited_best_angle(Mat<3> arc_point, Mat<3> radius) const {
   arc_point -= _axis.point(Mat<1>{0.});
   Mat<3> arc_radius = (arc_point - arc_point.dot(_unit_axis)*_unit_axis).normalized();
-  double angle = std::atan2(arc_radius.cross(radius).dot(_unit_axis), arc_radius.dot(radius));
-  return limited_angle(angle, _start_angle, _end_angle);
+  return std::atan2(arc_radius.cross(radius).dot(_unit_axis), arc_radius.dot(radius));
+}
+
+double Revolution_surface::_limited_best_angle(Mat<3> arc_point, Mat<3> radius) const {
+  return limited_angle(_unlimited_best_angle(arc_point, radius), _start_angle, _end_angle);
 }
 
 // given a point `arc_point` which is nominally on the genratrix, compute the nearst point
 // on the arc of points on the surface obtained by rotating `arc_point`
 Mat<3> Revolution_surface::_best_point(Mat<3> arc_point, Mat<3> radius) const {
-  double angle = _best_angle(arc_point, radius);
+  double angle = _limited_best_angle(arc_point, radius);
   return rotate(arc_point, angle);
 }
 
@@ -217,7 +220,7 @@ class Revolution_surface::_Find_nearest {
         Candidate c;
         Mat<3> node = segment.nodes(i_node).vector();
         c.np.params(0) = double(segment.nodes_start + i_node)/surf._n_div;
-        double angle = surf._best_angle(node, radius);
+        double angle = surf._limited_best_angle(node, radius);
         c.np.params(1) = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
         // check if the computed nearest parameters are feasible
         c.np.is_feasible = is_feasible(c.np.params);
@@ -284,9 +287,9 @@ class Revolution_surface::_Find_intersects {
               Mat<3> gen_point = gener_points*Mat<2>{1. - node_interp, node_interp};
               Mat<3> radius = points*Mat<2>{1. - interp_coef, interp_coef} - surf._axis.point(Mat<1>{0.});
               radius -= radius.dot(surf._unit_axis)*surf._unit_axis;
-              double angle = surf._best_angle(gen_point, radius.normalized());
+              double angle = surf._unlimited_best_angle(gen_point, radius.normalized());
               double param1 = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
-              intersects.push_back({{param0, param1}, interp_coef});
+              if (param1 <= 1) intersects.push_back({{param0, param1}, interp_coef});
             }
           }
         }
