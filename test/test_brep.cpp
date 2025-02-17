@@ -171,6 +171,45 @@ TEST_CASE("Revolution_surface") {
     test = std::vector<double>{sections[0].params(1), sections[1].params(1)};
     correct = std::vector<double>{5./6., 1./6.};
     REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
+    SECTION("horizontal section line and only 1 intersection") {
+      endpoints <<
+        .51, .51,
+        -.99, 1.01,
+        1./7. + .01, 1./7. + .01;
+      auto sections = surf.intersection_params(endpoints);
+      REQUIRE(sections.size() == 1);
+      std::vector<double> test {sections[0].params(0)};
+      std::vector<double> correct {1./7.};
+      REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
+      test = std::vector<double>{sections[0].interp_coef};
+      correct = std::vector<double>{.5*(1 + std::sqrt(.75))};
+      REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
+    }
+    SECTION("annular surface") {
+      hexed::Mat<3, 2> new_generatrix_endpoints;
+      new_generatrix_endpoints <<
+        1.01, 2.01,
+        0.01, 0.01,
+        0.01, 0.01;
+      hexed::brep::Revolution_surface new_surf(new hexed::brep::Line_segment(new_generatrix_endpoints),
+                                               hexed::brep::Line_segment(axis_endpoints), 1024,
+                                               0., hexed::constants::pi);
+      endpoints <<
+        1.01, 1.01,
+        1.01, 1.01,
+        1.00, 0.00;
+      auto sections = new_surf.intersection_params(endpoints);
+      REQUIRE(sections.size() == 1);
+      std::vector<double> test {sections[0].params(0)};
+      std::vector<double> correct {std::sqrt(2.) - 1.};
+      REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
+      test = std::vector<double>{sections[0].interp_coef};
+      correct = std::vector<double>{.99};
+      REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
+      test = std::vector<double>{sections[0].params(1)};
+      correct = std::vector<double>{.25};
+      REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
+    }
   }
 }
 

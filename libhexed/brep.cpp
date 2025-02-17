@@ -265,7 +265,7 @@ class Revolution_surface::_Find_intersects {
       Mat<3, 2> gener_points;
       for (int col = 0; col < 2; ++col) gener_points(all, col) = segment.nodes(i_node + col).vector();
       coefs[1] = Coefs(surf, gener_points);
-      int i_transform = coefs[0].axial_coefs[1] < coefs[1].axial_coefs[1];
+      int i_transform = std::abs(coefs[0].axial_coefs[1]) < std::abs(coefs[1].axial_coefs[1]);
       Mat<2> transform {
         (coefs[!i_transform].axial_coefs[0] - coefs[i_transform].axial_coefs[0])/coefs[i_transform].axial_coefs[1],
         coefs[!i_transform].axial_coefs[1]/coefs[i_transform].axial_coefs[1],
