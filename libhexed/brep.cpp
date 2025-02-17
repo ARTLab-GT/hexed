@@ -237,18 +237,18 @@ class Revolution_surface::_Find_intersects {
   const Revolution_surface& surf;
   std::vector<Intersection_parameters> intersects;
   struct Coefs {
-    Mat<3> radial_coefs;
-    Mat<3> axial_coefs;
+    Mat<3> radial;
+    Mat<3> axial;
     Coefs(const Revolution_surface& surf, Mat<3, 2> points) {
       Mat<3> r_start = points(all, 0) - surf._axis.point(Mat<1>{0.});
-      axial_coefs[0] = r_start.dot(surf._unit_axis);
-      r_start -= axial_coefs[0]*surf._unit_axis;
+      axial[0] = r_start.dot(surf._unit_axis);
+      r_start -= axial[0]*surf._unit_axis;
       Mat<3> r_diff = points(all, 1) - points(all, 0);
-      axial_coefs[1] = r_diff.dot(surf._unit_axis);
-      r_diff -= axial_coefs[1]*surf._unit_axis;
-      radial_coefs[0] = r_start.squaredNorm();
-      radial_coefs[1] = 2*r_start.dot(r_diff);
-      radial_coefs[2] = r_diff.squaredNorm();
+      axial[1] = r_diff.dot(surf._unit_axis);
+      r_diff -= axial[1]*surf._unit_axis;
+      radial[0] = r_start.squaredNorm();
+      radial[1] = 2*r_start.dot(r_diff);
+      radial[2] = r_diff.squaredNorm();
     }
     Coefs() = default;
   };
@@ -261,14 +261,22 @@ class Revolution_surface::_Find_intersects {
   void find(const Tree_curve::Segment& segment) {
     if (segment.segments.size()) {
       for (const Tree_curve::Segment& segment : segment.segments) {
-        #if 0
         Mat<3> center = segment.center - surf._axis.point(Mat<1>{0.});
-        double radius = (center - center.dot(surf._unit_axis)*surf._unit_axis).norm();
-        bool could_intersect = false;
-        if (point_coefs.radial_coefs[2] < math::pow(point_coefs.axial_coefs[1], 2)) {
+        double axial = center.dot(surf._unit_axis);
+        double radius = (center - axial*surf._unit_axis).norm();
+        bool could_intersect;
+        if (points_coefs.radial[2] < math::pow(points_coefs.axial[1], 2)) {
+          double center_param = (axial - points_coefs.axial[0])/points_coefs.axial[1];
+          double param_diff = segment.radius/points_coefs.axial[1];
+          double rsq = points_coefs.radial[0]
+                       + (points_coefs.radial[1] + points_coefs.radial[2]*center_param)*center_param;
+          double rsq_deriv = points_coefs.radial[1] + 2*points_coefs.radial[2]*center_param;
+          double rsq_uncert = (std::abs(rsq_deriv) + points_coefs.radial[2]*param_diff)*param_diff;
+          could_intersect = std::abs(radius*radius - rsq) <
+                            segment.radius*segment.radius + 2*std::abs(radius*segment.radius) + rsq_uncert;
+        } else {
+          could_intersect = true;
         }
-        #endif
-        bool could_intersect = true;
         if (could_intersect) find(segment);
       }
     } else {
@@ -279,16 +287,16 @@ class Revolution_surface::_Find_intersects {
         Mat<3, 2> gener_points;
         for (int col = 0; col < 2; ++col) gener_points(all, col) = segment.nodes(i_node + col).vector();
         coefs[1] = Coefs(surf, gener_points);
-        int i_transform = std::abs(coefs[0].axial_coefs[1]) < std::abs(coefs[1].axial_coefs[1]);
+        int i_transform = std::abs(coefs[0].axial[1]) < std::abs(coefs[1].axial[1]);
         Mat<2> transform {
-          (coefs[!i_transform].axial_coefs[0] - coefs[i_transform].axial_coefs[0])/coefs[i_transform].axial_coefs[1],
-          coefs[!i_transform].axial_coefs[1]/coefs[i_transform].axial_coefs[1],
+          (coefs[!i_transform].axial[0] - coefs[i_transform].axial[0])/coefs[i_transform].axial[1],
+          coefs[!i_transform].axial[1]/coefs[i_transform].axial[1],
         };
-        Mat<3> quad_coefs = coefs[i_transform].radial_coefs;
+        Mat<3> quad_coefs = coefs[i_transform].radial;
         quad_coefs(0) += transform(0)*(quad_coefs(1) + transform(0)*quad_coefs(2));
         quad_coefs(1) += 2*transform(0)*quad_coefs(2);
         for (int pow = 0; pow < 3; ++pow) quad_coefs(pow) *= math::pow(transform(1), pow);
-        quad_coefs -= coefs[!i_transform].radial_coefs;
+        quad_coefs -= coefs[!i_transform].radial;
         if (quad_coefs(2) != 0 && std::isfinite(transform(1))) {
           double descrim = quad_coefs(1)*quad_coefs(1) - 4*quad_coefs(2)*quad_coefs(0);
           if (descrim > 0) {
