@@ -100,7 +100,7 @@ std::vector<Parametric<2>::Intersection_parameters> Plane::intersection_params(M
   auto fact = lhs.fullPivHouseholderQr();
   if (!fact.isInvertible()) return {};
   Mat<3> soln = fact.solve(rhs);
-  for (int i = 0; i < 3; ++i) if (!(soln(i) >= 0 && soln(i) <= 1)) return {};
+  for (int i = 0; i < 2; ++i) if (!(soln(i) >= 0 && soln(i) <= 1)) return {};
   return {{{soln(0), soln(1)}, soln(2)}};
 }
 
@@ -258,6 +258,15 @@ class Revolution_surface::_Find_intersects {
   : surf{s}, points{p}, points_coefs{s, points}
   {}
   void find(const Tree_curve::Segment& segment) {
+    #if 0
+    if (segment.segments.size()) {
+      for (const Tree_curve::Segment& segment : segment.segments) {
+        Mat<3> center = segment.center - surf._axis.point(Mat<1>{0.});
+        double radius = (center - center.dot(surf._unit_axis)*surf._unit_axis).norm();
+        bool could_intersect = false;
+        if (point_coefs.radial_coefs[2] < math::pow(point_coefs.axial_coefs[1], 2)) {
+    }
+    #endif
     Int n_nodes = segment.nodes.shape()[0];
     Coefs coefs [2];
     coefs[0] = points_coefs;
@@ -281,7 +290,7 @@ class Revolution_surface::_Find_intersects {
           for (int sign : {-1, 1}) {
             double soln = (-quad_coefs(1) + sign*std::sqrt(descrim))/(2*quad_coefs(2));
             double node_interp = i_transform ? transform(0) + transform(1)*soln : soln;
-            if (0 <= node_interp && node_interp <= 1) {
+            if (-1e-3 <= node_interp && node_interp <= 1 + 1e-3) {
               double interp_coef = i_transform ? soln : transform(0) + transform(1)*soln;
               double param0 = (segment.nodes_start + i_node + node_interp)/(segment.nodes().shape()[0] - 1);
               Mat<3> gen_point = gener_points*Mat<2>{1. - node_interp, node_interp};
