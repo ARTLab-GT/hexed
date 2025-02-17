@@ -258,47 +258,52 @@ class Revolution_surface::_Find_intersects {
   : surf{s}, points{p}, points_coefs{s, points}
   {}
   void find(const Tree_curve::Segment& segment) {
-    #if 0
     if (segment.segments.size()) {
       for (const Tree_curve::Segment& segment : segment.segments) {
+        #if 0
         Mat<3> center = segment.center - surf._axis.point(Mat<1>{0.});
         double radius = (center - center.dot(surf._unit_axis)*surf._unit_axis).norm();
         bool could_intersect = false;
         if (point_coefs.radial_coefs[2] < math::pow(point_coefs.axial_coefs[1], 2)) {
-    }
-    #endif
-    Int n_nodes = segment.nodes.shape()[0];
-    Coefs coefs [2];
-    coefs[0] = points_coefs;
-    for (Int i_node = 0; i_node < n_nodes - 1; ++i_node) {
-      Mat<3, 2> gener_points;
-      for (int col = 0; col < 2; ++col) gener_points(all, col) = segment.nodes(i_node + col).vector();
-      coefs[1] = Coefs(surf, gener_points);
-      int i_transform = std::abs(coefs[0].axial_coefs[1]) < std::abs(coefs[1].axial_coefs[1]);
-      Mat<2> transform {
-        (coefs[!i_transform].axial_coefs[0] - coefs[i_transform].axial_coefs[0])/coefs[i_transform].axial_coefs[1],
-        coefs[!i_transform].axial_coefs[1]/coefs[i_transform].axial_coefs[1],
-      };
-      Mat<3> quad_coefs = coefs[i_transform].radial_coefs;
-      quad_coefs(0) += transform(0)*(quad_coefs(1) + transform(0)*quad_coefs(2));
-      quad_coefs(1) += 2*transform(0)*quad_coefs(2);
-      for (int pow = 0; pow < 3; ++pow) quad_coefs(pow) *= math::pow(transform(1), pow);
-      quad_coefs -= coefs[!i_transform].radial_coefs;
-      if (quad_coefs(2) != 0 && std::isfinite(transform(1))) {
-        double descrim = quad_coefs(1)*quad_coefs(1) - 4*quad_coefs(2)*quad_coefs(0);
-        if (descrim > 0) {
-          for (int sign : {-1, 1}) {
-            double soln = (-quad_coefs(1) + sign*std::sqrt(descrim))/(2*quad_coefs(2));
-            double node_interp = i_transform ? transform(0) + transform(1)*soln : soln;
-            if (-1e-3 <= node_interp && node_interp <= 1 + 1e-3) {
-              double interp_coef = i_transform ? soln : transform(0) + transform(1)*soln;
-              double param0 = (segment.nodes_start + i_node + node_interp)/(segment.nodes().shape()[0] - 1);
-              Mat<3> gen_point = gener_points*Mat<2>{1. - node_interp, node_interp};
-              Mat<3> radius = points*Mat<2>{1. - interp_coef, interp_coef} - surf._axis.point(Mat<1>{0.});
-              radius -= radius.dot(surf._unit_axis)*surf._unit_axis;
-              double angle = surf._unlimited_best_angle(gen_point, radius.normalized());
-              double param1 = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
-              if (param1 <= 1) intersects.push_back({{param0, param1}, interp_coef});
+        }
+        #endif
+        bool could_intersect = true;
+        if (could_intersect) find(segment);
+      }
+    } else {
+      Int n_nodes = segment.nodes.shape()[0];
+      Coefs coefs [2];
+      coefs[0] = points_coefs;
+      for (Int i_node = 0; i_node < n_nodes - 1; ++i_node) {
+        Mat<3, 2> gener_points;
+        for (int col = 0; col < 2; ++col) gener_points(all, col) = segment.nodes(i_node + col).vector();
+        coefs[1] = Coefs(surf, gener_points);
+        int i_transform = std::abs(coefs[0].axial_coefs[1]) < std::abs(coefs[1].axial_coefs[1]);
+        Mat<2> transform {
+          (coefs[!i_transform].axial_coefs[0] - coefs[i_transform].axial_coefs[0])/coefs[i_transform].axial_coefs[1],
+          coefs[!i_transform].axial_coefs[1]/coefs[i_transform].axial_coefs[1],
+        };
+        Mat<3> quad_coefs = coefs[i_transform].radial_coefs;
+        quad_coefs(0) += transform(0)*(quad_coefs(1) + transform(0)*quad_coefs(2));
+        quad_coefs(1) += 2*transform(0)*quad_coefs(2);
+        for (int pow = 0; pow < 3; ++pow) quad_coefs(pow) *= math::pow(transform(1), pow);
+        quad_coefs -= coefs[!i_transform].radial_coefs;
+        if (quad_coefs(2) != 0 && std::isfinite(transform(1))) {
+          double descrim = quad_coefs(1)*quad_coefs(1) - 4*quad_coefs(2)*quad_coefs(0);
+          if (descrim > 0) {
+            for (int sign : {-1, 1}) {
+              double soln = (-quad_coefs(1) + sign*std::sqrt(descrim))/(2*quad_coefs(2));
+              double node_interp = i_transform ? transform(0) + transform(1)*soln : soln;
+              if (-1e-3 <= node_interp && node_interp <= 1 + 1e-3) {
+                double interp_coef = i_transform ? soln : transform(0) + transform(1)*soln;
+                double param0 = (segment.nodes_start + i_node + node_interp)/(segment.nodes().shape()[0] - 1);
+                Mat<3> gen_point = gener_points*Mat<2>{1. - node_interp, node_interp};
+                Mat<3> radius = points*Mat<2>{1. - interp_coef, interp_coef} - surf._axis.point(Mat<1>{0.});
+                radius -= radius.dot(surf._unit_axis)*surf._unit_axis;
+                double angle = surf._unlimited_best_angle(gen_point, radius.normalized());
+                double param1 = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
+                if (param1 <= 1) intersects.push_back({{param0, param1}, interp_coef});
+              }
             }
           }
         }

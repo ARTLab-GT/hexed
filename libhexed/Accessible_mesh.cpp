@@ -751,7 +751,9 @@ void Accessible_mesh::_fit_surface() {
   auto faces_3d = _blocks.faces_3d();
   #pragma omp parallel for
   for (auto& face : faces_3d) {
-    for (int i_edge = 0; i_edge < 4; ++i_edge) snap_block(face.edge(i_edge));
+    for (int i_edge = 0; i_edge < 4; ++i_edge) {
+      if (!face.edge(i_edge).glued()) snap_block(face.edge(i_edge));
+    }
   }
   // Snap mesh edges to geometry edges.
   // This has to happen after snapping edges to the surface (which would undo this)
