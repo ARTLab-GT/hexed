@@ -154,7 +154,7 @@ TEST_CASE("Revolution_surface") {
   REQUIRE(!std::isnan(n(0)));
   REQUIRE(!std::isnan(n(1)));
   REQUIRE(n(2) == Catch::Approx(.11).epsilon(1e-2));
-  SECTION("intersections") {
+  SECTION("intersections") { // note: the following calculations should be exact up to rounding errors
     hexed::Mat<3, 2> endpoints;
     endpoints <<
       -0.99, 1.01,
@@ -165,11 +165,11 @@ TEST_CASE("Revolution_surface") {
     std::vector<double> test {sections[0].params(0), sections[1].params(0)};
     std::vector<double> correct {.5*(1 - std::sqrt(.75)), .5*(1 + std::sqrt(.75))};
     REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
-    test = std::vector<double>{sections[0].params(1), sections[1].params(1)};
-    correct = std::vector<double>{2./3., 1./3.};
-    REQUIRE_THAT(test,  Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
     test = std::vector<double>{sections[0].interp_coef, sections[1].interp_coef};
     correct = std::vector<double>{.5*(1 - std::sqrt(.75)), .5*(1 + std::sqrt(.75))};
+    REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
+    test = std::vector<double>{sections[0].params(1), sections[1].params(1)};
+    correct = std::vector<double>{5./6., 1./6.};
     REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
   }
 }

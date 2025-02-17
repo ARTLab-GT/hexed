@@ -150,6 +150,22 @@ Mat<3> Revolution_surface::point(Mat<2> params) const {
   return rotate(p, angle);
 }
 
+// given a point `arc_point` which is nominally on the genratrix, compute the rotation angle of the nearest point
+// on the arc of points on the surface obtained by rotating `arc_point`
+double Revolution_surface::_best_angle(Mat<3> arc_point, Mat<3> radius) const {
+  arc_point -= _axis.point(Mat<1>{0.});
+  Mat<3> arc_radius = (arc_point - arc_point.dot(_unit_axis)*_unit_axis).normalized();
+  double angle = std::atan2(arc_radius.cross(radius).dot(_unit_axis), arc_radius.dot(radius));
+  return limited_angle(angle, _start_angle, _end_angle);
+}
+
+// given a point `arc_point` which is nominally on the genratrix, compute the nearst point
+// on the arc of points on the surface obtained by rotating `arc_point`
+Mat<3> Revolution_surface::_best_point(Mat<3> arc_point, Mat<3> radius) const {
+  double angle = _best_angle(arc_point, radius);
+  return rotate(arc_point, angle);
+}
+
 // helper class that does the real work of nearest point calculations
 class Revolution_surface::_Find_nearest {
   public:
@@ -173,20 +189,6 @@ class Revolution_surface::_Find_nearest {
   // so that any farther candidates will be ignored
   , cand{{Mat<2>{std::nan(""), std::nan("")}, false}, max_distance}
   {}
-  // given a point `arc_point` which is nominally on the genratrix, compute the rotation angle of the nearest point
-  // on the arc of points on the surface obtained by rotating `arc_point`
-  double best_angle(Mat<3> arc_point) {
-    arc_point -= surf._axis.point(Mat<1>{0.});
-    Mat<3> arc_radius = (arc_point - arc_point.dot(surf._unit_axis)*surf._unit_axis).normalized();
-    double angle = std::atan2(arc_radius.cross(radius).dot(surf._unit_axis), arc_radius.dot(radius));
-    return limited_angle(angle, surf._start_angle, surf._end_angle);
-  }
-  // given a point `arc_point` which is nominally on the genratrix, compute the nearst point
-  // on the arc of points on the surface obtained by rotating `arc_point`
-  Mat<3> best_point(Mat<3> arc_point) {
-    double angle = best_angle(arc_point);
-    return surf.rotate(arc_point, angle);
-  }
   // return whichever of `c0` and `c1` is a better candidate
   Candidate merge(Candidate c0, Candidate c1) {
     if (c1.dist < c0.dist && c1.np.is_feasible) return c1;
@@ -200,7 +202,7 @@ class Revolution_surface::_Find_nearest {
       // if this segment is not a leaf, recursively search its child segments
       double dist [2];
       for (int i_segment = 0; i_segment < 2; ++i_segment) {
-        dist[i_segment] = (best_point(segment.segments[i_segment].center) - point).norm();
+        dist[i_segment] = (surf._best_point(segment.segments[i_segment].center, radius) - point).norm();
       }
       // do the closer segment first in hopes that we can find a point close enough
       // to justify skipping the farther one
@@ -215,7 +217,7 @@ class Revolution_surface::_Find_nearest {
         Candidate c;
         Mat<3> node = segment.nodes(i_node).vector();
         c.np.params(0) = double(segment.nodes_start + i_node)/surf._n_div;
-        double angle = best_angle(node);
+        double angle = surf._best_angle(node, radius);
         c.np.params(1) = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
         // check if the computed nearest parameters are feasible
         c.np.is_feasible = is_feasible(c.np.params);
@@ -235,24 +237,22 @@ class Revolution_surface::_Find_intersects {
     Mat<3> radial_coefs;
     Mat<3> axial_coefs;
     Coefs(const Revolution_surface& surf, Mat<3, 2> points) {
-      Mat<3> rsq_start = points(all, 0) - surf._axis.point(Mat<1>{0.});
-      axial_coefs[0] = rsq_start.dot(surf._unit_axis);
-      rsq_start -= axial_coefs[0]*surf._unit_axis;
-      Mat<3> rsq_diff = points(all, 1) - points(all, 0);
-      axial_coefs[1] = rsq_diff.dot(surf._unit_axis);
-      rsq_diff -= axial_coefs[1]*surf._unit_axis;
-      radial_coefs[0] = rsq_start.squaredNorm();
-      radial_coefs[1] = 2*rsq_start.dot(rsq_diff);
-      radial_coefs[2] = rsq_diff.squaredNorm();
+      Mat<3> r_start = points(all, 0) - surf._axis.point(Mat<1>{0.});
+      axial_coefs[0] = r_start.dot(surf._unit_axis);
+      r_start -= axial_coefs[0]*surf._unit_axis;
+      Mat<3> r_diff = points(all, 1) - points(all, 0);
+      axial_coefs[1] = r_diff.dot(surf._unit_axis);
+      r_diff -= axial_coefs[1]*surf._unit_axis;
+      radial_coefs[0] = r_start.squaredNorm();
+      radial_coefs[1] = 2*r_start.dot(r_diff);
+      radial_coefs[2] = r_diff.squaredNorm();
     }
-    Coefs() {
-      radial_coefs.setZero();
-      axial_coefs.setZero();
-    }
+    Coefs() = default;
   };
+  Mat<3, 2> points;
   Coefs points_coefs;
-  _Find_intersects(const Revolution_surface& s, Mat<3, 2> points)
-  : surf{s}, points_coefs{s, points}
+  _Find_intersects(const Revolution_surface& s, Mat<3, 2> p)
+  : surf{s}, points{p}, points_coefs{s, points}
   {}
   void find(const Tree_curve::Segment& segment) {
     Int n_nodes = segment.nodes.shape()[0];
@@ -279,11 +279,14 @@ class Revolution_surface::_Find_intersects {
             double soln = (-quad_coefs(1) + sign*std::sqrt(descrim))/(2*quad_coefs(2));
             double node_interp = i_transform ? transform(0) + transform(1)*soln : soln;
             if (0 <= node_interp && node_interp <= 1) {
-              std::cout << i_node << " " << node_interp << std::endl;
-              intersects.push_back({
-                {(segment.nodes_start + i_node + node_interp)/(segment.nodes().shape()[0] - 1), 0.},
-                0,
-              });
+              double interp_coef = i_transform ? soln : transform(0) + transform(1)*soln;
+              double param0 = (segment.nodes_start + i_node + node_interp)/(segment.nodes().shape()[0] - 1);
+              Mat<3> gen_point = gener_points*Mat<2>{1. - node_interp, node_interp};
+              Mat<3> radius = points*Mat<2>{1. - interp_coef, interp_coef} - surf._axis.point(Mat<1>{0.});
+              radius -= radius.dot(surf._unit_axis)*surf._unit_axis;
+              double angle = surf._best_angle(gen_point, radius.normalized());
+              double param1 = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
+              intersects.push_back({{param0, param1}, interp_coef});
             }
           }
         }

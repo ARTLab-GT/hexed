@@ -262,6 +262,8 @@ class Revolution_surface : public Parametric<2> {
   private:
   class _Find_nearest;
   class _Find_intersects;
+  double _best_angle(Mat<3> arc_point, Mat<3> radius) const;
+  Mat<3> _best_point(Mat<3> arc_point, Mat<3> radius) const;
   std::unique_ptr<Parametric<1>> _generatrix;
   Line_segment _axis;
   Mat<3> _unit_axis;
