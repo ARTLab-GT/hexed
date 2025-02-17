@@ -254,8 +254,9 @@ class Revolution_surface::_Find_intersects {
   };
   Mat<3, 2> points;
   Coefs points_coefs;
+  Int total_nodes;
   _Find_intersects(const Revolution_surface& s, Mat<3, 2> p)
-  : surf{s}, points{p}, points_coefs{s, points}
+  : surf{s}, points{p}, points_coefs{s, points}, total_nodes(surf._tree.n_points())
   {}
   void find(const Tree_curve::Segment& segment) {
     if (segment.segments.size()) {
@@ -296,7 +297,7 @@ class Revolution_surface::_Find_intersects {
               double node_interp = i_transform ? transform(0) + transform(1)*soln : soln;
               if (-1e-3 <= node_interp && node_interp <= 1 + 1e-3) {
                 double interp_coef = i_transform ? soln : transform(0) + transform(1)*soln;
-                double param0 = (segment.nodes_start + i_node + node_interp)/(segment.nodes().shape()[0] - 1);
+                double param0 = (segment.nodes_start + i_node + node_interp)/(total_nodes - 1);
                 Mat<3> gen_point = gener_points*Mat<2>{1. - node_interp, node_interp};
                 Mat<3> radius = points*Mat<2>{1. - interp_coef, interp_coef} - surf._axis.point(Mat<1>{0.});
                 radius -= radius.dot(surf._unit_axis)*surf._unit_axis;
