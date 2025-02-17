@@ -181,6 +181,8 @@ max_ref_level = 10
 geometry_uncertainty = 1e-3
 viscosity_model = {}
 conductivity_model = {}
+turbulence_model = {}
+turbulent_prandtl = .9
 thermal_bc = {heat_flux = 0.}
 surface_bc = {auto}
 temperature_offset = 0.
@@ -192,10 +194,13 @@ fix_therm_admis = false
 diffusive_admissibility = false
 working_dir = {hexed_out/}
 input_data = {auto}
-vis_freq = 10000
-write_freq = 10000
+vis_freq = 10^4
+write_freq = 10^4
 iter_width = 10
 print_freq = 100
+update_roughness_freq = 10^3
+surface_roughness = -1.
+max_roughness_plus = 4.
 refine_if = {false}
 unrefine_if = {false}
 max_refinement_iters = 100
@@ -252,12 +257,18 @@ do = {
 }
 $loop
 
-init_cond = {
+init_cond =  {
     momentum0 = freestream_density*freestream_velocity0 + 0*pos0
     momentum1 = freestream_density*freestream_velocity1 + 0*pos0
     momentum2 = freestream_density*freestream_velocity2 + 0*pos0
     density = freestream_density + 0*pos0
     energy = freestream_energy + 0*pos0
+    case0 = {}
+    case1 = {
+        turbulent_kinetic_energy = freestream_density*freestream_specific_turbulent_kinetic_energy
+        turbulent_dissipation_bassi = freestream_density*log(freestream_specific_turbulent_dissipation)
+    }
+    $$({case} + (turbulence_model == {k-omega}))
 }
 wall_velocity = {
     velocity0 = 0.
@@ -343,6 +354,12 @@ iterate = {
     }
     $$({case} + !residual_init)
     println report
+    case0 = {}
+    case1 = {
+        update_roughness
+        println({updating surface roughness to } + surface_roughness)
+    }
+    $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
     $write_iter
     $vis_iter
     hexed_prev_except = except
@@ -401,6 +418,25 @@ mesh = {
     do = {split_layers; i_split = i_split + 1}
     $loop
     mesh_init = true
+    bounds_surface_vars = {
+        position0 = pos0
+        position1 = pos1
+        position2 = pos2
+    }
+    bounds_surface
+    print({geometry bounding box:
+    } + min_surface_position0 + { } + max_surface_position0 + {
+    } + min_surface_position1 + { } + max_surface_position1 + {
+    } + min_surface_position2 + { } + max_surface_position2 + {
+})
+    geom_length = sqrt((max_surface_position0 - min_surface_position0)^2 + (max_surface_position1 - min_surface_position1)^2 + (max_surface_position2 - min_surface_position2)^2)
+    println({geometry length: } + geom_length)
+    case0 = {}
+    case1 = {
+        surface_roughness = 1e-6*geom_length
+        println({initializing surface roughness height to } + surface_roughness)
+    }
+    $$({case} + (surface_roughness < 0 & viscosity_model != {}))
     print_emph = true; println({meshing complete with } + n_elements + { elements} + newline)
 }
 

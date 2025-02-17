@@ -136,6 +136,7 @@ class Element : public Kernel_element, public Mortal {
   double* reference_level_normals() override;
   double* jacobian_determinant() override;
   double* kernel_face_normal(int i_face) override;
+  double* debug_variables() override;
   double& uncert() override;
 };
 

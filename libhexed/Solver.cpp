@@ -22,8 +22,10 @@ Kernel_mesh Solver::_kernel_mesh() {
   return {
     params.n_dim,
     params.row_size,
+    params.n_var,
     0,
     basis,
+    turb,
     acc_mesh->cartesian().kernel_connections(),
     acc_mesh->deformed ().kernel_connections(),
     acc_mesh->cartesian().kernel_elements(),
@@ -144,15 +146,15 @@ void Solver::apply_avc_diff_flux_bcs() {
 }
 
 void Solver::apply_fta_flux_bcs() {
-  int nd = params.n_dim;
   int rs = params.row_size;
   int nq = params.n_qpoint();
+  int nv = params.n_var;
   auto& bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     double* in_f = bc_cons[i_con].inside_face(true);
     double* gh_f = bc_cons[i_con].ghost_face(true);
-    for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+    for (int i_dof = 0; i_dof < nq*nv/rs; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
   }
 }
 
@@ -193,9 +195,12 @@ Interpreter Solver::_interpreter() {
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
+               Turbulence_model turbulence_model,
                std::shared_ptr<Namespace> space, bool implicit)
-: params{implicit ? Linearized::storage_start + Linearized::n_storage : 2, n_dim + 2, n_dim, row_size}
-, acc_mesh{new Accessible_mesh(params, root_mesh_size)}
+: params{implicit ? Linearized::storage_start + Linearized::n_storage
+                  : 2, n_dim + 2 + 2*(turbulence_model == k_omega),
+         n_dim, row_size}
+, acc_mesh{new Accessible_mesh(params, root_mesh_size, turbulence_model)}
 , basis{row_size}
 , stopwatch{"(element*update)"}
 , use_art_visc{false}
@@ -203,6 +208,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
 , av_rs{row_size}
 , visc{viscosity_model}
 , therm_cond{thermal_conductivity_model}
+, turb{turbulence_model}
 , _namespace{space}
 , _implicit{implicit}
 , _preti_level{0}
@@ -296,7 +302,7 @@ const Stopwatch_tree& Solver::stopwatch_tree() {return stopwatch;}
 
 void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs,
                        Surface_geom* geom, Flow_bc* surface_bc) {
-  acc_mesh.reset(new Accessible_mesh(file_name, extremal_bcs, geom, surface_bc));
+  acc_mesh.reset(new Accessible_mesh(file_name, extremal_bcs, turb, geom, surface_bc));
   HEXED_ASSERT(acc_mesh->storage_params().n_stage == params.n_stage,
                "attempt to read a mesh file with a different `n_stage`");
   HEXED_ASSERT(acc_mesh->storage_params().n_var == params.n_var,
@@ -385,7 +391,7 @@ void Solver::calc_jacobian(bool snap) {
     for (int i_fine = 0; i_fine < ref.n_fine_elements(); ++i_fine) {
       auto& fine = ref.connection(i_fine);
       double* face [2] {fine.state(rev, false), fine.state(!rev, false)};
-      auto fp = face_permutation(n_dim, rs, dir, face[1]);
+      auto fp = face_permutation(n_dim, rs, dir, face[1], turb);
       fp->match_faces();
       for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
         face[1][i_data] = sign*face[0][i_data];
@@ -408,7 +414,7 @@ void Solver::calc_jacobian(bool snap) {
     double* elem_nrml [2] {con.state(0, false), con.state(1, false)};
     auto dir = con.direction();
     // permute face 1 so that quadrature points match up
-    auto fp = face_permutation(n_dim, rs, dir, elem_nrml[1]);
+    auto fp = face_permutation(n_dim, rs, dir, elem_nrml[1], turb);
     fp->match_faces();
     // take average of element face normals with appropriate flipping
     int sign [2];
@@ -464,6 +470,10 @@ void Solver::initialize(std::string(expr)) {
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) state_vars.push_back("momentum" + std::to_string(i_dim));
   state_vars.push_back("density");
   state_vars.push_back("energy");
+  if (turb == k_omega) {
+    state_vars.push_back("turbulent_kinetic_energy");
+    state_vars.push_back("turbulent_dissipation_bassi");
+  }
   auto inter = _interpreter();
   int n_var = state_vars.size();
   int nq = params.n_qpoint();
@@ -478,6 +488,11 @@ void Solver::initialize(std::string(expr)) {
     Array<double> state({n_var, nq}, elem.state());
     for (int i_var = 0; i_var < n_var; ++i_var) {
       sub.variables->assign_array(state(i_var), state_vars[i_var]);
+    }
+    for (int i_adv = 0; i_adv < params.n_advection(params.row_size); ++i_adv) {
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        elem.advection_state()[i_adv*nq + i_qpoint] = 1.;
+      }
     }
   }
   _init_face_state();
@@ -574,8 +589,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   // perform pseudotime iteration
-  for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter)
-  {
+  for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter) {
     sw_adv["setup"].stopwatch.start();
     // evaluate advection operator
     compute_write_face_advection(_kernel_mesh());
@@ -842,7 +856,7 @@ void Solver::set_uncert_surface_rep(int bc_sn) {
   #pragma omp parallel for
   for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
     auto& con = def_cons[i_con];
-    auto permute = face_permutation(nd, params.row_size, con.direction(), con.state(1, false));
+    auto permute = face_permutation(nd, params.row_size, con.direction(), con.state(1, false), turb);
     permute->match_faces();
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
@@ -949,7 +963,7 @@ void Solver::update() {
                 .conv_substep = (sub_iters > 1) && use_ldg(),
               };
               apply_state_bcs();
-              if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+              if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
               else compute_euler(km, opts);
               // note that function call must come first to ensure it is evaluated despite short-circuiting
               fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
@@ -997,7 +1011,7 @@ void Solver::compute_residual() {
     true,
     bool(_namespace->get<int>("use_filter")),
   };
-  if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+  if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, false);
   else compute_euler(_kernel_mesh(), opts);
 }
 
@@ -1042,18 +1056,15 @@ bool Solver::is_admissible() {
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
   bool admiss = 1;
-  bool finite = 1;
-  auto check_admis = [&](double* data, int n_qpoint) {
-    const int n_var = nd + 2;
+  auto check_admis = [&](double* data, int n_qpoint, int n_var) {
     bool adm = true;
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       adm = adm && (data[nd*n_qpoint + i_qpoint] > 0.)
                 && (data[(nd + 1)*n_qpoint + i_qpoint] > 0.);
       for (int i_var = 0; i_var < n_var; ++i_var) {
-        if (!std::isfinite(data[i_var*n_qpoint + i_qpoint])) {
-          #pragma omp atomic write
-          finite = false;
-        }
+        HEXED_ASSERT(std::isfinite(data[i_var*n_qpoint + i_qpoint]),
+                     format_str(200, "variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]),
+                     assert::Numerical_exception);
       }
     }
     return adm;
@@ -1066,9 +1077,9 @@ bool Solver::is_admissible() {
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     bool elem_admis = true;
-    elem_admis = elem_admis && check_admis(elem.state(), nq);
+    elem_admis = elem_admis && check_admis(elem.state(), nq, params.n_var);
     for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
-      elem_admis = elem_admis && check_admis(elem.face(i_face, false), nq/rs);
+      elem_admis = elem_admis && check_admis(elem.face(i_face, false), nq/rs, nd + 2);
     }
     if (!elem_admis) elem.record = 1;
     admiss = admiss && elem_admis;
@@ -1081,10 +1092,9 @@ bool Solver::is_admissible() {
     int n_fine = params.n_vertices()/2;
     for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
     for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-      refined_admiss = refined_admiss && check_admis(ref.fine[i_fine], nq/rs);
+      refined_admiss = refined_admiss && check_admis(ref.fine[i_fine], nq/rs, nd + 2);
     }
   }
-  HEXED_ASSERT(finite, "non-finite state encountered", assert::Numerical_exception);
   sw.work_units_completed += acc_mesh->elements().size();
   sw.stopwatch.pause();
   return admiss && refined_admiss;
@@ -1096,7 +1106,6 @@ bool Solver::fix_admissibility(double stability_ratio) {
   sw_fix.stopwatch.start();
   std::string wd = _namespace->get<std::string>("working_dir");
   std::string vis_expr = _namespace->get<std::string>("vis_field_vars");
-  const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
   const int nv = params.n_vertices();
@@ -1187,7 +1196,7 @@ bool Solver::fix_admissibility(double stability_ratio) {
       for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
         double* in_f = bc_cons[i_con].inside_face(false);
         double* gh_f = bc_cons[i_con].ghost_face(false);
-        for (int i_dof = 0; i_dof < nq*(nd + 2)/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+        for (int i_dof = 0; i_dof < nq*params.n_var/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
       }
       opts.dt = s;
       compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
@@ -1314,6 +1323,47 @@ class Vis_evaluator {
   std::vector<std::string> _var_names;
 };
 //! \endcond
+
+void Solver::bounds_surface(std::string expr, int bc_sn, int n_sample = 20) {
+  // setup
+  const int nd = params.n_dim;
+  auto& bc_cons {acc_mesh->boundary_connections()};
+  if (!bc_cons.size()) return;
+  Vis_evaluator<Boundary_connection> evaluator(
+    _interpreter(),
+    [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
+    expr, bc_cons[0], params.n_dim - 1
+  );
+  std::vector<std::string> var_names = evaluator.var_names();
+  Int n_var = var_names.size();
+  Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
+  // write the state to the faces so that the BCs can access it
+  compute_write_face(_kernel_mesh());
+  // compute the integral
+  Array<double> bounds({2, n_var});
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    bounds(0)[i_var] = huge;
+    bounds(1)[i_var] = -huge;
+  }
+  //#pragma omp parallel for reduction(+:integral)
+  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con {bc_cons[i_con]};
+    if (con.bound_cond_serial_n() != bc_sn) continue;
+    Array<double> qpoints{evaluator.evaluate(con)};
+    Vis_data vis_dat(qpoints(nd, end), basis);
+    Array<double> interior = vis_dat.interior(n_sample);
+    for (int i_var = 0; i_var < n_var; ++i_var) {
+      for (int i_point = 0; i_point < interior(i_var).size(); ++i_point) {
+        bounds(0)[i_var] = std::min(bounds(0)[i_var], interior(i_var)[i_point]);
+        bounds(1)[i_var] = std::max(bounds(1)[i_var], interior(i_var)[i_point]);
+      }
+    }
+  }
+  for (int i_var = 0; i_var < n_var; ++i_var) {
+    _namespace->assign("min_surface_" + var_names[i_var], bounds(0)[i_var]);
+    _namespace->assign("max_surface_" + var_names[i_var], bounds(1)[i_var]);
+  }
+}
 
 void Solver::integrate_field(std::string expr) {
   Stopwatch_tree::Starter sw_starter(stopwatch["integrals"]["field"]);

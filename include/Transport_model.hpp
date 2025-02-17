@@ -28,10 +28,12 @@ class Transport_model {
   //! if `false`, you can safely assume `coefficient` will always return 0 regardless of input
   const bool is_viscous;
   /*! Compute whatever transport coefficient this object is supposed to represent.
-   * Expects the square root of the temperature to be precomputed (so the caller can reuse it for multiple transport coefficients)
+   * Expects the square root of the temperature to be precomputed
+   * (so the caller can reuse it for multiple transport coefficients)
    */
   double coefficient(double sqrt_temp) const {
-    return const_val + ref_val*math::pow(sqrt_temp/sqrt_ref_temp, 3)*(ref_temp + temp_offset)/(sqrt_temp*sqrt_temp + temp_offset);
+    return const_val + ref_val*math::pow(sqrt_temp/sqrt_ref_temp, 3)*(ref_temp + temp_offset)
+                       /(sqrt_temp*sqrt_temp + temp_offset);
   }
   //! create a `Transport_model` that always returns 0 (with `is_viscous` set to `false`)
   static inline Transport_model inviscid() {return {0., 0., 1., 1., 0};}
@@ -39,14 +41,18 @@ class Transport_model {
   static inline Transport_model constant(double value) {return {value, 0., 1., 1., 1};}
   /*! create a `Transport_model` which depends on temperature
    * according to [Sutherland's law](https://en.wikipedia.org/wiki/Viscosity#Chapman%E2%80%93Enskog_theory).
-   * It will return `reference_value` at `reference_temperature` and `temperature_offset` is the Sutherland constant \f$S\f$
+   * It will return `reference_value` at `reference_temperature` and `temperature_offset`
+   * is the Sutherland constant \f$ S \f$
    */
-  static inline Transport_model sutherland(double reference_value, double reference_temperature, double temperature_offset) {
+  static inline Transport_model sutherland(double reference_value, double reference_temperature,
+                                           double temperature_offset) {
     return {0., reference_value, reference_temperature, temperature_offset, 1};
   }
 };
 
 const auto inviscid = Transport_model::inviscid(); //!< always returns zero
+
+enum Turbulence_model {laminar, k_omega};
 
 }
 #endif

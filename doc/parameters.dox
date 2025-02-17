@@ -187,7 +187,8 @@ Options are the following:
   Constant viscosity equal to `const_value`.
   For example, `{const_value = 1.8e-5}` will set the viscosity to 1.8e-5 Pa s.
 - Code setting the variables `ref_value`, `ref_temperature`, and `offset`:
-  Sets the viscosity to [Sutherland's law](https://en.wikipedia.org/wiki/Viscosity#Chapman%E2%80%93Enskog_theory) (a result of Chapman-Enskog theory)
+  Sets the viscosity to [Sutherland's law](https://en.wikipedia.org/wiki/Viscosity#Chapman%E2%80%93Enskog_theory)
+  (a result of Chapman-Enskog theory)
   with \f$ \mu_0 \f$ = `ref_value`, \f$ T_0 \f$ = `ref_temperature` and \f$ S \f$ = `offset`.
   E.g. `{ref_value = 1.7e-5; ref_temperature = 273.; offset = 111.;}`.
 
@@ -203,6 +204,26 @@ __default:__ {} \n
 Model to compute the thermal conductivity.
 The options are the same as \ref viscosity_model .
 \see \ref air_conductivity
+
+<hr>
+\subsubsection turbulence_model
+__type:__ string \n
+__default:__ `{}` \n
+Model for turbulence.
+If the flow is inviscid (\ref viscosity_model = `{}`), this parameter is ignored.
+Recognized values are:
+- `{}`: Solve the ordinary Navier-Stokes equations. No turbulence model is applied.
+- `{k-omega}`: Solve the RANS equations with \f$ k\text{-}\omega \f$ closure.
+  Specifically, this uses the
+  [Wilcox 2006](https://turbmodels.larc.nasa.gov/wilcox.html) \cite wilcox_k_omega formulation
+  written in terms of `turbulent_dissipation_bassi` \f$ = \tilde{\omega} = \log \omega \f$.
+
+<hr>
+\subsubsection turbulent_prandtl
+__type:__ float \n
+__default:__ 0.9 \n
+Turbulent Prandtl number (\f$ Pr_t \f$).
+Default value recommended by [LaRC](https://turbmodels.larc.nasa.gov/wilcox.html).
 
 <hr>
 \subsubsection monitor_vars
@@ -271,6 +292,18 @@ Mesh and state files will be written every `vis_freq` iterations.
 __type:__ integer \n
 __default:__ 100 \n
 Solver status will be printed to `stdout` every `print_freq` iterations.
+
+<hr>
+\subsubsection update_roughness_freq
+__type:__ integer \n
+__default:__ 1000 \n
+If set to a positive integer,
+during the simulation, \ref surface_roughness (aka \f$ k_s \f$) will be adaptively updated
+to be the largest possible value that satisfies the criterion
+\f$ k_s^+ = k_s u_\tau/\nu \le \f$ \ref max_roughness_plus .
+This criterion is derived from Wilcox \cite wilcox_k_omega ,
+who recommends that \f$ k_s^+ \f$ be less than 5 for hydraulically smooth surfaces.
+`update_roughness_freq` is then the frequency with which to perform updates.
 
 <hr>
 \subsubsection unrefine_if
@@ -743,6 +776,30 @@ __type:__ float \n
 __default:__ 0.5 \n
 If \ref elementwise_art_visc_pde "PDE-based" \ref elementwise_art_visc "elementwise artificial viscosity" is used,
 this controls the amount of diffusion used to smooth the artificial viscosity coefficient.
+
+<hr>
+\subsubsection surface_roughness
+__type:__ float \n
+__default:__ -1 \n
+Controls the (dimensional) surface roughness height \f$ k_s \f$.
+This is only relevant when \ref turbulence_model is set to \f$ k\text{-}\omega \f$,
+in which case it controls the boundary condition for \f$ \omega \f$:
+\f$ \omega_w = \frac{4 \times 10^4 \nu_w}{k_s} \f$ .
+If negative, `surface_roughness` will be automatically initialized
+to 1e-6 times the diagonal length of the geometry bounding box.
+If \ref update_roughness_freq is set (which it is by default),
+\ref surface_roughness will be automatically adjusted to keep the surface hydraulically smooth.
+
+\note Setting `surface_roughness` too small will require a smaller wall spacing to achieve mesh convergence,
+whereas setting it too large may produce unrealistic results.
+For that reason, allowing automatic adaption is recommended.
+
+<hr>
+\subsubsection max_roughness_plus
+__type:__ float \n
+__default:__ 4 \n
+The maximum allowable value of \f$ k_s^+ \f$ in adaptive determination of \ref surface_roughness .
+\see \ref update_roughness_freq
 
 <hr>
 

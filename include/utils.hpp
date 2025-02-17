@@ -7,6 +7,7 @@
 namespace hexed {
 
 template <typename T> T gotcha(T) {throw std::runtime_error("hexed::gotcha");} //!< \brief don't ask
+template <typename T> constexpr bool always_false() {return false;}
 
 //! \brief prints its argument and then returns it
 //! \details you can wrap this around an expression to print it without computing it again

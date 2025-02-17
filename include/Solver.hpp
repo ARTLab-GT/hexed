@@ -44,6 +44,7 @@ class Solver {
   int av_rs;
   Transport_model visc;
   Transport_model therm_cond;
+  Turbulence_model turb;
   int last_fix_vis_iter = std::numeric_limits<int>::min();
   std::shared_ptr<Namespace> _namespace;
   bool _implicit;
@@ -106,6 +107,7 @@ class Solver {
    * how it depends on temperature
    * \param thermal_conductivity_model determines whether the flow has thermal conductivity and if so,
    *        how it depends on temperature
+   * \param turbulence_model How and if to model turbulence.
    * \param space `Namespace` containing any user-defined parameters affecting the behavior of the solver.
    *        If no namespace is provided, a new blank namespace is creqated.
    *        Any optional parameters which are not found in the namespace shall be created with their default values.
@@ -120,6 +122,7 @@ class Solver {
    */
   Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
          Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
+         Turbulence_model turbulence_model = laminar,
          std::shared_ptr<Namespace> space = std::make_shared<Namespace>(),
          bool implicit = false);
 
@@ -241,6 +244,8 @@ class Solver {
   //! \brief evaluate arbitrary functions at arbitrary locations
   std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func&);
   std::vector<double> sample(int ref_level, bool is_deformed, int serial_n, const Element_func&); //!< \overload
+  //! \brief compute bounds of an expression over a boundary surface
+  void bounds_surface(std::string expression, int bc_sn, int n_sample);
   //! \brief obtain performance data
   const Stopwatch_tree& stopwatch_tree();
   //! \brief compute an integral over the entire flow field at the current time
@@ -277,6 +282,10 @@ class Solver {
   void write_state(std::string file_name);
   Array<double> skews(); //!< \brief get a list of the Equiangle_skewness for each element
   //!\}
+
+  inline Transport_model viscosity_model() const {return visc;}
+  inline Transport_model conductivity_model() const {return therm_cond;}
+  inline Turbulence_model turbulence_model() const {return turb;}
 };
 
 }

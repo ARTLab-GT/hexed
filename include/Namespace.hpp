@@ -76,7 +76,7 @@ template <> inline Array<double> Namespace::Value<Array<double>>::get() {return 
 
 template <typename T>
 std::map<std::string, std::unique_ptr<Namespace::Variable<T>>>& Namespace::_get_map() {
-  static_assert(false, "`Namespace` does not deal with this type.");
+  static_assert(always_false<T>(), "`Namespace` does not deal with this type.");
 }
 
 template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>&           Namespace::_get_map() {return _ints;}

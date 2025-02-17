@@ -19,6 +19,9 @@ static_assert (hexed::math::log(2, 15) == 4);
 static_assert (hexed::math::log(3, 27) == 3);
 static_assert (hexed::math::log(1, 27) == -1);
 static_assert (hexed::math::log(-1, 27) == -1);
+static_assert (hexed::math::max(-2, 4, 3, 2) == 4);
+static_assert (hexed::math::max(-2, -3) == -2);
+static_assert (hexed::math::max(1, 2, 3, 4, 5) == 5);
 
 TEST_CASE("angle_diff") {
   REQUIRE(hexed::math::angle_diff(1.1, 1.) == Catch::Approx(0.1));

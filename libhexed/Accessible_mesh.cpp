@@ -906,7 +906,7 @@ Storage_params incr_res_cache(Storage_params params) {
   return params;
 }
 
-Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg)
+Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg, Turbulence_model turb)
 : params{params_arg}
 , n_vert{math::pow(2, params.n_dim)}
 , root_sz{root_size_arg}
@@ -927,7 +927,8 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 , _blocks(params.n_dim, _basis)
 , _n_verts{0}
 , _stopwatch("mesh")
-, buffer_dist{std::sqrt(params.n_dim)/2}
+, _turb{turb}
+, buffer_dist{std::sqrt(params.n_dim)/2} // if you're getting snapping problems, try multiplying this by 2
 {
   def.face_con_v = def_face_cons;
   _stopwatch.emplace("update", "update");
@@ -2170,8 +2171,10 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
 : kernel_mesh {
     mesh.params.n_dim,
     mesh.params.row_size,
+    mesh.params.n_var,
     mesh._mask_levels,
     basis,
+    mesh._turb,
     _masked_car_cons.slice,
     _masked_def_cons.slice,
     _masked_car_elems.slice,
@@ -2612,9 +2615,9 @@ void Accessible_mesh::read_file(std::string file_name) {
   cleanup();
 }
 
-Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs,
+Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Turbulence_model turb,
                                  Surface_geom* geometry, Flow_bc* surface_bc)
-: Accessible_mesh(read_params(file_name), read_root_sz(file_name)) {
+: Accessible_mesh(read_params(file_name), read_root_sz(file_name), turb) {
   // take ownership of these to avoid memory leaks in case of exception
   std::unique_ptr<Flow_bc> fbc(surface_bc);
   std::unique_ptr<Surface_geom> g(geometry);
@@ -2635,8 +2638,8 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> ex
   read_file(file_name);
 }
 
-Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> flow_bcs)
-: Accessible_mesh(read_params(file_name), read_root_sz(file_name)) {
+Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> flow_bcs, Turbulence_model turb)
+: Accessible_mesh(read_params(file_name), read_root_sz(file_name), turb) {
   for (unsigned i_bc = 0; i_bc < flow_bcs.size(); ++i_bc) add_boundary_condition(flow_bcs[i_bc]);
   read_file(file_name);
 }

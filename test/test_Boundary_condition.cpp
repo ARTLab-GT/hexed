@@ -188,12 +188,11 @@ TEST_CASE("No_slip") {
   }
   double state [] {1., 1., 1.2, 1e5/0.4 + 0.5*1.2*2.};
   double flux [] {10., -20., 1.3, 10.};
-  SECTION("isothermal")
-  {
+  SECTION("isothermal") {
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face(false)[i_var*row_size + i_qpoint] = state[i_var];
     }
-    hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_energy>(1e6));
+    hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_energy>(1e6), 1., 1.4, hexed::inviscid, hexed::laminar);
     no_slip.apply_state(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_dim = 0; i_dim < 2; ++i_dim) REQUIRE(tbc.ghost_face(false)[i_dim*row_size + i_qpoint] == Catch::Approx(-1.));
@@ -211,12 +210,12 @@ TEST_CASE("No_slip") {
       }
     }
   }
-  SECTION("specified flux")
-  {
+  SECTION("specified flux") {
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face(false)[i_var*row_size + i_qpoint] = state[i_var];
     }
-    hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_heat_flux>(3.));
+    hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_heat_flux>(3.),
+                           1., 1.4, hexed::inviscid, hexed::laminar);
     no_slip.apply_state(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_dim = 0; i_dim < 2; ++i_dim) REQUIRE(tbc.ghost_face(false)[i_dim*row_size + i_qpoint] == Catch::Approx(-1.));
@@ -245,7 +244,7 @@ TEST_CASE("No_slip") {
     }
     auto thermal = std::make_shared<hexed::Thermal_equilibrium>();
     thermal->emissivity = .8;
-    hexed::No_slip no_slip(thermal);
+    hexed::No_slip no_slip(thermal, 1., 1.4, hexed::inviscid, hexed::laminar);
     double temp = 1e5/1.2/hexed::constants::specific_gas_air;
     no_slip.apply_state(tbc);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {

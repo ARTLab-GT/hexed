@@ -3,16 +3,14 @@
 
 #include "math.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Represents a basis of [Lagrange polynomials](https://en.wikipedia.org/wiki/Lagrange_polynomial).
  * \details Interpolates between a set of quadrature points, a.k.a. nodes.
  * The `i`th basis vector is the polynomial with a value
  * of 1 at the `i`th node and 0 at all other nodes.
  */
-class Basis
-{
+class Basis {
   protected:
   //! \brief nondimensional minimum real part of eigenvals of 1D convection operator
   virtual double min_eig_convection() const = 0;

@@ -15,7 +15,7 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
 , _aniso_r_level{aniso_r_level}
 , n_dof(params.n_dof())
 , n_vert(params.n_vertices())
-, data_size{params.n_dof_numeric()}
+, data_size{params.n_dof_numeric() + config::debug_variables*params.n_qpoint()}
 , data{Eigen::VectorXd::Zero(data_size)}
 , _vertex_data({3, params.n_vertices()})
 , _mask{0}
@@ -193,6 +193,12 @@ bool Element::deformed() const {return false;}
 double* Element::reference_level_normals() {return nullptr;}
 double* Element::jacobian_determinant() {return nullptr;}
 double* Element::kernel_face_normal(int i_face) {return nullptr;}
+
+double* Element::debug_variables() {
+  HEXED_ASSERT(config::debug_variables, "Attempt to access nonexistant dummy variables.");
+  return data.data() + params.n_dof_numeric();
+}
+
 double& Element::uncert() {return uncertainty;}
 
 }

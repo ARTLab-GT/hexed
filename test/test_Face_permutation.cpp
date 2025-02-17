@@ -24,7 +24,8 @@ void test_mesh(hexed::Accessible_mesh& mesh) {
       if (elem.is_connected(i_face)) {
         for (int i_qpoint = 0; i_qpoint < n_face_qpoint; ++i_qpoint) {
           for (int i_var = 0; i_var < params.n_var; ++i_var) {
-            elem.face(i_face, false)[i_var*n_face_qpoint + i_qpoint] = pos(i_face/2)(i_face%2)(i_var%params.n_dim)[i_qpoint];
+            elem.face(i_face, false)[i_var*n_face_qpoint + i_qpoint]
+            = pos(i_face/2)(i_face%2)(i_var%params.n_dim)[i_qpoint];
           }
         }
       }
@@ -35,7 +36,8 @@ void test_mesh(hexed::Accessible_mesh& mesh) {
   const int n_fdof = params.n_dof()/params.row_size;
   for (int i_con = 0; i_con < connections.size(); ++i_con) {
     auto& con = connections[i_con];
-    auto fp = hexed::face_permutation(params.n_dim, params.row_size, con.direction(), con.state(1, false));
+    auto fp = hexed::face_permutation(params.n_dim, params.row_size, con.direction(),
+                                      con.state(1, false), hexed::laminar);
     fp->match_faces();
     for (int i_dof = 0; i_dof < n_fdof; ++i_dof) {
       REQUIRE(con.state(0, false)[i_dof] == Catch::Approx(con.state(1, false)[i_dof]).scale(1.));
@@ -62,11 +64,11 @@ void test_mesh(hexed::Accessible_mesh& mesh) {
 
 TEST_CASE("Face_permutation") {
   SECTION("2d") {
-    hexed::Accessible_mesh mesh {{1, 4, 2, hexed::config::max_row_size}, 1.};
+    hexed::Accessible_mesh mesh {{1, 4, 2, hexed::config::max_row_size}, 1., hexed::laminar};
     test_mesh(mesh);
   }
   SECTION("3d") {
-    hexed::Accessible_mesh mesh {{1, 5, 3, hexed::config::max_row_size}, 1.};
+    hexed::Accessible_mesh mesh {{1, 5, 3, hexed::config::max_row_size}, 1., hexed::laminar};
     test_mesh(mesh);
   }
 }

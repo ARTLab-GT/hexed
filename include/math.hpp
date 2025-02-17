@@ -50,6 +50,16 @@ constexpr Int log(Int base, Int arg) {
   return result;
 }
 
+template <typename T>
+constexpr T max(T arg) {
+  return arg;
+}
+
+template <typename T, typename... arg_ts>
+constexpr T max(T arg, arg_ts... args) {
+  return std::max<T>(arg, max(args...));
+}
+
 //! \brief returns 1 if `condition` is true, otherwise -1
 constexpr int sign(bool condition) {
   return 2*condition - 1;

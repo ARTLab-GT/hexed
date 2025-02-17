@@ -8,7 +8,7 @@
 TEST_CASE("Accessible_mesh") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 5, 3, row_size};
-  hexed::Accessible_mesh mesh {params, 1.};
+  hexed::Accessible_mesh mesh {params, 1., hexed::laminar};
   int sn0 = mesh.add_element(0, false, {0, 0});
   int sn1 = mesh.add_element(0, false, {0, 0});
   REQUIRE(sn0 != sn1); // test uniqueness of serial numbers
@@ -204,7 +204,7 @@ TEST_CASE("Accessible_mesh") {
 
   SECTION("connection validity testing") {
     hexed::Storage_params params1 {3, 4, 2, row_size};
-    hexed::Accessible_mesh mesh1 {params1, 0.64};
+    hexed::Accessible_mesh mesh1 {params1, 0.64, hexed::laminar};
     // serial numbers:
     int car [4];
     int def [4];
@@ -299,7 +299,7 @@ TEST_CASE("Accessible_mesh") {
 
 TEST_CASE("extruded BCs") {
   hexed::Storage_params params {2, 4, 2, 2};
-  hexed::Accessible_mesh mesh {params, 1.};
+  hexed::Accessible_mesh mesh {params, 1., hexed::laminar};
   int elem_sn = mesh.add_element(0, true, {0, 0});
   int bc_sn = mesh.add_boundary_condition(new hexed::Nonpenetration);
   mesh.connect_boundary(0, true, elem_sn, 0, 1, bc_sn);
@@ -315,7 +315,7 @@ TEST_CASE("extruded BCs") {
 TEST_CASE("extruded hanging node connection validity") {
   // note: this tests for a bug originally discovered on the NASCART-GT side
   hexed::Storage_params params {2, 5, 3, 2};
-  hexed::Accessible_mesh mesh {params, 1.};
+  hexed::Accessible_mesh mesh {params, 1., hexed::laminar};
   int coarse = mesh.add_element(0, true, {0, 0, 0});
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     std::vector<hexed::Int> fine;
@@ -338,7 +338,7 @@ TEST_CASE("extruded hanging node connection validity") {
 }
 
 TEST_CASE("Tree meshing", "[.slow]") {
-  hexed::Accessible_mesh mesh({1, 5, 3, hexed::config::max_row_size}, .7);
+  hexed::Accessible_mesh mesh({1, 5, 3, hexed::config::max_row_size}, .7, hexed::laminar);
   REQUIRE_THROWS(mesh.update(hexed::criteria::always));
   SECTION("wrong number of BCs") {
     std::vector<hexed::Flow_bc*> bcs;
@@ -401,7 +401,7 @@ TEST_CASE("Tree meshing", "[.slow]") {
     REQUIRE(mesh.elements().size() == 6*8 + 2*64);
     mesh.valid().assert_valid();
     SECTION("neighbors with different ref levels") {
-      hexed::Accessible_mesh mesh1({1, 5, 3, hexed::config::max_row_size}, .7);
+      hexed::Accessible_mesh mesh1({1, 5, 3, hexed::config::max_row_size}, .7, hexed::laminar);
       mesh1.add_boundary_condition(new hexed::Copy);
       std::vector<hexed::Flow_bc*> bcs;
       for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Copy);
@@ -444,7 +444,7 @@ TEST_CASE("mesh I/O") {
   int correct_n_car_after = 0;
   int correct_n_def_after = 0;
   { // create a mesh and write it to a file
-    hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size}, .8);
+    hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size}, .8, hexed::laminar);
     std::vector<hexed::Flow_bc*> bcs;
     for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
     mesh.add_tree(bcs, hexed::Mat<2>{0.1, 0.2});
@@ -469,8 +469,8 @@ TEST_CASE("mesh I/O") {
   { // read the above mesh from the file and check that it's the same
     std::vector<hexed::Flow_bc*> extr_bcs;
     for (int i = 0; i < 4; ++i) extr_bcs.push_back(new hexed::Copy);
-    hexed::Accessible_mesh mesh("io_test", extr_bcs, new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1),
-                                new hexed::Nonpenetration);
+    hexed::Accessible_mesh mesh("io_test", extr_bcs, hexed::laminar,
+                                new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), new hexed::Nonpenetration);
     REQUIRE(mesh.root_size() == Catch::Approx(0.8));
     REQUIRE(mesh.cartesian().elements().size() == 6);
     REQUIRE(mesh.deformed().elements().size() == 5);
@@ -506,7 +506,7 @@ TEST_CASE("mesh I/O") {
 }
 
 TEST_CASE("masking") {
-  hexed::Accessible_mesh mesh({2, 4, 2, 2}, 1.);
+  hexed::Accessible_mesh mesh({2, 4, 2, 2}, 1., hexed::laminar);
   hexed::Gauss_legendre basis(2);
   std::vector<hexed::Flow_bc*> bcs;
   for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);

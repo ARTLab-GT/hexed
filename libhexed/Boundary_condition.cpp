@@ -104,7 +104,8 @@ void Riemann_invariants::apply_state(Boundary_face& bf) {
     // compute characteristics
     switch (params.n_dim) {
       case 1:
-        state = apply_char<1>(inside, n, sign, inside, fs); // set incoming characteristics to zero and leave outgoing alone
+        // set incoming characteristics to zero and leave outgoing alone
+        state = apply_char<1>(inside, n, sign, inside, fs);
         break;
       case 2:
         state = apply_char<2>(inside, n, sign, inside, fs);
@@ -119,7 +120,8 @@ void Riemann_invariants::apply_state(Boundary_face& bf) {
     state(params.n_dim) = std::max(state(params.n_dim), inside(params.n_dim)/2);
     double kin_ener = .5*state(Eigen::seqN(0, params.n_dim)).squaredNorm()/state(params.n_dim);
     double inside_kin_ener = .5*inside(Eigen::seqN(0, params.n_dim)).squaredNorm()/inside(params.n_dim);
-    state(params.n_dim + 1) = std::max(kin_ener + std::max(state(params.n_dim + 1) - kin_ener, (inside(params.n_dim + 1) - inside_kin_ener)/2), 0.);
+    state(params.n_dim + 1) = std::max(kin_ener + std::max(state(params.n_dim + 1) - kin_ener,
+                                                           (inside(params.n_dim + 1) - inside_kin_ener)/2), 0.);
     // write to ghost state
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
       gh_f[i_var*nfq + i_qpoint] = state(i_var);
@@ -286,8 +288,7 @@ void Freestream::apply_flux(Boundary_face& bf) {copy_state(bf);}
 void Cache_bc::apply_flux(Boundary_face& bf) {copy_state(bf);}
 
 void reflect_normal(double* gh_f, double* nrml, int nq, int nd) {
-  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint)
-  {
+  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
     double dot = 0.;
     double norm_sq = 0.;
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
@@ -349,7 +350,15 @@ void Nonpenetration::apply_advection(Boundary_face& bf) {
   }
 }
 
-No_slip::No_slip(std::shared_ptr<Thermal_bc> thermal, double coercion) : _coercion{coercion}, _thermal{thermal} {}
+No_slip::No_slip(std::shared_ptr<Thermal_bc> thermal, double r, double heat_rat, Transport_model visc,
+                 Turbulence_model turb, double coercion)
+: _coercion{coercion}
+, _thermal{thermal}
+, _viscosity{visc}
+, _turb{turb}
+, _heat_rat{heat_rat}
+, roughness{r}
+{}
 
 double Thermal_equilibrium::ghost_heat_flux(Mat<> state, double) {
   double temp = state(last)*.4/state(state.size() - 2)/constants::specific_gas_air;
@@ -365,18 +374,36 @@ void No_slip::apply_state(Boundary_face& bf) {
   double* sc = bf.state_cache();
   Array<double> presc = bf.prescribed_data();
   int nd = params.n_dim;
-  int nfq = params.n_qpoint()/params.row_size;
+  int nfq = params.n_qpoint()/params.row_size; // number of face quadrature points
   // set ghost state
+  // momentum
   for (int i_dim = 0; i_dim < nd; ++i_dim) {
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
       gh_f[i_dim*nfq + i_qpoint] = 2*presc(i_dim)[i_qpoint]*in_f[nd*nfq + i_qpoint] - in_f[i_dim*nfq + i_qpoint];
     }
   }
+  // density
   for (int i_dof = params.n_dim*nfq; i_dof < (nd + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+  // energy
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-    Mat<> state(params.n_var);
-    for (int i_var = 0; i_var < params.n_var; ++i_var) state(i_var) = in_f[i_var*nfq + i_qpoint];
+    Mat<> state(params.n_dim + 2); // yes, this should be ignoring turbulence variables
+    for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) state(i_var) = in_f[i_var*nfq + i_qpoint];
     gh_f[(params.n_dim + 1)*nfq + i_qpoint] = math::pow(_thermal->ghost_energy(state), 2)/state(last);
+  }
+  if (_turb == k_omega) {
+    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+      // set turbulent kinetic energy to 0
+      gh_f[(params.n_dim + 2)*nfq + i_qpoint] = -in_f[(params.n_dim + 2)*nfq + i_qpoint];
+      // set dissipation based on wall roughness
+      double mass = in_f[params.n_dim*nfq + i_qpoint];
+      double energy = in_f[(params.n_dim + 1)*nfq + i_qpoint]/mass;
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        energy -= .5*math::pow(in_f[i_dim*nfq + i_qpoint]/mass, 2);
+      }
+      double dyn_visc = _viscosity.coefficient(std::sqrt(std::abs(energy*(_heat_rat - 1.)/constants::specific_gas_air)));
+      double omega_wall = 4e4*dyn_visc/(mass*roughness*roughness);
+      gh_f[(params.n_dim + 3)*nfq + i_qpoint] = 2*std::log(omega_wall)*mass - in_f[(params.n_dim + 3)*nfq + i_qpoint];
+    }
   }
   // prime `state_cache` with average state for use in emissivity BC
   for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
@@ -409,6 +436,8 @@ void No_slip::apply_flux(Boundary_face& bf) {
     double ghost_heat = _thermal->ghost_heat_flux(state, in_f[i_dof]*flux_sign/normal);
     gh_f[i_dof] = _coercion*(normal*flux_sign*ghost_heat - in_f[i_dof]) + in_f[i_dof];
   }
+  // set turbulence variables
+  for (int i_dof = (params.n_dim + 2)*nfq; i_dof < params.n_var*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
 }
 
 void No_slip::apply_advection(Boundary_face& bf) {

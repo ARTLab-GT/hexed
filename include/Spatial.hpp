@@ -133,14 +133,16 @@ class Spatial {
     const Eigen::Matrix<double, row_size, row_size> prolong_mat [2];
     bool scl;
     bool off;
+    int _n_var;
     int _mask;
 
     public:
-    Prolong_refined(const Basis& basis, int mask, bool scale = false, bool offset = false) :
-      prolong_mat{basis.prolong(0), basis.prolong(1)},
-      scl{scale},
-      off{offset},
-      _mask{mask}
+    Prolong_refined(const Basis& basis, int mask, int n_var, bool scale = false, bool offset = false)
+    : prolong_mat{basis.prolong(0), basis.prolong(1)}
+    , scl{scale}
+    , off{offset}
+    , _n_var{n_var}
+    , _mask{mask}
     {}
 
     virtual void operator()(Sequence<Refined_face&>& ref_faces) {
@@ -151,13 +153,13 @@ class Spatial {
       for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face) {
         auto& ref_face {ref_faces[i_ref_face]};
         if (ref_face.fine_mask() >= _mask) {
-          double* coarse {ref_face.coarse + off*(n_dim + 2)*nfq};
+          double* coarse {ref_face.coarse + off*_n_var*nfq};
           const auto str = ref_face.stretch;
           // update number of faces to reflect any face stretching
           int nf = n_face;
           for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
           for (int i_face = 0; i_face < nf; ++i_face) if (ref_face.fine_masks[i_face] >= _mask) {
-            double* fine {ref_face.fine[i_face] + off*(n_dim + 2)*nfq};
+            double* fine {ref_face.fine[i_face] + off*_n_var*nfq};
             for (int i_var = 0; i_var < n_var; ++i_var) {
               double* var_face {fine + i_var*nfq};
               // initialize fine face to be equal to coarse face
@@ -205,14 +207,16 @@ class Spatial {
     const Eigen::Matrix<double, row_size, row_size> restrict_mat [2];
     bool scl;
     bool off;
+    int _n_var;
     int _mask;
 
     public:
-    Restrict_refined(const Basis& basis, int mask, bool scale = true, bool offset = false) :
-      restrict_mat{basis.restrict(0), basis.restrict(1)},
-      scl{scale},
-      off{offset},
-      _mask{mask}
+    Restrict_refined(const Basis& basis, int mask, int n_var, bool scale = true, bool offset = false)
+    : restrict_mat{basis.restrict(0), basis.restrict(1)}
+    , scl{scale}
+    , off{offset}
+    , _n_var{n_var}
+    , _mask{mask}
     {}
 
     virtual void operator()(Sequence<Refined_face&>& ref_faces) {
@@ -220,38 +224,29 @@ class Spatial {
       constexpr int nfq = math::pow(row_size, n_dim - 1);
 
       #pragma omp parallel for
-      for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face)
-      {
+      for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face) {
         auto& ref_face {ref_faces[i_ref_face]};
         if (ref_face.coarse_mask >= _mask) {
-          double* coarse {ref_face.coarse + off*(n_dim + 2)*nfq};
+          double* coarse {ref_face.coarse + off*_n_var*nfq};
           for (int i_dof = 0; i_dof < n_var*nfq; ++i_dof) coarse[i_dof] = 0.;
           auto str = ref_face.stretch;
           // update number of faces to reflect any face stretching
           int nf = n_face;
           for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
-          for (int i_face = 0; i_face < nf; ++i_face)
-          {
-            double* fine {ref_face.fine[i_face] + off*(n_dim + 2)*nfq};
-            for (int i_var = 0; i_var < n_var; ++i_var)
-            {
+          for (int i_face = 0; i_face < nf; ++i_face) {
+            double* fine {ref_face.fine[i_face] + off*_n_var*nfq};
+            for (int i_var = 0; i_var < n_var; ++i_var) {
               double* var_face {fine + i_var*nfq};
-              for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim)
-              {
-                if (str[i_dim])
-                {
+              for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) {
+                if (str[i_dim]) {
                   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) var_face[i_qpoint] /= 1 + scl;
-                }
-                else
-                {
+                } else {
                   const int pow {n_dim - 2 - i_dim};
                   const int face_stride {str[n_dim - 2] ? 1 : math::pow(2, pow)};
                   const int qpoint_stride {math::pow(row_size, pow)};
                   const int i_half {(i_face/face_stride)%2}; // is this face covering the upper or lower half of the coarse face with respect to the current dimension?
-                  for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer)
-                  {
-                    for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner)
-                    {
+                  for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer) {
+                    for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner) {
                       Eigen::Matrix<double, row_size, 1> row;
                       for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
                         row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
@@ -299,7 +294,7 @@ class Spatial {
 
     public:
     template <typename... pde_args>
-    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, pde_args... args)
+    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, bool update_production, pde_args... args)
     : _eq(args...)
     , derivative{basis}
     , boundary{basis.boundary()}
@@ -358,6 +353,8 @@ class Spatial {
             if (!face_nrml[i_face]) face_nrml[i_face] = cartesian_normal[i_face/2][0];
           }
         }
+        double* debug_variables = nullptr;
+        if constexpr (config::debug_variables) debug_variables = elem.debug_variables();
 
         // compute gradient (times jacobian determinant, cause that's easier)
         if constexpr (Pde::has_diffusion) {
@@ -429,6 +426,11 @@ class Spatial {
             double mult = d_pos;
             if constexpr (is_deformed) mult *= elem_det[i_qpoint];
             for (int i_var = 0; i_var < Pde::n_update; ++i_var) time_rate[1][i_var][i_qpoint] = mult*comp.source(i_var);
+          }
+          if constexpr (config::debug_variables) if (comp.debug_vars_set) {
+            for (int i_var = 0; i_var < config::debug_variables; ++i_var) {
+              debug_variables[i_var*n_qpoint + i_qpoint] = comp.debug_variables(i_var);
+            }
           }
         }
 
@@ -713,7 +715,7 @@ class Spatial {
   class Neighbor_reconcile : public Kernel<Kernel_connection&> {
     using Pde = Pde_templ<n_dim, row_size>;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
-    int _mask;
+    const int _mask;
 
     public:
     Neighbor_reconcile(int mask) : _mask{mask} {}
@@ -722,7 +724,7 @@ class Spatial {
       for (int i_con = 0; i_con < connections.size(); ++i_con) {
         auto& con = connections[i_con];
         auto dir = con.get_direction();
-        double face [2][(n_dim + 2)*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
+        double face [2][Pde::n_update*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
@@ -778,8 +780,7 @@ class Spatial {
       // compute the maximum stable time step for all elements and take the minimum
       double dt = std::numeric_limits<double>::max();
       #pragma omp parallel for reduction(min:dt)
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
-      {
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
         Kernel_element& elem {elements[i_elem]};
         double* state = elem.state();
         double* tss = elem.time_step_scale();
@@ -787,8 +788,7 @@ class Spatial {
         for (unsigned i_vert = 0; i_vert < vertex_spacing.size(); ++i_vert) {
           vertex_spacing(i_vert) = elem.vertex_time_step_scale(i_vert);
         }
-        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint)
-        {
+        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           // get mesh spacing
           Mat<n_dim> coords;
           for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -807,6 +807,10 @@ class Spatial {
           if constexpr (Pde::has_diffusion) {
             comp.compute_diffusivity();
             scale += comp.diffusivity/max_cfl_d/spacing/spacing;
+          }
+          if constexpr (Pde::has_source) {
+            comp.compute_decay();
+            scale += comp.decay; // should be comp.decay/2, but i'm nervous
           }
           if (_is_local) tss[i_qpoint] = 1./scale;
           else {
