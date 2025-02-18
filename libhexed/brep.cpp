@@ -275,7 +275,29 @@ class Revolution_surface::_Find_intersects {
           could_intersect = std::abs(radius*radius - rsq) <
                             segment.radius*segment.radius + 2*std::abs(radius*segment.radius) + rsq_uncert;
         } else {
-          could_intersect = true;
+          could_intersect = false;
+          std::vector<double> intersection_params;
+          for (int layer = 0; layer < 2; ++layer) { // outer, inner
+            double target = math::pow(radius - math::sign(layer)*segment.radius, 2);
+            double descrim = points_coefs.radial[1]*points_coefs.radial[1]
+                             - 4*points_coefs.radial[2]*(points_coefs.radial[0] - target);
+            if (descrim > 0) {
+              for (int i_sign = 0; i_sign < 2; ++i_sign) {
+                intersection_params.insert(intersection_params.begin() + layer + i_sign,
+                                           (-points_coefs.radial[1] + math::sign(i_sign)*std::sqrt(descrim))
+                                           /(2*points_coefs.radial[2]));
+              }
+            } else break;
+          }
+          for (int i_interval = 0; i_interval < int(intersection_params.size()/2); ++i_interval) {
+            double bounds[2];
+            for (int i = 0; i < 2; ++i) {
+              bounds[i] = points_coefs.axial[0] + points_coefs.axial[1]*intersection_params[2*i_interval + i];
+            }
+            if (std::abs(axial - .5*(bounds[0] + bounds[1])) < segment.radius + .5*(bounds[1] - bounds[0])) {
+              could_intersect = true;
+            }
+          }
         }
         if (could_intersect) find(segment);
       }
