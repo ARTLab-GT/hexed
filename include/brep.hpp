@@ -63,9 +63,10 @@ class Parametric {
     bool is_feasible; //!< \brief `true` iff a feasible nearest point was found
   };
 
+  //! \brief Represents an intersection between a line (defined by 2 points) and some parametric geometry.
   struct Intersection_parameters {
-    Mat<n_param> params;
-    double interp_coef;
+    Mat<n_param> params; //!< \brief the parameters of the intersection point on the parametric geometry
+    double interp_coef; //!< \brief coefficient of the intersection point as an interpolation between the 2 line points
   };
 
   //! \brief Represents a constraint function for a `nearst_params()` calculation.
@@ -105,7 +106,9 @@ class Parametric {
     return point(nearest_params(p, [](Mat<n_param>){return true;}, default_max_dist).params);
   }
 
-  virtual inline std::vector<Intersection_parameters> intersection_params(Mat<3, 2> endpoints) const {return {};}
+  //! \brief returns the set of intersections between the infinite line passing through `points` and `this`
+  //! \attention for `n_param == 1`, the calculation shall be treated as 2D and the last coordinate shall be ignored
+  virtual std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const = 0;
 
   /*! \brief May reparameterize the entity to keep parameters in [0, 1].
    * \details For infinite entities (e.g., `Plane`),
@@ -154,9 +157,10 @@ class Transformed : public Parametric<n_param> {
   ) const override {
     return _param->nearest_params(_coord.to_definition(p), is_feasible, max_distance);
   }
-  std::vector<typename Parametric<n_param>::Intersection_parameters> intersection_params(Mat<3, 2> endpoints) const override {
-    for (int col = 0; col < 2; ++col) endpoints(all, col) = _coord.to_definition(endpoints(all, col));
-    return _param->intersection_params(endpoints);
+  typedef typename Parametric<n_param>::Intersection_parameters Inter_par;
+  std::vector<Inter_par> intersection_params(Mat<3, 2> points) const override {
+    for (int col = 0; col < 2; ++col) points(all, col) = _coord.to_definition(points(all, col));
+    return _param->intersection_params(points);
   }
   //! \brief forwards to transformed entity
   inline bool must_check_boundary() const override {return _param->must_check_boundary();}
@@ -170,12 +174,15 @@ class Line_segment : public Parametric<1> {
   public:
   //! \details Each column of `endpoints` is an endpoint of the segment.
   //! They can be retrieved by `point({0.})` and `point({1.})`, respectively.
-  inline Line_segment(Mat<3, 2> endpoints) : _endpoints{endpoints} {}
+  Line_segment(Mat<3, 2> endpoints);
   inline Mat<3> point(Mat<1> params) const override {return _endpoints*Mat<2>{1. - params(0), params(0)};}
+  inline double length() const {return _length;}
   //! \details Endpoints are included in nearest point search.
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
+  std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
   private:
   Mat<3, 2> _endpoints;
+  double _length;
 };
 
 //! \brief A circular arc in the \f$ x_0, x_1 \f$ plane.
@@ -192,6 +199,7 @@ class Circular_arc : public Parametric<1> {
   Circular_arc(Mat<3> center, double radius, double start_angle, double end_angle);
   Mat<3> point(Mat<1> params) const override;
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
+  std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
   private:
   Mat<3> _center;
   double _radius;
@@ -207,7 +215,7 @@ class Plane : public Parametric<2> {
   //! \note Does not include boundary points in search.
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
                                     double max_distance) const override;
-  std::vector<Intersection_parameters> intersection_params(Mat<3, 2> endpoints) const override;
+  std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
   inline Mat<3> point(Mat<2> params) const override {return _origin + _vecs*params;}
   /*! \brief Reparameterizes the plane
    * to contain the points `point(p)` where `bounds(i, 0) <= p(i) && p(i) <= bounds(i, 1)`.
@@ -250,10 +258,16 @@ class Revolution_surface : public Parametric<2> {
   Mat<3> point(Mat<2> params) const override;
   //! \note Includes boundary points in search.
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
+  std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
   private:
   class _Find_nearest;
+  class _Find_intersects;
+  double _unlimited_best_angle(Mat<3> arc_point, Mat<3> radius) const;
+  double _limited_best_angle(Mat<3> arc_point, Mat<3> radius) const;
+  Mat<3> _best_point(Mat<3> arc_point, Mat<3> radius) const;
   std::unique_ptr<Parametric<1>> _generatrix;
   Line_segment _axis;
+  Mat<3> _unit_axis;
   Int _n_div;
   double _start_angle;
   double _end_angle;
@@ -301,7 +315,7 @@ class Trimmed_surface {
   private:
   // Performs the real initialization work once the curves have been discretized.
   // Discretization is performed by the constructor.
-  void initialize(std::vector<std::vector<Mat<2>>>& curves);
+  void _initialize(std::vector<std::vector<std::vector<Mat<2>>>>& curves);
   Int _n_div;
   double _sz;
   std::unique_ptr<Parametric<2>> _surf;

@@ -643,6 +643,13 @@ void Accessible_mesh::_fit_surface() {
         _connect(elem_arr, {dim_arr, sign_arr, rotate});
       }
     }
+    // rebuild `extrude_cons`
+    for (int i_con = 0; i_con < (Int)def.cons.size(); ++i_con) {
+      auto& con = def.cons[i_con];
+      if (def.cons[i_con]) {
+        if (def.cons[i_con]->element(1).tree && !def.cons[i_con]->element(0).tree) extrude_cons.push_back(con.get());
+      }
+    }
   }
 
   #pragma omp parallel for
@@ -682,17 +689,19 @@ void Accessible_mesh::_fit_surface() {
     bool failed = false;
     int i_face = block.element()->boundary_face();
     Array<double> line_points({2, interior.shape()[0], 3});
-    for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
-      std::vector<int> coords(block.n_dim());
-      for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
-        coords[i_dim] = math::row_coordinate(params.n_dim - 1, b.row_size - 1, i_dim, i_point) + 1;
+    int block_nd = block.n_dim();
+    int n_point = interior.shape()[0];
+    for (int i_point = 0; i_point < n_point; ++i_point) {
+      std::vector<int> coords(block_nd);
+      for (int i_dim = 0; i_dim < block_nd; ++i_dim) {
+        coords[i_dim] = math::row_coordinate(block_nd, b.row_size - 2, i_dim, i_point) + 1;
       }
       std::vector<int> elem_coords = block.element_coords(coords);
       line_points(1)(i_point).vector() = block.element()->point(elem_coords);
       elem_coords[i_face/2] = b.row_size - 1 - elem_coords[i_face/2];
       line_points(0)(i_point).vector() = block.element()->point(elem_coords);
     }
-    for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
+    for (int i_point = 0; i_point < n_point; ++i_point) {
       Mat<3> p0 = line_points(0)(i_point).vector();
       Mat<3> p1 = line_points(1)(i_point).vector();
       auto sects = surf_geom->intersections(math::resize(p0, params.n_dim), math::resize(p1, params.n_dim));
@@ -705,6 +714,8 @@ void Accessible_mesh::_fit_surface() {
       }
     }
     for (next::Element_shape* e : dependent_elems) {
+      next::Face* face = e->boundary_face_3d();
+      if (face && face != &block) face->reset();
       Array<double> points = e->points();
       int nd = params.n_dim;
       int n_check_point = math::pow(_basis.row_size + 1, nd);
@@ -740,7 +751,9 @@ void Accessible_mesh::_fit_surface() {
   auto faces_3d = _blocks.faces_3d();
   #pragma omp parallel for
   for (auto& face : faces_3d) {
-    for (int i_edge = 0; i_edge < 4; ++i_edge) snap_block(face.edge(i_edge));
+    for (int i_edge = 0; i_edge < 4; ++i_edge) {
+      if (!face.edge(i_edge).glued()) snap_block(face.edge(i_edge));
+    }
   }
   // Snap mesh edges to geometry edges.
   // This has to happen after snapping edges to the surface (which would undo this)
