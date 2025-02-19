@@ -418,64 +418,81 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
   bounds = _surf->reparameterize(bounds);
   _param_segments.resize(_n_div);
   for (auto& loop : curves) {
-    for (int i_curve = 0; i_curve < int(loop.size()); ++i_curve) {
-      auto& nodes = loop[i_curve];
-      if (nodes.empty()) continue;
-      Int n_nodes = nodes.size();
-      // apply reparameterization to nodes
-      for (Int i_node = 0; i_node < Int(nodes.size()); ++i_node) {
-        nodes[i_node] = (nodes[i_node] - bounds(all, 0)).cwiseQuotient(bounds(all, 1) - bounds(all, 0));
-      }
-      // correct periodic seam errors
-      for (Int i_node = 1; i_node < n_nodes; ++i_node) {
-        for (int i_dim = 0; i_dim < 2; ++i_dim) {
-          for (int sign : {-1, 1}) {
-            if (std::abs(nodes[i_node%n_nodes](i_dim) + sign - nodes[i_node](i_dim)) <
-                std::abs(nodes[i_node%n_nodes](i_dim)        - nodes[i_node](i_dim))) {
-              nodes[i_node%nodes.size()](i_dim) += sign;
-            }
+    std::vector<Mat<2>> all_nodes;
+    std::vector<std::array<Int, 2>> curve_endpoints;
+    Int last_endpoint = 0;
+    for (auto& nodes : loop) {
+      curve_endpoints.push_back({last_endpoint, last_endpoint += nodes.size()});
+      all_nodes.insert(all_nodes.end(), nodes.begin(), nodes.end());
+    }
+    Int n_nodes = all_nodes.size();
+    // apply reparameterization to nodes
+    for (Int i_node = 0; i_node < n_nodes; ++i_node) {
+      all_nodes[i_node] = (all_nodes[i_node] - bounds(all, 0)).cwiseQuotient(bounds(all, 1) - bounds(all, 0));
+    }
+    // correct periodic seam errors
+    for (Int i_node = n_nodes, changed = false; (i_node < 2*n_nodes) || changed; ++i_node, changed = false) {
+      for (int i_dim = 0; i_dim < 2; ++i_dim) {
+        for (int sign : {-1, 1}) {
+          if (std::abs(all_nodes[i_node%n_nodes](i_dim) + sign - all_nodes[(i_node - 1)%n_nodes](i_dim)) <
+              std::abs(all_nodes[i_node%n_nodes](i_dim)        - all_nodes[(i_node - 1)%n_nodes](i_dim))) {
+            all_nodes[i_node%n_nodes](i_dim) += sign;
+            changed = true;
           }
         }
       }
-      // the seam correction process can end up shifting the entire curve loop to [-1, 0] or [1, 2],
-      // so this loop shifts it again to keep the largest possible number of nodes in [0, 1]
-      for (int i_dim = 0; i_dim < 2; ++i_dim) {
-        Int n_less = 0;
-        Int n_greater = 0;
-        for (Mat<2> node : nodes) {
-          n_less += node(i_dim) < -_sz;
-          n_greater += node(i_dim) > 1 + _sz;
-        }
-        int sign = (n_less > n_nodes/2) - (n_greater > n_nodes/2);
-        for (Mat<2>& node : nodes) node(i_dim) += sign;
+    }
+    // the seam correction process can end up shifting the entire curve loop to [-1, 0] or [1, 2],
+    // so this loop shifts it again to keep the largest possible number of nodes in [0, 1]
+    for (int i_dim = 0; i_dim < 2; ++i_dim) {
+      Int n_less = 0;
+      Int n_greater = 0;
+      for (Mat<2> node : all_nodes) {
+        n_less += node(i_dim) < -_sz;
+        n_greater += node(i_dim) > 1 + _sz;
       }
-      if (i_curve > (int)loop.size()/2 - 1) {
-        auto& reverse_curve = loop[loop.size() - 1 - i_curve];
-        if ((Int)reverse_curve.size() == n_nodes) {
+      int sign = (n_less > n_nodes/2) - (n_greater > n_nodes/2);
+      for (Mat<2>& node : all_nodes) node(i_dim) += sign;
+    }
+    // check if there's any two curves that are exactly the same, but reversed,
+    // and also on one of the parameter extremes,
+    // then that's a clue that they should actually be on opposite sides but aren't
+    // because there is both a periodic seam and a pole.
+    int n_curve = loop.size();
+    for (int i_curve = 0; i_curve < n_curve; ++i_curve) {
+      Int size0 = curve_endpoints[i_curve][1] - curve_endpoints[i_curve][0];
+      for (int j_curve = 0; j_curve < i_curve; ++j_curve) {
+        Int size1 = curve_endpoints[j_curve][1] - curve_endpoints[j_curve][0];
+        if (size1 == size0) {
           for (int i_dim = 0; i_dim < 2; ++i_dim) {
             Int n_duplicate [2] {};
-            for (Int i_node = 0; i_node < n_nodes; ++i_node) {
+            for (Int i_node = 0; i_node < size0; ++i_node) {
               for (int side : {0, 1}) {
-                n_duplicate[side] += std::abs(nodes[i_node](i_dim) - side) < _sz
-                                     && std::abs(reverse_curve[n_nodes - 1 - i_node](i_dim) - side) < _sz;
+                Int node0 = curve_endpoints[i_curve][0] + i_node;
+                Int node1 = curve_endpoints[j_curve][0] + size0 - 1 - i_node;
+                n_duplicate[side] += std::abs(all_nodes[node0](i_dim) - side) < _sz &&
+                                     std::abs(all_nodes[node1](i_dim) - side) < _sz &&
+                                     std::abs(all_nodes[node0](!i_dim) - all_nodes[node1](!i_dim)) < _sz;
               }
             }
             for (int side : {0, 1}) {
-              if (n_duplicate[side] > .99*n_nodes) {
-                for (Int i_node = 0; i_node < n_nodes; ++i_node) nodes[i_node](i_dim) -= math::sign(side);
+              // at least 2 of the nodes might not match up because of singularities,
+              // so let's say 4 can differ to be safe
+              if (n_duplicate[side] > size0 - 4) {
+                for (Int i_node = curve_endpoints[i_curve][0]; i_node < curve_endpoints[i_curve][1]; ++i_node) {
+                  all_nodes[i_node](i_dim) -= math::sign(side);
+                }
               }
             }
           }
         }
       }
     }
-    std::vector<Mat<2>> closed_curve;
-    for (auto& nodes : loop) {
-      closed_curve.insert(closed_curve.end(), nodes.begin(), nodes.end());
+    if (!all_nodes.empty()) {
+      all_nodes.insert(all_nodes.end(), all_nodes.front());
+      ++n_nodes;
     }
-    if (!closed_curve.empty()) closed_curve.insert(closed_curve.end(), closed_curve.front());
     // compute parametric segments
-    Int n_nodes = closed_curve.size();
     std::vector<Int> abscissa;
     std::vector<double> ordinate;
     Mat<2> prev_params {-1., 0.};
@@ -484,7 +501,7 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
       Mat<2> params;
       if (i_node == n_nodes && !abscissa.empty()) params << abscissa.front(), ordinate.front();
       else {
-        params = closed_curve[i_node];
+        params = all_nodes[i_node];
         params(0) = std::max(0., std::min(1., params(0)))*_n_div;
       }
       if (prev_params(0) < -.1) prev_params = params;
