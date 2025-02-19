@@ -713,8 +713,9 @@ void Accessible_mesh::_fit_surface() {
         failed = true;
       }
     }
-    #if 0
     for (next::Element_shape* e : dependent_elems) {
+      next::Face* face = e->boundary_face_3d();
+      if (face && face != &block) face->reset();
       Array<double> points = e->points();
       int nd = params.n_dim;
       int n_check_point = math::pow(_basis.row_size + 1, nd);
@@ -742,7 +743,6 @@ void Accessible_mesh::_fit_surface() {
       }
     }
     if (failed) block.reset();
-    #endif
   };
   // snap edges to the surface (regardless of dimensionality)
   auto edges_2d = _blocks.edges_2d();
