@@ -267,7 +267,7 @@ class Revolution_surface::_Find_intersects {
         bool could_intersect;
         if (points_coefs.radial[2] < math::pow(points_coefs.axial[1], 2)) {
           double center_param = (axial - points_coefs.axial[0])/points_coefs.axial[1];
-          double param_diff = segment.radius/points_coefs.axial[1];
+          double param_diff = segment.radius/std::abs(points_coefs.axial[1]);
           double rsq = points_coefs.radial[0]
                        + (points_coefs.radial[1] + points_coefs.radial[2]*center_param)*center_param;
           double rsq_deriv = points_coefs.radial[1] + 2*points_coefs.radial[2]*center_param;
