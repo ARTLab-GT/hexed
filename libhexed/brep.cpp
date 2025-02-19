@@ -368,11 +368,12 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
 : _n_div{n_div}, _sz{1./_n_div}, _surf{surface}
 {
   // discretize curves into polygonal segments in parameter space
-  std::vector<std::vector<Mat<2>>> discrete_curves;
+  std::vector<std::vector<std::vector<Mat<2>>>> discrete_curves;
   for (auto& composite : curves) {
     discrete_curves.emplace_back();
-    auto& param_nodes = discrete_curves.back();
     for (auto& curve : composite) {
+      discrete_curves.back().emplace_back();
+      auto& param_nodes = discrete_curves.back().back();
       Array<double> phys_nodes({_n_div + 1, 3});
       Mat<3> start = curve->point(Mat<1>{0.});
       double mean_squared_dist = 0;
@@ -391,22 +392,23 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
         _curves.emplace_back(phys_nodes.copy(), 4);
       }
     }
-    if (!param_nodes.empty()) param_nodes.push_back(param_nodes.front());
   }
   // initialize parameter-space curves with discretiation
-  initialize(discrete_curves);
+  _initialize(discrete_curves);
 }
 
-void Trimmed_surface::initialize(std::vector<std::vector<Mat<2>>>& curves) {
+void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>& curves) {
   // compute bounds of discrete nodes in parameter space
   Mat<2, 2> bounds;
   bounds << huge, -huge, huge, -huge;
   bool set = false;
-  for (auto& curve : curves) {
-    set = set || !curve.empty();
-    for (Mat<2> node : curve) {
-      bounds(all, 0) = bounds(all, 0).cwiseMin(node);
-      bounds(all, 1) = bounds(all, 1).cwiseMax(node);
+  for (auto& loop : curves) {
+    for (auto& curve : loop) {
+      set = set || !curve.empty();
+      for (Mat<2> node : curve) {
+        bounds(all, 0) = bounds(all, 0).cwiseMin(node);
+        bounds(all, 1) = bounds(all, 1).cwiseMax(node);
+      }
     }
   }
   if (set) bounds(all, 1) = bounds(all, 1).cwiseMax(bounds(all, 0) + Mat<2>{_sz, _sz});
@@ -414,37 +416,65 @@ void Trimmed_surface::initialize(std::vector<std::vector<Mat<2>>>& curves) {
   // reparameterize surface to contain bounds
   bounds = _surf->reparameterize(bounds);
   _param_segments.resize(_n_div);
-  for (auto& nodes : curves) if (!nodes.empty()) {
-    Int n_nodes = nodes.size();
-    // apply reparameterization to nodes
-    for (int i_node = 0; i_node < Int(nodes.size()); ++i_node) {
-      nodes[i_node] = (nodes[i_node] - bounds(all, 0)).cwiseQuotient(bounds(all, 1) - bounds(all, 0));
-    }
-    // correct periodic seam errors
-    for (Int i_node = n_nodes, changed = false; (i_node < 2*n_nodes) || changed; ++i_node, changed = false) {
+  for (auto& loop : curves) {
+    for (int i_curve = 0; i_curve < int(loop.size()); ++i_curve) {
+      auto& nodes = loop[i_curve];
+      if (nodes.empty()) continue;
+      Int n_nodes = nodes.size();
+      // apply reparameterization to nodes
+      for (Int i_node = 0; i_node < Int(nodes.size()); ++i_node) {
+        nodes[i_node] = (nodes[i_node] - bounds(all, 0)).cwiseQuotient(bounds(all, 1) - bounds(all, 0));
+      }
+      // correct periodic seam errors
+      for (Int i_node = 1; i_node < n_nodes; ++i_node) {
+        for (int i_dim = 0; i_dim < 2; ++i_dim) {
+          for (int sign : {-1, 1}) {
+            if (std::abs(nodes[i_node%n_nodes](i_dim) + sign - nodes[i_node](i_dim)) <
+                std::abs(nodes[i_node%n_nodes](i_dim)        - nodes[i_node](i_dim))) {
+              nodes[i_node%nodes.size()](i_dim) += sign;
+            }
+          }
+        }
+      }
+      // the seam correction process can end up shifting the entire curve loop to [-1, 0] or [1, 2],
+      // so this loop shifts it again to keep the largest possible number of nodes in [0, 1]
       for (int i_dim = 0; i_dim < 2; ++i_dim) {
-        for (int sign : {-1, 1}) {
-          if (std::abs(nodes[i_node%n_nodes](i_dim) + sign - nodes[(i_node - 1)%n_nodes](i_dim)) <
-              std::abs(nodes[i_node%n_nodes](i_dim)        - nodes[(i_node - 1)%n_nodes](i_dim))) {
-            nodes[i_node%nodes.size()](i_dim) += sign;
-            changed = true;
+        Int n_less = 0;
+        Int n_greater = 0;
+        for (Mat<2> node : nodes) {
+          n_less += node(i_dim) < -_sz;
+          n_greater += node(i_dim) > 1 + _sz;
+        }
+        int sign = (n_less > n_nodes/2) - (n_greater > n_nodes/2);
+        for (Mat<2>& node : nodes) node(i_dim) += sign;
+      }
+      if (i_curve > (int)loop.size()/2 - 1) {
+        auto& reverse_curve = loop[loop.size() - 1 - i_curve];
+        if ((Int)reverse_curve.size() == n_nodes) {
+          for (int i_dim = 0; i_dim < 2; ++i_dim) {
+            Int n_duplicate [2] {};
+            for (Int i_node = 0; i_node < n_nodes; ++i_node) {
+              for (int side : {0, 1}) {
+                n_duplicate[side] += std::abs(nodes[i_node](i_dim) - side) < _sz
+                                     && std::abs(reverse_curve[n_nodes - 1 - i_node](i_dim) - side) < _sz;
+              }
+            }
+            for (int side : {0, 1}) {
+              if (n_duplicate[side] > .99*n_nodes) {
+                for (Int i_node = 0; i_node < n_nodes; ++i_node) nodes[i_node](i_dim) -= math::sign(side);
+              }
+            }
           }
         }
       }
     }
-    // the seam correction process can end up shifting the entire curve loop to [-1, 0] or [1, 2],
-    // so this loop shifts it again to keep the largest possible number of nodes in [0, 1]
-    for (int i_dim = 0; i_dim < 2; ++i_dim) {
-      Int n_less = 0;
-      Int n_greater = 0;
-      for (Mat<2> node : nodes) {
-        n_less += node(i_dim) < -_sz;
-        n_greater += node(i_dim) > 1 + _sz;
-      }
-      int sign = (n_less > n_nodes/2) - (n_greater > n_nodes/2);
-      for (Mat<2>& node : nodes) node(i_dim) += sign;
+    std::vector<Mat<2>> closed_curve;
+    for (auto& nodes : loop) {
+      closed_curve.insert(closed_curve.end(), nodes.begin(), nodes.end());
     }
+    if (!closed_curve.empty()) closed_curve.insert(closed_curve.end(), closed_curve.front());
     // compute parametric segments
+    Int n_nodes = closed_curve.size();
     std::vector<Int> abscissa;
     std::vector<double> ordinate;
     Mat<2> prev_params {-1., 0.};
@@ -453,7 +483,7 @@ void Trimmed_surface::initialize(std::vector<std::vector<Mat<2>>>& curves) {
       Mat<2> params;
       if (i_node == n_nodes && !abscissa.empty()) params << abscissa.front(), ordinate.front();
       else {
-        params = nodes[i_node];
+        params = closed_curve[i_node];
         params(0) = std::max(0., std::min(1., params(0)))*_n_div;
       }
       if (prev_params(0) < -.1) prev_params = params;

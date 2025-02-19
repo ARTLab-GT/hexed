@@ -315,7 +315,7 @@ class Trimmed_surface {
   private:
   // Performs the real initialization work once the curves have been discretized.
   // Discretization is performed by the constructor.
-  void initialize(std::vector<std::vector<Mat<2>>>& curves);
+  void _initialize(std::vector<std::vector<std::vector<Mat<2>>>>& curves);
   Int _n_div;
   double _sz;
   std::unique_ptr<Parametric<2>> _surf;
