@@ -48,6 +48,7 @@ class Kernel_connection : virtual public Connection {
   virtual double* normal() = 0; //!< \brief face normal vector \details `nullptr` for Cartesian
   virtual int mask(int i_side) = 0; //!< \brief whether the element on side `i_side` is included in mesh masking
   int mask() {return std::max(mask(0), mask(1));}
+  virtual double nominal_area() const = 0;
 };
 
 }

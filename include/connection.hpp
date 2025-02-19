@@ -134,6 +134,9 @@ class Element_face_connection : public Element_connection, public Face_connectio
   Connection_direction get_direction() const override {return dir;}
   element_t& element(int i_side) override {return *elems[i_side];}
   int mask(int i_side) override {return element(i_side).mask();}
+  double nominal_area() const override {
+    return math::pow(elems[0]->nominal_size(), elems[0]->storage_params().n_dim - 1);
+  }
   Neighbor_connection& neighbor_connection() {return _neighbor_con;}
 };
 
@@ -184,6 +187,7 @@ class Refined_connection {
     Connection_direction get_direction() const override {return ref_con.direction();}
     element_t& element(int i_side) override {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
     int mask(int i_side) override {return element(i_side).mask();}
+    double nominal_area() const override {return math::pow(fine_elem.nominal_size(), ref_con.params.n_dim - 1);}
   };
 
   private:
@@ -369,6 +373,7 @@ class Typed_bound_connection : public Boundary_connection {
   int bound_cond_serial_n() override {return bc_sn;}
   element_t& element() override {return elem;}
   int mask(int i_side) override {return i_side ? -1 : element().mask();}
+  double nominal_area() const override {return math::pow(elem.nominal_size(), params.n_dim - 1);}
   Array<double> prescribed_data() override {return _prescribed_data();}
 };
 

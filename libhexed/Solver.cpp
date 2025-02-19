@@ -380,7 +380,7 @@ void Solver::calc_jacobian(bool snap) {
   }
   // for deformed refined faces, set normal to coarse face normal (for Cartesian, setting normal is not necessary)
   auto& ref_cons = acc_mesh->deformed().refined_connections();
-  compute_prolong(_kernel_mesh(), true);
+  compute_prolong(_kernel_mesh(), false);
   #pragma omp parallel for
   for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
     auto& ref = ref_cons[i_ref];
