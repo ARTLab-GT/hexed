@@ -273,7 +273,7 @@ class Revolution_surface::_Find_intersects {
           double rsq_deriv = points_coefs.radial[1] + 2*points_coefs.radial[2]*center_param;
           double rsq_uncert = (std::abs(rsq_deriv) + points_coefs.radial[2]*param_diff)*param_diff;
           could_intersect = std::abs(radius*radius - rsq) <
-                            segment.radius*segment.radius + 2*std::abs(radius*segment.radius) + rsq_uncert;
+                            segment.radius*segment.radius + 2*radius*segment.radius + rsq_uncert;
         } else {
           could_intersect = false;
           std::vector<double> intersection_params;
@@ -290,11 +290,12 @@ class Revolution_surface::_Find_intersects {
             } else break;
           }
           for (int i_interval = 0; i_interval < int(intersection_params.size()/2); ++i_interval) {
-            double bounds[2];
+            double bounds [2];
             for (int i = 0; i < 2; ++i) {
               bounds[i] = points_coefs.axial[0] + points_coefs.axial[1]*intersection_params[2*i_interval + i];
             }
-            if (std::abs(axial - .5*(bounds[0] + bounds[1])) < segment.radius + .5*(bounds[1] - bounds[0])) {
+            int sign = math::sign(points_coefs.axial[1] > 0);
+            if (std::abs(axial - .5*(bounds[0] + bounds[1])) < segment.radius + sign*.5*(bounds[1] - bounds[0])) {
               could_intersect = true;
             }
           }
