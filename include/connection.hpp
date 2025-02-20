@@ -195,7 +195,7 @@ class Refined_connection {
     double nominal_area() const override {return math::pow(fine_elem.nominal_size(), ref_con.params.n_dim - 1);}
     void set_normal() override {
       if (!this->normal() || ref_con.rev) return;
-      Array<double> nrml({ref_con.params.n_dim, ref_con.params.n_dof()/ref_con.params.row_size});
+      Array<double> nrml({ref_con.params.n_var, ref_con.params.n_qpoint()/ref_con.params.row_size});
       nrml(0, ref_con.params.n_dim) = this->normal(1);
       nrml(ref_con.params.n_dim, end) = 0;
       auto fp = face_permutation(ref_con.params.n_dim, ref_con.params.row_size, ref_con.dir, nrml.data(), laminar);

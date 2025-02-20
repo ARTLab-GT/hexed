@@ -46,7 +46,6 @@ void Deformed_element::set_jacobian(const Basis& basis) {
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       Eigen::MatrixXd bound_mat = basis.boundary()(sign, Eigen::all);
-      double* face_data = face(2*i_dim + sign, false);
       Eigen::MatrixXd face_jac(nfq, n_dim*n_dim);
       for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
         face_jac(Eigen::all, i_jac) = math::dimension_matvec(bound_mat, jac(Eigen::seqN(i_jac*n_qpoint, n_qpoint)),
@@ -61,7 +60,6 @@ void Deformed_element::set_jacobian(const Basis& basis) {
         }
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           qpoint_jac(Eigen::all, i_dim).setUnit(j_dim);
-          face_data[j_dim*nfq + i_qpoint] = qpoint_jac.determinant();
           // note: f_nrml might be null if the connection is cartesian
           if (f_nrml[2*i_dim + sign]) f_nrml[2*i_dim + sign][j_dim*nfq + i_qpoint] = qpoint_jac.determinant();
         }

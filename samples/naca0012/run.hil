@@ -13,7 +13,6 @@ mesh_extreme01 =  10.
 mesh_extreme11 =  10.
 max_ref_level = 13
 $set_geometry_refinement
-max_refinement_iters = 0
 
 {generate geometry with external script}
 shell {python3 make_geom.py}
@@ -27,8 +26,6 @@ attack = 4*degree
 {iteration parameters}
 print_freq = 1000
 vis_freq = 20000
-print_freq = 1
-vis_freq = 1
 done = {iteration > 10000 & lift_coef_max - lift_coef_min < 1e-2*(lift_coef_min + lift_coef_max)/2}
 iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}
