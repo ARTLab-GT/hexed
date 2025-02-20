@@ -369,6 +369,9 @@ void Solver::calc_jacobian(bool snap) {
     elements[i_elem].set_jacobian(basis);
   }
   // do some extra work to make sure each face knows its normal vectors
+  auto& car_cons {acc_mesh->cartesian().face_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < car_cons.size(); ++i_con) car_cons[i_con].set_normal();
   auto& def_cons {acc_mesh->deformed().face_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < def_cons.size(); ++i_con) def_cons[i_con].set_normal();

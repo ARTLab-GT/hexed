@@ -559,7 +559,7 @@ class Spatial {
         std::array<double*, 6> visc_faces;
         for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face, true);
         double* tss = elem.time_step_scale();
-        double nominal_size = elem.nominal_size();
+        double nominal_volume = math::pow(elem.nominal_size(), n_dim);
         double time_rate [Pde::n_update][n_qpoint] {};
         double* elem_det = nullptr;
         if constexpr (is_deformed) {
@@ -590,7 +590,7 @@ class Spatial {
         double* res_cache = elem.residual_cache();
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           Mat<Pde::n_update> update;
-          double mult = _update*tss[i_qpoint]/nominal_size*(!fringe);
+          double mult = _update*tss[i_qpoint]/nominal_volume*(!fringe);
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             update(i_var) = time_rate[i_var][i_qpoint]*mult;

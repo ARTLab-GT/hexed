@@ -356,7 +356,8 @@ class Typed_bound_connection : public Boundary_connection {
   Array<double> _prescribed_data;
 
   public:
-  Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n, int n_prescribed)
+  Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n,
+                         int n_prescribed)
   : Boundary_connection{elem_arg.storage_params()}
   , elem{elem_arg}
   , params{elem.storage_params()}
@@ -419,9 +420,14 @@ template<>
 inline void Typed_bound_connection<Element>::set_normal() {
   Array<double> nrml({params.n_dim, params.n_qpoint()/params.row_size}, normal());
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) nrml(i_dim) = i_dim == i_d;
+  Array<double> ghost_nrml({params.n_dim, params.n_qpoint()/params.row_size}, normal(1));
+  ghost_nrml = std::nan("");
 }
 
-template<> inline void Typed_bound_connection<Deformed_element>::set_normal() {}
+template<> inline void Typed_bound_connection<Deformed_element>::set_normal() {
+  Array<double> ghost_nrml({params.n_dim, params.n_qpoint()/params.row_size}, normal(1));
+  ghost_nrml = std::nan("");
+}
 
 }
 #endif
