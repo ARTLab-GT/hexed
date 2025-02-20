@@ -389,7 +389,7 @@ void Accessible_mesh::_fit_surface() {
             for (int i_face = 0; i_face < 6; ++i_face) e.face_record[i_face] = -1;
             s.extruded_direction = shape->extruded_direction;
           };
-          Int inside_sn = add_element(elem.refinement_level() + 1, true, elem.nominal_position(), tree->origin(), 0);
+          Int inside_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
           Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
           set_vertices(inside);
           inside.shape().is_new = false;
