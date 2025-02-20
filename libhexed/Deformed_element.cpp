@@ -62,6 +62,8 @@ void Deformed_element::set_jacobian(const Basis& basis) {
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           qpoint_jac(Eigen::all, i_dim).setUnit(j_dim);
           face_data[j_dim*nfq + i_qpoint] = qpoint_jac.determinant();
+          // note: f_nrml might be null if the connection is cartesian
+          if (f_nrml[2*i_dim + sign]) f_nrml[2*i_dim + sign][j_dim*nfq + i_qpoint] = qpoint_jac.determinant();
         }
       }
     }

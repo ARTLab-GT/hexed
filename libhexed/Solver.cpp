@@ -447,6 +447,10 @@ void Solver::calc_jacobian(bool snap) {
       nrml[i_data] = state[i_data];
     }
   }
+
+  // do some extra work to make sure each face knows its normal vectors
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < def_cons.size(); ++i_con) def_cons[i_con].set_normal();
   // set position at boundary faces
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
