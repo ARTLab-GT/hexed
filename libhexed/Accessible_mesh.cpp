@@ -754,6 +754,10 @@ void Accessible_mesh::_fit_surface() {
   auto faces_3d = _blocks.faces_3d();
   #pragma omp parallel for
   for (auto& face : faces_3d) {
+    for (int i_edge = 0; i_edge < 4; ++i_edge) face.edge(i_edge).reset();
+  }
+  #pragma omp parallel for
+  for (auto& face : faces_3d) {
     for (int i_edge = 0; i_edge < 4; ++i_edge) {
       if (!face.edge(i_edge).glued()) snap_block(face.edge(i_edge));
     }
