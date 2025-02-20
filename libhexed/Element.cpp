@@ -78,19 +78,7 @@ Array<double> Element::face_position(const Basis& basis) const {
   return face_pos;
 }
 
-void Element::set_jacobian(const Basis& basis) {
-  // set face jacobian
-  int nfq = params.n_qpoint()/params.row_size;
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    for (int sign = 0; sign < 2; ++sign) {
-      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-        for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-          faces[2*i_dim + sign][j_dim*nfq + i_qpoint] = i_dim == j_dim;
-        }
-      }
-    }
-  }
-}
+void Element::set_jacobian(const Basis& basis) {}
 
 double* Element::stage(int i_stage) {
   return (i_stage > 0) ? residual_cache() + (i_stage - 1)*n_dof : state();

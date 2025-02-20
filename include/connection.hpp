@@ -9,6 +9,7 @@
 #include "Refined_face.hpp"
 #include "vertex_inds.hpp"
 #include "Neighbor_connection.hpp"
+#include "kernels.hpp"
 
 namespace hexed {
 
@@ -52,7 +53,9 @@ class Face_connection : public Kernel_connection {
     {}
   virtual Con_dir<element_t> direction() const = 0;
   double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}
+  double* normal(int i_side) {return nullptr;}
   double* normal() override {return nullptr;}
+  virtual void set_normal() {};
 };
 
 template <>
@@ -74,6 +77,8 @@ class Face_connection<Deformed_element> : public Kernel_connection {
   //! \brief area-weighted face normal vector
   //! \details layout: [i_dim][i_face_qpoint]
   double* normal() override {return _data.data() + 2*_face_sz;}
+  //! \brief sets the normal data, assuming that all elements involved have just called `Element::set_jacobian()`
+  virtual void set_normal() {};
 };
 
 /*!
@@ -134,6 +139,9 @@ class Element_face_connection : public Element_connection, public Face_connectio
   Connection_direction get_direction() const override {return dir;}
   element_t& element(int i_side) override {return *elems[i_side];}
   int mask(int i_side) override {return element(i_side).mask();}
+  double nominal_area() const override {
+    return math::pow(elems[0]->nominal_size(), elems[0]->storage_params().n_dim - 1);
+  }
   Neighbor_connection& neighbor_connection() {return _neighbor_con;}
 };
 
@@ -184,6 +192,21 @@ class Refined_connection {
     Connection_direction get_direction() const override {return ref_con.direction();}
     element_t& element(int i_side) override {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
     int mask(int i_side) override {return element(i_side).mask();}
+    double nominal_area() const override {return math::pow(fine_elem.nominal_size(), ref_con.params.n_dim - 1);}
+    void set_normal() override {
+      if (!this->normal() || ref_con.rev) return;
+      Array<double> nrml({ref_con.params.n_var, ref_con.params.n_qpoint()/ref_con.params.row_size});
+      nrml(0, ref_con.params.n_dim) = this->normal(1);
+      nrml(ref_con.params.n_dim, end) = 0;
+      auto fp = face_permutation(ref_con.params.n_dim, ref_con.params.row_size, ref_con.dir, nrml.data(), laminar);
+      fp->match_faces();
+      Con_dir<Deformed_element> con_dir(ref_con.dir);
+      int sign = math::sign(con_dir.flip_normal(1) == con_dir.flip_normal(0));
+      for (int i = 0; i < ref_con.params.n_dim*ref_con.params.n_qpoint()/ref_con.params.row_size; ++i) {
+        this->normal()[i] = sign*nrml[i];
+      }
+      fp->restore();
+    }
   };
 
   private:
@@ -333,7 +356,8 @@ class Typed_bound_connection : public Boundary_connection {
   Array<double> _prescribed_data;
 
   public:
-  Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n, int n_prescribed)
+  Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n,
+                         int n_prescribed)
   : Boundary_connection{elem_arg.storage_params()}
   , elem{elem_arg}
   , params{elem.storage_params()}
@@ -369,7 +393,9 @@ class Typed_bound_connection : public Boundary_connection {
   int bound_cond_serial_n() override {return bc_sn;}
   element_t& element() override {return elem;}
   int mask(int i_side) override {return i_side ? -1 : element().mask();}
+  double nominal_area() const override {return math::pow(elem.nominal_size(), params.n_dim - 1);}
   Array<double> prescribed_data() override {return _prescribed_data();}
+  void set_normal() override;
 };
 
 template <>
@@ -388,6 +414,19 @@ inline void Typed_bound_connection<Element>::disconnect_normal()
 template <>
 inline void Typed_bound_connection<Deformed_element>::disconnect_normal() {
   elem.face_normal(2*i_d + ifs) = nullptr;
+}
+
+template<>
+inline void Typed_bound_connection<Element>::set_normal() {
+  Array<double> nrml({params.n_dim, params.n_qpoint()/params.row_size}, normal());
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) nrml(i_dim) = i_dim == i_d;
+  Array<double> ghost_nrml({params.n_dim, params.n_qpoint()/params.row_size}, normal(1));
+  ghost_nrml = std::nan("");
+}
+
+template<> inline void Typed_bound_connection<Deformed_element>::set_normal() {
+  Array<double> ghost_nrml({params.n_dim, params.n_qpoint()/params.row_size}, normal(1));
+  ghost_nrml = std::nan("");
 }
 
 }

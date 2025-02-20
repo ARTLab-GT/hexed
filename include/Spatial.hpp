@@ -168,8 +168,7 @@ class Spatial {
               }
               // interpolate one dimension at a time, in-place
               for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) {
-                if (str[i_dim]) for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) var_face[i_qpoint] *= 1 + scl;
-                else {
+                if (!str[i_dim]) {
                   const int pow {n_dim - 2 - i_dim};
                   const int face_stride {str[n_dim - 2] ? 1 : math::pow(2, pow)};
                   const int qpoint_stride {math::pow(row_size, pow)};
@@ -178,7 +177,7 @@ class Spatial {
                     for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner) {
                       Eigen::Matrix<double, row_size, 1> row;
                       for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                        row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
+                        row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner]/(1 + scl);
                       }
                       row = prolong_mat[i_half]*row;
                       for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
@@ -238,9 +237,7 @@ class Spatial {
             for (int i_var = 0; i_var < n_var; ++i_var) {
               double* var_face {fine + i_var*nfq};
               for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) {
-                if (str[i_dim]) {
-                  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) var_face[i_qpoint] /= 1 + scl;
-                } else {
+                if (!str[i_dim]) {
                   const int pow {n_dim - 2 - i_dim};
                   const int face_stride {str[n_dim - 2] ? 1 : math::pow(2, pow)};
                   const int qpoint_stride {math::pow(row_size, pow)};
@@ -253,7 +250,7 @@ class Spatial {
                       }
                       row = restrict_mat[i_half]*row;
                       for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                        var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint);
+                        var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint)*(1 + scl);
                       }
                     }
                   }
@@ -335,7 +332,9 @@ class Spatial {
         std::array<double*, 6> visc_faces;
         for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face, true);
         double* tss = elem.time_step_scale();
-        double d_pos = elem.nominal_size();
+        double nominal_size = elem.nominal_size();
+        double nominal_area = math::pow(nominal_size, n_dim - 1);
+        double nominal_volume = math::pow(nominal_size, n_dim);
         double time_rate [2][std::max(Pde::n_update, Pde::n_extrap - Pde::n_extrap/2)][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
         // only need the next 2 for deformed elements
         double* nrml = nullptr; // reference level normals
@@ -377,12 +376,14 @@ class Spatial {
                   for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
                     Mat<row_size, 1> row = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
                     Mat<2, 1> bound = face_n(Eigen::all, j_dim).cwiseProduct(face_state(Eigen::all, i_var));
-                    Row_rw<1, row_size>::write_row(derivative(row, bound)/d_pos, visc_storage[j_dim][i_var], ind, 1.);
+                    Row_rw<1, row_size>::write_row(derivative(row, bound)/nominal_size,
+                                                   visc_storage[j_dim][i_var], ind, 1.);
                   }
                 }
               } else {
                 // differentiate and write to temporary storage
-                Row_rw<Pde::n_extrap, row_size>::write_row(derivative(row_r, face_state)/d_pos, visc_storage[i_dim][0], ind, 0);
+                Row_rw<Pde::n_extrap, row_size>::write_row(derivative(row_r, face_state)/nominal_size,
+                                                           visc_storage[i_dim][0], ind, 0);
               }
             }
           }
@@ -396,9 +397,12 @@ class Spatial {
           comp.fetch_state(n_qpoint, state + i_qpoint);
           if constexpr (is_deformed) {
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              for (int j_dim = 0; j_dim < n_dim; ++j_dim) comp.normal(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+              for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+                comp.normal(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+              }
             }
           }
+          comp.normal *= nominal_area;
           if constexpr (Pde::has_convection) {
             comp.compute_flux_conv();
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -423,7 +427,7 @@ class Spatial {
           }
           if constexpr (Pde::has_source) if (!_stage) {
             comp.compute_source();
-            double mult = d_pos;
+            double mult = nominal_volume;
             if constexpr (is_deformed) mult *= elem_det[i_qpoint];
             for (int i_var = 0; i_var < Pde::n_update; ++i_var) time_rate[1][i_var][i_qpoint] = mult*comp.source(i_var);
           }
@@ -479,7 +483,7 @@ class Spatial {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           Mat<Pde::n_update> update;
           update.setZero();
-          double mult = _update*tss[i_qpoint]/d_pos*(!fringe);
+          double mult = _update*tss[i_qpoint]/nominal_volume*(!fringe);
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             double u = time_rate[0][i_var][i_qpoint];
@@ -555,7 +559,7 @@ class Spatial {
         std::array<double*, 6> visc_faces;
         for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face, true);
         double* tss = elem.time_step_scale();
-        double d_pos = elem.nominal_size();
+        double nominal_volume = math::pow(elem.nominal_size(), n_dim);
         double time_rate [Pde::n_update][n_qpoint] {};
         double* elem_det = nullptr;
         if constexpr (is_deformed) {
@@ -586,11 +590,13 @@ class Spatial {
         double* res_cache = elem.residual_cache();
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           Mat<Pde::n_update> update;
-          double mult = _update*tss[i_qpoint]/d_pos*(!fringe);
+          double mult = _update*tss[i_qpoint]/nominal_volume*(!fringe);
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             update(i_var) = time_rate[i_var][i_qpoint]*mult;
-            if constexpr (is_deformed) if (_conv_substep) res_cache[(Pde::n_update + i_var)*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint];
+            if constexpr (is_deformed) if (_conv_substep) {
+              res_cache[(Pde::n_update + i_var)*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint];
+            }
           }
           _eq.write_update(update, n_qpoint, to_update + i_qpoint, true);
         }
@@ -623,6 +629,7 @@ class Spatial {
       for (int i_con = 0; i_con < connections.size(); ++i_con) {
         auto& con = connections[i_con];
         auto dir = con.get_direction();
+        double nominal_area = con.nominal_area();
         double face [2 + 2*Pde::has_diffusion][Pde::n_extrap*n_fqpoint] {}; // copying face data to temporary stack storage improves efficiency
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -664,6 +671,7 @@ class Spatial {
                 comp[0].normal(i_dim) = sign[0]*face_nrml[i_dim*n_fqpoint + i_qpoint];
               }
             } else comp[0].normal.setUnit(dir.i_dim[0]);
+            comp[0].normal *= nominal_area;
             comp[1].normal = comp[0].normal;
             for (int i_side = 0; i_side < 2; ++i_side) {
               comp[i_side].fetch_extrap_state(n_fqpoint, face[i_side] + i_qpoint);

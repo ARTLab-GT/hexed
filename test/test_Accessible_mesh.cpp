@@ -81,7 +81,8 @@ TEST_CASE("Accessible_mesh") {
 
   SECTION("refined face connection") {
     // check that it can't find elements with the wrong deformedness
-    REQUIRE_THROWS(mesh.connect_hanging(1, car0, {def0, def1, def2, def3}, {{2, 2}, {1, 0}}, false, {true, true, true, false}));
+    REQUIRE_THROWS(mesh.connect_hanging(1, car0, {def0, def1, def2, def3}, {{2, 2}, {1, 0}},
+                                        false, {true, true, true, false}));
     SECTION("cartesian") {
       mesh.connect_hanging(1, car0, {def0, def1, def2, def3}, {{2, 2}, {1, 0}}, false, {true, true, true, true});
       auto& ref_face {mesh.cartesian().refined_faces()[0]};
@@ -257,7 +258,8 @@ TEST_CASE("Accessible_mesh") {
     }
     for (int kind = 0; kind < 2; ++kind) {
       bool fine_def = kind;
-      mesh1.connect_hanging(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {{0, 0}, {0, 1}}, false, {fine_def, fine_def});
+      mesh1.connect_hanging(0, coarse[kind], {kinds[kind][2], kinds[kind][3]}, {{0, 0}, {0, 1}},
+                            false, {fine_def, fine_def});
     }
     // add boundary conditions
     int bcsn = mesh1.add_boundary_condition(new hexed::Freestream {hexed::Mat<4>{0., 0., 1., 1.}});
@@ -361,15 +363,27 @@ TEST_CASE("Tree meshing", "[.slow]") {
     mesh.update();
     REQUIRE(mesh.elements().size() == 8);
     mesh.valid().assert_valid();
-    mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return np[0] == 0 && np[1] == 0 && np[2] == 0;});
+    mesh.update([](hexed::Element& elem){
+      auto np = elem.nominal_position();
+      return np[0] == 0 && np[1] == 0 && np[2] == 0;
+    });
     REQUIRE(mesh.elements().size() == 15);
     mesh.valid().assert_valid();
     // refining this element should refine 3 face neighbors and 3 edge neighbors
-    mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
+    mesh.update([](hexed::Element& elem){
+      auto np = elem.nominal_position();
+      return elem.refinement_level() == 2 && np[0] == 1 && np[1] == 1 && np[2] == 1;
+    });
     REQUIRE(mesh.elements().size() == 64);
     mesh.valid().assert_valid();
-    mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 1 && np[0] == 1 && np[1] == 1 && np[2] == 1;});
-    mesh.update([](hexed::Element& elem){auto np = elem.nominal_position(); return elem.refinement_level() == 2 && np[0] == 2 && np[1] == 2 && np[2] == 2;});
+    mesh.update([](hexed::Element& elem){
+      auto np = elem.nominal_position();
+      return elem.refinement_level() == 1 && np[0] == 1 && np[1] == 1 && np[2] == 1;
+    });
+    mesh.update([](hexed::Element& elem){
+      auto np = elem.nominal_position();
+      return elem.refinement_level() == 2 && np[0] == 2 && np[1] == 2 && np[2] == 2;
+    });
     mesh.valid().assert_valid();
     REQUIRE(mesh.elements().size() == 78);
   }
@@ -397,7 +411,8 @@ TEST_CASE("Tree meshing", "[.slow]") {
     REQUIRE(mesh.elements().size() == 6*64 + 2*8);
     mesh.valid().assert_valid();
     // simultaneous refinement and unrefinement
-    mesh.update([](hexed::Element& elem){return elem.refinement_level() == 2;}, [](hexed::Element& elem){return elem.refinement_level() == 3;});
+    mesh.update([](hexed::Element& elem){return elem.refinement_level() == 2;},
+                [](hexed::Element& elem){return elem.refinement_level() == 3;});
     REQUIRE(mesh.elements().size() == 6*8 + 2*64);
     mesh.valid().assert_valid();
     SECTION("neighbors with different ref levels") {
@@ -456,7 +471,9 @@ TEST_CASE("mesh I/O") {
     // to check vertex position
     auto& elems = mesh.elements();
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      for (int i_vert = 0; i_vert < 4; ++i_vert) correct_sum_vertices += elems[i_elem].shape().vertex(i_vert).point({});
+      for (int i_vert = 0; i_vert < 4; ++i_vert) {
+        correct_sum_vertices += elems[i_elem].shape().vertex(i_vert).point({});
+      }
     }
     // refine the mesh again and count the number of Cartesian and deformed elements
     // to make sure the recreated mesh behaves the same way
@@ -532,7 +549,9 @@ TEST_CASE("masking") {
   SECTION("custom mask") {
     mesh.reset_masks();
     hexed::Accessible_mesh::Masked_mesh(mesh, basis);
-    hexed::Accessible_mesh::Masked_mesh masked(mesh, basis, [](hexed::Element& elem){return elem.shape().vertex(3).point({})[1] < .501;});
+    hexed::Accessible_mesh::Masked_mesh masked(mesh, basis, [](hexed::Element& elem){
+      return elem.shape().vertex(3).point({})[1] < .501;
+    });
     auto& elems = mesh.elements();
     int n_masked = 0;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {

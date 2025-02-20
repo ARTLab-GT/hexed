@@ -3,7 +3,8 @@
 
 namespace hexed {
 
-Deformed_element::Deformed_element(Storage_params params, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level) :
+Deformed_element::Deformed_element(Storage_params params, std::vector<Int> pos,
+                                   double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level) :
   Element{params, pos, mesh_size, ref_level, origin_arg, true, aniso_r_level},
   n_qpoint{params.n_qpoint()},
   jac_dat{(n_dim*n_dim + 1)*n_qpoint},
@@ -45,10 +46,10 @@ void Deformed_element::set_jacobian(const Basis& basis) {
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       Eigen::MatrixXd bound_mat = basis.boundary()(sign, Eigen::all);
-      double* face_data = face(2*i_dim + sign, false);
       Eigen::MatrixXd face_jac(nfq, n_dim*n_dim);
       for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
-        face_jac(Eigen::all, i_jac) = math::dimension_matvec(bound_mat, jac(Eigen::seqN(i_jac*n_qpoint, n_qpoint)), i_dim);
+        face_jac(Eigen::all, i_jac) = math::dimension_matvec(bound_mat, jac(Eigen::seqN(i_jac*n_qpoint, n_qpoint)),
+                                                             i_dim);
       }
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
         Eigen::MatrixXd qpoint_jac(n_dim, n_dim);
@@ -59,7 +60,8 @@ void Deformed_element::set_jacobian(const Basis& basis) {
         }
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           qpoint_jac(Eigen::all, i_dim).setUnit(j_dim);
-          face_data[j_dim*nfq + i_qpoint] = qpoint_jac.determinant();
+          // note: f_nrml might be null if the connection is cartesian
+          if (f_nrml[2*i_dim + sign]) f_nrml[2*i_dim + sign][j_dim*nfq + i_qpoint] = qpoint_jac.determinant();
         }
       }
     }
@@ -69,9 +71,11 @@ void Deformed_element::set_jacobian(const Basis& basis) {
   Eigen::MatrixXd vertex_nrml (params.n_vertices(), n_dim*n_dim);
   for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
     // extrapolate one entry of the Jacobian to the vertex
-    vertex_nrml.col(i_jac) = math::hypercube_matvec(bound_mat, Eigen::Map<Eigen::VectorXd>(reference_level_normals() + i_jac*params.n_qpoint(), n_qpoint));
+    Eigen::Map<Eigen::VectorXd> rln(reference_level_normals() + i_jac*params.n_qpoint(), n_qpoint);
+    vertex_nrml.col(i_jac) = math::hypercube_matvec(bound_mat, rln);
   }
-  Eigen::VectorXd vertex_det = math::hypercube_matvec(bound_mat, Eigen::Map<Eigen::VectorXd>(jacobian_determinant(), n_qpoint));
+  Eigen::Map<Eigen::VectorXd> jac_det(jacobian_determinant(), n_qpoint);
+  Eigen::VectorXd vertex_det = math::hypercube_matvec(bound_mat, jac_det);
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
     double norm_sum = 0.;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -82,7 +86,8 @@ void Deformed_element::set_jacobian(const Basis& basis) {
       }
       norm_sum += std::sqrt(norm_sq);
     }
-    vertex_time_step_scale(i_vert) = nominal_size()*vertex_det(i_vert)/norm_sum; // for deformed elements this is a essentially a measure of the amount of stretching in each dimension
+    // for deformed elements this is a essentially a measure of the amount of stretching in each dimension
+    vertex_time_step_scale(i_vert) = nominal_size()*vertex_det(i_vert)/norm_sum;
   }
 }
 

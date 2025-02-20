@@ -368,86 +368,15 @@ void Solver::calc_jacobian(bool snap) {
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
   }
-
-  /*
-   * compute surface normals for deformed connections
-   */
+  // do some extra work to make sure each face knows its normal vectors
+  auto& car_cons {acc_mesh->cartesian().face_connections()};
+  #pragma omp parallel for
+  for (int i_con = 0; i_con < car_cons.size(); ++i_con) car_cons[i_con].set_normal();
   auto& def_cons {acc_mesh->deformed().face_connections()};
   #pragma omp parallel for
-  for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
-    double* nrml = def_cons[i_con].normal();
-    for (int i_data = 0; i_data < n_dim*nfq; ++i_data) nrml[i_data] = 0.;
-  }
-  // for deformed refined faces, set normal to coarse face normal (for Cartesian, setting normal is not necessary)
-  auto& ref_cons = acc_mesh->deformed().refined_connections();
-  compute_prolong(_kernel_mesh(), true);
-  #pragma omp parallel for
-  for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
-    auto& ref = ref_cons[i_ref];
-    bool rev = ref.order_reversed();
-    auto dir = ref.direction();
-    // might need to flip the direction of the normal vector depending on connection direction
-    int sign = 1 - 2*(dir.flip_normal(0) != dir.flip_normal(1));
-    for (int i_fine = 0; i_fine < ref.n_fine_elements(); ++i_fine) {
-      auto& fine = ref.connection(i_fine);
-      double* face [2] {fine.state(rev, false), fine.state(!rev, false)};
-      auto fp = face_permutation(n_dim, rs, dir, face[1], turb);
-      fp->match_faces();
-      for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
-        face[1][i_data] = sign*face[0][i_data];
-      }
-      fp->restore();
-    }
-  }
-  // for BCs, copy normal to ghost face
-  auto& bc_cons = acc_mesh->boundary_connections();
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* in_f = bc_cons[i_con].inside_face(false);
-    double* gh_f = bc_cons[i_con].ghost_face(false);
-    for (int i_data = 0; i_data < n_dim*nfq; ++i_data) gh_f[i_data] = in_f[i_data];
-  }
-  // compute the shared face normal
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
-    auto& con = def_cons[i_con];
-    double* elem_nrml [2] {con.state(0, false), con.state(1, false)};
-    auto dir = con.direction();
-    // permute face 1 so that quadrature points match up
-    auto fp = face_permutation(n_dim, rs, dir, elem_nrml[1], turb);
-    fp->match_faces();
-    // take average of element face normals with appropriate flipping
-    int sign [2];
-    for (int i_side : {0, 1}) sign[i_side] = 1 - 2*dir.flip_normal(i_side);
-    for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
-      double n = 0;
-      for (int i_side : {0, 1}) n += 0.5*sign[i_side]*elem_nrml[i_side][i_data];
-      for (int i_side : {0, 1}) elem_nrml[i_side][i_data] = sign[i_side]*n;
-    }
-    // put face 1 back in its original order (except now we're working with the normal data not state data)
-    fp->restore();
-    for (int i_side = 0; i_side < 2; ++i_side) {
-      double* n = con.normal(i_side);
-      for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
-        n[i_data] = elem_nrml[i_side][i_data];
-      }
-    }
-  }
-  // write face normal for coarse hanging node faces
-  #pragma omp parallel for
-  for (int i_ref = 0; i_ref < ref_cons.size(); ++i_ref) {
-    auto& ref = ref_cons[i_ref];
-    bool rev = ref.order_reversed();
-    auto& elem = ref.connection(0).element(rev);
-    auto dir = ref.direction();
-    int i_face = 2*dir.i_dim[rev] + dir.face_sign[rev];
-    double* nrml = elem.face_normal(i_face);
-    double* state = elem.face(i_face, false);
-    for (int i_data = 0; i_data < n_dim*nfq; ++i_data) {
-      nrml[i_data] = state[i_data];
-    }
-  }
+  for (int i_con = 0; i_con < def_cons.size(); ++i_con) def_cons[i_con].set_normal();
   // set position at boundary faces
+  auto& bc_cons = acc_mesh->boundary_connections();
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     Element& elem = bc_cons[i_con].element();

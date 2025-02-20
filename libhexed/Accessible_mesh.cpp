@@ -402,8 +402,10 @@ void Accessible_mesh::_fit_surface() {
           elem.record = 2;
           std::vector<Deformed_element*> matched_elems(6, nullptr);
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
-            HEXED_ASSERT(std::isfinite( inside.shape().vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
-            HEXED_ASSERT(std::isfinite(surface.shape().vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
+            HEXED_ASSERT(std::isfinite(inside.shape().vertex(i_vert).point({}).squaredNorm()),
+                         "Vertex pos is not finite.")
+            HEXED_ASSERT(std::isfinite(surface.shape().vertex(i_vert).point({}).squaredNorm()),
+                         "Vertex pos is not finite.")
           }
           for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
             for (bool j_sign : {0, 1}) {
@@ -434,7 +436,8 @@ void Accessible_mesh::_fit_surface() {
                 matched_edge.snapped_edge = m;
                 if (m >= 0) matched_edges[m].emplace_back(&matched_edge);
                 for (int i_vert = 0; i_vert < 8; ++i_vert) {
-                  HEXED_ASSERT(std::isfinite(match_elem.shape().vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
+                  HEXED_ASSERT(std::isfinite(match_elem.shape().vertex(i_vert).point({}).squaredNorm()),
+                               "Vertex pos is not finite.")
                 }
               } else {
                 elem.face_record[2*j_dim + j_sign] = inside_sn;
