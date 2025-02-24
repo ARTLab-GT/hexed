@@ -84,7 +84,7 @@ TEST_CASE("Deformed_element") {
   }
 
   SECTION("jacobian calculation") {
-    double faces [6][5*row_size*row_size];
+    double faces [6][3*row_size*row_size];
     hexed::Deformed_element elem0 {params2, {0, 0}, 0.2};
     hexed::Deformed_element elem1 {params2, {1, 1}, 0.2};
     elem0.create_shape(blocks2d);
@@ -92,7 +92,7 @@ TEST_CASE("Deformed_element") {
     elem1.create_shape(blocks2d, 2);
     blocks2d.edges_2d()[0].interior()(0)[1] += .1*.2;
     // jacobian is correct
-    for (int i_face = 0; i_face < 6; ++i_face) elem0.set_face(i_face, faces[i_face]);
+    for (int i_face = 0; i_face < 6; ++i_face) elem0.face_normal(i_face) = faces[i_face];
     elem0.set_jacobian(basis);
     REQUIRE(elem0.jacobian(0, 0, 0) == Catch::Approx(1.));
     REQUIRE(elem0.jacobian(0, 1, 0) == Catch::Approx(0.));
@@ -115,10 +115,10 @@ TEST_CASE("Deformed_element") {
     REQUIRE(elem1.jacobian(1, 1, 5) == Catch::Approx(0.9));
     // surface normal is written to face data
     elem0.set_jacobian(basis);
-    REQUIRE(elem0.face(0, false)[0] == Catch::Approx(1.));
-    REQUIRE(elem0.face(0, false)[row_size] == Catch::Approx(0.));
-    REQUIRE(elem0.face(3, false)[2] == Catch::Approx(.2));
-    REQUIRE(elem0.face(3, false)[row_size + 2] == Catch::Approx(.8));
+    REQUIRE(elem0.face_normal(0)[0] == Catch::Approx(1.));
+    REQUIRE(elem0.face_normal(0)[row_size] == Catch::Approx(0.));
+    REQUIRE(elem0.face_normal(3)[2] == Catch::Approx(.2));
+    REQUIRE(elem0.face_normal(3)[row_size + 2] == Catch::Approx(.8));
     // check time step scale
     REQUIRE(elem0.vertex_time_step_scale(0) == .2/2);
     REQUIRE(elem0.vertex_time_step_scale(3) == Catch::Approx(.2/2*(.8*.8 - .2*.2)/std::sqrt(.8*.8 + .2*.2)));
@@ -126,7 +126,7 @@ TEST_CASE("Deformed_element") {
     hexed::Deformed_element elem2 {params3, {0, 0, 0}, 0.2};
     elem2.create_shape(blocks3d);
     elem2.shape().vertex(7).set_pos(hexed::Mat<3>{0.8*0.2, 0.8*0.2, 0.8*0.2});
-    for (int i_face = 0; i_face < 6; ++i_face) elem2.set_face(i_face, faces[i_face]);
+    for (int i_face = 0; i_face < 6; ++i_face) elem2.face_normal(i_face) = faces[i_face];
     elem2.set_jacobian(basis);
     REQUIRE(elem2.jacobian(0, 0,  0) == 1.);
     REQUIRE(elem2.jacobian(0, 0, 26) == Catch::Approx( 0.8));
