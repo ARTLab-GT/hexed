@@ -265,6 +265,19 @@ TEST_CASE("Trimmed_surface") {
 }
 
 TEST_CASE("Geom_3d", "[.slow]") {
-  hexed::brep::Geom_3d geom("../test_assets/cylinder_extruded.iges", 1024);
-  geom.visualize("default", "cylinder_extruded");
+  #ifdef DEBUG
+  hexed::Int n_div = 128;
+  bool vis_volume = false;
+  #else
+  hexed::Int n_div = 1024;
+  bool vis_volume = true;
+  #endif
+  SECTION("cylinder_extruded") {
+    hexed::brep::Geom_3d geom("../test_assets/cylinder_extruded.iges", n_div);
+    geom.visualize("default", "cylinder_extruded", 100, vis_volume);
+  }
+  SECTION("prism_twisted") {
+    hexed::brep::Geom_3d geom("../test_assets/prism_twisted.iges", n_div);
+    geom.visualize("default", "prism_twisted", 100, vis_volume);
+  }
 }
