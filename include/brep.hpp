@@ -274,6 +274,22 @@ class Revolution_surface : public Parametric<2> {
   Tree_curve _tree;
 };
 
+template <int n_param>
+class Rational_b_spline : public Parametric<n_param> {
+  public:
+  Rational_b_spline(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points);
+  Mat<3> point(Mat<n_param> params) const override;
+  Parametric<n_param>::Nearest_parameters
+    nearest_params(Mat<3> point, Parametric<n_param>::Constraint is_feasible, double max_distance) const override;
+  std::vector<typename Parametric<n_param>::Intersection_parameters>
+    intersection_params(Mat<3, 2> points) const override;
+  private:
+  std::vector<Array<double>> _knots;
+  std::array<double, n_param> _degree;
+  Array<double> _weights;
+  Array<double> _control_points;
+};
+
 //! \brief A list of curves, where the end point of each should coincide with start of the next.
 typedef std::vector<std::unique_ptr<Parametric<1>>> Composite_curve;
 

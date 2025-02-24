@@ -9,6 +9,14 @@ namespace hexed::brep {
 
 //! \cond
 
+Coordinate_change::Coordinate_change(Mat<3> translate, Mat<3, 3> transform)
+: _translate{translate}, _transform{transform}, _inv{transform.inverse()}
+{}
+
+Coordinate_change Coordinate_change::operator()(Coordinate_change that) const {
+  return {_translate + _transform*that._translate, _transform*that._transform};
+}
+
 Line_segment::Line_segment(Mat<3, 2> endpoints)
 : _endpoints{endpoints}
 , _length{(_endpoints(all, 1) - _endpoints(all, 0)).norm()}
@@ -357,12 +365,33 @@ std::vector<Parametric<2>::Intersection_parameters> Revolution_surface::intersec
   return finder.intersects;
 }
 
-Coordinate_change::Coordinate_change(Mat<3> translate, Mat<3, 3> transform)
-: _translate{translate}, _transform{transform}, _inv{transform.inverse()}
-{}
+template class Rational_b_spline<1>;
+template class Rational_b_spline<2>;
 
-Coordinate_change Coordinate_change::operator()(Coordinate_change that) const {
-  return {_translate + _transform*that._translate, _transform*that._transform};
+template <int n_param>
+Rational_b_spline<n_param>::Rational_b_spline(std::vector<Array<double>> knots, Array<double> weights,
+                                              Array<double> control_points)
+: _weights(weights.copy())
+, _control_points(control_points.copy())
+{
+}
+
+template <int n_param>
+Mat<3> Rational_b_spline<n_param>::point(Mat<n_param> params) const {
+  return Mat<3>::Zero();
+}
+
+template <int n_param>
+Parametric<n_param>::Nearest_parameters
+Rational_b_spline<n_param>::nearest_params(Mat<3> point, Parametric<n_param>::Constraint is_feasible,
+                                           double max_distance) const {
+  return {Mat<n_param>::Zero(), false};
+}
+
+template <int n_param>
+std::vector<typename Parametric<n_param>::Intersection_parameters>
+Rational_b_spline<n_param>::intersection_params(Mat<3, 2> points) const {
+  return {};
 }
 
 Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves, Int n_div)
