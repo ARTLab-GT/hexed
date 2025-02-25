@@ -712,6 +712,34 @@ class Read_entity {
                                                 _parser.read_float(_par[3]), _parser.read_float(_par[4]));
   }
 
+  std::unique_ptr<Rational_b_spline<1>> read_rational_b_spline_curve() const {
+    if (_ent_num != 126) return {};
+    Int n_basis = _parser.read_int(_par[1]);
+    Int degree = _parser.read_int(_par[2]);
+    Int i = 7;
+    std::vector<Array<double>> knots;
+    knots.emplace_back(std::vector<Int>{2 + n_basis + degree});
+    for (int i_knot = 0; i_knot < knots[0].size(); ++i_knot) {
+      knots[0][i_knot] = _parser.read_float(_par[i++]);
+    }
+    printers::info(to_string(knots[0]));
+    Array<double> weights({n_basis + 1});
+    for (int i_weight = 0; i_weight < n_basis + 1; ++i_weight) {
+      weights[i_weight] = _parser.read_float(_par[i++]); // note transposed
+    }
+    printers::info(to_string(weights));
+    Array<double> control_points({n_basis + 1, 3});
+    for (int i_point = 0; i_point < n_basis + 1; ++i_point) {
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        control_points(i_point)[i_dim] = _parser.read_float(_par[i++]);
+      }
+    }
+    printers::info(to_string(control_points));
+    HEXED_ASSERT((Int)_par.size() == i + 5,
+                 format_str(200, "number of parameters doesn't match up (%li vs %li)", Int(_par.size()), i + 4))
+    return std::make_unique<Rational_b_spline<1>>(std::move(knots), weights(), control_points());
+  }
+
   std::unique_ptr<Rational_b_spline<2>> read_rational_b_spline_surface() const {
     if (_ent_num != 128) return {};
     std::vector<Int> n_basis {_parser.read_int(_par[1]), _parser.read_int(_par[2])};
@@ -752,6 +780,7 @@ class Read_entity {
     std::unique_ptr<Parametric<1>> ptr;
     merge(ptr, read_line_segment());
     merge(ptr, read_circular_arc());
+    merge(ptr, read_rational_b_spline_curve());
     HEXED_ASSERT(
       !required || ptr,
       "Curve entity #" + std::to_string(_ent_num) + " is not implemented.",
