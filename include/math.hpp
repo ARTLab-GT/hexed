@@ -19,6 +19,8 @@ typedef intmax_t Int; //!< \brief basic integer type  to use for potentially-lar
 //! \brief convenience alias for largest double value
 constexpr double huge = std::numeric_limits<double>::max();
 
+std::string to_string(Int); //! \brief overload of `to_string(int)` for larger `Int`s.
+
 #pragma omp declare reduction (+ : Mat<dyn, dyn> : omp_out = omp_out + omp_in) \
   initializer(omp_priv = Mat<dyn, dyn>::Zero(omp_orig.rows(), omp_orig.cols()))
 

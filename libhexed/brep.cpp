@@ -4,6 +4,7 @@
 #include <hexed/Visualizer.hpp>
 #include <hexed/utils.hpp>
 #include <hexed/constants.hpp>
+#include <hexed/Printer.hpp>
 
 namespace hexed::brep {
 
@@ -711,6 +712,22 @@ class Read_entity {
                                                 _parser.read_float(_par[3]), _parser.read_float(_par[4]));
   }
 
+  std::unique_ptr<Rational_b_spline<2>> read_rational_b_spline_surface() const {
+    if (_ent_num != 128) return {};
+    Int n_basis [2] {_parser.read_int(_par[1]), _parser.read_int(_par[2])};
+    Int degree  [2] {_parser.read_int(_par[3]), _parser.read_int(_par[4])};
+    Int i = 10;
+    std::vector<Array<double>> knots;
+    for (int i_dim = 0; i_dim < 2; ++i_dim) {
+      knots.emplace_back(std::vector<Int>{1 + n_basis[i_dim] + degree[i_dim]});
+      for (int i_knot = 0; i_knot < knots[i_dim].size(); ++i_knot) {
+        knots[i_dim][i_knot] = _parser.read_float(_par[i++]);
+      }
+      printers::info(to_string(knots[i_dim]));
+    }
+    HEXED_THROW("not done", assert::Not_implemented_error); throw;
+  }
+
   // Attempts to read any of the entities that derive from `Parametric<1>`.
   // Iff `required == true`, throws on failure.
   std::unique_ptr<Parametric<1>> read_curve(bool required = true) {
@@ -748,6 +765,7 @@ class Read_entity {
     std::unique_ptr<Parametric<2>> ptr;
     merge(ptr, read_plane());
     merge(ptr, read_revolution_surface());
+    merge(ptr, read_rational_b_spline_surface());
     HEXED_ASSERT(
       !required || ptr,
       "Surface entity #" + std::to_string(_ent_num) + " is not implemented.",

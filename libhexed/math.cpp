@@ -1,5 +1,7 @@
 #include <hexed/math.hpp>
 
+std::string hexed::to_string(hexed::Int i) {return std::to_string(i);}
+
 namespace hexed::math {
 
 double angle_diff(double angle0, double angle1) {

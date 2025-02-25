@@ -11,4 +11,9 @@ std::string file_extension(std::string file_name) {
   return ext;
 }
 
+std::string to_string(int i) {return std::to_string(i);}
+std::string to_string(double d) {return format_str(100, "%+.6e", d);}
+std::string to_string(std::string s) {return s;}
+std::string to_string(bool b) {return b ? "true" : "false";}
+
 }

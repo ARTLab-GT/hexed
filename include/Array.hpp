@@ -13,6 +13,7 @@
 #endif
 
 #include <vector>
+#include <typeinfo>
 #include "assert.hpp"
 #include "math.hpp"
 #include "Iterator.hpp"
@@ -428,6 +429,27 @@ DEFINE_OPERATOR(||)
 DEFINE_OPERATOR(-)
 DEFINE_OPERATOR(+)
 #undef DEFINE_OPERATOR
+
+//! \brief Overload of `hexed::to_string` for `Array`s.
+//! \details Works as long as `to_string(T)` is defined.
+template <typename T>
+std::string to_string(Array<T> arr) {
+  if (arr.size() == 0) return "";
+  Array<T> order2 = arr.reshaped({whatever, arr.shape()[arr.order() - 1]});
+  std::string s = format_str(200, "Array<%s> {", typeid(T).name());
+  for (int i = 0; i < arr.order(); ++i) s += to_string(arr.shape()[i]) + ", ";
+  s.pop_back();
+  s.pop_back();
+  s += "}:\n";
+  for (Int i = 0; i < order2.shape()[0]; ++i) {
+    for (Int j = 0; j < order2.shape()[1]; ++j) {
+      s += to_string(order2(i)[j]) + " ";
+    }
+    s.pop_back();
+    s += "\n";
+  }
+  return s;
+}
 
 }
 #endif

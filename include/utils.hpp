@@ -28,5 +28,15 @@ template <typename T> std::add_pointer<T>::type addr_if_possible(T&& arg) {
 //! \brief gets the extension of a file name and converts it to lowercase
 std::string file_extension(std::string file_name);
 
+/*! \brief Represents its argument as a human-readable string.
+ * \details like `std::to_string`, but overloaded for some `hexed` types.
+ * There should be overloads for most things you might want to print.
+ * If you want an overload that isn't here, let \me know.
+ */
+std::string to_string(int);
+std::string to_string(double); //!< \overload
+std::string to_string(std::string); //!< \overload
+std::string to_string(bool); //!< \overload
+
 }
 #endif
