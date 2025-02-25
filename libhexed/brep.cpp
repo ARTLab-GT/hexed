@@ -714,18 +714,36 @@ class Read_entity {
 
   std::unique_ptr<Rational_b_spline<2>> read_rational_b_spline_surface() const {
     if (_ent_num != 128) return {};
-    Int n_basis [2] {_parser.read_int(_par[1]), _parser.read_int(_par[2])};
-    Int degree  [2] {_parser.read_int(_par[3]), _parser.read_int(_par[4])};
+    std::vector<Int> n_basis {_parser.read_int(_par[1]), _parser.read_int(_par[2])};
+    std::vector<Int> degree  {_parser.read_int(_par[3]), _parser.read_int(_par[4])};
     Int i = 10;
     std::vector<Array<double>> knots;
     for (int i_dim = 0; i_dim < 2; ++i_dim) {
-      knots.emplace_back(std::vector<Int>{1 + n_basis[i_dim] + degree[i_dim]});
+      knots.emplace_back(std::vector<Int>{2 + n_basis[i_dim] + degree[i_dim]});
       for (int i_knot = 0; i_knot < knots[i_dim].size(); ++i_knot) {
         knots[i_dim][i_knot] = _parser.read_float(_par[i++]);
       }
       printers::info(to_string(knots[i_dim]));
     }
-    HEXED_THROW("not done", assert::Not_implemented_error); throw;
+    Array<double> weights({n_basis[0] + 1, n_basis[1] + 1});
+    for (int i_weight = 0; i_weight < n_basis[0] + 1; ++i_weight) {
+      for (int j_weight = 0; j_weight < n_basis[1] + 1; ++j_weight) {
+        weights(j_weight)[i_weight] = _parser.read_float(_par[i++]); // note transposed
+      }
+    }
+    printers::info(to_string(weights));
+    Array<double> control_points({n_basis[0] + 1, n_basis[1] + 1, 3});
+    for (int i_point = 0; i_point < n_basis[0] + 1; ++i_point) {
+      for (int j_point = 0; j_point < n_basis[1] + 1; ++j_point) {
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          control_points(j_point)(i_point)[i_dim] = _parser.read_float(_par[i++]);
+        }
+      }
+    }
+    printers::info(to_string(control_points));
+    HEXED_ASSERT((Int)_par.size() == i + 4,
+                 format_str(200, "number of parameters doesn't match up (%li vs %li)", Int(_par.size()), i + 4))
+    return std::make_unique<Rational_b_spline<2>>(std::move(knots), weights(), control_points());
   }
 
   // Attempts to read any of the entities that derive from `Parametric<1>`.
