@@ -375,10 +375,54 @@ Rational_b_spline<n_param>::Rational_b_spline(std::vector<Array<double>> knots, 
 : _weights(weights.copy())
 , _control_points(control_points.copy())
 {
+  for (Array<double>& k : knots) _knots.push_back(k.copy());
+  HEXED_ASSERT(knots.size() == n_param, "dimensionality mismatch in `knots`")
+  HEXED_ASSERT(weights.order() == n_param, "dimensionality mismatch in `weights`")
+  HEXED_ASSERT(control_points.order() == n_param + 1, "dimensionality mismatch in `control_points`")
+  for (int i_dim = 0; i_dim < n_param; ++i_dim) {
+    _n_basis[i_dim] = _weights.shape()[i_dim];
+    _degree[i_dim] = (_knots[i_dim].size() - _n_basis[i_dim])/2;
+    HEXED_ASSERT(_degree[i_dim] > 0, "degree must be positive")
+    HEXED_ASSERT(_control_points.shape()[i_dim] == _n_basis[i_dim],
+                 "shape of `weights` and `control_points` don't match")
+    _knots[i_dim] -= knots[i_dim][_degree[i_dim]];
+    _knots[i_dim] /= knots[i_dim][_knots[i_dim].size() - _degree[i_dim] - 1];
+  }
+  HEXED_ASSERT(_control_points.shape()[n_param] == 3, "wrong number of coordinates (should always be 3)")
 }
 
 template <int n_param>
 Mat<3> Rational_b_spline<n_param>::point(Mat<n_param> params) const {
+  if (n_param == 1) {
+    Mat<3> num = Mat<3>::Zero();
+    double denom = 0;
+    Int knot = _degree[0];
+    //! \todo accelerate this brute-force loop
+    while (knot < _knots[0].size() - 2 - _degree[0] && _knots[0][knot + 1] < params[0]) ++knot;
+    Array<double> basis({_degree[0] + 1});
+    basis = 0;
+    basis[0] = 1;
+    for (int deg = 1; deg <= _degree[0]; ++deg) {
+      for (int j_basis = deg; j_basis >= 0; --j_basis) {
+        // note: IGES spec unclear because formulae are for degree k - 1 basis in terms of k - 2
+        Array<double> shifted = _knots[0](knot - deg, end);
+        basis[j_basis] *= (shifted[j_basis + deg + 1] - params[0])
+                          /(shifted[j_basis + deg + 1] - shifted[j_basis]);
+        if (j_basis) {
+          basis[j_basis] += basis[j_basis - 1]*(params[0] - shifted[j_basis])
+                            /(shifted[j_basis + deg] - shifted[j_basis]);
+        }
+      }
+    }
+    for (int i_basis = 0; i_basis <= _degree[0] && knot + i_basis - _degree[0] < _n_basis[0]; ++i_basis) {
+      std::cout << basis[i_basis] << " ";
+      Int i_cp = knot - _degree[0] + i_basis;
+      num += _weights[i_cp]*basis[i_basis]*_control_points(i_cp).vector();
+      denom += _weights[i_cp]*basis[i_basis];
+    }
+    std::cout << (num/denom).transpose() << std::endl;
+    return num/denom;
+  }
   return Mat<3>::Zero();
 }
 
@@ -714,24 +758,24 @@ class Read_entity {
 
   std::unique_ptr<Rational_b_spline<1>> read_rational_b_spline_curve() const {
     if (_ent_num != 126) return {};
-    Int n_basis = _parser.read_int(_par[1]);
+    Int n_basis = _parser.read_int(_par[1]) + 1;
     Int degree = _parser.read_int(_par[2]);
     Int i = 7;
     std::vector<Array<double>> knots;
-    knots.emplace_back(std::vector<Int>{2 + n_basis + degree});
+    knots.emplace_back(std::vector<Int>{1 + n_basis + degree});
     for (int i_knot = 0; i_knot < knots[0].size(); ++i_knot) {
       knots[0][i_knot] = _parser.read_float(_par[i++]);
     }
     printers::info(to_string(knots[0]));
-    Array<double> weights({n_basis + 1});
-    for (int i_weight = 0; i_weight < n_basis + 1; ++i_weight) {
+    Array<double> weights({n_basis});
+    for (int i_weight = 0; i_weight < n_basis; ++i_weight) {
       weights[i_weight] = _parser.read_float(_par[i++]); // note transposed
     }
     printers::info(to_string(weights));
-    Array<double> control_points({n_basis + 1, 3});
-    for (int i_point = 0; i_point < n_basis + 1; ++i_point) {
+    Array<double> control_points({n_basis, 3});
+    for (int i_point = 0; i_point < n_basis; ++i_point) {
       for (int i_dim = 0; i_dim < 3; ++i_dim) {
-        control_points(i_point)[i_dim] = _parser.read_float(_par[i++]);
+        control_points(i_point)[i_dim] = _unit*_parser.read_float(_par[i++]);
       }
     }
     printers::info(to_string(control_points));
@@ -742,29 +786,29 @@ class Read_entity {
 
   std::unique_ptr<Rational_b_spline<2>> read_rational_b_spline_surface() const {
     if (_ent_num != 128) return {};
-    std::vector<Int> n_basis {_parser.read_int(_par[1]), _parser.read_int(_par[2])};
+    std::vector<Int> n_basis {_parser.read_int(_par[1]) + 1, _parser.read_int(_par[2]) + 1};
     std::vector<Int> degree  {_parser.read_int(_par[3]), _parser.read_int(_par[4])};
     Int i = 10;
     std::vector<Array<double>> knots;
     for (int i_dim = 0; i_dim < 2; ++i_dim) {
-      knots.emplace_back(std::vector<Int>{2 + n_basis[i_dim] + degree[i_dim]});
+      knots.emplace_back(std::vector<Int>{1 + n_basis[i_dim] + degree[i_dim]});
       for (int i_knot = 0; i_knot < knots[i_dim].size(); ++i_knot) {
         knots[i_dim][i_knot] = _parser.read_float(_par[i++]);
       }
       printers::info(to_string(knots[i_dim]));
     }
-    Array<double> weights({n_basis[0] + 1, n_basis[1] + 1});
-    for (int i_weight = 0; i_weight < n_basis[0] + 1; ++i_weight) {
-      for (int j_weight = 0; j_weight < n_basis[1] + 1; ++j_weight) {
+    Array<double> weights(n_basis);
+    for (int i_weight = 0; i_weight < n_basis[0]; ++i_weight) {
+      for (int j_weight = 0; j_weight < n_basis[1]; ++j_weight) {
         weights(j_weight)[i_weight] = _parser.read_float(_par[i++]); // note transposed
       }
     }
     printers::info(to_string(weights));
-    Array<double> control_points({n_basis[0] + 1, n_basis[1] + 1, 3});
-    for (int i_point = 0; i_point < n_basis[0] + 1; ++i_point) {
-      for (int j_point = 0; j_point < n_basis[1] + 1; ++j_point) {
+    Array<double> control_points({n_basis[0], n_basis[1], 3});
+    for (int i_point = 0; i_point < n_basis[0]; ++i_point) {
+      for (int j_point = 0; j_point < n_basis[1]; ++j_point) {
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
-          control_points(j_point)(i_point)[i_dim] = _parser.read_float(_par[i++]);
+          control_points(j_point)(i_point)[i_dim] = _unit*_parser.read_float(_par[i++]);
         }
       }
     }

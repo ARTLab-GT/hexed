@@ -285,7 +285,8 @@ class Rational_b_spline : public Parametric<n_param> {
     intersection_params(Mat<3, 2> points) const override;
   private:
   std::vector<Array<double>> _knots;
-  std::array<double, n_param> _degree;
+  std::array<Int, n_param> _n_basis;
+  std::array<int, n_param> _degree;
   Array<double> _weights;
   Array<double> _control_points;
 };
