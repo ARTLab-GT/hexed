@@ -381,7 +381,7 @@ Rational_b_spline<n_param>::Rational_b_spline(std::vector<Array<double>> knots, 
   HEXED_ASSERT(control_points.order() == n_param + 1, "dimensionality mismatch in `control_points`")
   for (int i_dim = 0; i_dim < n_param; ++i_dim) {
     _n_basis[i_dim] = _weights.shape()[i_dim];
-    _degree[i_dim] = (_knots[i_dim].size() - _n_basis[i_dim])/2;
+    _degree[i_dim] = _knots[i_dim].size() - _n_basis[i_dim] - 1;
     HEXED_ASSERT(_degree[i_dim] > 0, "degree must be positive")
     HEXED_ASSERT(_control_points.shape()[i_dim] == _n_basis[i_dim],
                  "shape of `weights` and `control_points` don't match")
@@ -394,29 +394,33 @@ Rational_b_spline<n_param>::Rational_b_spline(std::vector<Array<double>> knots, 
 template <int n_param>
 Mat<3> Rational_b_spline<n_param>::point(Mat<n_param> params) const {
   if (n_param == 1) {
-    Mat<3> num = Mat<3>::Zero();
-    double denom = 0;
     Int knot = _degree[0];
     //! \todo accelerate this brute-force loop
     while (knot < _knots[0].size() - 2 - _degree[0] && _knots[0][knot + 1] < params[0]) ++knot;
     Array<double> basis({_degree[0] + 1});
     basis = 0;
     basis[0] = 1;
+    std::cout << knot << " | ";
     for (int deg = 1; deg <= _degree[0]; ++deg) {
       for (int j_basis = deg; j_basis >= 0; --j_basis) {
         // note: IGES spec unclear because formulae are for degree k - 1 basis in terms of k - 2
         Array<double> shifted = _knots[0](knot - deg, end);
-        basis[j_basis] *= (shifted[j_basis + deg + 1] - params[0])
-                          /(shifted[j_basis + deg + 1] - shifted[j_basis]);
+        std::cout << knot << " " << deg << " " << j_basis << " " << knot - deg + j_basis + deg + 1 << " " << knot - deg + j_basis << " | ";
+        if (j_basis < deg) {
+          basis[j_basis] *= (shifted[j_basis + deg + 1] - params[0])
+                            /(shifted[j_basis + deg + 1] - shifted[j_basis + 1]);
+        }
         if (j_basis) {
           basis[j_basis] += basis[j_basis - 1]*(params[0] - shifted[j_basis])
                             /(shifted[j_basis + deg] - shifted[j_basis]);
         }
       }
     }
+    Mat<3> num = Mat<3>::Zero();
+    double denom = 0;
     for (int i_basis = 0; i_basis <= _degree[0] && knot + i_basis - _degree[0] < _n_basis[0]; ++i_basis) {
-      std::cout << basis[i_basis] << " ";
       Int i_cp = knot - _degree[0] + i_basis;
+      std::cout << _weights[i_cp] << " ";
       num += _weights[i_cp]*basis[i_basis]*_control_points(i_cp).vector();
       denom += _weights[i_cp]*basis[i_basis];
     }
@@ -798,15 +802,15 @@ class Read_entity {
       printers::info(to_string(knots[i_dim]));
     }
     Array<double> weights(n_basis);
-    for (int i_weight = 0; i_weight < n_basis[0]; ++i_weight) {
-      for (int j_weight = 0; j_weight < n_basis[1]; ++j_weight) {
+    for (int i_weight = 0; i_weight < n_basis[1]; ++i_weight) {
+      for (int j_weight = 0; j_weight < n_basis[0]; ++j_weight) {
         weights(j_weight)[i_weight] = _parser.read_float(_par[i++]); // note transposed
       }
     }
     printers::info(to_string(weights));
     Array<double> control_points({n_basis[0], n_basis[1], 3});
-    for (int i_point = 0; i_point < n_basis[0]; ++i_point) {
-      for (int j_point = 0; j_point < n_basis[1]; ++j_point) {
+    for (int i_point = 0; i_point < n_basis[1]; ++i_point) {
+      for (int j_point = 0; j_point < n_basis[0]; ++j_point) {
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
           control_points(j_point)(i_point)[i_dim] = _unit*_parser.read_float(_par[i++]);
         }
