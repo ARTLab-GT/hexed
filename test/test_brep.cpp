@@ -280,4 +280,8 @@ TEST_CASE("Geom_3d", "[.slow]") {
     hexed::brep::Geom_3d geom("../test_assets/prism_twisted.iges", n_div);
     geom.visualize("default", "prism_twisted", 100, vis_volume);
   }
+  SECTION("weird_surface") {
+    hexed::brep::Geom_3d geom("../test_assets/weird_surface.iges", n_div);
+    geom.visualize("default", "weird_surface", 100, vis_volume);
+  }
 }
