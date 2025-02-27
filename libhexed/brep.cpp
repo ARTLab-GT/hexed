@@ -385,49 +385,75 @@ Rational_b_spline<n_param>::Rational_b_spline(std::vector<Array<double>> knots, 
     HEXED_ASSERT(_degree[i_dim] > 0, "degree must be positive")
     HEXED_ASSERT(_control_points.shape()[i_dim] == _n_basis[i_dim],
                  "shape of `weights` and `control_points` don't match")
-    _knots[i_dim] -= knots[i_dim][_degree[i_dim]];
-    _knots[i_dim] /= knots[i_dim][_knots[i_dim].size() - _degree[i_dim] - 1];
+    _knots[i_dim] -= _knots[i_dim][_degree[i_dim]];
+    _knots[i_dim] /= _knots[i_dim][_knots[i_dim].size() - _degree[i_dim] - 1];
+    std::cout << "knots" << i_dim << "\n";
+    std::cout << to_string(_knots[i_dim]);
   }
+  std::cout << std::flush;
   HEXED_ASSERT(_control_points.shape()[n_param] == 3, "wrong number of coordinates (should always be 3)")
 }
 
 template <int n_param>
 Mat<3> Rational_b_spline<n_param>::point(Mat<n_param> params) const {
-  if (n_param == 1) {
-    Int knot = _degree[0];
+  Int start_knot [n_param];
+  std::vector<Array<double>> bases;
+  Int n_term = 1;
+  for (int i_dim = 0; i_dim < n_param; ++i_dim) {
+    bases.push_back(Array<double>({_degree[i_dim] + 1}));
+    n_term *= _degree[i_dim] + 1;
+    start_knot[i_dim] = _degree[i_dim];
     //! \todo accelerate this brute-force loop
-    while (knot < _knots[0].size() - 2 - _degree[0] && _knots[0][knot + 1] < params[0]) ++knot;
-    Array<double> basis({_degree[0] + 1});
+    while (start_knot[i_dim] < _knots[i_dim].size() - 2 - _degree[i_dim]
+           && _knots[i_dim][start_knot[i_dim] + 1] < params[i_dim]) {
+      ++start_knot[i_dim];
+    }
+    Array<double> basis = bases.back()();
     basis = 0;
     basis[0] = 1;
-    std::cout << knot << " | ";
-    for (int deg = 1; deg <= _degree[0]; ++deg) {
+    for (int deg = 1; deg <= _degree[i_dim]; ++deg) {
       for (int j_basis = deg; j_basis >= 0; --j_basis) {
         // note: IGES spec unclear because formulae are for degree k - 1 basis in terms of k - 2
-        Array<double> shifted = _knots[0](knot - deg, end);
-        std::cout << knot << " " << deg << " " << j_basis << " " << knot - deg + j_basis + deg + 1 << " " << knot - deg + j_basis << " | ";
+        Array<double> shifted = _knots[i_dim](start_knot[i_dim] - deg, end);
         if (j_basis < deg) {
-          basis[j_basis] *= (shifted[j_basis + deg + 1] - params[0])
+          basis[j_basis] *= (shifted[j_basis + deg + 1] - params[i_dim])
                             /(shifted[j_basis + deg + 1] - shifted[j_basis + 1]);
         }
         if (j_basis) {
-          basis[j_basis] += basis[j_basis - 1]*(params[0] - shifted[j_basis])
+          basis[j_basis] += basis[j_basis - 1]*(params[i_dim] - shifted[j_basis])
                             /(shifted[j_basis + deg] - shifted[j_basis]);
         }
       }
     }
-    Mat<3> num = Mat<3>::Zero();
-    double denom = 0;
-    for (int i_basis = 0; i_basis <= _degree[0] && knot + i_basis - _degree[0] < _n_basis[0]; ++i_basis) {
-      Int i_cp = knot - _degree[0] + i_basis;
-      std::cout << _weights[i_cp] << " ";
-      num += _weights[i_cp]*basis[i_basis]*_control_points(i_cp).vector();
-      denom += _weights[i_cp]*basis[i_basis];
-    }
-    std::cout << (num/denom).transpose() << std::endl;
-    return num/denom;
   }
-  return Mat<3>::Zero();
+  Mat<3> num = Mat<3>::Zero();
+  double denom = 0;
+  for (int i_term = 0; i_term < n_term; ++i_term) {
+    bool in_bounds = true;
+    double basis_fun = 1;
+    Int i_cp = 0;
+    for (int i_dim = 0; i_dim < n_param; ++i_dim) {
+      // this only works for curves and surfaces, no volumes (not that that's a thing anyway)
+      static_assert(n_param <= 2);
+      int i_basis = (n_param == 2 && !i_dim) ? i_term/(_degree[1] + 1) : i_term%(_degree[i_dim] + 1);
+      basis_fun *= bases[i_dim][i_basis];
+      Int row = start_knot[i_dim] - _degree[i_dim] + i_basis;
+      i_cp += row*_weights.stride(i_dim);
+      in_bounds = in_bounds && row < _n_basis[i_dim];
+    }
+    if (in_bounds) {
+      num += _weights[i_cp]*basis_fun*_control_points.reshaped({whatever, 3})(i_cp).vector();
+      denom += _weights[i_cp]*basis_fun;
+    }
+  }
+  #if 0
+  for (int i_basis = 0; i_basis <= _degree[0] && start_knot[0] + i_basis - _degree[0] < _n_basis[0]; ++i_basis) {
+    Int i_cp = start_knot[0] - _degree[0] + i_basis;
+    num += _weights[i_cp]*bases[0][i_basis]*_control_points(i_cp).vector();
+    denom += _weights[i_cp]*bases[0][i_basis];
+  }
+  #endif
+  return num/denom;
 }
 
 template <int n_param>
