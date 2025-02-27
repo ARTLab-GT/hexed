@@ -366,12 +366,11 @@ std::vector<Parametric<2>::Intersection_parameters> Revolution_surface::intersec
   return finder.intersects;
 }
 
-template class Rational_b_spline<1>;
-template class Rational_b_spline<2>;
+template class Nurbs<1>;
+template class Nurbs<2>;
 
 template <int n_param>
-Rational_b_spline<n_param>::Rational_b_spline(std::vector<Array<double>> knots, Array<double> weights,
-                                              Array<double> control_points)
+Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points)
 : _weights(weights.copy())
 , _control_points(control_points.copy())
 {
@@ -392,19 +391,14 @@ Rational_b_spline<n_param>::Rational_b_spline(std::vector<Array<double>> knots, 
 }
 
 template <int n_param>
-Mat<3> Rational_b_spline<n_param>::point(Mat<n_param> params) const {
+Mat<3> Nurbs<n_param>::point(Mat<n_param> params) const {
   Int start_knot [n_param];
   std::vector<Array<double>> bases;
   Int n_term = 1;
   for (int i_dim = 0; i_dim < n_param; ++i_dim) {
     bases.push_back(Array<double>({_degree[i_dim] + 1}));
     n_term *= _degree[i_dim] + 1;
-    start_knot[i_dim] = _degree[i_dim];
-    //! \todo accelerate this brute-force loop
-    while (start_knot[i_dim] < _knots[i_dim].size() - 2 - _degree[i_dim]
-           && _knots[i_dim][start_knot[i_dim] + 1] < params[i_dim]) {
-      ++start_knot[i_dim];
-    }
+    start_knot[i_dim] = _find_knot(i_dim, params[i_dim]);
     Array<double> basis = bases.back()();
     basis = 0;
     basis[0] = 1;
@@ -448,14 +442,35 @@ Mat<3> Rational_b_spline<n_param>::point(Mat<n_param> params) const {
 
 template <int n_param>
 Parametric<n_param>::Nearest_parameters
-Rational_b_spline<n_param>::nearest_params(Mat<3> point, Parametric<n_param>::Constraint is_feasible,
+Nurbs<n_param>::nearest_params(Mat<3> point, Parametric<n_param>::Constraint is_feasible,
                                            double max_distance) const {
   return {Mat<n_param>::Zero(), false};
 }
 
 template <int n_param>
+Int Nurbs<n_param>::_find_knot(int i_dim, double param) const {
+  // O(log n) binary search
+  Int low = _degree[i_dim];
+  Int high = _knots[i_dim].size() - 1 - _degree[i_dim];
+  while (high - low > 1) {
+    Int diff = (high - low)/2;
+    if (_knots[i_dim][low + diff] < param) {
+      low += diff;
+    } else if (_knots[i_dim][high - diff] > param) {
+      high -= diff;
+    // if `param` is exactly equal to a knot, the following cases will be selected
+    } else if (_knots[i_dim][low + diff] < .5*(_knots[i_dim][high] + _knots[i_dim][low])) {
+      low += diff;
+    } else {
+      high -= diff;
+    }
+  }
+  return low;
+}
+
+template <int n_param>
 std::vector<typename Parametric<n_param>::Intersection_parameters>
-Rational_b_spline<n_param>::intersection_params(Mat<3, 2> points) const {
+Nurbs<n_param>::intersection_params(Mat<3, 2> points) const {
   return {};
 }
 
@@ -776,7 +791,7 @@ class Read_entity {
                                                 _parser.read_float(_par[3]), _parser.read_float(_par[4]));
   }
 
-  std::unique_ptr<Rational_b_spline<1>> read_rational_b_spline_curve() const {
+  std::unique_ptr<Nurbs<1>> read_nurbs_curve() const {
     if (_ent_num != 126) return {};
     Int n_basis = _parser.read_int(_par[1]) + 1;
     Int degree = _parser.read_int(_par[2]);
@@ -798,10 +813,10 @@ class Read_entity {
     }
     HEXED_ASSERT((Int)_par.size() == i + 5,
                  format_str(200, "number of parameters doesn't match up (%li vs %li)", Int(_par.size()), i + 4))
-    return std::make_unique<Rational_b_spline<1>>(std::move(knots), weights(), control_points());
+    return std::make_unique<Nurbs<1>>(std::move(knots), weights(), control_points());
   }
 
-  std::unique_ptr<Rational_b_spline<2>> read_rational_b_spline_surface() const {
+  std::unique_ptr<Nurbs<2>> read_nurbs_surface() const {
     if (_ent_num != 128) return {};
     std::vector<Int> n_basis {_parser.read_int(_par[1]) + 1, _parser.read_int(_par[2]) + 1};
     std::vector<Int> degree  {_parser.read_int(_par[3]), _parser.read_int(_par[4])};
@@ -829,7 +844,7 @@ class Read_entity {
     }
     HEXED_ASSERT((Int)_par.size() == i + 4,
                  format_str(200, "number of parameters doesn't match up (%li vs %li)", Int(_par.size()), i + 4))
-    return std::make_unique<Rational_b_spline<2>>(std::move(knots), weights(), control_points());
+    return std::make_unique<Nurbs<2>>(std::move(knots), weights(), control_points());
   }
 
   // Attempts to read any of the entities that derive from `Parametric<1>`.
@@ -838,7 +853,7 @@ class Read_entity {
     std::unique_ptr<Parametric<1>> ptr;
     merge(ptr, read_line_segment());
     merge(ptr, read_circular_arc());
-    merge(ptr, read_rational_b_spline_curve());
+    merge(ptr, read_nurbs_curve());
     HEXED_ASSERT(
       !required || ptr,
       "Curve entity #" + std::to_string(_ent_num) + " is not implemented.",
@@ -870,7 +885,7 @@ class Read_entity {
     std::unique_ptr<Parametric<2>> ptr;
     merge(ptr, read_plane());
     merge(ptr, read_revolution_surface());
-    merge(ptr, read_rational_b_spline_surface());
+    merge(ptr, read_nurbs_surface());
     HEXED_ASSERT(
       !required || ptr,
       "Surface entity #" + std::to_string(_ent_num) + " is not implemented.",

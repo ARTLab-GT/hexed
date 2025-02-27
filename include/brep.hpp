@@ -275,9 +275,9 @@ class Revolution_surface : public Parametric<2> {
 };
 
 template <int n_param>
-class Rational_b_spline : public Parametric<n_param> {
+class Nurbs : public Parametric<n_param> {
   public:
-  Rational_b_spline(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points);
+  Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points);
   Mat<3> point(Mat<n_param> params) const override;
   Parametric<n_param>::Nearest_parameters
     nearest_params(Mat<3> point, Parametric<n_param>::Constraint is_feasible, double max_distance) const override;
@@ -285,6 +285,8 @@ class Rational_b_spline : public Parametric<n_param> {
     intersection_params(Mat<3, 2> points) const override;
   private:
   std::vector<Array<double>> _knots;
+  // finds the knot at the start of the interval bracketing `param` along the `i_dim`th parameter axis
+  Int _find_knot(int i_dim, double param) const;
   std::array<Int, n_param> _n_basis;
   std::array<int, n_param> _degree;
   Array<double> _weights;
