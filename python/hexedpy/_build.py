@@ -194,7 +194,7 @@ class Hexed(bu.C_project):
         return self.builder.options["build_tests"] and self.builder.options["run_tests"]
 
     def test(self):
-        args = [self.bdir + "bin/hexed_test", self.builder.options["test_args"]]
+        args = ["time", self.bdir + "bin/hexed_test", self.builder.options["test_args"]]
         if self.builder.options["gdb"]:
             args = ["gdb", "--args"] + args
         if self.builder.options["valgrind"]:

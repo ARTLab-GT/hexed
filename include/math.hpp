@@ -19,7 +19,7 @@ typedef intmax_t Int; //!< \brief basic integer type  to use for potentially-lar
 //! \brief convenience alias for largest double value
 constexpr double huge = std::numeric_limits<double>::max();
 
-std::string to_string(Int); //! \brief overload of `to_string(int)` for larger `Int`s.
+std::string to_string(Int); //!< \brief overload of `to_string(int)` for larger `Int`s.
 
 #pragma omp declare reduction (+ : Mat<dyn, dyn> : omp_out = omp_out + omp_in) \
   initializer(omp_priv = Mat<dyn, dyn>::Zero(omp_orig.rows(), omp_orig.cols()))
@@ -71,6 +71,8 @@ constexpr Int stride(int n_dim, Int row_size, int i_dim) {
   return math::pow(row_size, n_dim - 1 - i_dim);
 }
 
+//! \brief Finds the `i_dim`th array index of a point with flat index `index`
+//! in an `n_dim` dimensional array of `row_size` on each side
 constexpr Int row_coordinate(int n_dim, Int row_size, int i_dim, Int index) {
   return index/stride(n_dim, row_size, i_dim)%row_size;
 }

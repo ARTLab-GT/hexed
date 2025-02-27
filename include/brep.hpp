@@ -277,7 +277,7 @@ class Revolution_surface : public Parametric<2> {
 template <int n_param>
 class Nurbs : public Parametric<n_param> {
   public:
-  Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points);
+  Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points, Int n_div);
   Mat<3> point(Mat<n_param> params) const override;
   Parametric<n_param>::Nearest_parameters
     nearest_params(Mat<3> point, Parametric<n_param>::Constraint is_feasible, double max_distance) const override;
@@ -291,6 +291,7 @@ class Nurbs : public Parametric<n_param> {
   std::array<int, n_param> _degree;
   Array<double> _weights;
   Array<double> _control_points;
+  Int _n_div;
 };
 
 //! \brief A list of curves, where the end point of each should coincide with start of the next.

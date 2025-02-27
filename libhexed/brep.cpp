@@ -370,9 +370,10 @@ template class Nurbs<1>;
 template class Nurbs<2>;
 
 template <int n_param>
-Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points)
+Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points, Int n_div)
 : _weights(weights.copy())
 , _control_points(control_points.copy())
+, _n_div{n_div}
 {
   for (Array<double>& k : knots) _knots.push_back(k.copy());
   HEXED_ASSERT(knots.size() == n_param, "dimensionality mismatch in `knots`")
@@ -442,9 +443,25 @@ Mat<3> Nurbs<n_param>::point(Mat<n_param> params) const {
 
 template <int n_param>
 Parametric<n_param>::Nearest_parameters
-Nurbs<n_param>::nearest_params(Mat<3> point, Parametric<n_param>::Constraint is_feasible,
-                                           double max_distance) const {
-  return {Mat<n_param>::Zero(), false};
+Nurbs<n_param>::nearest_params(Mat<3> target, Parametric<n_param>::Constraint is_feasible, double max_distance) const {
+  typename Parametric<n_param>::Nearest_parameters nearest(Mat<n_param>::Zero(), false);
+  double dist_sq = max_distance*max_distance;
+  for (Int i_point = 0; i_point < math::pow(_n_div + 1, n_param); ++i_point) {
+    Mat<n_param> params;
+    for (int i_dim = 0; i_dim < n_param; ++i_dim) {
+      params(i_dim) = math::row_coordinate(n_param, _n_div + 1, i_dim, i_point)/double(_n_div);
+    }
+    if (is_feasible(params)) {
+      Mat<3> p = point(params);
+      double d = (target - p).squaredNorm();
+      if (d < dist_sq) {
+        dist_sq = d;
+        nearest.params = params;
+        nearest.is_feasible = true;
+      }
+    }
+  }
+  return nearest;
 }
 
 template <int n_param>
@@ -813,7 +830,7 @@ class Read_entity {
     }
     HEXED_ASSERT((Int)_par.size() == i + 5,
                  format_str(200, "number of parameters doesn't match up (%li vs %li)", Int(_par.size()), i + 4))
-    return std::make_unique<Nurbs<1>>(std::move(knots), weights(), control_points());
+    return std::make_unique<Nurbs<1>>(std::move(knots), weights(), control_points(), _n_div);
   }
 
   std::unique_ptr<Nurbs<2>> read_nurbs_surface() const {
@@ -844,7 +861,7 @@ class Read_entity {
     }
     HEXED_ASSERT((Int)_par.size() == i + 4,
                  format_str(200, "number of parameters doesn't match up (%li vs %li)", Int(_par.size()), i + 4))
-    return std::make_unique<Nurbs<2>>(std::move(knots), weights(), control_points());
+    return std::make_unique<Nurbs<2>>(std::move(knots), weights(), control_points(), _n_div);
   }
 
   // Attempts to read any of the entities that derive from `Parametric<1>`.
