@@ -387,10 +387,7 @@ Rational_b_spline<n_param>::Rational_b_spline(std::vector<Array<double>> knots, 
                  "shape of `weights` and `control_points` don't match")
     _knots[i_dim] -= _knots[i_dim][_degree[i_dim]];
     _knots[i_dim] /= _knots[i_dim][_knots[i_dim].size() - _degree[i_dim] - 1];
-    std::cout << "knots" << i_dim << "\n";
-    std::cout << to_string(_knots[i_dim]);
   }
-  std::cout << std::flush;
   HEXED_ASSERT(_control_points.shape()[n_param] == 3, "wrong number of coordinates (should always be 3)")
 }
 
@@ -446,13 +443,6 @@ Mat<3> Rational_b_spline<n_param>::point(Mat<n_param> params) const {
       denom += _weights[i_cp]*basis_fun;
     }
   }
-  #if 0
-  for (int i_basis = 0; i_basis <= _degree[0] && start_knot[0] + i_basis - _degree[0] < _n_basis[0]; ++i_basis) {
-    Int i_cp = start_knot[0] - _degree[0] + i_basis;
-    num += _weights[i_cp]*bases[0][i_basis]*_control_points(i_cp).vector();
-    denom += _weights[i_cp]*bases[0][i_basis];
-  }
-  #endif
   return num/denom;
 }
 
@@ -796,19 +786,16 @@ class Read_entity {
     for (int i_knot = 0; i_knot < knots[0].size(); ++i_knot) {
       knots[0][i_knot] = _parser.read_float(_par[i++]);
     }
-    printers::info(to_string(knots[0]));
     Array<double> weights({n_basis});
     for (int i_weight = 0; i_weight < n_basis; ++i_weight) {
       weights[i_weight] = _parser.read_float(_par[i++]); // note transposed
     }
-    printers::info(to_string(weights));
     Array<double> control_points({n_basis, 3});
     for (int i_point = 0; i_point < n_basis; ++i_point) {
       for (int i_dim = 0; i_dim < 3; ++i_dim) {
         control_points(i_point)[i_dim] = _unit*_parser.read_float(_par[i++]);
       }
     }
-    printers::info(to_string(control_points));
     HEXED_ASSERT((Int)_par.size() == i + 5,
                  format_str(200, "number of parameters doesn't match up (%li vs %li)", Int(_par.size()), i + 4))
     return std::make_unique<Rational_b_spline<1>>(std::move(knots), weights(), control_points());
@@ -825,7 +812,6 @@ class Read_entity {
       for (int i_knot = 0; i_knot < knots[i_dim].size(); ++i_knot) {
         knots[i_dim][i_knot] = _parser.read_float(_par[i++]);
       }
-      printers::info(to_string(knots[i_dim]));
     }
     Array<double> weights(n_basis);
     for (int i_weight = 0; i_weight < n_basis[1]; ++i_weight) {
@@ -833,7 +819,6 @@ class Read_entity {
         weights(j_weight)[i_weight] = _parser.read_float(_par[i++]); // note transposed
       }
     }
-    printers::info(to_string(weights));
     Array<double> control_points({n_basis[0], n_basis[1], 3});
     for (int i_point = 0; i_point < n_basis[1]; ++i_point) {
       for (int j_point = 0; j_point < n_basis[0]; ++j_point) {
@@ -842,7 +827,6 @@ class Read_entity {
         }
       }
     }
-    printers::info(to_string(control_points));
     HEXED_ASSERT((Int)_par.size() == i + 4,
                  format_str(200, "number of parameters doesn't match up (%li vs %li)", Int(_par.size()), i + 4))
     return std::make_unique<Rational_b_spline<2>>(std::move(knots), weights(), control_points());
