@@ -393,7 +393,7 @@ Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, A
   if constexpr (n_param == 1) {
     #pragma omp parallel for reduction(max:max_sq)
     for (Int i_div = 0; i_div < _n_div; ++i_div) {
-      double dist_sq = (point(Mat<1>{i_div/(_n_div + 1.)}) - point(Mat<1>{(i_div + 1.)/(_n_div + 1)})).squaredNorm()/4;
+      double dist_sq = (point(Mat<1>{double(i_div + 1)/_n_div}) - point(Mat<1>{double(i_div)/_n_div})).squaredNorm()/4;
       max_sq = std::max(max_sq, dist_sq);
     }
   } else {
@@ -404,7 +404,7 @@ Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, A
         Mat<3> centroid = Mat<3>::Zero();
         for (int i_vert = 0; i_vert < 2; ++i_vert) {
           for (int j_vert = 0; j_vert < 2; ++j_vert) {
-            verts(all, 2*i_vert + j_vert) = point({(i_div + i_vert)/(_n_div + 1.), (j_div + j_vert)/(_n_div + 1.)});
+            verts(all, 2*i_vert + j_vert) = point({double(i_div + i_vert)/_n_div, double(j_div + j_vert)/_n_div});
             centroid += verts(all, 2*i_vert + j_vert);
           }
         }
@@ -416,7 +416,6 @@ Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, A
     }
   }
   _max_deriv = std::sqrt(max_sq)*_n_div;
-  std::cout << _max_deriv << std::endl;
 }
 
 template <int n_param>
@@ -470,26 +469,60 @@ Mat<3> Nurbs<n_param>::point(Mat<n_param> params) const {
 }
 
 template <int n_param>
-Parametric<n_param>::Nearest_parameters
-Nurbs<n_param>::nearest_params(Mat<3> target, Parametric<n_param>::Constraint is_feasible, double max_distance) const {
-  typename Parametric<n_param>::Nearest_parameters nearest(Mat<n_param>::Zero(), false);
-  double dist_sq = max_distance*max_distance;
-  for (Int i_point = 0; i_point < math::pow(_n_div + 1, n_param); ++i_point) {
-    Mat<n_param> params;
-    for (int i_dim = 0; i_dim < n_param; ++i_dim) {
-      params(i_dim) = math::row_coordinate(n_param, _n_div + 1, i_dim, i_point)/double(_n_div);
+void Nurbs<n_param>::_recursive_nearest(_Nearest_params& nearest, std::array<Int, n_param> start_node, Int size,
+                                        Parametric<n_param>::Constraint is_feasible) const {
+  constexpr int n_tree = math::pow(2, n_param);
+  if (size > 1) {
+    double dist [n_tree];
+    for (int i_branch = 0; i_branch < n_tree; ++i_branch) {
+      Mat<n_param> params;
+      for (int i_dim = 0; i_dim < n_param; ++i_dim) {
+        Int i_node = start_node[i_dim] + i_branch/math::pow(2, n_param - 1 - i_dim)%2*size/2;
+        params(i_dim) = (i_node + size/4.)/_n_div;
+      }
+      dist[i_branch] = (point(params) - nearest.target).norm();
     }
-    if (is_feasible(params)) {
-      Mat<3> p = point(params);
-      double d = (target - p).squaredNorm();
-      if (d < dist_sq) {
-        dist_sq = d;
-        nearest.params = params;
-        nearest.is_feasible = true;
+    for (int i = 0; i < n_tree; ++i) {
+      int i_branch = 0;
+      for (int j = 1; j < n_tree; ++j) {
+        if (dist[j] < dist[i_branch]) i_branch = j;
+      }
+      std::array<Int, n_param> branch_start = start_node;
+      for (int i_dim = 0; i_dim < n_param; ++i_dim) {
+        branch_start[i_dim] += i_branch/math::pow(2, n_param - 1 - i_dim)%2*size/2;
+      }
+      if (math::pow(std::max(0., dist[i_branch] - _max_deriv*size/2/_n_div), 2) < nearest.dist_sq) {
+        _recursive_nearest(nearest, branch_start, size/2, is_feasible);
+      }
+      dist[i_branch] = std::sqrt(huge);
+    }
+  } else {
+    for (int i_vert = 0; i_vert < n_tree; ++i_vert) {
+      Mat<n_param> params;
+      for (int i_dim = 0; i_dim < n_param; ++i_dim) {
+        params(i_dim) = (start_node[i_dim] + i_vert/math::pow(2, n_param - 1 - i_dim)%2)/double(_n_div);
+      }
+      if (is_feasible(params)) {
+        Mat<3> p = point(params);
+        double dist_sq = (p - nearest.target).squaredNorm();
+        if (dist_sq < nearest.dist_sq) {
+          nearest.params = params;
+          nearest.is_feasible = true;
+          nearest.dist_sq = dist_sq;
+        }
       }
     }
   }
-  return nearest;
+}
+
+template <int n_param>
+Parametric<n_param>::Nearest_parameters
+Nurbs<n_param>::nearest_params(Mat<3> target, Parametric<n_param>::Constraint is_feasible, double max_distance) const {
+  _Nearest_params nearest {target, Mat<n_param>::Zero(), false, max_distance*max_distance};
+  std::array<Int, n_param> start_node;
+  start_node.fill(0);
+  _recursive_nearest(nearest, start_node, _n_div, is_feasible);
+  return {nearest.params, nearest.is_feasible};
 }
 
 template <int n_param>

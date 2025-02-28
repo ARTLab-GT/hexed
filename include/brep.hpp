@@ -285,6 +285,14 @@ class Nurbs : public Parametric<n_param> {
     intersection_params(Mat<3, 2> points) const override;
   private:
   Int _find_knot(int i_dim, double param) const;
+  struct _Nearest_params {
+    Mat<3> target;
+    Mat<n_param> params;
+    bool is_feasible;
+    double dist_sq;
+  };
+  void _recursive_nearest(_Nearest_params&, std::array<Int, n_param> start_node, Int size,
+                          Parametric<n_param>::Constraint is_feasible) const;
   double _max_deriv;
   std::vector<Array<double>> _knots;
   // finds the knot at the start of the interval bracketing `param` along the `i_dim`th parameter axis
