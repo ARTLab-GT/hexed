@@ -389,6 +389,34 @@ Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, A
     _knots[i_dim] /= _knots[i_dim][_knots[i_dim].size() - _degree[i_dim] - 1];
   }
   HEXED_ASSERT(_control_points.shape()[n_param] == 3, "wrong number of coordinates (should always be 3)")
+  double max_sq = 0;
+  if constexpr (n_param == 1) {
+    #pragma omp parallel for reduction(max:max_sq)
+    for (Int i_div = 0; i_div < _n_div; ++i_div) {
+      double dist_sq = (point(Mat<1>{i_div/(_n_div + 1.)}) - point(Mat<1>{(i_div + 1.)/(_n_div + 1)})).squaredNorm()/4;
+      max_sq = std::max(max_sq, dist_sq);
+    }
+  } else {
+    #pragma omp parallel for reduction(max:max_sq)
+    for (Int i_div = 0; i_div < _n_div; ++i_div) {
+      for (Int j_div = 0; j_div < _n_div; ++j_div) {
+        Mat<3, 4> verts;
+        Mat<3> centroid = Mat<3>::Zero();
+        for (int i_vert = 0; i_vert < 2; ++i_vert) {
+          for (int j_vert = 0; j_vert < 2; ++j_vert) {
+            verts(all, 2*i_vert + j_vert) = point({(i_div + i_vert)/(_n_div + 1.), (j_div + j_vert)/(_n_div + 1.)});
+            centroid += verts(all, 2*i_vert + j_vert);
+          }
+        }
+        centroid /= 4;
+        for (int i_vert = 0; i_vert < 4; ++i_vert) {
+          max_sq = std::max(max_sq, (verts(all, i_vert) - centroid).squaredNorm());
+        }
+      }
+    }
+  }
+  _max_deriv = std::sqrt(max_sq)*_n_div;
+  std::cout << _max_deriv << std::endl;
 }
 
 template <int n_param>

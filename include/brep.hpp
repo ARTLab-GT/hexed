@@ -284,9 +284,10 @@ class Nurbs : public Parametric<n_param> {
   std::vector<typename Parametric<n_param>::Intersection_parameters>
     intersection_params(Mat<3, 2> points) const override;
   private:
+  Int _find_knot(int i_dim, double param) const;
+  double _max_deriv;
   std::vector<Array<double>> _knots;
   // finds the knot at the start of the interval bracketing `param` along the `i_dim`th parameter axis
-  Int _find_knot(int i_dim, double param) const;
   std::array<Int, n_param> _n_basis;
   std::array<int, n_param> _degree;
   Array<double> _weights;
