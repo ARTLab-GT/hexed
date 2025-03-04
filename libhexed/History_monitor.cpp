@@ -37,4 +37,12 @@ double History_monitor::max() {
   return _max;
 }
 
+void History_monitor::clear() {
+  _start = 0;
+  _sz = 0;
+  _add_threshold = 1.;
+  _min = -huge;
+  _max = huge;
+}
+
 }

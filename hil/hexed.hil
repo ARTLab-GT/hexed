@@ -25,7 +25,7 @@ art_visc_expr = {bulk_art_visc = bulk_art_visc; laplacian_art_visc = laplacian_a
 visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
-iteration_expr = {iteration = iteration;}
+iteration_expr = {iteration = iteration; pseudotime_iteration = pseudotime_iteration;}
 art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
 normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
 flow_time_expr = {flow_time = flow_time;}
@@ -362,16 +362,20 @@ iterate = {
         println({updating surface roughness to } + surface_roughness)
     }
     $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
+    case0 = {
+        $write_iter
+        $vis_iter
+    }
     case1 = {
+        case0 = {}
         case1 = {
             next_time_step
-            visualize
+            $write_iter
+            $vis_iter
         }
         $$({case} + ($time_step_done))
     }
     $$({case} + (time_scheme == {backward Euler}))
-    $write_iter
-    $vis_iter
     hexed_prev_except = except
     except = {println exception}
     $(read(working_dir + {runtime_cmd.hil}))

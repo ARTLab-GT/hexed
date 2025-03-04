@@ -7,9 +7,11 @@ namespace hexed {
 
 /*! \brief monitors the history of some variable over iterations and computes the bounds over a specified window
  * \details The class user supplies the value of the desired variable at certain iterations.
- * The `History_monitor` will compute the maximum and minimum of these values over the last some-percent of the iterations.
+ * The `History_monitor` will compute the maximum and minimum of these values
+ * over the last some-percent of the iterations.
  * In case the number of iterations becomes large, there is a user-specified maximum number of samples,
- * and the `History_monitor` will only record a fraction of the supplied data points at a frequency chosen to maintain the specified buffer size.
+ * and the `History_monitor` will only record a fraction of the supplied data points
+ * at a frequency chosen to maintain the specified buffer size.
  * Of course, values outside of the window are also forgotten.
  */
 class History_monitor {
@@ -29,9 +31,11 @@ class History_monitor {
    * \param max_samples Maximum sample buffer size.
    */
   History_monitor(double window_size, int max_samples);
-  void add_sample(int iteration, double value); //!< \brief stipulates that the value of the variable to be monitored is `value` at iteration `iteration`
+  //! \brief stipulates that the value of the variable to be monitored is `value` at iteration `iteration`
+  void add_sample(int iteration, double value);
   double min(); //!< \brief obtains the minimum of the variable over the window
   double max(); //!< \brief obtains the maximum of the variable over the window
+  void clear(); //!< \brief deletes the entire history of the monitor as though it had been constructed again
 };
 
 }

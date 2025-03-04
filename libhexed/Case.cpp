@@ -566,16 +566,18 @@ Case::Case(std::string input_script)
     bool avw = _vard("art_visc_width") > 0;
     bool avc = _vard("art_visc_constant") > 0;
     for (double* r : _roughness) *r = _vard("surface_roughness");
-    int iter = _vari("iteration");
+    bool be = _vars("time_scheme") == "backward Euler";
+    int iter = _vari(be ? "pseudotime_iteration" : "iteration");
     int print_freq = _vari("print_freq");
     int n = iter ? print_freq - iter%print_freq : 1;
-    if (_vars("time_scheme") == "backward Euler") {
+    if (be) {
       HEXED_ASSERT(_inter.variables->lookup<double>("unsteady_time_step"),
                    "`time_scheme = {backward Euler}` requires you to set `unsteady_time_step` to a floating-point value.",
                    assert::User_error)
       HEXED_ASSERT(_vard("unsteady_time_step") >= 0, "`unsteady_time_step` must be nonnegative.", assert::User_error)
     }
     for (int i = 0; i < n; ++i) {
+      ++iter;
       if (_inter.variables->get<int>("diffusive_admissibility")) _solver().set_art_visc_admis();
       if (_inter.variables->get<int>("elementwise_art_visc")) {
         _solver().update_art_visc_elwise(_vard("art_visc_width"), _vari("elementwise_art_visc_pde"));
@@ -589,8 +591,7 @@ Case::Case(std::string input_script)
       }
       _solver().update();
     }
-    _inter.variables->assign("iteration", iter + n);
-    _inter.variables->assign("pseudotime_iteration", _vari("pseudotime_iteration") + n);
+    _inter.variables->assign(be ? "pseudotime_iteration" : "iteration", iter);
     auto sub = _inter.make_sub();
     auto vals = _monitor_expr->eval(sub);
     for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
@@ -604,6 +605,8 @@ Case::Case(std::string input_script)
   _inter.variables->create<std::string>("next_time_step", new Namespace::Heisenberg<std::string>([this]() {
     _solver().next_time_step();
     _inter.variables->assign("pseudotime_iteration", 0);
+    _inter.variables->assign("iteration", _vari("iteration") + 1);
+    for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) _monitors[i_monitor].clear();
     return "";
   }));
 
