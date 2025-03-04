@@ -569,6 +569,12 @@ Case::Case(std::string input_script)
     int iter = _vari("iteration");
     int print_freq = _vari("print_freq");
     int n = iter ? print_freq - iter%print_freq : 1;
+    if (_vars("time_scheme") == "backward Euler") {
+      HEXED_ASSERT(_inter.variables->lookup<double>("unsteady_time_step"),
+                   "`time_scheme = {backward Euler}` requires you to set `unsteady_time_step` to a floating-point value.",
+                   assert::User_error)
+      HEXED_ASSERT(_vard("unsteady_time_step") >= 0, "`unsteady_time_step` must be nonnegative.", assert::User_error)
+    }
     for (int i = 0; i < n; ++i) {
       ++iter;
       if (_inter.variables->get<int>("diffusive_admissibility")) _solver().set_art_visc_admis();

@@ -31,6 +31,7 @@ iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
 time_scheme = {backward Euler}
+unsteady_time_step = 3e-4
 
 {run simulation}
 $simulate

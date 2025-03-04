@@ -210,6 +210,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
 , _namespace{space}
 , _implicit{false}
 , _preti_level{0}
+, _backward_euler{backward_euler}
 {
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
@@ -413,9 +414,12 @@ void Solver::initialize(std::string(expr)) {
     vis_variables::position(*sub.variables, elem, basis);
     sub.exec(expr);
     Array<double> state({n_var, nq}, elem.state());
+    int n_res_cache = 2 + elem.get_is_deformed();
+    Array<double> res_cache({n_res_cache, n_var, nq}, elem.residual_cache());
     for (int i_var = 0; i_var < n_var; ++i_var) {
       sub.variables->assign_array(state(i_var), state_vars[i_var]);
     }
+    res_cache(n_res_cache - 1) = state;
     for (int i_adv = 0; i_adv < params.n_advection(params.row_size); ++i_adv) {
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
         elem.advection_state()[i_adv*nq + i_qpoint] = 1.;
@@ -888,6 +892,8 @@ void Solver::update() {
                 .use_filter = bool(_namespace->get<int>("use_filter")),
                 .mask = i_preti,
                 .conv_substep = (sub_iters > 1) && use_ldg(),
+                .backward_euler = _backward_euler,
+                .be_dt = _namespace->get<double>("unsteady_time_step"),
               };
               apply_state_bcs();
               if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
