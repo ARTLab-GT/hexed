@@ -300,7 +300,8 @@ Case::Case(std::string input_script)
         mesh_extremes(i_dim, sign) = _vard(format_str(50, "mesh_extreme%i%i", i_dim, sign));
       }
     }
-    HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!", assert::User_error);
+    HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0,
+                 "all mesh dimensions must be positive!", assert::User_error)
     double root_size = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
     // construct molecular transport models
     std::vector<std::string> transport_phenomena {"viscosity", "conductivity"};
@@ -332,7 +333,8 @@ Case::Case(std::string input_script)
       _inter.variables->assign_default(name + "_max",  huge);
     }
     // setup actual solver
-    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, true, transport_models[0], transport_models[1], turb_model, _inter.variables));
+    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, true, transport_models[0], transport_models[1],
+                                 turb_model, _inter.variables, _vars("time_scheme") == "backward Euler"));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis"));
     return "";

@@ -124,7 +124,7 @@ class Solver {
          Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
          Turbulence_model turbulence_model = laminar,
          std::shared_ptr<Namespace> space = std::make_shared<Namespace>(),
-         bool implicit = false);
+         bool backward_euler = false);
 
   //! \name setup
   //!\{

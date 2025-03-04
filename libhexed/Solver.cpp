@@ -196,10 +196,8 @@ Interpreter Solver::_interpreter() {
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
                Turbulence_model turbulence_model,
-               std::shared_ptr<Namespace> space, bool implicit)
-: params{implicit ? Linearized::storage_start + Linearized::n_storage
-                  : 2, n_dim + 2 + 2*(turbulence_model == k_omega),
-         n_dim, row_size}
+               std::shared_ptr<Namespace> space, bool backward_euler)
+: params{2 + backward_euler, n_dim + 2 + 2*(turbulence_model == k_omega), n_dim, row_size}
 , acc_mesh{new Accessible_mesh(params, root_mesh_size, turbulence_model)}
 , basis{row_size}
 , stopwatch{"(element*update)"}
@@ -210,7 +208,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
 , therm_cond{thermal_conductivity_model}
 , turb{turbulence_model}
 , _namespace{space}
-, _implicit{implicit}
+, _implicit{false}
 , _preti_level{0}
 {
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping

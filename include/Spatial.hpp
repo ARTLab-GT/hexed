@@ -287,11 +287,12 @@ class Spatial {
     const bool _use_filter;
     int _mask;
     bool _conv_substep;
-    // weights for different parameters when assembling the updated state
+    bool _backward_euler;
+    double _be_dt;
 
     public:
     template <typename... pde_args>
-    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, bool update_production, pde_args... args)
+    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, bool backward_euler, double be_dt, pde_args... args)
     : _eq(args...)
     , derivative{basis}
     , boundary{basis.boundary()}
@@ -304,6 +305,8 @@ class Spatial {
     , _use_filter{use_filter}
     , _mask{mask}
     , _conv_substep{conv_substep}
+    , _backward_euler{backward_euler}
+    , _be_dt{be_dt}
     {
       HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
       HEXED_ASSERT(!(_stage && _compute_residual), "residual calculation is a single-stage operation");
@@ -530,10 +533,12 @@ class Spatial {
     bool _use_filter;
     int _mask;
     bool _conv_substep;
+    bool _backward_euler;
+    double _be_dt;
 
     public:
     template <typename... pde_args>
-    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, pde_args... args)
+    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, bool backward_euler, double be_dt, pde_args... args)
     : _eq(args...)
     , _nodes{basis.nodes()}
     , derivative{basis}
@@ -545,6 +550,8 @@ class Spatial {
     , _use_filter{use_filter}
     , _mask{mask}
     , _conv_substep{conv_substep}
+    , _backward_euler{backward_euler}
+    , _be_dt{be_dt}
     {
       HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
       HEXED_ASSERT(Pde::has_convection || !_stage, "for pure diffusion use alternating time steps");

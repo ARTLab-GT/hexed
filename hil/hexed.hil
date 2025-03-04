@@ -177,6 +177,7 @@ plot_history = {shell({python3 -c "from hexedpy.utils import History_plot;Histor
 {scalar parameters}
 row_size = 6
 init_ref_level = 3
+time_scheme = {steady}
 max_ref_level = 10
 geometry_uncertainty = 1e-3
 viscosity_model = {}

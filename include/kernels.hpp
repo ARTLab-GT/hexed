@@ -17,6 +17,8 @@ struct Kernel_options {
   bool use_filter = false;
   int mask = 0;
   bool conv_substep = false;
+  bool backward_euler = false;
+  double be_dt = 0;
 };
 
 void compute_euler(Kernel_mesh, Kernel_options);
