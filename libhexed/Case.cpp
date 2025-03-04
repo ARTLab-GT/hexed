@@ -333,8 +333,10 @@ Case::Case(std::string input_script)
       _inter.variables->assign_default(name + "_max",  huge);
     }
     // setup actual solver
-    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, true, transport_models[0], transport_models[1],
-                                 turb_model, _inter.variables, _vars("time_scheme") == "backward Euler"));
+    bool steady = _vari("steady");
+    bool implicit = _vari("implicit");
+    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, !steady || implicit, transport_models[0],
+                                 transport_models[1], turb_model, _inter.variables, !steady && implicit));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis"));
     return "";
@@ -396,6 +398,11 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
     _solver().initialize(_vars("init_cond"));
+    if (!_vari("steady") && _vari("implicit")) {
+      for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
+        _inter.variables->assign(_monitor_expr->names[i_monitor] + "_prev", 0.);
+      }
+    }
     return "";
   }));
 
@@ -566,15 +573,15 @@ Case::Case(std::string input_script)
     bool avw = _vard("art_visc_width") > 0;
     bool avc = _vard("art_visc_constant") > 0;
     for (double* r : _roughness) *r = _vard("surface_roughness");
-    bool be = _vars("time_scheme") == "backward Euler";
+    bool be = !_vari("steady") && _vari("implicit");
     int iter = _vari(be ? "pseudotime_iteration" : "iteration");
     int print_freq = _vari("print_freq");
     int n = iter ? print_freq - iter%print_freq : 1;
     if (be) {
-      HEXED_ASSERT(_inter.variables->lookup<double>("unsteady_time_step"),
-                   "`time_scheme = {backward Euler}` requires you to set `unsteady_time_step` to a floating-point value.",
+      HEXED_ASSERT(_inter.variables->lookup<double>("time_step"),
+                   "unsteady implicit time marching requires you to set `time_step` to a floating-point value.",
                    assert::User_error)
-      HEXED_ASSERT(_vard("unsteady_time_step") >= 0, "`unsteady_time_step` must be nonnegative.", assert::User_error)
+      HEXED_ASSERT(_vard("time_step") >= 0, "`time_step` must be nonnegative.", assert::User_error)
     }
     for (int i = 0; i < n; ++i) {
       ++iter;
@@ -595,18 +602,26 @@ Case::Case(std::string input_script)
     auto sub = _inter.make_sub();
     auto vals = _monitor_expr->eval(sub);
     for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
-      _monitors[i_monitor].add_sample(iter, vals[i_monitor]);
-      _inter.variables->assign(_monitor_expr->names[i_monitor] + "_min", _monitors[i_monitor].min());
-      _inter.variables->assign(_monitor_expr->names[i_monitor] + "_max", _monitors[i_monitor].max());
+      _monitors[i_monitor].add_sample(iter, vals[i_monitor] - _vard(_monitor_expr->names[i_monitor] + "_prev"));
+      _inter.variables->assign(_monitor_expr->names[i_monitor] + "_diff_min", _monitors[i_monitor].min());
+      _inter.variables->assign(_monitor_expr->names[i_monitor] + "_diff_max", _monitors[i_monitor].max());
     }
     return "";
   }));
 
   _inter.variables->create<std::string>("next_time_step", new Namespace::Heisenberg<std::string>([this]() {
+    HEXED_ASSERT(!_vari("steady") && _vari("implicit"), "`next_time_step` is only for unsteady implicit time marching")
     _solver().next_time_step();
     _inter.variables->assign("pseudotime_iteration", 0);
     _inter.variables->assign("iteration", _vari("iteration") + 1);
-    for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) _monitors[i_monitor].clear();
+    _inter.variables->assign("flow_time", _vard("hexed_next_flow_time"));
+    _inter.variables->assign("hexed_next_flow_time", _vard("hexed_next_flow_time") + _vard("time_step"));
+    auto sub = _inter.make_sub();
+    auto vals = _monitor_expr->eval(sub);
+    for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
+      _monitors[i_monitor].clear();
+      _inter.variables->assign(_monitor_expr->names[i_monitor] + "_prev", vals[i_monitor]);
+    }
     return "";
   }));
 

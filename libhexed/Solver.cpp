@@ -244,7 +244,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("iteration", 0);
   _namespace->assign_default("pseudotime_iteration", 0);
   _namespace->assign_default("flow_time", 0.);
-  _namespace->assign_default("time_step", 0.);
+  if (!_backward_euler) _namespace->assign_default("time_step", 0.);
   _namespace->assign_default("art_visc_residual", 0.);
   status.set_time();
   // setup categories for performance reporting
@@ -908,7 +908,7 @@ void Solver::update() {
                 .mask = i_preti,
                 .conv_substep = (sub_iters > 1) && use_ldg(),
                 .backward_euler = _backward_euler,
-                .be_dt = _namespace->get<double>("unsteady_time_step"),
+                .be_dt = _namespace->get<double>("time_step"),
               };
               apply_state_bcs();
               if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
@@ -924,10 +924,12 @@ void Solver::update() {
           if (fixed) break;
 
           // update status for reporting
-          _namespace->assign<double>("time_step", dt);
-          _namespace->assign<double>("flow_time", _namespace->get<double>("flow_time") + dt);
-          status.time_step = dt;
-          status.flow_time += dt;
+          if (!_backward_euler) {
+            _namespace->assign<double>("time_step", dt);
+            _namespace->assign<double>("flow_time", _namespace->get<double>("flow_time") + dt);
+            status.time_step = dt;
+            status.flow_time += dt;
+          }
         }
       }
     }
