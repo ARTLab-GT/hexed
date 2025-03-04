@@ -242,6 +242,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("elementwise_art_visc_diff_ratio", 5.);
   _namespace->assign_default<std::string>("working_dir", ".");
   _namespace->assign_default("iteration", 0);
+  _namespace->assign_default("pseudotime_iteration", 0);
   _namespace->assign_default("flow_time", 0.);
   _namespace->assign_default("time_step", 0.);
   _namespace->assign_default("art_visc_residual", 0.);
@@ -601,6 +602,20 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   stopwatch["set art visc"].stopwatch.pause();
   stopwatch["set art visc"].work_units_completed += elements.size();
   stopwatch.stopwatch.pause();
+}
+
+void Solver::next_time_step() {
+  int n_var = params.n_var;
+  int nq = params.n_qpoint();
+  auto& elems = acc_mesh->elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    Array<double> state({n_var, nq}, elem.state());
+    int n_res_cache = 2 + elem.get_is_deformed();
+    Array<double> res_cache({n_res_cache, n_var, nq}, elem.residual_cache());
+    res_cache(n_res_cache - 1) = state;
+  }
 }
 
 void Solver::update_art_visc_elwise(double width, bool pde_based) {

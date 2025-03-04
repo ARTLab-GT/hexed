@@ -292,7 +292,8 @@ print_final = {
     println {performance summary:}
     println performance_report
 }
-done = {print_emph = true; print_type = {error}; println {Error: you forgot to a set stop condition} & throw}
+done = {print_emph = true; print_type = {error}; println {Error: you forgot to a set `done`} & throw}
+time_step_done = {print_emph = true; print_type = {error}; println {Error: you forgot to set `time_step_done`} & throw}
 hexed_failed = false
 terminate = {
     print_emph = true
@@ -361,6 +362,14 @@ iterate = {
         println({updating surface roughness to } + surface_roughness)
     }
     $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
+    case1 = {
+        case1 = {
+            next_time_step
+            visualize
+        }
+        $$({case} + ($time_step_done))
+    }
+    $$({case} + (time_scheme == {backward Euler}))
     $write_iter
     $vis_iter
     hexed_prev_except = except

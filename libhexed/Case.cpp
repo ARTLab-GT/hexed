@@ -576,7 +576,6 @@ Case::Case(std::string input_script)
       HEXED_ASSERT(_vard("unsteady_time_step") >= 0, "`unsteady_time_step` must be nonnegative.", assert::User_error)
     }
     for (int i = 0; i < n; ++i) {
-      ++iter;
       if (_inter.variables->get<int>("diffusive_admissibility")) _solver().set_art_visc_admis();
       if (_inter.variables->get<int>("elementwise_art_visc")) {
         _solver().update_art_visc_elwise(_vard("art_visc_width"), _vari("elementwise_art_visc_pde"));
@@ -590,7 +589,8 @@ Case::Case(std::string input_script)
       }
       _solver().update();
     }
-    _inter.variables->assign("iteration", iter);
+    _inter.variables->assign("iteration", iter + n);
+    _inter.variables->assign("pseudotime_iteration", _vari("pseudotime_iteration") + n);
     auto sub = _inter.make_sub();
     auto vals = _monitor_expr->eval(sub);
     for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
@@ -600,6 +600,13 @@ Case::Case(std::string input_script)
     }
     return "";
   }));
+
+  _inter.variables->create<std::string>("next_time_step", new Namespace::Heisenberg<std::string>([this]() {
+    _solver().next_time_step();
+    _inter.variables->assign("pseudotime_iteration", 0);
+    return "";
+  }));
+
   _inter.variables->create<int>("n_elements", new Namespace::Heisenberg<int>([this]() {
     return _solver().mesh().n_elements();
   }));

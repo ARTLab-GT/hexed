@@ -204,6 +204,9 @@ class Solver {
    * (it is scaled by the max allowable CFL for the chosen DG scheme which is often O(1e-2)).
    */
   void update();
+  //! \brief Switch to the next unsteady time step.
+  //! \details Reinitializes the previous state storage with the current state.
+  void next_time_step();
   //! \brief (experimental) performs an implicit time step
   //! \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
   void update_implicit();
