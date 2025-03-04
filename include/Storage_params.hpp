@@ -16,6 +16,7 @@ class Storage_params {
   int n_dim; //!< \brief number of dimensions
   int row_size; //!< \brief \ref basis_row_size "row size" of basis
   int n_forcing = 4; //!< \brief number of artificial viscosity forcing variables
+  int n_rk = 1; //!< \brief number of Runge-Kutta stages for time-accurate iteration
 
   int n_qpoint() const; //!< \brief number of quadrature points per element
   int n_face_qpoint() const; //!< \brief number of quadrature points on each element face
@@ -24,8 +25,10 @@ class Storage_params {
   int n_vertices() const; //!< \brief number of vertices of each element
   int n_var_numeric() const; //!< \brief number of _numerical_ variables (as opposed to physical state variables)
   int n_dof_numeric() const; //!< \brief number of numerical degrees of freedom
-  std::vector<int> physical_shape() const; //!< \brief Shape of the `Array` required to hold the physical state variables
-  std::vector<int> numerical_shape() const; //!< \brief Shape of the `Array` required to hold the full numerical state variables
+  //! \brief Shape of the `Array` required to hold the physical state variables
+  std::vector<int> physical_shape() const;
+  //! \brief Shape of the `Array` required to hold the full numerical state variables
+  std::vector<int> numerical_shape() const;
 };
 
 }

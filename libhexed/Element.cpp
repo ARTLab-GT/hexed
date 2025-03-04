@@ -38,7 +38,8 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
   _vertex_data(1, 3) = 0.;
 }
 
-Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level)
+Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
+                 int aniso_r_level)
 : Element(params_arg, pos, mesh_size, ref_level, origin_arg, false, aniso_r_level)
 {}
 
@@ -175,7 +176,9 @@ next::Element_shape& Element::active_shape() {
 }
 
 double* Element::state() {return data.data();}
-double* Element::residual_cache() {return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();}
+double* Element::residual_cache() {
+  return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();
+}
 double* Element::face(int i_face, bool is_ldg) {return faces[i_face] + is_ldg*params.n_dof()/params.row_size;}
 bool Element::deformed() const {return false;}
 double* Element::reference_level_normals() {return nullptr;}
