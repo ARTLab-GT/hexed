@@ -602,9 +602,11 @@ Case::Case(std::string input_script)
     auto sub = _inter.make_sub();
     auto vals = _monitor_expr->eval(sub);
     for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
-      _monitors[i_monitor].add_sample(iter, vals[i_monitor] - _vard(_monitor_expr->names[i_monitor] + "_prev"));
-      _inter.variables->assign(_monitor_expr->names[i_monitor] + "_diff_min", _monitors[i_monitor].min());
-      _inter.variables->assign(_monitor_expr->names[i_monitor] + "_diff_max", _monitors[i_monitor].max());
+      double val = vals[i_monitor];
+      if (be) val += _vard(_monitor_expr->names[i_monitor] + "_prev");
+      _monitors[i_monitor].add_sample(iter, vals[i_monitor]);
+      _inter.variables->assign(_monitor_expr->names[i_monitor] + (be ? "_diff" : "") + "_min", _monitors[i_monitor].min());
+      _inter.variables->assign(_monitor_expr->names[i_monitor] + (be ? "_diff" : "") + "_max", _monitors[i_monitor].max());
     }
     return "";
   }));

@@ -415,12 +415,14 @@ void Solver::initialize(std::string(expr)) {
     vis_variables::position(*sub.variables, elem, basis);
     sub.exec(expr);
     Array<double> state({n_var, nq}, elem.state());
-    int n_res_cache = 2 + elem.get_is_deformed();
-    Array<double> res_cache({n_res_cache, n_var, nq}, elem.residual_cache());
     for (int i_var = 0; i_var < n_var; ++i_var) {
       sub.variables->assign_array(state(i_var), state_vars[i_var]);
     }
-    res_cache(n_res_cache - 1) = state;
+    if (_backward_euler) {
+      int n_res_cache = 2 + elem.get_is_deformed();
+      Array<double> res_cache({n_res_cache, n_var, nq}, elem.residual_cache());
+      res_cache(n_res_cache - 1) = state;
+    }
     for (int i_adv = 0; i_adv < params.n_advection(params.row_size); ++i_adv) {
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
         elem.advection_state()[i_adv*nq + i_qpoint] = 1.;

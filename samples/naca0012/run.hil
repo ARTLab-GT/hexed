@@ -24,16 +24,12 @@ freestream_mach = 0.3
 attack = 4*degree
 
 {iteration parameters}
-print_freq = 10
-vis_freq = 10
-write_freq = 10
-time_step_done = {pseudotime_iteration > 100 & lift_coef_max - lift_coef_min < 1e-4*(lift_coef_min + lift_coef_max)/2}
-done = {false}
+print_freq = 1000
+vis_freq = 20000
+done = {iteration > 10000 & lift_coef_max - lift_coef_min < 1e-2*(lift_coef_min + lift_coef_max)/2}
 iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-time_scheme = {backward Euler}
-unsteady_time_step = 3e-5
 
 {run simulation}
 $simulate
