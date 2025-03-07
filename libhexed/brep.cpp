@@ -42,6 +42,11 @@ std::vector<Parametric<1>::Intersection_parameters> Line_segment::intersection_p
   return {};
 }
 
+Mat<2, 1> Line_segment::orig_param_bounds() const {
+  HEXED_THROW("not yet implemented for this entity", assert::Not_implemented_error)
+  throw;
+}
+
 Circular_arc::Circular_arc(Mat<3> center, double radius, double start_angle, double end_angle)
 : _center{center}
 , _radius{radius}
@@ -95,6 +100,11 @@ std::vector<Parametric<1>::Intersection_parameters> Circular_arc::intersection_p
   return sects;
 }
 
+Mat<2, 1> Circular_arc::orig_param_bounds() const {
+  HEXED_THROW("not yet implemented for this entity", assert::Not_implemented_error)
+  throw;
+}
+
 Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_feasible,
                                                         double max_distance) const {
   Mat<2> params = _vecs.colPivHouseholderQr().solve(p - _origin);
@@ -117,6 +127,11 @@ Mat<2, 2> Plane::reparameterize(Mat<2, 2> bounds) {
   _origin = point(bounds(all, 0));
   _vecs = _vecs*(bounds(all, 1) - bounds(all, 0)).asDiagonal();
   return bounds;
+}
+
+Mat<2, 2> Plane::orig_param_bounds() const {
+  HEXED_THROW("IGES does not define a parameterization for planes.")
+  throw;
 }
 
 // discretizes a curve into `n_div` polygonal segments and returns their `n_div + 1` endpoints
@@ -366,14 +381,21 @@ std::vector<Parametric<2>::Intersection_parameters> Revolution_surface::intersec
   return finder.intersects;
 }
 
+Mat<2, 2> Revolution_surface::orig_param_bounds() const {
+  HEXED_THROW("not yet implemented for this entity", assert::Not_implemented_error)
+  throw;
+}
+
 template class Nurbs<1>;
 template class Nurbs<2>;
 
 template <int n_param>
-Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points, Int n_div)
+Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points,
+                      Int n_div, Mat<2, n_param> param_bounds)
 : _weights(weights.copy())
 , _control_points(control_points.copy())
 , _n_div{n_div}
+, _orig_bounds{param_bounds}
 {
   for (Array<double>& k : knots) _knots.push_back(k.copy());
   HEXED_ASSERT(knots.size() == n_param, "dimensionality mismatch in `knots`")
@@ -385,8 +407,8 @@ Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, A
     HEXED_ASSERT(_degree[i_dim] > 0, "degree must be positive")
     HEXED_ASSERT(_control_points.shape()[i_dim] == _n_basis[i_dim],
                  "shape of `weights` and `control_points` don't match")
-    _knots[i_dim] -= _knots[i_dim][_degree[i_dim]];
-    _knots[i_dim] /= _knots[i_dim][_knots[i_dim].size() - _degree[i_dim] - 1];
+    _knots[i_dim] -= _orig_bounds(0, i_dim);
+    _knots[i_dim] /= _orig_bounds(1, i_dim) - _orig_bounds(0, i_dim);
   }
   HEXED_ASSERT(_control_points.shape()[n_param] == 3, "wrong number of coordinates (should always be 3)")
   double max_sq = 0;
@@ -557,25 +579,53 @@ Nurbs<n_param>::intersection_params(Mat<3, 2> points) const {
   return {};
 }
 
-Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves, Int n_div)
+template <int n_param>
+Mat<2, n_param> Nurbs<n_param>::orig_param_bounds() const {
+  return _orig_bounds;
+}
+
+Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves,
+                                 std::vector<bool> is_model_space, Int n_div)
 : _n_div{n_div}, _sz{1./_n_div}, _surf{surface}
 {
   // discretize curves into polygonal segments in parameter space
   std::vector<std::vector<std::vector<Mat<2>>>> discrete_curves;
-  for (auto& composite : curves) {
+  for (int i_composite = 0; i_composite < int(curves.size()); ++i_composite) {
+    auto& composite = curves[i_composite];
     discrete_curves.emplace_back();
     for (auto& curve : composite) {
       discrete_curves.back().emplace_back();
       auto& param_nodes = discrete_curves.back().back();
       Array<double> phys_nodes({_n_div + 1, 3});
-      Mat<3> start = curve->point(Mat<1>{0.});
       double mean_squared_dist = 0;
-      for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
-        Mat<3> pt = curve->point(Mat<1>{i_node*_sz});
-        mean_squared_dist += (pt - start).squaredNorm();
-        phys_nodes(i_node).vector() = pt;
-        Mat<2> params = _surf->nearest_params(pt, [](Mat<2>){return true;}, default_max_dist).params;
-        param_nodes.push_back(params);
+      Mat<3> start;
+      if (is_model_space[i_composite]) {
+        start = curve->point(Mat<1>{0.});
+        for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
+          Mat<3> pt = curve->point(Mat<1>{i_node*_sz});
+          mean_squared_dist += (pt - start).squaredNorm();
+          phys_nodes(i_node).vector() = pt;
+          Mat<2> params = _surf->nearest_params(pt, [](Mat<2>){return true;}, default_max_dist).params;
+          param_nodes.push_back(params);
+        }
+      } else {
+        Mat<2, 2> op = _surf->orig_param_bounds();
+        auto get_params = [&curve, op](double t) {
+          Mat<2> p = curve->point(Mat<1>{t})(Eigen::seqN(0, 2));
+          for (int i_dim = 0; i_dim < 2; ++i_dim) {
+            p(i_dim) = (p(i_dim) - op(0, i_dim))/(op(1, i_dim) - op(0, i_dim));
+          }
+          std::cout << p.transpose() << std::endl;
+          return p;
+        };
+        start = _surf->point(get_params(0.));
+        for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
+          Mat<2> params = get_params(i_node*_sz);
+          Mat<3> pt = _surf->point(params);
+          mean_squared_dist += (pt - start).squaredNorm();
+          phys_nodes(i_node).vector() = pt;
+          param_nodes.push_back(params);
+        }
       }
       mean_squared_dist /= n_div + 1;
       if ((curve->point(Mat<1>{1.}) - start).squaredNorm() < .1*mean_squared_dist) {
@@ -710,7 +760,11 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
     }
     // sort segments into bins of specified `param(0)`
     if (!abscissa.empty()) {
-      HEXED_ASSERT(abscissa.front() == abscissa.back(), "parametric representation is not closed");
+      #if 0
+      HEXED_ASSERT(abscissa.front() == abscissa.back(),
+                   format_str(200, "parametric representation is not closed (%li != %li)",
+                              abscissa.front(), abscissa.back()))
+      #endif
       for (Int i_segment = 0; i_segment < Int(abscissa.size()) - 1; ++i_segment) {
         HEXED_ASSERT(std::abs(abscissa[i_segment] - abscissa[i_segment + 1]) == 1, "invalid step size");
         bool reverse = abscissa[i_segment] > abscissa[i_segment + 1];
@@ -894,7 +948,9 @@ class Read_entity {
         control_points(i_point)[i_dim] = _unit*_parser.read_float(_par[i++]);
       }
     }
-    return std::make_unique<Nurbs<1>>(std::move(knots), weights(), control_points(), _n_div);
+    Mat<2, 1> param_bounds;
+    param_bounds << _parser.read_float(_par[i]), _parser.read_float(_par[i + 1]);
+    return std::make_unique<Nurbs<1>>(std::move(knots), weights(), control_points(), _n_div, param_bounds);
   }
 
   std::unique_ptr<Nurbs<2>> read_nurbs_surface() const {
@@ -923,7 +979,11 @@ class Read_entity {
         }
       }
     }
-    return std::make_unique<Nurbs<2>>(std::move(knots), weights(), control_points(), _n_div);
+    Mat<2, 2> param_bounds;
+    param_bounds <<
+      _parser.read_float(_par[i + 0]), _parser.read_float(_par[i + 2]),
+      _parser.read_float(_par[i + 1]), _parser.read_float(_par[i + 3]);
+    return std::make_unique<Nurbs<2>>(std::move(knots), weights(), control_points(), _n_div, param_bounds);
   }
 
   // Attempts to read any of the entities that derive from `Parametric<1>`.
@@ -983,20 +1043,25 @@ class Read_entity {
                  assert::Not_implemented_error);
     // get trimming curves
     std::vector<Composite_curve> curves;
+    std::vector<bool> model_space;
     for (Int i_curve = 0; i_curve < 1 + _parser.read_int(_par[3]); ++i_curve) {
       Read_entity on_surf(_parser, _parser.read_int(_par[4 + i_curve]), _n_div, _coords);
       HEXED_ASSERT(on_surf._ent_num == 142, "boundary must be a curve on a surface");
       int model_curve = _parser.read_int(on_surf._par[4]);
-      if ((_parser.read_int(on_surf._par[5]) == 1 || model_curve == 0) && _parser.read_int(on_surf._par[3]) != 0) {
-        HEXED_THROW("parameter-space curves are not implemented", assert::Not_implemented_error);
+      int param_curve = _parser.read_int(on_surf._par[3]);
+      if ((_parser.read_int(on_surf._par[5]) == 1 || model_curve == 0) && param_curve != 0) {
+        model_space.push_back(false);
+        Coordinate_change unscale(Mat<3>::Zero(), Mat<3, 3>::Identity()/_unit);
+        curves.push_back(Read_entity(_parser, param_curve, _n_div, unscale).read_composite_curve());
       } else {
         HEXED_ASSERT(model_curve != 0,
                      "at least one of parameter-space and model-space curve pointers must be defined");
+        model_space.push_back(true);
         curves.push_back(Read_entity(_parser, model_curve, _n_div, _coords).read_composite_curve());
       }
     }
     // construct Trimmed_surface
-    return {Trimmed_surface(surf.release(), std::move(curves), _n_div)};
+    return {Trimmed_surface(surf.release(), std::move(curves), std::move(model_space), _n_div)};
   }
 
   private:

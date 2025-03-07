@@ -137,7 +137,10 @@ class Parametric {
    * \details The default implementation returns `true`,
    * which should be correct for most derived classes.
    */
-  virtual inline bool must_check_boundary() const {return true;}
+  virtual bool must_check_boundary() const {return true;}
+
+  //! \brief returns the parameter bounds in the original IGES definition (low, high)
+  virtual Mat<2, n_param> orig_param_bounds() const = 0;
 };
 
 /*! \brief A parametric entity obtained by applying a `Coordinate_change` to another parametric entity
@@ -163,7 +166,9 @@ class Transformed : public Parametric<n_param> {
     return _param->intersection_params(points);
   }
   //! \brief forwards to transformed entity
-  inline bool must_check_boundary() const override {return _param->must_check_boundary();}
+  bool must_check_boundary() const override {return _param->must_check_boundary();}
+  //! \brief forwards to transformed entity
+  Mat<2, n_param> orig_param_bounds() const override {return _param->orig_param_bounds();}
   private:
   std::unique_ptr<Parametric<n_param>> _param;
   Coordinate_change _coord;
@@ -180,6 +185,7 @@ class Line_segment : public Parametric<1> {
   //! \details Endpoints are included in nearest point search.
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
   std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
+  Mat<2, 1> orig_param_bounds() const override;
   private:
   Mat<3, 2> _endpoints;
   double _length;
@@ -200,6 +206,7 @@ class Circular_arc : public Parametric<1> {
   Mat<3> point(Mat<1> params) const override;
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
   std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
+  Mat<2, 1> orig_param_bounds() const override;
   private:
   Mat<3> _center;
   double _radius;
@@ -225,6 +232,7 @@ class Plane : public Parametric<2> {
   Mat<2, 2> reparameterize(Mat<2, 2> bounds) override;
   //! \brief returns `false`; if the nearest point on the plane is feasible, there is no need to check the boundary
   inline bool must_check_boundary() const override {return false;}
+  Mat<2, 2> orig_param_bounds() const override;
   private:
   Mat<3> _origin;
   Mat<3, 2> _vecs;
@@ -259,6 +267,7 @@ class Revolution_surface : public Parametric<2> {
   //! \note Includes boundary points in search.
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
   std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
+  Mat<2, 2> orig_param_bounds() const override;
   private:
   class _Find_nearest;
   class _Find_intersects;
@@ -277,12 +286,14 @@ class Revolution_surface : public Parametric<2> {
 template <int n_param>
 class Nurbs : public Parametric<n_param> {
   public:
-  Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points, Int n_div);
+  Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points, Int n_div,
+        Mat<2, n_param> param_bounds);
   Mat<3> point(Mat<n_param> params) const override;
   Parametric<n_param>::Nearest_parameters
     nearest_params(Mat<3> point, Parametric<n_param>::Constraint is_feasible, double max_distance) const override;
   std::vector<typename Parametric<n_param>::Intersection_parameters>
     intersection_params(Mat<3, 2> points) const override;
+  Mat<2, n_param> orig_param_bounds() const override;
   private:
   Int _find_knot(int i_dim, double param) const;
   struct _Nearest_params {
@@ -302,6 +313,7 @@ class Nurbs : public Parametric<n_param> {
   Array<double> _weights;
   Array<double> _control_points;
   Int _n_div;
+  Mat<2, n_param> _orig_bounds;
 };
 
 //! \brief A list of curves, where the end point of each should coincide with start of the next.
@@ -329,7 +341,8 @@ class Trimmed_surface {
    *              into polygonal curves with O(`n_div`) segments.
    *              Must be a power of 2.
    */
-  Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves, Int n_div);
+  Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves,
+                  std::vector<bool> is_model_space, Int n_div);
   //! \brief Access the parametric surface.
   inline const Parametric<2>& surface() const {return *_surf;}
   //! \brief Test whether a point `parameters` is inside the bounding curves in parameter space.
