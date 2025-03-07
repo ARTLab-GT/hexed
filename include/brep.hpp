@@ -290,6 +290,7 @@ class Nurbs : public Parametric<n_param> {
     Mat<n_param> params;
     bool is_feasible;
     double dist_sq;
+    Int n_eval;
   };
   void _recursive_nearest(_Nearest_params&, std::array<Int, n_param> start_node, Int size,
                           Parametric<n_param>::Constraint is_feasible) const;

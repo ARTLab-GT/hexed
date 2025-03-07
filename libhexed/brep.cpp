@@ -502,6 +502,7 @@ void Nurbs<n_param>::_recursive_nearest(_Nearest_params& nearest, std::array<Int
       for (int i_dim = 0; i_dim < n_param; ++i_dim) {
         params(i_dim) = (start_node[i_dim] + i_vert/math::pow(2, n_param - 1 - i_dim)%2)/double(_n_div);
       }
+      ++nearest.n_eval;
       if (is_feasible(params)) {
         Mat<3> p = point(params);
         double dist_sq = (p - nearest.target).squaredNorm();
@@ -518,10 +519,14 @@ void Nurbs<n_param>::_recursive_nearest(_Nearest_params& nearest, std::array<Int
 template <int n_param>
 Parametric<n_param>::Nearest_parameters
 Nurbs<n_param>::nearest_params(Mat<3> target, Parametric<n_param>::Constraint is_feasible, double max_distance) const {
-  _Nearest_params nearest {target, Mat<n_param>::Zero(), false, max_distance*max_distance};
+  _Nearest_params nearest {target, Mat<n_param>::Zero(), false, max_distance*max_distance, 0};
   std::array<Int, n_param> start_node;
   start_node.fill(0);
   _recursive_nearest(nearest, start_node, _n_div, is_feasible);
+  #if 0
+  #pragma omp critical
+  std::cout << nearest.n_eval << "," << std::sqrt(nearest.dist_sq) << "," << nearest.is_feasible << "," << max_distance << " ";
+  #endif
   return {nearest.params, nearest.is_feasible};
 }
 
@@ -889,8 +894,6 @@ class Read_entity {
         control_points(i_point)[i_dim] = _unit*_parser.read_float(_par[i++]);
       }
     }
-    HEXED_ASSERT((Int)_par.size() == i + 5,
-                 format_str(200, "number of parameters doesn't match up (%li vs %li)", Int(_par.size()), i + 4))
     return std::make_unique<Nurbs<1>>(std::move(knots), weights(), control_points(), _n_div);
   }
 
@@ -920,8 +923,6 @@ class Read_entity {
         }
       }
     }
-    HEXED_ASSERT((Int)_par.size() == i + 4,
-                 format_str(200, "number of parameters doesn't match up (%li vs %li)", Int(_par.size()), i + 4))
     return std::make_unique<Nurbs<2>>(std::move(knots), weights(), control_points(), _n_div);
   }
 
