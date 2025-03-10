@@ -947,6 +947,7 @@ class Read_entity {
       for (int i_dim = 0; i_dim < 3; ++i_dim) {
         control_points(i_point)[i_dim] = _unit*_parser.read_float(_par[i++]);
       }
+      control_points(i_point).vector() = _coords.to_model(control_points(i_point).vector());
     }
     Mat<2, 1> param_bounds;
     param_bounds << _parser.read_float(_par[i]), _parser.read_float(_par[i + 1]);
@@ -977,6 +978,7 @@ class Read_entity {
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
           control_points(j_point)(i_point)[i_dim] = _unit*_parser.read_float(_par[i++]);
         }
+        control_points(j_point)(i_point).vector() = _coords.to_model(control_points(j_point)(i_point).vector());
       }
     }
     Mat<2, 2> param_bounds;
