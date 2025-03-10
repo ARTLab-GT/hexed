@@ -593,9 +593,10 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
   for (int i_composite = 0; i_composite < int(curves.size()); ++i_composite) {
     auto& composite = curves[i_composite];
     discrete_curves.emplace_back();
+    auto& disc_curve = discrete_curves.back();
     for (auto& curve : composite) {
-      discrete_curves.back().emplace_back();
-      auto& param_nodes = discrete_curves.back().back();
+      disc_curve.emplace_back();
+      auto& param_nodes = disc_curve.back();
       Array<double> phys_nodes({_n_div + 1, 3});
       double mean_squared_dist = 0;
       Mat<3> start;
@@ -615,7 +616,6 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
           for (int i_dim = 0; i_dim < 2; ++i_dim) {
             p(i_dim) = (p(i_dim) - op(0, i_dim))/(op(1, i_dim) - op(0, i_dim));
           }
-          std::cout << p.transpose() << std::endl;
           return p;
         };
         start = _surf->point(get_params(0.));
@@ -633,6 +633,34 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
         _curves.emplace_back(phys_nodes(n_div/2, n_div + 1).copy(), 4);
       } else {
         _curves.emplace_back(phys_nodes.copy(), 4);
+      }
+    }
+    int reversal = 0;
+    double continuity_error = huge;
+    int n_curves = disc_curve.size();
+    for (int test_reversal = 0; test_reversal < math::pow<int>(2, n_curves); ++test_reversal) {
+      Array<double> endpoints({n_curves, 2, 3});
+      for (int i_curve = 0; i_curve < n_curves; ++i_curve) {
+        bool reverse = test_reversal%math::pow(2, i_curve + 1)/math::pow(2, i_curve);
+        for (int i_end = 0; i_end < 2; ++i_end) {
+          Int i_point = (i_end + reverse)%2*(disc_curve[i_curve].size() - 1);
+          endpoints(i_curve)(i_end).vector() = _surf->point(disc_curve[i_curve][i_point]);
+        }
+      }
+      double err = 0;
+      for (int i_curve = 0; i_curve < n_curves; ++i_curve) {
+        err += (endpoints((i_curve + 1)%n_curves)(0) - endpoints(i_curve)(1)).vector().norm();
+      }
+      if (err < continuity_error) {
+        continuity_error = err;
+        reversal = test_reversal;
+      }
+      if (!test_reversal) std::cout << to_string(endpoints);
+    }
+    std::cout << n_curves << " " << reversal << " " << continuity_error << "\n" << std::endl;
+    for (int i_curve = 0; i_curve < n_curves; ++i_curve) {
+      if (reversal%math::pow(2, i_curve + 1)/math::pow(2, i_curve)) {
+        std::reverse(disc_curve[i_curve].begin(), disc_curve[i_curve].end());
       }
     }
   }
@@ -672,6 +700,7 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
     for (Int i_node = 0; i_node < n_nodes; ++i_node) {
       all_nodes[i_node] = (all_nodes[i_node] - bounds(all, 0)).cwiseQuotient(bounds(all, 1) - bounds(all, 0));
     }
+    #if 0
     // correct periodic seam errors
     for (Int i_node = n_nodes, changed = false; (i_node < 2*n_nodes) || changed; ++i_node, changed = false) {
       for (int i_dim = 0; i_dim < 2; ++i_dim) {
@@ -730,6 +759,7 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
         }
       }
     }
+    #endif
     if (!all_nodes.empty()) {
       all_nodes.insert(all_nodes.end(), all_nodes.front());
       ++n_nodes;
@@ -760,11 +790,9 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
     }
     // sort segments into bins of specified `param(0)`
     if (!abscissa.empty()) {
-      #if 0
       HEXED_ASSERT(abscissa.front() == abscissa.back(),
                    format_str(200, "parametric representation is not closed (%li != %li)",
                               abscissa.front(), abscissa.back()))
-      #endif
       for (Int i_segment = 0; i_segment < Int(abscissa.size()) - 1; ++i_segment) {
         HEXED_ASSERT(std::abs(abscissa[i_segment] - abscissa[i_segment + 1]) == 1, "invalid step size");
         bool reverse = abscissa[i_segment] > abscissa[i_segment + 1];
@@ -859,6 +887,10 @@ class Read_entity {
     _unit = units[unit_flag - 1];
   }
 
+  Read_entity make_reader(Int line, Coordinate_change change_to = {}) const {
+    return {_parser, line, _n_div, _coords(change_to)};
+  }
+
   template <typename T, typename U>
   static void merge(std::unique_ptr<T>& ptr0, std::unique_ptr<U>&& ptr1) {
     if (!ptr0 && ptr1) ptr0.reset(ptr1.release());
@@ -872,7 +904,7 @@ class Read_entity {
    * and see which one gives you a non-empty value.
    */
 
-  std::unique_ptr<Line_segment> read_line_segment() {
+  std::unique_ptr<Line_segment> read_line_segment() const {
     if (_ent_num != 110) return {};
     Mat<3, 2> endpts;
     for (int i = 0; i < 6; ++i) endpts(i) = _unit*_parser.read_float(_par[1 + i]);
@@ -880,7 +912,7 @@ class Read_entity {
     return std::make_unique<Line_segment>(endpts);
   }
 
-  std::unique_ptr<Parametric<1>> read_circular_arc() {
+  std::unique_ptr<Parametric<1>> read_circular_arc() const {
     if (_ent_num != 100) return {};
     std::vector<double> values;
     for (std::string s : _par) values.push_back(_parser.read_float(s));
@@ -920,10 +952,8 @@ class Read_entity {
 
   std::unique_ptr<Revolution_surface> read_revolution_surface() const {
     if (_ent_num != 120) return {};
-    Read_entity read_axis(_parser, _parser.read_int(_par[1]), _n_div, _coords);;
-    auto axis = read_axis.read_line_segment();
-    Read_entity read_generatrix(_parser, _parser.read_int(_par[2]), _n_div, _coords);
-    auto generatrix = read_generatrix.read_curve();
+    auto axis = make_reader(_parser.read_int(_par[1])).read_line_segment();
+    auto generatrix = make_reader(_parser.read_int(_par[2])).read_curve();
     return std::make_unique<Revolution_surface>(generatrix.release(), *axis, _n_div,
                                                 _parser.read_float(_par[3]), _parser.read_float(_par[4]));
   }
@@ -990,7 +1020,7 @@ class Read_entity {
 
   // Attempts to read any of the entities that derive from `Parametric<1>`.
   // Iff `required == true`, throws on failure.
-  std::unique_ptr<Parametric<1>> read_curve(bool required = true) {
+  std::unique_ptr<Parametric<1>> read_curve(bool required = true) const {
     std::unique_ptr<Parametric<1>> ptr;
     merge(ptr, read_line_segment());
     merge(ptr, read_circular_arc());
@@ -1004,7 +1034,7 @@ class Read_entity {
   }
 
   // attempts to read a composite curve (collection of curves that share endpoints) and throws on failure
-  Composite_curve read_composite_curve() {
+  Composite_curve read_composite_curve() const {
     auto ptr = read_curve(false);
     Composite_curve comp;
     if (ptr) {
@@ -1012,8 +1042,7 @@ class Read_entity {
     } else if (_ent_num == 116 || _ent_num == 132) { // Point and Connect Point entities are irrelevant
     } else if (_ent_num == 102) {
       for (int i_curve = 0; i_curve < _parser.read_int(_par[1]); ++i_curve) {
-        Read_entity sub_reader(_parser, _parser.read_int(_par[2 + i_curve]), _n_div, _coords);
-        Composite_curve sub_curve = sub_reader.read_composite_curve();
+        Composite_curve sub_curve = make_reader(_parser.read_int(_par[2 + i_curve])).read_composite_curve();
         for (auto& c : sub_curve) comp.emplace_back(c.release());
       }
     } else HEXED_THROW("failed to read curve from entity #" + std::to_string(_ent_num));
@@ -1039,27 +1068,26 @@ class Read_entity {
   std::optional<Trimmed_surface> read_trimmed_surface() const {
     if (_ent_num != 144) return {};
     // get surface
-    Read_entity surf_reader(_parser, _parser.read_int(_par[1]), _n_div, _coords);
-    auto surf = surf_reader.read_surface();
+    auto surf = make_reader(_parser.read_int(_par[1])).read_surface();
     HEXED_ASSERT(_parser.read_int(_par[2]) == 1, "using outer boundary as boundary curve is not implemented",
                  assert::Not_implemented_error);
     // get trimming curves
     std::vector<Composite_curve> curves;
     std::vector<bool> model_space;
     for (Int i_curve = 0; i_curve < 1 + _parser.read_int(_par[3]); ++i_curve) {
-      Read_entity on_surf(_parser, _parser.read_int(_par[4 + i_curve]), _n_div, _coords);
+      Read_entity on_surf = make_reader(_parser.read_int(_par[4 + i_curve]));
       HEXED_ASSERT(on_surf._ent_num == 142, "boundary must be a curve on a surface");
       int model_curve = _parser.read_int(on_surf._par[4]);
       int param_curve = _parser.read_int(on_surf._par[3]);
       if ((_parser.read_int(on_surf._par[5]) == 1 || model_curve == 0) && param_curve != 0) {
         model_space.push_back(false);
         Coordinate_change unscale(Mat<3>::Zero(), Mat<3, 3>::Identity()/_unit);
-        curves.push_back(Read_entity(_parser, param_curve, _n_div, unscale).read_composite_curve());
+        curves.push_back(make_reader(param_curve, unscale).read_composite_curve());
       } else {
         HEXED_ASSERT(model_curve != 0,
                      "at least one of parameter-space and model-space curve pointers must be defined");
         model_space.push_back(true);
-        curves.push_back(Read_entity(_parser, model_curve, _n_div, _coords).read_composite_curve());
+        curves.push_back(make_reader(model_curve).read_composite_curve());
       }
     }
     // construct Trimmed_surface
