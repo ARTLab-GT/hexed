@@ -545,10 +545,6 @@ Nurbs<n_param>::nearest_params(Mat<3> target, Parametric<n_param>::Constraint is
   std::array<Int, n_param> start_node;
   start_node.fill(0);
   _recursive_nearest(nearest, start_node, _n_div, is_feasible);
-  #if 0
-  #pragma omp critical
-  std::cout << nearest.n_eval << "," << std::sqrt(nearest.dist_sq) << "," << nearest.is_feasible << "," << max_distance << " ";
-  #endif
   return {nearest.params, nearest.is_feasible};
 }
 
@@ -655,9 +651,7 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
         continuity_error = err;
         reversal = test_reversal;
       }
-      if (!test_reversal) std::cout << to_string(endpoints);
     }
-    std::cout << n_curves << " " << reversal << " " << continuity_error << "\n" << std::endl;
     for (int i_curve = 0; i_curve < n_curves; ++i_curve) {
       if (reversal%math::pow(2, i_curve + 1)/math::pow(2, i_curve)) {
         std::reverse(disc_curve[i_curve].begin(), disc_curve[i_curve].end());
@@ -700,7 +694,6 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
     for (Int i_node = 0; i_node < n_nodes; ++i_node) {
       all_nodes[i_node] = (all_nodes[i_node] - bounds(all, 0)).cwiseQuotient(bounds(all, 1) - bounds(all, 0));
     }
-    #if 0
     // correct periodic seam errors
     for (Int i_node = n_nodes, changed = false; (i_node < 2*n_nodes) || changed; ++i_node, changed = false) {
       for (int i_dim = 0; i_dim < 2; ++i_dim) {
@@ -759,7 +752,6 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
         }
       }
     }
-    #endif
     if (!all_nodes.empty()) {
       all_nodes.insert(all_nodes.end(), all_nodes.front());
       ++n_nodes;
