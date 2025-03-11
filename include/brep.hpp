@@ -355,6 +355,7 @@ class Trimmed_surface {
    */
   Nearest_point<3> nearest_point(Mat<3> point, double max_dist) const;
   std::vector<double> intersections(Mat<3, 2> endpoints) const;
+  Mat<3> normal(Mat<2> params) const;
   private:
   // Performs the real initialization work once the curves have been discretized.
   // Discretization is performed by the constructor.

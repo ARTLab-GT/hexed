@@ -877,6 +877,27 @@ std::vector<double> Trimmed_surface::intersections(Mat<3, 2> endpoints) const {
   return sects;
 }
 
+Mat<3> Trimmed_surface::normal(Mat<2> params) const {
+  Mat<3, 2> diffs = Mat<3, 2>::Zero();
+  for (int i_dim = 0; i_dim < 2; ++i_dim) {
+    for (int sign : {-1, 1}) {
+      Mat<2> p = params;
+      p(i_dim) += sign*.5*_sz;
+      Mat<3> diff_point;
+      if (p(i_dim) < 0 || p(i_dim) > 1) {
+        Mat<3> point0 = _surf->point(params);
+        Mat<3> point1 = _surf->point(1.5*params - .5*p);
+        Mat<3> point2 = _surf->point(2*params - p);
+        diff_point = 6*point0 - 8*point1 + 3*point2;
+      } else {
+        diff_point = _surf->point(p);
+      }
+      diffs(all, i_dim) += sign*diff_point;
+    }
+  }
+  return diffs(all, 0).cross(diffs(all, 1)).normalized();
+}
+
 // helper class to read an entity from an IGES file
 class Read_entity {
   public:
@@ -1269,19 +1290,22 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
   Int n_nodes = n_div + 1;
   double sz = 1./n_div;
   {
-    auto vis = Visualizer::create(format, 3, 2, file_name + "_surfaces", {"inside"}, 0., Visualizer::block);
+    std::vector<std::string> var_names {"normal0", "normal1", "normal2", "inside"};
+    auto vis = Visualizer::create(format, 3, 2, file_name + "_surfaces", var_names, 0., Visualizer::block);
     for (auto& s : _surfaces) {
       Array<double> discrete({3, n_nodes, n_nodes});
-      Array<double> inside({1, n_nodes, n_nodes});
+      Array<double> data({4, n_nodes, n_nodes});
       for (int i = 0; i < n_nodes; ++i) {
         for (int j = 0; j < n_nodes; ++j) {
           Mat<2> params {i*sz, j*sz};
           Mat<3> p = s.surface().point(params);
           for (int i_dim = 0; i_dim < 3; ++i_dim) discrete(i_dim)(i)[j] = p(i_dim);
-          inside(0)(i)[j] = s.is_inside(params);
+          Mat<3> n = s.normal(params);
+          for (int i_dim = 0; i_dim < 3; ++i_dim) data(i_dim)(i)[j] = n(i_dim);
+          data(3)(i)[j] = s.is_inside(params);
         }
       }
-      vis->write_block(discrete, inside);
+      vis->write_block(discrete, data);
     }
   }
   {
