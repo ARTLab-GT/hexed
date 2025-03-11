@@ -680,7 +680,7 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
   else bounds << 0, 1, 0, 1;
   // reparameterize surface to contain bounds
   bounds = _surf->reparameterize(bounds);
-  _param_segments.resize(_n_div);
+  for (int i_direction = 0; i_direction < 3; ++i_direction) _param_segments[i_direction].resize(_n_div);
   for (auto& loop : curves) {
     std::vector<Mat<2>> all_nodes;
     std::vector<std::array<Int, 2>> curve_endpoints;
@@ -757,53 +757,94 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
       ++n_nodes;
     }
     // compute parametric segments
-    std::vector<Int> abscissa;
-    std::vector<double> ordinate;
-    Mat<2> prev_params {-1., 0.};
-    Int prev_absc = -1;
-    if (n_nodes) for (Int i_node = 0; i_node <= n_nodes; ++i_node) {
-      Mat<2> params;
-      if (i_node == n_nodes && !abscissa.empty()) params << abscissa.front(), ordinate.front();
-      else {
-        params = all_nodes[i_node];
-        params(0) = std::max(0., std::min(1., params(0)))*_n_div;
+    for (int i_direction = 0; i_direction < 3; ++i_direction) {
+      Mat<2, 2> transform = _transform_mat(i_direction);
+      std::vector<Int> abscissa;
+      std::vector<double> ordinate;
+      Mat<2> prev_params {-1., 0.};
+      Int prev_absc = -1;
+      if (n_nodes) for (Int i_node = 0; i_node <= n_nodes; ++i_node) {
+        Mat<2> params;
+        if (i_node == n_nodes && !abscissa.empty()) params << abscissa.front(), ordinate.front();
+        else {
+          params = transform*all_nodes[i_node];
+          params(0) = std::max(0., std::min(1., params(0)))*_n_div;
+        }
+        if (prev_params(0) < -.1) prev_params = params;
+        while (floor(params(0)) > floor(prev_params(0)) || ceil(params(0)) < ceil(prev_params(0))) {
+          prev_absc = floor(params(0)) > floor(prev_params(0)) ? floor(prev_params(0)) + 1
+                                                               : ceil (prev_params(0)) - 1;
+          double denom = params(0) - prev_params(0);
+          if (std::abs(denom) < _sz) prev_params(1) = params(1);
+          else prev_params(1) += (prev_absc - prev_params(0))*(params(1) - prev_params(1))/denom;
+          prev_params(0) = prev_absc;
+          abscissa.push_back(prev_absc);
+          ordinate.push_back(prev_params(1));
+        }
       }
-      if (prev_params(0) < -.1) prev_params = params;
-      while (floor(params(0)) > floor(prev_params(0)) || ceil(params(0)) < ceil(prev_params(0))) {
-        prev_absc = floor(params(0)) > floor(prev_params(0)) ? floor(prev_params(0)) + 1
-                                                             : ceil (prev_params(0)) - 1;
-        double denom = params(0) - prev_params(0);
-        if (std::abs(denom) < _sz) prev_params(1) = params(1);
-        else prev_params(1) += (prev_absc - prev_params(0))*(params(1) - prev_params(1))/denom;
-        prev_params(0) = prev_absc;
-        abscissa.push_back(prev_absc);
-        ordinate.push_back(prev_params(1));
-      }
-    }
-    // sort segments into bins of specified `param(0)`
-    if (!abscissa.empty()) {
-      HEXED_ASSERT(abscissa.front() == abscissa.back(),
-                   format_str(200, "parametric representation is not closed (%li != %li)",
-                              abscissa.front(), abscissa.back()))
-      for (Int i_segment = 0; i_segment < Int(abscissa.size()) - 1; ++i_segment) {
-        HEXED_ASSERT(std::abs(abscissa[i_segment] - abscissa[i_segment + 1]) == 1, "invalid step size");
-        bool reverse = abscissa[i_segment] > abscissa[i_segment + 1];
-        HEXED_ASSERT(0 <= abscissa[i_segment + reverse] && abscissa[i_segment + reverse] < _n_div,
-                     format_str(200, "segment index %i out of bounds", abscissa[i_segment + reverse]));
-        _param_segments[abscissa[i_segment + reverse]].push_back({ordinate[i_segment +  reverse],
-                                                                  ordinate[i_segment + !reverse]});
+      // sort segments into bins of specified `param(0)`
+      if (!abscissa.empty()) {
+        HEXED_ASSERT(abscissa.front() == abscissa.back(),
+                     format_str(200, "parametric representation is not closed (%li != %li)",
+                                abscissa.front(), abscissa.back()))
+        for (Int i_segment = 0; i_segment < Int(abscissa.size()) - 1; ++i_segment) {
+          HEXED_ASSERT(std::abs(abscissa[i_segment] - abscissa[i_segment + 1]) == 1, "invalid step size");
+          bool reverse = abscissa[i_segment] > abscissa[i_segment + 1];
+          HEXED_ASSERT(0 <= abscissa[i_segment + reverse] && abscissa[i_segment + reverse] < _n_div,
+                       format_str(200, "segment index %i out of bounds", abscissa[i_segment + reverse]));
+          _param_segments[i_direction][abscissa[i_segment + reverse]].push_back({ordinate[i_segment +  reverse],
+                                                                                 ordinate[i_segment + !reverse]});
+        }
       }
     }
   }
 }
 
+Mat<2, 2> Trimmed_surface::_transform_mat(int i_direction) const {
+  Mat<2> dir;
+  switch (i_direction) {
+    case 0: dir << 1., 0.; break;
+    case 1: dir << std::sqrt(3.)/2, -.5; break;
+    case 2: dir << .5, -std::sqrt(3.)/2; break;
+    default: HEXED_THROW("`i_direction` must be in [0, 3)")
+  }
+  dir /= dir(0) - dir(1);
+  Mat<2, 2> trans;
+  trans <<
+    dir(0), -dir(1),
+    dir(1),  dir(0);
+  return trans;
+}
+
 bool Trimmed_surface::is_inside(Mat<2> params) const {
-  // count the number of segmements intersected by a ray in the positive `params(1)` direction
-  Int i_seg = floor(params(0)*_n_div);
-  if (i_seg < 0 || i_seg > _n_div) return false;
-  if (i_seg == _n_div) i_seg = _n_div - 1;
+  // fudge it a little so the outer boundary is always inside
+  for (int i_dim = 0; i_dim < 2; ++i_dim) {
+    double tol = 1e-3/_n_div;
+    if (params(i_dim) < -tol || params(i_dim) > 1 + tol) return false;
+    params(i_dim) = std::max(tol, std::min(1 - tol, params(i_dim)));
+  }
   Int n_intersections = 0;
-  for (Mat<2> seg : _param_segments[i_seg]) n_intersections += params(1) < seg(0) + (params(0)*_n_div - i_seg)*(seg(1) - seg(0));
+  double diff = huge;
+  for (int i_direction = 0; i_direction < 3; ++i_direction) {
+    Mat<2> p = _transform_mat(i_direction)*params;
+    // count the number of segmements intersected by a ray in the positive `p(1)` direction
+    Int i_seg = floor(p(0)*_n_div);
+    double max_diff = 0;
+    for (Int j_seg : {i_seg - 1, i_seg, i_seg + 1}) if (0 <= j_seg && j_seg < _n_div) {
+      for (Mat<2> seg : _param_segments[i_direction][j_seg]) {
+        if (std::min(seg(0), seg(1)) <= p(1) && p(1) <= std::max(seg(0), seg(1))) {
+          max_diff = std::max(max_diff, std::abs(seg(0) - seg(1)));
+        }
+      }
+    }
+    if (max_diff < diff) {
+      diff = max_diff;
+      n_intersections = 0;
+      for (Mat<2> seg : _param_segments[i_direction][i_seg]) {
+        n_intersections += p(1) < seg(0) + (p(0)*_n_div - i_seg)*(seg(1) - seg(0));
+      }
+    }
+  }
   // the point is inside iff the number of intesections is odd
   return n_intersections%2;
 }

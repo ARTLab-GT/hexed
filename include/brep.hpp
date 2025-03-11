@@ -359,13 +359,14 @@ class Trimmed_surface {
   // Performs the real initialization work once the curves have been discretized.
   // Discretization is performed by the constructor.
   void _initialize(std::vector<std::vector<std::vector<Mat<2>>>>& curves);
+  Mat<2, 2> _transform_mat(int i_direction) const;
   Int _n_div;
   double _sz;
   std::unique_ptr<Parametric<2>> _surf;
   std::vector<Tree_curve> _curves;
   // No simple way to explain this.
   // Need to write a dedicated article about distinguishing inside/outside points, which _param_segmetns is a part of.
-  std::vector<std::vector<Mat<2>>> _param_segments;
+  std::array<std::vector<std::vector<Mat<2>>>, 3> _param_segments;
 };
 
 //! \brief a `Surface_geom` consisting of a set of `Parametric<1>` curves
