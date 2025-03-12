@@ -391,7 +391,7 @@ class Array {
   Array extreme(bool minmax, Array that) {
     HEXED_ARRAY_ASSERT(that.size() == size(), "array sizes must match")
     Array result(shape());
-    result = 0;
+    for (Int i = 0; i < size(); ++i) result[i] = math::extreme(minmax, _data[i], that[i]);
     return result;
   }
 
