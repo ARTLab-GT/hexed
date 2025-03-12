@@ -270,7 +270,7 @@ TEST_CASE("Geom_3d", "[.slow]") {
   hexed::Int n_div = 128;
   bool vis_volume = false;
   #else
-  hexed::Int n_div = 16;
+  hexed::Int n_div = 1024;
   bool vis_volume = true;
   #endif
   #if 0
@@ -281,7 +281,7 @@ TEST_CASE("Geom_3d", "[.slow]") {
   #endif
   SECTION("prism_twisted") {
     hexed::brep::Geom_3d geom("../test_assets/prism_twisted.iges", n_div);
-    geom.visualize("default", "prism_twisted", 20, vis_volume);
+    geom.visualize("default", "prism_twisted", 30, vis_volume);
   }
   #if 0
   SECTION("weird_surface") {
