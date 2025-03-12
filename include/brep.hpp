@@ -361,6 +361,7 @@ class Trimmed_surface {
   // Discretization is performed by the constructor.
   void _initialize(std::vector<std::vector<std::vector<Mat<2>>>>& curves);
   Mat<2, 2> _transform_mat(int i_direction) const;
+  void _recursive_nearest(Nearest_point<3>&, Int i_start, Int j_start, Int n_panel) const;
   Int _n_div;
   double _sz;
   std::unique_ptr<Parametric<2>> _surf;

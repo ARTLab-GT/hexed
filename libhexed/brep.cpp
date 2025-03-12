@@ -853,6 +853,43 @@ next::Sequence<const Tree_curve&> Trimmed_surface::curves() const {
   return next::Sequence<const Tree_curve&>::vector_view(_curves);
 }
 
+void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Int i_start, Int j_start, Int n_panel) const {
+  Mat<3> point = nearest.reference();
+  Array<double> diffs({2, 2, 3});
+  for (int i_vertex = 0; i_vertex < 2; ++i_vertex) {
+    for (int j_vertex = 0; j_vertex < 2; ++j_vertex) {
+      Mat<2> params {(i_start + i_vertex*n_panel)*_sz, (j_start + j_vertex*n_panel)*_sz};
+      Mat<3> n = normal(params);
+      Mat<3> d = _surf->point(params) - point;
+      diffs(i_vertex)(j_vertex).vector() = d - d.dot(n)*n;
+    }
+  }
+  bool recur = false;
+  for (int i_triangle = 0; i_triangle < 2; ++i_triangle) {
+    Mat<3, 2> lhs;
+    lhs(all, 0) = (diffs(!i_triangle)(i_triangle) - diffs(i_triangle)(i_triangle)).vector();
+    lhs(all, 1) = (diffs(i_triangle)(!i_triangle) - diffs(i_triangle)(i_triangle)).vector();
+    Mat<2> soln = lhs.householderQr().solve(-diffs(i_triangle)(i_triangle).vector());
+    double tol = 1e-3;
+    if (soln(0) > -tol && soln(1) > -tol && soln(0) + soln(1) < 1 + tol) {
+      if (n_panel == 1) {
+        Mat<2> params {(i_start + i_triangle)*_sz, (j_start + i_triangle)*_sz};
+        params -= math::sign(i_triangle)*soln*_sz;
+        if (is_inside(params)) nearest.merge(_surf->point(params));
+      } else {
+        recur = true;
+      }
+    }
+  }
+  if (recur) {
+    for (int i_subsect = 0; i_subsect < 2; ++i_subsect) {
+      for (int j_subsect = 0; j_subsect < 2; ++j_subsect) {
+        _recursive_nearest(nearest, i_start + i_subsect*n_panel/2, j_start + j_subsect*n_panel/2, n_panel/2);
+      }
+    }
+  }
+}
+
 Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) const {
   Nearest_point<3> nearest(point, max_dist);
   for (Int i_panel = 0; i_panel < _n_div; ++i_panel) {
@@ -865,17 +902,17 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
           Mat<3> d = _surf->point(params) - point;
           diffs(i_vertex)(j_vertex).vector() = d - d.dot(n)*n;
         }
-        for (int i_triangle = 0; i_triangle < 2; ++i_triangle) {
-          Mat<3, 2> lhs;
-          lhs(all, 0) = (diffs(!i_triangle)(i_triangle) - diffs(i_triangle)(i_triangle)).vector();
-          lhs(all, 1) = (diffs(i_triangle)(!i_triangle) - diffs(i_triangle)(i_triangle)).vector();
-          Mat<2> soln = lhs.householderQr().solve(-diffs(i_triangle)(i_triangle).vector());
-          double tol = 1e-3;
-          if (soln(0) > -tol && soln(1) > -tol && soln(0) + soln(1) < 1 + tol) {
-            Mat<2> params {(i_panel + i_triangle)*_sz, (j_panel + i_triangle)*_sz};
-            params -= math::sign(i_triangle)*soln*_sz;
-            if (is_inside(params)) nearest.merge(_surf->point(params));
-          }
+      }
+      for (int i_triangle = 0; i_triangle < 2; ++i_triangle) {
+        Mat<3, 2> lhs;
+        lhs(all, 0) = (diffs(!i_triangle)(i_triangle) - diffs(i_triangle)(i_triangle)).vector();
+        lhs(all, 1) = (diffs(i_triangle)(!i_triangle) - diffs(i_triangle)(i_triangle)).vector();
+        Mat<2> soln = lhs.householderQr().solve(-diffs(i_triangle)(i_triangle).vector());
+        double tol = 1e-3;
+        if (soln(0) > -tol && soln(1) > -tol && soln(0) + soln(1) < 1 + tol) {
+          Mat<2> params {(i_panel + i_triangle)*_sz, (j_panel + i_triangle)*_sz};
+          params -= math::sign(i_triangle)*soln*_sz;
+          if (is_inside(params)) nearest.merge(_surf->point(params));
         }
       }
     }
