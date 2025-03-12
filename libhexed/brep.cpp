@@ -855,15 +855,35 @@ next::Sequence<const Tree_curve&> Trimmed_surface::curves() const {
 
 Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) const {
   Nearest_point<3> nearest(point, max_dist);
-  // first find the nearest point in the surface interior, if any
-  auto params = _surf->nearest_params(point, [this](Mat<2> params){return is_inside(params);}, max_dist);
-  if (params.is_feasible) nearest.merge(_surf->point(params.params));
-  // then check the nearest point on all the boundary curves
-  if (nearest.empty() || _surf->must_check_boundary()) {
-    for (auto& curve : _curves) {
-      auto index = curve.nearest_point(point, 1.01*std::sqrt(nearest.dist_squared()));
-      if (index.index > -1) nearest.merge(curve.nodes()(index.index).vector());
+  for (Int i_panel = 0; i_panel < _n_div; ++i_panel) {
+    for (Int j_panel = 0; j_panel < _n_div; ++j_panel) {
+      Array<double> diffs({2, 2, 3});
+      for (int i_vertex = 0; i_vertex < 2; ++i_vertex) {
+        for (int j_vertex = 0; j_vertex < 2; ++j_vertex) {
+          Mat<2> params {(i_panel + i_vertex)*_sz, (j_panel + j_vertex)*_sz};
+          Mat<3> n = normal(params);
+          Mat<3> d = _surf->point(params) - point;
+          diffs(i_vertex)(j_vertex).vector() = d - d.dot(n)*n;
+        }
+        for (int i_triangle = 0; i_triangle < 2; ++i_triangle) {
+          Mat<3, 2> lhs;
+          lhs(all, 0) = (diffs(!i_triangle)(i_triangle) - diffs(i_triangle)(i_triangle)).vector();
+          lhs(all, 1) = (diffs(i_triangle)(!i_triangle) - diffs(i_triangle)(i_triangle)).vector();
+          Mat<2> soln = lhs.householderQr().solve(-diffs(i_triangle)(i_triangle).vector());
+          double tol = 1e-3;
+          if (soln(0) > -tol && soln(1) > -tol && soln(0) + soln(1) < 1 + tol) {
+            Mat<2> params {(i_panel + i_triangle)*_sz, (j_panel + i_triangle)*_sz};
+            params -= math::sign(i_triangle)*soln*_sz;
+            if (is_inside(params)) nearest.merge(_surf->point(params));
+          }
+        }
+      }
     }
+  }
+  // then check the nearest point on all the boundary curves
+  for (auto& curve : _curves) {
+    auto index = curve.nearest_point(point, 1.01*std::sqrt(nearest.dist_squared()));
+    if (index.index > -1) nearest.merge(curve.nodes()(index.index).vector());
   }
   return nearest;
 }
