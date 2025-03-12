@@ -54,23 +54,29 @@ inline std::vector<Int> hypercubes(Int n_var, Int n_dim, Int row_size) {
  * - To create a new array that references data in another array, use `Array(other())`.
  * - To create a new array that references existing data that is not in an array, use `Array(std::vector<Int>, T*)`
  * - To create a new array that is a copy of an existing array (allocating new data), use `Array(other.copy())`
- * - To copy data from an existing array to another (of the same size) without allocating or creating references, use the `=` operator.
+ * - To copy data from an existing array to another (of the same size) without allocating or creating references,
+ *   use the `=` operator.
  *
- * If you want to pass an `Array` as a function argument, you should be able to pass it by value without thinking about it.
+ * If you want to pass an `Array` as a function argument,
+ * you should be able to pass it by value without thinking about it.
  * If you're passing a temporary object, it should be preserved as long as it needs to be with the move constructor.
- * That said, for performance it's better to try to use the move constructor instead of the copy constructor whenever appropriate,
+ * That said, for performance it's better to try to use the move constructor
+ * instead of the copy constructor whenever appropriate,
  * because this will avoid unnecessary allocations for arrays that own their data.
  *
- * By default, if `DEBUG` is defined, then dynamic bounds checking is performed and out-of-bounds access will result in an exception.
+ * By default, if `DEBUG` is defined,
+ * then dynamic bounds checking is performed and out-of-bounds access will result in an exception.
  * Otherwise, no bounds checking is performed and out-of-bounds access is undefined behavior.
  * This can be overridden by explicitly defining the `HEXED_ARRAY_BOUNDS_CHECK` macro to be `true` or `false`.
  *
- * `Array`s support the unary arithmetic operators `-` and `+` as well as the binary operators `-`, `+`, `/`, `*`, `%`, `&&`, and `||`.
+ * `Array`s support the unary arithmetic operators `-` and `+`
+ * as well as the binary operators `-`, `+`, `/`, `*`, `%`, `&&`, and `||`.
  * Binary operators can operate on two arrays or on an array and a scalar.
  * All operators perform their operations elementwise.
  * They always create a copy, so for truly optimal performance you might consider a loop instead.
  * For binary operators, both operands (arrays or scalars) must have the same data type.
- * To perform operations on arrays that have different, but compatible, types, you can cast them to the same type with `Array::copy<U>()`.
+ * To perform operations on arrays that have different, but compatible, types,
+ * you can cast them to the same type with `Array::copy<U>()`.
  *
  * \note Implementing a feature-complete array container is a large task,
  * and I have not yet implemented all of the features that I ultimately plan to.
@@ -212,7 +218,8 @@ class Array {
     return *this;
   }
   /*! \brief Creates a new array that owns its data, which is a copy of `this`'s data (i.e. new data is allocated).
-   * \details If the template argument is specified to be something other than `T`, the array will be cast to a different type.
+   * \details If the template argument is specified to be something other than `T`,
+   * the array will be cast to a different type.
    * The old type must by copy-assignable to the new type.
    */
   template <typename U = T>
@@ -231,8 +238,10 @@ class Array {
     for (Int i = 0; i < _order; ++i) s[i] = _shape[i];
     return s;
   }
-  //! \brief Returns the total size of the array.
-  //! \details This is the number of values you can access with the `[]` operator, or equivalently the product of the entries of `shape()`.
+  /*! \brief Returns the total size of the array.
+   * \details This is the number of values you can access with the `[]` operator,
+   * or equivalently the product of the entries of `shape()`.
+   */
   Int size() const {return bool(_order)*_strides[0]/_strides[_order];}
   //! \brief `true` iff `this` and `other` have the same `shape()`.
   //! \details It's okay to call this on arrays of different `order()`; naturally it will return `false`.
@@ -378,6 +387,13 @@ class Array {
   DEFINE_OPERATOR(*=)
   DEFINE_OPERATOR(%=)
   #undef DEFINE_OPERATOR
+
+  Array extreme(bool minmax, Array that) {
+    HEXED_ARRAY_ASSERT(that.size() == size(), "array sizes must match")
+    Array result(shape());
+    result = 0;
+    return result;
+  }
 
   private:
   Array(Int o, T* d, bool own, Int* sh, Int* st) : _order{o}, _data{d}, _owns{own}, _shape{sh}, _strides{st} {}

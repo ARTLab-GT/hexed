@@ -53,13 +53,30 @@ constexpr Int log(Int base, Int arg) {
 }
 
 template <typename T>
-constexpr T max(T arg) {
+constexpr T extreme(bool minmax, T arg) {
   return arg;
 }
 
+//! \brief if `minmax` is true, returns the maximum of remaining arguments, else the minimum
+//! \warning always returns the type of the first argument, regardless of type conversion rules
+template <typename T, typename... arg_ts>
+constexpr T extreme(bool minmax, T arg, arg_ts... args) {
+  T trailing = extreme<T>(minmax, args...);
+  return minmax ? std::max<T>(arg, trailing) : std::min<T>(arg, trailing);
+}
+
+//! \brief returns the maximum of all arguments
+//! \warning always returns the type of the first argument, regardless of type conversion rules
 template <typename T, typename... arg_ts>
 constexpr T max(T arg, arg_ts... args) {
-  return std::max<T>(arg, max(args...));
+  return extreme(true, arg, args...);
+}
+
+//! \brief returns the minimum of all arguments
+//! \warning always returns the type of the first argument, regardless of type conversion rules
+template <typename T, typename... arg_ts>
+constexpr T min(T arg, arg_ts... args) {
+  return extreme(false, arg, args...);
 }
 
 //! \brief returns 1 if `condition` is true, otherwise -1
