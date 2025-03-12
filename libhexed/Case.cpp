@@ -335,7 +335,7 @@ Case::Case(std::string input_script)
     // setup actual solver
     bool steady = _vari("steady");
     bool implicit = _vari("implicit");
-    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, !steady || implicit, transport_models[0],
+    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, steady || implicit, transport_models[0],
                                  transport_models[1], turb_model, _inter.variables, !steady && implicit));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis"));
