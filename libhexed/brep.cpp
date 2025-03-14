@@ -856,35 +856,55 @@ next::Sequence<const Tree_curve&> Trimmed_surface::curves() const {
 void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Int i_start, Int j_start, Int n_panel) const {
   Mat<3> point = nearest.reference();
   Array<double> diffs({2, 2, 3});
+  Array<double> dist_nrml({2, 2, 2, 3});
+  Array<double> average({2, 3});
+  average = 0;
   for (int i_vertex = 0; i_vertex < 2; ++i_vertex) {
     for (int j_vertex = 0; j_vertex < 2; ++j_vertex) {
       Mat<2> params {(i_start + i_vertex*n_panel)*_sz, (j_start + j_vertex*n_panel)*_sz};
       Mat<3> n = normal(params);
       Mat<3> d = _surf->point(params) - point;
       diffs(i_vertex)(j_vertex).vector() = d - d.dot(n)*n;
+      d.normalize();
+      dist_nrml(i_vertex)(j_vertex)(0).vector() = d;
+      dist_nrml(i_vertex)(j_vertex)(1).vector() = n;
+      average += dist_nrml(i_vertex)(j_vertex);
     }
   }
-  bool recur = false;
-  for (int i_triangle = 0; i_triangle < 2; ++i_triangle) {
-    Mat<3, 2> lhs;
-    lhs(all, 0) = (diffs(!i_triangle)(i_triangle) - diffs(i_triangle)(i_triangle)).vector();
-    lhs(all, 1) = (diffs(i_triangle)(!i_triangle) - diffs(i_triangle)(i_triangle)).vector();
-    Mat<2> soln = lhs.householderQr().solve(-diffs(i_triangle)(i_triangle).vector());
-    double tol = 1e-3;
-    if (soln(0) > -tol && soln(1) > -tol && soln(0) + soln(1) < 1 + tol) {
-      if (n_panel == 1) {
-        Mat<2> params {(i_start + i_triangle)*_sz, (j_start + i_triangle)*_sz};
+  average /= 4;
+  dist_nrml.reshape({whatever, 2, 3});
+  double radii [2] {};
+  for (int i_vertex = 0; i_vertex < 4; ++i_vertex) {
+    for (int i = 0; i < 2; ++i) {
+      radii[i] = std::max(radii[i], (dist_nrml(i_vertex)(i) - average(i)).vector().norm());
+    }
+  }
+  double deviation = std::min((average(0) - average(1)).vector().norm(), (average(0) + average(1)).vector().norm());
+  if (deviation < radii[0] + radii[1] + 1e-3) {
+    if (n_panel == 1) {
+      Mat<2> params;
+      for (int i_triangle = 0; i_triangle < 2; ++i_triangle) {
+        Mat<3, 2> lhs;
+        lhs(all, 0) = (diffs(!i_triangle)(i_triangle) - diffs(i_triangle)(i_triangle)).vector();
+        lhs(all, 1) = (diffs(i_triangle)(!i_triangle) - diffs(i_triangle)(i_triangle)).vector();
+        Mat<2> soln = lhs.householderQr().solve(-diffs(i_triangle)(i_triangle).vector());
+        for (int i_dim = 0; i_dim < 2; ++i_dim) {
+          for (bool minmax : {0, 1}) soln(i_dim) = math::extreme<double>(minmax, soln(i_dim), !minmax);
+        }
+        double over = soln(0) + soln(1) - 1;
+        if (over > 0) {
+          soln(0) -= over/2;
+          soln(1) -= over/2;
+        }
+        params << (i_start + i_triangle)*_sz, (j_start + i_triangle)*_sz;
         params -= math::sign(i_triangle)*soln*_sz;
         if (is_inside(params)) nearest.merge(_surf->point(params));
-      } else {
-        recur = true;
       }
-    }
-  }
-  if (recur) {
-    for (int i_subsect = 0; i_subsect < 2; ++i_subsect) {
-      for (int j_subsect = 0; j_subsect < 2; ++j_subsect) {
-        _recursive_nearest(nearest, i_start + i_subsect*n_panel/2, j_start + j_subsect*n_panel/2, n_panel/2);
+    } else {
+      for (int i_subsect = 0; i_subsect < 2; ++i_subsect) {
+        for (int j_subsect = 0; j_subsect < 2; ++j_subsect) {
+          _recursive_nearest(nearest, i_start + i_subsect*n_panel/2, j_start + j_subsect*n_panel/2, n_panel/2);
+        }
       }
     }
   }

@@ -109,16 +109,9 @@ class Array {
    * Once you initialize the elements, you can then assign to them even if `T` is a class type.
    */
   Array(std::vector<Int> shape_arg, T* data_arg = nullptr)
-  : _order{Int(shape_arg.size())}
-  , _shape_storage{shape_arg}
-  , _shape{_shape_storage.data()}
+  : _shape_storage{shape_arg}
   {
-    _shape_storage.shrink_to_fit();
-    _stride_storage.resize(_order + 1);
-    _stride_storage.shrink_to_fit();
-    _strides = _stride_storage.data();
-    _strides[_order] = 1;
-    for (Int i = _order - 1; i >= 0; --i) _strides[i] = _strides[i + 1]*_shape[i];
+    _initialize_shape();
     if (data_arg || size() == 0) {
       _data = data_arg;
       _owns = false;
@@ -324,26 +317,7 @@ class Array {
        E.g., `array.reshaped({hexed::whatever})` flattens `array`.
      */ \
     CONST Array reshaped(std::vector<Int> new_shape) CONST { \
-      std::vector<Int> s = new_shape; \
-      Int sz = 1; \
-      Int i_whatever = -1; \
-      for (Int i = 0; i < Int(s.size()); ++i) { \
-        if (s[i] == same) { \
-          HEXED_ARRAY_ASSERT(i < order(), "`same` appears at a position >= `order()`"); \
-          s[i] = _shape[i]; \
-        } \
-        if (s[i] == whatever) { \
-          HEXED_ARRAY_ASSERT(i_whatever == -1, "more than one `hexed::whatever` in `new_shape`"); \
-          i_whatever = i; \
-        } else sz *= s[i]; \
-      } \
-      if (i_whatever >= 0) { \
-        HEXED_ARRAY_ASSERT(size()%sz == 0, "`whatever` dimension is not an integer"); \
-        s[i_whatever] = size()/sz; \
-        sz *= s[i_whatever]; \
-      } \
-      HEXED_ARRAY_ASSERT(sz <= size(), "`new_shape` is larger than current shape"); \
-      Array r(s, _data); \
+      Array r(_compute_new_shape(new_shape), _data); \
       for (int i_dim = 0; i_dim <= r._order; ++i_dim) r._strides[i_dim] *= _strides[_order]; \
       return r; \
     } \
@@ -364,6 +338,13 @@ class Array {
   QUALIFIED()
   QUALIFIED(const)
   #undef QUALIFIED
+
+  void reshape(std::vector<Int> new_shape) {
+    Int inner_stride = _strides[_order];
+    _shape_storage = _compute_new_shape(new_shape);
+    _initialize_shape();
+    for (int i_dim = 0; i_dim <= _order; ++i_dim) _strides[i_dim] *= inner_stride;
+  }
 
   #define DEFINE_OPERATOR(BIN_OP) \
     Array<T>& operator BIN_OP(const Array<T>& that) { \
@@ -397,6 +378,38 @@ class Array {
 
   private:
   Array(Int o, T* d, bool own, Int* sh, Int* st) : _order{o}, _data{d}, _owns{own}, _shape{sh}, _strides{st} {}
+  void _initialize_shape() {
+    _shape = _shape_storage.data();
+    _order = _shape_storage.size();
+    _shape_storage.shrink_to_fit();
+    _stride_storage.resize(_order + 1);
+    _stride_storage.shrink_to_fit();
+    _strides = _stride_storage.data();
+    _strides[_order] = 1;
+    for (Int i = _order - 1; i >= 0; --i) _strides[i] = _strides[i + 1]*_shape[i];
+  }
+  std::vector<Int> _compute_new_shape(std::vector<Int> new_shape) const { // replaces `whatever` as necessary
+    std::vector<Int> s = new_shape;
+    Int sz = 1;
+    Int i_whatever = -1;
+    for (Int i = 0; i < Int(s.size()); ++i) {
+      if (s[i] == same) {
+        HEXED_ARRAY_ASSERT(i < order(), "`same` appears at a position >= `order()`");
+        s[i] = _shape[i];
+      }
+      if (s[i] == whatever) {
+        HEXED_ARRAY_ASSERT(i_whatever == -1, "more than one `hexed::whatever` in `new_shape`");
+        i_whatever = i;
+      } else sz *= s[i];
+    }
+    if (i_whatever >= 0) {
+      HEXED_ARRAY_ASSERT(size()%sz == 0, "`whatever` dimension is not an integer");
+      s[i_whatever] = size()/sz;
+      sz *= s[i_whatever];
+    }
+    HEXED_ARRAY_ASSERT(sz <= size(), "`new_shape` is larger than current shape");
+    return s;
+  }
   Int _order;
   std::vector<Int> _shape_storage;
   std::vector<Int> _stride_storage;
