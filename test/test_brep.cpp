@@ -278,20 +278,27 @@ TEST_CASE("Geom_3d", "[.slow]") {
     hexed::brep::Geom_3d geom("../test_assets/cylinder_extruded.iges", n_div);
     geom.visualize("default", "cylinder_extruded", 100, vis_volume);
   }
-  #endif
   SECTION("prism_twisted") {
     hexed::brep::Geom_3d geom("../test_assets/prism_twisted.iges", n_div);
     geom.visualize("default", "prism_twisted", 30, vis_volume);
   }
-  #if 0
   SECTION("weird_surface") {
     hexed::brep::Geom_3d geom("../test_assets/weird_surface.iges", n_div);
     hexed::Mat<3, 2> bounds;
     bounds <<
       -.1, .1,
       -.1, .1,
-      0., .2;
+       0., .2;
     geom.visualize("default", "weird_surface", 30, vis_volume, bounds);
   }
   #endif
+  SECTION("misleading_normal") {
+    hexed::brep::Geom_3d geom("../test_assets/misleading_normal.iges", n_div);
+    hexed::Mat<3, 2> bounds;
+    bounds <<
+      -.2, .2,
+      -.1, .3,
+      -.2, .2;
+    geom.visualize("default", "misleading_normal", 30, vis_volume, bounds);
+  }
 }
