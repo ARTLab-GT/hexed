@@ -111,6 +111,11 @@ Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_
   return {params, is_feasible(params)};
 }
 
+std::optional<Mat<2>> Plane::nearest_parameters(Mat<3> p) const {
+  Mat<2> params = _vecs.colPivHouseholderQr().solve(p - _origin);
+  return {params};
+}
+
 std::vector<Parametric<2>::Intersection_parameters> Plane::intersection_params(Mat<3, 2> endpoints) const {
   Mat<3, 3> lhs;
   lhs(all, Eigen::seqN(0, 2)) = _vecs;
@@ -1009,7 +1014,13 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
 Mat<2> Trimmed_surface::_nearest_params(Mat<3> point) const {
   Nearest_point<3> nearest(point, default_max_dist);
   Mat<2> best_params = Mat<2>::Zero();
-  _recursive_nearest(nearest, best_params, 0, 0, 0, false);
+  auto par = _surf->nearest_parameters(point);
+  if (par.has_value()) {
+    best_params = par.value();
+    nearest.merge(_surf->point(par.value()));
+  } else {
+    _recursive_nearest(nearest, best_params, 0, 0, 0, false);
+  }
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       auto& curve = _extremal_boundaries[2*i_dim + sign];

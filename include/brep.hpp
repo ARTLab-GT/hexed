@@ -97,6 +97,8 @@ class Parametric {
    */
   virtual Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const = 0;
 
+  virtual std::optional<Mat<2>> nearest_parameters(Mat<3> point) const {return {};}
+
   /*! \brief Finds the nearest point on the entity to `p`, at least if that point is on the interior.
    * \details Wrapper for `nearest_params()` with no constraints applied.
    * \warning This is mostly for testing.
@@ -222,6 +224,7 @@ class Plane : public Parametric<2> {
   //! \note Does not include boundary points in search.
   Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
                                     double max_distance) const override;
+  std::optional<Mat<2>> nearest_parameters(Mat<3> point) const override;
   std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
   inline Mat<3> point(Mat<2> params) const override {return _origin + _vecs*params;}
   /*! \brief Reparameterizes the plane
