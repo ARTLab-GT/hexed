@@ -361,14 +361,18 @@ class Trimmed_surface {
   // Discretization is performed by the constructor.
   void _initialize(std::vector<std::vector<std::vector<Mat<2>>>>& curves);
   Mat<2, 2> _transform_mat(int i_direction) const;
-  void _recursive_nearest(Nearest_point<3>&, Mat<2>& params, Int i_start, Int j_start, Int n_panel,
+  void _recursive_nearest(Nearest_point<3>&, Mat<2>& params, Int i_start, Int j_start, Int level,
                           bool check_inside) const;
+  void _evaluate_excession(Int i_start, Int j_start, Int n_panel);
   Mat<2> _nearest_params(Mat<3> point) const;
   Int _n_div;
   double _sz;
   std::unique_ptr<Parametric<2>> _surf;
   std::vector<Tree_curve> _curves;
   std::vector<Tree_curve> _extremal_boundaries;
+  Int _levels;
+  Array<double> _excession;
+  Array<double> _excession_epsilon;
   // No simple way to explain this.
   // Need to write a dedicated article about distinguishing inside/outside points, which _param_segmetns is a part of.
   std::array<std::vector<std::vector<Mat<2>>>, 3> _param_segments;

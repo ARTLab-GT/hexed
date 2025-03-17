@@ -582,11 +582,17 @@ Mat<2, n_param> Nurbs<n_param>::orig_param_bounds() const {
 
 Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves,
                                  std::vector<bool> is_model_space, Int n_div)
-: _n_div{n_div}, _sz{1./_n_div}, _surf{surface}
+: _n_div{n_div}
+, _sz{1./_n_div}
+, _surf{surface}
+, _levels{math::log(2, _n_div)}
+, _excession({_levels + 1, 2})
+, _excession_epsilon({2})
 {
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       Array<double> boundary({_n_div + 1, 3});
+      #pragma omp parallel for
       for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
         Mat<2> params;
         params(i_dim) = sign;
@@ -596,6 +602,53 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
       _extremal_boundaries.emplace_back(boundary.copy());
     }
   }
+  Mat<3> ref_point = _surf->point(Mat<2>{.5, .5});
+  double ref_dist = 0;
+  #pragma omp parallel for reduction(max:ref_dist)
+  for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
+    for (Int j_node = 0; j_node < _n_div + 1; ++j_node) {
+      ref_dist = std::max(ref_dist, (_surf->point(Mat<2>{i_node*_sz, j_node*_sz}) - ref_point).norm());
+    }
+  }
+  _excession_epsilon = Array<double>::make(1e-3*ref_dist*_sz, 1e-3*_n_div);
+  _excession = 0; // this will set `_excession(_levels)`, which is not set in the following loop
+  for (int level = 0; level < _levels; ++level) {
+    Int n_outer = math::pow(2, level);
+    Int n_inner = _n_div/n_outer;
+    for (Int i_outer = 0; i_outer < n_outer; ++i_outer) {
+      for (Int j_outer = 0; j_outer < n_outer; ++j_outer) {
+        Array<double> dist_nrml({4, 2, 3});
+        Array<double> average({2, 3});
+        average = 0;
+        for (int i_vert = 0; i_vert < 4; ++i_vert) {
+          Mat<2> params {(i_outer + i_vert/2*n_inner)*_sz, (j_outer + i_vert%2*n_inner)*_sz};
+          dist_nrml(i_vert)(0).vector() = _surf->point(params);
+          dist_nrml(i_vert)(1).vector() = normal(params);
+          average += dist_nrml(i_vert)/4.;
+        }
+        double approx_radius [2] {};
+        for (int i_vert = 0; i_vert < 4; ++i_vert) {
+          for (int i = 0; i < 2; ++i) {
+            approx_radius[i] = std::max(approx_radius[i], (dist_nrml(i_vert)(i) - average(i)).vector().norm());
+          }
+        }
+        for (Int i_inner = 0; i_inner < n_inner + 1; ++i_inner) {
+          for (Int j_inner = 0; j_inner < n_inner + 1; ++j_inner) {
+            Mat<2> params {(i_outer + i_inner)*_sz, (j_outer + j_inner)*_sz};
+            Array<double> dn({2, 3});
+            dn(0).vector() = _surf->point(params);
+            dn(1).vector() = normal(params);
+            for (int i = 0; i < 2; ++i) {
+              double r = (dn(i) - average(i)).vector().norm();
+              _excession(level)[i] = std::max(_excession(level)[i],
+                                              (r - approx_radius[i])/(approx_radius[i] + _excession_epsilon[i]));
+            }
+          }
+        }
+      }
+    }
+  }
+  printers::info(to_string(_excession));
   // discretize curves into polygonal segments in parameter space
   std::vector<std::vector<std::vector<Mat<2>>>> discrete_curves;
   for (int i_composite = 0; i_composite < int(curves.size()); ++i_composite) {
@@ -866,7 +919,8 @@ next::Sequence<const Tree_curve&> Trimmed_surface::curves() const {
 }
 
 void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best_params, Int i_start, Int j_start,
-                                         Int n_panel, bool check_inside) const {
+                                         Int level, bool check_inside) const {
+  Int n_panel = _n_div/math::pow(2, level);
   Mat<3> point = nearest.reference();
   Array<double> diffs({2, 2, 3});
   Array<double> dist_nrml({2, 2, 2, 3});
@@ -891,9 +945,10 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
       radii[i] = std::max(radii[i], (dist_nrml(i_vertex)(i) - average(i)).vector().norm());
     }
   }
+  for (int i = 0; i < 2; ++i) radii[i] += _excession(level)[i]*(radii[i] + _excession_epsilon[i]);
   double norm = average(1).vector().norm();
   bool compute;
-  if (average(0).vector().norm() < radii[0] + std::sqrt(nearest.dist_squared())) {
+  if (average(0).vector().norm() > radii[0] + std::sqrt(nearest.dist_squared())) {
     compute = false;
   } else if (radii[1] >= norm) {
     compute = true;
@@ -901,7 +956,7 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
     average(1) *= average(0).vector().dot(average(1).vector())/(norm*norm);
     double sin = radii[1]/norm;
     double cos = std::sqrt(1 - sin*sin);
-    average(1) += (average(1) - average(0)).vector().norm()*sin/cos;
+    average(1) *= 1 + (average(1) - average(0)).vector().norm()*sin/cos/average(1).vector().norm();
     double r = radii[0] + (radii[1] + 1e-3)*average(1).vector().norm()/norm;
     compute = (average(0) - average(1)).vector().norm() < r;
   }
@@ -931,7 +986,7 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
       for (int i_subsect = 0; i_subsect < 2; ++i_subsect) {
         for (int j_subsect = 0; j_subsect < 2; ++j_subsect) {
           _recursive_nearest(nearest, best_params, i_start + i_subsect*n_panel/2, j_start + j_subsect*n_panel/2,
-                             n_panel/2, check_inside);
+                             level + 1, check_inside);
         }
       }
     }
@@ -942,7 +997,7 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
   Nearest_point<3> nearest(point, max_dist);
   Mat<2> best_params; // unused
   // first check all local nearest points in the interior of the surface
-  _recursive_nearest(nearest, best_params, 0, 0, _n_div, true);
+  _recursive_nearest(nearest, best_params, 0, 0, 0, true);
   // then check the nearest point on all the boundary curves
   for (auto& curve : _curves) {
     auto index = curve.nearest_point(point, 1.01*std::sqrt(nearest.dist_squared()));
@@ -954,7 +1009,7 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
 Mat<2> Trimmed_surface::_nearest_params(Mat<3> point) const {
   Nearest_point<3> nearest(point, default_max_dist);
   Mat<2> best_params = Mat<2>::Zero();
-  _recursive_nearest(nearest, best_params, 0, 0, _n_div, false);
+  _recursive_nearest(nearest, best_params, 0, 0, 0, false);
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       auto& curve = _extremal_boundaries[2*i_dim + sign];
