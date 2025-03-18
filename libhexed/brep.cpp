@@ -653,7 +653,6 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
       }
     }
   }
-  printers::info(to_string(_excession));
   // discretize curves into polygonal segments in parameter space
   std::vector<std::vector<std::vector<Mat<2>>>> discrete_curves;
   for (int i_composite = 0; i_composite < int(curves.size()); ++i_composite) {
