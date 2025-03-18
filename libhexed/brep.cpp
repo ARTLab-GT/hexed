@@ -951,17 +951,19 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
     }
   }
   for (int i = 0; i < 2; ++i) radii[i] += _excession(level)[i]*(radii[i] + _excession_epsilon[i]);
-  double norm = average(1).vector().norm();
+  double norm = average(1).vector().norm() + 1e-12;
+  Mat<3> unit_avg = average(1).vector()/norm;
   bool compute;
   if (average(0).vector().norm() > radii[0] + std::sqrt(nearest.dist_squared())) {
     compute = false;
-  } else if (radii[1] >= norm) {
+  } else if (radii[1] > norm - 1e-3) {
     compute = true;
   } else {
-    average(1) *= average(0).vector().dot(average(1).vector())/(norm*norm);
+    double scale = average(0).vector().dot(unit_avg)/norm;
+    average(1) *= scale;
     double sin = radii[1]/norm;
     double cos = std::sqrt(1 - sin*sin);
-    average(1) *= 1 + (average(1) - average(0)).vector().norm()*sin/cos/average(1).vector().norm();
+    average(1).vector() += (average(1) - average(0)).vector().norm()*sin/cos*math::sign(scale > 0)*unit_avg;
     double r = radii[0] + (radii[1] + 1e-3)*average(1).vector().norm()/norm;
     compute = (average(0) - average(1)).vector().norm() < r;
   }
