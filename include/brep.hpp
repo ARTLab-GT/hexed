@@ -359,6 +359,7 @@ class Trimmed_surface {
   Nearest_point<3> nearest_point(Mat<3> point, double max_dist) const;
   std::vector<double> intersections(Mat<3, 2> endpoints) const;
   Mat<3> normal(Mat<2> params) const;
+  Mat<3> point(Mat<2> params) const;
   private:
   // Performs the real initialization work once the curves have been discretized.
   // Discretization is performed by the constructor.
@@ -439,6 +440,7 @@ class Geom_3d : public Surface_geom {
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
   next::Sequence<const Tree_curve&> edges() override;
+  next::Sequence<const Trimmed_surface&> surfaces();
   private:
   std::vector<Trimmed_surface> _surfaces;
 };

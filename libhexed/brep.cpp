@@ -409,6 +409,7 @@ Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, A
   for (int i_dim = 0; i_dim < n_param; ++i_dim) {
     _n_basis[i_dim] = _weights.shape()[i_dim];
     _degree[i_dim] = _knots[i_dim].size() - _n_basis[i_dim] - 1;
+    HEXED_ASSERT(_degree[i_dim] <= 3, "degree > 3 NURBSs are not yet supported", assert::Not_implemented_error);
     HEXED_ASSERT(_degree[i_dim] > 0, "degree must be positive")
     HEXED_ASSERT(_control_points.shape()[i_dim] == _n_basis[i_dim],
                  "shape of `weights` and `control_points` don't match")
@@ -448,19 +449,18 @@ Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, A
 template <int n_param>
 Mat<3> Nurbs<n_param>::point(Mat<n_param> params) const {
   Int start_knot [n_param];
-  std::vector<Array<double>> bases;
+  double bases [2][4];
   Int n_term = 1;
   for (int i_dim = 0; i_dim < n_param; ++i_dim) {
-    bases.push_back(Array<double>({_degree[i_dim] + 1}));
     n_term *= _degree[i_dim] + 1;
     start_knot[i_dim] = _find_knot(i_dim, params[i_dim]);
-    Array<double> basis = bases.back()();
-    basis = 0;
+    double* basis = bases[i_dim];
     basis[0] = 1;
+    for (int i = 1; i <= _degree[i_dim]; ++i) basis[i] = 0;
     for (int deg = 1; deg <= _degree[i_dim]; ++deg) {
       for (int j_basis = deg; j_basis >= 0; --j_basis) {
         // note: IGES spec unclear because formulae are for degree k - 1 basis in terms of k - 2
-        Array<double> shifted = _knots[i_dim](start_knot[i_dim] - deg, end);
+        const double* shifted = _knots[i_dim](start_knot[i_dim] - deg, end).data();
         if (j_basis < deg) {
           basis[j_basis] *= (shifted[j_basis + deg + 1] - params[i_dim])
                             /(shifted[j_basis + deg + 1] - shifted[j_basis + 1]);
@@ -1076,6 +1076,10 @@ Mat<3> Trimmed_surface::normal(Mat<2> params) const {
   return diffs(all, 0).cross(diffs(all, 1)).normalized();
 }
 
+Mat<3> Trimmed_surface::point(Mat<2> params) const {
+  return _surf->point(params);
+}
+
 // helper class to read an entity from an IGES file
 class Read_entity {
   public:
@@ -1462,6 +1466,10 @@ next::Sequence<const Tree_curve&> Geom_3d::edges() {
   next::Sequence<const Tree_curve&> e;
   for (auto& surf : _surfaces) e = e + surf.curves();
   return e;
+}
+
+next::Sequence<const Trimmed_surface&> Geom_3d::surfaces() {
+  return next::Sequence<const Trimmed_surface&>::vector_view(_surfaces);
 }
 
 void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bool vis_volume, Mat<3, 2> bounds) {

@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/brep.hpp>
+#include <hexed/Stopwatch.hpp>
 
 TEST_CASE("Line_segment") {
   hexed::Mat<3, 2> endpoints;
@@ -273,7 +274,7 @@ TEST_CASE("Geom_3d", "[.slow]") {
   hexed::Int n_div = 1024;
   bool vis_volume = true;
   #endif
-  #if 1
+  #if 0
   SECTION("cylinder_extruded") {
     hexed::brep::Geom_3d geom("../test_assets/cylinder_extruded.iges", n_div);
     geom.visualize("default", "cylinder_extruded", 100, vis_volume);
@@ -293,12 +294,32 @@ TEST_CASE("Geom_3d", "[.slow]") {
   }
   #endif
   SECTION("misleading_normal") {
+    hexed::Stopwatch sw;
+    sw.start();
     hexed::brep::Geom_3d geom("../test_assets/misleading_normal.iges", n_div);
+    sw.pause();
+    std::cout << "startup time: " << sw.time() << std::endl;
+    sw.reset();
+    sw.start();
+    auto& surf = geom.surfaces()[0];
+    hexed::Int n = hexed::math::pow(10, 5);
+    #pragma omp parallel for
+    for (hexed::Int i = 0; i < n; ++i) {
+      // we're going to do something with the results just to make sure the calculation isn't optimized away
+      if (!std::isfinite(surf.point((hexed::Mat<2>::Random() + hexed::Mat<2>::Ones())/2).squaredNorm())) throw;
+    }
+    sw.pause();
+    std::cout << "point evaluation time: " << sw.time()/n << "s/point" << std::endl;
+    sw.reset();
     hexed::Mat<3, 2> bounds;
     bounds <<
       -.2, .2,
       -.1, .3,
       -.2, .2;
+    sw.start();
     geom.visualize("default", "misleading_normal", 30, vis_volume, bounds);
+    sw.pause();
+    std::cout << "visualization time: " << sw.time() << std::endl;
+    sw.reset();
   }
 }
