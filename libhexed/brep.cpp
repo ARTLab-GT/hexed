@@ -926,7 +926,6 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
                                          Int level, bool check_inside) const {
   Int n_panel = _n_div/math::pow(2, level);
   Mat<3> point = nearest.reference();
-  Array<double> diffs({2, 2, 3});
   Array<double> dist_nrml({2, 2, 2, 3});
   Array<double> average({2, 3});
   average = 0;
@@ -935,18 +934,18 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
       Mat<2> params {(i_start + i_vertex*n_panel)*_sz, (j_start + j_vertex*n_panel)*_sz};
       Mat<3> n = normal(params);
       Mat<3> d = _surf->point(params) - point;
-      diffs(i_vertex)(j_vertex).vector() = d - d.dot(n)*n;
       dist_nrml(i_vertex)(j_vertex)(0).vector() = d;
       dist_nrml(i_vertex)(j_vertex)(1).vector() = n;
       average += dist_nrml(i_vertex)(j_vertex);
     }
   }
   average /= 4;
-  dist_nrml.reshape({whatever, 2, 3});
   double radii [2] {};
-  for (int i_vertex = 0; i_vertex < 4; ++i_vertex) {
-    for (int i = 0; i < 2; ++i) {
-      radii[i] = std::max(radii[i], (dist_nrml(i_vertex)(i) - average(i)).vector().norm());
+  for (int i_vertex = 0; i_vertex < 2; ++i_vertex) {
+    for (int j_vertex = 0; j_vertex < 2; ++j_vertex) {
+      for (int i = 0; i < 2; ++i) {
+        radii[i] = std::max(radii[i], (dist_nrml(i_vertex)(j_vertex)(i) - average(i)).vector().norm());
+      }
     }
   }
   for (int i = 0; i < 2; ++i) radii[i] += _excession(level)[i]*(radii[i] + _excession_epsilon[i]);
@@ -971,21 +970,31 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
       Mat<2> params;
       for (int i_triangle = 0; i_triangle < 2; ++i_triangle) {
         Mat<3, 2> lhs;
-        lhs(all, 0) = (diffs(!i_triangle)(i_triangle) - diffs(i_triangle)(i_triangle)).vector();
-        lhs(all, 1) = (diffs(i_triangle)(!i_triangle) - diffs(i_triangle)(i_triangle)).vector();
-        Mat<2> soln = lhs.householderQr().solve(-diffs(i_triangle)(i_triangle).vector());
-        for (int i_dim = 0; i_dim < 2; ++i_dim) {
-          for (bool minmax : {0, 1}) soln(i_dim) = math::extreme<double>(minmax, soln(i_dim), !minmax);
-        }
-        double over = soln(0) + soln(1) - 1;
-        if (over > 0) {
-          soln(0) -= over/2;
-          soln(1) -= over/2;
+        lhs(all, 0) = (dist_nrml(!i_triangle)(i_triangle)(0) - dist_nrml(i_triangle)(i_triangle)(0)).vector();
+        lhs(all, 1) = (dist_nrml(i_triangle)(!i_triangle)(0) - dist_nrml(i_triangle)(i_triangle)(0)).vector();
+        Mat<2> soln = lhs.householderQr().solve(-dist_nrml(i_triangle)(i_triangle)(0).vector());
+        if (!(soln(0) >= 0 && soln(1) >= 0 && soln(0) + soln(1) <= 1)) {
+          double dist_sq = huge;
+          for (int i_edge = 0; i_edge < 3; ++i_edge) {
+            Mat<3> start = dist_nrml(i_triangle != (i_edge == 1))(i_triangle != (i_edge == 2))(0).vector();
+            int i_end = (i_edge + 1)%3;
+            Mat<3> diff  = dist_nrml(i_triangle != (i_end == 1))(i_triangle != (i_end == 2))(0).vector() - start;
+            double interp = std::max(0., std::min(1., -start.dot(diff)/diff.squaredNorm()));
+            double d = (start + interp*diff).squaredNorm();
+            if (d < dist_sq) {
+              dist_sq = d;
+              switch (i_edge) {
+                case 0: soln(0) = interp; soln(1) = 0; break;
+                case 1: soln(0) = 1 - interp; soln(1) = interp; break;
+                case 2: soln(0) = 0; soln(1) = 1 - interp; break;
+              }
+            }
+          }
         }
         params << (i_start + i_triangle)*_sz, (j_start + i_triangle)*_sz;
         params -= math::sign(i_triangle)*soln*_sz;
         if (!check_inside || is_inside(params)) {
-          if (nearest.merge(_surf->point(params))) best_params = params;
+          if (nearest.merge(point + dist_nrml(i_triangle)(i_triangle)(0).vector() + lhs*soln)) best_params = params;
         }
       }
     } else {
