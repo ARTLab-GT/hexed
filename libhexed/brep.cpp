@@ -409,7 +409,6 @@ Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, A
   for (int i_dim = 0; i_dim < n_param; ++i_dim) {
     _n_basis[i_dim] = _weights.shape()[i_dim];
     _degree[i_dim] = _knots[i_dim].size() - _n_basis[i_dim] - 1;
-    HEXED_ASSERT(_degree[i_dim] <= 3, "degree > 3 NURBSs are not yet supported", assert::Not_implemented_error);
     HEXED_ASSERT(_degree[i_dim] > 0, "degree must be positive")
     HEXED_ASSERT(_control_points.shape()[i_dim] == _n_basis[i_dim],
                  "shape of `weights` and `control_points` don't match")
@@ -449,18 +448,19 @@ Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, A
 template <int n_param>
 Mat<3> Nurbs<n_param>::point(Mat<n_param> params) const {
   Int start_knot [n_param];
-  double bases [2][4];
+  std::vector<Array<double>> bases;
   Int n_term = 1;
   for (int i_dim = 0; i_dim < n_param; ++i_dim) {
+    bases.push_back(Array<double>({_degree[i_dim] + 1}));
     n_term *= _degree[i_dim] + 1;
     start_knot[i_dim] = _find_knot(i_dim, params[i_dim]);
-    double* basis = bases[i_dim];
+    Array<double> basis = bases.back()();
+    basis = 0;
     basis[0] = 1;
-    for (int i = 1; i <= _degree[i_dim]; ++i) basis[i] = 0;
     for (int deg = 1; deg <= _degree[i_dim]; ++deg) {
       for (int j_basis = deg; j_basis >= 0; --j_basis) {
         // note: IGES spec unclear because formulae are for degree k - 1 basis in terms of k - 2
-        const double* shifted = _knots[i_dim](start_knot[i_dim] - deg, end).data();
+        Array<double> shifted = _knots[i_dim](start_knot[i_dim] - deg, end);
         if (j_basis < deg) {
           basis[j_basis] *= (shifted[j_basis + deg + 1] - params[i_dim])
                             /(shifted[j_basis + deg + 1] - shifted[j_basis + 1]);
