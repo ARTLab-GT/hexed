@@ -274,7 +274,7 @@ TEST_CASE("Geom_3d", "[.slow]") {
   hexed::Int n_div = 1024;
   bool vis_volume = true;
   #endif
-  #if 0
+  #if 1
   SECTION("cylinder_extruded") {
     hexed::brep::Geom_3d geom("../test_assets/cylinder_extruded.iges", n_div);
     geom.visualize("default", "cylinder_extruded", 100, vis_volume);

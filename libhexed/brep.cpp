@@ -926,26 +926,51 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
                                          Int level, bool check_inside) const {
   Int n_panel = _n_div/math::pow(2, level);
   Mat<3> point = nearest.reference();
-  Array<double> dist_nrml({2, 2, 2, 3});
-  Array<double> average({2, 3});
-  average = 0;
+  Array<double> dist({2, 2, 3});
+  Array<double> nrml({6, 3});
+  Array<double> dist_nrml [2] {dist.reshaped({4, 3}), nrml()};
   for (int i_vertex = 0; i_vertex < 2; ++i_vertex) {
     for (int j_vertex = 0; j_vertex < 2; ++j_vertex) {
       Mat<2> params {(i_start + i_vertex*n_panel)*_sz, (j_start + j_vertex*n_panel)*_sz};
-      Mat<3> n = normal(params);
-      Mat<3> d = _surf->point(params) - point;
-      dist_nrml(i_vertex)(j_vertex)(0).vector() = d;
-      dist_nrml(i_vertex)(j_vertex)(1).vector() = n;
-      average += dist_nrml(i_vertex)(j_vertex);
+      dist(i_vertex)(j_vertex).vector() = _surf->point(params) - point;
     }
   }
-  average /= 4;
-  double radii [2] {};
   for (int i_vertex = 0; i_vertex < 2; ++i_vertex) {
     for (int j_vertex = 0; j_vertex < 2; ++j_vertex) {
-      for (int i = 0; i < 2; ++i) {
-        radii[i] = std::max(radii[i], (dist_nrml(i_vertex)(j_vertex)(i) - average(i)).vector().norm());
+      Mat<3, 2> vecs;
+      for (int i_dim = 0; i_dim < 2; ++i_dim) {
+        int offset [2] {(!i_dim)*math::sign(i_vertex), i_dim*math::sign(j_vertex) };
+        Mat<2> params {std::max(0., std::min(1., (i_start + (i_vertex + offset[0])*n_panel)*_sz)),
+                       std::max(0., std::min(1., (j_start + (j_vertex + offset[1])*n_panel)*_sz))};
+        vecs(all, i_dim) = (_surf->point(params) - point - dist(i_vertex - offset[0])(j_vertex - offset[1]).vector())
+                           *math::sign(i_dim ? j_vertex : i_vertex);
       }
+      nrml(2*i_vertex + j_vertex).vector() = vecs(all, 0).cross(vecs(all, 1)).normalized();
+    }
+  }
+  for (int i_triangle = 0; i_triangle < 2; ++i_triangle) {
+    Mat<3, 2> vecs;
+    for (int i_dim = 0; i_dim < 2; ++i_dim) {
+      int inds [2] {i_triangle, i_triangle};
+      inds[i_dim] = !inds[i_dim];
+      vecs(all, i_dim) = (dist(inds[0])(inds[1]) - dist(i_triangle)(i_triangle)).vector();
+    }
+    nrml(4 + i_triangle).vector() = vecs(all, 0).cross(vecs(all, 1)).normalized();
+  }
+  Array<double> average({2, 3});
+  average = 0;
+  for (int i = 0; i < 2; ++i) {
+    Array<double> dn = dist_nrml[i];
+    for (int j = 0; j < dn.shape()[0]; ++j) {
+      average(i) += dn(j);
+    }
+    average(i) /= dn.shape()[0];
+  }
+  double radii [2] {};
+  for (int i = 0; i < 2; ++i) {
+    Array<double> dn = dist_nrml[i];
+    for (int j = 0; j < dn.shape()[0]; ++j) {
+      radii[i] = std::max(radii[i], (dn(j) - average(i)).vector().norm());
     }
   }
   for (int i = 0; i < 2; ++i) radii[i] += _excession(level)[i]*(radii[i] + _excession_epsilon[i]);
@@ -970,15 +995,15 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
       Mat<2> params;
       for (int i_triangle = 0; i_triangle < 2; ++i_triangle) {
         Mat<3, 2> lhs;
-        lhs(all, 0) = (dist_nrml(!i_triangle)(i_triangle)(0) - dist_nrml(i_triangle)(i_triangle)(0)).vector();
-        lhs(all, 1) = (dist_nrml(i_triangle)(!i_triangle)(0) - dist_nrml(i_triangle)(i_triangle)(0)).vector();
-        Mat<2> soln = lhs.householderQr().solve(-dist_nrml(i_triangle)(i_triangle)(0).vector());
+        lhs(all, 0) = (dist(!i_triangle)(i_triangle) - dist(i_triangle)(i_triangle)).vector();
+        lhs(all, 1) = (dist(i_triangle)(!i_triangle) - dist(i_triangle)(i_triangle)).vector();
+        Mat<2> soln = lhs.householderQr().solve(-dist(i_triangle)(i_triangle).vector());
         if (!(soln(0) >= 0 && soln(1) >= 0 && soln(0) + soln(1) <= 1)) {
           double dist_sq = huge;
           for (int i_edge = 0; i_edge < 3; ++i_edge) {
-            Mat<3> start = dist_nrml(i_triangle != (i_edge == 1))(i_triangle != (i_edge == 2))(0).vector();
+            Mat<3> start = dist(i_triangle != (i_edge == 1))(i_triangle != (i_edge == 2)).vector();
             int i_end = (i_edge + 1)%3;
-            Mat<3> diff  = dist_nrml(i_triangle != (i_end == 1))(i_triangle != (i_end == 2))(0).vector() - start;
+            Mat<3> diff  = dist(i_triangle != (i_end == 1))(i_triangle != (i_end == 2)).vector() - start;
             double interp = std::max(0., std::min(1., -start.dot(diff)/diff.squaredNorm()));
             double d = (start + interp*diff).squaredNorm();
             if (d < dist_sq) {
@@ -994,7 +1019,7 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
         params << (i_start + i_triangle)*_sz, (j_start + i_triangle)*_sz;
         params -= math::sign(i_triangle)*soln*_sz;
         if (!check_inside || is_inside(params)) {
-          if (nearest.merge(point + dist_nrml(i_triangle)(i_triangle)(0).vector() + lhs*soln)) best_params = params;
+          if (nearest.merge(point + dist(i_triangle)(i_triangle).vector() + lhs*soln)) best_params = params;
         }
       }
     } else {
