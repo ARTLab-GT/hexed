@@ -132,7 +132,29 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
         pos = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
       }
     } else {
+      #if 0
       pos(seq) = surf_geom->nearest_point(pos(seq), huge, ns/2).point();
+      #else
+      Mat<3> p0 = pos;
+      bool found = false;
+      for (auto n : vert.neighbors()) if (n) {
+        if (!n->is_surface()) {
+          p0 = n->point({});
+          found = true;
+        }
+      }
+      HEXED_ASSERT(found, "no non-surface neighbor found")
+      auto sects = surf_geom->intersections(p0(seq), pos(seq));
+      double best_sect = huge;
+      found = false;
+      for (double sect : sects) {
+        if (sect > 0 && sect < best_sect) {
+          best_sect = sect;
+          found = true;
+        }
+      }
+      if (found) pos = best_sect*pos + (1 - best_sect)*p0;
+      #endif
     }
   }
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -855,7 +877,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     Mat<> o = tree->origin();
     double tns = tree->nominal_size();
     double objective_diff = 0;
-    bool try_snap = i_relax%5 == 4;
+    bool try_snap = true;
     if (try_snap) {
       snaps_failed = 0;
       total_dist = 0;
