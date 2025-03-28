@@ -426,7 +426,8 @@ void Accessible_mesh::_fit_surface() {
                                + j_sign*math::pow(2, 2 - j_dim)
                                + k_sign*math::pow(2, 2 - k_dim);
                   int i_snapped = shape->vertex(i_vert).snapped_edge;
-                  HEXED_ASSERT(i_snapped != -1, "Vertex and edge do not agree on whether they are snapped.");
+                  HEXED_ASSERT(i_snapped != -1 || face->edge(i_edge_matched).glued(),
+                               "vertex and edge do not agree on whether they are snapped")
                   auto& vert = match_elem.shape().vertex(i_vert);
                   vert.snapped_edge = i_snapped;
                   vert.snapped_endpoint = shape->vertex(i_vert).snapped_endpoint;
