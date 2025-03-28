@@ -368,7 +368,7 @@ class Trimmed_surface {
   void _recursive_nearest(Nearest_point<3>&, Mat<2>& params, Int i_start, Int j_start, Int level,
                           bool check_inside) const;
   void _evaluate_excession(Int i_start, Int j_start, Int n_panel);
-  Mat<2> _nearest_params(Mat<3> point) const;
+  Mat<2> _nearest_params(Mat<3> point, double dist_guess) const;
   Int _n_div;
   double _sz;
   std::unique_ptr<Parametric<2>> _surf;

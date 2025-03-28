@@ -825,12 +825,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   watch.start();
   double last_time = 0;
   std::string message;
-  for (Int i_relax = 0;
-       i_relax < 1000 && (i_relax < 30
-                          || (snaps_failed == 0 && obj_monitor.max() - obj_monitor.min()
-                                                   > 1e-3*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
-                          || dist_monitor.max() - dist_monitor.min() > 1e-3*dist_monitor.min());
-       ++i_relax) {
+  Int snap_succeeded = -1;
+  for (Int i_relax = 0; i_relax < 300; ++i_relax) {
     #if HEXED_VIS_MESH_OPT
     {
       auto blocks = _blocks.boundary_sides();
@@ -915,6 +911,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       last_time += .1;
       printers::info(message, false, true);
     }
+    if (snaps_failed == 0 && snap_succeeded < 0) snap_succeeded = i_relax;
+    if (i_relax > 2*snap_succeeded && snap_succeeded >= 0 && i_relax > 30) break;
   }
   printers::info(message, false, true);
   printers::info("\n");
@@ -1503,6 +1501,7 @@ bool Accessible_mesh::is_surface(Tree* t) {
 }
 
 void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start) {
+  Task_message tm0(printers::info, "  incorporating surface geometry", "\n");
   // take ownership of the surface geometries (do this first to avoid memory leak)
   surf_bc_sn = add_boundary_condition(surface_bc);
   surf_geom.reset(geometry);
@@ -1516,21 +1515,24 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   if (!tree) return;
   // identify surface elements
   auto& elems = elements();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    if (elem.tree) if (intersects_surface(elem.tree.get())) elem.tree->set_status(0);
-  }
-    // pefrorm flood fill
-  Tree* start = tree->find_leaf(flood_fill_start);
-  if (!start) start = tree.get();
-  start->flood_fill(1);
-  // delete stuff
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    elem.record = 0;
-    if (elem.tree) if (elem.tree->get_status() != 1) elem.record = 2;
+  {
+    Task_message tm1(printers::info, "    determining inside/outside", "\n");
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (elem.tree) if (intersects_surface(elem.tree.get())) elem.tree->set_status(0);
+    }
+      // pefrorm flood fill
+    Tree* start = tree->find_leaf(flood_fill_start);
+    if (!start) start = tree.get();
+    start->flood_fill(1);
+    // delete stuff
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      elem.record = 0;
+      if (elem.tree) if (elem.tree->get_status() != 1) elem.record = 2;
+    }
   }
   delete_bad_extrusions();
   deform();

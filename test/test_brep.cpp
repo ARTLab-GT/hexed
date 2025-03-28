@@ -274,7 +274,6 @@ TEST_CASE("Geom_3d", "[.slow]") {
   hexed::Int n_div = 1024;
   bool vis_volume = true;
   #endif
-  #if 1
   SECTION("cylinder_extruded") {
     hexed::brep::Geom_3d geom("../test_assets/cylinder_extruded.iges", n_div);
     geom.visualize("default", "cylinder_extruded", 100, vis_volume);
@@ -292,7 +291,6 @@ TEST_CASE("Geom_3d", "[.slow]") {
        0., .2;
     geom.visualize("default", "weird_surface", 30, vis_volume, bounds);
   }
-  #endif
   SECTION("misleading_normal") {
     hexed::Stopwatch sw;
     sw.start();
@@ -306,7 +304,7 @@ TEST_CASE("Geom_3d", "[.slow]") {
     #pragma omp parallel for
     for (hexed::Int i = 0; i < n; ++i) {
       // we're going to do something with the results just to make sure the calculation isn't optimized away
-      if (!std::isfinite(surf.point((hexed::Mat<2>::Random() + hexed::Mat<2>::Ones())/2).squaredNorm())) throw;
+      HEXED_ASSERT(std::isfinite(surf.point((hexed::Mat<2>::Random() + hexed::Mat<2>::Ones())/2).squaredNorm()), "")
     }
     sw.pause();
     std::cout << "point evaluation time: " << sw.time()/n << "s/point" << std::endl;

@@ -617,62 +617,91 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
   }
   _excession_epsilon = Array<double>::make(1e-3*ref_dist*_sz, 1e-3*_n_div);
   _excession = 0; // this will set `_excession(_levels)`, which is not set in the following loop
-  for (int level = 0; level < _levels; ++level) {
-    Int n_outer = math::pow(2, level);
-    Int n_inner = _n_div/n_outer;
-    for (Int i_outer = 0; i_outer < n_outer; ++i_outer) {
-      for (Int j_outer = 0; j_outer < n_outer; ++j_outer) {
-        Array<double> dist_nrml({4, 2, 3});
-        Array<double> average({2, 3});
-        average = 0;
-        for (int i_vert = 0; i_vert < 4; ++i_vert) {
-          Mat<2> params {(i_outer + i_vert/2*n_inner)*_sz, (j_outer + i_vert%2*n_inner)*_sz};
-          dist_nrml(i_vert)(0).vector() = _surf->point(params);
-          dist_nrml(i_vert)(1).vector() = normal(params);
-          average += dist_nrml(i_vert)/4.;
-        }
-        double approx_radius [2] {};
-        for (int i_vert = 0; i_vert < 4; ++i_vert) {
-          for (int i = 0; i < 2; ++i) {
-            approx_radius[i] = std::max(approx_radius[i], (dist_nrml(i_vert)(i) - average(i)).vector().norm());
+  Array<double> points({_levels + 1, 4, _n_div + 1, 3});
+  Array<double> avg({2, 2*_n_div - 1, 3});
+  Array<double> radius({2, 2*_n_div - 1});
+  for (Int i_point = 0; i_point < _n_div; ++i_point) {
+    for (int level = 0; level <= _levels; ++level) {
+      Int n_panel = math::pow(2, _levels - level);
+      if (i_point%n_panel == 0) {
+        for (int i_offset = -1; i_offset < 3; ++i_offset) {
+          #pragma omp parallel for
+          for (Int j_point = 0; j_point <= _n_div; ++j_point) {
+            Mat<2> params {std::max(0., std::min(1., (i_point + i_offset*n_panel)*_sz)), j_point*_sz};
+            points(level)(i_offset + 1)(j_point).vector() = _surf->point(params);
           }
         }
-        for (Int i_inner = 0; i_inner < n_inner + 1; ++i_inner) {
-          for (Int j_inner = 0; j_inner < n_inner + 1; ++j_inner) {
-            Mat<2> params {(i_outer + i_inner)*_sz, (j_outer + j_inner)*_sz};
-            Array<double> dn({2, 3});
-            dn(0).vector() = _surf->point(params);
-            dn(1).vector() = normal(params);
+        if (level < _levels) {
+          #pragma omp parallel for
+          for (Int j_point = 0; j_point < _n_div; j_point += n_panel) {
+            Array<double> pos_nrml({2, 2, 2, 3});
+            for (int i_vert = 0; i_vert < 2; ++i_vert) {
+              for (int j_vert = 0; j_vert < 2; ++j_vert) {
+                Int j = j_point + j_vert*n_panel;
+                pos_nrml(0)(i_vert)(j_vert) = points(level)(1 + i_vert)(j);
+                Mat<3> vec0 = (  points(level)(i_vert + 2)(j)
+                               - points(level)(i_vert    )(j)).vector();
+                Mat<3> vec1 = (  points(level)(i_vert + 1)(std::max<Int>(0, std::min(_n_div, j + n_panel)))
+                               - points(level)(i_vert + 1)(std::max<Int>(0, std::min(_n_div, j - n_panel)))).vector();
+                pos_nrml(1)(i_vert)(j_vert).vector() = vec0.cross(vec1).normalized();
+              }
+            }
+            pos_nrml.reshape({2, whatever, 3});
             for (int i = 0; i < 2; ++i) {
-              double r = (dn(i) - average(i)).vector().norm();
-              _excession(level)[i] = std::max(_excession(level)[i],
-                                              (r - approx_radius[i])/(approx_radius[i] + _excession_epsilon[i]));
+              Array<double> a = avg(i)(_n_div/n_panel - 1 + j_point/n_panel);
+              a = 0;
+              for (int j = 0; j < 4; ++j) a += pos_nrml(i)(j);
+              a /= 4;
+              double& r = radius(i)[_n_div/n_panel - 1 + j_point/n_panel];
+              r = 0;
+              for (int j = 0; j < 4; ++j) r = std::max(r, (pos_nrml(i)(j) - a).vector().norm());
             }
           }
+        }
+      }
+    }
+    #pragma omp parallel for reduction(max:_excession)
+    for (Int j_point = 0; j_point < _n_div; ++j_point) {
+      for (int i_tri = 0; i_tri < 2; ++i_tri) {
+        Mat<3> vec0 =  (points(_levels)(1 + !i_tri)(j_point +  i_tri)
+                      - points(_levels)(1 +  i_tri)(j_point +  i_tri)).vector();
+        Mat<3> vec1 =  (points(_levels)(1 +  i_tri)(j_point + !i_tri)
+                      - points(_levels)(1 +  i_tri)(j_point +  i_tri)).vector();
+        Mat<3> nrml = vec0.cross(vec1).normalized();
+        for (int level = 0; level < _levels; ++level) {
+          Int n_panel = math::pow(2, _levels - level);
+          Int j = _n_div/n_panel - 1 + j_point/n_panel;
+          // this will compare most of the points for position twice, but that's ok
+          double ex = ((points(_levels)(1 + i_tri)(j_point + i_tri) - avg(0)(j)).vector().norm() - radius(0)[j])
+                      /(radius(0)[j] + _excession_epsilon[0]);
+          _excession(level)[0] = std::max(_excession(level)[0], ex);
+          ex = ((nrml - avg(1)(j).vector()).norm() - radius(1)[j])/(radius(1)[j] + _excession_epsilon[1]);
+          _excession(level)[1] = std::max(_excession(level)[1], ex);
         }
       }
     }
   }
   // discretize curves into polygonal segments in parameter space
   std::vector<std::vector<std::vector<Mat<2>>>> discrete_curves;
+  double dist_guess = (radius(0)[0] + _excession(0)[0]*(radius(0)[0] + _excession_epsilon[0]))*_sz;
   for (int i_composite = 0; i_composite < int(curves.size()); ++i_composite) {
     auto& composite = curves[i_composite];
     discrete_curves.emplace_back();
     auto& disc_curve = discrete_curves.back();
     for (auto& curve : composite) {
-      disc_curve.emplace_back();
+      disc_curve.emplace_back(_n_div + 1);
       auto& param_nodes = disc_curve.back();
       Array<double> phys_nodes({_n_div + 1, 3});
       double mean_squared_dist = 0;
       Mat<3> start;
       if (is_model_space[i_composite]) {
         start = curve->point(Mat<1>{0.});
+        #pragma omp parallel for
         for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
           Mat<3> pt = curve->point(Mat<1>{i_node*_sz});
           mean_squared_dist += (pt - start).squaredNorm();
           phys_nodes(i_node).vector() = pt;
-          Mat<2> params = _nearest_params(pt);
-          param_nodes.push_back(params);
+          param_nodes[i_node] = _nearest_params(pt, dist_guess);
         }
       } else {
         Mat<2, 2> op = _surf->orig_param_bounds();
@@ -684,12 +713,13 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
           return p;
         };
         start = _surf->point(get_params(0.));
+        #pragma omp parallel for
         for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
           Mat<2> params = get_params(i_node*_sz);
           Mat<3> pt = _surf->point(params);
           mean_squared_dist += (pt - start).squaredNorm();
           phys_nodes(i_node).vector() = pt;
-          param_nodes.push_back(params);
+          param_nodes[i_node] = params;
         }
       }
       mean_squared_dist /= n_div + 1;
@@ -927,7 +957,7 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
   Int n_panel = _n_div/math::pow(2, level);
   Mat<3> point = nearest.reference();
   Array<double> dist({2, 2, 3});
-  Array<double> nrml({6, 3});
+  Array<double> nrml({4 + 2*(n_panel == 1), 3});
   Array<double> dist_nrml [2] {dist.reshaped({4, 3}), nrml()};
   for (int i_vertex = 0; i_vertex < 2; ++i_vertex) {
     for (int j_vertex = 0; j_vertex < 2; ++j_vertex) {
@@ -948,29 +978,29 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
       nrml(2*i_vertex + j_vertex).vector() = vecs(all, 0).cross(vecs(all, 1)).normalized();
     }
   }
-  for (int i_triangle = 0; i_triangle < 2; ++i_triangle) {
-    Mat<3, 2> vecs;
-    for (int i_dim = 0; i_dim < 2; ++i_dim) {
-      int inds [2] {i_triangle, i_triangle};
-      inds[i_dim] = !inds[i_dim];
-      vecs(all, i_dim) = (dist(inds[0])(inds[1]) - dist(i_triangle)(i_triangle)).vector();
+  if (n_panel == 1) {
+    for (int i_triangle = 0; i_triangle < 2; ++i_triangle) {
+      Mat<3, 2> vecs;
+      for (int i_dim = 0; i_dim < 2; ++i_dim) {
+        int inds [2] {i_triangle, i_triangle};
+        inds[i_dim] = !inds[i_dim];
+        vecs(all, i_dim) = (dist(inds[0])(inds[1]) - dist(i_triangle)(i_triangle)).vector();
+      }
+      nrml(4 + i_triangle).vector() = vecs(all, 0).cross(vecs(all, 1)).normalized();
     }
-    nrml(4 + i_triangle).vector() = vecs(all, 0).cross(vecs(all, 1)).normalized();
   }
   Array<double> average({2, 3});
   average = 0;
   for (int i = 0; i < 2; ++i) {
-    Array<double> dn = dist_nrml[i];
-    for (int j = 0; j < dn.shape()[0]; ++j) {
-      average(i) += dn(j);
+    for (int j = 0; j < dist_nrml[i].shape()[0]; ++j) {
+      average(i) += dist_nrml[i](j);
     }
-    average(i) /= dn.shape()[0];
+    average(i) /= dist_nrml[i].shape()[0];
   }
   double radii [2] {};
   for (int i = 0; i < 2; ++i) {
-    Array<double> dn = dist_nrml[i];
-    for (int j = 0; j < dn.shape()[0]; ++j) {
-      radii[i] = std::max(radii[i], (dn(j) - average(i)).vector().norm());
+    for (int j = 0; j < dist_nrml[i].shape()[0]; ++j) {
+      radii[i] = std::max(radii[i], (dist_nrml[i](j) - average(i)).vector().norm());
     }
   }
   for (int i = 0; i < 2; ++i) radii[i] += _excession(level)[i]*(radii[i] + _excession_epsilon[i]);
@@ -1046,8 +1076,8 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
   return nearest;
 }
 
-Mat<2> Trimmed_surface::_nearest_params(Mat<3> point) const {
-  Nearest_point<3> nearest(point, default_max_dist);
+Mat<2> Trimmed_surface::_nearest_params(Mat<3> point, double dist_guess) const {
+  Nearest_point<3> nearest(point, dist_guess);
   Mat<2> best_params = Mat<2>::Zero();
   auto par = _surf->nearest_parameters(point);
   if (par.has_value()) {
@@ -1068,6 +1098,8 @@ Mat<2> Trimmed_surface::_nearest_params(Mat<3> point) const {
       }
     }
   }
+  dist_guess *= 10;
+  if (nearest.empty() && dist_guess < std::sqrt(huge)) return _nearest_params(point, dist_guess);
   return best_params;
 }
 

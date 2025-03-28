@@ -113,6 +113,7 @@ Surface_geom* Case::_make_geom() {
     auto geom = _inter.variables->lookup<std::string>("geom" + std::to_string(i_geom));
     if (!geom) break;
     HEXED_ASSERT(std::filesystem::exists(geom.value()), format_str(1000, "geometry file `%s` not found", geom->c_str()), assert::User_error);
+    Task_message tm(printers::info, "  reading geometry file `" + geom.value() + "`");
     std::string ext = file_extension(geom.value());
     std::string without_ext(geom->begin(), geom->end() - ext.size() - 1);
     for (char& c : ext) c = tolower(c);
