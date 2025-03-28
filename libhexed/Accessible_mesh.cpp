@@ -160,7 +160,7 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) {
     vert.set_pos(vert.nominal_position());
   }
-  _offset_vertices(.1);
+  _offset_vertices(.2);
   {
     Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
     _optimize(1, 10, true);
