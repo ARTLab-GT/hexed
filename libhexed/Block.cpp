@@ -276,7 +276,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
                state.worst_ortho, state.worst_edge, orig_pos(0), orig_pos(1), orig_pos(2),
                int(gn)))
   Mat<3> direction = -state.gradient.normalized();
-  Mat<3> target = satisfy_constraints(get_target(orig_pos));
+  Mat<3> target = get_target(orig_pos);
   double orig_dist = (target - orig_pos).norm();
   _Optimization_state new_state = state;
   const double min_step = 1e-8*ns;
@@ -301,7 +301,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
         }
         _step_sz /= repeat_factor[i];
         _pos = satisfy_constraints(orig_pos + _step_sz*direction);
-        Mat<3> new_target = satisfy_constraints(get_target(_pos));
+        Mat<3> new_target = get_target(_pos);
         double dist = (new_target - _pos).norm();
         if (dist > orig_dist) _pos += (dist - orig_dist)/dist*(new_target - _pos);
         new_state = _compute_state();

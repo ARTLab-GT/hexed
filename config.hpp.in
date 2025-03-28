@@ -29,7 +29,7 @@ constexpr int n_threads = {[options["n_threads"]]}; //!< \brief number of thread
 #define HEXED_USE_OCCT {[int(options["use_occt"])]}
 #define HEXED_OBSESSIVE_TIMING {[int(options["obsessive_timing"])]}
 constexpr int debug_variables = 1;
-#define HEXED_VIS_MESH_OPT 0
+#define HEXED_VIS_MESH_OPT 1
 
 }
 #endif
