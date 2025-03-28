@@ -161,10 +161,12 @@ void Accessible_mesh::_fit_surface() {
     vert.set_pos(vert.nominal_position());
   }
   _offset_vertices(.2);
+  #if 1
   {
     Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
     _optimize(1, 10, true);
   }
+  #endif
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.record.clear();
@@ -243,7 +245,7 @@ void Accessible_mesh::_fit_surface() {
         if (nearest.index >= 0 && nearest.distance <= d) {
           vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
           if (vert.snapped_edge >= 0) {
-            vert.dijkstra_curve_dist_sq *= 1e4;
+            vert.dijkstra_curve_dist_sq *= 100;
           }
           vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
         } else {
@@ -822,6 +824,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   printers::info("id: " + std::to_string(id) + "\n");
   #endif
   Int snaps_failed = 0;
+  double total_dist = 0;
   Stopwatch watch;
   watch.start();
   double last_time = 0;
@@ -834,14 +837,29 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       #pragma omp parallel for
       for (auto& b : blocks) b.reset();
       visualize("default", "meshing_diagnostic" + std::to_string(id) + "_" + std::to_string(i_relax), (double)i_relax);
+      std::string fname = "vertex_nearest" + to_string(id) + "_" + to_string(i_relax);
+      auto vis = Visualizer::create("default", 3, 1, fname, {}, (double)i_relax, Visualizer::block);
+      for (auto& vert : bverts) {
+        Array<double> pos({3, 2});
+        Mat<3> p0 = vert.point({});
+        Mat<3> p1 = _get_snapping_target(vert, p0);
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          pos(i_dim)[0] = p0(i_dim);
+          pos(i_dim)[1] = p1(i_dim);
+        }
+        vis->write_block(pos, Array<double>({}));
+      }
     }
     #endif
     // snap vertices to surface boundary
     Mat<> o = tree->origin();
     double tns = tree->nominal_size();
     double objective_diff = 0;
-    snaps_failed = 0;
-    double total_dist = 0;
+    bool try_snap = i_relax%5 == 4;
+    if (try_snap) {
+      snaps_failed = 0;
+      total_dist = 0;
+    }
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
       for (auto& vert : verts) if (vert.mobile()) {
@@ -872,7 +890,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert.record[i];
         next::Vertex::Improve_quality_result iqr;
         if (on_surface) {
-          iqr = vert.improve_quality(get_target, satisfy);
+          iqr = vert.improve_quality(get_target, satisfy, true, try_snap);
         } else {
           iqr = vert.improve_quality();
         }
@@ -912,7 +930,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       last_time += .1;
       printers::info(message, false, true);
     }
-    if (snaps_failed == 0 && snap_succeeded < 0) snap_succeeded = i_relax;
+    if (try_snap && snaps_failed == 0 && snap_succeeded < 0) snap_succeeded = i_relax;
     if (i_relax > 2*snap_succeeded && snap_succeeded >= 0 && i_relax > 30) break;
   }
   printers::info(message, false, true);

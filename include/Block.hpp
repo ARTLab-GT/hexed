@@ -138,7 +138,7 @@ class Vertex : public Block {
   Improve_quality_result improve_quality();
   Improve_quality_result improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                          std::function<Mat<3>(Mat<3>)> satisfy_constraints,
-                                         bool limit_direction = true);
+                                         bool limit_direction = true, bool snap = true);
   bool snap_to(Mat<3> target);
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
   double quality_objective();
@@ -212,7 +212,7 @@ class Vertex : public Block {
                                 const Vertex* orig_vertex = nullptr) const;
   Improve_quality_result _improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                           std::function<Mat<3>(Mat<3>)> satisfy_constraints,
-                                          bool has_target, bool limit_direction);
+                                          bool has_target, bool limit_direction, bool snap);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   Mat<3> _desired_pos() const;
   int _get_index(const Element_shape&) const;

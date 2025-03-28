@@ -252,18 +252,18 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
 }
 
 Vertex::Improve_quality_result Vertex::improve_quality() {
-  return _improve_quality([](Mat<3>){return Mat<3>::Zero();}, [](Mat<3> p){return p;}, false, false);
+  return _improve_quality([](Mat<3>){return Mat<3>::Zero();}, [](Mat<3> p){return p;}, false, false, false);
 }
 
 Vertex::Improve_quality_result Vertex::improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                                        std::function<Mat<3>(Mat<3>)> satisfy_constraints,
-                                                       bool limit_direction) {
-  return _improve_quality(get_target, satisfy_constraints, true, limit_direction);
+                                                       bool limit_direction, bool snap) {
+  return _improve_quality(get_target, satisfy_constraints, true, limit_direction, snap);
 }
 
 Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                                         std::function<Mat<3>(Mat<3>)> satisfy_constraints,
-                                                        bool has_target, bool limit_direction) {
+                                                        bool has_target, bool limit_direction, bool snap) {
   _pos = _point({});
   Mat<3> orig_pos = _pos;
   auto state = _compute_state();
@@ -311,7 +311,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   }
   int snap_iters = 0;
   double target_dist = 0;
-  if (has_target) {
+  if (has_target && snap) {
     orig_pos = _pos;
     target = satisfy_constraints(get_target(_pos));
     Mat<3> step = target - _pos;

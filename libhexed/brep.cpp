@@ -1014,10 +1014,14 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
   } else {
     double scale = average(0).vector().dot(unit_avg)/norm;
     average(1) *= scale;
+    #if 1
     double sin = radii[1]/norm;
     double cos = std::sqrt(1 - sin*sin);
     average(1).vector() += (average(1) - average(0)).vector().norm()*sin/cos*math::sign(scale > 0)*unit_avg;
     double r = radii[0] + (radii[1] + 1e-3)*average(1).vector().norm()/norm;
+    #else
+    double r = radii[0] + (radii[1] + 1e-3)*scale;
+    #endif
     compute = (average(0) - average(1)).vector().norm() < r;
   }
   if (compute) {
