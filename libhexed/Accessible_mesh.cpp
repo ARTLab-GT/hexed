@@ -132,7 +132,7 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
         pos = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
       }
     } else {
-      #if 0
+      #if 1
       pos(seq) = surf_geom->nearest_point(pos(seq), huge, ns/2).point();
       #else
       Mat<3> p0 = pos;

@@ -1025,7 +1025,7 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
     compute = (average(0) - average(1)).vector().norm() < r;
   }
   if (compute) {
-    if (n_panel == 1) {
+    if (n_panel == 1 || radii[1] < 1e-2) {
       Mat<2> params;
       for (int i_triangle = 0; i_triangle < 2; ++i_triangle) {
         Mat<3, 2> lhs;
@@ -1050,8 +1050,8 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
             }
           }
         }
-        params << (i_start + i_triangle)*_sz, (j_start + i_triangle)*_sz;
-        params -= math::sign(i_triangle)*soln*_sz;
+        params << (i_start + i_triangle*n_panel)*_sz, (j_start + i_triangle*n_panel)*_sz;
+        params -= math::sign(i_triangle)*soln*n_panel*_sz;
         if (!check_inside || is_inside(params)) {
           if (nearest.merge(point + dist(i_triangle)(i_triangle).vector() + lhs*soln)) best_params = params;
         }
