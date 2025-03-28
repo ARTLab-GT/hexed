@@ -277,6 +277,22 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
                int(gn)))
   Mat<3> direction = -state.gradient.normalized();
   Mat<3> target = get_target(orig_pos);
+  if (has_target) {
+    Mat<3> n_pos;
+    bool found = false;
+    for (Vertex* n : neighbors()) if (n) {
+      if (!n->is_surface()) {
+        n_pos = n->_point({});
+        found = true;
+      }
+    }
+    if (found) {
+      Mat<3> diff = orig_pos - n_pos;
+      double dot = direction.dot(diff);
+      direction -= dot*(diff)/diff.squaredNorm();
+      direction.normalize();
+    }
+  }
   double orig_dist = (target - orig_pos).norm();
   _Optimization_state new_state = state;
   const double min_step = 1e-8*ns;

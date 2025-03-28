@@ -890,6 +890,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
             p(i_dim) = std::max(p(i_dim), o(i_dim));
             p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
           }
+          #if 0
           if (vert.record[2*params.n_dim]) {
             for (auto n : vert.neighbors()) if (n) {
               if ((int)n->record.size() == 2*params.n_dim + 1) {
@@ -905,6 +906,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
               }
             }
           }
+          #endif
           return p;
         };
         auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
