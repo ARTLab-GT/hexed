@@ -134,6 +134,14 @@ class Parametric {
     return bounds;
   }
 
+  //! \brief `reparameterize`s to contain the projections of `points`.
+  virtual Mat<n_param, 2> reparameterize(const std::vector<Mat<3>>& points) {
+    Mat<n_param, 2> bounds;
+    bounds(all, 0).setZero();
+    bounds(all, 1).setOnes();
+    return bounds;
+  }
+
   /*! \brief whether it is necessary to check the boundary curves of a `Trimmed_surface` of this surface
    * even if a feasible nearest point was found.
    * \details The default implementation returns `true`,
@@ -233,6 +241,7 @@ class Plane : public Parametric<2> {
    * \see `Parametric::reparameterize`
    */
   Mat<2, 2> reparameterize(Mat<2, 2> bounds) override;
+  Mat<2, 2> reparameterize(const std::vector<Mat<3>>& points) override;
   //! \brief returns `false`; if the nearest point on the plane is feasible, there is no need to check the boundary
   inline bool must_check_boundary() const override {return false;}
   Mat<2, 2> orig_param_bounds() const override;
@@ -374,6 +383,9 @@ class Trimmed_surface {
   std::unique_ptr<Parametric<2>> _surf;
   std::vector<Tree_curve> _curves;
   std::vector<Tree_curve> _extremal_boundaries;
+  Array<double> _nodes_normals;
+  Array<double> _nodes;
+  Array<double> _normals;
   Int _levels;
   Array<double> _excession;
   Array<double> _excession_epsilon;
