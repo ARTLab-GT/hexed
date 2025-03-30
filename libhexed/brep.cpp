@@ -1102,12 +1102,54 @@ Mat<2> Trimmed_surface::_nearest_params(Mat<3> point, double dist_guess) const {
   return best_params;
 }
 
+void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3> start, Mat<3> diff,
+                                               Int i_start, Int j_start, Int level) const {
+  Int n_panel = _n_div/math::pow(2, level);
+  double tol = 1e-3; // extend triangles to overlap by this fraction of their size
+  Array<double> verts({2, 2, 3});
+  Mat<3> avg = Mat<3>::Zero();
+  for (int i_vert = 0; i_vert < 2; ++i_vert) {
+    for (int j_vert = 0; j_vert < 2; ++j_vert) {
+      Mat<3> vert = _nodes(i_start + i_vert*n_panel)(j_start + j_vert*n_panel).vector() - start;
+      verts(i_vert)(j_vert).vector() = vert;
+      avg += vert;
+    }
+  }
+  avg /= 4;
+  double rsq = 0;
+  for (int i_vert = 0; i_vert < 2; ++i_vert) {
+    for (int j_vert = 0; j_vert < 2; ++j_vert) {
+      rsq = std::max(rsq, (verts(i_vert)(j_vert).vector() - avg).squaredNorm());
+    }
+  }
+  rsq *= math::pow(1. + (std::sqrt(rsq) + _excession_epsilon[0])*_excession(level)[0], 2);
+  if ((avg - avg.dot(diff)*diff/diff.squaredNorm()).squaredNorm() < rsq*(1 + tol)) {
+    if (n_panel == 1) {
+      for (int i_tri = 0; i_tri < 2; ++i_tri) {
+        Mat<3, 3> lhs;
+        lhs(all, 0) = (verts(!i_tri)( i_tri) - verts(i_tri)(i_tri)).vector();
+        lhs(all, 1) = (verts( i_tri)(!i_tri) - verts(i_tri)(i_tri)).vector();
+        lhs(all, 2) = diff;
+        Mat<3> soln = lhs.householderQr().solve(verts(i_tri)(i_tri).vector());
+        if (soln(0) > -tol && soln(1) > -tol && soln(0) + soln(1) < 1 + tol) {
+          if (is_inside({(i_start + soln(0))*_sz, (j_start + soln(1))*_sz})) {
+            sects.push_back(soln(2));
+          }
+        }
+      }
+    } else {
+      for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j) {
+          _recursive_intersections(sects, start, diff, i_start + i*n_panel/2, j_start + j*n_panel/2, level + 1);
+        }
+      }
+    }
+  }
+}
+
 std::vector<double> Trimmed_surface::intersections(Mat<3, 2> endpoints) const {
   std::vector<double> sects;
-  auto sect_params = _surf->intersection_params(endpoints);
-  for (auto params : sect_params) {
-    if (is_inside(params.params)) sects.push_back(params.interp_coef);
-  }
+  _recursive_intersections(sects, endpoints(all, 0), endpoints(all, 1) - endpoints(all, 0), 0, 0, 0);
   return sects;
 }
 

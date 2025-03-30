@@ -237,7 +237,7 @@ heat_flux_coercion = 2.
 min_elem_size = 0.
 elementwise_art_visc_pde = false
 prefer_occt = false
-geom_subdivision_levels = 12
+geom_subdivision_levels = 10
 geom_vis_subdivisions = 100
 
 {array parameters}
