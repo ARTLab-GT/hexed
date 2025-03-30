@@ -214,6 +214,7 @@ class Vertex : public Block {
                                           std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                           bool has_target, bool limit_direction, bool snap);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
+  Mat<3> _unwarped_point() const;
   Mat<3> _desired_pos() const;
   int _get_index(const Element_shape&) const;
   Mat<3> _pos;

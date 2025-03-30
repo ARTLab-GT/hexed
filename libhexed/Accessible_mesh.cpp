@@ -860,9 +860,16 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
        ++i_relax) {
     #if HEXED_VIS_MESH_OPT
     {
-      auto blocks = _blocks.boundary_sides();
+      auto faces = _blocks.faces_3d();
+      for (auto& f : faces) {
+        for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+      }
+      for (auto& f : faces) {
+        for (int i_edge = 0; i_edge < 4; ++i_edge) f.reset();
+      }
+      auto edges = _blocks.edges_2d();
       #pragma omp parallel for
-      for (auto& b : blocks) b.reset();
+      for (auto& e : edges) e.reset();
       visualize("default", "meshing_diagnostic" + std::to_string(id) + "_" + std::to_string(i_relax), (double)i_relax);
       std::string fname = "vertex_nearest" + to_string(id) + "_" + to_string(i_relax);
       auto vis = Visualizer::create("default", 3, 1, fname, {}, (double)i_relax, Visualizer::block);
