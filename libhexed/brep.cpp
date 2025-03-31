@@ -1107,13 +1107,17 @@ Mat<2> Trimmed_surface::_nearest_params(Mat<3> point, double dist_guess) const {
 
 void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3> start, Mat<3> diff,
                                                Int i_start, Int j_start, Int level) const {
-  Int n_panel = _n_div_min/math::pow(2, level);
+  Int n_panel = _n_div_max/math::pow(2, level);
+  Int store_stride = _n_div_max/_n_div_min;
   double tol = 1e-3; // extend triangles to overlap by this fraction of their size
   Array<double> verts({2, 2, 3});
   Mat<3> avg = Mat<3>::Zero();
   for (int i_vert = 0; i_vert < 2; ++i_vert) {
     for (int j_vert = 0; j_vert < 2; ++j_vert) {
-      Mat<3> vert = _nodes(i_start + i_vert*n_panel)(j_start + j_vert*n_panel).vector() - start;
+      Int inds [2] {i_start + i_vert*n_panel, j_start + j_vert*n_panel};
+      Mat<3> vert = n_panel/store_stride ? _nodes(inds[0]/store_stride)(inds[1]/store_stride).vector()
+                                         : _surf->point({inds[0]*_sz_max, inds[1]*_sz_max});
+      vert -= start;
       verts(i_vert)(j_vert).vector() = vert;
       avg += vert;
     }
@@ -1125,8 +1129,8 @@ void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3
       radius = std::max(radius, (verts(i_vert)(j_vert).vector() - avg).squaredNorm());
     }
   }
-  radius = std::sqrt(radius);
-  radius += (_excession(level)[0] + tol)*(radius + _excession_epsilon[0]);
+  radius = std::sqrt(radius)*(1 + tol);
+  radius += _excession(std::min(_levels, level))[0]*(radius + _excession_epsilon[0]);
   if ((avg - avg.dot(diff)*diff/diff.squaredNorm()).squaredNorm() < radius*radius) {
     if (n_panel == 1) {
       for (int i_tri = 0; i_tri < 2; ++i_tri) {
@@ -1136,8 +1140,8 @@ void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3
         lhs(all, 2) = diff;
         Mat<3> soln = lhs.householderQr().solve(verts(i_tri)(i_tri).vector());
         if (soln(0) > -tol && soln(1) > -tol && soln(0) + soln(1) < 1 + tol) {
-          Mat<2> params {(i_start + i_tri - math::sign(i_tri)*soln(0))*_sz_min,
-                         (j_start + i_tri - math::sign(i_tri)*soln(1))*_sz_min};
+          Mat<2> params {(i_start + i_tri - math::sign(i_tri)*soln(0))*_sz_max,
+                         (j_start + i_tri - math::sign(i_tri)*soln(1))*_sz_max};
           if (is_inside(params)) {
             sects.push_back(soln(2));
           }
