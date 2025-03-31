@@ -38,7 +38,7 @@ class Surface_geom {
    * Returns the (potentially empty) set of \f$ t \f$ values where the line intersects the surface.
    * \deprecated Newer methods should be based purely on nearest point projections.
    */
-  virtual std::vector<double> intersections(Mat<> point0, Mat<> point1) = 0;
+  virtual std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_precision = true) = 0;
   /*! \brief Returns a list of any geometry edges that require mesh edges to be snapped to them.
    * \details Only used in 3D.
    * Default implementation returns an empty sequence, but derived classes may override.
@@ -57,7 +57,7 @@ class Compound_geom : public Surface_geom {
   public:
   Compound_geom(std::vector<Surface_geom*>); //!< acquires ownership
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-  std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
+  std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_precision = true) override;
   next::Sequence<const Tree_curve&> edges() override;
   next::Sequence<Mat<3>> points() override;
 };
@@ -74,7 +74,7 @@ class Hypersphere : public Surface_geom {
   public:
   Hypersphere(Mat<> center, double radius);
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-  std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
+  std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_precision = true) override;
 };
 
 }

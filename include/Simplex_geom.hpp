@@ -41,7 +41,8 @@ class Simplex_geom_nd : public Surface_geom {
  * or a list of node coordinates in 2D.
  * Each simplex is represented as an `n_dim` by `n_dim` matrix where each column is the coordinates of one vertex.
  * The order of the vertices is arbitrary, and there are no requirements on inter-simplex continuity.
- * Since the `Surface_geom` interface is so minimal, the geometry is simply viewed as a collection of unrelated simplices,
+ * Since the `Surface_geom` interface is so minimal,
+ * the geometry is simply viewed as a collection of unrelated simplices,
  * so we do not care about orientation or watertightness.
  * The you are free to modify the simplex list at will, since there are no requirements on it.
  * All input points must have exactly `n_dim` entries.
@@ -125,7 +126,9 @@ class Simplex_geom : public Simplex_geom_nd {
    * so if the line passes exactly through the shared boundary of multiple _simplices
    * then duplicate intersections may be obtained.
    */
-  std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return simplex_intersections(point0, point1).points;}
+  std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_prec = true) override {
+    return simplex_intersections(point0, point1).points;
+  }
 
   next::Sequence<Mat<3>> points() override {return next::Sequence<Mat<3>>::vector_view(_snap_points);}
 

@@ -1106,7 +1106,7 @@ Mat<2> Trimmed_surface::_nearest_params(Mat<3> point, double dist_guess) const {
 }
 
 void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3> start, Mat<3> diff,
-                                               Int i_start, Int j_start, Int level) const {
+                                               Int i_start, Int j_start, Int level, bool high_prec) const {
   Int n_panel = _n_div_max/math::pow(2, level);
   Int store_stride = _n_div_max/_n_div_min;
   double tol = 1e-3; // extend triangles to overlap by this fraction of their size
@@ -1132,7 +1132,8 @@ void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3
   radius = std::sqrt(radius)*(1 + tol);
   radius += _excession(std::min(_levels, level))[0]*(radius + _excession_epsilon[0]);
   if ((avg - avg.dot(diff)*diff/diff.squaredNorm()).squaredNorm() < radius*radius) {
-    if (n_panel == 1) {
+    Int stride = high_prec ? 1 : store_stride;
+    if (n_panel == stride) {
       for (int i_tri = 0; i_tri < 2; ++i_tri) {
         Mat<3, 3> lhs;
         lhs(all, 0) = -(verts(!i_tri)( i_tri) - verts(i_tri)(i_tri)).vector();
@@ -1140,8 +1141,8 @@ void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3
         lhs(all, 2) = diff;
         Mat<3> soln = lhs.householderQr().solve(verts(i_tri)(i_tri).vector());
         if (soln(0) > -tol && soln(1) > -tol && soln(0) + soln(1) < 1 + tol) {
-          Mat<2> params {(i_start + i_tri - math::sign(i_tri)*soln(0))*_sz_max,
-                         (j_start + i_tri - math::sign(i_tri)*soln(1))*_sz_max};
+          Mat<2> params {(i_start + (i_tri - math::sign(i_tri)*soln(0))*stride)*_sz_max,
+                         (j_start + (i_tri - math::sign(i_tri)*soln(1))*stride)*_sz_max};
           if (is_inside(params)) {
             sects.push_back(soln(2));
           }
@@ -1150,16 +1151,17 @@ void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3
     } else {
       for (int i = 0; i < 2; ++i) {
         for (int j = 0; j < 2; ++j) {
-          _recursive_intersections(sects, start, diff, i_start + i*n_panel/2, j_start + j*n_panel/2, level + 1);
+          _recursive_intersections(sects, start, diff, i_start + i*n_panel/2, j_start + j*n_panel/2,
+                                   level + 1, high_prec);
         }
       }
     }
   }
 }
 
-std::vector<double> Trimmed_surface::intersections(Mat<3, 2> endpoints) const {
+std::vector<double> Trimmed_surface::intersections(Mat<3, 2> endpoints, bool high_prec) const {
   std::vector<double> sects;
-  _recursive_intersections(sects, endpoints(all, 0), endpoints(all, 1) - endpoints(all, 0), 0, 0, 0);
+  _recursive_intersections(sects, endpoints(all, 0), endpoints(all, 1) - endpoints(all, 0), 0, 0, 0, high_prec);
   return sects;
 }
 
@@ -1559,13 +1561,13 @@ Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, doub
   });
 }
 
-std::vector<double> Geom_3d::intersections(Mat<> start, Mat<> end) {
+std::vector<double> Geom_3d::intersections(Mat<> start, Mat<> end, bool high_prec) {
   Mat<3, 2> endpoints;
   endpoints(all, 0) = start;
   endpoints(all, 1) = end;
   std::vector<double> sects;
   for (auto& surf : _surfaces) {
-    std::vector<double> surf_sects = surf.intersections(endpoints);
+    std::vector<double> surf_sects = surf.intersections(endpoints, high_prec);
     sects.insert(sects.end(), surf_sects.begin(), surf_sects.end());
   }
   return sects;
