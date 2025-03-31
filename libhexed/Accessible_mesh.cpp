@@ -745,7 +745,6 @@ void Accessible_mesh::_fit_surface() {
         failed = true;
       }
     }
-    #if 0
     for (next::Element_shape* e : dependent_elems) {
       next::Face* face = e->boundary_face_3d();
       if (face && face != &block) face->reset();
@@ -775,7 +774,6 @@ void Accessible_mesh::_fit_surface() {
         if (!(point_jac.determinant() > 0)) failed = true;
       }
     }
-    #endif
     if (failed) block.reset();
   };
   // snap edges to the surface (regardless of dimensionality)

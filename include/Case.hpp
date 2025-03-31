@@ -22,6 +22,7 @@ class Case {
   Surface_geom* _make_geom(); // `nullptr` if no geometry
   std::string _iteration_suffix();
   std::string _input_data_file();
+  void _visualize(std::string suffix);
   bool _has_geom = false;
   std::unique_ptr<std::ofstream> _output_file; // anything printed to cout will also be printed here
   std::time_t _start_time;

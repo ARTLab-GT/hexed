@@ -170,6 +170,54 @@ std::string Case::_assignment(std::string var_name) {
   return statement;
 }
 
+void Case::_visualize(std::string suffix) {
+  Task_message(printers::info, "visualizing");
+  std::string wd = _vars("working_dir");
+  int n_sample = _vari("vis_n_sample");
+  std::vector<std::string> vis_objects {"surface", "field"};
+  for (int i_contour = 0; ; ++i_contour) {
+    std::string name = "contour" + std::to_string(i_contour);
+    if (_inter.variables->lookup<std::string>(name)) vis_objects.push_back(name);
+    else break;
+  }
+  for (std::string v : vis_objects) if (_vari("vis_" + strip_trailing_digits(v))) {
+    for (std::string format : {"xdmf", "tecplot", "csv"}) if (_vari("vis_" + format)) {
+      std::string vis_expr = _vars("vis_" + strip_trailing_digits(v) + "_vars");
+      Struct_expr vis_vars(vis_expr);
+      for (bool edges : {false, true}) {
+        std::string name = v;
+        if (edges) name = name + "_edges";
+        if (!edges || (_vari("vis_edges") && _vari("n_dim") + (v == "field") > 2)) {
+          std::string file_name = wd + name + suffix;
+          if (v == "surface") {
+            _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(), vis_expr, n_sample, edges);
+          } else if (v == "field") {
+            _solver().visualize_field(format, file_name, vis_expr, n_sample, edges);
+            if (_vari("vis_lts_constraints")) {
+              _solver().vis_lts_constraints(format, wd + "lts_constraints" + suffix, n_sample);
+            }
+          } else if (!edges) { // vis_type == contour0, contour1, etc
+            std::string contour_expr = _vars("vis_contour_vars") + v + "_var = " + _vars(v) + ";";
+            auto tol = _inter.variables->lookup<double>(name + "_tol");
+            double const_tol = tol ? *tol : 1e-10;
+            _solver().visualize_contour(format, file_name, _vars(v), _vars("vis_contour_vars"), const_tol, n_sample);
+          }
+          if (format == "xdmf") {
+            std::string latest = wd + name + "_latest1.xmf";
+            if (std::filesystem::exists(latest)) {
+              std::filesystem::copy_file(latest, wd + name + "_latest0.xmf",
+                                         std::filesystem::copy_options::overwrite_existing);
+            }
+            if (std::filesystem::exists(file_name + ".xmf")) {
+              std::filesystem::copy_file(file_name + ".xmf", latest, std::filesystem::copy_options::overwrite_existing);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 Case::Case(std::string input_script)
 : _start_time{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())}
 {
@@ -342,6 +390,7 @@ Case::Case(std::string input_script)
       _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc")), _get_vector("flood_fill_start", _vari("n_dim")));
       _solver().calc_jacobian();
     }
+    _visualize("_ref_sweep0");
     return "";
   }));
 
@@ -366,6 +415,7 @@ Case::Case(std::string input_script)
     _solver().mesh().set_unref_locks(criteria::if_extruded);
     bool changed = _solver().mesh().update(crits[0], crits[1]);
     _solver().calc_jacobian();
+    _visualize("_ref_sweep" + to_string(_vari("i_refinement") + 1));
     return changed;
   }));
 
@@ -438,49 +488,7 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("visualize", new Namespace::Heisenberg<std::string>([this]() {
-    Task_message(printers::info, "visualizing");
-    std::string wd = _vars("working_dir");
-    std::string suffix = "_" + _iteration_suffix();
-    int n_sample = _vari("vis_n_sample");
-    std::vector<std::string> vis_objects {"surface", "field"};
-    for (int i_contour = 0; ; ++i_contour) {
-      std::string name = "contour" + std::to_string(i_contour);
-      if (_inter.variables->lookup<std::string>(name)) vis_objects.push_back(name);
-      else break;
-    }
-    for (std::string v : vis_objects) if (_vari("vis_" + strip_trailing_digits(v))) {
-      for (std::string format : {"xdmf", "tecplot", "csv"}) if (_vari("vis_" + format)) {
-        std::string vis_expr = _vars("vis_" + strip_trailing_digits(v) + "_vars");
-        Struct_expr vis_vars(vis_expr);
-        for (bool edges : {false, true}) {
-          std::string name = v;
-          if (edges) name = name + "_edges";
-          if (!edges || (_vari("vis_edges") && _vari("n_dim") + (v == "field") > 2)) {
-            std::string file_name = wd + name + suffix;
-            if (v == "surface") {
-              _solver().visualize_surface(format, file_name, _solver().mesh().surface_bc_sn(), vis_expr, n_sample, edges);
-            } else if (v == "field") {
-              _solver().visualize_field(format, file_name, vis_expr, n_sample, edges);
-              if (_vari("vis_lts_constraints")) _solver().vis_lts_constraints(format, wd + "lts_constraints" + suffix, n_sample);
-            } else if (!edges) { // vis_type == contour0, contour1, etc
-              std::string contour_expr = _vars("vis_contour_vars") + v + "_var = " + _vars(v) + ";";
-              auto tol = _inter.variables->lookup<double>(name + "_tol");
-              double const_tol = tol ? *tol : 1e-10;
-              _solver().visualize_contour(format, file_name, _vars(v), _vars("vis_contour_vars"), const_tol, n_sample);
-            }
-            if (format == "xdmf") {
-              std::string latest = wd + name + "_latest1.xmf";
-              if (std::filesystem::exists(latest)) {
-                std::filesystem::copy_file(latest, wd + name + "_latest0.xmf", std::filesystem::copy_options::overwrite_existing);
-              }
-              if (std::filesystem::exists(file_name + ".xmf")) {
-                std::filesystem::copy_file(file_name + ".xmf", latest, std::filesystem::copy_options::overwrite_existing);
-              }
-            }
-          }
-        }
-      }
-    }
+    _visualize("_" + _iteration_suffix());
     return "";
   }));
 
