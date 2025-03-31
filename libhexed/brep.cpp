@@ -1066,9 +1066,10 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
 
 Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) const {
   Nearest_point<3> nearest(point, max_dist);
-  Mat<2> best_params; // unused
+  Mat<2> best_params = Mat<2>::Zero();
   // first check all local nearest points in the interior of the surface
   _recursive_nearest(nearest, best_params, 0, 0, 0, true);
+  if (!nearest.empty()) nearest = Nearest_point<3>(point, _surf->point(best_params));
   // then check the nearest point on all the boundary curves
   for (auto& curve : _curves) {
     auto index = curve.nearest_point(point, 1.01*std::sqrt(nearest.dist_squared()));
