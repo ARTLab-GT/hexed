@@ -12,7 +12,7 @@ Nearest_point<dyn> Tree_curve_geom::nearest_point(Mat<> point, double max_distan
   for (int i = 0; i < nd; ++i) p(i) = point(i);
   Nearest_point<dyn> nearest(point, max_distance);
   auto index = _curve.nearest_point(p, max_distance);
-  if (index.index >= 0) nearest.merge(math::resize(_curve.interp_point(index), point.size()));
+  if (index.index >= 0) nearest.merge(resize(_curve.interp_point(index), point.size()));
   return nearest;
 }
 

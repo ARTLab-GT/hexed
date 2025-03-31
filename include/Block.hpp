@@ -98,6 +98,8 @@ class Vertex : public Block {
   inline bool is_shadow() const {return _shadowed;} //!< \brief Returns `true` is `this` is shadowing another vertex.
   //! \brief Returns `true` if `this` is in control of its own position (i.e. is neither glued nor shadowing).
   inline bool independent() const {return !glued() && !is_shadow();}
+  //! \brief Computes the position of the vertex without any face/edge warping.
+  Mat<3> unwarped_point() const;
 
   /*! \brief Combines this vertex with `that` and steals its resources.
    * \details All `Edge`s and `Element_shape`s that currently have pointers to `that`
@@ -214,7 +216,7 @@ class Vertex : public Block {
                                           std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                           bool has_target, bool limit_direction, bool snap);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
-  Mat<3> _unwarped_point() const;
+  Mat<3> _get_pos() const; // fetches `_pos` with atomic reads
   Mat<3> _desired_pos() const;
   int _get_index(const Element_shape&) const;
   Mat<3> _pos;

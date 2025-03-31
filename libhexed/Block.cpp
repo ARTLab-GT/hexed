@@ -191,7 +191,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
     double ns = elem->nominal_size();
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
-      verts(all, i_vert) = elem->vertex(i_vert)._unwarped_point();
+      verts(all, i_vert) = elem->vertex(i_vert).unwarped_point();
     }
     Sequence<Mat<3>> vert_seq {
       [&](Int i_vert)->Mat<3> {return verts(all, i_vert);},
@@ -263,7 +263,7 @@ Vertex::Improve_quality_result Vertex::improve_quality(std::function<Mat<3>(Mat<
 Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                                         std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                                         bool has_target, bool limit_direction, bool snap) {
-  _pos = _unwarped_point();
+  _pos = unwarped_point();
   Mat<3> orig_pos = _pos;
   auto state = _compute_state();
   double ns = nominal_size();
@@ -334,7 +334,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
 }
 
 bool Vertex::snap_to(Mat<3> target) {
-  Mat<3> orig_pos = _unwarped_point();
+  Mat<3> orig_pos = unwarped_point();
   set_pos(target);
   _Optimization_state state = _compute_state();
   if (!state.feasible) set_pos(orig_pos);
@@ -411,23 +411,25 @@ void Vertex::Shared_value::set(double value) {
   if (_acquire) _vert._shared_value = value;
 }
 
+Mat<3> Vertex::_get_pos() const {
+  Mat<3> p;
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    #pragma omp atomic read
+    p(i_dim) = _pos(i_dim);
+  }
+  return p;
+}
+
 Mat<3> Vertex::_point(const std::vector<int>&, Int recursion_depth) const {
   // usually, the vertex will not be glued or a shadow and we can just return the `_pos`
   if (_shadowed) return _shadowed.value().point({}, recursion_depth + 1);
-  if (!_glued_to) {
-    Mat<3> p;
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      #pragma omp atomic read
-      p(i_dim) = _pos(i_dim);
-    }
-    return p;
-  }
+  if (!_glued_to) return _get_pos();
   return _glued_to.value().interpolate(_glued_coords, recursion_depth + 1);
 }
 
-Mat<3> Vertex::_unwarped_point() const {
+Mat<3> Vertex::unwarped_point() const {
   HEXED_ASSERT(!_shadowed, "we're supposed to be done with shadowing")
-  if (!_glued_to) return _pos;
+  if (!_glued_to) return _get_pos();
   int nd = _glued_to->n_dim();
   int nv = math::pow(2, nd);
   int nc = _glued_coords.size();
@@ -437,7 +439,7 @@ Mat<3> Vertex::_unwarped_point() const {
     for (int i_dim = 0; i_dim < nc; ++i_dim) {
       skip = skip || std::abs(_glued_coords[i_dim] - !math::row_coordinate(nd, 2, i_dim, i_vert)) < 1e-6;
     }
-    if (!skip) vert_pos(i_vert, all) = _glued_to->vertex(i_vert)._unwarped_point().transpose();
+    if (!skip) vert_pos(i_vert, all) = _glued_to->vertex(i_vert).unwarped_point().transpose();
   }
   Mat<3> coords = Mat<3>::Zero();
   for (int i_dim = 0; i_dim < nc; ++i_dim) coords(i_dim) = _glued_coords[i_dim];
