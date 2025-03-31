@@ -321,7 +321,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
         new_state.objective = orig_objective;
         break;
       }
-      _pos = satisfy_constraints(orig_pos + step);
+      _pos = orig_pos + step;
       target_dist = (target - _pos).norm();
       new_state = _compute_state();
       step /= 2;

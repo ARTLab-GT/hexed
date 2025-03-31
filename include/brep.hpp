@@ -369,7 +369,7 @@ class Trimmed_surface {
    * the empty `Nearest_point` is returned.
    */
   Nearest_point<3> nearest_point(Mat<3> point, double max_dist) const;
-  std::vector<double> intersections(Mat<3, 2> endpoints) const;
+  std::vector<double> intersections(Mat<3, 2> endpoints, bool high_prec = true) const;
   Mat<3> normal(Mat<2> params) const;
   Mat<3> point(Mat<2> params) const;
   private:
@@ -380,7 +380,7 @@ class Trimmed_surface {
   void _recursive_nearest(Nearest_point<3>&, Mat<2>& params, Int i_start, Int j_start, Int level,
                           bool check_inside) const;
   void _recursive_intersections(std::vector<double>&, Mat<3> start, Mat<3> diff,
-                                Int i_start, Int j_start, Int level) const;
+                                Int i_start, Int j_start, Int level, bool high_prec) const;
   void _evaluate_excession(Int i_start, Int j_start, Int n_panel);
   Mat<2> _nearest_params(Mat<3> point, double dist_guess) const;
   Int _n_div_min;
@@ -423,7 +423,7 @@ class Geom_2d : public Surface_geom {
   void visualize(std::string format, std::string file_name, Int n_div = 100);
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   //! \brief Dummy implementation that returns an empty vector.
-  inline std::vector<double> intersections(Mat<> point0, Mat<> point1) override {return {};}
+  inline std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_prec = true) override {return {};}
   next::Sequence<Mat<3>> points() override;
   private:
   std::vector<std::unique_ptr<Parametric<1>>> _curves;
@@ -458,7 +458,7 @@ class Geom_3d : public Surface_geom {
   void visualize(std::string format, std::string file_name,
                  Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose());
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-  std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
+  std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_prec = true) override;
   next::Sequence<const Tree_curve&> edges() override;
   next::Sequence<const Trimmed_surface&> surfaces();
   private:
