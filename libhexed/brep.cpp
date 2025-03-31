@@ -1119,23 +1119,26 @@ void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3
     }
   }
   avg /= 4;
-  double rsq = 0;
+  double radius = 0;
   for (int i_vert = 0; i_vert < 2; ++i_vert) {
     for (int j_vert = 0; j_vert < 2; ++j_vert) {
-      rsq = std::max(rsq, (verts(i_vert)(j_vert).vector() - avg).squaredNorm());
+      radius = std::max(radius, (verts(i_vert)(j_vert).vector() - avg).squaredNorm());
     }
   }
-  rsq *= math::pow(1. + (std::sqrt(rsq) + _excession_epsilon[0])*_excession(level)[0], 2);
-  if ((avg - avg.dot(diff)*diff/diff.squaredNorm()).squaredNorm() < rsq*(1 + tol)) {
+  radius = std::sqrt(radius);
+  radius += (_excession(level)[0] + tol)*(radius + _excession_epsilon[0]);
+  if ((avg - avg.dot(diff)*diff/diff.squaredNorm()).squaredNorm() < radius*radius) {
     if (n_panel == 1) {
       for (int i_tri = 0; i_tri < 2; ++i_tri) {
         Mat<3, 3> lhs;
-        lhs(all, 0) = (verts(!i_tri)( i_tri) - verts(i_tri)(i_tri)).vector();
-        lhs(all, 1) = (verts( i_tri)(!i_tri) - verts(i_tri)(i_tri)).vector();
+        lhs(all, 0) = -(verts(!i_tri)( i_tri) - verts(i_tri)(i_tri)).vector();
+        lhs(all, 1) = -(verts( i_tri)(!i_tri) - verts(i_tri)(i_tri)).vector();
         lhs(all, 2) = diff;
         Mat<3> soln = lhs.householderQr().solve(verts(i_tri)(i_tri).vector());
         if (soln(0) > -tol && soln(1) > -tol && soln(0) + soln(1) < 1 + tol) {
-          if (is_inside({(i_start + soln(0))*_sz_min, (j_start + soln(1))*_sz_min})) {
+          Mat<2> params {(i_start + i_tri - math::sign(i_tri)*soln(0))*_sz_min,
+                         (j_start + i_tri - math::sign(i_tri)*soln(1))*_sz_min};
+          if (is_inside(params)) {
             sects.push_back(soln(2));
           }
         }
