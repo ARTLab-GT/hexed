@@ -107,12 +107,14 @@ std::vector<Flow_bc*> Case::_make_extremal_bcs() {
 
 Surface_geom* Case::_make_geom() {
   int nd = _vari("n_dim");
-  Int n_div = math::pow(Int(2), _vari("geom_subdivision_levels"));
+  Int n_div_min = math::pow(Int(2), _vari("min_geom_subdiv_levels"));
+  Int n_div_max = math::pow(Int(2), _vari("max_geom_subdiv_levels"));
   std::vector<Surface_geom*> geoms;
   for (int i_geom = 0;; ++i_geom) {
     auto geom = _inter.variables->lookup<std::string>("geom" + std::to_string(i_geom));
     if (!geom) break;
-    HEXED_ASSERT(std::filesystem::exists(geom.value()), format_str(1000, "geometry file `%s` not found", geom->c_str()), assert::User_error);
+    HEXED_ASSERT(std::filesystem::exists(geom.value()),
+                 format_str(1000, "geometry file `%s` not found", geom->c_str()), assert::User_error)
     Task_message tm(printers::info, "  reading geometry file `" + geom.value() + "`");
     std::string ext = file_extension(geom.value());
     std::string without_ext(geom->begin(), geom->end() - ext.size() - 1);
@@ -128,7 +130,7 @@ Surface_geom* Case::_make_geom() {
       geoms.emplace_back(geom);
     } else if ((ext == "igs" || ext == "iges") && !(HEXED_USE_OCCT && _vari("prefer_occt"))) {
       if (nd == 3) {
-        auto ptr = std::make_unique<brep::Geom_3d>(geom.value(), n_div);
+        auto ptr = std::make_unique<brep::Geom_3d>(geom.value(), n_div_min, n_div_max);
         if (_vari("vis_geom")) {
           Mat<3, 2> bounds;
           for (int i_dim = 0; i_dim < 3; ++i_dim) {
@@ -141,25 +143,13 @@ Surface_geom* Case::_make_geom() {
         }
         geoms.emplace_back(ptr.release());
       } else if (nd == 2) {
-        auto ptr = std::make_unique<brep::Geom_2d>(geom.value(), n_div);
+        auto ptr = std::make_unique<brep::Geom_2d>(geom.value(), n_div_max);
         if (_vari("vis_geom")) {
           ptr->visualize("default", _vars("working_dir") + without_ext, _vari("geom_vis_subdivisions"));
         }
         geoms.emplace_back(ptr.release());
-      } else HEXED_THROW("BRep geometry must be 2 or 3D", assert::User_error);
+      } else HEXED_THROW("BRep geometry must be 2 or 3D", assert::User_error)
     #if HEXED_USE_OCCT
-    } else if (ext == "igs" || ext == "iges" || ext == "stp" || ext == "step") {
-      auto shape = Occt::read(*geom);
-      if (nd == 2) {
-        geoms.emplace_back(new Simplex_geom<2>(Occt::segments(shape, _vari("geom_n_segments"))));
-      } else if (nd == 3) {
-        auto ptr = new Simplex_geom<3>(
-          Occt::triangulate(shape, _vard("max_angle"), _vard("max_deflection"), _vari("geom_n_segments"))
-        );
-        std::string vis_name = format_str(1000, "%sgeom%i_triangulation", _vars("working_dir").c_str(), i_geom);
-        ptr->visualize("default", vis_name);
-        geoms.emplace_back(ptr);
-      }
     } else if (ext == "stl") {
       HEXED_ASSERT(nd == 3, "STL format is only supported for 3D", assert::User_error);
       geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(Occt::read_stl(geom.value()))));

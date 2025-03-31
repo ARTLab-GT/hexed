@@ -240,7 +240,7 @@ TEST_CASE("Trimmed_surface") {
                0., 0.;
   curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
   std::vector<bool> model_space(curves.size(), true);
-  hexed::brep::Trimmed_surface trim(plane.release(), std::move(curves), std::move(model_space), 1024);
+  hexed::brep::Trimmed_surface trim(plane.release(), std::move(curves), std::move(model_space), 512, 1024);
   // test reparameterization
   REQUIRE_THAT(trim.surface().point(hexed::Mat<2>{0., 0.}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., .0}, hexed::math::Approx_equal(0, 1e-6)));
@@ -268,22 +268,24 @@ TEST_CASE("Trimmed_surface") {
 
 TEST_CASE("Geom_3d", "[.slow]") {
   #ifdef DEBUG
-  hexed::Int n_div = 128;
+  hexed::Int n_div_min = 8;
+  hexed::Int n_div_max = 128;
   bool vis_volume = false;
   #else
-  hexed::Int n_div = 1024;
+  hexed::Int n_div_min = 128;
+  hexed::Int n_div_max = 1024;
   bool vis_volume = true;
   #endif
   SECTION("cylinder_extruded") {
-    hexed::brep::Geom_3d geom("../test_assets/cylinder_extruded.iges", n_div);
+    hexed::brep::Geom_3d geom("../test_assets/cylinder_extruded.iges", n_div_min, n_div_max);
     geom.visualize("default", "cylinder_extruded", 100, vis_volume);
   }
   SECTION("prism_twisted") {
-    hexed::brep::Geom_3d geom("../test_assets/prism_twisted.iges", n_div);
+    hexed::brep::Geom_3d geom("../test_assets/prism_twisted.iges", n_div_min, n_div_max);
     geom.visualize("default", "prism_twisted", 30, vis_volume);
   }
   SECTION("weird_surface") {
-    hexed::brep::Geom_3d geom("../test_assets/weird_surface.iges", n_div);
+    hexed::brep::Geom_3d geom("../test_assets/weird_surface.iges", n_div_min, n_div_max);
     hexed::Mat<3, 2> bounds;
     bounds <<
       -.1, .1,
@@ -294,7 +296,7 @@ TEST_CASE("Geom_3d", "[.slow]") {
   SECTION("misleading_normal") {
     hexed::Stopwatch sw;
     sw.start();
-    hexed::brep::Geom_3d geom("../test_assets/misleading_normal.iges", n_div);
+    hexed::brep::Geom_3d geom("../test_assets/misleading_normal.iges", n_div_min, n_div_max);
     sw.pause();
     std::cout << "startup time: " << sw.time() << std::endl;
     sw.reset();

@@ -349,12 +349,15 @@ class Trimmed_surface {
    *               These curves should (approximately) lie on the surface.
    *               Any deviation from the surface will be a source of numerical error.
    *               \todo Implement another constructor that accepts curves in parameter space.
-   * \param n_div For some calculations, the bounding curves will be discretized
-   *              into polygonal curves with O(`n_div`) segments.
-   *              Must be a power of 2.
+   * \param n_div_min Minimum number of subdivisions for dividing curves/surfaces into panels
+   *     for low-precision calculations.
+   *     Must be a power of 2.
+   * \param n_div_max Maximum number of subdivisions for dividing curves/surfaces into panels
+   *     for high-precision calculations.
+   *     Must be a power of 2.
    */
   Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves,
-                  std::vector<bool> is_model_space, Int n_div);
+                  std::vector<bool> is_model_space, Int n_div_min, Int n_div_max);
   //! \brief Access the parametric surface.
   inline const Parametric<2>& surface() const {return *_surf;}
   //! \brief Test whether a point `parameters` is inside the bounding curves in parameter space.
@@ -380,8 +383,10 @@ class Trimmed_surface {
                                 Int i_start, Int j_start, Int level) const;
   void _evaluate_excession(Int i_start, Int j_start, Int n_panel);
   Mat<2> _nearest_params(Mat<3> point, double dist_guess) const;
-  Int _n_div;
-  double _sz;
+  Int _n_div_min;
+  Int _n_div_max;
+  double _sz_min;
+  double _sz_max;
   std::unique_ptr<Parametric<2>> _surf;
   std::vector<Tree_curve> _curves;
   std::vector<Tree_curve> _extremal_boundaries;
@@ -428,8 +433,9 @@ class Geom_2d : public Surface_geom {
 class Geom_3d : public Surface_geom {
   public:
   //! \param file_name Name of file containing geometry. Must be in IGES format.
-  //! \param n_div Any entities that need to be discretized will be so with `n_div` subdivisions. Must be a power of 2.
-  Geom_3d(std::string file_name, Int n_div);
+  //! \param n_div_min See `Trimmed_surface::Trimmed_surface`
+  //! \param n_div_max See `Trimmed_surface::Trimmed_surface`
+  Geom_3d(std::string file_name, Int n_div_min, Int n_div_max);
   /*! \brief Writes visualization files of the geometry to help diagnose import/translation bugs.
    * \details For visualization purposes, entities will be discretized with `n_div` segments.
    * This is not the same as the `n_div` passed to the constructor, and need not be a power of 2.

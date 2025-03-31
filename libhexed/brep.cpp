@@ -603,14 +603,16 @@ Mat<2, n_param> Nurbs<n_param>::orig_param_bounds() const {
 }
 
 Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves,
-                                 std::vector<bool> is_model_space, Int n_div)
-: _n_div{n_div}
-, _sz{1./_n_div}
+                                 std::vector<bool> is_model_space, Int n_div_min, Int n_div_max)
+: _n_div_min{n_div_min}
+, _n_div_max{n_div_max}
+, _sz_min{1./_n_div_min}
+, _sz_max{1./_n_div_max}
 , _surf{surface}
-, _nodes_normals({2, _n_div + 1, _n_div + 1, 3})
+, _nodes_normals({2, _n_div_min + 1, _n_div_min + 1, 3})
 , _nodes{_nodes_normals(0)}
 , _normals{_nodes_normals(1)}
-, _levels{math::log(2, _n_div)}
+, _levels{math::log(2, _n_div_min)}
 , _excession({_levels + 1, 2})
 , _excession_epsilon({2})
 {
@@ -621,10 +623,10 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
     for (auto& curve : curves[i_composite]) if (is_model_space[i_composite]) {
       set = true;
       Int prev_sz = repar_points.size();
-      repar_points.resize(prev_sz + _n_div + 1, Mat<3>::Zero());
+      repar_points.resize(prev_sz + _n_div_max + 1, Mat<3>::Zero());
       #pragma omp parallel for
-      for (Int i_point = 0; i_point < _n_div + 1; ++i_point) {
-        repar_points[prev_sz + i_point] = curve->point(Mat<1>{i_point*_sz});
+      for (Int i_point = 0; i_point < _n_div_max + 1; ++i_point) {
+        repar_points[prev_sz + i_point] = curve->point(Mat<1>{i_point*_sz_max});
       }
     }
   }
@@ -632,12 +634,12 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
   // compute extremal boundaries
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
-      Array<double> boundary({_n_div + 1, 3});
+      Array<double> boundary({_n_div_max + 1, 3});
       #pragma omp parallel for
-      for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
+      for (Int i_node = 0; i_node < _n_div_max + 1; ++i_node) {
         Mat<2> params;
         params(i_dim) = sign;
-        params(!i_dim) = i_node*_sz;
+        params(!i_dim) = i_node*_sz_max;
         boundary(i_node).vector() = _surf->point(params);
       }
       _extremal_boundaries.emplace_back(boundary.copy());
@@ -646,42 +648,42 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
   Mat<3> ref_point = _surf->point(Mat<2>{.5, .5});
   double ref_dist = 0;
   #pragma omp parallel for reduction(max:ref_dist)
-  for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
-    for (Int j_node = 0; j_node < _n_div + 1; ++j_node) {
-      ref_dist = std::max(ref_dist, (_surf->point(Mat<2>{i_node*_sz, j_node*_sz}) - ref_point).norm());
+  for (Int i_node = 0; i_node < _n_div_min + 1; ++i_node) {
+    for (Int j_node = 0; j_node < _n_div_min + 1; ++j_node) {
+      ref_dist = std::max(ref_dist, (_surf->point(Mat<2>{i_node*_sz_min, j_node*_sz_min}) - ref_point).norm());
     }
   }
   #pragma omp parallel for
-  for (Int i_point = 0; i_point < _n_div + 1; ++i_point) {
-    for (Int j_point = 0; j_point < _n_div + 1; ++j_point) {
-      _nodes(i_point)(j_point).vector() = _surf->point({i_point*_sz, j_point*_sz});
+  for (Int i_point = 0; i_point < _n_div_min + 1; ++i_point) {
+    for (Int j_point = 0; j_point < _n_div_min + 1; ++j_point) {
+      _nodes(i_point)(j_point).vector() = _surf->point({i_point*_sz_min, j_point*_sz_min});
     }
   }
   #pragma omp parallel for
-  for (Int i = 0; i < _n_div + 1; ++i) {
-    for (Int j = 0; j < _n_div + 1; ++j) {
-      Mat<3> vec0 = (_nodes(std::min(_n_div, i + 1))(j) - _nodes(std::max<Int>(0, i - 1))(j)).vector();
-      Mat<3> vec1 = (_nodes(i)(std::min(_n_div, j + 1)) - _nodes(i)(std::max<Int>(0, j - 1))).vector();
+  for (Int i = 0; i < _n_div_min + 1; ++i) {
+    for (Int j = 0; j < _n_div_min + 1; ++j) {
+      Mat<3> vec0 = (_nodes(std::min(_n_div_min, i + 1))(j) - _nodes(std::max<Int>(0, i - 1))(j)).vector();
+      Mat<3> vec1 = (_nodes(i)(std::min(_n_div_min, j + 1)) - _nodes(i)(std::max<Int>(0, j - 1))).vector();
       _normals(i)(j).vector() = vec0.cross(vec1).normalized();
     }
   }
-  _excession_epsilon = Array<double>::make(1e-3*ref_dist*_sz, 1e-3*_n_div);
+  _excession_epsilon = Array<double>::make(1e-3*ref_dist*_sz_min, 1e-3*_sz_min);
   _excession = 0; // this will set `_excession(_levels)`, which is not set in the following loop
-  Array<double> avg({2, 2*_n_div - 1, 3});
-  Array<double> radius({2, 2*_n_div - 1});
-  for (Int i_point = 0; i_point < _n_div; ++i_point) {
+  Array<double> avg({2, 2*_n_div_min - 1, 3});
+  Array<double> radius({2, 2*_n_div_min - 1});
+  for (Int i_point = 0; i_point < _n_div_min; ++i_point) {
     for (int level = 0; level <= _levels; ++level) {
       Int n_panel = math::pow(2, _levels - level);
       if (i_point%n_panel == 0) {
         if (level < _levels) {
           #pragma omp parallel for
-          for (Int j_point = 0; j_point < _n_div; j_point += n_panel) {
+          for (Int j_point = 0; j_point < _n_div_min; j_point += n_panel) {
             for (int i = 0; i < 2; ++i) {
-              Array<double> a = avg(i)(_n_div/n_panel - 1 + j_point/n_panel);
+              Array<double> a = avg(i)(_n_div_min/n_panel - 1 + j_point/n_panel);
               a = 0;
               for (int j = 0; j < 4; ++j) a += _nodes_normals(i)(i_point + (j/2)*n_panel)(j_point + (j%2)*n_panel);
               a /= 4;
-              double& r = radius(i)[_n_div/n_panel - 1 + j_point/n_panel];
+              double& r = radius(i)[_n_div_min/n_panel - 1 + j_point/n_panel];
               r = 0;
               for (int j = 0; j < 4; ++j) {
                 Mat<3> diff = (_nodes_normals(i)(i_point + (j/2)*n_panel)(j_point + (j%2)*n_panel) - a).vector();
@@ -693,7 +695,7 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
       }
     }
     #pragma omp parallel for reduction(max:_excession)
-    for (Int j_point = 0; j_point < _n_div; ++j_point) {
+    for (Int j_point = 0; j_point < _n_div_min; ++j_point) {
       for (int i_tri = 0; i_tri < 2; ++i_tri) {
         Mat<3> vec0 = (  _nodes(i_point + !i_tri)(j_point +  i_tri)
                        - _nodes(i_point +  i_tri)(j_point +  i_tri)).vector();
@@ -702,7 +704,7 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
         Mat<3> nrml = vec0.cross(vec1).normalized();
         for (int level = 0; level < _levels; ++level) {
           Int n_panel = math::pow(2, _levels - level);
-          Int j = _n_div/n_panel - 1 + j_point/n_panel;
+          Int j = _n_div_min/n_panel - 1 + j_point/n_panel;
           // this will compare most of the points for position twice, but that's ok
           double ex = ((_nodes(i_point + i_tri)(j_point + i_tri) - avg(0)(j)).vector().norm() - radius(0)[j])
                       /(radius(0)[j] + _excession_epsilon[0]);
@@ -715,22 +717,22 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
   }
   // discretize curves into polygonal segments in parameter space
   std::vector<std::vector<std::vector<Mat<2>>>> discrete_curves;
-  double dist_guess = (radius(0)[0] + _excession(0)[0]*(radius(0)[0] + _excession_epsilon[0]))*_sz;
+  double dist_guess = (radius(0)[0] + _excession(0)[0]*(radius(0)[0] + _excession_epsilon[0]))*_sz_max;
   for (int i_composite = 0; i_composite < int(curves.size()); ++i_composite) {
     auto& composite = curves[i_composite];
     discrete_curves.emplace_back();
     auto& disc_curve = discrete_curves.back();
     for (auto& curve : composite) {
-      disc_curve.emplace_back(_n_div + 1);
+      disc_curve.emplace_back(_n_div_max + 1);
       auto& param_nodes = disc_curve.back();
-      Array<double> phys_nodes({_n_div + 1, 3});
+      Array<double> phys_nodes({_n_div_max + 1, 3});
       double mean_squared_dist = 0;
       Mat<3> start;
       if (is_model_space[i_composite]) {
         start = curve->point(Mat<1>{0.});
         #pragma omp parallel for
-        for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
-          Mat<3> pt = curve->point(Mat<1>{i_node*_sz});
+        for (Int i_node = 0; i_node < _n_div_max + 1; ++i_node) {
+          Mat<3> pt = curve->point(Mat<1>{i_node*_sz_max});
           mean_squared_dist += (pt - start).squaredNorm();
           phys_nodes(i_node).vector() = pt;
           param_nodes[i_node] = _nearest_params(pt, dist_guess);
@@ -746,18 +748,18 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
         };
         start = _surf->point(get_params(0.));
         #pragma omp parallel for
-        for (Int i_node = 0; i_node < _n_div + 1; ++i_node) {
-          Mat<2> params = get_params(i_node*_sz);
+        for (Int i_node = 0; i_node < _n_div_max + 1; ++i_node) {
+          Mat<2> params = get_params(i_node*_sz_max);
           Mat<3> pt = _surf->point(params);
           mean_squared_dist += (pt - start).squaredNorm();
           phys_nodes(i_node).vector() = pt;
           param_nodes[i_node] = params;
         }
       }
-      mean_squared_dist /= n_div + 1;
+      mean_squared_dist /= n_div_max + 1;
       if ((curve->point(Mat<1>{1.}) - start).squaredNorm() < .1*mean_squared_dist) {
-        _curves.emplace_back(phys_nodes(0, n_div/2 + 1).copy(), 4);
-        _curves.emplace_back(phys_nodes(n_div/2, n_div + 1).copy(), 4);
+        _curves.emplace_back(phys_nodes(0, n_div_max/2 + 1).copy(), 4);
+        _curves.emplace_back(phys_nodes(n_div_max/2, n_div_max + 1).copy(), 4);
       } else {
         _curves.emplace_back(phys_nodes.copy(), 4);
       }
@@ -794,7 +796,7 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
 }
 
 void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>& curves) {
-  for (int i_direction = 0; i_direction < 3; ++i_direction) _param_segments[i_direction].resize(_n_div);
+  for (int i_direction = 0; i_direction < 3; ++i_direction) _param_segments[i_direction].resize(_n_div_max);
   for (auto& loop : curves) {
     std::vector<Mat<2>> all_nodes;
     std::vector<std::array<Int, 2>> curve_endpoints;
@@ -822,8 +824,8 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
       Int n_less = 0;
       Int n_greater = 0;
       for (Mat<2> node : all_nodes) {
-        n_less += node(i_dim) < -_sz;
-        n_greater += node(i_dim) > 1 + _sz;
+        n_less += node(i_dim) < -_sz_max;
+        n_greater += node(i_dim) > 1 + _sz_max;
       }
       int sign = (n_less > n_nodes/2) - (n_greater > n_nodes/2);
       for (Mat<2>& node : all_nodes) node(i_dim) += sign;
@@ -844,9 +846,9 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
               for (int side : {0, 1}) {
                 Int node0 = curve_endpoints[i_curve][0] + i_node;
                 Int node1 = curve_endpoints[j_curve][0] + size0 - 1 - i_node;
-                n_duplicate[side] += std::abs(all_nodes[node0](i_dim) - side) < _sz &&
-                                     std::abs(all_nodes[node1](i_dim) - side) < _sz &&
-                                     std::abs(all_nodes[node0](!i_dim) - all_nodes[node1](!i_dim)) < _sz;
+                n_duplicate[side] += std::abs(all_nodes[node0](i_dim) - side) < _sz_max &&
+                                     std::abs(all_nodes[node1](i_dim) - side) < _sz_max &&
+                                     std::abs(all_nodes[node0](!i_dim) - all_nodes[node1](!i_dim)) < _sz_max;
               }
             }
             for (int side : {0, 1}) {
@@ -878,14 +880,14 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
         if (i_node == n_nodes && !abscissa.empty()) params << abscissa.front(), ordinate.front();
         else {
           params = transform*all_nodes[i_node];
-          params(0) = std::max(0., std::min(1., params(0)))*_n_div;
+          params(0) = std::max(0., std::min(1., params(0)))*_n_div_max;
         }
         if (prev_params(0) < -.1) prev_params = params;
         while (floor(params(0)) > floor(prev_params(0)) || ceil(params(0)) < ceil(prev_params(0))) {
           prev_absc = floor(params(0)) > floor(prev_params(0)) ? floor(prev_params(0)) + 1
                                                                : ceil (prev_params(0)) - 1;
           double denom = params(0) - prev_params(0);
-          if (std::abs(denom) < _sz) prev_params(1) = params(1);
+          if (std::abs(denom) < _sz_max) prev_params(1) = params(1);
           else prev_params(1) += (prev_absc - prev_params(0))*(params(1) - prev_params(1))/denom;
           prev_params(0) = prev_absc;
           abscissa.push_back(prev_absc);
@@ -900,7 +902,7 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
         for (Int i_segment = 0; i_segment < Int(abscissa.size()) - 1; ++i_segment) {
           HEXED_ASSERT(std::abs(abscissa[i_segment] - abscissa[i_segment + 1]) == 1, "invalid step size");
           bool reverse = abscissa[i_segment] > abscissa[i_segment + 1];
-          HEXED_ASSERT(0 <= abscissa[i_segment + reverse] && abscissa[i_segment + reverse] < _n_div,
+          HEXED_ASSERT(0 <= abscissa[i_segment + reverse] && abscissa[i_segment + reverse] < _n_div_max,
                        format_str(200, "segment index %i out of bounds", abscissa[i_segment + reverse]));
           _param_segments[i_direction][abscissa[i_segment + reverse]].push_back({ordinate[i_segment +  reverse],
                                                                                  ordinate[i_segment + !reverse]});
@@ -929,7 +931,7 @@ Mat<2, 2> Trimmed_surface::_transform_mat(int i_direction) const {
 bool Trimmed_surface::is_inside(Mat<2> params) const {
   // fudge it a little so the outer boundary is always inside
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
-    double tol = 1e-3/_n_div;
+    double tol = 1e-3/_n_div_max;
     if (params(i_dim) < -tol || params(i_dim) > 1 + tol) return false;
     params(i_dim) = std::max(tol, std::min(1 - tol, params(i_dim)));
   }
@@ -938,9 +940,9 @@ bool Trimmed_surface::is_inside(Mat<2> params) const {
   for (int i_direction = 0; i_direction < 3; ++i_direction) {
     Mat<2> p = _transform_mat(i_direction)*params;
     // count the number of segmements intersected by a ray in the positive `p(1)` direction
-    Int i_seg = floor(p(0)*_n_div);
+    Int i_seg = floor(p(0)*_n_div_max);
     double max_diff = 0;
-    for (Int j_seg : {i_seg - 1, i_seg, i_seg + 1}) if (0 <= j_seg && j_seg < _n_div) {
+    for (Int j_seg : {i_seg - 1, i_seg, i_seg + 1}) if (0 <= j_seg && j_seg < _n_div_max) {
       for (Mat<2> seg : _param_segments[i_direction][j_seg]) {
         if (std::min(seg(0), seg(1)) <= p(1) && p(1) <= std::max(seg(0), seg(1))) {
           max_diff = std::max(max_diff, std::abs(seg(0) - seg(1)));
@@ -951,7 +953,7 @@ bool Trimmed_surface::is_inside(Mat<2> params) const {
       diff = max_diff;
       n_intersections = 0;
       for (Mat<2> seg : _param_segments[i_direction][i_seg]) {
-        n_intersections += p(1) < seg(0) + (p(0)*_n_div - i_seg)*(seg(1) - seg(0));
+        n_intersections += p(1) < seg(0) + (p(0)*_n_div_max - i_seg)*(seg(1) - seg(0));
       }
     }
   }
@@ -965,7 +967,7 @@ next::Sequence<const Tree_curve&> Trimmed_surface::curves() const {
 
 void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best_params, Int i_start, Int j_start,
                                          Int level, bool check_inside) const {
-  Int n_panel = _n_div/math::pow(2, level);
+  Int n_panel = _n_div_min/math::pow(2, level);
   Mat<3> point = nearest.reference();
   Array<double> p_arr({3}, point.data());
   Array<double> dist({2, 2, 3});
@@ -1045,8 +1047,8 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
             }
           }
         }
-        params << (i_start + i_triangle*n_panel)*_sz, (j_start + i_triangle*n_panel)*_sz;
-        params -= math::sign(i_triangle)*soln*n_panel*_sz;
+        params << (i_start + i_triangle*n_panel)*_sz_min, (j_start + i_triangle*n_panel)*_sz_min;
+        params -= math::sign(i_triangle)*soln*n_panel*_sz_min;
         if (!check_inside || is_inside(params)) {
           if (nearest.merge(point + dist(i_triangle)(i_triangle).vector() + lhs*soln)) best_params = params;
         }
@@ -1092,7 +1094,7 @@ Mat<2> Trimmed_surface::_nearest_params(Mat<3> point, double dist_guess) const {
       if (index.index > -1) {
         if (nearest.merge(curve.nodes()(index.index).vector())) {
           best_params(i_dim) = sign;
-          best_params(!i_dim) = index.interp_index*_sz;
+          best_params(!i_dim) = index.interp_index*_sz_max;
         }
       }
     }
@@ -1104,7 +1106,7 @@ Mat<2> Trimmed_surface::_nearest_params(Mat<3> point, double dist_guess) const {
 
 void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3> start, Mat<3> diff,
                                                Int i_start, Int j_start, Int level) const {
-  Int n_panel = _n_div/math::pow(2, level);
+  Int n_panel = _n_div_min/math::pow(2, level);
   double tol = 1e-3; // extend triangles to overlap by this fraction of their size
   Array<double> verts({2, 2, 3});
   Mat<3> avg = Mat<3>::Zero();
@@ -1132,7 +1134,7 @@ void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3
         lhs(all, 2) = diff;
         Mat<3> soln = lhs.householderQr().solve(verts(i_tri)(i_tri).vector());
         if (soln(0) > -tol && soln(1) > -tol && soln(0) + soln(1) < 1 + tol) {
-          if (is_inside({(i_start + soln(0))*_sz, (j_start + soln(1))*_sz})) {
+          if (is_inside({(i_start + soln(0))*_sz_min, (j_start + soln(1))*_sz_min})) {
             sects.push_back(soln(2));
           }
         }
@@ -1158,7 +1160,7 @@ Mat<3> Trimmed_surface::normal(Mat<2> params) const {
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign : {-1, 1}) {
       Mat<2> p = params;
-      p(i_dim) += sign*.5*_sz;
+      p(i_dim) += sign*.5*_sz_min;
       Mat<3> diff_point;
       if (p(i_dim) < 0 || p(i_dim) > 1) {
         Mat<3> point0 = _surf->point(params);
@@ -1183,23 +1185,24 @@ class Read_entity {
   public:
   // Initializes the to read the entity whose directory entry starts on line `line`.
   // If `change_to` is provided, it will be postcomposed with any coordinate transformation specified by the entity.
-  Read_entity(const Iges_parser& parser, Int line, Int n_div, Coordinate_change change_to = {})
-  : Read_entity{parser, parser.entry(Iges_parser::directory, line), n_div, change_to}
+  Read_entity(const Iges_parser& parser, Int line, Int n_div_min, Int n_div_max, Coordinate_change change_to = {})
+  : Read_entity{parser, parser.entry(Iges_parser::directory, line), n_div_min, n_div_max, change_to}
   {}
   // initializes the reader to read the entity whose directory entry is given literally by `dir`
-  Read_entity(const Iges_parser& parser, const std::vector<std::string>& dir, Int n_div,
+  Read_entity(const Iges_parser& parser, const std::vector<std::string>& dir, Int n_div_min, Int n_div_max,
               Coordinate_change change_to = {})
   : _parser{parser}
   , _dir{dir}
   , _par{_parser.entry(Iges_parser::parameter, _parser.read_int(_dir[1]))}
   , _ent_num{_parser.read_int(_dir[0])}
-  , _n_div{n_div}
+  , _n_div_min{n_div_min}
+  , _n_div_max{n_div_max}
   {
     // compute the coordinate transformation of this entity
     Int line = _parser.read_int(_dir[6]);
     if (!line) _coords = change_to; // IGES entities can have a null pointer for indicating the identity transformation
     else {
-      Read_entity reader(_parser, line, _n_div);
+      Read_entity reader(_parser, line, _n_div_min, _n_div_max);
       _coords = change_to(reader._read_coord());
     }
     // determine the units of the file
@@ -1222,7 +1225,7 @@ class Read_entity {
   }
 
   Read_entity make_reader(Int line, Coordinate_change change_to = {}) const {
-    return {_parser, line, _n_div, _coords(change_to)};
+    return {_parser, line, _n_div_min, _n_div_max, _coords(change_to)};
   }
 
   template <typename T, typename U>
@@ -1288,7 +1291,7 @@ class Read_entity {
     if (_ent_num != 120) return {};
     auto axis = make_reader(_parser.read_int(_par[1])).read_line_segment();
     auto generatrix = make_reader(_parser.read_int(_par[2])).read_curve();
-    return std::make_unique<Revolution_surface>(generatrix.release(), *axis, _n_div,
+    return std::make_unique<Revolution_surface>(generatrix.release(), *axis, _n_div_max,
                                                 _parser.read_float(_par[3]), _parser.read_float(_par[4]));
   }
 
@@ -1315,7 +1318,7 @@ class Read_entity {
     }
     Mat<2, 1> param_bounds;
     param_bounds << _parser.read_float(_par[i]), _parser.read_float(_par[i + 1]);
-    return std::make_unique<Nurbs<1>>(std::move(knots), weights(), control_points(), _n_div, param_bounds);
+    return std::make_unique<Nurbs<1>>(std::move(knots), weights(), control_points(), _n_div_min, param_bounds);
   }
 
   std::unique_ptr<Nurbs<2>> read_nurbs_surface() const {
@@ -1349,7 +1352,7 @@ class Read_entity {
     param_bounds <<
       _parser.read_float(_par[i + 0]), _parser.read_float(_par[i + 2]),
       _parser.read_float(_par[i + 1]), _parser.read_float(_par[i + 3]);
-    return std::make_unique<Nurbs<2>>(std::move(knots), weights(), control_points(), _n_div, param_bounds);
+    return std::make_unique<Nurbs<2>>(std::move(knots), weights(), control_points(), _n_div_min, param_bounds);
   }
 
   // Attempts to read any of the entities that derive from `Parametric<1>`.
@@ -1425,7 +1428,7 @@ class Read_entity {
       }
     }
     // construct Trimmed_surface
-    return {Trimmed_surface(surf.release(), std::move(curves), std::move(model_space), _n_div)};
+    return {Trimmed_surface(surf.release(), std::move(curves), std::move(model_space), _n_div_min, _n_div_max)};
   }
 
   private:
@@ -1449,28 +1452,18 @@ class Read_entity {
   const std::vector<std::string>& _dir;
   const std::vector<std::string>& _par;
   Int _ent_num;
-  Int _n_div;
+  Int _n_div_min;
+  Int _n_div_max;
   Coordinate_change _coords;
   double _unit;
 };
-
-Geom_3d::Geom_3d(std::string file_name, Int n_div) {
-  Iges_parser parser(file_name);
-  auto dir = parser.section(Iges_parser::directory);
-  // read all the trimmed surface entities and ignore everything else
-  for (auto& entry : dir) {
-    Read_entity read(parser, entry, n_div);
-    auto surf = read.read_trimmed_surface();
-    if (surf) _surfaces.emplace_back(std::move(*surf));
-  }
-}
 
 Geom_2d::Geom_2d(std::string file_name, Int n_div) {
   Iges_parser parser(file_name);
   auto dir = parser.section(Iges_parser::directory);
   // read all the curve (not composite curve) entities and ignore everything else
   for (auto& entry : dir) {
-    Read_entity read(parser, entry, n_div);
+    Read_entity read(parser, entry, n_div, n_div);
     auto curve = read.read_curve(false);
     if (curve) _curves.emplace_back(curve.release());
   }
@@ -1537,6 +1530,17 @@ next::Sequence<Mat<3>> Geom_2d::points() {
     [this](std::size_t i) {return _curves[i/2]->point(Mat<1>::Constant(i%2));},
     [this]() {return 2*_curves.size();},
   };
+}
+
+Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max) {
+  Iges_parser parser(file_name);
+  auto dir = parser.section(Iges_parser::directory);
+  // read all the trimmed surface entities and ignore everything else
+  for (auto& entry : dir) {
+    Read_entity read(parser, entry, n_div_min, n_div_max);
+    auto surf = read.read_trimmed_surface();
+    if (surf) _surfaces.emplace_back(std::move(*surf));
+  }
 }
 
 Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
