@@ -2723,7 +2723,8 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> fl
   read_file(file_name);
 }
 
-void write_polymesh_file(std::string dir_name, std::string name, std::string cls, int n_entries, std::function<std::string(int)> entries, std::string note = "") {
+void write_polymesh_file(std::string dir_name, std::string name, std::string cls, int n_entries,
+                         std::function<std::string(int)> entries, std::string note = "") {
   std::ofstream file(dir_name + name);
   file
     << "// this file was generated for OpenFOAM by Hexed, an open-source mesher and CFD solver\n"

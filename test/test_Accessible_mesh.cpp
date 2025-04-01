@@ -519,6 +519,7 @@ TEST_CASE("mesh I/O") {
     mesh.valid().assert_valid();
     REQUIRE(n_car_after == correct_n_car_after);
     REQUIRE(n_def_after == correct_n_def_after);
+    mesh.visualize("default", "io_error");
   }
 }
 

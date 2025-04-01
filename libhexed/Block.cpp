@@ -396,7 +396,7 @@ Mat<3> Vertex::unwarped_point() const {
     if (!skip) vert_pos(i_vert, all) = _glued_to->vertex(i_vert).unwarped_point().transpose();
   }
   Mat<3> coords = Mat<3>::Zero();
-  for (int i_dim = 0; i_dim < nc; ++i_dim) coords(i_dim) = _glued_coords[i_dim];
+  for (int i_dim = 0; i_dim < nc; ++i_dim) coords(3 - nc + i_dim) = _glued_coords[i_dim];
   Mat<3> p;
   for (int i_dim = 0; i_dim < 3; ++i_dim) p(i_dim) = math::interp(vert_pos(all, i_dim), coords);
   return p;
