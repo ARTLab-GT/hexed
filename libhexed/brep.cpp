@@ -1143,9 +1143,15 @@ void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3
         if (soln(0) > -tol && soln(1) > -tol && soln(0) + soln(1) < 1 + tol) {
           Mat<2> params {(i_start + (i_tri - math::sign(i_tri)*soln(0))*stride)*_sz_max,
                          (j_start + (i_tri - math::sign(i_tri)*soln(1))*stride)*_sz_max};
-          if (is_inside(params)) {
-            sects.push_back(soln(2));
+          bool inside = false;
+          if (high_prec) {
+            for (int i_vert = 0; i_vert < 4; ++i_vert) {
+              inside = inside || is_inside({(i_start + i_vert/2)*_sz_max, (j_start + i_vert%2)*_sz_max});
+            }
+          } else {
+            inside = is_inside(params);
           }
+          if (inside) sects.push_back(soln(2));
         }
       }
     } else {
