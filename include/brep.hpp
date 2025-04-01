@@ -177,10 +177,6 @@ class Revolution_surface : public Parametric<2> {
    *             The length does not matter, but the direction does,
    *             because it determines the direction of rotation by the right hand rule.
    *             Thus swapping the endpoints reverses the sense of rotation.
-   * \param n_div For the purpose of nearest point calculations,
-   *              `generatrix` shall be discretized into a polygonal curve with `n_div` segments,
-   *              with uniform spacing in parameter space.
-   *              Must be a power of 2.
    * \param start_angle Same behavior and requirements as for `Circular_arc::Circular_arc()`
    * \param end_angle Same behavior and requirements as for `Circular_arc::Circular_arc()`
    */
