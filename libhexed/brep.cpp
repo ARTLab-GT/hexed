@@ -23,25 +23,6 @@ Line_segment::Line_segment(Mat<3, 2> endpoints)
 , _length{(_endpoints(all, 1) - _endpoints(all, 0)).norm()}
 {}
 
-Parametric<1>::Nearest_parameters Line_segment::nearest_params(Mat<3> p, Constraint is_feasible,
-                                                               double max_distance) const {
-  Mat<3> diff = _endpoints(all, 1) - _endpoints(all, 0);
-  Mat<1> params {std::max(0., std::min(1., (p - _endpoints(all, 0)).dot(diff)/diff.squaredNorm()))};
-  return {params, is_feasible(params)};
-}
-
-std::vector<Parametric<1>::Intersection_parameters> Line_segment::intersection_params(Mat<3, 2> points) const {
-  Mat<3, 2> lhs;
-  lhs(all, 0) = _endpoints(all, 1) - _endpoints(all, 0);
-  lhs(all, 1) = points(all, 0) - points(all, 1);
-  lhs(2, all).setZero();
-  Mat<3> rhs = points(all, 0) - _endpoints(all, 0);
-  rhs(2) = 0;
-  Mat<2> soln = lhs.householderQr().solve(rhs);
-  if (0 <= soln(0) && soln(0) <= 1) return {{Mat<1>{soln(0)}, soln(1)}};
-  return {};
-}
-
 Mat<2, 1> Line_segment::orig_param_bounds() const {
   HEXED_THROW("not yet implemented for this entity", assert::Not_implemented_error)
   throw;
@@ -68,64 +49,9 @@ Mat<3> Circular_arc::point(Mat<1> params) const {
   return _center + _radius*Mat<3>{std::cos(angle), std::sin(angle), 0.};
 }
 
-Parametric<1>::Nearest_parameters Circular_arc::nearest_params(Mat<3> p, Constraint is_feasible,
-                                                               double max_distance) const {
-  double angle = limited_angle(std::atan2(p(1) - _center(1), p(0) - _center(0)), _start_angle, _end_angle);
-  Mat<1> params {math::angle_diff(angle, _start_angle)/(_end_angle - _start_angle)};
-  return {params, is_feasible(params)};
-}
-
-std::vector<Parametric<1>::Intersection_parameters> Circular_arc::intersection_params(Mat<3, 2> points) const {
-  Mat<3> start = points(all, 0) - _center;
-  Mat<3> diff = points(all, 1) - points(all, 0);
-  // radius^2 = coefs[0] + coefs[1]*interp_coef + coefs[2]*interp_coef^2
-  double coefs [3] {
-    start(0)*start(0) + start(1)*start(1),
-    2*(start(0)*diff(0) + start(1)*diff(1)),
-    diff(0)*diff(0) + diff(1)*diff(1),
-  };
-  double descrim = coefs[1]*coefs[1] - 4*coefs[2]*(coefs[0] - _radius*_radius);
-  std::vector<Parametric<1>::Intersection_parameters> sects;
-  // skip the single intersection case---no one's actually going to care
-  if (descrim > 0) {
-    double root = std::sqrt(descrim);
-    for (int sign : {-1, 1}) {
-      double interp = (-coefs[1] + sign*root)/(2*coefs[2]);
-      Mat<3> sect_point = start + interp*diff;
-      double param = math::angle_diff(std::atan2(sect_point(1), sect_point(0)), _start_angle)
-                     /(_end_angle - _start_angle);
-      if (0 <= param && param <= 1) sects.push_back({Mat<1>{param}, interp});
-    }
-  }
-  return sects;
-}
-
 Mat<2, 1> Circular_arc::orig_param_bounds() const {
   HEXED_THROW("not yet implemented for this entity", assert::Not_implemented_error)
   throw;
-}
-
-Parametric<2>::Nearest_parameters Plane::nearest_params(Mat<3> p, Constraint is_feasible,
-                                                        double max_distance) const {
-  Mat<2> params = _vecs.colPivHouseholderQr().solve(p - _origin);
-  return {params, is_feasible(params)};
-}
-
-std::optional<Mat<2>> Plane::nearest_parameters(Mat<3> p) const {
-  Mat<2> params = _vecs.colPivHouseholderQr().solve(p - _origin);
-  return {params};
-}
-
-std::vector<Parametric<2>::Intersection_parameters> Plane::intersection_params(Mat<3, 2> endpoints) const {
-  Mat<3, 3> lhs;
-  lhs(all, Eigen::seqN(0, 2)) = _vecs;
-  lhs(all, 2) = endpoints(all, 0) - endpoints(all, 1);
-  Mat<3> rhs = endpoints(all, 0) - _origin;
-  auto fact = lhs.fullPivHouseholderQr();
-  if (!fact.isInvertible()) return {};
-  Mat<3> soln = fact.solve(rhs);
-  for (int i = 0; i < 2; ++i) if (!(soln(i) >= 0 && soln(i) <= 1)) return {};
-  return {{{soln(0), soln(1)}, soln(2)}};
 }
 
 Mat<2, 2> Plane::reparameterize(Mat<2, 2> bounds) {
@@ -142,9 +68,9 @@ Mat<2, 2> Plane::reparameterize(const std::vector<Mat<3>>& points) {
   bounds1 = -huge;
   #pragma omp parallel for reduction(min:bounds0) reduction(max:bounds1)
   for (Mat<3> p : points) {
-    Mat<2> par = nearest_parameters(p).value();
-    bounds0 = bounds0.extreme(0, Array<double>({2}, par.data()));
-    bounds1 = bounds1.extreme(1, Array<double>({2}, par.data()));
+    Mat<2> params = _vecs.colPivHouseholderQr().solve(p - _origin);
+    bounds0 = bounds0.extreme(0, Array<double>({2}, params.data()));
+    bounds1 = bounds1.extreme(1, Array<double>({2}, params.data()));
   }
   Mat<2, 2> bounds_mat;
   for (int i = 0; i < 4; ++i) bounds_mat(i) = bounds[i];
@@ -165,14 +91,12 @@ Array<double> discretize(Parametric<1>& curve, Int n_div) {
   return nodes;
 }
 
-Revolution_surface::Revolution_surface(Parametric<1>* g, Line_segment ax, Int n_div, double sa, double ea)
+Revolution_surface::Revolution_surface(Parametric<1>* g, Line_segment ax, double sa, double ea)
 : _generatrix{g}
 , _axis{ax}
 , _unit_axis{(_axis.point(Mat<1>{1.}) - _axis.point(Mat<1>{0.})).normalized()}
-, _n_div{n_div}
 , _start_angle{sa}
 , _end_angle{ea}
-, _tree(discretize(*_generatrix, _n_div), 4)
 {
   HEXED_ASSERT(_end_angle - _start_angle > 0, "end angle must be greater than start angle");
 }
@@ -196,213 +120,6 @@ Mat<3> Revolution_surface::point(Mat<2> params) const {
   return rotate(p, angle);
 }
 
-// given a point `arc_point` which is nominally on the genratrix, compute the rotation angle of the nearest point
-// on the arc of points on the surface obtained by rotating `arc_point`
-double Revolution_surface::_unlimited_best_angle(Mat<3> arc_point, Mat<3> radius) const {
-  arc_point -= _axis.point(Mat<1>{0.});
-  Mat<3> arc_radius = (arc_point - arc_point.dot(_unit_axis)*_unit_axis).normalized();
-  return std::atan2(arc_radius.cross(radius).dot(_unit_axis), arc_radius.dot(radius));
-}
-
-double Revolution_surface::_limited_best_angle(Mat<3> arc_point, Mat<3> radius) const {
-  return limited_angle(_unlimited_best_angle(arc_point, radius), _start_angle, _end_angle);
-}
-
-// given a point `arc_point` which is nominally on the genratrix, compute the nearst point
-// on the arc of points on the surface obtained by rotating `arc_point`
-Mat<3> Revolution_surface::_best_point(Mat<3> arc_point, Mat<3> radius) const {
-  double angle = _limited_best_angle(arc_point, radius);
-  return rotate(arc_point, angle);
-}
-
-// helper class that does the real work of nearest point calculations
-class Revolution_surface::_Find_nearest {
-  public:
-  struct Candidate {
-    Nearest_parameters np;
-    double dist;
-  };
-  const Revolution_surface& surf;
-  Constraint is_feasible;
-  Mat<3> point; // point we want to compute the nearest point to
-  Mat<3> from_start; // displacement of `point` relative to first axis endpoint
-  Mat<3> radius; // component of `from_start` orthogonal to axis
-  Candidate cand;
-  _Find_nearest(const Revolution_surface& s, Mat<3> p, Parametric<2>::Constraint is_f, double max_distance)
-  : surf{s}
-  , is_feasible{is_f}
-  , point{p}
-  , from_start{p - surf._axis.point(Mat<1>{0.})}
-  , radius{(from_start - from_start.dot(surf._unit_axis)*surf._unit_axis).normalized()}
-  // initialize `cand` to a non-point but set the distance to `max_distance`
-  // so that any farther candidates will be ignored
-  , cand{{Mat<2>{std::nan(""), std::nan("")}, false}, max_distance}
-  {}
-  // return whichever of `c0` and `c1` is a better candidate
-  Candidate merge(Candidate c0, Candidate c1) {
-    if (c1.dist < c0.dist && c1.np.is_feasible) return c1;
-    return c0;
-  }
-  // search the part of the surface subtended by the segment of the generatrix covered by the nodes of `segment`
-  // for the nearest point.
-  // Any candidates for the nearest point in this area will be `merge`d with `cand`.
-  void find(const Tree_curve::Segment& segment) {
-    if (segment.segments.size()) {
-      // if this segment is not a leaf, recursively search its child segments
-      double dist [2];
-      for (int i_segment = 0; i_segment < 2; ++i_segment) {
-        dist[i_segment] = (surf._best_point(segment.segments[i_segment].center, radius) - point).norm();
-      }
-      // do the closer segment first in hopes that we can find a point close enough
-      // to justify skipping the farther one
-      for (bool i_segment : {dist[1] < dist[0], !(dist[1] < dist[0])}) {
-        if (dist[i_segment] - segment.segments[i_segment].radius < cand.dist) find(segment.segments[i_segment]);
-      }
-    } else {
-      // this segment is a leaf, so search its nodes
-      Int n_nodes = segment.nodes.shape()[0];
-      for (Int i_node = 0; i_node < n_nodes; ++i_node) {
-        // find the parameters of the neares point on the arc subtended by this node
-        Candidate c;
-        Mat<3> node = segment.nodes(i_node).vector();
-        c.np.params(0) = double(segment.nodes_start + i_node)/surf._n_div;
-        double angle = surf._limited_best_angle(node, radius);
-        c.np.params(1) = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
-        // check if the computed nearest parameters are feasible
-        c.np.is_feasible = is_feasible(c.np.params);
-        c.dist = (surf.rotate(node, angle) - point).norm();
-        // merge candidates
-        cand = merge(cand, c);
-      }
-    }
-  }
-};
-
-class Revolution_surface::_Find_intersects {
-  public:
-  const Revolution_surface& surf;
-  std::vector<Intersection_parameters> intersects;
-  struct Coefs {
-    Mat<3> radial;
-    Mat<3> axial;
-    Coefs(const Revolution_surface& surf, Mat<3, 2> points) {
-      Mat<3> r_start = points(all, 0) - surf._axis.point(Mat<1>{0.});
-      axial[0] = r_start.dot(surf._unit_axis);
-      r_start -= axial[0]*surf._unit_axis;
-      Mat<3> r_diff = points(all, 1) - points(all, 0);
-      axial[1] = r_diff.dot(surf._unit_axis);
-      r_diff -= axial[1]*surf._unit_axis;
-      radial[0] = r_start.squaredNorm();
-      radial[1] = 2*r_start.dot(r_diff);
-      radial[2] = r_diff.squaredNorm();
-    }
-    Coefs() = default;
-  };
-  Mat<3, 2> points;
-  Coefs points_coefs;
-  Int total_nodes;
-  _Find_intersects(const Revolution_surface& s, Mat<3, 2> p)
-  : surf{s}, points{p}, points_coefs{s, points}, total_nodes(surf._tree.n_points())
-  {}
-  void find(const Tree_curve::Segment& segment) {
-    if (segment.segments.size()) {
-      for (const Tree_curve::Segment& segment : segment.segments) {
-        Mat<3> center = segment.center - surf._axis.point(Mat<1>{0.});
-        double axial = center.dot(surf._unit_axis);
-        double radius = (center - axial*surf._unit_axis).norm();
-        bool could_intersect;
-        if (points_coefs.radial[2] < math::pow(points_coefs.axial[1], 2)) {
-          double center_param = (axial - points_coefs.axial[0])/points_coefs.axial[1];
-          double param_diff = segment.radius/std::abs(points_coefs.axial[1]);
-          double rsq = points_coefs.radial[0]
-                       + (points_coefs.radial[1] + points_coefs.radial[2]*center_param)*center_param;
-          double rsq_deriv = points_coefs.radial[1] + 2*points_coefs.radial[2]*center_param;
-          double rsq_uncert = (std::abs(rsq_deriv) + points_coefs.radial[2]*param_diff)*param_diff;
-          could_intersect = std::abs(radius*radius - rsq) <
-                            segment.radius*segment.radius + 2*radius*segment.radius + rsq_uncert;
-        } else {
-          could_intersect = false;
-          std::vector<double> intersection_params;
-          for (int layer = 0; layer < 2; ++layer) { // outer, inner
-            double target = math::pow(radius - math::sign(layer)*segment.radius, 2);
-            double descrim = points_coefs.radial[1]*points_coefs.radial[1]
-                             - 4*points_coefs.radial[2]*(points_coefs.radial[0] - target);
-            if (descrim > 0) {
-              for (int i_sign = 0; i_sign < 2; ++i_sign) {
-                intersection_params.insert(intersection_params.begin() + layer + i_sign,
-                                           (-points_coefs.radial[1] + math::sign(i_sign)*std::sqrt(descrim))
-                                           /(2*points_coefs.radial[2]));
-              }
-            } else break;
-          }
-          for (int i_interval = 0; i_interval < int(intersection_params.size()/2); ++i_interval) {
-            double bounds [2];
-            for (int i = 0; i < 2; ++i) {
-              bounds[i] = points_coefs.axial[0] + points_coefs.axial[1]*intersection_params[2*i_interval + i];
-            }
-            int sign = math::sign(points_coefs.axial[1] > 0);
-            if (std::abs(axial - .5*(bounds[0] + bounds[1])) < segment.radius + sign*.5*(bounds[1] - bounds[0])) {
-              could_intersect = true;
-            }
-          }
-        }
-        if (could_intersect) find(segment);
-      }
-    } else {
-      Int n_nodes = segment.nodes.shape()[0];
-      Coefs coefs [2];
-      coefs[0] = points_coefs;
-      for (Int i_node = 0; i_node < n_nodes - 1; ++i_node) {
-        Mat<3, 2> gener_points;
-        for (int col = 0; col < 2; ++col) gener_points(all, col) = segment.nodes(i_node + col).vector();
-        coefs[1] = Coefs(surf, gener_points);
-        int i_transform = std::abs(coefs[0].axial[1]) < std::abs(coefs[1].axial[1]);
-        Mat<2> transform {
-          (coefs[!i_transform].axial[0] - coefs[i_transform].axial[0])/coefs[i_transform].axial[1],
-          coefs[!i_transform].axial[1]/coefs[i_transform].axial[1],
-        };
-        Mat<3> quad_coefs = coefs[i_transform].radial;
-        quad_coefs(0) += transform(0)*(quad_coefs(1) + transform(0)*quad_coefs(2));
-        quad_coefs(1) += 2*transform(0)*quad_coefs(2);
-        for (int pow = 0; pow < 3; ++pow) quad_coefs(pow) *= math::pow(transform(1), pow);
-        quad_coefs -= coefs[!i_transform].radial;
-        if (quad_coefs(2) != 0 && std::isfinite(transform(1))) {
-          double descrim = quad_coefs(1)*quad_coefs(1) - 4*quad_coefs(2)*quad_coefs(0);
-          if (descrim > 0) {
-            for (int sign : {-1, 1}) {
-              double soln = (-quad_coefs(1) + sign*std::sqrt(descrim))/(2*quad_coefs(2));
-              double node_interp = i_transform ? transform(0) + transform(1)*soln : soln;
-              if (-1e-3 <= node_interp && node_interp <= 1 + 1e-3) {
-                double interp_coef = i_transform ? soln : transform(0) + transform(1)*soln;
-                double param0 = (segment.nodes_start + i_node + node_interp)/(total_nodes - 1);
-                Mat<3> gen_point = gener_points*Mat<2>{1. - node_interp, node_interp};
-                Mat<3> radius = points*Mat<2>{1. - interp_coef, interp_coef} - surf._axis.point(Mat<1>{0.});
-                radius -= radius.dot(surf._unit_axis)*surf._unit_axis;
-                double angle = surf._unlimited_best_angle(gen_point, radius.normalized());
-                double param1 = math::angle_diff(angle, surf._start_angle)/(surf._end_angle - surf._start_angle);
-                if (param1 <= 1) intersects.push_back({{param0, param1}, interp_coef});
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-};
-
-Parametric<2>::Nearest_parameters Revolution_surface::nearest_params(Mat<3> p, Constraint is_feasible,
-                                                                     double max_distance) const {
-  _Find_nearest finder(*this, p, is_feasible, max_distance);
-  finder.find(_tree.root());
-  return finder.cand.np;
-}
-
-std::vector<Parametric<2>::Intersection_parameters> Revolution_surface::intersection_params(Mat<3, 2> pnts) const {
-  _Find_intersects finder(*this, pnts);
-  finder.find(_tree.root());
-  return finder.intersects;
-}
-
 Mat<2, 2> Revolution_surface::orig_param_bounds() const {
   HEXED_THROW("not yet implemented for this entity", assert::Not_implemented_error)
   throw;
@@ -413,10 +130,9 @@ template class Nurbs<2>;
 
 template <int n_param>
 Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points,
-                      Int n_div, Mat<2, n_param> param_bounds)
+                      Mat<2, n_param> param_bounds)
 : _weights(weights.copy())
 , _control_points(control_points.copy())
-, _n_div{n_div}
 , _orig_bounds{param_bounds}
 {
   for (Array<double>& k : knots) _knots.push_back(k.copy());
@@ -433,33 +149,6 @@ Nurbs<n_param>::Nurbs(std::vector<Array<double>> knots, Array<double> weights, A
     _knots[i_dim] /= _orig_bounds(1, i_dim) - _orig_bounds(0, i_dim);
   }
   HEXED_ASSERT(_control_points.shape()[n_param] == 3, "wrong number of coordinates (should always be 3)")
-  double max_sq = 0;
-  if constexpr (n_param == 1) {
-    #pragma omp parallel for reduction(max:max_sq)
-    for (Int i_div = 0; i_div < _n_div; ++i_div) {
-      double dist_sq = (point(Mat<1>{double(i_div + 1)/_n_div}) - point(Mat<1>{double(i_div)/_n_div})).squaredNorm()/4;
-      max_sq = std::max(max_sq, dist_sq);
-    }
-  } else {
-    #pragma omp parallel for reduction(max:max_sq)
-    for (Int i_div = 0; i_div < _n_div; ++i_div) {
-      for (Int j_div = 0; j_div < _n_div; ++j_div) {
-        Mat<3, 4> verts;
-        Mat<3> centroid = Mat<3>::Zero();
-        for (int i_vert = 0; i_vert < 2; ++i_vert) {
-          for (int j_vert = 0; j_vert < 2; ++j_vert) {
-            verts(all, 2*i_vert + j_vert) = point({double(i_div + i_vert)/_n_div, double(j_div + j_vert)/_n_div});
-            centroid += verts(all, 2*i_vert + j_vert);
-          }
-        }
-        centroid /= 4;
-        for (int i_vert = 0; i_vert < 4; ++i_vert) {
-          max_sq = std::max(max_sq, (verts(all, i_vert) - centroid).squaredNorm());
-        }
-      }
-    }
-  }
-  _max_deriv = std::sqrt(max_sq)*_n_div;
 }
 
 template <int n_param>
@@ -513,64 +202,6 @@ Mat<3> Nurbs<n_param>::point(Mat<n_param> params) const {
 }
 
 template <int n_param>
-void Nurbs<n_param>::_recursive_nearest(_Nearest_params& nearest, std::array<Int, n_param> start_node, Int size,
-                                        Parametric<n_param>::Constraint is_feasible) const {
-  constexpr int n_tree = math::pow(2, n_param);
-  if (size > 1) {
-    double dist [n_tree];
-    for (int i_branch = 0; i_branch < n_tree; ++i_branch) {
-      Mat<n_param> params;
-      for (int i_dim = 0; i_dim < n_param; ++i_dim) {
-        Int i_node = start_node[i_dim] + i_branch/math::pow(2, n_param - 1 - i_dim)%2*size/2;
-        params(i_dim) = (i_node + size/4.)/_n_div;
-      }
-      dist[i_branch] = (point(params) - nearest.target).norm();
-    }
-    for (int i = 0; i < n_tree; ++i) {
-      int i_branch = 0;
-      for (int j = 1; j < n_tree; ++j) {
-        if (dist[j] < dist[i_branch]) i_branch = j;
-      }
-      std::array<Int, n_param> branch_start = start_node;
-      for (int i_dim = 0; i_dim < n_param; ++i_dim) {
-        branch_start[i_dim] += i_branch/math::pow(2, n_param - 1 - i_dim)%2*size/2;
-      }
-      if (math::pow(std::max(0., dist[i_branch] - _max_deriv*size/2/_n_div), 2) < nearest.dist_sq) {
-        _recursive_nearest(nearest, branch_start, size/2, is_feasible);
-      }
-      dist[i_branch] = std::sqrt(huge);
-    }
-  } else {
-    for (int i_vert = 0; i_vert < n_tree; ++i_vert) {
-      Mat<n_param> params;
-      for (int i_dim = 0; i_dim < n_param; ++i_dim) {
-        params(i_dim) = (start_node[i_dim] + i_vert/math::pow(2, n_param - 1 - i_dim)%2)/double(_n_div);
-      }
-      ++nearest.n_eval;
-      if (is_feasible(params)) {
-        Mat<3> p = point(params);
-        double dist_sq = (p - nearest.target).squaredNorm();
-        if (dist_sq < nearest.dist_sq) {
-          nearest.params = params;
-          nearest.is_feasible = true;
-          nearest.dist_sq = dist_sq;
-        }
-      }
-    }
-  }
-}
-
-template <int n_param>
-Parametric<n_param>::Nearest_parameters
-Nurbs<n_param>::nearest_params(Mat<3> target, Parametric<n_param>::Constraint is_feasible, double max_distance) const {
-  _Nearest_params nearest {target, Mat<n_param>::Zero(), false, max_distance*max_distance, 0};
-  std::array<Int, n_param> start_node;
-  start_node.fill(0);
-  _recursive_nearest(nearest, start_node, _n_div, is_feasible);
-  return {nearest.params, nearest.is_feasible};
-}
-
-template <int n_param>
 Int Nurbs<n_param>::_find_knot(int i_dim, double param) const {
   // O(log n) binary search
   Int low = _degree[i_dim];
@@ -589,12 +220,6 @@ Int Nurbs<n_param>::_find_knot(int i_dim, double param) const {
     }
   }
   return low;
-}
-
-template <int n_param>
-std::vector<typename Parametric<n_param>::Intersection_parameters>
-Nurbs<n_param>::intersection_params(Mat<3, 2> points) const {
-  return {};
 }
 
 template <int n_param>
@@ -1081,13 +706,7 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
 Mat<2> Trimmed_surface::_nearest_params(Mat<3> point, double dist_guess) const {
   Nearest_point<3> nearest(point, dist_guess);
   Mat<2> best_params = Mat<2>::Zero();
-  auto par = _surf->nearest_parameters(point);
-  if (par.has_value()) {
-    best_params = par.value();
-    nearest.merge(_surf->point(par.value()));
-  } else {
-    _recursive_nearest(nearest, best_params, 0, 0, 0, false);
-  }
+  _recursive_nearest(nearest, best_params, 0, 0, 0, false);
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       auto& curve = _extremal_boundaries[2*i_dim + sign];
@@ -1307,8 +926,8 @@ class Read_entity {
     if (_ent_num != 120) return {};
     auto axis = make_reader(_parser.read_int(_par[1])).read_line_segment();
     auto generatrix = make_reader(_parser.read_int(_par[2])).read_curve();
-    return std::make_unique<Revolution_surface>(generatrix.release(), *axis, _n_div_max,
-                                                _parser.read_float(_par[3]), _parser.read_float(_par[4]));
+    return std::make_unique<Revolution_surface>(generatrix.release(), *axis, _parser.read_float(_par[3]),
+                                                                             _parser.read_float(_par[4]));
   }
 
   std::unique_ptr<Nurbs<1>> read_nurbs_curve() const {
@@ -1334,7 +953,7 @@ class Read_entity {
     }
     Mat<2, 1> param_bounds;
     param_bounds << _parser.read_float(_par[i]), _parser.read_float(_par[i + 1]);
-    return std::make_unique<Nurbs<1>>(std::move(knots), weights(), control_points(), _n_div_min, param_bounds);
+    return std::make_unique<Nurbs<1>>(std::move(knots), weights(), control_points(), param_bounds);
   }
 
   std::unique_ptr<Nurbs<2>> read_nurbs_surface() const {
@@ -1368,7 +987,7 @@ class Read_entity {
     param_bounds <<
       _parser.read_float(_par[i + 0]), _parser.read_float(_par[i + 2]),
       _parser.read_float(_par[i + 1]), _parser.read_float(_par[i + 3]);
-    return std::make_unique<Nurbs<2>>(std::move(knots), weights(), control_points(), _n_div_min, param_bounds);
+    return std::make_unique<Nurbs<2>>(std::move(knots), weights(), control_points(), param_bounds);
   }
 
   // Attempts to read any of the entities that derive from `Parametric<1>`.
@@ -1481,7 +1100,14 @@ Geom_2d::Geom_2d(std::string file_name, Int n_div) {
   for (auto& entry : dir) {
     Read_entity read(parser, entry, n_div, n_div);
     auto curve = read.read_curve(false);
-    if (curve) _curves.emplace_back(curve.release());
+    if (curve) {
+      Array<double> nodes({n_div + 1, 3});
+      for (int i_node = 0; i_node < n_div + 1; ++i_node) {
+        nodes(i_node).vector() = curve->point(Mat<1>{i_node/(double)n_div});
+      }
+      _curves.emplace_back(curve.release());
+      _tree_curves.emplace_back(nodes.copy(), 4);
+    }
   }
 }
 
@@ -1529,12 +1155,13 @@ Nearest_point<dyn> guess_nearest(Mat<> point, double max_distance, double distan
 
 Nearest_point<dyn> Geom_2d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
   return guess_nearest(point, max_distance, distance_guess, [this](Mat<> p, double max_dist) {
-    Mat<3> p3d = Mat<3>::Zero();
-    p3d(Eigen::seqN(0, 2)) = p(Eigen::seqN(0, 2));
-    Nearest_point<dyn> nearest(p(Eigen::seqN(0, 2)), max_dist);
-    for (auto& curve : _curves) {
-      auto param = curve->nearest_params(p3d, [](Mat<1>){return true;}, max_dist);
-      if (param.is_feasible) nearest.merge(curve->point(param.params)(Eigen::seqN(0, 2)));
+    Nearest_point<dyn> nearest(resize(p, 2), max_dist);
+    Mat<3> p3d = resize(p, 3);
+    for (auto& curve : _tree_curves) {
+      auto index = curve.nearest_point(p3d, max_dist);
+      if (index.index >= 0) {
+        nearest.merge(resize(curve.interp_point(index), 2));
+      }
     }
     return nearest;
   });

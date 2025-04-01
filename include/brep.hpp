@@ -56,61 +56,10 @@ class Coordinate_change {
 template <int n_param>
 class Parametric {
   public:
-  //! \brief Represents the result of a `nearest_params()` calculation,
-  //! \details which may or may not have found a feasible result.
-  struct Nearest_parameters {
-    Mat<n_param> params; //!< \brief the parameters of the nearest point on the entity, if found
-    bool is_feasible; //!< \brief `true` iff a feasible nearest point was found
-  };
-
-  //! \brief Represents an intersection between a line (defined by 2 points) and some parametric geometry.
-  struct Intersection_parameters {
-    Mat<n_param> params; //!< \brief the parameters of the intersection point on the parametric geometry
-    double interp_coef; //!< \brief coefficient of the intersection point as an interpolation between the 2 line points
-  };
-
-  //! \brief Represents a constraint function for a `nearst_params()` calculation.
-  typedef std::function<bool(Mat<n_param>)> Constraint;
-
   virtual ~Parametric() = default;
 
   //! \brief Obtains the point at parameters `params`.
   virtual Mat<3> point(Mat<n_param> params) const = 0;
-
-  /*! \brief Finds the parameters of the point on the entity nearest to `point`,
-   * subject to a constraint, if that point is in the interior.
-   * \details This is designed as a helper function to a robust and computationally efficient implementation of
-   * `Trimmed_surface::nearest_point`, so its behavior might be confusing if considered in isolation.
-   * Derived classes must implement this member function.
-   *
-   * Consider the problem of finding the parameter vector `param`
-   * to minimize the distance `(point - this->point(param)).norm()`
-   * subject to the constraint that `is_feasible(param)` must be `true`
-   * and the distance must be less than `max_distance`.
-   * If the solution to this problem is in the interior of the entity
-   * (`0 < param(i) && param(i) < 1` for all `i` in [0, `n_param`)),
-   * then the implementation must return it as a `Nearest_parameters`
-   * with `Nearest_parameters::is_feasible` set to `true`.
-   * If there is no solution, it must return a `Nearest_parameters` with arbitrary `params`
-   * and `Nearest_parameters::is_feasible` set to `false`.
-   * Implementations may optionally include boundary points in their search.
-   */
-  virtual Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const = 0;
-
-  virtual std::optional<Mat<2>> nearest_parameters(Mat<3> point) const {return {};}
-
-  /*! \brief Finds the nearest point on the entity to `p`, at least if that point is on the interior.
-   * \details Wrapper for `nearest_params()` with no constraints applied.
-   * \warning This is mostly for testing.
-   * Due to the implementor-defined behavior for boundary points, it may not always give you what you expect.
-   */
-  Mat<3> nearest_point(Mat<3> p) const {
-    return point(nearest_params(p, [](Mat<n_param>){return true;}, default_max_dist).params);
-  }
-
-  //! \brief returns the set of intersections between the infinite line passing through `points` and `this`
-  //! \attention for `n_param == 1`, the calculation shall be treated as 2D and the last coordinate shall be ignored
-  virtual std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const = 0;
 
   /*! \brief May reparameterize the entity to keep parameters in [0, 1].
    * \details For infinite entities (e.g., `Plane`),
@@ -142,13 +91,6 @@ class Parametric {
     return bounds;
   }
 
-  /*! \brief whether it is necessary to check the boundary curves of a `Trimmed_surface` of this surface
-   * even if a feasible nearest point was found.
-   * \details The default implementation returns `true`,
-   * which should be correct for most derived classes.
-   */
-  virtual bool must_check_boundary() const {return true;}
-
   //! \brief returns the parameter bounds in the original IGES definition (low, high)
   virtual Mat<2, n_param> orig_param_bounds() const = 0;
 };
@@ -165,18 +107,6 @@ class Transformed : public Parametric<n_param> {
   //! \note Acquires ownership of `param`!
   Transformed(Parametric<n_param>* param, Coordinate_change coord) : _param{param}, _coord{coord} {}
   Mat<3> point(Mat<n_param> params) const override {return _coord.to_model(_param->point(params));}
-  Parametric<n_param>::Nearest_parameters nearest_params(
-    Mat<3> p, Parametric<n_param>::Constraint is_feasible, double max_distance
-  ) const override {
-    return _param->nearest_params(_coord.to_definition(p), is_feasible, max_distance);
-  }
-  typedef typename Parametric<n_param>::Intersection_parameters Inter_par;
-  std::vector<Inter_par> intersection_params(Mat<3, 2> points) const override {
-    for (int col = 0; col < 2; ++col) points(all, col) = _coord.to_definition(points(all, col));
-    return _param->intersection_params(points);
-  }
-  //! \brief forwards to transformed entity
-  bool must_check_boundary() const override {return _param->must_check_boundary();}
   //! \brief forwards to transformed entity
   Mat<2, n_param> orig_param_bounds() const override {return _param->orig_param_bounds();}
   private:
@@ -192,9 +122,6 @@ class Line_segment : public Parametric<1> {
   Line_segment(Mat<3, 2> endpoints);
   inline Mat<3> point(Mat<1> params) const override {return _endpoints*Mat<2>{1. - params(0), params(0)};}
   inline double length() const {return _length;}
-  //! \details Endpoints are included in nearest point search.
-  Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
-  std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
   Mat<2, 1> orig_param_bounds() const override;
   private:
   Mat<3, 2> _endpoints;
@@ -214,8 +141,6 @@ class Circular_arc : public Parametric<1> {
    */
   Circular_arc(Mat<3> center, double radius, double start_angle, double end_angle);
   Mat<3> point(Mat<1> params) const override;
-  Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
-  std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
   Mat<2, 1> orig_param_bounds() const override;
   private:
   Mat<3> _center;
@@ -229,11 +154,6 @@ class Plane : public Parametric<2> {
   public:
   //! \brief Specify `origin` and `coord_vectors` such that `point(p)` will yield `origin + coord_vectors*p`.
   inline Plane(Mat<3> origin, Mat<3, 2> coord_vectors) : _origin{origin}, _vecs{coord_vectors} {}
-  //! \note Does not include boundary points in search.
-  Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible,
-                                    double max_distance) const override;
-  std::optional<Mat<2>> nearest_parameters(Mat<3> point) const override;
-  std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
   inline Mat<3> point(Mat<2> params) const override {return _origin + _vecs*params;}
   /*! \brief Reparameterizes the plane
    * to contain the points `point(p)` where `bounds(i, 0) <= p(i) && p(i) <= bounds(i, 1)`.
@@ -242,8 +162,6 @@ class Plane : public Parametric<2> {
    */
   Mat<2, 2> reparameterize(Mat<2, 2> bounds) override;
   Mat<2, 2> reparameterize(const std::vector<Mat<3>>& points) override;
-  //! \brief returns `false`; if the nearest point on the plane is feasible, there is no need to check the boundary
-  inline bool must_check_boundary() const override {return false;}
   Mat<2, 2> orig_param_bounds() const override;
   private:
   Mat<3> _origin;
@@ -266,7 +184,7 @@ class Revolution_surface : public Parametric<2> {
    * \param start_angle Same behavior and requirements as for `Circular_arc::Circular_arc()`
    * \param end_angle Same behavior and requirements as for `Circular_arc::Circular_arc()`
    */
-  Revolution_surface(Parametric<1>* generatrix, Line_segment axis, Int n_div,
+  Revolution_surface(Parametric<1>* generatrix, Line_segment axis,
                      double start_angle = 0, double end_angle = 2*constants::pi);
   //! \brief Rotates `p` about the axis by `angle`.
   //! \details Helper function made available to you cause why not?
@@ -276,55 +194,30 @@ class Revolution_surface : public Parametric<2> {
    * and `param(1) = 1.` yields `end_angle`.
    */
   Mat<3> point(Mat<2> params) const override;
-  //! \note Includes boundary points in search.
-  Nearest_parameters nearest_params(Mat<3> point, Constraint is_feasible, double max_distance) const override;
-  std::vector<Intersection_parameters> intersection_params(Mat<3, 2> points) const override;
   Mat<2, 2> orig_param_bounds() const override;
   private:
-  class _Find_nearest;
-  class _Find_intersects;
-  double _unlimited_best_angle(Mat<3> arc_point, Mat<3> radius) const;
-  double _limited_best_angle(Mat<3> arc_point, Mat<3> radius) const;
-  Mat<3> _best_point(Mat<3> arc_point, Mat<3> radius) const;
   std::unique_ptr<Parametric<1>> _generatrix;
   Line_segment _axis;
   Mat<3> _unit_axis;
-  Int _n_div;
   double _start_angle;
   double _end_angle;
-  Tree_curve _tree;
 };
 
 template <int n_param>
 class Nurbs : public Parametric<n_param> {
   public:
-  Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points, Int n_div,
+  Nurbs(std::vector<Array<double>> knots, Array<double> weights, Array<double> control_points,
         Mat<2, n_param> param_bounds);
   Mat<3> point(Mat<n_param> params) const override;
-  Parametric<n_param>::Nearest_parameters
-    nearest_params(Mat<3> point, Parametric<n_param>::Constraint is_feasible, double max_distance) const override;
-  std::vector<typename Parametric<n_param>::Intersection_parameters>
-    intersection_params(Mat<3, 2> points) const override;
   Mat<2, n_param> orig_param_bounds() const override;
   private:
   Int _find_knot(int i_dim, double param) const;
-  struct _Nearest_params {
-    Mat<3> target;
-    Mat<n_param> params;
-    bool is_feasible;
-    double dist_sq;
-    Int n_eval;
-  };
-  void _recursive_nearest(_Nearest_params&, std::array<Int, n_param> start_node, Int size,
-                          Parametric<n_param>::Constraint is_feasible) const;
-  double _max_deriv;
-  std::vector<Array<double>> _knots;
   // finds the knot at the start of the interval bracketing `param` along the `i_dim`th parameter axis
+  std::vector<Array<double>> _knots;
   std::array<Int, n_param> _n_basis;
   std::array<int, n_param> _degree;
   Array<double> _weights;
   Array<double> _control_points;
-  Int _n_div;
   Mat<2, n_param> _orig_bounds;
 };
 
@@ -427,6 +320,7 @@ class Geom_2d : public Surface_geom {
   next::Sequence<Mat<3>> points() override;
   private:
   std::vector<std::unique_ptr<Parametric<1>>> _curves;
+  std::vector<Tree_curve> _tree_curves;
 };
 
 //! \brief a `Surface_geom` consisting of a set of 3D `Trimmed_surface`s

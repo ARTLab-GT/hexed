@@ -10,20 +10,6 @@ TEST_CASE("Line_segment") {
   hexed::brep::Line_segment seg(endpoints);
   REQUIRE_THAT(seg.point(hexed::Mat<1>{.1}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{0.1, 0.1, 1.}, hexed::math::Approx_equal(0., 1e-12)));
-  REQUIRE_THAT(seg.nearest_point(hexed::Mat<3>{1., 0., 0.}),
-               Catch::Matchers::RangeEquals(hexed::Mat<3>{0.5, 0.5, 1.}, hexed::math::Approx_equal(0., 1e-12)));
-  REQUIRE_THAT(seg.nearest_point(hexed::Mat<3>{-1., 0., 1.}),
-               Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., 1.}, hexed::math::Approx_equal(0., 1e-12)));
-  REQUIRE_THAT(seg.nearest_point(hexed::Mat<3>{2., 1., 1.}),
-               Catch::Matchers::RangeEquals(hexed::Mat<3>{1., 1., 1.}, hexed::math::Approx_equal(0., 1e-12)));
-  hexed::Mat<3, 2> points;
-  points << 0., .5,
-            .6, .6,
-            1., 1.;
-  auto inter_points = seg.intersection_params(points);
-  REQUIRE(inter_points.size() == 1);
-  REQUIRE(inter_points[0].params(0) == Catch::Approx(.6));
-  REQUIRE(inter_points[0].interp_coef == Catch::Approx(1.2));
 }
 
 TEST_CASE("Circular_arc") {
@@ -33,37 +19,6 @@ TEST_CASE("Circular_arc") {
     Catch::Matchers::RangeEquals(hexed::Mat<3>{.1 - 10*std::sqrt(.5), .1 + 10*std::sqrt(.5), .1},
     hexed::math::Approx_equal())
   );
-  REQUIRE_THAT(
-    arc.nearest_point(hexed::Mat<3>{-9.9, 10.1, 5.}),
-    Catch::Matchers::RangeEquals(hexed::Mat<3>{.1 - 10*std::sqrt(.5), .1 + 10*std::sqrt(.5), .1},
-    hexed::math::Approx_equal())
-  );
-  REQUIRE_THAT(
-    arc.nearest_point(hexed::Mat<3>{10.1, 10.1, 5.}),
-    Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, 10.1, .1},
-    hexed::math::Approx_equal())
-  );
-  REQUIRE_THAT(
-    arc.nearest_point(hexed::Mat<3>{-9.9, -10.1, 5.}),
-    Catch::Matchers::RangeEquals(hexed::Mat<3>{-9.9, .1, .1},
-    hexed::math::Approx_equal())
-  );
-  hexed::Mat<3, 2> points;
-  points <<  -4.9,  -4.9,
-             10.1,    .1,
-               .1,    .1;
-  auto inter_points = arc.intersection_params(points);
-  REQUIRE(inter_points.size() == 1);
-  REQUIRE(inter_points[0].params(0) == Catch::Approx(1./3.));
-  REQUIRE(inter_points[0].interp_coef == Catch::Approx(1. - std::sqrt(.75)));
-  points << -10.9,    .1,
-               .1,  11.1,
-               .1,    .1;
-  REQUIRE(arc.intersection_params(points).size() == 2);
-  points << -19.9,    .1,
-               .1,  20.1,
-               .1,    .1;
-  REQUIRE(arc.intersection_params(points).size() == 0);
 }
 
 TEST_CASE("Plane") {
@@ -76,28 +31,6 @@ TEST_CASE("Plane") {
   hexed::brep::Plane plane(origin, coords);
   REQUIRE_THAT(plane.point(hexed::Mat<2>{.1, .2}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{.2, .3, .3}, hexed::math::Approx_equal()));
-  REQUIRE_THAT(plane.nearest_point(hexed::Mat<3>{.5, 0.1, 1.1}),
-               Catch::Matchers::RangeEquals(hexed::Mat<3>{.5, .6, .6}, hexed::math::Approx_equal()));
-  hexed::Mat<3, 2> endpoints;
-  endpoints <<
-    1., 1.,
-    .5, .5,
-    2., 0.;
-  auto sects = plane.intersection_params(endpoints);
-  REQUIRE(sects.size() == 1);
-  REQUIRE(sects[0].params[0] == Catch::Approx(.9));
-  REQUIRE(sects[0].params[1] == Catch::Approx(.4));
-  REQUIRE(sects[0].interp_coef == Catch::Approx(.75));
-  endpoints <<
-    -1., -1.,
-    .5, .5,
-    2., 0.;
-  REQUIRE(plane.intersection_params(endpoints).size() == 0);
-  endpoints <<
-    1., 1.,
-    5., 5.,
-    2., 0.;
-  REQUIRE(plane.intersection_params(endpoints).size() == 0);
   hexed::Mat<2, 2> bounds;
   bounds << .4, .8,
             .4, 1.;
@@ -118,95 +51,13 @@ TEST_CASE("Revolution_surface") {
     0.01, 0.01,
     0.01, 1.01;
   hexed::brep::Revolution_surface surf(new hexed::brep::Line_segment(generatrix_endpoints),
-                                       hexed::brep::Line_segment(axis_endpoints), 1024, 0., hexed::constants::pi);
+                                       hexed::brep::Line_segment(axis_endpoints), 0., hexed::constants::pi);
   REQUIRE_THAT(surf.rotate(hexed::Mat<3>{.01 + std::sqrt(.5), .01 + std::sqrt(.5), .9}, 1.25*hexed::constants::pi),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{0.01, -.99, .9}, hexed::math::Approx_equal()));
   REQUIRE_THAT(
     surf.point(hexed::Mat<2>{.5, .5}),
     Catch::Matchers::RangeEquals(hexed::Mat<3>{0.01, 1.01, .51}, hexed::math::Approx_equal(0, 1e-3))
   );
-  REQUIRE_THAT(
-    surf.nearest_point(hexed::Mat<3>{0.01, 1.01, .51}),
-    Catch::Matchers::RangeEquals(hexed::Mat<3>{0.01, 1.01, .51}, hexed::math::Approx_equal(0, 1e-3))
-  );
-  REQUIRE_THAT(
-    surf.nearest_point(hexed::Mat<3>{1.01, 1.01, .71}),
-    Catch::Matchers::RangeEquals(hexed::Mat<3>{std::sqrt(.5) + .01, std::sqrt(.5) + .01, .71},
-                                 hexed::math::Approx_equal(0, 1e-3))
-  );
-  REQUIRE_THAT(
-    surf.nearest_point(hexed::Mat<3>{-.99, -.99, .71}),
-    Catch::Matchers::RangeEquals(hexed::Mat<3>{-.99, 0.01, .71}, hexed::math::Approx_equal(0, 1e-3))
-  );
-  REQUIRE_THAT(
-    surf.nearest_point(hexed::Mat<3>{0.01, 1.01, 2.01}),
-    Catch::Matchers::RangeEquals(hexed::Mat<3>{0.01, 1.01, 1.01}, hexed::math::Approx_equal(0, 1e-3))
-  );
-  REQUIRE_THAT(
-    surf.nearest_point(hexed::Mat<3>{1.01, -.99, -.11}),
-    Catch::Matchers::RangeEquals(hexed::Mat<3>{1.01, 0.01, 0.01}, hexed::math::Approx_equal(0, 1e-3))
-  );
-  hexed::Mat<3> n = surf.nearest_point(hexed::Mat<3>{0.01, 0.01, .11});
-  REQUIRE(!std::isnan(n(0)));
-  REQUIRE(!std::isnan(n(1)));
-  REQUIRE(n(2) == Catch::Approx(.11).epsilon(1e-2));
-  SECTION("intersections") { // note: the following calculations should be exact up to rounding errors
-    hexed::Mat<3, 2> endpoints;
-    endpoints <<
-      -0.99, 1.01,
-      .51, .51,
-      .01, 1.01;
-    auto sections = surf.intersection_params(endpoints);
-    REQUIRE(sections.size() == 2);
-    std::vector<double> test {sections[0].params(0), sections[1].params(0)};
-    std::vector<double> correct {.5*(1 - std::sqrt(.75)), .5*(1 + std::sqrt(.75))};
-    REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
-    test = std::vector<double>{sections[0].interp_coef, sections[1].interp_coef};
-    correct = std::vector<double>{.5*(1 - std::sqrt(.75)), .5*(1 + std::sqrt(.75))};
-    REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
-    test = std::vector<double>{sections[0].params(1), sections[1].params(1)};
-    correct = std::vector<double>{5./6., 1./6.};
-    REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
-    SECTION("horizontal section line and only 1 intersection") {
-      endpoints <<
-        .51, .51,
-        -.99, 1.01,
-        1./7. + .01, 1./7. + .01;
-      auto sections = surf.intersection_params(endpoints);
-      REQUIRE(sections.size() == 1);
-      std::vector<double> test {sections[0].params(0)};
-      std::vector<double> correct {1./7.};
-      REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
-      test = std::vector<double>{sections[0].interp_coef};
-      correct = std::vector<double>{.5*(1 + std::sqrt(.75))};
-      REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
-    }
-    SECTION("annular surface") {
-      hexed::Mat<3, 2> new_generatrix_endpoints;
-      new_generatrix_endpoints <<
-        1.01, 2.01,
-        0.01, 0.01,
-        0.01, 0.01;
-      hexed::brep::Revolution_surface new_surf(new hexed::brep::Line_segment(new_generatrix_endpoints),
-                                               hexed::brep::Line_segment(axis_endpoints), 1024,
-                                               0., hexed::constants::pi);
-      endpoints <<
-        1.01, 1.01,
-        1.01, 1.01,
-        1.00, 0.00;
-      auto sections = new_surf.intersection_params(endpoints);
-      REQUIRE(sections.size() == 1);
-      std::vector<double> test {sections[0].params(0)};
-      std::vector<double> correct {std::sqrt(2.) - 1.};
-      REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
-      test = std::vector<double>{sections[0].interp_coef};
-      correct = std::vector<double>{.99};
-      REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
-      test = std::vector<double>{sections[0].params(1)};
-      correct = std::vector<double>{.25};
-      REQUIRE_THAT(test, Catch::Matchers::UnorderedRangeEquals(correct, hexed::math::Approx_equal(0, 1e-6)));
-    }
-  }
 }
 
 TEST_CASE("Trimmed_surface") {
