@@ -31,9 +31,6 @@ TEST_CASE("Block") {
     REQUIRE(vert0.alive());
     REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2},
                  hexed::math::Approx_equal()));
-    vert0.apply_relax(); // before first call to `calc_relax`, `apply_update` should do nothing
-    REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2},
-                 hexed::math::Approx_equal()));
     hexed::next::Vertex vert1({.3, -.1, .4}, 4);
     hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr1(nullptr);
     vert1.pair(ptr1);
@@ -88,22 +85,6 @@ TEST_CASE("Block") {
       for (auto edge : {&edge0, &edge1, &edge2}) {
         REQUIRE_THAT(edge->point({3}), Catch::Matchers::RangeEquals(hexed::Mat<3>{3.3, 2.9, 3.4}/3.));
       }
-    }
-
-    SECTION("vertex shadowing") {
-      hexed::next::Vertex vert2({2., 2., 2.}, 4);
-      hexed::next::Vertex vert3({0., 0., 0.}, 4);
-      REQUIRE(!vert2.are_shadows(vert3));
-      REQUIRE(!vert3.are_shadows(vert2));
-      vert2.shadow(vert3);
-      REQUIRE(vert2.are_shadows(vert3));
-      REQUIRE(vert3.are_shadows(vert2));
-      REQ_VEC_EQ(vert2.point({}), hexed::Mat<3>{1., 1., 1.});
-      REQ_VEC_EQ(vert3.point({}), hexed::Mat<3>{1., 1., 1.});
-      vert2.set_pos({4., 1., 1.});
-      vert3.set_pos({1., 5., 1.});
-      REQ_VEC_EQ(vert2.point({}), hexed::Mat<3>{1., 5., 1.});
-      REQ_VEC_EQ(vert3.point({}), hexed::Mat<3>{1., 5., 1.});
     }
 
     SECTION("vertex shared value") {

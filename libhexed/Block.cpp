@@ -67,19 +67,13 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , snapped_edge{-1}
 , snapped_endpoint{-1}
 , _pos{pos}
-, _update{Mat<3>::Zero()}
-, _step_sz{-1}
 , _edges(this)
 , _elems(this)
 , _glued_to(this)
-, _shadowed(this)
-, _shadows(this)
 , _shared_value{0}
 {}
 
-Vertex::~Vertex() {
-  for (auto v : _shadows.theirs()) v->set_pos(point({}));
-}
+Vertex::~Vertex() {}
 
 double Vertex::nominal_size() const {
   double nom_sz = huge;
@@ -88,14 +82,6 @@ double Vertex::nominal_size() const {
     nom_sz = std::min(nom_sz, elem->nominal_size());
   }
   return nom_sz;
-}
-
-void Vertex::shadow(Vertex& that) {
-  that.set_pos(.5*(that.point({}) + point({})));
-  HEXED_ASSERT(that._shadowed.get() != this, "two `Vertex`s cannot shadow each other");
-  HEXED_ASSERT(!_shadowed || !that._shadowed, "one of the vertices must not already be shadowing");
-  if (_shadowed) that._shadowed.pair(_shadows);
-  else _shadowed.pair(that._shadows);
 }
 
 void Vertex::eat(Vertex& that) {
@@ -121,24 +107,6 @@ void Vertex::glue(Element_shape& to, std::vector<double> coords) {
   _glued_coords = coords;
 }
 
-void Vertex::calc_relax() {
-  _update = _desired_pos() - _pos;
-}
-
-void Vertex::apply_relax() {
-  if (_shadowed || glued()) return;
-  Mat<3> u = _update;
-  for (auto s : _shadows.theirs()) u += s->_update;
-  _pos += u/(1 + _shadows.theirs().size());
-}
-
-double Vertex::badness(Mat<3> proposed_pos) const {
-  Mat<3> des_pos = _desired_pos();
-  for (auto s : _shadows.theirs()) des_pos += s->_desired_pos();
-  des_pos /= 1 + _shadows.theirs().size();
-  return (proposed_pos - des_pos).norm();
-}
-
 void Vertex::set_pos(Mat<3> p) {
   if (!glued()) {
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
@@ -146,7 +114,6 @@ void Vertex::set_pos(Mat<3> p) {
       _pos(i_dim) = p(i_dim);
     }
   }
-  _step_sz = -1;
 }
 
 Mat<3> Vertex::nominal_position() const {
@@ -288,24 +255,24 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
       printers::warn("badGradient" + std::to_string(state.has_glued_neighbor), true);
     }
     #endif
-    _step_sz = ns;
+    double step_sz = ns;
     double repeat_factor [] {10., 2., 2.};
     double end_factor [] {10., .9, 1.};
-    for (int i = 0; i < 3; ++i) if (_step_sz > min_step) {
+    for (int i = 0; i < 3; ++i) if (step_sz > min_step) {
       do {
-        if (_step_sz < min_step) {
+        if (step_sz < min_step) {
           _pos = orig_pos;
           new_state.objective = state.objective;
           break;
         }
-        _step_sz /= repeat_factor[i];
-        _pos = satisfy_constraints(orig_pos + _step_sz*direction);
+        step_sz /= repeat_factor[i];
+        _pos = satisfy_constraints(orig_pos + step_sz*direction);
         Mat<3> new_target = get_target(_pos);
         double dist = (new_target - _pos).norm();
         if (dist > orig_dist) _pos += (dist - orig_dist)/dist*(new_target - _pos);
         new_state = _compute_state();
       } while (!(new_state.feasible && new_state.objective < state.objective));
-      _step_sz *= end_factor[i];
+      step_sz *= end_factor[i];
     }
   }
   int snap_iters = 0;
@@ -344,17 +311,6 @@ bool Vertex::snap_to(Mat<3> target) {
 double Vertex::quality_objective() {
   auto state = _compute_state(false);
   HEXED_ASSERT(state.feasible, "infeasible state");
-  return state.objective;
-}
-
-double Vertex::quality_gradient_norm_sq() {
-  auto state = _compute_state(true);
-  return state.gradient.squaredNorm();
-}
-
-double Vertex::quality() {
-  auto state = _compute_state();
-  HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
   return state.objective;
 }
 
@@ -421,14 +377,12 @@ Mat<3> Vertex::_get_pos() const {
 }
 
 Mat<3> Vertex::_point(const std::vector<int>&, Int recursion_depth) const {
-  // usually, the vertex will not be glued or a shadow and we can just return the `_pos`
-  if (_shadowed) return _shadowed.value().point({}, recursion_depth + 1);
+  // usually, the vertex will not be glued and we can just return the `_pos`
   if (!_glued_to) return _get_pos();
   return _glued_to.value().interpolate(_glued_coords, recursion_depth + 1);
 }
 
 Mat<3> Vertex::unwarped_point() const {
-  HEXED_ASSERT(!_shadowed, "we're supposed to be done with shadowing")
   if (!_glued_to) return _get_pos();
   int nd = _glued_to->n_dim();
   int nv = math::pow(2, nd);
@@ -446,59 +400,6 @@ Mat<3> Vertex::unwarped_point() const {
   Mat<3> p;
   for (int i_dim = 0; i_dim < 3; ++i_dim) p(i_dim) = math::interp(vert_pos(all, i_dim), coords);
   return p;
-}
-
-Mat<3> Vertex::_desired_pos() const {
-  Mat<3> des_pos = Mat<3>::Zero();
-  HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute optimize postion");
-  HEXED_ASSERT(_elems.theirs()[0], "element is null");
-  #if 1
-  auto n = neighbors();
-  for (const Vertex* vert : n) {
-    des_pos += vert->point({});
-  }
-  des_pos = .1*_pos + .9*des_pos/n.size();
-  #else
-  int nd = _elems.theirs()[0]->n_dim();
-  int nv = math::pow(2, nd);
-  double tot_sz = 0;
-  for (auto elem : _elems.theirs()) {
-    HEXED_ASSERT(elem, "element is null");
-    if (elem->glued()) continue;
-    double nom_sz = elem->nominal_size();
-    int i_this = _get_index(*elem);
-    Mat<3, dyn> verts(3, nv);
-    for (int i_vert = 0; i_vert < nv; ++i_vert) {
-      // we can use `_pos` because `Mesh_blocks` just set that to `point({})`
-      verts(all, i_vert) = elem->vertex(i_vert)._pos;
-    }
-    HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
-    if (!elem->deformed) return elem->nominal_position(i_this);
-    std::vector<int> coords(nd);
-    for (int i_dim = 0; i_dim < nd; ++i_dim) coords[i_dim] = i_this/vstride(nd, i_dim)%2*vstride(nd, i_dim);
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      Mat<3, 2> edges;
-      int opposite = i_this + (vstride(nd, i_dim) - 2*coords[i_dim]);
-      bool degenerate = false;
-      for (int i_edge = 0; i_edge < 2; ++i_edge) {
-        if (i_edge < nd - 1) {
-          int j_dim = (i_dim + i_edge + 1)%nd;
-          int start = opposite - coords[j_dim];
-          edges(all, i_edge) = verts(all, start + vstride(nd, j_dim)) - verts(all, start);
-          if (edges(all, i_edge).norm() < 1e-2*nom_sz) degenerate = true;
-        } else edges(all, i_edge) = math::sign(!i_dim)*nom_sz*Mat<3>::Unit(2);
-      }
-      if (!degenerate) {
-        tot_sz += 1/nom_sz;
-        des_pos += (verts(all, opposite) + math::sign(coords[i_dim])/nom_sz*edges(all, 0).cross(edges(all, 1)))
-                   /nom_sz;
-      }
-    }
-  }
-  if (tot_sz == 0) return _pos;
-  des_pos = .9*des_pos/tot_sz + .1*_pos;
-  #endif
-  return des_pos;
 }
 
 int Vertex::_get_index(const Element_shape& elem) const {
@@ -949,16 +850,6 @@ Sequence<Boundary_block&> Mesh_blocks::boundary_sides() {
       [&faces](){return 5*faces.size();},
     };
   } else return Sequence<Boundary_block&>();
-}
-
-void Mesh_blocks::relax_vertices() {
-  auto vs = verts();
-  #pragma omp parallel for
-  for (auto& vert : vs) vert.set_pos(vert.point({}));
-  #pragma omp parallel for
-  for (auto& vert : vs) vert.calc_relax();
-  #pragma omp parallel for
-  for (auto& vert : vs) vert.apply_relax();
 }
 
 Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face) {
