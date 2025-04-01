@@ -235,9 +235,12 @@ class Trimmed_surface {
   /*!
    * \param surface Parametric surface to be trimmed. Acquires ownership of `surface`.
    * \param curves Bounding curves _in model space_, not parameter space.
-   *               These curves should (approximately) lie on the surface.
-   *               Any deviation from the surface will be a source of numerical error.
-   *               \todo Implement another constructor that accepts curves in parameter space.
+   *     These curves should (approximately) lie on the surface.
+   *     Any deviation from the surface will be a source of numerical error.
+   *     \todo Implement another constructor that accepts curves in parameter space.
+   * \param is_model_space For each curve, `true` if the curve provides coordinates in model space
+   *     and `false` if the curve provides coordinates in the parameter space of the surface
+   *     (in which case the x2 coordinate should be zero).
    * \param n_div_min Minimum number of subdivisions for dividing curves/surfaces into panels
    *     for low-precision calculations.
    *     Must be a power of 2.

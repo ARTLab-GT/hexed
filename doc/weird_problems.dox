@@ -1,0 +1,65 @@
+/*! \page weird_problems Weird Problems
+
+I have repeatedly found myself debugging frustrating problems and thinking
+"I swear I've seen this problem before, but I can't for the life of me remember how I fixed it!".
+So, this page is a record of random programming problems I've encountered that had non-intuitive solutions.
+The emphasis is on describing what happened as specifically as possible so that future me has all the facts.
+I shall not presume to draw too many inferences about things I still don't fully understand.
+
+__Error:__
+~~~{.unparsed}
+/home/micaiah/Desktop/hexed/libhexed/Block.cpp:187:9: runtime error: member access within address 0x72c03c52ac80 which does not point to an object of type 'Block'
+0x72c03c52ac80: note: object has invalid vptr
+~~~
+
+__Solution:__
+Initialization of base class referenced one of its own members:
+~~~
+class Block
+{
+  public:
+  int n_dim
+  Block(int, ...);
+};
+
+class Mesh_element : public Block
+{
+  ...
+}
+
+Mesh_element::Mesh_element(...) : Block(n_dim, ...)
+~~~
+
+__Error:__
+~~~{.unparsed}
+undefined reference to `vtable for hexed::Mortal'
+~~~
+
+__Solution:__
+`hexed::Mortal` had declared a virtual destructor in the header file which was never defined in the `.cpp` file.
+
+__Error:__
+GCC mistakenly thinks some `Eigen` object may be uninitialized:
+~~~{.unparsed}
+/home/micaiah/Desktop/hexed/build/include/Eigen/src/Core/functors/BinaryFunctors.h:80:122: warning: ‘unit_avg’ may be used uninitialized [-Wmaybe-uninitialized]
+   80 |   EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE result_type operator() (const LhsScalar& a, const RhsScalar& b) const { return a * b; }
+      |                                                                                                                        ~~^~~
+/home/micaiah/Desktop/hexed/libhexed/brep.cpp: In member function ‘void hexed::brep::Trimmed_surface::_recursive_nearest(hexed::Nearest_point<3>&, hexed::Mat<2, 1>&, hexed::Int, hexed::Int, hexed::Int, bool) const’:
+/home/micaiah/Desktop/hexed/libhexed/brep.cpp:634:10: note: ‘unit_avg’ declared here
+  634 |   Mat<3> unit_avg = average(1).vector()/norm;
+~~~
+Clearly, `unit_avg` is in fact initialized.
+
+__Solution:__
+Replace
+~~~
+    average(1).vector() += (average(1) - average(0)).vector().norm()*sin/cos*math::sign(scale > 0)*unit_avg;
+~~~
+with
+~~~
+    double scale1 = (average(1) - average(0)).vector().norm()*sin/cos*math::sign(scale > 0);
+    for (int i = 0; i < 3; ++i) average(1)[i] += scale1*unit_avg(i);
+~~~
+Not sure why this works, or if it will be in any way repeatable, but at least for this time, it shuts GCC up.
+
+*/

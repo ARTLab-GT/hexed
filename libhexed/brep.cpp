@@ -642,7 +642,8 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
     average(1) *= scale;
     double sin = radii[1]/norm;
     double cos = std::sqrt(1 - sin*sin);
-    average(1).vector() += (average(1) - average(0)).vector().norm()*sin/cos*math::sign(scale > 0)*unit_avg;
+    double scale1 = (average(1) - average(0)).vector().norm()*sin/cos*math::sign(scale > 0);
+    for (int i = 0; i < 3; ++i) average(1)[i] += scale1*unit_avg(i);
     double r = radii[0] + (radii[1] + 1e-3)*average(1).vector().norm()/norm;
     compute = (average(0) - average(1)).vector().norm() < r;
   }
