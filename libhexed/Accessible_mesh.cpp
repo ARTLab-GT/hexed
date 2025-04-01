@@ -859,8 +859,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   for (Int i_relax = 0;
        i_relax < 1000 && (i_relax < 30
                           || (snaps_failed == 0 && obj_monitor.max() - obj_monitor.min()
-                                                   > 1e-3*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
-                          || dist_monitor.max() - dist_monitor.min() > 1e-3*dist_monitor.min());
+                                                   > 1e-2*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
+                          || dist_monitor.max() - dist_monitor.min() > 1e-2*dist_monitor.min());
        ++i_relax) {
     #if HEXED_VIS_MESH_OPT
     {
