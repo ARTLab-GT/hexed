@@ -92,12 +92,8 @@ class Vertex : public Block {
   Sequence<Edge&> edges() {return _edges.theirs().dereference();}
   Sequence<Element_shape&> elements() {return _elems.theirs().dereference();}
   inline bool glued() const {return _glued_to;}
-  void shadow(Vertex& that);
-  inline void unshadow() {_shadowed.unpair();}
-  inline bool are_shadows(Vertex& that) const {return _shadowed.get() == &that || that._shadowed.get() == this;}
-  inline bool is_shadow() const {return _shadowed;} //!< \brief Returns `true` is `this` is shadowing another vertex.
-  //! \brief Returns `true` if `this` is in control of its own position (i.e. is neither glued nor shadowing).
-  inline bool independent() const {return !glued() && !is_shadow();}
+  //! \brief Computes the position of the vertex without any face/edge warping.
+  Mat<3> unwarped_point() const;
 
   /*! \brief Combines this vertex with `that` and steals its resources.
    * \details All `Edge`s and `Element_shape`s that currently have pointers to `that`
@@ -122,11 +118,6 @@ class Vertex : public Block {
    */
   void glue(Element_shape& to, std::vector<double> coords);
 
-  //! \brief Computes a hypothetical new position for this vertex to improve mesh quality, but doesn't apply it yet
-  void calc_relax();
-  //! \brief Applies the update computed with `calc_update`.
-  void apply_relax();
-  double badness(Mat<3> proposed_pos) const;
   void set_pos(Mat<3> p);
   Mat<3> nominal_position() const;
   bool mobile() const;
@@ -138,12 +129,10 @@ class Vertex : public Block {
   Improve_quality_result improve_quality();
   Improve_quality_result improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                          std::function<Mat<3>(Mat<3>)> satisfy_constraints,
-                                         bool limit_direction = true);
+                                         bool limit_direction = true, bool snap = true);
   bool snap_to(Mat<3> target);
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
   double quality_objective();
-  double quality_gradient_norm_sq();
-  double quality();
   int n_elements() const; //!< \brief The number of elements sharing this vertex
   inline bool is_surface() const {return _edges.theirs().size();}
   /*! \brief The list of vertices that share an edge with `this`.
@@ -212,18 +201,14 @@ class Vertex : public Block {
                                 const Vertex* orig_vertex = nullptr) const;
   Improve_quality_result _improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                           std::function<Mat<3>(Mat<3>)> satisfy_constraints,
-                                          bool has_target, bool limit_direction);
+                                          bool has_target, bool limit_direction, bool snap);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
-  Mat<3> _desired_pos() const;
+  Mat<3> _get_pos() const; // fetches `_pos` with atomic reads
   int _get_index(const Element_shape&) const;
   Mat<3> _pos;
-  Mat<3> _update;
-  double _step_sz;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;
   Reciprocal_ptr<Vertex, Element_shape> _glued_to;
-  Reciprocal_ptr<Vertex, Vertex> _shadowed;
-  Reciprocal_list<Vertex, Vertex> _shadows;
   std::vector<double> _glued_coords;
   double _shared_value;
   Lock _shared_value_lock;
@@ -472,8 +457,6 @@ class Mesh_blocks {
   Sequence<Face&> faces_3d();
   //! \brief returns `edges_2d` or `faces_3d`, as appropriate
   Sequence<Boundary_block&> boundary_sides();
-  //! \brief Adjusts the position of the vertices to improve mesh quality
-  void relax_vertices();
 
   /*! \brief Constructs an element and returns it (you now own it).
    * \brief Vertex 0 of the element has position `pos`.

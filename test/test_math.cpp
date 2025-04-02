@@ -22,6 +22,9 @@ static_assert (hexed::math::log(-1, 27) == -1);
 static_assert (hexed::math::max(-2, 4, 3, 2) == 4);
 static_assert (hexed::math::max(-2, -3) == -2);
 static_assert (hexed::math::max(1, 2, 3, 4, 5) == 5);
+static_assert (hexed::math::min(-2, 4, 3, 2) == -2);
+static_assert (hexed::math::min(-2, -3) == -3);
+static_assert (hexed::math::min(1, 2, 3, 4, 5) == 1);
 
 TEST_CASE("angle_diff") {
   REQUIRE(hexed::math::angle_diff(1.1, 1.) == Catch::Approx(0.1));
@@ -192,20 +195,6 @@ TEST_CASE("proj_to_segment") {
   REQUIRE((proj - endpoints[1]).norm() == Catch::Approx(0.).scale(1.));
   proj = hexed::math::proj_to_segment(endpoints, Eigen::Vector2d{3., 0.});
   REQUIRE((proj - Eigen::Vector2d{1.5, 1.5}).norm() == Catch::Approx(0.).scale(1.));
-}
-
-TEST_CASE("to_mat") {
-  std::vector<double> vec {.1, -.3, .2};
-  REQUIRE_THAT(hexed::math::to_mat(vec), Catch::Matchers::RangeEquals(vec, hexed::math::Approx_equal()));
-}
-
-TEST_CASE("resize") {
-  hexed::Mat<4> vec {.2, -.1, .03, 6.};
-  REQUIRE_THAT(hexed::math::resize(vec, 2),
-               Catch::Matchers::RangeEquals(std::vector<double>{.2, -.1}, hexed::math::Approx_equal(0., 1e-10)));
-  REQUIRE_THAT(hexed::math::resize(vec, 6),
-               Catch::Matchers::RangeEquals(std::vector<double>{.2, -.1, .03, 6., 0., 0.},
-                                            hexed::math::Approx_equal(0., 1e-10)));
 }
 
 TEST_CASE("bounding_ball") {

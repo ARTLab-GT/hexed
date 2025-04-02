@@ -83,7 +83,7 @@ void Accessible_mesh::_offset_vertices(double offset) {
       std::vector<next::Vertex*> con_verts(nv);
       for (int i_vert = 0; i_vert < nv; ++i_vert) {
         con_verts[i_vert] = &con->element(0).active_shape().vertex(i_verts[i_vert]);
-        vert_pos(all, i_vert) = con_verts[i_vert]->point({});
+        vert_pos(all, i_vert) = con_verts[i_vert]->unwarped_point();
       }
       for (int i_vert = 0; i_vert < nv; ++i_vert) {
         Mat<3, 2> edges;
@@ -110,7 +110,7 @@ void Accessible_mesh::_offset_vertices(double offset) {
   }
   #pragma omp parallel for
   for (auto& vert : verts) {
-    vert.set_pos(vert.point({}) + offset*vert.nominal_size()*vert.offset);
+    vert.set_pos(vert.unwarped_point() + offset*vert.nominal_size()*vert.offset);
   }
 }
 
@@ -132,7 +132,29 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
         pos = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
       }
     } else {
+      #if 1
       pos(seq) = surf_geom->nearest_point(pos(seq), huge, ns/2).point();
+      #else
+      Mat<3> p0 = pos;
+      bool found = false;
+      for (auto n : vert.neighbors()) if (n) {
+        if (!n->is_surface()) {
+          p0 = n->unwarped_point();
+          found = true;
+        }
+      }
+      HEXED_ASSERT(found, "no non-surface neighbor found")
+      auto sects = surf_geom->intersections(p0(seq), pos(seq));
+      double best_sect = huge;
+      found = false;
+      for (double sect : sects) {
+        if (sect > 0 && sect < best_sect) {
+          best_sect = sect;
+          found = true;
+        }
+      }
+      if (found) pos = best_sect*pos + (1 - best_sect)*p0;
+      #endif
     }
   }
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -160,11 +182,13 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) {
     vert.set_pos(vert.nominal_position());
   }
-  _offset_vertices(.1);
+  _offset_vertices(.2);
+  #if 1
   {
     Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
     _optimize(1, 10, true);
   }
+  #endif
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.record.clear();
@@ -172,7 +196,7 @@ void Accessible_mesh::_fit_surface() {
   auto verts = _blocks.boundary_verts();
   #pragma omp parallel for
   for (next::Vertex& vert : all_verts) {
-    Mat<3> point = vert.point({});
+    Mat<3> point = vert.unwarped_point();
     vert.dijkstra_point = point;
     vert.snapped_point = -1;
     vert.snapped_edge = -1;
@@ -243,7 +267,7 @@ void Accessible_mesh::_fit_surface() {
         if (nearest.index >= 0 && nearest.distance <= d) {
           vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
           if (vert.snapped_edge >= 0) {
-            vert.dijkstra_curve_dist_sq *= 1e4;
+            vert.dijkstra_curve_dist_sq *= 100;
           }
           vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
         } else {
@@ -384,7 +408,7 @@ void Accessible_mesh::_fit_surface() {
           auto set_vertices = [&](Element& e) {
             auto& s = e.shape();
             for (int i_vert = 0; i_vert < 8; ++i_vert) {
-              s.vertex(i_vert).set_pos(shape->vertex(i_vert).point({}));
+              s.vertex(i_vert).set_pos(shape->vertex(i_vert).unwarped_point());
             }
             for (int i_face = 0; i_face < 6; ++i_face) e.face_record[i_face] = -1;
             s.extruded_direction = shape->extruded_direction;
@@ -402,9 +426,9 @@ void Accessible_mesh::_fit_surface() {
           elem.record = 2;
           std::vector<Deformed_element*> matched_elems(6, nullptr);
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
-            HEXED_ASSERT(std::isfinite(inside.shape().vertex(i_vert).point({}).squaredNorm()),
+            HEXED_ASSERT(std::isfinite(inside.shape().vertex(i_vert).unwarped_point().squaredNorm()),
                          "Vertex pos is not finite.")
-            HEXED_ASSERT(std::isfinite(surface.shape().vertex(i_vert).point({}).squaredNorm()),
+            HEXED_ASSERT(std::isfinite(surface.shape().vertex(i_vert).unwarped_point().squaredNorm()),
                          "Vertex pos is not finite.")
           }
           for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
@@ -426,7 +450,8 @@ void Accessible_mesh::_fit_surface() {
                                + j_sign*math::pow(2, 2 - j_dim)
                                + k_sign*math::pow(2, 2 - k_dim);
                   int i_snapped = shape->vertex(i_vert).snapped_edge;
-                  HEXED_ASSERT(i_snapped != -1, "Vertex and edge do not agree on whether they are snapped.");
+                  HEXED_ASSERT(i_snapped != -1 || face->edge(i_edge_matched).glued(),
+                               "vertex and edge do not agree on whether they are snapped")
                   auto& vert = match_elem.shape().vertex(i_vert);
                   vert.snapped_edge = i_snapped;
                   vert.snapped_endpoint = shape->vertex(i_vert).snapped_endpoint;
@@ -436,7 +461,7 @@ void Accessible_mesh::_fit_surface() {
                 matched_edge.snapped_edge = m;
                 if (m >= 0) matched_edges[m].emplace_back(&matched_edge);
                 for (int i_vert = 0; i_vert < 8; ++i_vert) {
-                  HEXED_ASSERT(std::isfinite(match_elem.shape().vertex(i_vert).point({}).squaredNorm()),
+                  HEXED_ASSERT(std::isfinite(match_elem.shape().vertex(i_vert).unwarped_point().squaredNorm()),
                                "Vertex pos is not finite.")
                 }
               } else {
@@ -447,7 +472,7 @@ void Accessible_mesh::_fit_surface() {
           }
           Mat<3, 8> orig_pos;
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
-            orig_pos(all, i_vert) = shape->vertex(i_vert).point({});
+            orig_pos(all, i_vert) = shape->vertex(i_vert).unwarped_point();
           }
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
             Mat<3> pos = orig_pos(all, i_vert);
@@ -478,7 +503,8 @@ void Accessible_mesh::_fit_surface() {
           for (auto p : matched_elems) if (p) check_elems.push_back(p);
           for (auto e : check_elems) {
             for (int i_vert = 0; i_vert < 8; ++i_vert) {
-              HEXED_ASSERT(std::isfinite(e->shape().vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
+              HEXED_ASSERT(std::isfinite(e->shape().vertex(i_vert).unwarped_point().squaredNorm()),
+                           "Vertex pos is not finite.")
             }
           }
         }
@@ -487,9 +513,11 @@ void Accessible_mesh::_fit_surface() {
     for (int i_element = 0; i_element < elems.size(); ++i_element) {
       if (elems[i_element].record == 2) continue;
       for (int i_vert = 0; i_vert < 8; ++i_vert) {
-        HEXED_ASSERT(std::isfinite(elems[i_element].shape().vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
+        HEXED_ASSERT(std::isfinite(elems[i_element].shape().vertex(i_vert).unwarped_point().squaredNorm()),
+                     "Vertex pos is not finite.")
         if (elems[i_element].fake_shape()) {
-          HEXED_ASSERT(std::isfinite(elems[i_element].fake_shape()->vertex(i_vert).point({}).squaredNorm()), "Vertex pos is not finite.");
+          HEXED_ASSERT(std::isfinite(elems[i_element].fake_shape()->vertex(i_vert).unwarped_point().squaredNorm()),
+                       "Vertex pos is not finite.")
         }
       }
     }
@@ -498,7 +526,8 @@ void Accessible_mesh::_fit_surface() {
         elems[i_element].destroy_shape();
       } else {
         for (int i_vert = 0; i_vert < 8; ++i_vert) {
-          elems[i_element].shape().vertex(i_vert).set_pos(elems[i_element].active_shape().vertex(i_vert).point({}));
+          Mat<3> p = elems[i_element].active_shape().vertex(i_vert).unwarped_point();
+          elems[i_element].shape().vertex(i_vert).set_pos(p);
         }
       }
     }
@@ -671,7 +700,7 @@ void Accessible_mesh::_fit_surface() {
   }
   Int n_failed = 0;
   for (auto& vert : all_verts) {
-    n_failed += !vert.snap_to(_get_snapping_target(vert, vert.point({})));
+    n_failed += !vert.snap_to(_get_snapping_target(vert, vert.unwarped_point()));
   }
   if (n_failed) {
     printers::warn(format_str(200, "%li vertices could not be snapped to the surface.\n", n_failed), true);
@@ -707,7 +736,7 @@ void Accessible_mesh::_fit_surface() {
     for (int i_point = 0; i_point < n_point; ++i_point) {
       Mat<3> p0 = line_points(0)(i_point).vector();
       Mat<3> p1 = line_points(1)(i_point).vector();
-      auto sects = surf_geom->intersections(math::resize(p0, params.n_dim), math::resize(p1, params.n_dim));
+      auto sects = surf_geom->intersections(resize(p0, params.n_dim), resize(p1, params.n_dim));
       double sect = huge;
       for (double s : sects) if (s > 0.) sect = std::min(sect, s);
       if (sect < 2.) {
@@ -821,30 +850,54 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   printers::info("id: " + std::to_string(id) + "\n");
   #endif
   Int snaps_failed = 0;
+  double total_dist = 0;
   Stopwatch watch;
   watch.start();
   double last_time = 0;
   std::string message;
+  Int snap_succeeded = -1;
   for (Int i_relax = 0;
        i_relax < 1000 && (i_relax < 30
                           || (snaps_failed == 0 && obj_monitor.max() - obj_monitor.min()
-                                                   > 1e-3*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
-                          || dist_monitor.max() - dist_monitor.min() > 1e-3*dist_monitor.min());
+                                                   > 1e-2*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
+                          || dist_monitor.max() - dist_monitor.min() > 1e-2*dist_monitor.min());
        ++i_relax) {
     #if HEXED_VIS_MESH_OPT
     {
-      auto blocks = _blocks.boundary_sides();
+      auto faces = _blocks.faces_3d();
+      for (auto& f : faces) {
+        for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+      }
+      for (auto& f : faces) {
+        for (int i_edge = 0; i_edge < 4; ++i_edge) f.reset();
+      }
+      auto edges = _blocks.edges_2d();
       #pragma omp parallel for
-      for (auto& b : blocks) b.reset();
+      for (auto& e : edges) e.reset();
       visualize("default", "meshing_diagnostic" + std::to_string(id) + "_" + std::to_string(i_relax), (double)i_relax);
+      std::string fname = "vertex_nearest" + to_string(id) + "_" + to_string(i_relax);
+      auto vis = Visualizer::create("default", 3, 1, fname, {}, (double)i_relax, Visualizer::block);
+      for (auto& vert : bverts) {
+        Array<double> pos({3, 2});
+        Mat<3> p0 = vert.unwarped_point();
+        Mat<3> p1 = _get_snapping_target(vert, p0);
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          pos(i_dim)[0] = p0(i_dim);
+          pos(i_dim)[1] = p1(i_dim);
+        }
+        vis->write_block(pos, Array<double>({}));
+      }
     }
     #endif
     // snap vertices to surface boundary
     Mat<> o = tree->origin();
     double tns = tree->nominal_size();
     double objective_diff = 0;
-    snaps_failed = 0;
-    double total_dist = 0;
+    bool try_snap = true;
+    if (try_snap) {
+      snaps_failed = 0;
+      total_dist = 0;
+    }
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
       for (auto& vert : verts) if (vert.mobile()) {
@@ -860,7 +913,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
                   auto seq = Eigen::seqN(0, params.n_dim);
                   Mat<> start = n->point({})(seq);
                   Mat<> end = p(Eigen::seqN(0, params.n_dim));
-                  std::vector<double> intersections = surf_geom->intersections(start, end);
+                  std::vector<double> intersections = surf_geom->intersections(start, end, false);
                   double min_sect = 1;
                   for (double s : intersections) min_sect = std::min(min_sect, s);
                   p(seq) = start + min_sect*(p(seq) - start);
@@ -875,7 +928,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert.record[i];
         next::Vertex::Improve_quality_result iqr;
         if (on_surface) {
-          iqr = vert.improve_quality(get_target, satisfy);
+          iqr = vert.improve_quality(get_target, satisfy, true, try_snap);
         } else {
           iqr = vert.improve_quality();
         }
@@ -915,6 +968,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       last_time += .1;
       printers::info(message, false, true);
     }
+    if (try_snap && snaps_failed == 0 && snap_succeeded < 0) snap_succeeded = i_relax;
+    if (i_relax > 2*snap_succeeded && snap_succeeded >= 0 && i_relax > 30) break;
   }
   printers::info(message, false, true);
   printers::info("\n");
@@ -1503,6 +1558,7 @@ bool Accessible_mesh::is_surface(Tree* t) {
 }
 
 void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start) {
+  Task_message tm0(printers::info, "  incorporating surface geometry", "\n");
   // take ownership of the surface geometries (do this first to avoid memory leak)
   surf_bc_sn = add_boundary_condition(surface_bc);
   surf_geom.reset(geometry);
@@ -1516,21 +1572,24 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   if (!tree) return;
   // identify surface elements
   auto& elems = elements();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    if (elem.tree) if (intersects_surface(elem.tree.get())) elem.tree->set_status(0);
-  }
-    // pefrorm flood fill
-  Tree* start = tree->find_leaf(flood_fill_start);
-  if (!start) start = tree.get();
-  start->flood_fill(1);
-  // delete stuff
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    elem.record = 0;
-    if (elem.tree) if (elem.tree->get_status() != 1) elem.record = 2;
+  {
+    Task_message tm1(printers::info, "    determining inside/outside", "\n");
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (elem.tree) if (intersects_surface(elem.tree.get())) elem.tree->set_status(0);
+    }
+      // pefrorm flood fill
+    Tree* start = tree->find_leaf(flood_fill_start);
+    if (!start) start = tree.get();
+    start->flood_fill(1);
+    // delete stuff
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      elem.record = 0;
+      if (elem.tree) if (elem.tree->get_status() != 1) elem.record = 2;
+    }
   }
   delete_bad_extrusions();
   deform();
@@ -2664,7 +2723,8 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> fl
   read_file(file_name);
 }
 
-void write_polymesh_file(std::string dir_name, std::string name, std::string cls, int n_entries, std::function<std::string(int)> entries, std::string note = "") {
+void write_polymesh_file(std::string dir_name, std::string name, std::string cls, int n_entries,
+                         std::function<std::string(int)> entries, std::string note = "") {
   std::ofstream file(dir_name + name);
   file
     << "// this file was generated for OpenFOAM by Hexed, an open-source mesher and CFD solver\n"

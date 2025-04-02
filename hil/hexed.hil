@@ -205,7 +205,6 @@ refine_if = {false}
 unrefine_if = {false}
 max_refinement_iters = 100
 n_smooth = 30
-geom_n_segments = 1000
 vis_surface = true
 vis_field = true
 vis_contour = true
@@ -237,7 +236,8 @@ heat_flux_coercion = 2.
 min_elem_size = 0.
 elementwise_art_visc_pde = false
 prefer_occt = false
-geom_subdivision_levels = 15
+min_geom_subdiv_levels = 8
+max_geom_subdiv_levels = 15
 geom_vis_subdivisions = 100
 
 {array parameters}

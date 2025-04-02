@@ -136,4 +136,11 @@ TEST_CASE("Array") {
     REQUIRE(whole.order() == 3);
     REQUIRE_THAT(whole.shape(), Catch::Matchers::RangeEquals(std::vector<int>{10, 10, 10}));
   }
+
+  SECTION("comparisons") {
+    auto arr0 = hexed::Array<int>::make(1, -2, 4);
+    auto arr1 = hexed::Array<int>::make(2, -1, 3);
+    REQUIRE_THAT(arr0.extreme(0, arr1), Catch::Matchers::RangeEquals(std::vector<int>{1, -2, 3}));
+    REQUIRE_THAT(arr0.extreme(1, arr1), Catch::Matchers::RangeEquals(std::vector<int>{2, -1, 4}));
+  }
 }

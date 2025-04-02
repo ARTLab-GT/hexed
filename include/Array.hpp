@@ -13,6 +13,7 @@
 #endif
 
 #include <vector>
+#include <typeinfo>
 #include "assert.hpp"
 #include "math.hpp"
 #include "Iterator.hpp"
@@ -53,23 +54,29 @@ inline std::vector<Int> hypercubes(Int n_var, Int n_dim, Int row_size) {
  * - To create a new array that references data in another array, use `Array(other())`.
  * - To create a new array that references existing data that is not in an array, use `Array(std::vector<Int>, T*)`
  * - To create a new array that is a copy of an existing array (allocating new data), use `Array(other.copy())`
- * - To copy data from an existing array to another (of the same size) without allocating or creating references, use the `=` operator.
+ * - To copy data from an existing array to another (of the same size) without allocating or creating references,
+ *   use the `=` operator.
  *
- * If you want to pass an `Array` as a function argument, you should be able to pass it by value without thinking about it.
+ * If you want to pass an `Array` as a function argument,
+ * you should be able to pass it by value without thinking about it.
  * If you're passing a temporary object, it should be preserved as long as it needs to be with the move constructor.
- * That said, for performance it's better to try to use the move constructor instead of the copy constructor whenever appropriate,
+ * That said, for performance it's better to try to use the move constructor
+ * instead of the copy constructor whenever appropriate,
  * because this will avoid unnecessary allocations for arrays that own their data.
  *
- * By default, if `DEBUG` is defined, then dynamic bounds checking is performed and out-of-bounds access will result in an exception.
+ * By default, if `DEBUG` is defined,
+ * then dynamic bounds checking is performed and out-of-bounds access will result in an exception.
  * Otherwise, no bounds checking is performed and out-of-bounds access is undefined behavior.
  * This can be overridden by explicitly defining the `HEXED_ARRAY_BOUNDS_CHECK` macro to be `true` or `false`.
  *
- * `Array`s support the unary arithmetic operators `-` and `+` as well as the binary operators `-`, `+`, `/`, `*`, `%`, `&&`, and `||`.
+ * `Array`s support the unary arithmetic operators `-` and `+`
+ * as well as the binary operators `-`, `+`, `/`, `*`, `%`, `&&`, and `||`.
  * Binary operators can operate on two arrays or on an array and a scalar.
  * All operators perform their operations elementwise.
  * They always create a copy, so for truly optimal performance you might consider a loop instead.
  * For binary operators, both operands (arrays or scalars) must have the same data type.
- * To perform operations on arrays that have different, but compatible, types, you can cast them to the same type with `Array::copy<U>()`.
+ * To perform operations on arrays that have different, but compatible, types,
+ * you can cast them to the same type with `Array::copy<U>()`.
  *
  * \note Implementing a feature-complete array container is a large task,
  * and I have not yet implemented all of the features that I ultimately plan to.
@@ -102,16 +109,9 @@ class Array {
    * Once you initialize the elements, you can then assign to them even if `T` is a class type.
    */
   Array(std::vector<Int> shape_arg, T* data_arg = nullptr)
-  : _order{Int(shape_arg.size())}
-  , _shape_storage{shape_arg}
-  , _shape{_shape_storage.data()}
+  : _shape_storage{shape_arg}
   {
-    _shape_storage.shrink_to_fit();
-    _stride_storage.resize(_order + 1);
-    _stride_storage.shrink_to_fit();
-    _strides = _stride_storage.data();
-    _strides[_order] = 1;
-    for (Int i = _order - 1; i >= 0; --i) _strides[i] = _strides[i + 1]*_shape[i];
+    _initialize_shape();
     if (data_arg || size() == 0) {
       _data = data_arg;
       _owns = false;
@@ -211,7 +211,8 @@ class Array {
     return *this;
   }
   /*! \brief Creates a new array that owns its data, which is a copy of `this`'s data (i.e. new data is allocated).
-   * \details If the template argument is specified to be something other than `T`, the array will be cast to a different type.
+   * \details If the template argument is specified to be something other than `T`,
+   * the array will be cast to a different type.
    * The old type must by copy-assignable to the new type.
    */
   template <typename U = T>
@@ -230,8 +231,10 @@ class Array {
     for (Int i = 0; i < _order; ++i) s[i] = _shape[i];
     return s;
   }
-  //! \brief Returns the total size of the array.
-  //! \details This is the number of values you can access with the `[]` operator, or equivalently the product of the entries of `shape()`.
+  /*! \brief Returns the total size of the array.
+   * \details This is the number of values you can access with the `[]` operator,
+   * or equivalently the product of the entries of `shape()`.
+   */
   Int size() const {return bool(_order)*_strides[0]/_strides[_order];}
   //! \brief `true` iff `this` and `other` have the same `shape()`.
   //! \details It's okay to call this on arrays of different `order()`; naturally it will return `false`.
@@ -314,26 +317,7 @@ class Array {
        E.g., `array.reshaped({hexed::whatever})` flattens `array`.
      */ \
     CONST Array reshaped(std::vector<Int> new_shape) CONST { \
-      std::vector<Int> s = new_shape; \
-      Int sz = 1; \
-      Int i_whatever = -1; \
-      for (Int i = 0; i < Int(s.size()); ++i) { \
-        if (s[i] == same) { \
-          HEXED_ARRAY_ASSERT(i < order(), "`same` appears at a position >= `order()`"); \
-          s[i] = _shape[i]; \
-        } \
-        if (s[i] == whatever) { \
-          HEXED_ARRAY_ASSERT(i_whatever == -1, "more than one `hexed::whatever` in `new_shape`"); \
-          i_whatever = i; \
-        } else sz *= s[i]; \
-      } \
-      if (i_whatever >= 0) { \
-        HEXED_ARRAY_ASSERT(size()%sz == 0, "`whatever` dimension is not an integer"); \
-        s[i_whatever] = size()/sz; \
-        sz *= s[i_whatever]; \
-      } \
-      HEXED_ARRAY_ASSERT(sz <= size(), "`new_shape` is larger than current shape"); \
-      Array r(s, _data); \
+      Array r(_compute_new_shape(new_shape), _data); \
       for (int i_dim = 0; i_dim <= r._order; ++i_dim) r._strides[i_dim] *= _strides[_order]; \
       return r; \
     } \
@@ -354,6 +338,13 @@ class Array {
   QUALIFIED()
   QUALIFIED(const)
   #undef QUALIFIED
+
+  void reshape(std::vector<Int> new_shape) {
+    Int inner_stride = _strides[_order];
+    _shape_storage = _compute_new_shape(new_shape);
+    _initialize_shape();
+    for (int i_dim = 0; i_dim <= _order; ++i_dim) _strides[i_dim] *= inner_stride;
+  }
 
   #define DEFINE_OPERATOR(BIN_OP) \
     Array<T>& operator BIN_OP(const Array<T>& that) { \
@@ -378,8 +369,47 @@ class Array {
   DEFINE_OPERATOR(%=)
   #undef DEFINE_OPERATOR
 
+  Array extreme(bool minmax, Array that) {
+    HEXED_ARRAY_ASSERT(that.size() == size(), "array sizes must match")
+    Array result(shape());
+    for (Int i = 0; i < size(); ++i) result[i] = math::extreme(minmax, _data[i], that[i]);
+    return result;
+  }
+
   private:
   Array(Int o, T* d, bool own, Int* sh, Int* st) : _order{o}, _data{d}, _owns{own}, _shape{sh}, _strides{st} {}
+  void _initialize_shape() {
+    _shape = _shape_storage.data();
+    _order = _shape_storage.size();
+    _shape_storage.shrink_to_fit();
+    _stride_storage.resize(_order + 1);
+    _stride_storage.shrink_to_fit();
+    _strides = _stride_storage.data();
+    _strides[_order] = 1;
+    for (Int i = _order - 1; i >= 0; --i) _strides[i] = _strides[i + 1]*_shape[i];
+  }
+  std::vector<Int> _compute_new_shape(std::vector<Int> new_shape) const { // replaces `whatever` as necessary
+    std::vector<Int> s = new_shape;
+    Int sz = 1;
+    Int i_whatever = -1;
+    for (Int i = 0; i < Int(s.size()); ++i) {
+      if (s[i] == same) {
+        HEXED_ARRAY_ASSERT(i < order(), "`same` appears at a position >= `order()`");
+        s[i] = _shape[i];
+      }
+      if (s[i] == whatever) {
+        HEXED_ARRAY_ASSERT(i_whatever == -1, "more than one `hexed::whatever` in `new_shape`");
+        i_whatever = i;
+      } else sz *= s[i];
+    }
+    if (i_whatever >= 0) {
+      HEXED_ARRAY_ASSERT(size()%sz == 0, "`whatever` dimension is not an integer");
+      s[i_whatever] = size()/sz;
+      sz *= s[i_whatever];
+    }
+    HEXED_ARRAY_ASSERT(sz <= size(), "`new_shape` is larger than current shape");
+    return s;
+  }
   Int _order;
   std::vector<Int> _shape_storage;
   std::vector<Int> _stride_storage;
@@ -428,6 +458,33 @@ DEFINE_OPERATOR(||)
 DEFINE_OPERATOR(-)
 DEFINE_OPERATOR(+)
 #undef DEFINE_OPERATOR
+
+//! \brief Overload of `hexed::to_string` for `Array`s.
+//! \details Works as long as `to_string(T)` is defined.
+template <typename T>
+std::string to_string(Array<T> arr) {
+  if (arr.size() == 0) return "";
+  Array<T> order2 = arr.reshaped({whatever, arr.shape()[arr.order() - 1]});
+  std::string s = format_str(200, "Array<%s> {", typeid(T).name());
+  for (int i = 0; i < arr.order(); ++i) s += to_string(arr.shape()[i]) + ", ";
+  s.pop_back();
+  s.pop_back();
+  s += "}:\n";
+  for (Int i = 0; i < order2.shape()[0]; ++i) {
+    for (Int j = 0; j < order2.shape()[1]; ++j) {
+      s += to_string(order2(i)[j]) + " ";
+    }
+    s.pop_back();
+    s += "\n";
+  }
+  return s;
+}
+
+#pragma omp declare reduction (max : Array<double> : omp_out = omp_out.extreme(1, omp_in)) \
+  initializer(omp_priv = Array<double>::make_uniform(omp_orig.shape(), -huge))
+
+#pragma omp declare reduction (min : Array<double> : omp_out = omp_out.extreme(0, omp_in)) \
+  initializer(omp_priv = Array<double>::make_uniform(omp_orig.shape(), huge))
 
 }
 #endif

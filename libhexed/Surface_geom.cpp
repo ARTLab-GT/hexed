@@ -12,10 +12,10 @@ Nearest_point<dyn> Compound_geom::nearest_point(Mat<> point, double max_distance
   return nearest;
 }
 
-std::vector<double> Compound_geom::intersections(Mat<> point0, Mat<> point1) {
+std::vector<double> Compound_geom::intersections(Mat<> point0, Mat<> point1, bool high_precision) {
   std::vector<double> inters;
   for (auto& comp : components) {
-    auto comp_inters = comp->intersections(point0, point1);
+    auto comp_inters = comp->intersections(point0, point1, high_precision);
     inters.insert(inters.end(), comp_inters.begin(), comp_inters.end());
   }
   return inters;
@@ -43,7 +43,7 @@ Nearest_point<dyn> Hypersphere::nearest_point(Mat<> point, double max_distance, 
   return nearest;
 }
 
-std::vector<double> Hypersphere::intersections(Mat<> point0, Mat<> point1) {
+std::vector<double> Hypersphere::intersections(Mat<> point0, Mat<> point1, bool) {
   Mat<> start = point0 - c;
   Mat<> diff = point1 - point0;
   // a t^2 + b t + c = 0

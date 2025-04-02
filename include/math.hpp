@@ -2,28 +2,11 @@
 #define HEXED_MATH_HPP_
 
 #include <cmath>
-#include <Eigen/Dense>
 #include "assert.hpp"
 #include "utils.hpp"
 
-namespace hexed {
-
-const int dyn = Eigen::Dynamic; //!< \brief convenience alias for `Eigen::dynamic`
-//! \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = 1>`
-template <int rows = dyn, int cols = 1> using Mat = Eigen::Matrix<double, rows, cols>;
-//! \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = dyn, Eigen::RowMajor>`
-template <int rows = dyn, int cols = dyn> using Mat_rm = Eigen::Matrix<double, rows, cols, Eigen::RowMajor>;
-const auto all = Eigen::all; //!< \brief convenience alias for `Eigen::all`
-const auto last = Eigen::last; //!< \brief convenience alias for `Eigen::last`
-typedef intmax_t Int; //!< \brief basic integer type  to use for potentially-large numbers, such as sizes
-//! \brief convenience alias for largest double value
-constexpr double huge = std::numeric_limits<double>::max();
-
-#pragma omp declare reduction (+ : Mat<dyn, dyn> : omp_out = omp_out + omp_in) \
-  initializer(omp_priv = Mat<dyn, dyn>::Zero(omp_orig.rows(), omp_orig.cols()))
-
 //! \brief Miscellaneous mathematical functions that aren't in `std::math`
-namespace math {
+namespace hexed::math {
 
 /*! \brief Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.
  * \details
@@ -51,13 +34,30 @@ constexpr Int log(Int base, Int arg) {
 }
 
 template <typename T>
-constexpr T max(T arg) {
+constexpr T extreme(bool minmax, T arg) {
   return arg;
 }
 
+//! \brief if `minmax` is true, returns the maximum of remaining arguments, else the minimum
+//! \warning always returns the type of the first argument, regardless of type conversion rules
+template <typename T, typename... arg_ts>
+constexpr T extreme(bool minmax, T arg, arg_ts... args) {
+  T trailing = extreme<T>(minmax, args...);
+  return minmax ? std::max<T>(arg, trailing) : std::min<T>(arg, trailing);
+}
+
+//! \brief returns the maximum of all arguments
+//! \warning always returns the type of the first argument, regardless of type conversion rules
 template <typename T, typename... arg_ts>
 constexpr T max(T arg, arg_ts... args) {
-  return std::max<T>(arg, max(args...));
+  return extreme(true, arg, args...);
+}
+
+//! \brief returns the minimum of all arguments
+//! \warning always returns the type of the first argument, regardless of type conversion rules
+template <typename T, typename... arg_ts>
+constexpr T min(T arg, arg_ts... args) {
+  return extreme(false, arg, args...);
 }
 
 //! \brief returns 1 if `condition` is true, otherwise -1
@@ -69,6 +69,8 @@ constexpr Int stride(int n_dim, Int row_size, int i_dim) {
   return math::pow(row_size, n_dim - 1 - i_dim);
 }
 
+//! \brief Finds the `i_dim`th array index of a point with flat index `index`
+//! in an `n_dim` dimensional array of `row_size` on each side
 constexpr Int row_coordinate(int n_dim, Int row_size, int i_dim, Int index) {
   return index/stride(n_dim, row_size, i_dim)%row_size;
 }
@@ -236,28 +238,6 @@ class Approx_equal {
   inline bool operator()(double x, double y) const {return std::abs(x - y) < a + r*std::abs(x + y)/2;}
 };
 
-//! \brief Constructs an `Eigen::VectorXd` from iterators `begin()` and `end()` to arithmetic types.
-template <typename T>
-Mat<> to_mat(T begin, T end) {
-  Mat<> vec(end - begin);
-  int i = 0;
-  for (auto it = begin; it < end; ++it) vec(i++) = *it;
-  return vec;
-}
-
-//! \brief Constructs an `Eigen::VectorXd` from any object supporting `begin()` and `end()` members.
-template <typename T>
-Mat<> to_mat(const T& range) {
-  return to_mat(range.begin(), range.end());
-}
-
-/*! \brief Returns a copy of `vec` resized to `size`.
- * \details If `size` is less than `vec.size()`, the trailing entries are deleted.
- * If `size` is greater than `vec.size()`, trailing zeros are appended.
- * Otherwise, entries are preserved.
- */
-Mat<> resize(const Mat<>& vec, Int size);
-
 //! \brief minimal representation of an `n_dim`-dimensional ball
 template <int n_dim = dyn>
 struct Ball {
@@ -306,6 +286,5 @@ double chebyshev_step(int n_steps, int i_step, double safety = .9);
  */
 std::vector<double> correct_values(std::vector<double> estimates, std::vector<double> exacts, double tol = huge);
 
-}
 }
 #endif

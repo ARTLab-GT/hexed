@@ -183,11 +183,4 @@ std::vector<double> correct_values(std::vector<double> estimates, std::vector<do
   return estimates;
 }
 
-Mat<> resize(const Mat<>& vec, Int size) {
-  Mat<> resized = Mat<>::Zero(size);
-  auto seq = Eigen::seqN(0, std::min<Int>(vec.size(), size));
-  resized(seq) = vec(seq);
-  return resized;
-}
-
 }

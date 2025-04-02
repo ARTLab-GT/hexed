@@ -48,8 +48,8 @@ void Deformed_element::set_jacobian(const Basis& basis) {
       Eigen::MatrixXd bound_mat = basis.boundary()(sign, Eigen::all);
       Eigen::MatrixXd face_jac(nfq, n_dim*n_dim);
       for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
-        face_jac(Eigen::all, i_jac) = math::dimension_matvec(bound_mat, jac(Eigen::seqN(i_jac*n_qpoint, n_qpoint)),
-                                                             i_dim);
+        face_jac(Eigen::all, i_jac)
+          = math::dimension_matvec(bound_mat, jac(Eigen::seqN(i_jac*n_qpoint, n_qpoint)), i_dim);
       }
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
         Eigen::MatrixXd qpoint_jac(n_dim, n_dim);
