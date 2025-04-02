@@ -91,21 +91,21 @@ TEST_CASE("Trimmed_surface") {
                0., 0.;
   curves.back().push_back(std::make_unique<hexed::brep::Line_segment>(endpoints));
   std::vector<bool> model_space(curves.size(), true);
-  hexed::brep::Trimmed_surface trim(plane.release(), std::move(curves), std::move(model_space), 512, 1024);
+  hexed::brep::Trimmed_surface trim(plane.release(), std::move(curves), std::move(model_space), 256, 1024);
   // test reparameterization
   REQUIRE_THAT(trim.surface().point(hexed::Mat<2>{0., 0.}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., .0}, hexed::math::Approx_equal(0, 1e-6)));
   REQUIRE_THAT(trim.surface().point(hexed::Mat<2>{1., 1.}),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{3., 3., .0}, hexed::math::Approx_equal(0, 1e-6)));
   // test is_inside
-  REQUIRE( trim.is_inside(hexed::Mat<2>{.10, .10}));
-  REQUIRE(!trim.is_inside(hexed::Mat<2>{.35, .35}));
-  REQUIRE( trim.is_inside(hexed::Mat<2>{.49, .49}));
-  REQUIRE( trim.is_inside(hexed::Mat<2>{.50, .10}));
-  REQUIRE( trim.is_inside(hexed::Mat<2>{.10, .50}));
-  REQUIRE(!trim.is_inside(hexed::Mat<2>{.55, .55}));
-  REQUIRE(!trim.is_inside(hexed::Mat<2>{-.1, .50}));
-  REQUIRE(!trim.is_inside(hexed::Mat<2>{.50, -.1}));
+  CHECK( trim.is_inside(hexed::Mat<2>{.10, .10}));
+  CHECK(!trim.is_inside(hexed::Mat<2>{.35, .35}));
+  CHECK( trim.is_inside(hexed::Mat<2>{.49, .49}));
+  CHECK( trim.is_inside(hexed::Mat<2>{.50, .10}));
+  CHECK( trim.is_inside(hexed::Mat<2>{.10, .50}));
+  CHECK(!trim.is_inside(hexed::Mat<2>{.55, .55}));
+  CHECK(!trim.is_inside(hexed::Mat<2>{-.1, .50}));
+  CHECK(!trim.is_inside(hexed::Mat<2>{.50, -.1}));
 
   // test nearest_point
   REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{.1, .1, .1}, .2).point(),

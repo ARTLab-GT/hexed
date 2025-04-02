@@ -382,6 +382,7 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
         }
       }
       mean_squared_dist /= n_div_max + 1;
+      // if the start and end points are close together, split the curve in half to simplify edge matching
       if ((curve->point(Mat<1>{1.}) - start).squaredNorm() < .1*mean_squared_dist) {
         _curves.emplace_back(phys_nodes(0, n_div_max/2 + 1).copy(), 4);
         _curves.emplace_back(phys_nodes(n_div_max/2, n_div_max + 1).copy(), 4);
@@ -389,6 +390,7 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
         _curves.emplace_back(phys_nodes.copy(), 4);
       }
     }
+    // check for any curves that may be oriented backward (which does happen, apparently) and flip them
     int reversal = 0;
     double continuity_error = huge;
     int n_curves = disc_curve.size();
@@ -592,6 +594,7 @@ next::Sequence<const Tree_curve&> Trimmed_surface::curves() const {
 
 void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best_params, Int i_start, Int j_start,
                                          Int level, bool check_inside) const {
+  double tol = 1e-3;
   Int n_panel = _n_div_min/math::pow(2, level);
   Mat<3> point = nearest.reference();
   Array<double> p_arr({3}, point.data());
@@ -635,7 +638,7 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
   bool compute;
   if (average(0).vector().norm() > radii[0] + std::sqrt(nearest.dist_squared())) {
     compute = false;
-  } else if (radii[1] > norm - 1e-3) {
+  } else if (radii[1] > norm - tol) {
     compute = true;
   } else {
     double scale = average(0).vector().dot(unit_avg)/norm;
@@ -644,8 +647,8 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
     double cos = std::sqrt(1 - sin*sin);
     double scale1 = (average(1) - average(0)).vector().norm()*sin/cos*math::sign(scale > 0);
     for (int i = 0; i < 3; ++i) average(1)[i] += scale1*unit_avg(i);
-    double r = radii[0] + (radii[1] + 1e-3)*average(1).vector().norm()/norm;
-    compute = (average(0) - average(1)).vector().norm() < r;
+    double r = radii[0] + radii[1]*average(1).vector().norm()/norm;
+    compute = (average(0) - average(1)).vector().norm() < r*(1 + tol);
   }
   if (compute) {
     if (n_panel == 1) {
