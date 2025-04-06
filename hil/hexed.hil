@@ -161,8 +161,8 @@ set_aerothermo = {
 }
 
 set_geometry_refinement = {
-    refine_if = {(uncertainty > geometry_uncertainty | snapping_problem) & ref_level < max_ref_level & nom_sz > min_elem_size}
-    unrefine_if = {ref_level > init_ref_level & !is_extruded}
+    refine_if = {((uncertainty > geometry_uncertainty | snapping_problem) & ref_level < max_ref_level & nom_sz > min_elem_size)}
+    unrefine_if = {(ref_level > init_ref_level & !is_extruded)}
     hexed_min_sz = (mesh_extreme01 - mesh_extreme00)*2.^-max_ref_level
     case0 = {}
     case1 = {hexed_min_sz = min_elem_size}
