@@ -74,13 +74,6 @@ vis_field_vars = vis_field_vars + {
 $start
 $mesh
 init_state
-integrand_surface = {normal0 = normal0; normal1 = normal1; normal2 = normal2;}
-integrate_surface
-print({
-normal0 = } + integral_surface_normal0 + {
-normal1 = } + integral_surface_normal1 + {
-normal2 = } + integral_surface_normal2 + {
-})
 $run
 $print_force
 
