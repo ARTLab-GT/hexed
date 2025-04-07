@@ -4,6 +4,7 @@
 #include "Transport_model.hpp"
 #include "Face_permutation.hpp"
 #include "Kernel_mesh.hpp"
+#include "Time_scheme.hpp"
 
 namespace hexed {
 
@@ -17,7 +18,7 @@ struct Kernel_options {
   bool use_filter = false;
   int mask = 0;
   bool conv_substep = false;
-  bool backward_euler = false;
+  Time_scheme time_scheme = explicit_steady;
   double be_dt = 0;
 };
 

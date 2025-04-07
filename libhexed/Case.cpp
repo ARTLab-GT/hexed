@@ -335,8 +335,15 @@ Case::Case(std::string input_script)
     // setup actual solver
     bool steady = _vari("steady");
     bool implicit = _vari("implicit");
-    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, steady || implicit, transport_models[0],
-                                 transport_models[1], turb_model, _inter.variables, !steady && implicit));
+    std::string ts_str = to_lower(_vars("implicit_scheme"));
+    Time_scheme ts;
+    if (steady) ts = explicit_steady;
+    else if (!implicit) ts = explicit_unsteady;
+    else if (ts_str == "backward euler") ts = backward_euler;
+    else if (ts_str == "crank-nicolson") ts = crank_nicolson;
+    else HEXED_THROW("`" + ts_str + "` is not a supported time integration scheme.")
+    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, ts, transport_models[0],
+                                 transport_models[1], turb_model, _inter.variables));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis"));
     return "";

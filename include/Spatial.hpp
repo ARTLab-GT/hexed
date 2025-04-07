@@ -10,6 +10,7 @@
 #include "Row_rw.hpp"
 #include "Face_permutation.hpp"
 #include "Refined_face.hpp"
+#include "Time_scheme.hpp"
 
 namespace hexed {
 
@@ -287,12 +288,13 @@ class Spatial {
     const bool _use_filter;
     int _mask;
     bool _conv_substep;
-    bool _backward_euler;
+    Time_scheme _time_scheme;
     double _be_dt;
 
     public:
     template <typename... pde_args>
-    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, bool backward_euler, double be_dt, pde_args... args)
+    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask,
+          bool conv_substep, Time_scheme time_scheme, double be_dt, pde_args... args)
     : _eq(args...)
     , derivative{basis}
     , boundary{basis.boundary()}
@@ -305,7 +307,7 @@ class Spatial {
     , _use_filter{use_filter}
     , _mask{mask}
     , _conv_substep{conv_substep}
-    , _backward_euler{backward_euler}
+    , _time_scheme{time_scheme}
     , _be_dt{be_dt}
     {
       HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
@@ -486,7 +488,7 @@ class Spatial {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           Mat<Pde::n_update> update;
           update.setZero();
-          double mult = _update*tss[i_qpoint]/nominal_volume*(!fringe)*(_backward_euler ? _be_dt : 1.);
+          double mult = _update*tss[i_qpoint]/nominal_volume*(!fringe)*(is_implicit(_time_scheme) ? _be_dt : 1.);
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             double u = time_rate[0][i_var][i_qpoint];
@@ -504,9 +506,9 @@ class Spatial {
               }
             }
             u *= mult;
-            if (_backward_euler) {
+            if (is_implicit(_time_scheme)) {
               u += _update*tss[i_qpoint]*(ref_state[(Pde::n_update*(1 + is_deformed) + i_var)*n_qpoint + i_qpoint]
-                                          - state[i_var*n_qpoint + i_qpoint]);
+                                          - (1 + (_time_scheme == crank_nicolson))*state[i_var*n_qpoint + i_qpoint]);
               u /= _be_dt + _update*tss[i_qpoint];
             }
             if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
@@ -538,12 +540,13 @@ class Spatial {
     bool _use_filter;
     int _mask;
     bool _conv_substep;
-    bool _backward_euler;
+    Time_scheme _time_scheme;
     double _be_dt;
 
     public:
     template <typename... pde_args>
-    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, bool backward_euler, double be_dt, pde_args... args)
+    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter,
+                       int mask, bool conv_substep, Time_scheme time_scheme, double be_dt, pde_args... args)
     : _eq(args...)
     , _nodes{basis.nodes()}
     , derivative{basis}
@@ -555,7 +558,7 @@ class Spatial {
     , _use_filter{use_filter}
     , _mask{mask}
     , _conv_substep{conv_substep}
-    , _backward_euler{backward_euler}
+    , _time_scheme{time_scheme}
     , _be_dt{be_dt}
     {
       HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");

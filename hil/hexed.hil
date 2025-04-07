@@ -179,6 +179,7 @@ row_size = 6
 init_ref_level = 3
 steady = true
 implicit = true
+implicit_scheme = {backward Euler}
 max_ref_level = 10
 geometry_uncertainty = 1e-3
 viscosity_model = {}
