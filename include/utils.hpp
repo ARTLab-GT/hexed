@@ -28,5 +28,8 @@ template <typename T> std::add_pointer<T>::type addr_if_possible(T&& arg) {
 //! \brief gets the extension of a file name and converts it to lowercase
 std::string file_extension(std::string file_name);
 
+//! \brief converts a string to lowercase
+std::string to_lower(std::string);
+
 }
 #endif
