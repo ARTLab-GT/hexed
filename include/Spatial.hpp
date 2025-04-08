@@ -488,7 +488,8 @@ class Spatial {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           Mat<Pde::n_update> update;
           update.setZero();
-          double mult = _update*tss[i_qpoint]/nominal_volume*(!fringe)*(is_implicit(_time_scheme) ? _be_dt : 1.);
+          double mult = _update*tss[i_qpoint]/nominal_volume*(!fringe)
+                        *(is_implicit(_time_scheme) ? _be_dt/(_be_dt + _update*tss[i_qpoint]) : 1.);
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             double u = time_rate[0][i_var][i_qpoint];
@@ -497,6 +498,11 @@ class Spatial {
             } else {
               if constexpr (Pde::has_convection) ref_state[i_var*n_qpoint + i_qpoint] = u;
               if constexpr (Pde::has_diffusion || Pde::has_source) u += time_rate[1][i_var][i_qpoint];
+              if (is_implicit(_time_scheme)) {
+                u += (ref_state[(Pde::n_update*(1 + is_deformed) + i_var)*n_qpoint + i_qpoint]
+                      - (1 + (_time_scheme == crank_nicolson))*state[i_var*n_qpoint + i_qpoint])
+                     *nominal_volume*(is_deformed ? elem_det[i_qpoint] : 1.)/_be_dt;
+              }
               if constexpr (is_deformed) {
                 if (_conv_substep) {
                   double& diff_cache = ref_state[(Pde::n_update + i_var)*n_qpoint + i_qpoint];
@@ -506,11 +512,6 @@ class Spatial {
               }
             }
             u *= mult;
-            if (is_implicit(_time_scheme)) {
-              u += _update*tss[i_qpoint]*(ref_state[(Pde::n_update*(1 + is_deformed) + i_var)*n_qpoint + i_qpoint]
-                                          - (1 + (_time_scheme == crank_nicolson))*state[i_var*n_qpoint + i_qpoint]);
-              u /= _be_dt + _update*tss[i_qpoint];
-            }
             if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
             else update(i_var) = u;
           }
