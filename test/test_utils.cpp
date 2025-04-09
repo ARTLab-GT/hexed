@@ -7,3 +7,9 @@ TEST_CASE("format_str") {
   REQUIRE(hexed::file_extension("archive.tar.gz") == "gz");
   REQUIRE(hexed::file_extension("model.STL") == "stl");
 }
+
+TEST_CASE("to_lower") {
+  REQUIRE(hexed::to_lower("SOmE cHarac-teRs.") == "some charac-ters.");
+  REQUIRE(hexed::to_lower("") == "");
+  REQUIRE(hexed::to_lower("\n") == "\n");
+}

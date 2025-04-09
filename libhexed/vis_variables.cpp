@@ -90,7 +90,7 @@ void surface(Namespace& space, Boundary_connection& con) {
     norm = std::sqrt(norm);
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) nrml(i_dim)[i_fqpoint] /= nrml_sign*norm;
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      flux(i_var)[i_fqpoint] = norm > 1e-6 ? -ref_flux[i_var*nfq + i_fqpoint]*nrml_sign/norm : 0;
+      flux(i_var)[i_fqpoint] = norm > 1e-6 ? -ref_flux[i_var*nfq + i_fqpoint]*nrml_sign/norm/con.nominal_area() : 0;
     }
   }
   // assign variables
