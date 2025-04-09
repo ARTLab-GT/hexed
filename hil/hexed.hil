@@ -294,7 +294,7 @@ print_final = {
     println {performance summary:}
     println performance_report
 }
-done = {print_emph = true; print_type = {error}; println {Error: you forgot to a set `done`} & throw}
+done = {print_emph = true; print_type = {error}; println {Error: you forgot to set `done`} & throw}
 time_step_done = {print_emph = true; print_type = {error}; println {Error: you forgot to set `time_step_done`} & throw}
 hexed_failed = false
 terminate = {
