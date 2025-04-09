@@ -104,7 +104,7 @@ class Solver {
    * \param n_dim number of dimensions
    * \param row_size row size of the basis (see \ref Terminology)
    * \param root_mesh_size sets the value of `Mesh::root_mesh_size()`
-   * \param time_schem what numerical scheme to use for time integration
+   * \param time_scheme what numerical scheme to use for time integration
    * \param viscosity_model determines whether the flow has viscosity (natural, not artificial) and if so,
    * how it depends on temperature
    * \param thermal_conductivity_model determines whether the flow has thermal conductivity and if so,
