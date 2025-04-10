@@ -446,6 +446,7 @@ Mat<3> Edge::_point(const std::vector<int>& coords, Int recursion_depth) const {
 
 Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
 : Boundary_block(1, b)
+, snapped_edge{-1}
 , _verts{this, this}
 , _glued_to(this)
 , _glued(this)

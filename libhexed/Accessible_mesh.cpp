@@ -708,14 +708,7 @@ void Accessible_mesh::_fit_surface() {
   #pragma omp parallel for
   for (auto& vert : all_verts) vert.record.clear();
 
-  // snaps faces and edges to the surface
-  // snaps a `Boundary_block` to the geometry surface
-  auto snap_block = [this](next::Boundary_block& block) {
-    std::vector<next::Element_shape*> dependent_elems = block.dependent_elements();
-    std::sort(dependent_elems.begin(), dependent_elems.end(), std::less());
-    std::vector<std::unique_ptr<Lock::Acquire>> acquires;
-    for (next::Element_shape* e : dependent_elems) acquires.emplace_back(new Lock::Acquire(e->lock));
-    block.reset();
+  auto snap_intersections = [this](next::Boundary_block& block) {
     Array<double> interior {block.interior().reshaped({whatever, 3})};
     const Basis& b = block.basis();
     bool failed = false;
@@ -745,7 +738,12 @@ void Accessible_mesh::_fit_surface() {
         failed = true;
       }
     }
-    for (next::Element_shape* e : dependent_elems) {
+    return failed;
+  };
+
+  auto check_elems = [this](next::Boundary_block& block) {
+    bool failed = false;
+    for (next::Element_shape* e : block.dependent_elements()) {
       next::Face* face = e->boundary_face_3d();
       if (face && face != &block) face->reset();
       Array<double> points = e->points();
@@ -774,12 +772,20 @@ void Accessible_mesh::_fit_surface() {
         if (!(point_jac.determinant() > 0)) failed = true;
       }
     }
+    return failed;
+  };
+
+  auto plain_snap = [snap_intersections, check_elems](next::Boundary_block& block) {
+    block.reset();
+    bool failed = snap_intersections(block);
+    if (!failed) failed = check_elems(block);
     if (failed) block.reset();
   };
+
   // snap edges to the surface (regardless of dimensionality)
   auto edges_2d = _blocks.edges_2d();
   #pragma omp parallel for
-  for (auto& edge : edges_2d) snap_block(edge);
+  for (auto& edge : edges_2d) plain_snap(edge);
   auto faces_3d = _blocks.faces_3d();
   #pragma omp parallel for
   for (auto& face : faces_3d) {
@@ -788,29 +794,37 @@ void Accessible_mesh::_fit_surface() {
   #pragma omp parallel for
   for (auto& face : faces_3d) {
     for (int i_edge = 0; i_edge < 4; ++i_edge) {
-      if (!face.edge(i_edge).glued()) snap_block(face.edge(i_edge));
-    }
-  }
-  // Snap mesh edges to geometry edges.
-  // This has to happen after snapping edges to the surface (which would undo this)
-  // but before snapping faces to the surface
-  // (or else the `reset()` function would be called with incorrect edge data)
-  for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
-    auto& geom_edge = edges[i_geom_edge];
-    Array<double> nodes {geom_edge.nodes()};
-    for (auto& edge : matched_edges[i_geom_edge]) {
-      edge.value().reset();
-      Array<double> interior {edge.value().interior()};
-      double max_dist = .5*edge.value().element()->nominal_size();
-      for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
-        Int nearest = geom_edge.nearest_point(interior(i_point).vector(), max_dist).index;
-        if (nearest >= 0) interior(i_point) = nodes(nearest);
+      auto& edge = face.edge(i_edge);
+      if (!edge.glued()) {
+        std::vector<next::Element_shape*> dependent_elems = edge.dependent_elements();
+        std::sort(dependent_elems.begin(), dependent_elems.end(), std::less());
+        std::vector<std::unique_ptr<Lock::Acquire>> acquires;
+        for (next::Element_shape* e : dependent_elems) acquires.emplace_back(new Lock::Acquire(e->lock));
+        bool failed = false;
+        if (edge.snapped_edge >= 0) {
+          HEXED_ASSERT(edge.snapped_edge < edges.size(), "clearly erroneous `snapped_edge` value")
+          auto& geom_edge = edges[edge.snapped_edge];
+          Array<double> interior = edge.interior();
+          for (int i_node = 0; i_node < interior.shape()[0]; ++i_node) {
+            auto node = interior(i_node);
+            auto nearest = geom_edge.nearest_point(node.vector());
+            if (nearest.index >= 0) {
+              node = geom_edge.nodes()(nearest.index);
+            } else {
+              failed = true;
+            }
+          }
+        } else {
+          failed = snap_intersections(edge);
+        }
+        if (!failed) failed = check_elems(edge);
+        if (failed) edge.reset();
       }
     }
   }
   // snap face interiors (if 3D) to surface
   #pragma omp parallel for
-  for (auto& face : faces_3d) snap_block(face);
+  for (auto& face : faces_3d) plain_snap(face);
   ++_stopwatch["update"]["fit surface"].work_units_completed;
 }
 
