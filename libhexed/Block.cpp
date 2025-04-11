@@ -140,18 +140,18 @@ bool Vertex::mobile() const {
 const double ortho_tolerance = 3e-2;
 const double edge_tolerance = 3e-3;
 
-Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) const {
+Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
   _Optimization_state state;
   _compute_state_recursive(state, 1., include_neighbors);
   return state;
 }
 
 void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                      const Vertex* orig_vertex) const {
+                                      Vertex* orig_vertex) {
   if (!orig_vertex) orig_vertex = this;
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
-  for (const Element_shape* elem : _elems.theirs()) {
+  for (Element_shape* elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
     if (elem->glued()) continue;
     int i_this = _get_index(*elem);
@@ -173,6 +173,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
     }
     i_those.push_back(i_this);
     for (int i_that : i_those) {
+      Vertex& that_vert = elem->vertex(i_that);
       bool skip_obj = false;
       bool skip_grad = false;
       for (auto s : state.skip) if (s.elem == elem) {
@@ -180,6 +181,11 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         skip_grad = skip_grad || (s.i == i_that && s.j == i_this);
       }
       if (!skip_grad) state.skip.emplace_back(elem, i_that, i_this);
+      if (state.computing_depends) {
+        bool contains = false;
+        for (Vertex* v : orig_vertex->_depends_on) contains = contains || &that_vert == v;
+        if (!contains) orig_vertex->_depends_on.push_back(&that_vert);
+      }
       Mesh_assessment ma(vert_seq, i_that, i_this);
       state.feasible = state.feasible && ma.orthogonality > ortho_tolerance;
       state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality);
@@ -188,7 +194,6 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim)/ns);
       }
       if (state.feasible) {
-        const Vertex& that_vert = elem->vertex(i_that);
         double orth_diff = ma.orthogonality - ortho_tolerance;
         state.objective += (!skip_obj)*1./orth_diff;
         state.gradient += (!skip_grad)*gradient_weight*1.*(-1/orth_diff/orth_diff)*ma.grad_orth;
@@ -202,7 +207,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         // note: the valid values for `gradient_weight` are 1., .5, and .25
         if (gradient_weight > .3 && that_vert.glued() && i_this != i_that) {
           bool coupled = false;
-          for (const Vertex* v : {this, orig_vertex}) {
+          for (Vertex* v : {this, orig_vertex}) {
             for (auto e : v->_elems.theirs()) {
               coupled = coupled || (!e->glued() && e == that_vert._glued_to.get());
             }
@@ -227,9 +232,21 @@ Vertex::Improve_quality_result Vertex::improve_quality(std::function<Mat<3>(Mat<
   return _improve_quality(get_target, satisfy_constraints, true, limit_direction, snap);
 }
 
+void Vertex::compute_depends() {
+  _depends_on.clear();
+  _Optimization_state state;
+  state.computing_depends = true;
+  _compute_state_recursive(state, 1., true);
+  // sort to prevent deadlocks
+  std::sort(_depends_on.begin(), _depends_on.end(), std::less<Vertex*>{});
+}
+
 Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                                         std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                                         bool has_target, bool limit_direction, bool snap) {
+  // acquire locks on all vertices we depend on to prevent simultaneous vertex motions from violating mesh quality
+  std::vector<Lock::Acquire> locks;
+  for (Vertex* vert : _depends_on) locks.emplace_back(vert->_shared_value_lock);
   _pos = unwarped_point();
   Mat<3> orig_pos = _pos;
   auto state = _compute_state();

@@ -130,6 +130,7 @@ class Vertex : public Block {
   Improve_quality_result improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                          std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                          bool limit_direction = true, bool snap = true);
+  void compute_depends();
   bool snap_to(Mat<3> target);
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
   double quality_objective();
@@ -195,10 +196,11 @@ class Vertex : public Block {
     double worst_ortho = 1;
     double worst_edge = 1;
     bool has_glued_neighbor = false;
+    bool computing_depends = false;
   };
-  _Optimization_state _compute_state(bool include_neighbors = true) const;
+  _Optimization_state _compute_state(bool include_neighbors = true);
   void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                const Vertex* orig_vertex = nullptr) const;
+                                Vertex* orig_vertex = nullptr);
   Improve_quality_result _improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                           std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                           bool has_target, bool limit_direction, bool snap);
@@ -212,6 +214,7 @@ class Vertex : public Block {
   std::vector<double> _glued_coords;
   double _shared_value;
   Lock _shared_value_lock;
+  std::vector<Vertex*> _depends_on;
 };
 
 /*! \brief A `Block` which is part of the mesh boundary.

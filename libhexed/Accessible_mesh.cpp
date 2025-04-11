@@ -863,6 +863,9 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   int id = rand()%1000;
   printers::info("id: " + std::to_string(id) + "\n");
   #endif
+  std::vector<next::Vertex*> mobile_verts;
+  for (auto& vert : verts) if (vert.mobile()) mobile_verts.push_back(&vert);
+  for (auto vert : mobile_verts) vert->compute_depends();
   Int snaps_failed = 0;
   double total_dist = 0;
   Stopwatch watch;
@@ -914,7 +917,9 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     }
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
-      for (auto& vert : verts) if (vert.mobile()) {
+      #pragma omp parallel for reduction(+:objective_diff) reduction(+:snaps_failed) reduction(+:total_dist)
+      for (auto ptr : mobile_verts) {
+        auto& vert = *ptr;
         auto satisfy = [&](Mat<3> p)->Mat<3> {
           for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
             p(i_dim) = std::max(p(i_dim), o(i_dim));
@@ -949,8 +954,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         objective_diff += iqr.objective_diff;
         snaps_failed += iqr.snap_failed;
         total_dist += iqr.target_dist;
-        ++_stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed;
       }
+      _stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed += mobile_verts.size();
     }
     double prev_obj = objective;
     objective = 0;
