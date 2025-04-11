@@ -865,6 +865,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   #endif
   std::vector<next::Vertex*> mobile_verts;
   for (auto& vert : verts) if (vert.mobile()) mobile_verts.push_back(&vert);
+  #pragma omp parallel for
   for (auto vert : mobile_verts) vert->compute_depends();
   Int snaps_failed = 0;
   double total_dist = 0;
@@ -961,6 +962,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     objective = 0;
     {
       Stopwatch_tree::Starter sw_assess(_stopwatch["update"]["fit surface"]["optimization"]["assessment"]);
+      #pragma omp parallel for reduction(+:objective)
       for (auto& vert : verts) objective += vert.quality_objective();
       _stopwatch["update"]["fit surface"]["optimization"]["assessment"].work_units_completed += verts.size();
     }
