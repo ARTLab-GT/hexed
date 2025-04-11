@@ -24,15 +24,20 @@ namespace hexed {
  */
 class Lock {
   #if HEXED_THREADED
-  omp_nest_lock_t l;
+  omp_nest_lock_t _l;
   #endif
   public:
   //! acquires the lock when constructed and releases when destroyed
   class Acquire {
-    Lock& lock;
     public:
     Acquire(Lock&);
+    Acquire(Acquire&& that);
+    Acquire(const Acquire&) = delete;
+    Acquire& operator=(Acquire&& that);
+    Acquire& operator=(const Acquire&) = delete;
     ~Acquire();
+    private:
+    Lock* _lock;
   };
   Lock();
   ~Lock();
