@@ -905,6 +905,7 @@ class Builder:
         self.indent = ""
         for opt in opts:
             self._merge_option(opt)
+        assert self.build_dir.split("/")[-2].startswith("build"), "build directory names must start with `build`"
         self.mkdir(self.build_dir)
         self.cache_dir = self.build_dir + "cache/"
         self.mkdir(self.cache_dir)
