@@ -865,7 +865,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   #endif
   std::vector<next::Vertex*> mobile_verts;
   for (auto& vert : verts) if (vert.mobile()) mobile_verts.push_back(&vert);
-  std::random_shuffle(mobile_verts.begin(), mobile_verts.end());
   #pragma omp parallel for
   for (auto vert : mobile_verts) vert->compute_depends();
   Int snaps_failed = 0;
