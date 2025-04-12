@@ -158,12 +158,12 @@ class Vertex : public Block {
    */
   class Shared_value {
     public:
-    Shared_value(Vertex&); //!< \brief Acquires the `Lock`
+    Shared_value(Vertex&); //!< \brief Sets the `Lock`
     double get() const; //!< \brief Fetches the shared value.
     void set(double); //!< \brief Writes to the shared value.
     private:
     Vertex& _vert;
-    std::optional<Lock::Acquire> _acquire;
+    std::optional<Lock::Set> _set;
   };
 
   //! \brief current position of this vertex

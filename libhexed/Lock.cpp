@@ -2,7 +2,7 @@
 
 namespace hexed {
 
-Lock::Acquire::Acquire(Lock& ref)
+Lock::Set::Set(Lock& ref)
 : _lock{&ref}
 {
   #if HEXED_THREADED
@@ -10,13 +10,13 @@ Lock::Acquire::Acquire(Lock& ref)
   #endif
 }
 
-Lock::Acquire::Acquire(Lock::Acquire&& that)
+Lock::Set::Set(Lock::Set&& that)
 : _lock{nullptr}
 {
   *this = std::move(that);
 }
 
-Lock::Acquire& Lock::Acquire::operator=(Lock::Acquire&& that) {
+Lock::Set& Lock::Set::operator=(Lock::Set&& that) {
   #if HEXED_THREADED
   if (_lock) omp_unset_nest_lock(&_lock->_l);
   #endif
@@ -26,7 +26,7 @@ Lock::Acquire& Lock::Acquire::operator=(Lock::Acquire&& that) {
 }
 
 
-Lock::Acquire::~Acquire() {
+Lock::Set::~Set() {
   #if HEXED_THREADED
   if (_lock) omp_unset_nest_lock(&_lock->_l);
   #endif

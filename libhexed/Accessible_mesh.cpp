@@ -798,8 +798,8 @@ void Accessible_mesh::_fit_surface() {
       if (!edge.glued()) {
         std::vector<next::Element_shape*> dependent_elems = edge.dependent_elements();
         std::sort(dependent_elems.begin(), dependent_elems.end(), std::less());
-        std::vector<std::unique_ptr<Lock::Acquire>> acquires;
-        for (next::Element_shape* e : dependent_elems) acquires.emplace_back(new Lock::Acquire(e->lock));
+        std::vector<std::unique_ptr<Lock::Set>> sets;
+        for (next::Element_shape* e : dependent_elems) sets.emplace_back(new Lock::Set(e->lock));
         bool failed = false;
         if (edge.snapped_edge >= 0) {
           HEXED_ASSERT(edge.snapped_edge < edges.size(), "clearly erroneous `snapped_edge` value")
@@ -2081,7 +2081,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
     #pragma omp parallel for
     for (auto con : extrude_cons) {
       auto& inside = con->element(1);
-      Lock::Acquire a(inside.lock);
+      Lock::Set s(inside.lock);
       if (inside.record == 0) inside.record = con->element(0).record;
       else inside.record = std::max(inside.record, con->element(0).record);
       inside.unrefinement_locked = inside.unrefinement_locked || con->element(0).unrefinement_locked;
@@ -2348,7 +2348,7 @@ void Accessible_mesh::reset_verts() {
     if (elem.tree) {
       for (int i_vert = 0; i_vert < nv; ++i_vert) {
         auto& vert = elem.vertex(i_vert);
-        Lock::Acquire a(vert.lock);
+        Lock::Set s(vert.lock);
         vert.pos = elem.tree->nominal_position();
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
           vert.pos(i_dim) += elem.tree->nominal_size()*((i_vert/math::pow(2, params.n_dim - 1 - i_dim))%2);
@@ -2364,7 +2364,7 @@ void Accessible_mesh::reset_verts() {
     int stride = math::pow(2, params.n_dim - 1 - dir.i_dim[0]);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
       auto& vert = elem.vertex(i_vert);
-      Lock::Acquire a(vert.lock);
+      Lock::Set s(vert.lock);
       int face_sign = (i_vert/stride)%2;
       if (face_sign == dir.face_sign[1]) {
         vert.pos = elem.vertex(i_vert + stride*(dir.face_sign[0] - face_sign)).pos;

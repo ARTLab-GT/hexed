@@ -245,7 +245,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
                                                         std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                                         bool has_target, bool limit_direction, bool snap) {
   // acquire locks on all vertices we depend on to prevent simultaneous vertex motions from violating mesh quality
-  std::vector<Lock::Acquire> locks;
+  std::vector<Lock::Set> locks;
   for (Vertex* vert : _depends_on) locks.emplace_back(vert->_shared_value_lock);
   _pos = unwarped_point();
   Mat<3> orig_pos = _pos;
@@ -360,11 +360,11 @@ NEIGHBORS(const)
 #undef NEIGHBORS
 
 Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
-  if (!_vert.glued()) _acquire.emplace(_vert._shared_value_lock);
+  if (!_vert.glued()) _set.emplace(_vert._shared_value_lock);
 }
 
 double Vertex::Shared_value::get() const {
-  if (_acquire) return _vert._shared_value;
+  if (_set) return _vert._shared_value; // equivalent to checking if vertex is glued
   HEXED_ASSERT(_vert.glued(), "The glued status of the vertex changed since constructing the `Shared_value`.")
   double value = 0;
   for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
@@ -381,7 +381,7 @@ double Vertex::Shared_value::get() const {
 }
 
 void Vertex::Shared_value::set(double value) {
-  if (_acquire) _vert._shared_value = value;
+  if (_set) _vert._shared_value = value;
 }
 
 Mat<3> Vertex::_get_pos() const {

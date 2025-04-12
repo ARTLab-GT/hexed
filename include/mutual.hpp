@@ -22,8 +22,8 @@ namespace hexed::mutual {
 #define LOCK \
   Lock* locks [2] {&this->_lock, &that._lock}; \
   bool less = std::less<void*>()(this, &that); \
-  Lock::Acquire aq0(*locks[ less]); \
-  Lock::Acquire aq1(*locks[!less]); \
+  Lock::Set s0(*locks[ less]); \
+  Lock::Set s1(*locks[!less]); \
 
 /*! \brief abstract base class for all mutually-connected objects
  * \details Implements the basic mechanics of mutual connection and disconnection.
@@ -138,7 +138,7 @@ class Multiple : public Base<T, U> {
   //! \brief steals all of `that`'s partners, leaving `that` unconnected
   Multiple(Multiple&& that) {*this = std::move(that);}
   virtual ~Multiple() {
-    Lock::Acquire aq(Base<T, U>::_lock);
+    Lock::Set s(Base<T, U>::_lock);
     for (int i = _partners.size() - 1; i >= 0; --i) this->_disconnect(*_partners[i]);
   }
   Multiple& operator=(const Multiple&) = delete;
