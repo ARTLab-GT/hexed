@@ -865,6 +865,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   #endif
   std::vector<next::Vertex*> mobile_verts;
   for (auto& vert : verts) if (vert.mobile()) mobile_verts.push_back(&vert);
+  auto compare = [](next::Vertex* vert0, next::Vertex* vert1) {return vert0->point({})[1] < vert1->point({})[1];};
+  std::sort(mobile_verts.begin(), mobile_verts.end(), compare);
   #pragma omp parallel for
   for (auto vert : mobile_verts) vert->compute_depends();
   Int snaps_failed = 0;
@@ -920,9 +922,12 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     }
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
+      Int n_chunk = mobile_verts.size()/config::n_threads + 1;
       #pragma omp parallel for reduction(+:objective_diff) reduction(+:snaps_failed) reduction(+:total_dist)
-      for (auto ptr : mobile_verts) {
-        auto& vert = *ptr;
+      for (int i_thread = 0; i_thread < config::n_threads; ++i_thread) {
+      Int loop_max = std::min<Int>(mobile_verts.size(), (i_thread + 1)*n_chunk);
+      for (int i_vert = i_thread*n_chunk; i_vert < loop_max; ++i_vert) {
+        auto& vert = *mobile_verts[i_vert];
         auto satisfy = [&](Mat<3> p)->Mat<3> {
           for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
             p(i_dim) = std::max(p(i_dim), o(i_dim));
@@ -957,6 +962,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         objective_diff += iqr.objective_diff;
         snaps_failed += iqr.snap_failed;
         total_dist += iqr.target_dist;
+      }
       }
       _stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed += mobile_verts.size();
     }
