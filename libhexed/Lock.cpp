@@ -44,4 +44,15 @@ Lock::~Lock() {
   #endif
 }
 
+std::optional<Lock::Set> Lock::test() {
+  std::optional<Set> set;
+  #if HEXED_THREADED
+  if (omp_test_nest_lock(&_l)) { // Increments nesting count. We now own the lock, so we can set it without blocking.
+    set.emplace(*this); // increments nesting count again
+    omp_unset_nest_lock(&_l); // Decrement nesting count to undo initial test. We still own the lock.
+  }
+  #endif
+  return set;
+}
+
 }

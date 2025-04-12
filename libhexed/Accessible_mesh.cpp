@@ -875,6 +875,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   double last_time = 0;
   std::string message;
   Int snap_succeeded = -1;
+  next::Vertex::misses = 0;
+  next::Vertex::tries = 0;
   for (Int i_relax = 0;
        i_relax < 1000 && (i_relax < 30
                           || (snaps_failed == 0 && obj_monitor.max() - obj_monitor.min()
@@ -995,6 +997,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   }
   printers::info(message, false, true);
   printers::info("\n");
+  printers::info(to_string(next::Vertex::misses) + " misses out of " + to_string(next::Vertex::tries) + " tries ("
+                 + to_string(double(next::Vertex::misses)/next::Vertex::tries) + ")");
   ++_stopwatch["update"]["fit surface"]["optimization"].work_units_completed;
 }
 

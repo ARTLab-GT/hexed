@@ -2,6 +2,7 @@
 #define HEXED_LOCK_HPP_
 
 #include <omp.h>
+#include <optional>
 #include "config.hpp"
 
 namespace hexed {
@@ -27,7 +28,7 @@ class Lock {
   omp_nest_lock_t _l;
   #endif
   public:
-  //! sets the lock when constructed and unsets when destroyed
+  //! \brief sets the lock when constructed and unsets when destroyed
   class Set {
     public:
     Set(Lock&);
@@ -41,6 +42,9 @@ class Lock {
   };
   Lock();
   ~Lock();
+  //! \brief If the lock is available, set it and return a `Set` object. Otherwise, return empty `std::optional`.
+  //! \note Doesn't block if the lock isn't available.
+  std::optional<Set> test();
 };
 
 }

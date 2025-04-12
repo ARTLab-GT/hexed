@@ -241,9 +241,25 @@ void Vertex::compute_depends() {
   std::sort(_depends_on.begin(), _depends_on.end(), std::less<Vertex*>{});
 }
 
+Int Vertex::misses = 0;
+Int Vertex::tries = 0;
+
 Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                                         std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                                         bool has_target, bool limit_direction, bool snap) {
+  bool miss = false;
+  for (Vertex* vert : _depends_on) {
+    if (!vert->_shared_value_lock.test()) {
+      miss = true;
+      break;
+    }
+  }
+  if (miss) {
+    #pragma omp atomic update
+    ++misses;
+  }
+  #pragma omp atomic update
+  ++tries;
   // acquire locks on all vertices we depend on to prevent simultaneous vertex motions from violating mesh quality
   std::vector<Lock::Set> locks;
   for (Vertex* vert : _depends_on) locks.emplace_back(vert->_shared_value_lock);
