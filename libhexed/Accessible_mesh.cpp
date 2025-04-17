@@ -869,6 +869,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   for (auto vert : mobile_verts) vert->compute_depends();
   Int snaps_failed = 0;
   double total_dist = 0;
+  Int n_problem = 0;
   Stopwatch watch;
   watch.start();
   double last_time = 0;
@@ -876,6 +877,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   Int snap_succeeded = -1;
   next::Vertex::misses = 0;
   next::Vertex::tries = 0;
+  std::vector<next::Vertex*> failed_vertices(mobile_verts.size(), nullptr);
   for (Int i_relax = 0;
        i_relax < 1000 && (i_relax < 30
                           || (snaps_failed == 0 && obj_monitor.max() - obj_monitor.min()
@@ -920,43 +922,57 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     }
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
-      #pragma omp parallel for reduction(+:objective_diff) reduction(+:snaps_failed) reduction(+:total_dist)
-      for (auto ptr : mobile_verts) {
-        auto& vert = *ptr;
-        auto satisfy = [&](Mat<3> p)->Mat<3> {
-          for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
-            p(i_dim) = std::max(p(i_dim), o(i_dim));
-            p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
-          }
-          if (vert.record[2*params.n_dim]) {
-            for (auto n : vert.neighbors()) if (n) {
-              if ((int)n->record.size() == 2*params.n_dim + 1) {
-                if (!n->record[2*params.n_dim]) {
-                  auto seq = Eigen::seqN(0, params.n_dim);
-                  Mat<> start = n->point({})(seq);
-                  Mat<> end = p(Eigen::seqN(0, params.n_dim));
-                  std::vector<double> intersections = surf_geom->intersections(start, end, false);
-                  double min_sect = 1;
-                  for (double s : intersections) min_sect = std::min(min_sect, s);
-                  p(seq) = start + min_sect*(p(seq) - start);
+      auto improve_verts = [&](std::vector<next::Vertex*>& to_improve, Int n_improve) {
+        #pragma omp parallel for reduction(+:objective_diff) reduction(+:snaps_failed) reduction(+:total_dist)
+        for (Int i_vert = 0; i_vert < n_improve; ++i_vert) {
+          auto& vert = *to_improve[i_vert];
+          auto satisfy = [&](Mat<3> p)->Mat<3> {
+            for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
+              p(i_dim) = std::max(p(i_dim), o(i_dim));
+              p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
+            }
+            if (vert.record[2*params.n_dim]) {
+              for (auto n : vert.neighbors()) if (n) {
+                if ((int)n->record.size() == 2*params.n_dim + 1) {
+                  if (!n->record[2*params.n_dim]) {
+                    auto seq = Eigen::seqN(0, params.n_dim);
+                    Mat<> start = n->point({})(seq);
+                    Mat<> end = p(Eigen::seqN(0, params.n_dim));
+                    std::vector<double> intersections = surf_geom->intersections(start, end, false);
+                    double min_sect = 1;
+                    for (double s : intersections) min_sect = std::min(min_sect, s);
+                    p(seq) = start + min_sect*(p(seq) - start);
+                  }
                 }
               }
             }
+            return p;
+          };
+          auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
+          bool on_surface = false;
+          for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert.record[i];
+          next::Vertex::Improve_quality_result iqr;
+          if (on_surface) {
+            iqr = vert.improve_quality(get_target, satisfy, true, try_snap);
+          } else {
+            iqr = vert.improve_quality();
           }
-          return p;
-        };
-        auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
-        bool on_surface = false;
-        for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert.record[i];
-        next::Vertex::Improve_quality_result iqr;
-        if (on_surface) {
-          iqr = vert.improve_quality(get_target, satisfy, true, try_snap);
-        } else {
-          iqr = vert.improve_quality();
+          objective_diff += iqr.objective_diff;
+          snaps_failed += iqr.snap_failed;
+          total_dist += iqr.target_dist;
         }
-        objective_diff += iqr.objective_diff;
-        snaps_failed += iqr.snap_failed;
-        total_dist += iqr.target_dist;
+      };
+      improve_verts(mobile_verts, mobile_verts.size());
+      n_problem = 0;
+      for (next::Vertex* vert : mobile_verts) {
+        if (vert->has_problem()) failed_vertices[n_problem++] = vert;
+      }
+      if (n_problem) {
+        for (Int i_iter = 0; i_iter < Int(mobile_verts.size())/n_problem; ++i_iter) {
+          snaps_failed = 0;
+          total_dist = 0;
+          improve_verts(failed_vertices, n_problem);
+        }
       }
       _stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed += mobile_verts.size();
     }
@@ -985,7 +1001,9 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       " Objective = %.18e (%+.5e);"
       " Number of vertex snaps failed = %li;"
       " Total distance from surface = %.5e;"
+      " Fraction of problematic vertices = %.5e;"
       , i_relax, objective, objective - starting_objective, snaps_failed, total_dist
+      , n_problem/(double)mobile_verts.size()
     );
     if (watch.time() > last_time) {
       last_time += .1;

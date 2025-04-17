@@ -71,6 +71,7 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , _elems(this)
 , _glued_to(this)
 , _shared_value{0}
+, _last_snap_failed{false}
 {}
 
 Vertex::~Vertex() {}
@@ -241,6 +242,12 @@ void Vertex::compute_depends() {
   std::sort(_depends_on.begin(), _depends_on.end(), std::less<Vertex*>{});
 }
 
+bool Vertex::has_problem() const {
+  // note that each vertex is in its own `depends_on`
+  for (const Vertex* d : _depends_on) if (d->_last_snap_failed) return true;
+  return false;
+}
+
 Int Vertex::misses = 0;
 Int Vertex::tries = 0;
 
@@ -330,7 +337,8 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   }
   new_state = _compute_state();
   HEXED_ASSERT(new_state.feasible, "something changed");
-  return {new_state.objective - state.objective, snap_iters > 1, target_dist};
+  _last_snap_failed = snap_iters > 1;
+  return {new_state.objective - state.objective, _last_snap_failed, target_dist};
 }
 
 bool Vertex::snap_to(Mat<3> target) {

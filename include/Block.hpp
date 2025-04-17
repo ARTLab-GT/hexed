@@ -131,6 +131,7 @@ class Vertex : public Block {
                                          std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                          bool limit_direction = true, bool snap = true);
   void compute_depends();
+  bool has_problem() const;
   bool snap_to(Mat<3> target);
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
   double quality_objective();
@@ -218,6 +219,7 @@ class Vertex : public Block {
   double _shared_value;
   Lock _shared_value_lock;
   std::vector<Vertex*> _depends_on;
+  bool _last_snap_failed;
 };
 
 /*! \brief A `Block` which is part of the mesh boundary.
