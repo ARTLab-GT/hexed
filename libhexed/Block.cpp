@@ -340,7 +340,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   new_state = _compute_state();
   HEXED_ASSERT(new_state.feasible, "something changed");
   _last_snap_failed = snap_iters > 1;
-  return {new_state.objective - state.objective, _last_snap_failed, target_dist, n_back_improve, snap_iters};
+  return {new_state.objective - state.objective, _last_snap_failed, target_dist};
 }
 
 bool Vertex::snap_to(Mat<3> target) {

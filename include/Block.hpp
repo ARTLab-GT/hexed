@@ -125,8 +125,6 @@ class Vertex : public Block {
     double objective_diff;
     bool snap_failed;
     double target_dist;
-    int n_backtrack_improve;
-    int n_backtrack_snap;
   };
   Improve_quality_result improve_quality();
   Improve_quality_result improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
