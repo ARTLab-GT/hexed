@@ -321,7 +321,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   double target_dist = 0;
   if (has_target && snap) {
     orig_pos = _pos;
-    target = get_target(_pos);
+    target = satisfy_constraints(get_target(_pos));
     Mat<3> step = target - _pos;
     double orig_objective = new_state.objective;
     do {
