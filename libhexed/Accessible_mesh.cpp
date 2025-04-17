@@ -703,7 +703,25 @@ void Accessible_mesh::_fit_surface() {
     n_failed += !vert.snap_to(_get_snapping_target(vert, vert.unwarped_point()));
   }
   if (n_failed) {
-    printers::warn(format_str(200, "%li vertices could not be snapped to the surface.\n", n_failed), true);
+    n_failed = 0;
+    {
+      for (auto& vert : verts) {
+        if (vert.last_snap_failed()) {
+          vert.snapped_edge = -1;
+          vert.snapped_endpoint = -1;
+          for (auto& edge : vert.edges()) {
+            edge.snapped_edge = -1;
+          }
+        }
+      }
+      {
+        Task_message message(printers::info, "  Attempting to fit failed vertices to the surface", "\n", "  ");
+        _optimize(1, 10, true);
+      }
+      if (n_failed) {
+        printers::warn(format_str(200, "%li vertices could not be snapped to the surface at all.\n", n_failed), true);
+      }
+    }
   }
   #pragma omp parallel for
   for (auto& vert : all_verts) vert.record.clear();

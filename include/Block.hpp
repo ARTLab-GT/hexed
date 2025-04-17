@@ -132,6 +132,7 @@ class Vertex : public Block {
                                          bool limit_direction = true, bool snap = true);
   void compute_depends();
   bool has_problem() const;
+  inline bool last_snap_failed() const {return _last_snap_failed;}
   bool snap_to(Mat<3> target);
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
   double quality_objective();
