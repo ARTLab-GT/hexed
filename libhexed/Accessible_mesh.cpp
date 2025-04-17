@@ -870,6 +870,10 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   Int snaps_failed = 0;
   double total_dist = 0;
   Int n_problem = 0;
+  Int n_backtrack_all = 0;
+  Int n_backtrack_problem = 0;
+  Int n_snap_all = 0;
+  Int n_snap_problem = 0;
   Stopwatch watch;
   watch.start();
   double last_time = 0;
@@ -915,15 +919,17 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     Mat<> o = tree->origin();
     double tns = tree->nominal_size();
     double objective_diff = 0;
-    bool try_snap = true;
-    if (try_snap) {
-      snaps_failed = 0;
-      total_dist = 0;
-    }
+    snaps_failed = 0;
+    total_dist = 0;
+    n_backtrack_all = 0;
+    n_snap_all = 0;
+    n_backtrack_problem = 0;
+    n_snap_problem = 0;
+    Int n_problem_iters = 1;
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
-      auto improve_verts = [&](std::vector<next::Vertex*>& to_improve, Int n_improve) {
-        #pragma omp parallel for reduction(+:objective_diff) reduction(+:snaps_failed) reduction(+:total_dist)
+      auto improve_verts = [&](std::vector<next::Vertex*>& to_improve, Int n_improve, Int& backtrack, Int& snaps) {
+        #pragma omp parallel for reduction(+:objective_diff, snaps_failed, total_dist, backtrack, snaps)
         for (Int i_vert = 0; i_vert < n_improve; ++i_vert) {
           auto& vert = *to_improve[i_vert];
           auto satisfy = [&](Mat<3> p)->Mat<3> {
@@ -953,25 +959,28 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
           for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert.record[i];
           next::Vertex::Improve_quality_result iqr;
           if (on_surface) {
-            iqr = vert.improve_quality(get_target, satisfy, true, try_snap);
+            iqr = vert.improve_quality(get_target, satisfy, true, true);
           } else {
             iqr = vert.improve_quality();
           }
           objective_diff += iqr.objective_diff;
           snaps_failed += iqr.snap_failed;
           total_dist += iqr.target_dist;
+          backtrack += iqr.n_backtrack_improve;
+          snaps += iqr.n_backtrack_snap;
         }
       };
-      improve_verts(mobile_verts, mobile_verts.size());
+      improve_verts(mobile_verts, mobile_verts.size(), n_backtrack_all, n_snap_all);
       n_problem = 0;
       for (next::Vertex* vert : mobile_verts) {
         if (vert->has_problem()) failed_vertices[n_problem++] = vert;
       }
       if (n_problem) {
-        for (Int i_iter = 0; i_iter < Int(mobile_verts.size())/n_problem; ++i_iter) {
+        n_problem_iters = Int(mobile_verts.size())/n_problem;
+        for (Int i_iter = 0; i_iter < n_problem_iters; ++i_iter) {
           snaps_failed = 0;
           total_dist = 0;
-          improve_verts(failed_vertices, n_problem);
+          improve_verts(failed_vertices, n_problem, n_backtrack_problem, n_snap_problem);
         }
       }
       _stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed += mobile_verts.size();
@@ -994,6 +1003,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     }
     obj_monitor.add_sample(i_relax, objective - starting_objective);
     dist_monitor.add_sample(i_relax, total_dist);
+    double np = n_problem*n_problem_iters;
+    double mvs = mobile_verts.size();
     message = format_str(
       400,
       "   "
@@ -1002,14 +1013,16 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       " Number of vertex snaps failed = %li;"
       " Total distance from surface = %.5e;"
       " Fraction of problematic vertices = %.5e;"
+      " Backtrack averages = ai%.5e as%.5e pi%.5e ps%.5e;"
       , i_relax, objective, objective - starting_objective, snaps_failed, total_dist
-      , n_problem/(double)mobile_verts.size()
+      , n_problem/mvs
+      , n_backtrack_all/mvs, n_snap_all/mvs, n_backtrack_problem/np, n_snap_problem/np
     );
     if (watch.time() > last_time) {
       last_time += .1;
       printers::info(message, false, true);
     }
-    if (try_snap && snaps_failed == 0 && snap_succeeded < 0) snap_succeeded = i_relax;
+    if (snaps_failed == 0 && snap_succeeded < 0) snap_succeeded = i_relax;
     if (i_relax > 2*snap_succeeded && snap_succeeded >= 0 && i_relax > 30) break;
   }
   printers::info(message, false, true);

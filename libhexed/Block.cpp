@@ -286,6 +286,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   double orig_dist = (target - orig_pos).norm();
   _Optimization_state new_state = state;
   const double min_step = 1e-8*ns;
+  int n_back_improve = 0;
   if (state.gradient.norm()*ns > 1e-6*state.objective) {
     _pos = orig_pos + 1e-8*ns*direction;
     _Optimization_state test_state = _compute_state();
@@ -306,6 +307,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
           break;
         }
         step_sz /= repeat_factor[i];
+        ++n_back_improve;
         _pos = satisfy_constraints(orig_pos + step_sz*direction);
         Mat<3> new_target = get_target(_pos);
         double dist = (new_target - _pos).norm();
@@ -338,7 +340,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   new_state = _compute_state();
   HEXED_ASSERT(new_state.feasible, "something changed");
   _last_snap_failed = snap_iters > 1;
-  return {new_state.objective - state.objective, _last_snap_failed, target_dist};
+  return {new_state.objective - state.objective, _last_snap_failed, target_dist, n_back_improve, snap_iters};
 }
 
 bool Vertex::snap_to(Mat<3> target) {
