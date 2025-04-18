@@ -100,7 +100,7 @@ class Accessible_mesh : public Mesh {
     std::array<Geom_edge::Node, 2> nodes;
   };
   void _record_connections();
-  void _offset_vertices(double);
+  void _offset_vertices(double, bool strategy);
   Mat<3> _get_snapping_target(next::Vertex&, Mat<3>);
   void _fit_surface();
   void _optimize(int min_pow, int max_pow, bool check_snapping);

@@ -60,7 +60,7 @@ namespace dijkstra {
   }
 }
 
-void Accessible_mesh::_offset_vertices(double offset) {
+void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
   int nd = params.n_dim;
   auto verts = _blocks.verts();
   #pragma omp parallel for
@@ -77,34 +77,48 @@ void Accessible_mesh::_offset_vertices(double offset) {
       is_new[i_side] = con->element(i_side).active_shape().is_new;
     }
     if (is_new[0] != is_new[1]) {
-      int new_elem = is_new[1];
-      auto i_verts = vertex_inds(nd, dir)[0];
-      Mat<3, dyn> vert_pos(3, nv);
-      std::vector<next::Vertex*> con_verts(nv);
-      for (int i_vert = 0; i_vert < nv; ++i_vert) {
-        con_verts[i_vert] = &con->element(0).active_shape().vertex(i_verts[i_vert]);
-        vert_pos(all, i_vert) = con_verts[i_vert]->unwarped_point();
-      }
-      for (int i_vert = 0; i_vert < nv; ++i_vert) {
-        Mat<3, 2> edges;
-        edges(all, 1).setUnit(2);
-        for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-          int stride = math::pow(2, nd - 2 - i_dim);
-          int start = i_vert - i_vert/stride%2*stride;
-          edges(all, i_dim) = vert_pos(all, start + stride) - vert_pos(all, start);
-        }
-        Mat<3> nrml = edges(all, 0).cross(edges(all, 1)).normalized()
-                      *math::sign(dir.face_sign[0])*math::sign(new_elem)*math::sign(dir.i_dim[0] == 1);
-        double dot = nrml.dot(con_verts[i_vert]->offset);
-        Mat<3> diff = nrml;
-        if (dot < 0) {
-          double norm_sq = con_verts[i_vert]->offset.squaredNorm();
-          if (norm_sq > .1) { // `offset` should be 0 or >= 1
-            diff -= con_verts[i_vert]->offset*dot/norm_sq;
-            diff /= diff.dot(nrml);
+      bool new_elem = is_new[1];
+      if (strategy) {
+        auto& shape = con->element(!new_elem).active_shape();
+        if (shape.boundary_face() != next::Mesh_blocks::no_face) {
+          for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+            int row_coord = math::row_coordinate(nd, 2, dir.i_dim[!new_elem], i_vert);
+            auto& vert = shape.vertex(i_vert);
+            if (row_coord == dir.face_sign[!new_elem]) {
+              int opposite = i_vert - math::sign(row_coord)*math::pow(2, nd - 1 - dir.i_dim[!new_elem]);
+              vert.offset += .5*(shape.vertex(opposite).point({}) - vert.point({}))/vert.nominal_size();
+            }
           }
         }
-        con_verts[i_vert]->offset += std::max(0., 1 - dot)*diff;
+      } else {
+        auto i_verts = vertex_inds(nd, dir)[0];
+        Mat<3, dyn> vert_pos(3, nv);
+        std::vector<next::Vertex*> con_verts(nv);
+        for (int i_vert = 0; i_vert < nv; ++i_vert) {
+          con_verts[i_vert] = &con->element(0).active_shape().vertex(i_verts[i_vert]);
+          vert_pos(all, i_vert) = con_verts[i_vert]->unwarped_point();
+        }
+        for (int i_vert = 0; i_vert < nv; ++i_vert) {
+          Mat<3, 2> edges;
+          edges(all, 1).setUnit(2);
+          for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+            int stride = math::pow(2, nd - 2 - i_dim);
+            int start = i_vert - i_vert/stride%2*stride;
+            edges(all, i_dim) = vert_pos(all, start + stride) - vert_pos(all, start);
+          }
+          Mat<3> nrml = edges(all, 0).cross(edges(all, 1)).normalized()
+                        *math::sign(dir.face_sign[0])*math::sign(new_elem)*math::sign(dir.i_dim[0] == 1);
+          double dot = nrml.dot(con_verts[i_vert]->offset);
+          Mat<3> diff = nrml;
+          if (dot < 0) {
+            double norm_sq = con_verts[i_vert]->offset.squaredNorm();
+            if (norm_sq > .1) { // `offset` should be 0 or >= 1
+              diff -= con_verts[i_vert]->offset*dot/norm_sq;
+              diff /= diff.dot(nrml);
+            }
+          }
+          con_verts[i_vert]->offset += std::max(0., 1 - dot)*diff;
+        }
       }
     }
   }
@@ -182,7 +196,18 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) {
     vert.set_pos(vert.nominal_position());
   }
-  _offset_vertices(.2);
+  _offset_vertices(.2, false);
+  {
+    auto faces = _blocks.faces_3d();
+    #pragma omp parallel for
+    for (auto& f : faces) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+    }
+    auto blocks = _blocks.boundary_sides();
+    #pragma omp parallel for
+    for (auto& b : blocks) b.reset();
+    visualize("default", "mesh_diagnostic2", 0.);
+  }
   #if 1
   {
     Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
@@ -364,7 +389,18 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) {
     vert.set_pos(vert.nominal_position());
   }
-  _offset_vertices(.2);
+  _offset_vertices(.2, false);
+  {
+    auto faces = _blocks.faces_3d();
+    #pragma omp parallel for
+    for (auto& f : faces) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+    }
+    auto blocks = _blocks.boundary_sides();
+    #pragma omp parallel for
+    for (auto& b : blocks) b.reset();
+    visualize("default", "mesh_diagnostic1", 0.);
+  }
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
@@ -689,10 +725,21 @@ void Accessible_mesh::_fit_surface() {
     vert.record.clear();
   }
   purge();
-  _offset_vertices(.01);
+  _offset_vertices(.05, false);
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
+  }
+  {
+    auto faces = _blocks.faces_3d();
+    #pragma omp parallel for
+    for (auto& f : faces) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+    }
+    auto blocks = _blocks.boundary_sides();
+    #pragma omp parallel for
+    for (auto& b : blocks) b.reset();
+    visualize("default", "mesh_diagnostic", 0.);
   }
   {
     Task_message message(printers::info, "  Post-edge-matching mesh optimization", "\n", "  ");
@@ -702,6 +749,7 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) {
     n_failed += !vert.snap_to(_get_snapping_target(vert, vert.unwarped_point()));
   }
+  #if 0
   if (n_failed) {
     n_failed = 0;
     {
@@ -723,6 +771,7 @@ void Accessible_mesh::_fit_surface() {
       }
     }
   }
+  #endif
   #pragma omp parallel for
   for (auto& vert : all_verts) vert.record.clear();
 
@@ -844,6 +893,14 @@ void Accessible_mesh::_fit_surface() {
   #pragma omp parallel for
   for (auto& face : faces_3d) plain_snap(face);
   ++_stopwatch["update"]["fit surface"].work_units_completed;
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    elem.snapping_problem = false;
+    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      elem.snapping_problem = elem.snapping_problem || elem.active_shape().vertex(i_vert).last_snap_failed();
+    }
+  }
 }
 
 void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
@@ -893,12 +950,16 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   std::string message;
   next::Vertex::misses = 0;
   next::Vertex::tries = 0;
+  #if 0
   for (Int i_relax = 0;
        i_relax < 1000 && (i_relax < 30
                           || (snaps_failed == 0 && obj_monitor.max() - obj_monitor.min()
                                                    > 1e-2*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
                           || (snaps_failed != 0 && dist_monitor.max() - dist_monitor.min() > 1e-2*dist_monitor.min()));
        ++i_relax) {
+  #else
+  for (Int i_relax = 0; i_relax < 100; ++i_relax) {
+  #endif
     #if HEXED_VIS_MESH_OPT
     {
       auto faces = _blocks.faces_3d();
@@ -2088,6 +2149,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       elem.record = 0;
       bool ref = refine_criterion(elem);
       bool unref = unrefine_criterion(elem);
+      HEXED_ASSERT(!unref, "element requests unrefinement")
       if (ref && !unref) elem.record = 1;
       else if (unref && !ref) elem.record = -1;
     }

@@ -138,8 +138,8 @@ bool Vertex::mobile() const {
   return has_unglued && !has_cartesian && !glued();
 }
 
-const double ortho_tolerance = 3e-2;
-const double edge_tolerance = 3e-3;
+const double ortho_tolerance = .03;
+const double edge_tolerance = .03;
 
 Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
   _Optimization_state state;
@@ -288,7 +288,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   const double min_step = 1e-8*ns;
   int n_back_improve = 0;
   if (state.gradient.norm()*ns > 1e-6*state.objective) {
-    _pos = orig_pos + 1e-8*ns*direction;
+    //_pos = orig_pos + 1e-8*ns*direction;
     _Optimization_state test_state = _compute_state();
     #if 0
     if (std::abs(test_state.objective - state.objective + state.gradient.norm()*1e-8*ns)
