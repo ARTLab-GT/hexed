@@ -156,7 +156,6 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
     HEXED_ASSERT(elem, "element is null");
     if (elem->glued()) continue;
     int i_this = _get_index(*elem);
-    double ns = elem->nominal_size();
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
       verts(all, i_vert) = elem->vertex(i_vert).unwarped_point();
@@ -175,6 +174,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
     i_those.push_back(i_this);
     for (int i_that : i_those) {
       Vertex& that_vert = elem->vertex(i_that);
+      double ns = that_vert.nominal_size();
       bool skip_obj = false;
       bool skip_grad = false;
       for (auto s : state.skip) if (s.elem == elem) {

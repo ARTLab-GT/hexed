@@ -91,6 +91,7 @@ void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
           }
         }
       } else {
+        // compute the positions of all the vertices on the face
         auto i_verts = vertex_inds(nd, dir)[0];
         Mat<3, dyn> vert_pos(3, nv);
         std::vector<next::Vertex*> con_verts(nv);
@@ -99,6 +100,7 @@ void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
           vert_pos(all, i_vert) = con_verts[i_vert]->unwarped_point();
         }
         for (int i_vert = 0; i_vert < nv; ++i_vert) {
+          // compute the face normal
           Mat<3, 2> edges;
           edges(all, 1).setUnit(2);
           for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
@@ -108,6 +110,8 @@ void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
           }
           Mat<3> nrml = edges(all, 0).cross(edges(all, 1)).normalized()
                         *math::sign(dir.face_sign[0])*math::sign(new_elem)*math::sign(dir.i_dim[0] == 1);
+          // if this normal is in the opposite direction of the current vertex offset,
+          // orthogonalize it against the current offset
           double dot = nrml.dot(con_verts[i_vert]->offset);
           Mat<3> diff = nrml;
           if (dot < 0) {
@@ -117,6 +121,7 @@ void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
               diff /= diff.dot(nrml);
             }
           }
+          // make sure that the vertex offset dot `nrml` will be >= 1
           con_verts[i_vert]->offset += std::max(0., 1 - dot)*diff;
         }
       }
