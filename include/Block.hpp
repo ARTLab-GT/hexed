@@ -118,7 +118,11 @@ class Vertex : public Block {
    */
   void glue(Element_shape& to, std::vector<double> coords);
 
+  //! \brief set the `point({})` of `this` to `p`, if possible
   void set_pos(Mat<3> p);
+  //! \brief add a constraint that the `nominal_size()` of `this` must be smaller than the supplied value
+  //! \details inherited by vertices that `eat()` `this`.
+  void add_size_constraint(double);
   Mat<3> nominal_position() const;
   bool mobile() const;
   struct Improve_quality_result {
@@ -221,6 +225,7 @@ class Vertex : public Block {
   Lock _shared_value_lock;
   std::vector<Vertex*> _depends_on;
   bool _last_snap_failed;
+  double _sz_constraint;
 };
 
 /*! \brief A `Block` which is part of the mesh boundary.

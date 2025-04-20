@@ -247,6 +247,12 @@ TEST_CASE("Block") {
       elems.push_back(blocks2.create_element({-.2, 1., .1}, .7, 3));
       REQUIRE(elems[0].nominal_size() == Catch::Approx(0.7));
       REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.7));
+      elems[0].vertex(0).add_size_constraint(.9);
+      REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.7));
+      elems[0].vertex(0).add_size_constraint(.6);
+      REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.6));
+      elems[0].vertex(0).add_size_constraint(.9);
+      REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.6));
       SECTION("vertex gluing") {
         hexed::next::Vertex vert({10., 20., 30.}, 5);
         vert.glue(elems[1], {.1, .2});
@@ -287,6 +293,7 @@ TEST_CASE("Block") {
         REQUIRE(&elems[0].vertex(1) == &elems[1].vertex(3));
       }
       REQUIRE(elems[0].vertex(0).n_elements() == 2);
+      REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.6));
     }
 
     SECTION("3D conformal") {

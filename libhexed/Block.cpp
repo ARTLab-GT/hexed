@@ -72,14 +72,15 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , _glued_to(this)
 , _shared_value{0}
 , _last_snap_failed{false}
+, _sz_constraint{huge}
 {}
 
 Vertex::~Vertex() {}
 
 double Vertex::nominal_size() const {
-  double nom_sz = huge;
+  double nom_sz = _sz_constraint;
   for (auto elem : _elems.theirs()) {
-    HEXED_ASSERT("elem", "element is null");
+    HEXED_ASSERT(elem, "element is null")
     nom_sz = std::min(nom_sz, elem->nominal_size());
   }
   return nom_sz;
@@ -100,6 +101,7 @@ void Vertex::eat(Vertex& that) {
     snapped_edge = that.snapped_edge;
     snapped_endpoint = that.snapped_endpoint;
   }
+  _sz_constraint = std::min(_sz_constraint, that._sz_constraint);
 }
 
 void Vertex::glue(Element_shape& to, std::vector<double> coords) {
@@ -115,6 +117,11 @@ void Vertex::set_pos(Mat<3> p) {
       _pos(i_dim) = p(i_dim);
     }
   }
+}
+
+void Vertex::add_size_constraint(double sz) {
+  Lock::Set s(_shared_value_lock);
+  _sz_constraint = std::min(_sz_constraint, sz);
 }
 
 Mat<3> Vertex::nominal_position() const {
