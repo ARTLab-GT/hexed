@@ -1726,7 +1726,7 @@ void Accessible_mesh::connect_new(int start_at) {
                           neighbors.size()))
     bool is_def = elem.get_is_deformed();
     for (Tree* neighbor : neighbors) {
-      VIS_ASSERT(neighbor->elem, "hanging-node connection with nonexistant elements");
+      if (!neighbor->elem) return;
       is_def = is_def && neighbor->elem->get_is_deformed();
     }
     Con_dir<Deformed_element> dir {{i_dim, i_dim}, {!sign, bool(sign)}};
@@ -2004,14 +2004,20 @@ void Accessible_mesh::delete_bad_extrusions() {
       if (!elem.tree || !elem.has_shape() || elem.record == 2) continue;
       for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
         auto& vert = elem.active_shape().vertex(i_vert);
-        for (int i = 0; i < Int(vert.record.size()); ++i) {
-          for (int j = 0; j < Int(vert.record.size()); ++j) if (i != j) {
+        for (Int i = 0; i < Int(vert.record.size()); ++i) {
+          for (Int j = i + 1; j < Int(vert.record.size()); ++j) {
             if (vert.record[i]/2 == vert.record[j]/2 && vert.record[i]%2 != vert.record[j]%2) {
               changed = true;
               elem.record = 2;
-              vert.record.clear();
             }
           }
+        }
+      }
+      // if this element is being deleted, all its vertices should be reassessed in the next sweep
+      // and we know there will be another sweep, because if `elem.record == 2` then `changed == true`
+      if (elem.record == 2) {
+        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+          elem.active_shape().vertex(i_vert).record.clear();
         }
       }
     }
@@ -2311,11 +2317,10 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       if (!elems[i_elem].tree) elems[i_elem].record = 2;
     }
     purge();
-    delete_bad_extrusions();
-    purge();
     // connect new elements
     connect_new<         Element>(0);
     connect_new<Deformed_element>(0);
+    delete_bad_extrusions();
     deform();
     purge();
     connect_new<         Element>(0);
