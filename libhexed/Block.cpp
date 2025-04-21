@@ -124,6 +124,11 @@ void Vertex::add_size_constraint(double sz) {
   _sz_constraint = std::min(_sz_constraint, sz);
 }
 
+void Vertex::remove_size_constraints() {
+  Lock::Set s(_shared_value_lock);
+  _sz_constraint = huge;
+}
+
 Mat<3> Vertex::nominal_position() const {
   Mat<3> p = Mat<3>::Zero();
   int n = 0;

@@ -294,6 +294,8 @@ TEST_CASE("Block") {
       }
       REQUIRE(elems[0].vertex(0).n_elements() == 2);
       REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.6));
+      elems[0].vertex(0).remove_size_constraints();
+      REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.7));
     }
 
     SECTION("3D conformal") {

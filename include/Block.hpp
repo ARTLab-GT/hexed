@@ -123,6 +123,8 @@ class Vertex : public Block {
   //! \brief add a constraint that the `nominal_size()` of `this` must be smaller than the supplied value
   //! \details inherited by vertices that `eat()` `this`.
   void add_size_constraint(double);
+  //! \brief removes all size constraints set with `add_size_constraint(double)`
+  void remove_size_constraints();
   Mat<3> nominal_position() const;
   bool mobile() const;
   struct Improve_quality_result {

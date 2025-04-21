@@ -471,6 +471,12 @@ void Accessible_mesh::_fit_surface() {
                          "Vertex pos is not finite.")
             HEXED_ASSERT(std::isfinite(surface.shape().vertex(i_vert).unwarped_point().squaredNorm()),
                          "Vertex pos is not finite.")
+            // add size constraints to prevent over-large offsets
+            int j_vert = i_vert - math::sign(math::row_coordinate(params.n_dim, 2, i_dim, i_vert))
+                                  *math::pow(2, params.n_dim - 1 - i_dim);
+            double sz_constraint = std::min(elem.active_shape().vertex(i_vert).nominal_size(),
+                                            elem.active_shape().vertex(j_vert).nominal_size());
+            surface.shape().vertex(i_vert).add_size_constraint(sz_constraint);
           }
           for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
             for (bool j_sign : {0, 1}) {
@@ -905,6 +911,11 @@ void Accessible_mesh::_fit_surface() {
     for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
       elem.snapping_problem = elem.snapping_problem || elem.active_shape().vertex(i_vert).last_snap_failed();
     }
+  }
+  {
+    auto new_all_verts = _blocks.verts();
+    #pragma omp parallel for
+    for (auto& vert : new_all_verts) vert.remove_size_constraints();
   }
 }
 
