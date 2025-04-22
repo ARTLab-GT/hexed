@@ -657,7 +657,8 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
         Mat<3, 2> lhs;
         lhs(all, 0) = (dist(!i_triangle)(i_triangle) - dist(i_triangle)(i_triangle)).vector();
         lhs(all, 1) = (dist(i_triangle)(!i_triangle) - dist(i_triangle)(i_triangle)).vector();
-        Mat<2> soln = lhs.householderQr().solve(-dist(i_triangle)(i_triangle).vector());
+        Mat<3> rhs = -dist(i_triangle)(i_triangle).vector();
+        Mat<2> soln = lhs.colPivHouseholderQr().solve(rhs);
         if (!(soln(0) >= 0 && soln(1) >= 0 && soln(0) + soln(1) <= 1)) {
           double dist_sq = huge;
           for (int i_edge = 0; i_edge < 3; ++i_edge) {
@@ -762,7 +763,8 @@ void Trimmed_surface::_recursive_intersections(std::vector<double>& sects, Mat<3
         lhs(all, 0) = -(verts(!i_tri)( i_tri) - verts(i_tri)(i_tri)).vector();
         lhs(all, 1) = -(verts( i_tri)(!i_tri) - verts(i_tri)(i_tri)).vector();
         lhs(all, 2) = diff;
-        Mat<3> soln = lhs.householderQr().solve(verts(i_tri)(i_tri).vector());
+        Mat<3> rhs = verts(i_tri)(i_tri).vector();
+        Mat<3> soln = lhs.colPivHouseholderQr().solve(rhs);
         if (soln(0) > -tol && soln(1) > -tol && soln(0) + soln(1) < 1 + tol) {
           Mat<2> params {(i_start + (i_tri - math::sign(i_tri)*soln(0))*stride)*_sz_max,
                          (j_start + (i_tri - math::sign(i_tri)*soln(1))*stride)*_sz_max};
