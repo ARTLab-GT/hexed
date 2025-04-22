@@ -239,9 +239,9 @@ class Array {
   //! \brief `true` iff `this` and `other` have the same `shape()`.
   //! \details It's okay to call this on arrays of different `order()`; naturally it will return `false`.
   bool same_shape(const Array<T>& other) {
-    bool same = _order == other._order;
-    if (same) for (Int i = 0; i < _order; ++i) same = same && _shape[i] == other._shape[i];
-    return same;
+    bool is_same = _order == other._order;
+    if (is_same) for (Int i = 0; i < _order; ++i) is_same = is_same && _shape[i] == other._shape[i];
+    return is_same;
   }
   /*! \brief The stride for indexing along demension `i_dim`.
    * \details E.g.,
