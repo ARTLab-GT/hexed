@@ -220,12 +220,11 @@ void Accessible_mesh::_fit_surface() {
     for (auto& b : blocks) b.reset();
     visualize("default", "mesh_diagnostic2", 0.);
   }
-  #if 1
   {
     Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
     _optimize(1, 10, true);
   }
-  #endif
+  printers::info("mark0\n");
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.record.clear();
@@ -246,6 +245,7 @@ void Accessible_mesh::_fit_surface() {
       face.edge(i_edge).snapped_edge = -1;
     }
   }
+  printers::info("mark1\n");
   auto find_nearest_vert = [&](Mat<3> point, int i_geom_edge = -1)->next::Vertex* {
     next::Vertex* nearest_vert = nullptr;
     double dist_sq = huge;
@@ -278,6 +278,7 @@ void Accessible_mesh::_fit_surface() {
     return nearest_vert;
   };
 
+  printers::info("mark2\n");
   auto edges = surf_geom->edges();
   if (params.n_dim == 3) {
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
@@ -342,12 +343,9 @@ void Accessible_mesh::_fit_surface() {
           }
         }
       }
-      matched_vertices[i_geom_edge].clear();
-      matched_edges[i_geom_edge].clear();
       if (curr.vert == start_end[0]) {
         next::Vertex* vert = curr.vert;
         do {
-          matched_vertices[i_geom_edge].emplace_back(vert);
           if (vert->dijkstra_prev_edge) {
             vert->dijkstra_prev_edge->snapped_edge = i_geom_edge;
           }
@@ -368,6 +366,8 @@ void Accessible_mesh::_fit_surface() {
       if (vert) vert->snapped_point = i_point;
     }
   }
+  printers::info("mark3\n");
+  // deal with edge endpoints that aren't shared with other edges
   for (auto& vert : verts) {
     if (vert.snapped_endpoint >= 0) {
       int n_snapped_edges = 0;
@@ -392,6 +392,7 @@ void Accessible_mesh::_fit_surface() {
       }
     }
   }
+  printers::info("mark4\n");
 
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -420,6 +421,7 @@ void Accessible_mesh::_fit_surface() {
   Int elems_sz = elems.size();
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems_sz; ++i_elem) elems[i_elem].record = 0;
+  printers::info("mark5\n");
 
   if (params.n_dim == 3) {
     for (Int i_element = 0; i_element < elems_sz; ++i_element) {
@@ -429,6 +431,7 @@ void Accessible_mesh::_fit_surface() {
       if (shape) {
         const next::Face* face = shape->boundary_face_3d();
         if (face) {
+          printers::info("mark5.1");
           int bf = shape->boundary_face();
           int i_dim = bf/2;
           bool i_sign = bf%2;
@@ -444,6 +447,7 @@ void Accessible_mesh::_fit_surface() {
               }
             }
           }
+          printers::info("mark5.2");
           if (!matched) continue;
           for (int i_edge = 0; i_edge < 4; ++i_edge) {
             auto& edge = face->edge(i_edge);
@@ -453,6 +457,7 @@ void Accessible_mesh::_fit_surface() {
               matched_to[i_edge] = edge.snapped_edge;
             }
           }
+          printers::info("mark5.3");
           auto set_vertices = [&](Element& e) {
             auto& s = e.shape();
             for (int i_vert = 0; i_vert < 8; ++i_vert) {
@@ -461,11 +466,13 @@ void Accessible_mesh::_fit_surface() {
             for (int i_face = 0; i_face < 6; ++i_face) e.face_record[i_face] = -1;
             s.extruded_direction = shape->extruded_direction;
           };
+          printers::info("mark5.4");
           Int inside_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
           Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
           set_vertices(inside);
           inside.shape().is_new = false;
           elem.face_record[2*i_dim + !i_sign] = inside_sn;
+          printers::info("mark5.5");
           Int surface_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, bf);
           Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
           set_vertices(surface);
@@ -473,23 +480,24 @@ void Accessible_mesh::_fit_surface() {
           _connect({&inside, &surface}, Con_dir<Deformed_element>({i_dim, i_dim}, {i_sign, !i_sign}));
           elem.record = 2;
           std::vector<Deformed_element*> matched_elems(6, nullptr);
+          printers::info("mark5.6");
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
             HEXED_ASSERT(std::isfinite(inside.shape().vertex(i_vert).unwarped_point().squaredNorm()),
                          "Vertex pos is not finite.")
             HEXED_ASSERT(std::isfinite(surface.shape().vertex(i_vert).unwarped_point().squaredNorm()),
                          "Vertex pos is not finite.")
             // add size constraints to prevent over-large offsets
-            int j_vert = i_vert - math::sign(math::row_coordinate(params.n_dim, 2, i_dim, i_vert))
-                                  *math::pow(2, params.n_dim - 1 - i_dim);
-            double sz_constraint = std::min(elem.active_shape().vertex(i_vert).nominal_size(),
-                                            elem.active_shape().vertex(j_vert).nominal_size());
+            int j_vert = i_vert + (i_sign - math::row_coordinate(3, 2, i_dim, i_vert))*math::pow(2, 2 - i_dim);
+            double sz_constraint = elem.active_shape().vertex(j_vert).nominal_size();
             surface.shape().vertex(i_vert).add_size_constraint(sz_constraint);
           }
+          printers::info("mark5.7");
           for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
             for (bool j_sign : {0, 1}) {
               int k_dim = 3 - j_dim - i_dim;
               int i_edge_matched = 2*(j_dim > k_dim) + j_sign;
               Int m = matched_to[i_edge_matched];
+              printers::info("mark5.7.1");
               if (m != -1) {
                 Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, bf);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
@@ -497,33 +505,37 @@ void Accessible_mesh::_fit_surface() {
                 match_elem.shape().is_new = true;
                 _connect({&surface, &match_elem}, Con_dir<Deformed_element>({j_dim, j_dim}, {j_sign, !j_sign}));
                 _connect({&inside,  &match_elem}, Con_dir<Deformed_element>({j_dim, i_dim}, {j_sign, !i_sign}));
+                printers::info("mark5.7.2");
                 matched_elems[2*j_dim + j_sign] = &match_elem;
                 elem.face_record[2*j_dim + j_sign] = sn;
                 for (bool k_sign : {0, 1}) {
                   int i_vert =   i_sign*math::pow(2, 2 - i_dim)
                                + j_sign*math::pow(2, 2 - j_dim)
                                + k_sign*math::pow(2, 2 - k_dim);
+                  printers::info("mark5.7.2.1(" + to_string(i_vert) + ")");
                   int i_snapped = shape->vertex(i_vert).snapped_edge;
-                  HEXED_ASSERT(i_snapped != -1 || face->edge(i_edge_matched).glued(),
+                  HEXED_ASSERT(i_snapped >= 0 || face->edge(i_edge_matched).glued(),
                                "vertex and edge do not agree on whether they are snapped")
+                  printers::info("mark5.7.2.2");
                   auto& vert = match_elem.shape().vertex(i_vert);
                   vert.snapped_edge = i_snapped;
                   vert.snapped_endpoint = shape->vertex(i_vert).snapped_endpoint;
-                  if (i_snapped >= 0) matched_vertices[i_snapped].emplace_back(&vert);
                 }
+                printers::info("mark5.7.3");
                 auto& matched_edge = match_elem.shape().boundary_face_3d()->edge(i_edge_matched);
                 matched_edge.snapped_edge = m;
-                if (m >= 0) matched_edges[m].emplace_back(&matched_edge);
                 for (int i_vert = 0; i_vert < 8; ++i_vert) {
                   HEXED_ASSERT(std::isfinite(match_elem.shape().vertex(i_vert).unwarped_point().squaredNorm()),
                                "Vertex pos is not finite.")
                 }
+                printers::info("mark5.7.4");
               } else {
                 elem.face_record[2*j_dim + j_sign] = inside_sn;
                 inside.face_record[2*j_dim + j_sign] = surface_sn;
               }
             }
           }
+          printers::info("mark5.8");
           Mat<3, 8> orig_pos;
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
             orig_pos(all, i_vert) = shape->vertex(i_vert).unwarped_point();
@@ -540,6 +552,7 @@ void Accessible_mesh::_fit_surface() {
             }
             surface.shape().vertex(i_vert).set_pos(pos);
           }
+          printers::info("mark5.9");
           for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
             int k_dim = 3 - j_dim - i_dim;
             for (bool j_sign : {0, 1}) if (matched_elems[2*j_dim + j_sign]) {
@@ -561,9 +574,11 @@ void Accessible_mesh::_fit_surface() {
                            "Vertex pos is not finite.")
             }
           }
+          printers::info("mark5.10");
         }
       }
     }
+    printers::info("mark5a");
     for (int i_element = 0; i_element < elems.size(); ++i_element) {
       if (elems[i_element].record == 2) continue;
       for (int i_vert = 0; i_vert < 8; ++i_vert) {
@@ -585,6 +600,7 @@ void Accessible_mesh::_fit_surface() {
         }
       }
     }
+    printers::info("mark5b");
     extrude_cons.clear();
     _blocks.boundary_sides();
     Int cons_sz = def.cons.size();
@@ -633,6 +649,7 @@ void Accessible_mesh::_fit_surface() {
         }
       }
     }
+    printers::info("mark5c");
     for (Int i_con = 0; i_con < ref_cons_sz; ++i_con) {
       auto& con = def.ref_face_cons[1][i_con];
       if (!con) continue;
@@ -694,6 +711,7 @@ void Accessible_mesh::_fit_surface() {
         next::Element_shape::connect({coarse_shapes, fine_shapes}, new_dir);
       }
     }
+    printers::info("mark5d");
     for (Int i_con = 0; i_con < bound_cons_sz; ++i_con) {
       auto& con = def.bound_cons[i_con];
       if (!con) continue;
@@ -706,6 +724,7 @@ void Accessible_mesh::_fit_surface() {
         connect_boundary(ref_level, true, record, dir.i_dim[0], dir.face_sign[0], bc_sn);
       }
     }
+    printers::info("mark5e");
     for (auto& vert : all_verts) {
       if (vert.record.size() == 12) {
         std::array<Deformed_element*, 2> elem_arr;
@@ -726,9 +745,15 @@ void Accessible_mesh::_fit_surface() {
             }
           }
         }
-        _connect(elem_arr, {dim_arr, sign_arr, rotate});
+        try {
+          _connect(elem_arr, {dim_arr, sign_arr, rotate});
+        } catch (const assert::Internal_error& e) {
+          visualize("default", "error_diagnostic", 0.);
+          throw e;
+        }
       }
     }
+    printers::info("mark5f");
     // rebuild `extrude_cons`
     for (int i_con = 0; i_con < (Int)def.cons.size(); ++i_con) {
       auto& con = def.cons[i_con];
@@ -737,13 +762,15 @@ void Accessible_mesh::_fit_surface() {
       }
     }
   }
+  printers::info("mark6\n");
 
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.record.clear();
   }
   purge();
-  _offset_vertices(.05, false);
+  _offset_vertices(.03, false);
+  printers::info("mark7\n");
   {
     auto faces = _blocks.faces_3d();
     #pragma omp parallel for
@@ -1700,13 +1727,6 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   // take ownership of the surface geometries (do this first to avoid memory leak)
   surf_bc_sn = add_boundary_condition(surface_bc);
   surf_geom.reset(geometry);
-  Int n_edges = surf_geom->edges().size();
-  matched_vertices.clear();
-  matched_vertices.resize(n_edges);
-  matched_edges.clear();
-  matched_edges.resize(n_edges);
-  point_matched_vertices.clear();
-  point_matched_vertices.resize(surf_geom->points().size());
   if (!tree) return;
   // identify surface elements
   auto& elems = elements();
@@ -2168,9 +2188,6 @@ void Accessible_mesh::purge() {
     // delete old matched vertices and edges
     _blocks.verts(); // evaluating `verts` and `boundary_sides` automatically purges the vertex and face/edge lists
     _blocks.boundary_sides();
-    std::erase(point_matched_vertices, nullptr);
-    for (auto& vec : matched_vertices) std::erase(vec, nullptr);
-    for (auto& vec : matched_edges) std::erase(vec, nullptr);
   }
 }
 
@@ -2367,11 +2384,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   extrude(true);
   if (surf_geom) {
     connect_rest(surf_bc_sn);
-    for (auto& ptr : point_matched_vertices) ptr.set();
-    for (Int i_edge = 0; i_edge < (Int)surf_geom->edges().size(); ++i_edge) {
-      matched_vertices[i_edge].clear();
-      matched_edges[i_edge].clear();
-    }
     _fit_surface();
     connect_rest(surf_bc_sn);
     _n_verts = _blocks.verts().size();

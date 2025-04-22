@@ -40,9 +40,6 @@ class Accessible_mesh : public Mesh {
   next::Mesh_blocks _blocks;
   int _n_verts;
   Stopwatch_tree _stopwatch;
-  std::vector<Mortal_ptr<next::Vertex>> point_matched_vertices;
-  std::vector<std::vector<Mortal_ptr<next::Vertex>>> matched_vertices;
-  std::vector<std::vector<Mortal_ptr<next::Edge>>> matched_edges;
   Turbulence_model _turb;
 
   // masked sequences

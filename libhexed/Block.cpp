@@ -87,7 +87,7 @@ double Vertex::nominal_size() const {
 }
 
 void Vertex::eat(Vertex& that) {
-  HEXED_ASSERT(alive() && that.alive(), "both vertices must be alive (at least at the start...)");
+  HEXED_ASSERT(alive() && that.alive(), "both vertices must be alive (at least at the start...)")
   if (&that == this) return;
   // compute averaged position
   Int sz [2] {_elems.partners().size(), that._elems.partners().size()};
@@ -97,7 +97,7 @@ void Vertex::eat(Vertex& that) {
   for (Int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
   for (Int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
   record.insert(record.end(), that.record.begin(), that.record.end());
-  if (that.snapped_endpoint >= 0 && snapped_endpoint < 0) {
+  if ((that.snapped_endpoint >= 0 && snapped_endpoint < 0) || (that.snapped_edge >= 0 && snapped_edge < 0)) {
     snapped_edge = that.snapped_edge;
     snapped_endpoint = that.snapped_endpoint;
   }

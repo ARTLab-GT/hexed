@@ -392,8 +392,8 @@ class Element_shape : public Block {
   Mat<3> nominal_center() const;
   Mat<3> vertex_center() const; //!< \brief average of the vertices' positions
   //! \brief Accesses the `i_vert`th vertex (in standard row-major order)
-  inline Vertex& vertex(int i_vert) {return *_verts[i_vert];}
-  inline const Vertex& vertex(int i_vert) const {return *_verts[i_vert];}
+  inline Vertex& vertex(int i_vert) {return _verts[i_vert].value();}
+  inline const Vertex& vertex(int i_vert) const {return _verts[i_vert].value();}
   inline const Basis& basis() const {return *_basis;}
   inline bool glued() const {return _glued_to;}
   Mat<3> interpolate(std::vector<double> coords, Int recursion_depth = 0) const;
