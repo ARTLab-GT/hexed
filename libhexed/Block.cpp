@@ -151,7 +151,7 @@ bool Vertex::mobile() const {
 }
 
 const double ortho_tolerance = .03;
-const double edge_tolerance = .03;
+const double edge_tolerance = .02;
 
 Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
   _Optimization_state state;
