@@ -744,10 +744,6 @@ void Accessible_mesh::_fit_surface() {
   }
   purge();
   _offset_vertices(.05, false);
-  #pragma omp parallel for
-  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    elems[i_elem].active_shape().is_new = false;
-  }
   {
     auto faces = _blocks.faces_3d();
     #pragma omp parallel for
@@ -919,6 +915,29 @@ void Accessible_mesh::_fit_surface() {
       elem.snapping_problem = elem.snapping_problem || elem.active_shape().vertex(i_vert).last_snap_failed();
     }
   }
+  #pragma omp parallel for
+  for (Int i_con = 0; i_con < (Int)def.cons.size(); ++i_con) {
+    auto& con = *def.cons[i_con];
+    if (con.element(0).active_shape().is_new || con.element(1).active_shape().is_new) {
+      bool problem = false;
+      for (int i_elem = 0; i_elem < 2; ++i_elem) {
+        bool p;
+        #pragma omp atomic read
+        p = con.element(i_elem).snapping_problem;
+        problem = problem || p;
+      }
+      if (problem) {
+        for (int i_elem = 0; i_elem < 2; ++i_elem) {
+          #pragma omp atomic write
+          con.element(i_elem).snapping_problem = true;
+        }
+      }
+    }
+  }
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].active_shape().is_new = false;
+  }
   {
     auto new_all_verts = _blocks.verts();
     #pragma omp parallel for
@@ -1070,14 +1089,14 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     if (i_relax) {
       if (std::abs(objective_diff - (objective - prev_obj)) > 1e-4*verts.size()) {
         printers::warn(" Warning: ", true);
-        printers::warn(format_str(100, "inaccurate objective change: %e vs %e (please report as a bug)\n",
+        printers::warn(format_str(300, "inaccurate objective change: %e vs %e (please report as a bug)\n",
                                   -objective_diff, objective - prev_obj));
       }
     }
     obj_monitor.add_sample(i_relax, objective - starting_objective);
     dist_monitor.add_sample(i_relax, total_dist);
     message = format_str(
-      400,
+      800,
       "   "
       " Iteration = %4li;"
       " Objective = %.18e (%+.5e);"
@@ -1092,8 +1111,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   }
   printers::info(message, false, true);
   printers::info("\n");
-  printers::info(to_string(next::Vertex::misses) + " misses out of " + to_string(next::Vertex::tries) + " tries ("
-                 + to_string(double(next::Vertex::misses)/next::Vertex::tries) + ")");
   ++_stopwatch["update"]["fit surface"]["optimization"].work_units_completed;
 }
 
