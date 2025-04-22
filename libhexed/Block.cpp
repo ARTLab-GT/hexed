@@ -365,7 +365,17 @@ bool Vertex::snap_to(Mat<3> target) {
 
 double Vertex::quality_objective() {
   auto state = _compute_state(false);
-  HEXED_ASSERT(state.feasible, "infeasible state");
+  std::string dists;
+  std::string neighb_pos;
+  for (Vertex* n : neighbors()) if (n) if (n->mobile()) {
+    dists += to_string(n->dijkstra_dist) + " ";
+    neighb_pos += to_string(n->point({})) + " ";
+  }
+  HEXED_ASSERT(state.feasible, format_str(200,
+               "Vertex state violates quality criteria "
+               "(ortho = %e; edge = %e; coords = (%e %e %e); offset record = %s; neighbors = %s).",
+               state.worst_ortho, state.worst_edge, point({})(0), point({})(1), point({})(2),
+               dists.c_str(), neighb_pos.c_str()))
   return state.objective;
 }
 

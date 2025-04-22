@@ -75,6 +75,16 @@ std::string to_string(Int); //!< \overload
 std::string to_string(double); //!< \overload
 std::string to_string(std::string); //!< \overload
 std::string to_string(bool); //!< \overload
+std::string to_string(Mat<>); //!< \overload
+
+//! \brief Represents an array of objects which themselves are representable with `to_string()`
+template <typename T>
+std::string to_string(T* p, Int n) {
+  std::string s;
+  for (Int i = 0; i < n; ++i) s += to_string(p[i]) + ", ";
+  if (n) s.erase(s.end() - 2, s.end());
+  return s;
+}
 
 }
 #endif

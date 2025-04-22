@@ -61,6 +61,11 @@ namespace dijkstra {
 }
 
 void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
+  for (auto& con : car.cons) {
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      HEXED_ASSERT(con->element(i_side).active_shape().is_new == false, "Cartesian connection has a new element")
+    }
+  }
   int nd = params.n_dim;
   auto verts = _blocks.verts();
   #pragma omp parallel for
@@ -110,6 +115,7 @@ void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
           }
           Mat<3> nrml = edges(all, 0).cross(edges(all, 1)).normalized()
                         *math::sign(dir.face_sign[0])*math::sign(new_elem)*math::sign(dir.i_dim[0] == 1);
+          HEXED_ASSERT(std::abs(nrml.norm() - 1.) < 1e-6, "normal magnitude is 0")
           // if this normal is in the opposite direction of the current vertex offset,
           // orthogonalize it against the current offset
           double dot = nrml.dot(con_verts[i_vert]->offset);
@@ -123,6 +129,7 @@ void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
           }
           // make sure that the vertex offset dot `nrml` will be >= 1
           con_verts[i_vert]->offset += std::max(0., 1 - dot)*diff;
+          con_verts[i_vert]->dijkstra_dist += math::pow(10, dir.i_dim[new_elem]);
         }
       }
     }
@@ -195,7 +202,7 @@ void Accessible_mesh::_fit_surface() {
   auto& elems = def.elements();
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    if (!elems[i_elem].tree) elems[i_elem].active_shape().is_new = true;
+    elems[i_elem].active_shape().is_new = !elems[i_elem].tree;
   }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
@@ -966,6 +973,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   std::string message;
   next::Vertex::misses = 0;
   next::Vertex::tries = 0;
+  for (auto& vert : verts) vert.quality_objective();
   #if 0
   for (Int i_relax = 0;
        i_relax < 1000 && (i_relax < 30
@@ -1906,17 +1914,34 @@ void Accessible_mesh::delete_bad_extrusions() {
               }
             }
           }
-          // for all faces that share an edge with `i_face` (but only the ones with lower index to avoid redundancy)
+          // for all faces that share an edge with `i_face`
+          // (but only the ones with lower index to avoid redundancy)
           for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) {
-            if (exposed[i_face] || exposed[j_face]) {
-              auto dir = math::direction(nd, i_face);
-              dir(j_face/2) = math::sign(j_face%2);
-              auto diag_neighbs = elem.tree->find_neighbors(dir);
-              // if there are elements that are connected diagonally but have no mutual face neighbors, delete at least one of them
-              if (exposed[i_face] && exposed[j_face]) {
-                for (Tree* n : diag_neighbs) if (exists(n)) {
-                  // To make results repeatable, if the elements have different refinement levels, delete the finer one(s).
-                  // If they have the same refinement level, delete both
+            auto dir = math::direction(nd, i_face);
+            dir(j_face/2) = math::sign(j_face%2);
+            auto diag_neighbs = elem.tree->find_neighbors(dir);
+            // if there are elements that are connected diagonally but have no mutual face neighbors,
+            // delete at least one of them
+            if (exposed[i_face] && exposed[j_face]) {
+              for (Tree* n : diag_neighbs) if (exists(n)) {
+                // To make results repeatable, if the elements have different refinement levels,
+                // delete the finer one(s).
+                // If they have the same refinement level, delete both
+                if (n->refinement_level() >= elem.refinement_level()) {
+                  changed = true;
+                  #pragma omp atomic write
+                  n->elem->record = 2;
+                  if (n->refinement_level() == elem.refinement_level()) {
+                    #pragma omp atomic write
+                    elem.record = 2;
+                  }
+                }
+              }
+              for (int k_face = 0; k_face < 2*(j_face/2); ++k_face) if (exposed[k_face]) {
+                auto d = dir;
+                d(k_face/2) = math::sign(k_face%2);
+                auto neighbs = elem.tree->find_neighbors(d);
+                for (Tree* n : neighbs) if (exists(n)) {
                   if (n->refinement_level() >= elem.refinement_level()) {
                     changed = true;
                     #pragma omp atomic write
@@ -1927,32 +1952,16 @@ void Accessible_mesh::delete_bad_extrusions() {
                     }
                   }
                 }
-                for (int k_face = 0; k_face < 2*(j_face/2); ++k_face) if (exposed[k_face]) {
-                  auto d = dir;
-                  d(k_face/2) = math::sign(k_face%2);
-                  auto neighbs = elem.tree->find_neighbors(d);
-                  for (Tree* n : neighbs) if (exists(n)) {
-                    if (n->refinement_level() >= elem.refinement_level()) {
-                      changed = true;
-                      #pragma omp atomic write
-                      n->elem->record = 2;
-                      if (n->refinement_level() == elem.refinement_level()) {
-                        #pragma omp atomic write
-                        elem.record = 2;
-                      }
-                    }
-                  }
-                }
-              } else if (nd == 3) {
-                // if the edge is partially covered with fine elements, delete them
-                if (  !std::all_of(diag_neighbs.begin(), diag_neighbs.end(), exists)
-                    && std::any_of(diag_neighbs.begin(), diag_neighbs.end(), exists)) {
-                  changed = true;
-                  for (Tree* n : diag_neighbs) {
-                    if (n->elem) {
-                      #pragma omp atomic write
-                      n->elem->record = 2;
-                    }
+              }
+            } else {
+              // if the edge is partially covered with fine elements, delete them
+              if (  !std::all_of(diag_neighbs.begin(), diag_neighbs.end(), exists)
+                  && std::any_of(diag_neighbs.begin(), diag_neighbs.end(), exists)) {
+                changed = true;
+                for (Tree* n : diag_neighbs) {
+                  if (n->elem) {
+                    #pragma omp atomic write
+                    n->elem->record = 2;
                   }
                 }
               }
