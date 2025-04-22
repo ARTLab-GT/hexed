@@ -435,7 +435,6 @@ void Accessible_mesh::_fit_surface() {
           int bf = shape->boundary_face();
           int i_dim = bf/2;
           bool i_sign = bf%2;
-          std::vector<Int> matched_to(4);
           bool matched = false;
           for (int i_vert = 0; i_vert < 8; ++i_vert) if (i_vert/math::pow(2, 2 - i_dim)%2 == i_sign) {
             matched = matched || shape->vertex(i_vert).snapped_edge != -1;
@@ -449,6 +448,7 @@ void Accessible_mesh::_fit_surface() {
           }
           printers::info("mark5.2");
           if (!matched) continue;
+          std::vector<Int> matched_to(4);
           for (int i_edge = 0; i_edge < 4; ++i_edge) {
             auto& edge = face->edge(i_edge);
             if (edge.glued()) {
@@ -514,7 +514,7 @@ void Accessible_mesh::_fit_surface() {
                                + k_sign*math::pow(2, 2 - k_dim);
                   printers::info("mark5.7.2.1(" + to_string(i_vert) + ")");
                   int i_snapped = shape->vertex(i_vert).snapped_edge;
-                  HEXED_ASSERT(i_snapped >= 0 || face->edge(i_edge_matched).glued(),
+                  HEXED_ASSERT(i_snapped != -1 || face->edge(i_edge_matched).glued(),
                                "vertex and edge do not agree on whether they are snapped")
                   printers::info("mark5.7.2.2");
                   auto& vert = match_elem.shape().vertex(i_vert);
