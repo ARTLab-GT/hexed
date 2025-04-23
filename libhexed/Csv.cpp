@@ -26,9 +26,13 @@ void Csv::write(Array<double> data) {
 }
 
 void Csv::write_block(Array<double> pos, Array<double> vars) {
+  #if 0
   HEXED_ASSERT(pos.order() > 1, "input arrays have wrong order");
-  HEXED_ASSERT(pos(0).same_shape(vars(0)), "`pos` and `vars` must have compatible shape");
-  HEXED_ASSERT(pos.shape()[0] + vars.shape()[0] == _cols, "total number of position and state variables must equal number of columns");
+  pos.reshape({same, whatever});
+  vars.reshape({same, whatever});
+  HEXED_ASSERT(pos.shape()[1] = vars.shape()[1], "`pos` and `vars` must have compatible shape")
+  HEXED_ASSERT(pos.shape()[0] + vars.shape()[0] == _cols,
+               "total number of position and state variables must equal number of columns")
   int rows = pos(0).size();
   for (int i_row = 0; i_row < rows; ++i_row) {
     std::string text;
@@ -38,6 +42,7 @@ void Csv::write_block(Array<double> pos, Array<double> vars) {
     _file << text << "\n";
     ++_row;
   }
+  #endif
 }
 
 void Csv::write_unstruct(Array<Int> elements, Array<double> pos, Array<double> vars) {

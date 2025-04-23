@@ -427,22 +427,21 @@ void Accessible_mesh::_fit_surface() {
     for (Int i_element = 0; i_element < elems_sz; ++i_element) {
       auto& elem = elems[i_element];
       for (int i_face = 0; i_face < 6; ++i_face) elem.face_record[i_face] = -1;
-      const next::Element_shape* shape = elem.fake_shape();
-      if (shape) {
-        const next::Face* face = shape->boundary_face_3d();
-        if (face) {
+      if (elem.fake_shape()) {
+        if (elem.fake_shape()->boundary_face_3d()) {
           printers::info("mark5.1");
-          int bf = shape->boundary_face();
+          int bf = elem.fake_shape()->boundary_face();
           int i_dim = bf/2;
           bool i_sign = bf%2;
           bool matched = false;
           for (int i_vert = 0; i_vert < 8; ++i_vert) if (i_vert/math::pow(2, 2 - i_dim)%2 == i_sign) {
-            matched = matched || shape->vertex(i_vert).snapped_edge != -1;
+            matched = matched || elem.fake_shape()->vertex(i_vert).snapped_edge != -1;
           }
           for (int i_edge = 0; i_edge < 4; ++i_edge) {
-            if (face->edge(i_edge).glued()) {
+            if (elem.fake_shape()->boundary_face_3d()->edge(i_edge).glued()) {
               for (int i_vert = 0; i_vert < 2; ++i_vert) {
-                matched = matched || face->edge(i_edge).glued_to()->vertex(i_vert).snapped_edge != -1;
+                const auto& edge = elem.fake_shape()->boundary_face_3d()->edge(i_edge).glued_to();
+                matched = matched || edge->vertex(i_vert).snapped_edge != -1;
               }
             }
           }
@@ -450,7 +449,7 @@ void Accessible_mesh::_fit_surface() {
           if (!matched) continue;
           std::vector<Int> matched_to(4);
           for (int i_edge = 0; i_edge < 4; ++i_edge) {
-            auto& edge = face->edge(i_edge);
+            auto& edge = elem.fake_shape()->boundary_face_3d()->edge(i_edge);
             if (edge.glued()) {
               matched_to[i_edge] = edge.glued_to()->snapped_edge;
             } else {
@@ -461,10 +460,10 @@ void Accessible_mesh::_fit_surface() {
           auto set_vertices = [&](Element& e) {
             auto& s = e.shape();
             for (int i_vert = 0; i_vert < 8; ++i_vert) {
-              s.vertex(i_vert).set_pos(shape->vertex(i_vert).unwarped_point());
+              s.vertex(i_vert).set_pos(elem.fake_shape()->vertex(i_vert).unwarped_point());
             }
             for (int i_face = 0; i_face < 6; ++i_face) e.face_record[i_face] = -1;
-            s.extruded_direction = shape->extruded_direction;
+            s.extruded_direction = elem.fake_shape()->extruded_direction;
           };
           printers::info("mark5.4");
           Int inside_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
@@ -512,14 +511,16 @@ void Accessible_mesh::_fit_surface() {
                   int i_vert =   i_sign*math::pow(2, 2 - i_dim)
                                + j_sign*math::pow(2, 2 - j_dim)
                                + k_sign*math::pow(2, 2 - k_dim);
-                  printers::info("mark5.7.2.1(" + to_string(i_vert) + ")");
-                  int i_snapped = shape->vertex(i_vert).snapped_edge;
-                  HEXED_ASSERT(i_snapped != -1 || face->edge(i_edge_matched).glued(),
+                  printers::info("mark5.7.2.1(" + to_string(i_vert) + "," + to_string(i_edge_matched) + ")");
+                  int i_snapped = elem.fake_shape()->vertex(i_vert).snapped_edge;
+                  printers::info("mark5.7.2.1.1(");
+                  printers::info(to_string(elem.fake_shape()->boundary_face_3d()->element_coords({0, 0})[0]));
+                  HEXED_ASSERT(i_snapped != -1 || elem.fake_shape()->boundary_face_3d()->edge(i_edge_matched).glued(),
                                "vertex and edge do not agree on whether they are snapped")
                   printers::info("mark5.7.2.2");
                   auto& vert = match_elem.shape().vertex(i_vert);
                   vert.snapped_edge = i_snapped;
-                  vert.snapped_endpoint = shape->vertex(i_vert).snapped_endpoint;
+                  vert.snapped_endpoint = elem.fake_shape()->vertex(i_vert).snapped_endpoint;
                 }
                 printers::info("mark5.7.3");
                 auto& matched_edge = match_elem.shape().boundary_face_3d()->edge(i_edge_matched);
@@ -538,7 +539,7 @@ void Accessible_mesh::_fit_surface() {
           printers::info("mark5.8");
           Mat<3, 8> orig_pos;
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
-            orig_pos(all, i_vert) = shape->vertex(i_vert).unwarped_point();
+            orig_pos(all, i_vert) = elem.fake_shape()->vertex(i_vert).unwarped_point();
           }
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
             Mat<3> pos = orig_pos(all, i_vert);
@@ -734,6 +735,8 @@ void Accessible_mesh::_fit_surface() {
           elem_arr[i_side] = &def.elems.at(vert.record[6*i_side], vert.record[6*i_side + 1]);
           dim_arr[i_side] = vert.record[6*i_side + 2];
           sign_arr[i_side] = vert.record[6*i_side + 3];
+          HEXED_ASSERT(elem_arr[i_side]->record != 2, "attempt to connect with doomed element")
+          elem_arr[i_side]->shape();
         }
         int rotate = 0;
         for (int r : {-1, 1, 2}) {
@@ -745,12 +748,14 @@ void Accessible_mesh::_fit_surface() {
             }
           }
         }
+        printers::info("mark5e.1");
         try {
           _connect(elem_arr, {dim_arr, sign_arr, rotate});
         } catch (const assert::Internal_error& e) {
           visualize("default", "error_diagnostic", 0.);
           throw e;
         }
+        printers::info("mark5e.2");
       }
     }
     printers::info("mark5f");
