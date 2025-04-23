@@ -224,7 +224,6 @@ void Accessible_mesh::_fit_surface() {
     Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
     _optimize(1, 10, true);
   }
-  printers::info("mark0\n");
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.record.clear();
@@ -245,7 +244,6 @@ void Accessible_mesh::_fit_surface() {
       face.edge(i_edge).snapped_edge = -1;
     }
   }
-  printers::info("mark1\n");
   auto find_nearest_vert = [&](Mat<3> point, int i_geom_edge = -1)->next::Vertex* {
     next::Vertex* nearest_vert = nullptr;
     double dist_sq = huge;
@@ -278,7 +276,6 @@ void Accessible_mesh::_fit_surface() {
     return nearest_vert;
   };
 
-  printers::info("mark2\n");
   auto edges = surf_geom->edges();
   if (params.n_dim == 3) {
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
@@ -366,7 +363,6 @@ void Accessible_mesh::_fit_surface() {
       if (vert) vert->snapped_point = i_point;
     }
   }
-  printers::info("mark3\n");
   // deal with edge endpoints that aren't shared with other edges
   for (auto& vert : verts) {
     if (vert.snapped_endpoint >= 0) {
@@ -392,7 +388,6 @@ void Accessible_mesh::_fit_surface() {
       }
     }
   }
-  printers::info("mark4\n");
 
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -421,7 +416,6 @@ void Accessible_mesh::_fit_surface() {
   Int elems_sz = elems.size();
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems_sz; ++i_elem) elems[i_elem].record = 0;
-  printers::info("mark5\n");
 
   if (params.n_dim == 3) {
     for (Int i_element = 0; i_element < elems_sz; ++i_element) {
@@ -429,7 +423,6 @@ void Accessible_mesh::_fit_surface() {
       for (int i_face = 0; i_face < 6; ++i_face) elem.face_record[i_face] = -1;
       if (elem.fake_shape()) {
         if (elem.fake_shape()->boundary_face_3d()) {
-          printers::info("mark5.1");
           int bf = elem.fake_shape()->boundary_face();
           int i_dim = bf/2;
           bool i_sign = bf%2;
@@ -445,7 +438,6 @@ void Accessible_mesh::_fit_surface() {
               }
             }
           }
-          printers::info("mark5.2");
           if (!matched) continue;
           std::vector<Int> matched_to(4);
           for (int i_edge = 0; i_edge < 4; ++i_edge) {
@@ -456,7 +448,6 @@ void Accessible_mesh::_fit_surface() {
               matched_to[i_edge] = edge.snapped_edge;
             }
           }
-          printers::info("mark5.3");
           auto set_vertices = [&](Element& e) {
             auto& s = e.shape();
             for (int i_vert = 0; i_vert < 8; ++i_vert) {
@@ -465,13 +456,11 @@ void Accessible_mesh::_fit_surface() {
             for (int i_face = 0; i_face < 6; ++i_face) e.face_record[i_face] = -1;
             s.extruded_direction = elem.fake_shape()->extruded_direction;
           };
-          printers::info("mark5.4");
           Int inside_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
           Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
           set_vertices(inside);
           inside.shape().is_new = false;
           elem.face_record[2*i_dim + !i_sign] = inside_sn;
-          printers::info("mark5.5");
           Int surface_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, bf);
           Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
           set_vertices(surface);
@@ -479,7 +468,6 @@ void Accessible_mesh::_fit_surface() {
           _connect({&inside, &surface}, Con_dir<Deformed_element>({i_dim, i_dim}, {i_sign, !i_sign}));
           elem.record = 2;
           std::vector<Deformed_element*> matched_elems(6, nullptr);
-          printers::info("mark5.6");
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
             HEXED_ASSERT(std::isfinite(inside.shape().vertex(i_vert).unwarped_point().squaredNorm()),
                          "Vertex pos is not finite.")
@@ -490,13 +478,11 @@ void Accessible_mesh::_fit_surface() {
             double sz_constraint = elem.active_shape().vertex(j_vert).nominal_size();
             surface.shape().vertex(i_vert).add_size_constraint(sz_constraint);
           }
-          printers::info("mark5.7");
           for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
             for (bool j_sign : {0, 1}) {
               int k_dim = 3 - j_dim - i_dim;
               int i_edge_matched = 2*(j_dim > k_dim) + j_sign;
               Int m = matched_to[i_edge_matched];
-              printers::info("mark5.7.1");
               if (m != -1) {
                 Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, bf);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
@@ -504,39 +490,31 @@ void Accessible_mesh::_fit_surface() {
                 match_elem.shape().is_new = true;
                 _connect({&surface, &match_elem}, Con_dir<Deformed_element>({j_dim, j_dim}, {j_sign, !j_sign}));
                 _connect({&inside,  &match_elem}, Con_dir<Deformed_element>({j_dim, i_dim}, {j_sign, !i_sign}));
-                printers::info("mark5.7.2");
                 matched_elems[2*j_dim + j_sign] = &match_elem;
                 elem.face_record[2*j_dim + j_sign] = sn;
                 for (bool k_sign : {0, 1}) {
                   int i_vert =   i_sign*math::pow(2, 2 - i_dim)
                                + j_sign*math::pow(2, 2 - j_dim)
                                + k_sign*math::pow(2, 2 - k_dim);
-                  printers::info("mark5.7.2.1(" + to_string(i_vert) + "," + to_string(i_edge_matched) + ")");
                   int i_snapped = elem.fake_shape()->vertex(i_vert).snapped_edge;
-                  printers::info("mark5.7.2.1.1(");
-                  printers::info(to_string(elem.fake_shape()->boundary_face_3d()->element_coords({0, 0})[0]));
                   HEXED_ASSERT(i_snapped != -1 || elem.fake_shape()->boundary_face_3d()->edge(i_edge_matched).glued(),
                                "vertex and edge do not agree on whether they are snapped")
-                  printers::info("mark5.7.2.2");
                   auto& vert = match_elem.shape().vertex(i_vert);
                   vert.snapped_edge = i_snapped;
                   vert.snapped_endpoint = elem.fake_shape()->vertex(i_vert).snapped_endpoint;
                 }
-                printers::info("mark5.7.3");
                 auto& matched_edge = match_elem.shape().boundary_face_3d()->edge(i_edge_matched);
                 matched_edge.snapped_edge = m;
                 for (int i_vert = 0; i_vert < 8; ++i_vert) {
                   HEXED_ASSERT(std::isfinite(match_elem.shape().vertex(i_vert).unwarped_point().squaredNorm()),
                                "Vertex pos is not finite.")
                 }
-                printers::info("mark5.7.4");
               } else {
                 elem.face_record[2*j_dim + j_sign] = inside_sn;
                 inside.face_record[2*j_dim + j_sign] = surface_sn;
               }
             }
           }
-          printers::info("mark5.8");
           Mat<3, 8> orig_pos;
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
             orig_pos(all, i_vert) = elem.fake_shape()->vertex(i_vert).unwarped_point();
@@ -553,7 +531,6 @@ void Accessible_mesh::_fit_surface() {
             }
             surface.shape().vertex(i_vert).set_pos(pos);
           }
-          printers::info("mark5.9");
           for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
             int k_dim = 3 - j_dim - i_dim;
             for (bool j_sign : {0, 1}) if (matched_elems[2*j_dim + j_sign]) {
@@ -575,11 +552,9 @@ void Accessible_mesh::_fit_surface() {
                            "Vertex pos is not finite.")
             }
           }
-          printers::info("mark5.10");
         }
       }
     }
-    printers::info("mark5a");
     for (int i_element = 0; i_element < elems.size(); ++i_element) {
       if (elems[i_element].record == 2) continue;
       for (int i_vert = 0; i_vert < 8; ++i_vert) {
@@ -601,7 +576,6 @@ void Accessible_mesh::_fit_surface() {
         }
       }
     }
-    printers::info("mark5b");
     extrude_cons.clear();
     _blocks.boundary_sides();
     Int cons_sz = def.cons.size();
@@ -650,7 +624,6 @@ void Accessible_mesh::_fit_surface() {
         }
       }
     }
-    printers::info("mark5c");
     for (Int i_con = 0; i_con < ref_cons_sz; ++i_con) {
       auto& con = def.ref_face_cons[1][i_con];
       if (!con) continue;
@@ -712,7 +685,6 @@ void Accessible_mesh::_fit_surface() {
         next::Element_shape::connect({coarse_shapes, fine_shapes}, new_dir);
       }
     }
-    printers::info("mark5d");
     for (Int i_con = 0; i_con < bound_cons_sz; ++i_con) {
       auto& con = def.bound_cons[i_con];
       if (!con) continue;
@@ -725,7 +697,6 @@ void Accessible_mesh::_fit_surface() {
         connect_boundary(ref_level, true, record, dir.i_dim[0], dir.face_sign[0], bc_sn);
       }
     }
-    printers::info("mark5e");
     for (auto& vert : all_verts) {
       if (vert.record.size() == 12) {
         std::array<Deformed_element*, 2> elem_arr;
@@ -748,17 +719,14 @@ void Accessible_mesh::_fit_surface() {
             }
           }
         }
-        printers::info("mark5e.1");
         try {
           _connect(elem_arr, {dim_arr, sign_arr, rotate});
         } catch (const assert::Internal_error& e) {
           visualize("default", "error_diagnostic", 0.);
           throw e;
         }
-        printers::info("mark5e.2");
       }
     }
-    printers::info("mark5f");
     // rebuild `extrude_cons`
     for (int i_con = 0; i_con < (Int)def.cons.size(); ++i_con) {
       auto& con = def.cons[i_con];
@@ -767,7 +735,6 @@ void Accessible_mesh::_fit_surface() {
       }
     }
   }
-  printers::info("mark6\n");
 
   #pragma omp parallel for
   for (auto& vert : all_verts) {
@@ -775,7 +742,6 @@ void Accessible_mesh::_fit_surface() {
   }
   purge();
   _offset_vertices(.03, false);
-  printers::info("mark7\n");
   {
     auto faces = _blocks.faces_3d();
     #pragma omp parallel for
