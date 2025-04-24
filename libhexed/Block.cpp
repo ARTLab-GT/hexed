@@ -159,14 +159,14 @@ bool Vertex::mobile() const {
 const double ortho_tolerance = .03;
 const double edge_tolerance = .02;
 
-Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors, bool ignore) {
+Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors, bool ignore, double extra_tol) {
   _Optimization_state state;
-  _compute_state_recursive(state, 1., include_neighbors, this, ignore ? this : nullptr);
+  _compute_state_recursive(state, 1., include_neighbors, this, ignore ? this : nullptr, extra_tol);
   return state;
 }
 
 void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                      Vertex* orig_vertex, Vertex* ignore) {
+                                      Vertex* orig_vertex, Vertex* ignore, double extra_tol) {
   if (!orig_vertex) orig_vertex = this;
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
@@ -206,10 +206,10 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         if (!contains) orig_vertex->_depends_on.push_back(&that_vert);
       }
       Mesh_assessment ma(vert_seq, i_that, i_this);
-      state.feasible = state.feasible && ma.orthogonality > ortho_tolerance;
+      state.feasible = state.feasible && ma.orthogonality > ortho_tolerance + extra_tol;
       state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state.feasible = state.feasible && ma.edge_lengths(i_dim) > edge_tolerance*ns;
+        state.feasible = state.feasible && ma.edge_lengths(i_dim) > (edge_tolerance + extra_tol)*ns;
         state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim)/ns);
       }
       if (state.feasible) {
@@ -233,7 +233,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
           }
           if (coupled) {
             state.has_glued_neighbor = true;
-            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex, ignore);
+            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex, ignore, extra_tol);
           }
         }
       }
@@ -300,7 +300,7 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
 bool Vertex::check_improve() {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
   auto state0 = _compute_state(true, true);
-  auto state1 = _compute_state(true, false);
+  auto state1 = _compute_state(true, false, 1e-3);
   _improve_done = state0.feasible && state1.feasible && state1.objective < state0.objective;
   return _improve_done || _improve_failed;
 }
@@ -320,9 +320,7 @@ void Vertex::compute_snap() {
 
 Vertex::Snap_result Vertex::check_snap() {
   if (_improve_failed) return {true, true, _step.norm()};
-  auto state0 = _compute_state(true, true);
-  auto state1 = _compute_state(true, false);
-  _improve_done = state0.feasible && state1.feasible && state1.objective < 2*state0.objective;
+  _improve_done = _compute_state(true, false, 1e-3).feasible;
   if (!_improve_done) {
     _step_sz /= 3;
     _last_snap_failed = true;

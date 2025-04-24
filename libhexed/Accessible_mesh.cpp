@@ -965,17 +965,16 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   next::Vertex::misses = 0;
   next::Vertex::tries = 0;
   for (auto& vert : verts) vert.quality_objective();
-  #if 0
+  #if 1
   for (Int i_relax = 0;
        i_relax < 1000 && (i_relax < 30
                           || (snaps_failed == 0 && obj_monitor.max() - obj_monitor.min()
                                                    > 1e-2*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
-                          || (snaps_failed != 0 && dist_monitor.max() - dist_monitor.min() > 1e-2*dist_monitor.min()));
+                          || (snaps_failed != 0 && dist_monitor.max() - dist_monitor.min() > 1e-1*dist_monitor.min()));
        ++i_relax) {
   #else
   for (Int i_relax = 0; i_relax < 100; ++i_relax) {
   #endif
-    visualize("default", "relax" + to_string(i_relax), (double)i_relax);
     #if HEXED_VIS_MESH_OPT
     {
       auto faces = _blocks.faces_3d();
