@@ -1074,7 +1074,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   printers::info(message, false, true);
   printers::info("\n");
   ++_stopwatch["update"]["fit surface"]["optimization"].work_units_completed;
-  HEXED_THROW("foo")
 }
 
 Storage_params incr_res_cache(Storage_params params) {
