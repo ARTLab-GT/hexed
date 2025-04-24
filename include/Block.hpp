@@ -139,6 +139,14 @@ class Vertex : public Block {
   void init_improve(std::function<Mat<3>(Mat<3>)> get_target);
   void compute_improve(std::function<Mat<3>(Mat<3>)> get_target);
   bool check_improve();
+  void init_snap(std::function<Mat<3>(Mat<3>)> get_target);
+  void compute_snap();
+  struct Snap_result {
+    bool done;
+    bool failed;
+    double distance;
+  };
+  Snap_result check_snap();
   bool has_problem() const;
   inline bool last_snap_failed() const {return _last_snap_failed;}
   bool snap_to(Mat<3> target);

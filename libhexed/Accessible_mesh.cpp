@@ -1003,8 +1003,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       }
     }
     #endif
-    snaps_failed = 0;
-    total_dist = 0;
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
       #pragma omp parallel for
@@ -1025,6 +1023,26 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
           // can't combine these because of short-circuit evaluation
           bool d = vert->check_improve();
           done = done && d;
+        }
+      } while (!done);
+      #pragma omp parallel for
+      for (next::Vertex* vert : mobile_verts) {
+        auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
+        vert->init_snap(get_target);
+      }
+      do {
+        #pragma omp parallel for
+        for (next::Vertex* vert : mobile_verts) vert->compute_snap();
+        done = true;
+        snaps_failed = 0;
+        total_dist = 0;
+        #pragma omp parallel for reduction(&&:done) reduction(+:snaps_failed,total_dist)
+        for (next::Vertex* vert : mobile_verts) {
+          // can't combine these because of short-circuit evaluation
+          auto result = vert->check_snap();
+          done = done && result.done;
+          snaps_failed += result.failed;
+          total_dist += result.distance;
         }
       } while (!done);
       _stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed += mobile_verts.size();

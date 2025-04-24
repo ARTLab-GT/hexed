@@ -287,7 +287,7 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
   if (_improve_done || _improve_failed) return;
   _step_sz /= 3;
-  _pos = _orig_pos + _step*_step_sz;
+  _pos = _orig_pos + _step_sz*_step;
   Mat<3> target = get_target(_pos);
   double dist = (target - _pos).norm();
   if (dist > _orig_dist) _pos += (dist - _orig_dist)/dist*(target - _pos);
@@ -303,6 +303,30 @@ bool Vertex::check_improve() {
   auto state1 = _compute_state(true, false);
   _improve_done = state0.feasible && state1.feasible && state1.objective < state0.objective;
   return _improve_done || _improve_failed;
+}
+
+void Vertex::init_snap(std::function<Mat<3>(Mat<3>)> get_target) {
+  _orig_pos = unwarped_point();
+  _step = get_target(_orig_pos) - _orig_pos;
+  _step_sz = 1.;
+  _improve_done = false;
+  _improve_failed = false;
+  _last_snap_failed = false;
+}
+
+void Vertex::compute_snap() {
+  _pos = _orig_pos + _step_sz*_step;
+}
+
+Vertex::Snap_result Vertex::check_snap() {
+  if (_improve_failed) return {true, true, _step.norm()};
+  _improve_done = _compute_state().feasible;
+  if (!_improve_done) {
+    _step_sz /= 3;
+    _last_snap_failed = true;
+  }
+  _improve_failed = _step_sz < 1e-10;
+  return {_improve_done, _last_snap_failed, (1 - _step_sz)*_step.norm()};
 }
 
 Int Vertex::misses = 0;
