@@ -1007,17 +1007,20 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     total_dist = 0;
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
+      #pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
         auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
         vert->init_improve(get_target);
       }
       bool done;
       do {
+        #pragma omp parallel for
         for (next::Vertex* vert : mobile_verts) {
           auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
           vert->compute_improve(get_target);
         }
         done = true;
+        #pragma omp parallel for reduction(&&:done)
         for (next::Vertex* vert : mobile_verts) {
           // can't combine these because of short-circuit evaluation
           bool d = vert->check_improve();
