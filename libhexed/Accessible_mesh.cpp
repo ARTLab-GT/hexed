@@ -299,7 +299,7 @@ void Accessible_mesh::_fit_surface() {
         if (nearest.index >= 0 && nearest.distance <= d) {
           vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
           if (vert.snapped_edge >= 0) {
-            vert.dijkstra_curve_dist_sq *= 100;
+            vert.dijkstra_curve_dist_sq *= 1e4;
           }
           vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
         } else {
