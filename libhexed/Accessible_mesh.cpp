@@ -221,6 +221,17 @@ void Accessible_mesh::_fit_surface() {
     Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
     _optimize(1, 10, true);
   }
+  {
+    auto faces = _blocks.faces_3d();
+    #pragma omp parallel for
+    for (auto& f : faces) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+    }
+    auto blocks = _blocks.boundary_sides();
+    #pragma omp parallel for
+    for (auto& b : blocks) b.reset();
+    next::Block::visualize("default", "surf_pre_edge_match", _blocks.faces_3d().cast<const next::Block&>(), 0.);
+  }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.record.clear();
@@ -257,16 +268,8 @@ void Accessible_mesh::_fit_surface() {
         }
         // don't bother to account for snapped neighbors unless d is initially < dist_sq
         if (d < std::min(ns, dist_sq)) {
-          bool snapped_neighbor = false;
-          for (next::Vertex* v : vert.neighbors()) {
-            if (v) snapped_neighbor = snapped_neighbor || (v->snapped_edge != -1 && v->snapped_edge != i_geom_edge)
-                                                       || v->snapped_point != -1;
-          }
-          if (snapped_neighbor) d *= 10;
-          if (d < dist_sq) { // now we know d accounting for snapped neighbors, so this is the real comparison
-            dist_sq = d;
-            nearest_vert = &vert;
-          }
+          dist_sq = d;
+          nearest_vert = &vert;
         }
       }
     }
