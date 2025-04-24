@@ -70,11 +70,9 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , _orig_pos{Mat<3>::Zero()}
 , _step{Mat<3>::Zero()}
 , _orig_dist{0.}
-, _orig_objective{0.}
 , _step_sz{0.}
 , _improve_failed{false}
 , _improve_done{true}
-, _neighbor_improve_done{false}
 , _edges(this)
 , _elems(this)
 , _glued_to(this)
@@ -280,48 +278,31 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
                int(gn)))
   _step = -nominal_size()*state.gradient.normalized();
   _step_sz = 1.;
-  _orig_objective = state.objective;
   _orig_dist = (get_target(_orig_pos) - _orig_pos).norm();
   _improve_done = false;
-  _neighbor_improve_done = false;
   _improve_failed = false;
 }
 
 void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
-  if (_neighbor_improve_done) return;
+  if (_improve_done || _improve_failed) return;
   _step_sz /= 3;
   _pos = _orig_pos + _step*_step_sz;
-  #if 0
   Mat<3> target = get_target(_pos);
   double dist = (target - _pos).norm();
   if (dist > _orig_dist) _pos += (dist - _orig_dist)/dist*(target - _pos);
-  #endif
-  if (_step_sz < 1e-20) {
+  if (_step_sz < 1e-10) {
     _pos = _orig_pos;
     _improve_failed = true;
-    printers::warn("failed\n");
   }
 }
 
-void Vertex::check_improve() {
+bool Vertex::check_improve() {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
   auto state0 = _compute_state(true, true);
   auto state1 = _compute_state(true, false);
   _improve_done = state0.feasible && state1.feasible && state1.objective < state0.objective;
-  printers::info(format_str("%i %e %e %i %e\n", (int)_improve_done, state1.objective, state0.objective, (int)_neighbor_improve_done, _step_sz));
-}
-
-bool Vertex::improve_done() {
-  HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
-  #if 0
-  _neighbor_improve_done = true;
-  for (Vertex* d : _depends_on) {
-    _neighbor_improve_done = _neighbor_improve_done && (d->_improve_done || d->_improve_failed);
-  }
-  #endif
-  _neighbor_improve_done = _improve_done || _improve_failed;
-  return _neighbor_improve_done;
+  return _improve_done || _improve_failed;
 }
 
 Int Vertex::misses = 0;

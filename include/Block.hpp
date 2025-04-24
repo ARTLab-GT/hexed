@@ -138,8 +138,7 @@ class Vertex : public Block {
   void compute_depends();
   void init_improve(std::function<Mat<3>(Mat<3>)> get_target);
   void compute_improve(std::function<Mat<3>(Mat<3>)> get_target);
-  void check_improve();
-  bool improve_done();
+  bool check_improve();
   bool has_problem() const;
   inline bool last_snap_failed() const {return _last_snap_failed;}
   bool snap_to(Mat<3> target);
@@ -225,11 +224,9 @@ class Vertex : public Block {
   Mat<3> _orig_pos;
   Mat<3> _step;
   double _orig_dist;
-  double _orig_objective;
   double _step_sz;
   bool _improve_failed;
   bool _improve_done;
-  bool _neighbor_improve_done;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;
   Reciprocal_ptr<Vertex, Element_shape> _glued_to;

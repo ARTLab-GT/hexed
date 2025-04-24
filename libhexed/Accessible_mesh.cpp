@@ -1013,16 +1013,14 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       }
       bool done;
       do {
-        printers::info("\n");
         for (next::Vertex* vert : mobile_verts) {
           auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
           vert->compute_improve(get_target);
         }
-        for (next::Vertex* vert : mobile_verts) vert->check_improve();
         done = true;
         for (next::Vertex* vert : mobile_verts) {
           // can't combine these because of short-circuit evaluation
-          bool d = vert->improve_done();
+          bool d = vert->check_improve();
           done = done && d;
         }
       } while (!done);
