@@ -158,9 +158,7 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
         pos = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
       }
     } else {
-      #if 1
       pos(seq) = surf_geom->nearest_point(pos(seq), huge, ns/2).point();
-      #else
       Mat<3> p0 = pos;
       bool found = false;
       for (auto n : vert.neighbors()) if (n) {
@@ -170,8 +168,8 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
         }
       }
       HEXED_ASSERT(found, "no non-surface neighbor found")
-      auto sects = surf_geom->intersections(p0(seq), pos(seq));
-      double best_sect = huge;
+      auto sects = surf_geom->intersections(p0(seq), pos(seq), false);
+      double best_sect = 1.;
       found = false;
       for (double sect : sects) {
         if (sect > 0 && sect < best_sect) {
@@ -180,7 +178,6 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
         }
       }
       if (found) pos = best_sect*pos + (1 - best_sect)*p0;
-      #endif
     }
   }
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -761,29 +758,6 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) {
     n_failed += !vert.snap_to(_get_snapping_target(vert, vert.unwarped_point()));
   }
-  #if 0
-  if (n_failed) {
-    n_failed = 0;
-    {
-      for (auto& vert : verts) {
-        if (vert.last_snap_failed()) {
-          vert.snapped_edge = -1;
-          vert.snapped_endpoint = -1;
-          for (auto& edge : vert.edges()) {
-            edge.snapped_edge = -1;
-          }
-        }
-      }
-      {
-        Task_message message(printers::info, "  Attempting to fit failed vertices to the surface", "\n", "  ");
-        _optimize(1, 10, true);
-      }
-      if (n_failed) {
-        printers::warn(format_str(200, "%li vertices could not be snapped to the surface at all.\n", n_failed), true);
-      }
-    }
-  }
-  #endif
   #pragma omp parallel for
   for (auto& vert : all_verts) vert.record.clear();
 
@@ -1001,6 +975,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   #else
   for (Int i_relax = 0; i_relax < 100; ++i_relax) {
   #endif
+    visualize("default", "relax" + to_string(i_relax), (double)i_relax);
     #if HEXED_VIS_MESH_OPT
     {
       auto faces = _blocks.faces_3d();
@@ -1028,54 +1003,31 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       }
     }
     #endif
-    // snap vertices to surface boundary
-    Mat<> o = tree->origin();
-    double tns = tree->nominal_size();
-    double objective_diff = 0;
     snaps_failed = 0;
     total_dist = 0;
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
-      #pragma omp parallel for reduction(+:objective_diff, snaps_failed, total_dist)
       for (next::Vertex* vert : mobile_verts) {
-        auto satisfy = [&](Mat<3> p)->Mat<3> {
-          for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
-            p(i_dim) = std::max(p(i_dim), o(i_dim));
-            p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
-          }
-          if (vert->record[2*params.n_dim]) {
-            for (auto n : vert->neighbors()) if (n) {
-              if ((int)n->record.size() == 2*params.n_dim + 1) {
-                if (!n->record[2*params.n_dim]) {
-                  auto seq = Eigen::seqN(0, params.n_dim);
-                  Mat<> start = n->point({})(seq);
-                  Mat<> end = p(Eigen::seqN(0, params.n_dim));
-                  std::vector<double> intersections = surf_geom->intersections(start, end, false);
-                  double min_sect = 1;
-                  for (double s : intersections) min_sect = std::min(min_sect, s);
-                  p(seq) = start + min_sect*(p(seq) - start);
-                }
-              }
-            }
-          }
-          return p;
-        };
         auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
-        bool on_surface = false;
-        for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert->record[i];
-        next::Vertex::Improve_quality_result iqr;
-        if (on_surface) {
-          iqr = vert->improve_quality(get_target, satisfy, true, true);
-        } else {
-          iqr = vert->improve_quality();
-        }
-        objective_diff += iqr.objective_diff;
-        snaps_failed += iqr.snap_failed;
-        total_dist += iqr.target_dist;
+        vert->init_improve(get_target);
       }
+      bool done;
+      do {
+        printers::info("\n");
+        for (next::Vertex* vert : mobile_verts) {
+          auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
+          vert->compute_improve(get_target);
+        }
+        for (next::Vertex* vert : mobile_verts) vert->check_improve();
+        done = true;
+        for (next::Vertex* vert : mobile_verts) {
+          // can't combine these because of short-circuit evaluation
+          bool d = vert->improve_done();
+          done = done && d;
+        }
+      } while (!done);
       _stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed += mobile_verts.size();
     }
-    double prev_obj = objective;
     objective = 0;
     {
       Stopwatch_tree::Starter sw_assess(_stopwatch["update"]["fit surface"]["optimization"]["assessment"]);
@@ -1084,13 +1036,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       _stopwatch["update"]["fit surface"]["optimization"]["assessment"].work_units_completed += verts.size();
     }
     if (starting_objective < 0) starting_objective = objective;
-    if (i_relax) {
-      if (std::abs(objective_diff - (objective - prev_obj)) > 1e-4*verts.size()) {
-        printers::warn(" Warning: ", true);
-        printers::warn(format_str(300, "inaccurate objective change: %e vs %e (please report as a bug)\n",
-                                  -objective_diff, objective - prev_obj));
-      }
-    }
     obj_monitor.add_sample(i_relax, objective - starting_objective);
     dist_monitor.add_sample(i_relax, total_dist);
     message = format_str(
@@ -1110,6 +1055,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   printers::info(message, false, true);
   printers::info("\n");
   ++_stopwatch["update"]["fit surface"]["optimization"].work_units_completed;
+  HEXED_THROW("foo")
 }
 
 Storage_params incr_res_cache(Storage_params params) {

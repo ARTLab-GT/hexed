@@ -134,9 +134,12 @@ class Vertex : public Block {
   };
   Improve_quality_result improve_quality();
   Improve_quality_result improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                                         std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                          bool limit_direction = true, bool snap = true);
   void compute_depends();
+  void init_improve(std::function<Mat<3>(Mat<3>)> get_target);
+  void compute_improve(std::function<Mat<3>(Mat<3>)> get_target);
+  void check_improve();
+  bool improve_done();
   bool has_problem() const;
   inline bool last_snap_failed() const {return _last_snap_failed;}
   bool snap_to(Mat<3> target);
@@ -209,16 +212,24 @@ class Vertex : public Block {
     bool has_glued_neighbor = false;
     bool computing_depends = false;
   };
-  _Optimization_state _compute_state(bool include_neighbors = true);
+  _Optimization_state _compute_state(bool include_neighbors = true, bool ignore = false);
+  Mat<3> _unwarped_point(Vertex* ignore) const; // will treat the vertex `ignore` as being at its `_orig_pos`;
   void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                Vertex* orig_vertex = nullptr);
+                                Vertex* orig_vertex = nullptr, Vertex* ignore = nullptr);
   Improve_quality_result _improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                                          std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                           bool has_target, bool limit_direction, bool snap);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   Mat<3> _get_pos() const; // fetches `_pos` with atomic reads
   int _get_index(const Element_shape&) const;
   Mat<3> _pos;
+  Mat<3> _orig_pos;
+  Mat<3> _step;
+  double _orig_dist;
+  double _orig_objective;
+  double _step_sz;
+  bool _improve_failed;
+  bool _improve_done;
+  bool _neighbor_improve_done;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;
   Reciprocal_ptr<Vertex, Element_shape> _glued_to;

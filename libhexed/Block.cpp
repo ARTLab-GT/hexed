@@ -67,6 +67,14 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , snapped_edge{-1}
 , snapped_endpoint{-1}
 , _pos{pos}
+, _orig_pos{Mat<3>::Zero()}
+, _step{Mat<3>::Zero()}
+, _orig_dist{0.}
+, _orig_objective{0.}
+, _step_sz{0.}
+, _improve_failed{false}
+, _improve_done{true}
+, _neighbor_improve_done{false}
 , _edges(this)
 , _elems(this)
 , _glued_to(this)
@@ -153,14 +161,14 @@ bool Vertex::mobile() const {
 const double ortho_tolerance = .03;
 const double edge_tolerance = .02;
 
-Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) {
+Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors, bool ignore) {
   _Optimization_state state;
-  _compute_state_recursive(state, 1., include_neighbors);
+  _compute_state_recursive(state, 1., include_neighbors, this, ignore ? this : nullptr);
   return state;
 }
 
 void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                      Vertex* orig_vertex) {
+                                      Vertex* orig_vertex, Vertex* ignore) {
   if (!orig_vertex) orig_vertex = this;
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
@@ -170,7 +178,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
     int i_this = _get_index(*elem);
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
-      verts(all, i_vert) = elem->vertex(i_vert).unwarped_point();
+      verts(all, i_vert) = elem->vertex(i_vert)._unwarped_point(ignore);
     }
     Sequence<Mat<3>> vert_seq {
       [&](Int i_vert)->Mat<3> {return verts(all, i_vert);},
@@ -227,7 +235,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
           }
           if (coupled) {
             state.has_glued_neighbor = true;
-            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex);
+            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex, ignore);
           }
         }
       }
@@ -236,13 +244,12 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
 }
 
 Vertex::Improve_quality_result Vertex::improve_quality() {
-  return _improve_quality([](Mat<3>){return Mat<3>::Zero();}, [](Mat<3> p){return p;}, false, false, false);
+  return _improve_quality([](Mat<3>){return Mat<3>::Zero();}, false, false, false);
 }
 
 Vertex::Improve_quality_result Vertex::improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                                                       std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                                        bool limit_direction, bool snap) {
-  return _improve_quality(get_target, satisfy_constraints, true, limit_direction, snap);
+  return _improve_quality(get_target, true, limit_direction, snap);
 }
 
 void Vertex::compute_depends() {
@@ -260,11 +267,67 @@ bool Vertex::has_problem() const {
   return false;
 }
 
+void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
+  HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
+  _orig_pos = unwarped_point();
+  auto state = _compute_state();
+  bool gn = false;
+  for (Vertex* n : neighbors()) gn = gn || n->glued();
+  HEXED_ASSERT(state.feasible, format_str(200,
+               "Vertex state violates quality criteria "
+               "(ortho = %e; edge = %e; coords = (%e %e %e); glued neighbor = %i).",
+               state.worst_ortho, state.worst_edge, _orig_pos(0), _orig_pos(1), _orig_pos(2),
+               int(gn)))
+  _step = -nominal_size()*state.gradient.normalized();
+  _step_sz = 1.;
+  _orig_objective = state.objective;
+  _orig_dist = (get_target(_orig_pos) - _orig_pos).norm();
+  _improve_done = false;
+  _neighbor_improve_done = false;
+  _improve_failed = false;
+}
+
+void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
+  HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
+  if (_neighbor_improve_done) return;
+  _step_sz /= 3;
+  _pos = _orig_pos + _step*_step_sz;
+  #if 0
+  Mat<3> target = get_target(_pos);
+  double dist = (target - _pos).norm();
+  if (dist > _orig_dist) _pos += (dist - _orig_dist)/dist*(target - _pos);
+  #endif
+  if (_step_sz < 1e-20) {
+    _pos = _orig_pos;
+    _improve_failed = true;
+    printers::warn("failed\n");
+  }
+}
+
+void Vertex::check_improve() {
+  HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
+  auto state0 = _compute_state(true, true);
+  auto state1 = _compute_state(true, false);
+  _improve_done = state0.feasible && state1.feasible && state1.objective < state0.objective;
+  printers::info(format_str("%i %e %e %i %e\n", (int)_improve_done, state1.objective, state0.objective, (int)_neighbor_improve_done, _step_sz));
+}
+
+bool Vertex::improve_done() {
+  HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
+  #if 0
+  _neighbor_improve_done = true;
+  for (Vertex* d : _depends_on) {
+    _neighbor_improve_done = _neighbor_improve_done && (d->_improve_done || d->_improve_failed);
+  }
+  #endif
+  _neighbor_improve_done = _improve_done || _improve_failed;
+  return _neighbor_improve_done;
+}
+
 Int Vertex::misses = 0;
 Int Vertex::tries = 0;
 
 Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                                                        std::function<Mat<3>(Mat<3>)> satisfy_constraints,
                                                         bool has_target, bool limit_direction, bool snap) {
   bool miss = false;
   for (Vertex* vert : _depends_on) {
@@ -320,7 +383,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
         }
         step_sz /= repeat_factor[i];
         ++n_back_improve;
-        _pos = satisfy_constraints(orig_pos + step_sz*direction);
+        _pos = orig_pos + step_sz*direction;
         Mat<3> new_target = get_target(_pos);
         double dist = (new_target - _pos).norm();
         if (dist > orig_dist) _pos += (dist - orig_dist)/dist*(new_target - _pos);
@@ -333,7 +396,7 @@ Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat
   double target_dist = 0;
   if (has_target && snap) {
     orig_pos = _pos;
-    target = satisfy_constraints(get_target(_pos));
+    target = get_target(_pos);
     Mat<3> step = target - _pos;
     double orig_objective = new_state.objective;
     do {
@@ -447,8 +510,10 @@ Mat<3> Vertex::_point(const std::vector<int>&, Int recursion_depth) const {
   return _glued_to.value().interpolate(_glued_coords, recursion_depth + 1);
 }
 
-Mat<3> Vertex::unwarped_point() const {
-  if (!_glued_to) return _get_pos();
+Mat<3> Vertex::unwarped_point() const {return _unwarped_point(nullptr);}
+
+Mat<3> Vertex::_unwarped_point(Vertex* ignore) const {
+  if (!_glued_to) return (this == ignore) ? _orig_pos : _get_pos();
   int nd = _glued_to->n_dim();
   int nv = math::pow(2, nd);
   int nc = _glued_coords.size();
@@ -458,7 +523,7 @@ Mat<3> Vertex::unwarped_point() const {
     for (int i_dim = 0; i_dim < nc; ++i_dim) {
       skip = skip || std::abs(_glued_coords[i_dim] - !math::row_coordinate(nd, 2, i_dim, i_vert)) < 1e-6;
     }
-    if (!skip) vert_pos(i_vert, all) = _glued_to->vertex(i_vert).unwarped_point().transpose();
+    if (!skip) vert_pos(i_vert, all) = _glued_to->vertex(i_vert)._unwarped_point(ignore).transpose();
   }
   Mat<3> coords = Mat<3>::Zero();
   for (int i_dim = 0; i_dim < nc; ++i_dim) coords(3 - nc + i_dim) = _glued_coords[i_dim];
