@@ -379,25 +379,23 @@ void Accessible_mesh::_fit_surface() {
   }
   // deal with edge endpoints that aren't shared with other edges
   for (auto& vert : verts) {
-    if (vert.snapped_endpoint >= 0) {
-      int n_snapped_edges = 0;
-      for (auto& edge : vert.edges()) {
-        n_snapped_edges += edge.snapped_edge != -1;
-      }
-      if (n_snapped_edges == 1) {
-        for (auto& elem : vert.elements()) {
-          auto face = elem.boundary_face_3d();
-          if (face) {
-            for (int i_edge = 0; i_edge < 4; ++i_edge) {
-              auto* edge = &face->edge(i_edge);
-              if (edge->glued()) edge = edge->glued_to();
-              if (edge->snapped_edge == -1) edge->snapped_edge = -2;
-              for (int i_vert = 0; i_vert < 2; ++i_vert) {
-                if (edge->vertex(i_vert).snapped_edge == -1) edge->vertex(i_vert).snapped_edge = -2;
-              }
+    int n_snapped_edges = 0;
+    for (auto& edge : vert.edges()) {
+      n_snapped_edges += edge.snapped_edge != -1;
+    }
+    if (n_snapped_edges == 1) {
+      for (auto& elem : vert.elements()) {
+        auto face = elem.boundary_face_3d();
+        if (face) {
+          for (int i_edge = 0; i_edge < 4; ++i_edge) {
+            auto* edge = &face->edge(i_edge);
+            if (edge->glued()) edge = edge->glued_to();
+            if (edge->snapped_edge == -1) edge->snapped_edge = -2;
+            for (int i_vert = 0; i_vert < 2; ++i_vert) {
+              if (edge->vertex(i_vert).snapped_edge == -1) edge->vertex(i_vert).snapped_edge = -2;
             }
-            break;
           }
+          break;
         }
       }
     }
@@ -717,62 +715,33 @@ void Accessible_mesh::_fit_surface() {
     }
     for (auto& vert : all_verts) {
       if (vert.record.size() == 12) {
-        try {
-          std::array<Deformed_element*, 2> elem_arr;
-          std::array<int, 2> dim_arr;
-          std::array<bool, 2> sign_arr;
-          for (int i_side = 0; i_side < 2; ++i_side) {
-            elem_arr[i_side] = &def.elems.at(vert.record[6*i_side], vert.record[6*i_side + 1]);
-            dim_arr[i_side] = vert.record[6*i_side + 2];
-            sign_arr[i_side] = vert.record[6*i_side + 3];
-            HEXED_ASSERT(elem_arr[i_side]->record != 2, "attempt to connect with doomed element")
-          }
-          HEXED_ASSERT(dim_arr[0] != dim_arr[1] || sign_arr[0] != sign_arr[1], "cannot connect same faces")
-          int rotate = 0;
-          for (int r : {-1, 1, 2}) {
-            auto inds = vertex_inds(3, {dim_arr, sign_arr, r});
-            for (int i_vert = 0; i_vert < 4; ++i_vert) {
-              if (   &elem_arr[0]->shape().vertex(inds[0][i_vert])
-                  == &elem_arr[1]->shape().vertex(inds[1][i_vert])) {
-                rotate = r;
-              }
-            }
-          }
-          printers::info("marker0\n");
-          printers::info("vertex pos: " + to_string(vert.unwarped_point()));
-          printers::info(format_str("faces:%li%li ", 2*vert.record[2] + vert.record[3], 2*vert.record[8] + vert.record[9]));
-          for (int i_side = 0; i_side < 2; ++i_side) {
-            Mat<3> center = Mat<3>::Zero();
-            for (int i_vert = 0; i_vert < 8; ++i_vert) {
-              center += elem_arr[i_side]->active_shape().vertex(i_vert).unwarped_point()/8;
-            }
-            printers::info("element" + to_string(i_side) + " center: " + to_string(center));
-          }
-          printers::info("\n");
-          _connect(elem_arr, {dim_arr, sign_arr, rotate});
-          printers::info("marker1\n");
-        } catch (const assert::Internal_error& e) {
-          auto faces = _blocks.faces_3d();
-          #pragma omp parallel for
-          for (auto& f : faces) {
-            for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
-          }
-          for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-            if (!elems[i_elem].has_shape()) continue;
-            Mat<3> center = Mat<3>::Zero();
-            for (int i_vert = 0; i_vert < 8; ++i_vert) {
-              center += elems[i_elem].active_shape().vertex(i_vert).unwarped_point()/8;
-            }
-            for (int i_vert = 0; i_vert < 8; ++i_vert) {
-              elems[i_elem].active_shape().vertex(i_vert).set_pos(.9*elems[i_elem].active_shape().vertex(i_vert).unwarped_point() + .1*center);
-            }
-          }
-          auto blocks = _blocks.boundary_sides();
-          #pragma omp parallel for
-          for (auto& b : blocks) b.reset();
-          visualize("default", "err", 0.);
-          throw e;
+        std::array<Deformed_element*, 2> elem_arr;
+        std::array<int, 2> dim_arr;
+        std::array<bool, 2> sign_arr;
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          elem_arr[i_side] = &def.elems.at(vert.record[6*i_side], vert.record[6*i_side + 1]);
+          dim_arr[i_side] = vert.record[6*i_side + 2];
+          sign_arr[i_side] = vert.record[6*i_side + 3];
+          HEXED_ASSERT(elem_arr[i_side]->record != 2, "attempt to connect with doomed element")
         }
+        HEXED_ASSERT(dim_arr[0] != dim_arr[1] || sign_arr[0] != sign_arr[1], "cannot connect same faces")
+        int rotate = 0;
+        for (int r : {-1, 1, 2}) {
+          auto inds = vertex_inds(3, {dim_arr, sign_arr, r});
+          for (int i_vert = 0; i_vert < 4; ++i_vert) {
+            if (   &elem_arr[0]->shape().vertex(inds[0][i_vert])
+                == &elem_arr[1]->shape().vertex(inds[1][i_vert])) {
+              rotate = r;
+            }
+          }
+        }
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          Mat<3> center = Mat<3>::Zero();
+          for (int i_vert = 0; i_vert < 8; ++i_vert) {
+            center += elem_arr[i_side]->active_shape().vertex(i_vert).unwarped_point()/8;
+          }
+        }
+        _connect(elem_arr, {dim_arr, sign_arr, rotate});
       }
     }
     // rebuild `extrude_cons`
@@ -1188,9 +1157,7 @@ Element& Accessible_mesh::element(int ref_level, bool is_deformed, int serial_n)
 }
 
 void Accessible_mesh::_connect_shapes(Element& elem0, Element& elem1, Connection_direction dir) {
-  printers::info("marker2\n");
   next::Element_shape* shapes [2] {&elem0.shape(), &elem1.shape()};
-  printers::info("marker3\n");
   shapes[0]->connect(*shapes[1], dir);
   next::Element_shape* fake_shapes [2] {elem0.fake_shape(), elem1.fake_shape()};
   if (fake_shapes[0] || fake_shapes[1]) {
@@ -1205,10 +1172,8 @@ void Accessible_mesh::_connect(std::array<Element*, 2> el_ar, Con_dir<Element> d
 }
 
 void Accessible_mesh::_connect(std::array<Deformed_element*, 2> el_ar, Con_dir<Deformed_element> direction) {
-  printers::info("marker4\n");
   def.cons.emplace_back(new Element_face_connection<Deformed_element>(el_ar, direction));
   _connect_shapes(*el_ar[0], *el_ar[1], direction);
-  printers::info("marker5\n");
 }
 
 template <typename Elem_t>
