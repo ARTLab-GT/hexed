@@ -210,53 +210,9 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) {
     vert.set_pos(vert.nominal_position());
   }
-  _offset_vertices(.2, false);
-  {
-    auto faces = _blocks.faces_3d();
-    #pragma omp parallel for
-    for (auto& f : faces) {
-      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
-    }
-    auto blocks = _blocks.boundary_sides();
-    #pragma omp parallel for
-    for (auto& b : blocks) b.reset();
-    visualize("default", "mesh_diagnostic2", 0.);
-  }
-  {
-    Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
-    _optimize(1, 10, true);
-  }
-  {
-    auto faces = _blocks.faces_3d();
-    #pragma omp parallel for
-    for (auto& f : faces) {
-      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
-    }
-    auto blocks = _blocks.boundary_sides();
-    #pragma omp parallel for
-    for (auto& b : blocks) b.reset();
-    next::Block::visualize("default", "surf_pre_edge_match", _blocks.faces_3d().cast<const next::Block&>(), 0.);
-  }
-  #pragma omp parallel for
-  for (auto& vert : all_verts) {
-    vert.record.clear();
-  }
   auto verts = _blocks.boundary_verts();
-  #pragma omp parallel for
-  for (next::Vertex& vert : all_verts) {
-    Mat<3> point = vert.unwarped_point();
-    vert.dijkstra_point = point;
-    vert.snapped_point = -1;
-    vert.snapped_edge = -1;
-    vert.snapped_endpoint = -1;
-  }
-  auto faces = _blocks.faces_3d();
-  #pragma omp parallel for
-  for (next::Face& face : faces) {
-    for (int i_edge = 0; i_edge < 4; ++i_edge) {
-      face.edge(i_edge).snapped_edge = -1;
-    }
-  }
+  _offset_vertices(.2, false);
+
   auto find_nearest_vert = [&](Mat<3> point, int i_geom_edge = -1)->next::Vertex* {
     next::Vertex* nearest_vert = nullptr;
     double dist_sq = huge;
@@ -285,6 +241,13 @@ void Accessible_mesh::_fit_surface() {
 
   auto edges = surf_geom->edges();
   if (params.n_dim == 3) {
+    auto faces = _blocks.faces_3d();
+    #pragma omp parallel for
+    for (next::Face& face : faces) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) {
+        face.edge(i_edge).snapped_edge = -1;
+      }
+    }
     std::vector<Int> edge_inds(edges.size());
     std::vector<double> avg_coords(edges.size());
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
@@ -297,6 +260,68 @@ void Accessible_mesh::_fit_surface() {
       avg_coords[i_geom_edge] /= nodes.shape()[0];
     }
     std::sort(edge_inds.begin(), edge_inds.end(), [&avg_coords](Int i, Int j){return avg_coords[i] < avg_coords[j];});
+    for (int iter = 0; iter < 10; ++iter) {
+      {
+        Task_message message(printers::info, "  During-edge-matching mesh optimization", "\n", "  ");
+        _optimize(1, 10, true);
+      }
+      #pragma omp parallel for
+      for (auto& vert : all_verts) {
+        vert.record.clear();
+      }
+      auto verts = _blocks.boundary_verts();
+      #pragma omp parallel for
+      for (next::Vertex& vert : all_verts) {
+        Mat<3> point = vert.unwarped_point();
+        vert.dijkstra_point = point;
+        vert.snapped_point = -1;
+        vert.snapped_edge = -1;
+        vert.snapped_endpoint = -1;
+      }
+      for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+        auto& geom_edge = edges[edge_inds[i_geom_edge]];
+        std::array<next::Vertex*, 2> start_end {nullptr, nullptr};
+        for (int i_endpoint = 0; i_endpoint < 2; ++i_endpoint) {
+          Mat<3> endpoint = geom_edge.nodes()(i_endpoint*(geom_edge.nodes().shape()[0] - 1)).vector();
+          start_end[i_endpoint] = find_nearest_vert(endpoint, edge_inds[i_geom_edge]);
+          if (start_end[i_endpoint]) {
+            start_end[i_endpoint]->dijkstra_point = endpoint;
+            start_end[i_endpoint]->snapped_edge = edge_inds[i_geom_edge];
+            start_end[i_endpoint]->snapped_endpoint = i_endpoint;
+          }
+        }
+      }
+      {
+        auto blocks = _blocks.boundary_sides();
+        auto faces = _blocks.faces_3d();
+        #pragma omp parallel for
+        for (auto& f : faces) {
+          for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+        }
+        #pragma omp parallel for
+        for (auto& b : blocks) b.reset();
+        next::Block::visualize("default", "edge_match_points" + to_string(iter), _blocks.faces_3d().cast<const next::Block&>(), double(iter));
+        #pragma omp parallel for
+        for (auto& vert : verts) {
+          Mat<3> p = vert.unwarped_point();
+          vert.set_pos(vert.dijkstra_point);
+          vert.dijkstra_point = p;
+        }
+        #pragma omp parallel for
+        for (auto& f : faces) {
+          for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+        }
+        #pragma omp parallel for
+        for (auto& b : blocks) b.reset();
+        next::Block::visualize("default", "edge_match" + to_string(iter), _blocks.faces_3d().cast<const next::Block&>(), double(iter));
+        #pragma omp parallel for
+        for (auto& vert : verts) {
+          Mat<3> p = vert.unwarped_point();
+          vert.set_pos(vert.dijkstra_point);
+          vert.dijkstra_point = p;
+        }
+      }
+    }
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
       auto& geom_edge = edges[edge_inds[i_geom_edge]];
       std::array<next::Vertex*, 2> start_end {nullptr, nullptr};
@@ -376,31 +401,17 @@ void Accessible_mesh::_fit_surface() {
           vert = vert->dijkstra_prev_vert;
         } while (vert);
       }
-      {
-        #pragma omp parallel for
-        for (auto& vert : verts) {
-          Mat<3> p = vert.unwarped_point();
-          vert.set_pos(vert.dijkstra_point);
-          vert.dijkstra_point = p;
-        }
-        auto faces = _blocks.faces_3d();
-        #pragma omp parallel for
-        for (auto& f : faces) {
-          for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
-        }
-        auto blocks = _blocks.boundary_sides();
-        #pragma omp parallel for
-        for (auto& b : blocks) b.reset();
-        next::Block::visualize("default", "edge_match" + to_string(i_geom_edge), _blocks.faces_3d().cast<const next::Block&>(), double(i_geom_edge));
-        #pragma omp parallel for
-        for (auto& vert : verts) {
-          Mat<3> p = vert.unwarped_point();
-          vert.set_pos(vert.dijkstra_point);
-          vert.dijkstra_point = p;
-        }
-      }
     }
   } else if (params.n_dim == 2) {
+    {
+      Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
+      _optimize(1, 10, true);
+    }
+    #pragma omp parallel for
+    for (next::Vertex& vert : all_verts) {
+      vert.record.clear();
+      vert.snapped_point = -1;
+    }
     auto points = surf_geom->points();
     for (int i_point = 0; i_point < points.size(); ++i_point) {
       Mat<3> point {points[i_point][0], points[i_point][1], 0.};
