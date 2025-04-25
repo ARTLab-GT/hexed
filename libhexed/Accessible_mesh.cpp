@@ -210,6 +210,11 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) {
     vert.set_pos(vert.nominal_position());
   }
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    elem.snapping_problem = false;
+  }
   _offset_vertices(.2, false);
   {
     auto faces = _blocks.faces_3d();
@@ -245,6 +250,7 @@ void Accessible_mesh::_fit_surface() {
     vert.snapped_point = -1;
     vert.snapped_edge = -1;
     vert.snapped_endpoint = -1;
+    vert.incompatible_snap = false;
   }
   auto faces = _blocks.faces_3d();
   #pragma omp parallel for
@@ -259,13 +265,14 @@ void Accessible_mesh::_fit_surface() {
     for (auto& vert : verts) {
       if (!vert.glued()) {
         double ns = vert.nominal_size();
-        double d = (vert.dijkstra_point - point).squaredNorm();
+        Mat<3> unwarped = vert.unwarped_point();
+        double d = (unwarped - point).squaredNorm();
         d += 1e6*(_de_intersect(vert, point) - point).squaredNorm();
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
           for (int sign : {0, 1}) {
             double extreme = tree->origin()(i_dim) + sign*tree->nominal_size();
             if ((std::abs(point(i_dim) - extreme) > 3e-2*ns) !=
-                (std::abs(vert.dijkstra_point(i_dim) - extreme) > 3e-2*ns)) d = huge;
+                (std::abs(unwarped(i_dim) - extreme) > 3e-2*ns)) d = huge;
           }
         }
         // don't bother to account for snapped neighbors unless d is initially < dist_sq
@@ -299,7 +306,7 @@ void Accessible_mesh::_fit_surface() {
         vert.dijkstra_prev_vert = nullptr;
         vert.dijkstra_prev_edge = nullptr;
         double d = huge;
-        auto nearest = geom_edge.nearest_point(vert.dijkstra_point, d);
+        auto nearest = geom_edge.nearest_point(vert.unwarped_point(), d);
         if (nearest.index >= 0 && nearest.distance <= d) {
           vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
           vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
@@ -309,7 +316,6 @@ void Accessible_mesh::_fit_surface() {
           printers::warn("projection failed\n");
         }
       }
-      std::cout << "foo\n";
       std::priority_queue<
         dijkstra::Node,
         std::vector<dijkstra::Node>,
@@ -328,7 +334,7 @@ void Accessible_mesh::_fit_surface() {
         if (curr.updates < curr.vert->dijkstra_updates) continue;
         for (next::Edge& edge : curr.vert->edges()) if (!edge.glued()) {
           next::Vertex* vert = &edge.vertex(&edge.vertex(0) == curr.vert);
-          double interval = std::max((curr.vert->dijkstra_point - vert->dijkstra_point).norm(),
+          double interval = std::max((curr.vert->unwarped_point() - vert->unwarped_point()).norm(),
                                      std::abs(vert->dijkstra_arc_len - curr.vert->dijkstra_arc_len));
           double d = curr.cost + .5*(curr.vert->dijkstra_curve_dist_sq + vert->dijkstra_curve_dist_sq)*interval;
           if (d < vert->dijkstra_dist) {
@@ -343,17 +349,26 @@ void Accessible_mesh::_fit_surface() {
       if (curr.vert == start_end[0]) {
         next::Vertex* vert = curr.vert;
         do {
-          if (vert->dijkstra_prev_edge) {
-            vert->dijkstra_prev_edge->snapped_edge = i_geom_edge;
-          }
+          bool snap = false;
+          Mat<3> unwarped = vert->unwarped_point();
+          Mat<3> edge_point = edges[i_geom_edge].interp_point(edges[i_geom_edge].nearest_point(unwarped));
           if (vert->snapped_edge < 0) {
+            snap = true;
+          } else {
+            if ((edge_point - vert->dijkstra_point).norm() > 1e-3*vert->nominal_size()) vert->incompatible_snap = true;
+            if ((edge_point - unwarped).squaredNorm() < (vert->dijkstra_point - unwarped).squaredNorm()) {
+              snap = true;
+            }
+          }
+          if (snap) {
+            if (vert->dijkstra_prev_edge) vert->dijkstra_prev_edge->snapped_edge = i_geom_edge;
+            vert->dijkstra_point = edge_point;
             vert->snapped_edge = i_geom_edge;
           }
           vert = vert->dijkstra_prev_vert;
         } while (vert);
       }
     }
-    std::cout << "bar\n";
   } else if (params.n_dim == 2) {
     auto points = surf_geom->points();
     for (int i_point = 0; i_point < points.size(); ++i_point) {
@@ -495,12 +510,14 @@ void Accessible_mesh::_fit_surface() {
                   int i_vert =   i_sign*math::pow(2, 2 - i_dim)
                                + j_sign*math::pow(2, 2 - j_dim)
                                + k_sign*math::pow(2, 2 - k_dim);
-                  int i_snapped = elem.fake_shape()->vertex(i_vert).snapped_edge;
+                  auto& elem_vert = elem.fake_shape()->vertex(i_vert);
+                  int i_snapped = elem_vert.snapped_edge;
                   HEXED_ASSERT(i_snapped != -1 || elem.fake_shape()->boundary_face_3d()->edge(i_edge_matched).glued(),
                                "vertex and edge do not agree on whether they are snapped")
                   auto& vert = match_elem.shape().vertex(i_vert);
                   vert.snapped_edge = i_snapped;
-                  vert.snapped_endpoint = elem.fake_shape()->vertex(i_vert).snapped_endpoint;
+                  vert.snapped_endpoint = elem_vert.snapped_endpoint;
+                  vert.incompatible_snap = vert.incompatible_snap || elem_vert.incompatible_snap;
                 }
                 auto& matched_edge = match_elem.shape().boundary_face_3d()->edge(i_edge_matched);
                 matched_edge.snapped_edge = m;
@@ -884,9 +901,9 @@ void Accessible_mesh::_fit_surface() {
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    elem.snapping_problem = false;
     for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-      elem.snapping_problem = elem.snapping_problem || elem.active_shape().vertex(i_vert).last_snap_failed();
+      auto& vert = elem.active_shape().vertex(i_vert);
+      elem.snapping_problem = elem.snapping_problem || vert.last_snap_failed() || vert.incompatible_snap;
     }
   }
   #pragma omp parallel for
