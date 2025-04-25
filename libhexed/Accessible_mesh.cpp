@@ -159,25 +159,7 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
       }
     } else {
       pos(seq) = surf_geom->nearest_point(pos(seq), huge, ns/2).point();
-      Mat<3> p0 = pos;
-      bool found = false;
-      for (auto n : vert.neighbors()) if (n) {
-        if (!n->is_surface()) {
-          p0 = n->unwarped_point();
-          found = true;
-        }
-      }
-      HEXED_ASSERT(found, "no non-surface neighbor found")
-      auto sects = surf_geom->intersections(p0(seq), pos(seq), false);
-      double best_sect = 1.;
-      found = false;
-      for (double sect : sects) {
-        if (sect > 0 && sect < best_sect) {
-          best_sect = sect;
-          found = true;
-        }
-      }
-      if (found) pos = best_sect*pos + (1 - best_sect)*p0;
+      pos = _de_intersect(vert, pos);
     }
   }
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -187,6 +169,29 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
       }
     }
   }
+  return pos;
+}
+
+Mat<3> Accessible_mesh::_de_intersect(next::Vertex& vert, Mat<3> pos) {
+  Mat<3> p0 = pos;
+  bool found = false;
+  for (auto n : vert.neighbors()) if (n) {
+    if (!n->is_surface()) {
+      p0 = n->unwarped_point();
+      found = true;
+    }
+  }
+  HEXED_ASSERT(found, "no non-surface neighbor found")
+  auto sects = surf_geom->intersections(resize(p0, params.n_dim), resize(pos, params.n_dim), false);
+  double best_sect = 1.;
+  found = false;
+  for (double sect : sects) {
+    if (sect > 0 && sect < best_sect) {
+      best_sect = sect;
+      found = true;
+    }
+  }
+  if (found) pos = best_sect*pos + (1 - best_sect)*p0;
   return pos;
 }
 
@@ -259,6 +264,7 @@ void Accessible_mesh::_fit_surface() {
       if (!vert.glued()) {
         double ns = vert.nominal_size();
         double d = (vert.dijkstra_point - point).squaredNorm();
+        d += 1e6*(_de_intersect(vert, point) - point).squaredNorm();
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
           for (int sign : {0, 1}) {
             double extreme = tree->origin()(i_dim) + sign*tree->nominal_size();
@@ -266,6 +272,7 @@ void Accessible_mesh::_fit_surface() {
                 (std::abs(vert.dijkstra_point(i_dim) - extreme) > 3e-2*ns)) d = huge;
           }
         }
+        if (vert.snapped_edge >= 0) d *= 1e6;
         // don't bother to account for snapped neighbors unless d is initially < dist_sq
         if (d < std::min(ns, dist_sq)) {
           dist_sq = d;
@@ -278,15 +285,27 @@ void Accessible_mesh::_fit_surface() {
 
   auto edges = surf_geom->edges();
   if (params.n_dim == 3) {
+    std::vector<Int> edge_inds(edges.size());
+    std::vector<double> avg_coords(edges.size());
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
-      auto& geom_edge = edges[i_geom_edge];
+      edge_inds[i_geom_edge] = i_geom_edge;
+      avg_coords[i_geom_edge] = 0;
+      Array<double> nodes = edges[i_geom_edge].nodes();
+      for (Int i_node = 0; i_node < nodes.shape()[0]; ++i_node) {
+        avg_coords[i_geom_edge] += nodes(i_node)[0] + .1*nodes(i_node)[1] + .01*nodes(i_node)[2];
+      }
+      avg_coords[i_geom_edge] /= nodes.shape()[0];
+    }
+    std::sort(edge_inds.begin(), edge_inds.end(), [&avg_coords](Int i, Int j){return avg_coords[i] < avg_coords[j];});
+    for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
+      auto& geom_edge = edges[edge_inds[i_geom_edge]];
       std::array<next::Vertex*, 2> start_end {nullptr, nullptr};
       for (int i_endpoint = 0; i_endpoint < 2; ++i_endpoint) {
         Mat<3> endpoint = geom_edge.nodes()(i_endpoint*(geom_edge.nodes().shape()[0] - 1)).vector();
-        start_end[i_endpoint] = find_nearest_vert(endpoint, i_geom_edge);
+        start_end[i_endpoint] = find_nearest_vert(endpoint, edge_inds[i_geom_edge]);
         if (start_end[i_endpoint]) {
           start_end[i_endpoint]->dijkstra_point = endpoint;
-          start_end[i_endpoint]->snapped_edge = i_geom_edge;
+          start_end[i_endpoint]->snapped_edge = edge_inds[i_geom_edge];
           start_end[i_endpoint]->snapped_endpoint = i_endpoint;
         }
       }
@@ -300,14 +319,17 @@ void Accessible_mesh::_fit_surface() {
         double d = huge;
         auto nearest = geom_edge.nearest_point(vert.dijkstra_point, d);
         if (nearest.index >= 0 && nearest.distance <= d) {
-          vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
+          Mat<3> edge_point = geom_edge.nodes()(nearest.index).vector();
+          vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance
+                                        + 1e6*(_de_intersect(vert, edge_point) - edge_point).squaredNorm();
           if (vert.snapped_edge >= 0) {
-            vert.dijkstra_curve_dist_sq *= 1e4;
+            vert.dijkstra_curve_dist_sq *= 1e6;
           }
           vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
         } else {
           vert.dijkstra_curve_dist_sq = std::sqrt(huge);
           vert.dijkstra_arc_len = std::sqrt(huge);
+          printers::warn("projection failed\n");
         }
       }
       std::priority_queue<
@@ -344,15 +366,38 @@ void Accessible_mesh::_fit_surface() {
         next::Vertex* vert = curr.vert;
         do {
           if (vert->dijkstra_prev_edge) {
-            vert->dijkstra_prev_edge->snapped_edge = i_geom_edge;
+            vert->dijkstra_prev_edge->snapped_edge = edge_inds[i_geom_edge];
           }
           if (vert->snapped_edge < 0) {
             Int ind = geom_edge.nearest_point(vert->dijkstra_point, huge).index;
             if (ind >= 0) vert->dijkstra_point = geom_edge.nodes()(ind).vector();
-            vert->snapped_edge = i_geom_edge;
+            vert->snapped_edge = edge_inds[i_geom_edge];
           }
           vert = vert->dijkstra_prev_vert;
         } while (vert);
+      }
+      {
+        #pragma omp parallel for
+        for (auto& vert : verts) {
+          Mat<3> p = vert.unwarped_point();
+          vert.set_pos(vert.dijkstra_point);
+          vert.dijkstra_point = p;
+        }
+        auto faces = _blocks.faces_3d();
+        #pragma omp parallel for
+        for (auto& f : faces) {
+          for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+        }
+        auto blocks = _blocks.boundary_sides();
+        #pragma omp parallel for
+        for (auto& b : blocks) b.reset();
+        next::Block::visualize("default", "edge_match" + to_string(i_geom_edge), _blocks.faces_3d().cast<const next::Block&>(), double(i_geom_edge));
+        #pragma omp parallel for
+        for (auto& vert : verts) {
+          Mat<3> p = vert.unwarped_point();
+          vert.set_pos(vert.dijkstra_point);
+          vert.dijkstra_point = p;
+        }
       }
     }
   } else if (params.n_dim == 2) {
