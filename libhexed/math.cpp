@@ -71,7 +71,7 @@ Mat<> newton(std::function<Mat<dyn, dyn>(Mat<>)> error_jacobian, Mat<> guess, Ro
     prev_err = err;
     if (err < opts.ftol) break;
     prev_guess = guess;
-    guess -= err_jac(all, Eigen::seqN(1, err_jac.rows())).partialPivLu().solve(err_jac(all, 0));
+    guess -= err_jac(all, Eigen::seqN(1, err_jac.rows())).colPivHouseholderQr().solve(err_jac(all, 0));
     if ((guess - prev_guess).norm() < opts.xtol) break;
   }
   return guess;
