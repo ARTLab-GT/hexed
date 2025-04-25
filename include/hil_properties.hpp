@@ -6,8 +6,7 @@
 #include "connection.hpp"
 
 //! \brief functions that assign properties of objects to HIL variables
-namespace hexed::hil_properties
-{
+namespace hexed::hil_properties {
 
 /*! \details Assigns the follwing variables:
  * - `is_extruded`: 1 if element is extruded, else 0
