@@ -272,7 +272,7 @@ void Accessible_mesh::_fit_surface() {
                 (std::abs(vert.dijkstra_point(i_dim) - extreme) > 3e-2*ns)) d = huge;
           }
         }
-        if (vert.snapped_edge >= 0) d *= 1e6;
+        if (vert.snapped_edge >= 0) d *= 1e4;
         // don't bother to account for snapped neighbors unless d is initially < dist_sq
         if (d < std::min(ns, dist_sq)) {
           dist_sq = d;
@@ -323,7 +323,7 @@ void Accessible_mesh::_fit_surface() {
           vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance
                                         + 1e6*(_de_intersect(vert, edge_point) - edge_point).squaredNorm();
           if (vert.snapped_edge >= 0) {
-            vert.dijkstra_curve_dist_sq *= 1e6;
+            vert.dijkstra_curve_dist_sq *= 1e4;
           }
           vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
         } else {
