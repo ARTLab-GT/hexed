@@ -1,10 +1,8 @@
 #include <hil_properties.hpp>
 
-namespace hexed::hil_properties
-{
+namespace hexed::hil_properties {
 
-void element(Namespace& space, Element& elem)
-{
+void element(Namespace& space, Element& elem) {
   space.assign("is_extruded", int(!elem.tree));
   space.assign("ref_level", elem.refinement_level());
   space.assign("aniso_ref_level", elem.aniso_ref_level());
@@ -24,8 +22,7 @@ void element(Namespace& space, Element& elem)
   }
 }
 
-void position(Namespace& space, Element& elem, const Basis& basis, int i_qpoint)
-{
+void position(Namespace& space, Element& elem, const Basis& basis, int i_qpoint) {
   auto pos = elem.position(basis);
   for (unsigned i_dim = 0; i_dim < pos.size(); ++i_dim) {
     space.assign("pos" + std::to_string(i_dim), pos(i_dim)[i_qpoint]);
@@ -35,8 +32,7 @@ void position(Namespace& space, Element& elem, const Basis& basis, int i_qpoint)
   }
 }
 
-void state(Namespace& space, Element& elem, int i_qpoint)
-{
+void state(Namespace& space, Element& elem, int i_qpoint) {
   auto params = elem.storage_params();
   int nq = params.n_qpoint();
   auto assign_state = [&](std::string name, int i_var) {
@@ -55,8 +51,7 @@ void state(Namespace& space, Element& elem, int i_qpoint)
   space.assign("tss", elem.time_step_scale()[i_qpoint]);
 }
 
-void surface(Namespace& space, Boundary_connection& con, int i_fqpoint)
-{
+void surface(Namespace& space, Boundary_connection& con, int i_fqpoint) {
   bool viscous = space.get<std::string>("viscosity_model") != "" || space.get<std::string>("conductivity_model") != "";;
   auto params = con.storage_params();
   int nfq = params.n_qpoint()/params.row_size;

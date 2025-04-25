@@ -165,7 +165,7 @@ void Element::destroy_shape() {
 }
 
 next::Element_shape& Element::shape() {
-  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
+  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.")
   return *_shape;
 }
 
