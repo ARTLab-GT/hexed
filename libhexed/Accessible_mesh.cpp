@@ -916,7 +916,13 @@ void Accessible_mesh::_fit_surface() {
           failed = snap_intersections(edge);
         }
         if (!failed) failed = check_elems(edge);
-        if (failed) edge.reset();
+        if (failed) {
+          if (edge.snapped_edge < 0) {
+            edge.reset();
+          } else {
+            plain_snap(edge);
+          }
+        }
       }
     }
   }
