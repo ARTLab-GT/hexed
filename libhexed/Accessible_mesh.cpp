@@ -293,9 +293,6 @@ void Accessible_mesh::_fit_surface() {
 
   auto edges = surf_geom->edges();
   if (params.n_dim == 3) {
-    auto vert_match_vis = Visualizer::create("default", 3, 1, "vertex_match", {}, 0., Visualizer::block);
-    auto edge_match_vis = Visualizer::create("default", 3, 2, "edges_match", {}, 0., Visualizer::block);
-    auto orphan_vert_vis = Visualizer::create("default", 3, 1, "orphan_vertices", {}, 0., Visualizer::block);
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
       auto& geom_edge = edges[i_geom_edge];
       std::array<next::Vertex*, 2> start_end {nullptr, nullptr};
@@ -305,14 +302,6 @@ void Accessible_mesh::_fit_surface() {
         if (start_end[i_endpoint]) {
           start_end[i_endpoint]->snapped_edge = i_geom_edge;
           start_end[i_endpoint]->snapped_endpoint = i_endpoint;
-          Array<double> pos({3, 2});
-          Mat<3> vert_point = start_end[i_endpoint]->unwarped_point();
-          for (int i_dim = 0; i_dim < 3; ++i_dim) {
-            pos(i_dim)[0] = vert_point(i_dim);
-            pos(i_dim)[1] = endpoint(i_dim);
-          }
-          Array<double> data({0, 2});
-          vert_match_vis->write_block(pos, data);
         }
       }
       if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
@@ -362,14 +351,9 @@ void Accessible_mesh::_fit_surface() {
             unvisited.emplace(vert, d, vert->dijkstra_updates);
           }
         }
-        if (unvisited.empty()) {
-          printers::warn("Warning: ", true);
-          printers::warn("Dijkstra's Algorithm terminated without reaching destination.");
-        }
       }
       if (curr.vert == start_end[0]) {
         next::Vertex* vert = curr.vert;
-        printers::info("starting edge match");
         do {
           bool snap = false;
           Mat<3> unwarped = vert->unwarped_point();
@@ -387,26 +371,9 @@ void Accessible_mesh::_fit_surface() {
             vert->dijkstra_point = edge_point;
             vert->snapped_edge = i_geom_edge;
           }
-          if (vert && vert->dijkstra_prev_edge) {
-            Array<double> pos({3, 2, 2});
-            for (int i_vert = 0; i_vert < 2; ++i_vert) {
-              auto& v = vert->dijkstra_prev_edge->vertex(i_vert);
-              Mat<3> vert_point = v.unwarped_point();
-              Mat<3> edge_point = edges[i_geom_edge].interp_point(edges[i_geom_edge].nearest_point(vert_point));
-              for (int i_dim = 0; i_dim < 3; ++i_dim) {
-                pos(i_dim)(i_vert)[0] = vert_point(i_dim);
-                pos(i_dim)(i_vert)[1] = edge_point(i_dim);
-              }
-            }
-            Array<double> data({0, 2, 2});
-            edge_match_vis->write_block(pos, data);
-          }
-          printers::info(".");
-          if (vert == start_end[1]) printers::info("completed");
           vert = vert->dijkstra_prev_vert;
           if (!vert->dijkstra_prev_edge) break;
         } while (vert);
-        printers::info("\n");
       }
     }
     // deal with edge endpoints that aren't shared with other edges
@@ -439,16 +406,6 @@ void Accessible_mesh::_fit_surface() {
                 for (int i_vert = 0; i_vert < 2; ++i_vert) {
                   if (edge->vertex(i_vert).snapped_edge == -1) edge->vertex(i_vert).snapped_edge = -2;
                 }
-                Array<double> pos({3, 2});
-                for (int i_vert = 0; i_vert < 2; ++i_vert) {
-                  auto& v = edge->vertex(i_vert);
-                  Mat<3> vert_point = v.unwarped_point();
-                  for (int i_dim = 0; i_dim < 3; ++i_dim) {
-                    pos(i_dim)[i_vert] = vert_point(i_dim);
-                  }
-                }
-                Array<double> data({0, 2});
-                orphan_vert_vis->write_block(pos, data);
               }
               successful = true;
               break;
