@@ -295,6 +295,7 @@ void Accessible_mesh::_fit_surface() {
   if (params.n_dim == 3) {
     auto vert_match_vis = Visualizer::create("default", 3, 1, "vertex_match", {}, 0., Visualizer::block);
     auto edge_match_vis = Visualizer::create("default", 3, 2, "edges_match", {}, 0., Visualizer::block);
+    auto orphan_vert_vis = Visualizer::create("default", 3, 1, "orphan_vertices", {}, 0., Visualizer::block);
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
       auto& geom_edge = edges[i_geom_edge];
       std::array<next::Vertex*, 2> start_end {nullptr, nullptr};
@@ -361,14 +362,19 @@ void Accessible_mesh::_fit_surface() {
             unvisited.emplace(vert, d, vert->dijkstra_updates);
           }
         }
+        if (unvisited.empty()) {
+          printers::warn("Warning: ", true);
+          printers::warn("Dijkstra's Algorithm terminated without reaching destination.");
+        }
       }
       if (curr.vert == start_end[0]) {
         next::Vertex* vert = curr.vert;
+        printers::info("starting edge match");
         do {
           bool snap = false;
           Mat<3> unwarped = vert->unwarped_point();
           Mat<3> edge_point = edges[i_geom_edge].interp_point(edges[i_geom_edge].nearest_point(unwarped));
-          if (vert->snapped_edge < 0) {
+          if (vert->snapped_edge < 0 || vert->dijkstra_prev_edge->snapped_edge < 0) {
             snap = true;
           } else {
             if ((edge_point - vert->dijkstra_point).norm() > 1e-3*vert->nominal_size()) vert->incompatible_snap = true;
@@ -377,7 +383,7 @@ void Accessible_mesh::_fit_surface() {
             }
           }
           if (snap) {
-            if (vert->dijkstra_prev_edge) vert->dijkstra_prev_edge->snapped_edge = i_geom_edge;
+            vert->dijkstra_prev_edge->snapped_edge = i_geom_edge;
             vert->dijkstra_point = edge_point;
             vert->snapped_edge = i_geom_edge;
           }
@@ -395,8 +401,61 @@ void Accessible_mesh::_fit_surface() {
             Array<double> data({0, 2, 2});
             edge_match_vis->write_block(pos, data);
           }
+          printers::info(".");
+          if (vert == start_end[1]) printers::info("completed");
           vert = vert->dijkstra_prev_vert;
+          if (!vert->dijkstra_prev_edge) break;
         } while (vert);
+        printers::info("\n");
+      }
+    }
+    // deal with edge endpoints that aren't shared with other edges
+    for (auto& vert : verts) {
+      int n_snapped_edges = 0;
+      for (auto& edge : vert.edges()) if (!edge.glued()) {
+        n_snapped_edges += edge.snapped_edge >= 0;
+      }
+      if (n_snapped_edges == 1) {
+        bool successful = false;
+        for (auto& elem : vert.elements()) {
+          auto face = elem.boundary_face_3d();
+          if (face) {
+            std::vector<next::Edge*> dummy_edges(4);
+            bool bad_edge = false;
+            for (int i_edge = 0; i_edge < 4; ++i_edge) {
+              auto* edge = &face->edge(i_edge);
+              if (edge->glued()) {
+                if (edge->glued_half() == next::Edge::no) {
+                  edge = edge->glued_to();
+                } else {
+                  bad_edge = true;
+                }
+              }
+              dummy_edges[i_edge] = edge;
+            }
+            if (!bad_edge) {
+              for (next::Edge* edge : dummy_edges) {
+                if (edge->snapped_edge == -1) edge->snapped_edge = -2;
+                for (int i_vert = 0; i_vert < 2; ++i_vert) {
+                  if (edge->vertex(i_vert).snapped_edge == -1) edge->vertex(i_vert).snapped_edge = -2;
+                }
+                Array<double> pos({3, 2});
+                for (int i_vert = 0; i_vert < 2; ++i_vert) {
+                  auto& v = edge->vertex(i_vert);
+                  Mat<3> vert_point = v.unwarped_point();
+                  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+                    pos(i_dim)[i_vert] = vert_point(i_dim);
+                  }
+                }
+                Array<double> data({0, 2});
+                orphan_vert_vis->write_block(pos, data);
+              }
+              successful = true;
+              break;
+            }
+          }
+        }
+        HEXED_ASSERT(successful, "We haven't seen this scenario yet. Please report.", assert::Not_implemented_error)
       }
     }
   } else if (params.n_dim == 2) {
@@ -405,45 +464,6 @@ void Accessible_mesh::_fit_surface() {
       Mat<3> point {points[i_point][0], points[i_point][1], 0.};
       next::Vertex* vert = find_nearest_vert(point);
       if (vert) vert->snapped_point = i_point;
-    }
-  }
-  // deal with edge endpoints that aren't shared with other edges
-  for (auto& vert : verts) {
-    int n_snapped_edges = 0;
-    for (auto& edge : vert.edges()) {
-      n_snapped_edges += edge.snapped_edge != -1;
-    }
-    if (n_snapped_edges == 1) {
-      bool successful = false;
-      for (auto& elem : vert.elements()) {
-        auto face = elem.boundary_face_3d();
-        if (face) {
-          std::vector<next::Edge*> dummy_edges(4);
-          bool bad_edge = false;
-          for (int i_edge = 0; i_edge < 4; ++i_edge) {
-            auto* edge = &face->edge(i_edge);
-            if (edge->glued()) {
-              if (edge->glued_half() == next::Edge::no) {
-                edge = edge->glued_to();
-              } else {
-                bad_edge = true;
-              }
-            }
-            dummy_edges[i_edge] = edge;
-          }
-          if (!bad_edge) {
-            for (next::Edge* edge : dummy_edges) {
-              if (edge->snapped_edge == -1) edge->snapped_edge = -2;
-              for (int i_vert = 0; i_vert < 2; ++i_vert) {
-                if (edge->vertex(i_vert).snapped_edge == -1) edge->vertex(i_vert).snapped_edge = -2;
-              }
-            }
-            successful = true;
-            break;
-          }
-        }
-      }
-      HEXED_ASSERT(successful, "We haven't seen this scenario yet. Please report.", assert::Not_implemented_error)
     }
   }
 
