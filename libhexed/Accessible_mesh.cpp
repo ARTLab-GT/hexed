@@ -384,20 +384,36 @@ void Accessible_mesh::_fit_surface() {
       n_snapped_edges += edge.snapped_edge != -1;
     }
     if (n_snapped_edges == 1) {
+      bool successful = false;
       for (auto& elem : vert.elements()) {
         auto face = elem.boundary_face_3d();
         if (face) {
+          std::vector<next::Edge*> dummy_edges(4);
+          bool bad_edge = false;
           for (int i_edge = 0; i_edge < 4; ++i_edge) {
             auto* edge = &face->edge(i_edge);
-            if (edge->glued()) edge = edge->glued_to();
-            if (edge->snapped_edge == -1) edge->snapped_edge = -2;
-            for (int i_vert = 0; i_vert < 2; ++i_vert) {
-              if (edge->vertex(i_vert).snapped_edge == -1) edge->vertex(i_vert).snapped_edge = -2;
+            if (edge->glued()) {
+              if (edge->glued_half() == next::Edge::no) {
+                edge = edge->glued_to();
+              } else {
+                bad_edge = true;
+              }
             }
+            dummy_edges[i_edge] = edge;
           }
-          break;
+          if (!bad_edge) {
+            for (next::Edge* edge : dummy_edges) {
+              if (edge->snapped_edge == -1) edge->snapped_edge = -2;
+              for (int i_vert = 0; i_vert < 2; ++i_vert) {
+                if (edge->vertex(i_vert).snapped_edge == -1) edge->vertex(i_vert).snapped_edge = -2;
+              }
+            }
+            successful = true;
+            break;
+          }
         }
       }
+      HEXED_ASSERT(successful, "We haven't seen this scenario yet. Please report.", assert::Not_implemented_error)
     }
   }
 

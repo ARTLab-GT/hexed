@@ -338,7 +338,8 @@ class Edge : public Boundary_block {
   bool glued() const; //!< \brief `true` iff `this` is currently `glue()`d to another edge
   std::vector<Element_shape*> contacted_elements();
   Edge* glued_to() {return _glued_to.get();}
-  const Edge* glued_to() const {return _glued_to.get();}
+  inline const Edge* glued_to() const {return _glued_to.get();}
+  int glued_half() const;
 
   Int snapped_edge;
 

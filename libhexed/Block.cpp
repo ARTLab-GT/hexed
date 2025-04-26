@@ -658,6 +658,11 @@ std::vector<Element_shape*> Edge::contacted_elements() {
   return elems;
 }
 
+int Edge::glued_half() const {
+  HEXED_ASSERT(glued(), "`glued_half` is only relevant if the edge is glued")
+  return _half;
+}
+
 Mat<3> Face::_point(const std::vector<int>& coords, Int recursion_depth) const {
   // if the point is on the boundary of the node array, forward to one of the edges
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
