@@ -532,6 +532,8 @@ void Accessible_mesh::_fit_surface() {
                   vert.snapped_edge = i_snapped;
                   vert.snapped_endpoint = elem_vert.snapped_endpoint;
                   vert.incompatible_snap = vert.incompatible_snap || elem_vert.incompatible_snap;
+                  // make sure neighboring vertices will agree on their nominal size to avoid quality criterion issues
+                  vert.add_size_constraint(surface.shape().vertex(i_vert).nominal_size());
                 }
                 auto& matched_edge = match_elem.shape().boundary_face_3d()->edge(i_edge_matched);
                 matched_edge.snapped_edge = m;
