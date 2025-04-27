@@ -312,9 +312,12 @@ void Accessible_mesh::_fit_surface() {
         vert.dijkstra_prev_vert = nullptr;
         vert.dijkstra_prev_edge = nullptr;
         double d = huge;
-        auto nearest = geom_edge.nearest_point(vert.unwarped_point(), d);
+        auto nearest = geom_edge.nearest_point(vert.dijkstra_point, d);
         if (nearest.index >= 0 && nearest.distance <= d) {
           vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
+          if (vert.snapped_edge >= 0 && vert.snapped_edge != i_geom_edge) vert.dijkstra_curve_dist_sq *= 1e3;
+          Mat<3> edge_point = geom_edge.interp_point(nearest);
+          vert.dijkstra_curve_dist_sq += 1e6*(_de_intersect(vert, edge_point) - edge_point).squaredNorm();
           vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
         } else {
           vert.dijkstra_curve_dist_sq = std::sqrt(huge);
