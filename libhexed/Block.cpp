@@ -321,8 +321,9 @@ void Vertex::compute_snap() {
 
 Vertex::Snap_result Vertex::check_snap() {
   if (_improve_failed) return {true, true, _step.norm()};
-  _improve_done = _compute_state(true, false, 1e-3).feasible;
-  if (!_improve_done) {
+  auto state = _compute_state(true, false, 1e-3);
+  _improve_done = state.feasible;
+  if (!_improve_done || _step_sz*_step.norm() > .2*nominal_size()*state.worst_edge) {
     _step_sz /= 3;
     _last_snap_failed = true;
   }
