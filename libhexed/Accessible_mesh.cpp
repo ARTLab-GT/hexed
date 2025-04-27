@@ -227,12 +227,10 @@ void Accessible_mesh::_fit_surface() {
     for (auto& b : blocks) b.reset();
     visualize("default", "mesh_diagnostic2", 0.);
   }
-  #if 0
   {
     Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
     _optimize(1, 10, true);
   }
-  #endif
   {
     auto faces = _blocks.faces_3d();
     #pragma omp parallel for
@@ -315,7 +313,6 @@ void Accessible_mesh::_fit_surface() {
         auto nearest = geom_edge.nearest_point(vert.dijkstra_point, d);
         if (nearest.index >= 0 && nearest.distance <= d) {
           vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
-          if (vert.snapped_edge >= 0 && vert.snapped_edge != i_geom_edge) vert.dijkstra_curve_dist_sq *= 1e3;
           Mat<3> edge_point = geom_edge.interp_point(nearest);
           vert.dijkstra_curve_dist_sq += 1e6*(_de_intersect(vert, edge_point) - edge_point).squaredNorm();
           vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
@@ -1029,7 +1026,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   #else
   for (Int i_relax = 0; i_relax < 100; ++i_relax) {
   #endif
-    #if HEXED_VIS_MESH_OPT
+    #if 1
     {
       auto faces = _blocks.faces_3d();
       for (auto& f : faces) {
@@ -1041,8 +1038,9 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       auto edges = _blocks.edges_2d();
       #pragma omp parallel for
       for (auto& e : edges) e.reset();
-      visualize("default", "meshing_diagnostic" + std::to_string(id) + "_" + std::to_string(i_relax), (double)i_relax);
-      std::string fname = "vertex_nearest" + to_string(id) + "_" + to_string(i_relax);
+      next::Block::visualize("default", "relax_iter" + to_string(i_relax),
+                             _blocks.faces_3d().cast<const next::Block&>(), double(i_relax));
+      std::string fname = "vertex_nearest" + to_string(i_relax);
       auto vis = Visualizer::create("default", 3, 1, fname, {}, (double)i_relax, Visualizer::block);
       for (auto& vert : bverts) {
         Array<double> pos({3, 2});
