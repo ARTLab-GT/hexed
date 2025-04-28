@@ -220,6 +220,23 @@ class Nurbs : public Parametric<n_param> {
 //! \brief A list of curves, where the end point of each should coincide with start of the next.
 typedef std::vector<std::unique_ptr<Parametric<1>>> Composite_curve;
 
+class Trimmed_surface;
+
+//! \brief Represents a curve that is trimmint a `Trimmed_surface`.
+struct Trimming_curve {
+  //! \brief Initialize tree curve from nodes in physical space and initialize `parameters` and `tangents` to zero;
+  Trimming_curve(Array<double> nodes);
+  //! \brief The curve in physical space
+  Tree_curve curve;
+  //! \brief The surface parameter values of the tree curve nodes
+  //! \details layout: [i_node][i_dim];
+  Array<double> parameters;
+  //! \brief The surface tangent vectors associated with the nodes
+  //! \details Vectors are normal to the curve, tangent to the surface, and point toward the interior of the surface.
+  //! layout: [i_node][i_dim];
+  Array<double> tangents;
+};
+
 /*! \brief A surface created by trimming a parametric surface with closed curves.
  * \details Specifically, given a parametric surface and a set of closed curves on that surface,
  * the resulting trimmed surface is the set of points on the surface such a ray originating from that point
@@ -254,8 +271,10 @@ class Trimmed_surface {
   inline const Parametric<2>& surface() const {return *_surf;}
   //! \brief Test whether a point `parameters` is inside the bounding curves in parameter space.
   bool is_inside(Mat<2> parameters) const;
-  //! \brief Access the bounding curves.
+  //! \brief Access the physical bounding curves.
   next::Sequence<const Tree_curve&> curves() const;
+  //! \brief Access the full data of the bounding curves.
+  next::Sequence<const Trimming_curve&> trimming_curves() const;
   /*! \brief Compute the point on the trimmed surface (including the boundary) nearest to `point`.
    * \details If the nearest point would be further than `max_dist` from `point`,
    * the empty `Nearest_point` is returned.
@@ -280,7 +299,7 @@ class Trimmed_surface {
   double _sz_min;
   double _sz_max;
   std::unique_ptr<Parametric<2>> _surf;
-  std::vector<Tree_curve> _curves;
+  std::vector<Trimming_curve> _curves;
   std::vector<Tree_curve> _extremal_boundaries;
   Array<double> _nodes_normals;
   Array<double> _nodes;
@@ -289,7 +308,7 @@ class Trimmed_surface {
   Array<double> _excession;
   Array<double> _excession_epsilon;
   // No simple way to explain this.
-  // Need to write a dedicated article about distinguishing inside/outside points, which _param_segmetns is a part of.
+  // Need to write a dedicated article about distinguishing inside/outside points, which _param_segments is a part of.
   std::array<std::vector<std::vector<Mat<2>>>, 3> _param_segments;
 };
 

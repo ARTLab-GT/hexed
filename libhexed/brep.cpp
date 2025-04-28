@@ -227,6 +227,12 @@ Mat<2, n_param> Nurbs<n_param>::orig_param_bounds() const {
   return _orig_bounds;
 }
 
+Trimming_curve::Trimming_curve(Array<double> nodes)
+: curve(std::move(nodes), 4)
+, parameters{Array<double>::make_uniform({curve.n_points(), 2})}
+, tangents{Array<double>::make_uniform({curve.n_points(), 3})}
+{}
+
 Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves,
                                  std::vector<bool> is_model_space, Int n_div_min, Int n_div_max)
 : _n_div_min{n_div_min}
@@ -384,10 +390,10 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
       mean_squared_dist /= n_div_max + 1;
       // if the start and end points are close together, split the curve in half to simplify edge matching
       if ((curve->point(Mat<1>{1.}) - start).squaredNorm() < .1*mean_squared_dist) {
-        _curves.emplace_back(phys_nodes(0, n_div_max/2 + 1).copy(), 4);
-        _curves.emplace_back(phys_nodes(n_div_max/2, n_div_max + 1).copy(), 4);
+        _curves.emplace_back(phys_nodes(0, n_div_max/2 + 1).copy());
+        _curves.emplace_back(phys_nodes(n_div_max/2, n_div_max + 1).copy());
       } else {
-        _curves.emplace_back(phys_nodes.copy(), 4);
+        _curves.emplace_back(phys_nodes.copy());
       }
     }
     // check for any curves that may be oriented backward (which does happen, apparently) and flip them
@@ -589,7 +595,14 @@ bool Trimmed_surface::is_inside(Mat<2> params) const {
 }
 
 next::Sequence<const Tree_curve&> Trimmed_surface::curves() const {
-  return next::Sequence<const Tree_curve&>::vector_view(_curves);
+  return {
+    [this](Int index)->const Tree_curve& {return _curves[index].curve;},
+    [this]()->Int {return _curves.size();}
+  };
+}
+
+next::Sequence<const Trimming_curve&> Trimmed_surface::trimming_curves() const {
+  return next::Sequence<const Trimming_curve&>::vector_view(_curves);
 }
 
 void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best_params, Int i_start, Int j_start,
@@ -702,8 +715,7 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
   if (!nearest.empty()) nearest = Nearest_point<3>(point, _surf->point(best_params));
   // then check the nearest point on all the boundary curves
   for (auto& curve : _curves) {
-    auto index = curve.nearest_point(point, 1.01*std::sqrt(nearest.dist_squared()));
-    if (index.index > -1) nearest.merge(curve.nodes()(index.index).vector());
+    nearest.merge(curve.curve.interp_point(curve.curve.nearest_point(point, 1.01*std::sqrt(nearest.dist_squared()))));
   }
   return nearest;
 }
