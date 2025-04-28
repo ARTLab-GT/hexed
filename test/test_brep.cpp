@@ -115,6 +115,15 @@ TEST_CASE("Trimmed_surface") {
   REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{-.1, -.1, .1}, .2).point(),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., .0}, hexed::math::Approx_equal(0, 1e-3)));
   REQUIRE(trim.nearest_point(hexed::Mat<3>{.1, .1, .1}, .01).empty());
+
+  // test trimming curves
+  const auto& trim_curve = trim.trimming_curves()[1];
+  REQUIRE(trim_curve.parameters(0)[0] == Catch::Approx(1.).margin(1e-4));
+  REQUIRE(trim_curve.parameters(0)[1] == Catch::Approx(0.).margin(1e-4));
+  REQUIRE(trim_curve.parameters(512)[0] == Catch::Approx(.5).margin(1e-4));
+  REQUIRE(trim_curve.parameters(512)[1] == Catch::Approx(.5).margin(1e-4));
+  REQUIRE(trim_curve.parameters(1024)[0] == Catch::Approx(0.).margin(1e-4));
+  REQUIRE(trim_curve.parameters(1024)[1] == Catch::Approx(1.).margin(1e-4));
 }
 
 TEST_CASE("Geom_3d", "[.slow]") {

@@ -389,11 +389,18 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
       }
       mean_squared_dist /= n_div_max + 1;
       // if the start and end points are close together, split the curve in half to simplify edge matching
+      Array<double> node_array({_n_div_max + 1, 2});
+      for (Int i_node = 0; i_node < _n_div_max + 1; ++i_node) {
+        for (int i_dim = 0; i_dim < 2; ++i_dim) node_array(i_node)[i_dim] = param_nodes[i_node][i_dim];
+      }
       if ((curve->point(Mat<1>{1.}) - start).squaredNorm() < .1*mean_squared_dist) {
         _curves.emplace_back(phys_nodes(0, n_div_max/2 + 1).copy());
+        _curves.back().parameters = node_array(0, _n_div_max/2 + 1);
         _curves.emplace_back(phys_nodes(n_div_max/2, n_div_max + 1).copy());
+        _curves.back().parameters = node_array(n_div_max/2, end);
       } else {
         _curves.emplace_back(phys_nodes.copy());
+        _curves.back().parameters = node_array;
       }
     }
     // check for any curves that may be oriented backward (which does happen, apparently) and flip them
@@ -715,7 +722,8 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) c
   if (!nearest.empty()) nearest = Nearest_point<3>(point, _surf->point(best_params));
   // then check the nearest point on all the boundary curves
   for (auto& curve : _curves) {
-    nearest.merge(curve.curve.interp_point(curve.curve.nearest_point(point, 1.01*std::sqrt(nearest.dist_squared()))));
+    auto n = curve.curve.nearest_point(point, 1.01*std::sqrt(nearest.dist_squared()));
+    if (n.index >= 0) nearest.merge(curve.curve.interp_point(n));
   }
   return nearest;
 }
