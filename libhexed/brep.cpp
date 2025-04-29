@@ -1325,7 +1325,25 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
             transposed(i_dim)[i] = nodes(i)[i_dim];
           }
         }
-        vis->write_block(transposed, Array<double>({0, n_nodes}));
+        vis->write_block(transposed, Array<double>({0, nodes.shape()[0]}));
+      }
+    }
+  }
+  {
+    auto vis = Visualizer::create(format, 3, 1, file_name + "_tangents", {}, 0., Visualizer::block);
+    double tang_mag = (bounds(all, 1) - bounds(all, 0)).norm()/n_div;
+    for (auto& s : _surfaces) {
+      for (auto& curve : s.trimming_curves()) {
+        Int np = curve.curve.n_points();
+        for (Int i_node = 0; i_node < np; ++i_node) {
+          Array<double> nodes({3, 2});
+          Array<double> data({0, 2});
+          for (int i_dim = 0; i_dim < 3; ++i_dim) {
+            nodes(i_dim)[0] = curve.curve.nodes()(i_node)[i_dim];
+            nodes(i_dim)[1] = nodes(i_dim)[0] + tang_mag*curve.tangents(i_node)[i_dim];
+          }
+          vis->write_block(nodes, data);
+        }
       }
     }
   }
