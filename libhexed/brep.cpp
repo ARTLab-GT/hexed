@@ -480,7 +480,7 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
           Mat<2> curve_param_tangent = (curve.parameters(i_tangent + 1) - curve.parameters(i_tangent)).vector();
           param_diff -= param_diff.dot(curve_param_tangent)/curve_param_tangent.squaredNorm()*curve_param_tangent;
           param_diff.normalize();
-          Mat<3> tangent = _surf->point(params + 2*_sz_max*param_diff) - _surf->point(params + _sz_max*param_diff);
+          Mat<3> tangent = _surf->point(params + _sz_max*param_diff) - _surf->point(params);
           // if surface parametric directions are not orthogonal or isotropic,
           // both of these orthogonalizations are necessary
           Mat<3> curve_tangent = (curve.curve.nodes()(i_tangent + 1) - curve.curve.nodes()(i_tangent)).vector();
@@ -1276,37 +1276,51 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max) {
   auto trim_curves = _trim_curves();
   std::list<Int> curve_inds;
   for (Int i = 0; i < trim_curves.size(); ++i) curve_inds.push_back(i);
-  std::vector<std::list<Int>> coincident_groups;
+  std::vector<std::vector<Int>> coincident_groups;
   for (auto it0 = curve_inds.begin(); it0 != curve_inds.end(); ++it0) {
     auto& group = coincident_groups.emplace_back();
     group.push_back(*it0);
     auto it1 = it0;
     ++it1;
     for (; it1 != curve_inds.end(); ++it1) {
-      Array<double> nodes0 = trim_curves[*it0].curve.nodes();
-      Array<double> nodes1 = trim_curves[*it1].curve.nodes();
-      if (nodes0.size() == nodes1.size()) {
-        for (bool reverse : {0, 1}) {
-          double total_diff = 0;
-          Int n_nodes = nodes0.shape()[0];
-          #pragma omp parallel for reduction(+:total_diff)
-          for (int i_node = 0; i_node < n_nodes; ++i_node) {
-            total_diff += (nodes0(i_node) - nodes1(reverse ? n_nodes - 1 - i_node : i_node)).vector().norm();
-          }
-          if (total_diff < trim_curves[*it0].curve.arc_length()[n_nodes - 1]) {
-            group.push_back(*it1);
-            it1 = curve_inds.erase(it1);
-            --it1; // compensates for increment in loop declaration, since we just erased what used to be `it1`
-            break; // breaks `for (bool reverse`
-          }
-        }
+      const Tree_curve* tc [2] {&trim_curves[*it0].curve, &trim_curves[*it1].curve};
+      double arc_len = tc[0]->arc_length()[tc[0]->n_points() - 1];
+      if (std::abs(tc[1]->arc_length()[tc[1]->n_points() - 1] - arc_len) > 1e-2*arc_len) continue;
+      double total_diff = 0;
+      #pragma omp parallel for reduction(+:total_diff)
+      for (Int i_test = 1; i_test < n_div_min; ++i_test) {
+        Mat<3> point = tc[0]->interp_point(i_test/double(n_div_min)*tc[0]->n_points());
+        total_diff += tc[1]->nearest_point(point).distance;
+      }
+      if (total_diff/(n_div_min - 1) < arc_len/double(n_div_max)) {
+        group.push_back(*it1);
+        it1 = curve_inds.erase(it1);
+        --it1; // compensates for increment in loop declaration, since we just erased what used to be `it1`
       }
     }
   }
   for (auto& group : coincident_groups) {
-    _used_curves.push_back(group.front());
+    bool tangent = false;
+    if (group.size() == 2) {
+      Array<double> tang0 = trim_curves[group[0]].tangents();
+      Array<double> tang1 = trim_curves[group[1]].tangents();
+      for (bool reverse : {0, 1}) {
+        double total_diff = 0;
+        Int n_tang = tang0.shape()[0];
+        #pragma omp parallel for reduction(+:total_diff)
+        for (int i_node = 0; i_node < n_tang; ++i_node) {
+          total_diff += (tang0(i_node) + tang1(reverse ? n_tang - 1 - i_node : i_node)).vector().norm();
+        }
+        tangent = total_diff < 20*constants::pi;
+      }
+    }
+    if (tangent) {
+      _tangent_curves.push_back(group[0]);
+    } else {
+      _used_curves.push_back(group[0]);
+    }
   }
-  printers::info(format_str("%li total %lu used\n", trim_curves.size(), _used_curves.size()));
+  printers::info(format_str("%li total %lu used %lu tangent\n", trim_curves.size(), _used_curves.size(), _tangent_curves.size()));
 }
 
 Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
@@ -1365,7 +1379,7 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
     auto vis = Visualizer::create(format, 3, 1, file_name + "_curves", {"is_tangent"}, 0., Visualizer::block);
     auto tc = _trim_curves();
     for (bool is_tangent : {0, 1}) {
-      std::vector<Int>& vec = is_tangent ? _used_curves : _tangent_curves;
+      std::vector<Int>& vec = is_tangent ? _tangent_curves : _used_curves;
       for (Int i_curve : vec) {
         Array<double> nodes = tc[i_curve].curve.nodes();
         Array<double> transposed({3, nodes.shape()[0]});

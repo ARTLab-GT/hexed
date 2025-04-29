@@ -149,7 +149,6 @@ TEST_CASE("Geom_3d", "[.slow]") {
     hexed::brep::Geom_3d geom("../test_assets/cylinder_extruded.iges", n_div_min, n_div_max);
     geom.visualize("default", "cylinder_extruded", 100, vis_volume);
   }
-  #if 0
   SECTION("prism_twisted") {
     hexed::brep::Geom_3d geom("../test_assets/prism_twisted.iges", n_div_min, n_div_max);
     geom.visualize("default", "prism_twisted", 30, vis_volume);
@@ -192,5 +191,4 @@ TEST_CASE("Geom_3d", "[.slow]") {
     std::cout << "visualization time: " << sw.time() << std::endl;
     sw.reset();
   }
-  #endif
 }
