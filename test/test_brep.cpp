@@ -124,15 +124,15 @@ TEST_CASE("Trimmed_surface") {
   REQUIRE(trim_curve.parameters(512)[1] == Catch::Approx(.5).margin(1e-4));
   REQUIRE(trim_curve.parameters(1024)[0] == Catch::Approx(0.).margin(1e-4));
   REQUIRE(trim_curve.parameters(1024)[1] == Catch::Approx(1.).margin(1e-4));
-  REQUIRE(trim_curve.tangents(0)[0] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
-  REQUIRE(trim_curve.tangents(0)[1] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
-  REQUIRE(trim_curve.tangents(0)[2] == Catch::Approx(0.).margin(1e-4));
-  REQUIRE(trim_curve.tangents(512)[0] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
-  REQUIRE(trim_curve.tangents(512)[1] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
-  REQUIRE(trim_curve.tangents(512)[2] == Catch::Approx(0.).margin(1e-4));
-  REQUIRE(trim_curve.tangents(1024)[0] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
-  REQUIRE(trim_curve.tangents(1024)[1] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
-  REQUIRE(trim_curve.tangents(1024)[2] == Catch::Approx(0.).margin(1e-4));
+  CHECK(trim_curve.tangents(0)[0] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
+  CHECK(trim_curve.tangents(0)[1] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
+  CHECK(trim_curve.tangents(0)[2] == Catch::Approx(0.).margin(1e-4));
+  CHECK(trim_curve.tangents(512)[0] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
+  CHECK(trim_curve.tangents(512)[1] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
+  CHECK(trim_curve.tangents(512)[2] == Catch::Approx(0.).margin(1e-4));
+  CHECK(trim_curve.tangents(1023)[0] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
+  CHECK(trim_curve.tangents(1023)[1] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
+  CHECK(trim_curve.tangents(1023)[2] == Catch::Approx(0.).margin(1e-4));
 }
 
 TEST_CASE("Geom_3d", "[.slow]") {

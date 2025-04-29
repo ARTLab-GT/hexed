@@ -230,7 +230,7 @@ Mat<2, n_param> Nurbs<n_param>::orig_param_bounds() const {
 Trimming_curve::Trimming_curve(Array<double> nodes)
 : curve(std::move(nodes), 4)
 , parameters{Array<double>::make_uniform({curve.n_points(), 2})}
-, tangents{Array<double>::make_uniform({curve.n_points(), 3})}
+, tangents{Array<double>::make_uniform({curve.n_points() - 1, 3})}
 {}
 
 Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves,
@@ -436,37 +436,46 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
   _initialize(discrete_curves);
   for (Trimming_curve& curve : _curves) {
     #pragma omp parallel for
-    for (Int i_node = 0; i_node < curve.curve.n_points(); ++i_node) {
-      Mat<2> params = curve.parameters(i_node).vector();
-      auto seg_result = _find_segments(params);
-      double dist = huge;
-      Int nearest_seg = -1;
-      auto& segs = _param_segments[seg_result.i_direction][seg_result.i_segment];
-      std::vector<double> intersects(segs.size());
-      for (Int j_seg = 0; j_seg < (Int)segs.size(); ++j_seg) {
-        double sect = segs[j_seg](0) + (seg_result.transformed_params(0)*_n_div_max - seg_result.i_segment)
-                                       *(segs[j_seg](1) - segs[j_seg](0));
-        intersects[j_seg] = sect;
-        double d = std::abs(sect - seg_result.transformed_params(1));
-        if (d < dist) {
-          dist = d;
-          nearest_seg = j_seg;
+    for (Int i_tangent = 0; i_tangent < curve.curve.n_points() - 1; ++i_tangent) {
+      Mat<2> params = (curve.parameters(i_tangent) + curve.parameters(i_tangent + 1)).vector()/2;
+      double diff = huge/2;
+      bool found = false;
+      for (int i_direction = 0; i_direction < 3; ++i_direction) {
+        Mat<2> p = _transform_mat(i_direction)*params;
+        // count the number of segmements intersected by a ray in the positive `p(1)` direction
+        Int i_seg = std::max<Int>(0, std::min<Int>(_n_div_max - 1, floor(p(0)*_n_div_max)));
+        double max_diff = huge;
+        Int nearest_seg;
+        auto& segs = _param_segments[i_direction][i_seg];
+        std::vector<double> intersects(segs.size());
+        for (Int j_seg = 0; j_seg < (Int)segs.size(); ++j_seg) {
+          double sect = segs[j_seg](0) + (p(0)*_n_div_max - i_seg)*(segs[j_seg](1) - segs[j_seg](0));
+          intersects[j_seg] = sect;
+          double d = std::abs(sect - p(1));
+          if (d < max_diff) {
+            max_diff = d;
+            nearest_seg = j_seg;
+          }
+        }
+        if (max_diff < diff) {
+          diff = max_diff;
+          Int n_less = 0;
+          for (Int i_seg = 0; i_seg < (Int)segs.size(); ++i_seg) if (i_seg != nearest_seg) {
+             n_less += intersects[i_seg] < intersects[nearest_seg];
+          }
+          double diff = -_sz_max*math::sign(n_less%2);
+          Mat<2> param_diff = _transform_mat(i_direction).inverse()*Mat<2>{0., diff};
+          Mat<2> curve_tangent = (curve.parameters(i_tangent + 1) - curve.parameters(i_tangent)).vector();
+          param_diff -= param_diff.dot(curve_tangent)/curve_tangent.squaredNorm()*curve_tangent;
+          Mat<3> surf_diff = _surf->point(params + param_diff) - _surf->point(params);
+          curve.tangents(i_tangent).vector() = surf_diff.normalized();
+          found = true;
+        }
+        if (!found) {
+          printers::warn("Warning: ", true);
+          printers::warn("Surface tangent calculation failed." + to_string(params) + to_string(i_tangent) + "\n");
         }
       }
-      if (nearest_seg == -1) {
-        printers::warn("Warning: ", true);
-        printers::warn("Surface tangent calculation failed." + to_string(seg_result.i_direction) + to_string(params) + to_string(i_node) + "\n");
-        continue;
-      }
-      Int n_less = 0;
-      for (Int j_seg = 0; j_seg < (Int)segs.size(); ++j_seg) n_less += intersects[j_seg] < intersects[nearest_seg];
-      double diff = -_sz_max*math::sign(n_less%2);
-      Mat<2> param_diff = _transform_mat(seg_result.i_direction).inverse()*Mat<2>{0., diff};
-      Mat<2> curve_tangent = (curve.parameters(std::min(_n_div_max, i_node + 1))
-                              - curve.parameters(std::max<Int>(0, i_node - 1))).vector();
-      param_diff -= param_diff.dot(curve_tangent)/curve_tangent.squaredNorm()*curve_tangent;
-      Mat<3> surf_diff = _surf->point(params + param_diff) - _surf->point(params);
-      curve.tangents(i_node).vector() = surf_diff.normalized();
     }
   }
 }
@@ -604,13 +613,15 @@ Mat<2, 2> Trimmed_surface::_transform_mat(int i_direction) const {
   return trans;
 }
 
-Trimmed_surface::_Segment_result Trimmed_surface::_find_segments(Mat<2> params) const {
+bool Trimmed_surface::is_inside(Mat<2> params) const {
   // fudge it a little so the outer boundary is always inside
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
-    params(i_dim) = std::max(_inside_tol, std::min(1 - _inside_tol, params(i_dim)));
+    double tol = 1e-3/_n_div_max;
+    if (params(i_dim) < -tol || params(i_dim) > 1 + tol) return false;
+    params(i_dim) = std::max(tol, std::min(1 - tol, params(i_dim)));
   }
+  Int n_intersections = 0;
   double diff = huge;
-  _Segment_result sr {-1, -1, Mat<2>::Zero()};
   for (int i_direction = 0; i_direction < 3; ++i_direction) {
     Mat<2> p = _transform_mat(i_direction)*params;
     // count the number of segmements intersected by a ray in the positive `p(1)` direction
@@ -623,28 +634,13 @@ Trimmed_surface::_Segment_result Trimmed_surface::_find_segments(Mat<2> params) 
         }
       }
     }
-    // if there are no segments, this is probably not a good direction
-    if (_param_segments[i_direction][i_seg].empty()) max_diff += 1;
     if (max_diff < diff) {
       diff = max_diff;
-      sr.i_direction = i_direction;
-      sr.i_segment = i_seg;
-      sr.transformed_params = p;
+      n_intersections = 0;
+      for (Mat<2> seg : _param_segments[i_direction][i_seg]) {
+        n_intersections += p(1) < seg(0) + (p(0)*_n_div_max - i_seg)*(seg(1) - seg(0));
+      }
     }
-  }
-  HEXED_ASSERT(sr.i_direction >= 0, "no best direction found")
-  return sr;
-}
-
-bool Trimmed_surface::is_inside(Mat<2> params) const {
-  for (int i_dim = 0; i_dim < 2; ++i_dim) {
-    if (params(i_dim) < -_inside_tol || params(i_dim) > 1 + _inside_tol) return false;
-  }
-  auto seg_result = _find_segments(params);
-  Int n_intersections = 0;
-  for (Mat<2> seg : _param_segments[seg_result.i_direction][seg_result.i_segment]) {
-    double par1 = seg(0) + (seg_result.transformed_params(0)*_n_div_max - seg_result.i_segment)*(seg(1) - seg(0));
-    n_intersections += seg_result.transformed_params(1) < par1;
   }
   // the point is inside iff the number of intesections is odd
   return n_intersections%2;
@@ -1334,8 +1330,7 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
     double tang_mag = (bounds(all, 1) - bounds(all, 0)).norm()/n_div;
     for (auto& s : _surfaces) {
       for (auto& curve : s.trimming_curves()) {
-        Int np = curve.curve.n_points();
-        for (Int i_node = 0; i_node < np; ++i_node) {
+        for (Int i_node = 0; i_node < curve.curve.n_points() - 1; ++i_node) {
           Array<double> nodes({3, 2});
           Array<double> data({0, 2});
           for (int i_dim = 0; i_dim < 3; ++i_dim) {

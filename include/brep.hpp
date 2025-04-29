@@ -231,7 +231,7 @@ struct Trimming_curve {
   //! \brief The surface parameter values of the tree curve nodes
   //! \details layout: [i_node][i_dim];
   Array<double> parameters;
-  //! \brief The surface tangent vectors associated with the nodes
+  //! \brief The surface tangent vectors at the midpoint of each segment
   //! \details Vectors are normal to the curve, tangent to the surface, and point toward the interior of the surface.
   //! layout: [i_node][i_dim];
   Array<double> tangents;
@@ -293,13 +293,6 @@ class Trimmed_surface {
   void _recursive_intersections(std::vector<double>&, Mat<3> start, Mat<3> diff,
                                 Int i_start, Int j_start, Int level, bool high_prec) const;
   void _evaluate_excession(Int i_start, Int j_start, Int n_panel);
-  struct _Segment_result {
-    Int i_direction;
-    Int i_segment;
-    Mat<2> transformed_params;
-  };
-  // find the {i_direction, i_segment} pair necessary to evaluate whether `params` is inside or outside
-  _Segment_result _find_segments(Mat<2> params) const;
   Mat<2> _nearest_params(Mat<3> point, double dist_guess) const;
   Int _n_div_min;
   Int _n_div_max;
