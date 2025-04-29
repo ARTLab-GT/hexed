@@ -1329,10 +1329,12 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
   }
   {
     auto vis = Visualizer::create(format, 3, 1, file_name + "_tangents", {}, 0., Visualizer::block);
-    double tang_mag = (bounds(all, 1) - bounds(all, 0)).norm()/n_div;
     for (auto& s : _surfaces) {
       for (auto& curve : s.trimming_curves()) {
-        for (Int i_node = 0; i_node < curve.curve.n_points() - 1; ++i_node) {
+        Int np = curve.curve.n_points();
+        double tang_mag = curve.curve.arc_length()[np - 1]/n_div;
+        Int freq = std::max<Int>(1, np/n_div);
+        for (Int i_node = 0; i_node < np - 1; ++i_node) if (i_node%freq == 0) {
           Array<double> nodes({3, 2});
           Array<double> data({0, 2});
           for (int i_dim = 0; i_dim < 3; ++i_dim) {
