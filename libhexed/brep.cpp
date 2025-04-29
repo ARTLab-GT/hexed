@@ -390,18 +390,11 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
       }
       mean_squared_dist /= n_div_max + 1;
       // if the start and end points are close together, split the curve in half to simplify edge matching
-      Array<double> node_array({_n_div_max + 1, 2});
-      for (Int i_node = 0; i_node < _n_div_max + 1; ++i_node) {
-        for (int i_dim = 0; i_dim < 2; ++i_dim) node_array(i_node)[i_dim] = param_nodes[i_node][i_dim];
-      }
       if ((curve->point(Mat<1>{1.}) - start).squaredNorm() < .1*mean_squared_dist) {
         _curves.emplace_back(phys_nodes(0, n_div_max/2 + 1).copy());
-        _curves.back().parameters = node_array(0, _n_div_max/2 + 1);
         _curves.emplace_back(phys_nodes(n_div_max/2, n_div_max + 1).copy());
-        _curves.back().parameters = node_array(n_div_max/2, end);
       } else {
         _curves.emplace_back(phys_nodes.copy());
-        _curves.back().parameters = node_array;
       }
     }
     // check for any curves that may be oriented backward (which does happen, apparently) and flip them
@@ -432,20 +425,19 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
       }
     }
   }
-  // initialize parameter-space curves with discretiation
+  // initialize parameter-space curves with discretization
   _initialize(discrete_curves);
   for (Trimming_curve& curve : _curves) {
     #pragma omp parallel for
     for (Int i_tangent = 0; i_tangent < curve.curve.n_points() - 1; ++i_tangent) {
       Mat<2> params = (curve.parameters(i_tangent) + curve.parameters(i_tangent + 1)).vector()/2;
-      double diff = huge/2;
-      bool found = false;
+      double diff = _sz_max;
       for (int i_direction = 0; i_direction < 3; ++i_direction) {
         Mat<2> p = _transform_mat(i_direction)*params;
         // count the number of segmements intersected by a ray in the positive `p(1)` direction
         Int i_seg = std::max<Int>(0, std::min<Int>(_n_div_max - 1, floor(p(0)*_n_div_max)));
         double max_diff = huge;
-        Int nearest_seg;
+        Int nearest_seg = 0;
         auto& segs = _param_segments[i_direction][i_seg];
         std::vector<double> intersects(segs.size());
         for (Int j_seg = 0; j_seg < (Int)segs.size(); ++j_seg) {
@@ -460,8 +452,8 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
         if (max_diff < diff) {
           diff = max_diff;
           Int n_less = 0;
-          for (Int i_seg = 0; i_seg < (Int)segs.size(); ++i_seg) if (i_seg != nearest_seg) {
-             n_less += intersects[i_seg] < intersects[nearest_seg];
+          for (Int i = 0; i < (Int)segs.size(); ++i) if (i != nearest_seg) {
+             n_less += intersects[i] < intersects[nearest_seg];
           }
           double diff = -_sz_max*math::sign(n_less%2);
           Mat<2> param_diff = _transform_mat(i_direction).inverse()*Mat<2>{0., diff};
@@ -469,11 +461,6 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
           param_diff -= param_diff.dot(curve_tangent)/curve_tangent.squaredNorm()*curve_tangent;
           Mat<3> surf_diff = _surf->point(params + param_diff) - _surf->point(params);
           curve.tangents(i_tangent).vector() = surf_diff.normalized();
-          found = true;
-        }
-        if (!found) {
-          printers::warn("Warning: ", true);
-          printers::warn("Surface tangent calculation failed." + to_string(params) + to_string(i_tangent) + "\n");
         }
       }
     }
@@ -482,6 +469,7 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
 
 void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>& curves) {
   for (int i_direction = 0; i_direction < 3; ++i_direction) _param_segments[i_direction].resize(_n_div_max);
+  Int i_curve_global = 0;
   for (auto& loop : curves) {
     std::vector<Mat<2>> all_nodes;
     std::vector<std::array<Int, 2>> curve_endpoints;
@@ -548,6 +536,20 @@ void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>&
           }
         }
       }
+    }
+    Int i_node_global = 0;
+    for (int i_curve = 0; i_curve < n_curve; ++i_curve) {
+      Int i_subtract = 0;
+      for (Int i_node = 0; i_node < (Int)loop[i_curve].size(); ++i_node) {
+        // deal with curves that have been split to break periodicity
+        if (i_node == _curves[i_curve_global].curve.n_points()) {
+          ++i_curve_global;
+          i_subtract = i_node - 1;
+          _curves[i_curve_global].parameters(0).vector() = all_nodes[i_node_global - 1];
+        }
+        _curves[i_curve_global].parameters(i_node - i_subtract).vector() = all_nodes[i_node_global++];
+      }
+      ++i_curve_global;
     }
     if (!all_nodes.empty()) {
       all_nodes.insert(all_nodes.end(), all_nodes.front());
