@@ -239,6 +239,7 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
 , _n_div_max{n_div_max}
 , _sz_min{1./_n_div_min}
 , _sz_max{1./_n_div_max}
+, _inside_tol{1e-3/_n_div_max}
 , _surf{surface}
 , _nodes_normals({2, _n_div_min + 1, _n_div_min + 1, 3})
 , _nodes{_nodes_normals(0)}
@@ -433,6 +434,41 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
   }
   // initialize parameter-space curves with discretiation
   _initialize(discrete_curves);
+  for (Trimming_curve& curve : _curves) {
+    #pragma omp parallel for
+    for (Int i_node = 0; i_node < curve.curve.n_points(); ++i_node) {
+      Mat<2> params = curve.parameters(i_node).vector();
+      auto seg_result = _find_segments(params);
+      double dist = huge;
+      Int nearest_seg = -1;
+      auto& segs = _param_segments[seg_result.i_direction][seg_result.i_segment];
+      std::vector<double> intersects(segs.size());
+      for (Int j_seg = 0; j_seg < (Int)segs.size(); ++j_seg) {
+        double sect = segs[j_seg](0) + (seg_result.transformed_params(0)*_n_div_max - seg_result.i_segment)
+                                       *(segs[j_seg](1) - segs[j_seg](0));
+        intersects[j_seg] = sect;
+        double d = std::abs(sect - seg_result.transformed_params(1));
+        if (d < dist) {
+          dist = d;
+          nearest_seg = j_seg;
+        }
+      }
+      if (nearest_seg == -1) {
+        printers::warn("Warning: ", true);
+        printers::warn("Surface tangent calculation failed." + to_string(seg_result.i_direction) + to_string(params) + to_string(i_node) + "\n");
+        continue;
+      }
+      Int n_less = 0;
+      for (Int j_seg = 0; j_seg < (Int)segs.size(); ++j_seg) n_less += intersects[j_seg] < intersects[nearest_seg];
+      double diff = -_sz_max*math::sign(n_less%2);
+      Mat<2> param_diff = _transform_mat(seg_result.i_direction).inverse()*Mat<2>{0., diff};
+      Mat<2> curve_tangent = (curve.parameters(std::min(_n_div_max, i_node + 1))
+                              - curve.parameters(std::max<Int>(0, i_node - 1))).vector();
+      param_diff -= param_diff.dot(curve_tangent)/curve_tangent.squaredNorm()*curve_tangent;
+      Mat<3> surf_diff = _surf->point(params + param_diff) - _surf->point(params);
+      curve.tangents(i_node).vector() = surf_diff.normalized();
+    }
+  }
 }
 
 void Trimmed_surface::_initialize(std::vector<std::vector<std::vector<Mat<2>>>>& curves) {
@@ -568,15 +604,13 @@ Mat<2, 2> Trimmed_surface::_transform_mat(int i_direction) const {
   return trans;
 }
 
-bool Trimmed_surface::is_inside(Mat<2> params) const {
+Trimmed_surface::_Segment_result Trimmed_surface::_find_segments(Mat<2> params) const {
   // fudge it a little so the outer boundary is always inside
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
-    double tol = 1e-3/_n_div_max;
-    if (params(i_dim) < -tol || params(i_dim) > 1 + tol) return false;
-    params(i_dim) = std::max(tol, std::min(1 - tol, params(i_dim)));
+    params(i_dim) = std::max(_inside_tol, std::min(1 - _inside_tol, params(i_dim)));
   }
-  Int n_intersections = 0;
   double diff = huge;
+  _Segment_result sr {-1, -1, Mat<2>::Zero()};
   for (int i_direction = 0; i_direction < 3; ++i_direction) {
     Mat<2> p = _transform_mat(i_direction)*params;
     // count the number of segmements intersected by a ray in the positive `p(1)` direction
@@ -589,13 +623,28 @@ bool Trimmed_surface::is_inside(Mat<2> params) const {
         }
       }
     }
+    // if there are no segments, this is probably not a good direction
+    if (_param_segments[i_direction][i_seg].empty()) max_diff += 1;
     if (max_diff < diff) {
       diff = max_diff;
-      n_intersections = 0;
-      for (Mat<2> seg : _param_segments[i_direction][i_seg]) {
-        n_intersections += p(1) < seg(0) + (p(0)*_n_div_max - i_seg)*(seg(1) - seg(0));
-      }
+      sr.i_direction = i_direction;
+      sr.i_segment = i_seg;
+      sr.transformed_params = p;
     }
+  }
+  HEXED_ASSERT(sr.i_direction >= 0, "no best direction found")
+  return sr;
+}
+
+bool Trimmed_surface::is_inside(Mat<2> params) const {
+  for (int i_dim = 0; i_dim < 2; ++i_dim) {
+    if (params(i_dim) < -_inside_tol || params(i_dim) > 1 + _inside_tol) return false;
+  }
+  auto seg_result = _find_segments(params);
+  Int n_intersections = 0;
+  for (Mat<2> seg : _param_segments[seg_result.i_direction][seg_result.i_segment]) {
+    double par1 = seg(0) + (seg_result.transformed_params(0)*_n_div_max - seg_result.i_segment)*(seg(1) - seg(0));
+    n_intersections += seg_result.transformed_params(1) < par1;
   }
   // the point is inside iff the number of intesections is odd
   return n_intersections%2;

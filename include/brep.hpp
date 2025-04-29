@@ -293,11 +293,19 @@ class Trimmed_surface {
   void _recursive_intersections(std::vector<double>&, Mat<3> start, Mat<3> diff,
                                 Int i_start, Int j_start, Int level, bool high_prec) const;
   void _evaluate_excession(Int i_start, Int j_start, Int n_panel);
+  struct _Segment_result {
+    Int i_direction;
+    Int i_segment;
+    Mat<2> transformed_params;
+  };
+  // find the {i_direction, i_segment} pair necessary to evaluate whether `params` is inside or outside
+  _Segment_result _find_segments(Mat<2> params) const;
   Mat<2> _nearest_params(Mat<3> point, double dist_guess) const;
   Int _n_div_min;
   Int _n_div_max;
   double _sz_min;
   double _sz_max;
+  double _inside_tol;
   std::unique_ptr<Parametric<2>> _surf;
   std::vector<Trimming_curve> _curves;
   std::vector<Tree_curve> _extremal_boundaries;
