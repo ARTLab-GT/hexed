@@ -1,4 +1,5 @@
 #include <optional>
+#include <list>
 #include <hexed/brep.hpp>
 #include <hexed/Iges_parser.hpp>
 #include <hexed/Visualizer.hpp>
@@ -438,8 +439,8 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
         Array<double> phys_nodes({n_div_split + 1, 3});
         Array<double> param_nodes({n_div_split + 1, 2});
         for (Int i_node = 0; i_node < n_div_split + 1; ++i_node) {
-          phys_nodes(i_node).vector() = discrete_curves_phys[i_composite][i_curve][i_node + i_split*(n_div_split + 1)];
-          param_nodes(i_node).vector() = discrete_curves[i_composite][i_curve][i_node + i_split*(n_div_split + 1)];
+          phys_nodes(i_node).vector() = discrete_curves_phys[i_composite][i_curve][i_node + i_split*n_div_split];
+          param_nodes(i_node).vector() = discrete_curves[i_composite][i_curve][i_node + i_split*n_div_split];
         }
         _curves.emplace_back(phys_nodes.copy());
         _curves.back().parameters = param_nodes;
@@ -1272,6 +1273,40 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max) {
     auto surf = read.read_trimmed_surface();
     if (surf) _surfaces.emplace_back(std::move(*surf));
   }
+  auto trim_curves = _trim_curves();
+  std::list<Int> curve_inds;
+  for (Int i = 0; i < trim_curves.size(); ++i) curve_inds.push_back(i);
+  std::vector<std::list<Int>> coincident_groups;
+  for (auto it0 = curve_inds.begin(); it0 != curve_inds.end(); ++it0) {
+    auto& group = coincident_groups.emplace_back();
+    group.push_back(*it0);
+    auto it1 = it0;
+    ++it1;
+    for (; it1 != curve_inds.end(); ++it1) {
+      Array<double> nodes0 = trim_curves[*it0].curve.nodes();
+      Array<double> nodes1 = trim_curves[*it1].curve.nodes();
+      if (nodes0.size() == nodes1.size()) {
+        for (bool reverse : {0, 1}) {
+          double total_diff = 0;
+          Int n_nodes = nodes0.shape()[0];
+          #pragma omp parallel for reduction(+:total_diff)
+          for (int i_node = 0; i_node < n_nodes; ++i_node) {
+            total_diff += (nodes0(i_node) - nodes1(reverse ? n_nodes - 1 - i_node : i_node)).vector().norm();
+          }
+          if (total_diff < trim_curves[*it0].curve.arc_length()[n_nodes - 1]) {
+            group.push_back(*it1);
+            it1 = curve_inds.erase(it1);
+            --it1; // compensates for increment in loop declaration, since we just erased what used to be `it1`
+            break; // breaks `for (bool reverse`
+          }
+        }
+      }
+    }
+  }
+  for (auto& group : coincident_groups) {
+    _used_curves.push_back(group.front());
+  }
+  printers::info(format_str("%li total %lu used\n", trim_curves.size(), _used_curves.size()));
 }
 
 Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
@@ -1295,7 +1330,6 @@ std::vector<double> Geom_3d::intersections(Mat<> start, Mat<> end, bool high_pre
 }
 
 next::Sequence<const Tree_curve&> Geom_3d::edges() {
-  // concatenate the sequences of bounding curves of all trimmed surfaces
   next::Sequence<const Tree_curve&> e;
   for (auto& surf : _surfaces) e = e + surf.curves();
   return e;
@@ -1328,17 +1362,21 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
     }
   }
   {
-    auto vis = Visualizer::create(format, 3, 1, file_name + "_curves", {}, 0., Visualizer::block);
-    for (auto& s : _surfaces) {
-      for (auto& curve : s.curves()) {
-        Array<double> nodes = curve.nodes();
+    auto vis = Visualizer::create(format, 3, 1, file_name + "_curves", {"is_tangent"}, 0., Visualizer::block);
+    auto tc = _trim_curves();
+    for (bool is_tangent : {0, 1}) {
+      std::vector<Int>& vec = is_tangent ? _used_curves : _tangent_curves;
+      for (Int i_curve : vec) {
+        Array<double> nodes = tc[i_curve].curve.nodes();
         Array<double> transposed({3, nodes.shape()[0]});
         for (int i = 0; i < nodes.shape()[0]; ++i) {
           for (int i_dim = 0; i_dim < 3; ++i_dim) {
             transposed(i_dim)[i] = nodes(i)[i_dim];
           }
         }
-        vis->write_block(transposed, Array<double>({0, nodes.shape()[0]}));
+        Array<double> data({1, nodes.shape()[0]});
+        data = is_tangent;
+        vis->write_block(transposed, data);
       }
     }
   }
@@ -1378,6 +1416,13 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
     }
     vis->write_block(coords, dist);
   }
+}
+
+next::Sequence<const Trimming_curve&> Geom_3d::_trim_curves() {
+  // concatenate the sequences of bounding curves of all trimmed surfaces
+  next::Sequence<const Trimming_curve&> e;
+  for (auto& surf : _surfaces) e = e + surf.trimming_curves();
+  return e;
 }
 
 //! \endcond

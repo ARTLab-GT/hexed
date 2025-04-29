@@ -375,7 +375,12 @@ class Geom_3d : public Surface_geom {
   next::Sequence<const Tree_curve&> edges() override;
   next::Sequence<const Trimmed_surface&> surfaces();
   private:
+  next::Sequence<const Trimming_curve&> _trim_curves();
   std::vector<Trimmed_surface> _surfaces;
+  // used for edge matching
+  std::vector<Int> _used_curves;
+  // used only for visualization
+  std::vector<Int> _tangent_curves;
 };
 
 }
