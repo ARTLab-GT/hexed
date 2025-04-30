@@ -1367,9 +1367,11 @@ std::vector<double> Geom_3d::intersections(Mat<> start, Mat<> end, bool high_pre
 }
 
 next::Sequence<const Tree_curve&> Geom_3d::edges() {
-  next::Sequence<const Tree_curve&> e;
-  for (auto& surf : _surfaces) e = e + surf.curves();
-  return e;
+  auto tc = _trim_curves();
+  return {
+    [tc, this](Int index)->const Tree_curve& {return tc[_used_curves[index]].curve;},
+    [this]()->Int {return _used_curves.size();},
+  };
 }
 
 next::Sequence<const Trimmed_surface&> Geom_3d::surfaces() {
