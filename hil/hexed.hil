@@ -239,6 +239,11 @@ prefer_occt = false
 min_geom_subdiv_levels = 8
 max_geom_subdiv_levels = 15
 geom_vis_subdivisions = 100
+coincidence_tol_bbox = 1e-6
+coincidence_tol_abs = 0.
+coincidence_tol_subdiv = 1.
+tangency_tol_angle = 1*degree
+tangency_tol_subdiv = 10.
 
 {array parameters}
 i_dim = 0

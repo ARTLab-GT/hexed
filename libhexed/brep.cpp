@@ -280,10 +280,17 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
   }
   Mat<3> ref_point = _surf->point(Mat<2>{.5, .5});
   double ref_dist = 0;
-  #pragma omp parallel for reduction(max:ref_dist)
+  Array<double> bbox_min({3}, _bbox(all, 0).data());
+  Array<double> bbox_max({3}, _bbox(all, 1).data());
+  bbox_min = huge;
+  bbox_max = -huge;
+  #pragma omp parallel for reduction(max:ref_dist, bbox_max) reduction(min:bbox_min)
   for (Int i_node = 0; i_node < _n_div_min + 1; ++i_node) {
     for (Int j_node = 0; j_node < _n_div_min + 1; ++j_node) {
-      ref_dist = std::max(ref_dist, (_surf->point(Mat<2>{i_node*_sz_min, j_node*_sz_min}) - ref_point).norm());
+      Mat<3> p = _surf->point(Mat<2>{i_node*_sz_min, j_node*_sz_min});
+      ref_dist = std::max(ref_dist, (p - ref_point).norm());
+      bbox_max.vector() = bbox_max.vector().cwiseMax(p);
+      bbox_min.vector() = bbox_min.vector().cwiseMin(p);
     }
   }
   #pragma omp parallel for
@@ -904,6 +911,10 @@ Mat<3> Trimmed_surface::point(Mat<2> params) const {
   return _surf->point(params);
 }
 
+Mat<3, 2> Trimmed_surface::bounding_box() const {
+  return _bbox;
+}
+
 // helper class to read an entity from an IGES file
 class Read_entity {
   public:
@@ -1264,15 +1275,25 @@ next::Sequence<Mat<3>> Geom_2d::points() {
   };
 }
 
-Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max) {
+Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coinc_bbox_tol, double coinc_abs_tol,
+                 double coinc_prec_tol, double tang_angle_tol, double tang_prec_tol) {
   Iges_parser parser(file_name);
   auto dir = parser.section(Iges_parser::directory);
+  Mat<3, 2> bbox;
+  bbox(all, 0).setConstant( huge);
+  bbox(all, 1).setConstant(-huge);
   // read all the trimmed surface entities and ignore everything else
   for (auto& entry : dir) {
     Read_entity read(parser, entry, n_div_min, n_div_max);
     auto surf = read.read_trimmed_surface();
-    if (surf) _surfaces.emplace_back(std::move(*surf));
+    if (surf) {
+      Mat<3, 2> b = surf->bounding_box();
+      bbox(all, 0) = bbox(all, 0).cwiseMin(b(all, 0));
+      bbox(all, 1) = bbox(all, 1).cwiseMax(b(all, 1));
+      _surfaces.emplace_back(std::move(*surf));
+    }
   }
+  double max_diff = (bbox(all, 1) - bbox(all, 0)).maxCoeff();
   auto trim_curves = _trim_curves();
   std::list<Int> curve_inds;
   for (Int i = 0; i < trim_curves.size(); ++i) curve_inds.push_back(i);
@@ -1292,7 +1313,8 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max) {
         Mat<3> point = tc[0]->interp_point(i_test/double(n_div_min)*tc[0]->n_points());
         total_diff += tc[1]->nearest_point(point).distance;
       }
-      if (total_diff/(n_div_min - 1) < arc_len/double(n_div_max)) {
+      double tol = coinc_prec_tol*arc_len/double(n_div_max) + coinc_bbox_tol*max_diff + coinc_abs_tol;
+      if (total_diff/(n_div_min - 1) < tol) {
         group.push_back(*it1);
         it1 = curve_inds.erase(it1);
         --it1; // compensates for increment in loop declaration, since we just erased what used to be `it1`
@@ -1311,7 +1333,7 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max) {
         for (int i_node = 0; i_node < n_tang; ++i_node) {
           total_diff += (tang0(i_node) + tang1(reverse ? n_tang - 1 - i_node : i_node)).vector().norm();
         }
-        tangent = total_diff < 20*constants::pi;
+        tangent = total_diff < tang_prec_tol*2*constants::pi + tang_angle_tol*n_div_max;
       }
     }
     if (tangent) {

@@ -130,7 +130,9 @@ Surface_geom* Case::_make_geom() {
       geoms.emplace_back(geom);
     } else if ((ext == "igs" || ext == "iges") && !(HEXED_USE_OCCT && _vari("prefer_occt"))) {
       if (nd == 3) {
-        auto ptr = std::make_unique<brep::Geom_3d>(geom.value(), n_div_min, n_div_max);
+        auto ptr = std::make_unique<brep::Geom_3d>(geom.value(), n_div_min, n_div_max, _vard("coincidence_tol_bbox"),
+                                                   _vard("coincidence_tol_abs"), _vard("coincidence_tol_subdiv"),
+                                                   _vard("tangency_tol_angle"), _vard("tangency_tol_subdiv"));
         if (_vari("vis_geom")) {
           Mat<3, 2> bounds;
           for (int i_dim = 0; i_dim < 3; ++i_dim) {

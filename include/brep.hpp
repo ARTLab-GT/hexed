@@ -283,6 +283,7 @@ class Trimmed_surface {
   std::vector<double> intersections(Mat<3, 2> endpoints, bool high_prec = true) const;
   Mat<3> normal(Mat<2> params) const;
   Mat<3> point(Mat<2> params) const;
+  Mat<3, 2> bounding_box() const;
   private:
   // Performs the real initialization work once the curves have been discretized.
   // Discretization is performed by the constructor.
@@ -305,6 +306,7 @@ class Trimmed_surface {
   Array<double> _nodes_normals;
   Array<double> _nodes;
   Array<double> _normals;
+  Mat<3, 2> _bbox;
   Int _levels;
   Array<double> _excession;
   Array<double> _excession_epsilon;
@@ -348,7 +350,8 @@ class Geom_3d : public Surface_geom {
   //! \param file_name Name of file containing geometry. Must be in IGES format.
   //! \param n_div_min See `Trimmed_surface::Trimmed_surface`
   //! \param n_div_max See `Trimmed_surface::Trimmed_surface`
-  Geom_3d(std::string file_name, Int n_div_min, Int n_div_max);
+  Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coincidence_bbox_tol, double coincidence_abs_tol,
+          double coincidence_precision_tol, double tangency_angle_tol, double tangency_precision_tol);
   /*! \brief Writes visualization files of the geometry to help diagnose import/translation bugs.
    * \details For visualization purposes, entities will be discretized with `n_div` segments.
    * This is not the same as the `n_div` passed to the constructor, and need not be a power of 2.
