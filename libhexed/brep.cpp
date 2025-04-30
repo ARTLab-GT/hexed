@@ -1324,17 +1324,18 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coi
   for (auto& group : coincident_groups) {
     bool tangent = false;
     if (group.size() == 2) {
+      const Tree_curve* tc [2] {&trim_curves[group[0]].curve, &trim_curves[group[1]].curve};
       Array<double> tang0 = trim_curves[group[0]].tangents();
       Array<double> tang1 = trim_curves[group[1]].tangents();
-      for (bool reverse : {0, 1}) {
-        double total_diff = 0;
-        Int n_tang = tang0.shape()[0];
-        #pragma omp parallel for reduction(+:total_diff)
-        for (int i_node = 0; i_node < n_tang; ++i_node) {
-          total_diff += (tang0(i_node) + tang1(reverse ? n_tang - 1 - i_node : i_node)).vector().norm();
-        }
-        tangent = total_diff < tang_prec_tol*2*constants::pi + tang_angle_tol*n_div_max;
+      double total_diff = 0;
+      #pragma omp parallel for reduction(+:total_diff)
+      for (Int i_test = 1; i_test < n_div_min; ++i_test) {
+        double param0 = i_test/double(n_div_min)*tc[0]->n_points();
+        Mat<3> point = tc[0]->interp_point(param0);
+        double param1 = tc[1]->nearest_point(point).interp_index;
+        total_diff += (tang0.interp(param0) + tang1.interp(param1)).vector().norm();
       }
+      tangent = total_diff/n_div_min < tang_prec_tol*2*constants::pi/n_div_max + tang_angle_tol;
     }
     if (tangent) {
       _tangent_curves.push_back(group[0]);
