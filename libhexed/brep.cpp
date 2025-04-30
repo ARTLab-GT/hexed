@@ -232,7 +232,6 @@ Trimming_curve::Trimming_curve(Array<double> nodes)
 : curve(std::move(nodes), 4)
 , parameters{Array<double>::make_uniform({curve.n_points(), 2})}
 , tangents{Array<double>::make_uniform({curve.n_points() - 1, 3})}
-, used{false}
 {}
 
 Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_curve>&& curves,
@@ -679,19 +678,8 @@ next::Sequence<const Tree_curve&> Trimmed_surface::curves() const {
   };
 }
 
-next::Sequence<Tree_curve&> Trimmed_surface::curves() {
-  return {
-    [this](Int index)->Tree_curve& {return _curves[index].curve;},
-    [this]()->Int {return _curves.size();}
-  };
-}
-
 next::Sequence<const Trimming_curve&> Trimmed_surface::trimming_curves() const {
   return next::Sequence<const Trimming_curve&>::vector_view(_curves);
-}
-
-next::Sequence<Trimming_curve&> Trimmed_surface::trimming_curves() {
-  return next::Sequence<Trimming_curve&>::vector_view(_curves);
 }
 
 void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best_params, Int i_start, Int j_start,
@@ -796,7 +784,7 @@ void Trimmed_surface::_recursive_nearest(Nearest_point<3>& nearest, Mat<2>& best
   }
 }
 
-Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist, double buf_dist) const {
+Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist) const {
   Nearest_point<3> nearest(point, max_dist);
   Mat<2> best_params = Mat<2>::Zero();
   // first check all local nearest points in the interior of the surface
@@ -805,11 +793,7 @@ Nearest_point<3> Trimmed_surface::nearest_point(Mat<3> point, double max_dist, d
   // then check the nearest point on all the boundary curves
   for (auto& curve : _curves) {
     auto n = curve.curve.nearest_point(point, 1.01*std::sqrt(nearest.dist_squared()));
-    if (n.index >= 0) {
-      Mat<3> p = curve.curve.interp_point(n);
-      if (curve.used) p += buf_dist*curve.tangents.interp(n.interp_index).vector();
-      nearest.merge(p);
-    }
+    if (n.index >= 0) nearest.merge(curve.curve.interp_point(n));
   }
   return nearest;
 }
@@ -1357,22 +1341,17 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coi
       _tangent_curves.push_back(group[0]);
     } else {
       _used_curves.push_back(group[0]);
-      trim_curves[group[0]].used = true;
     }
   }
   printers::info(format_str("%li total %lu used %lu tangent\n", trim_curves.size(), _used_curves.size(), _tangent_curves.size()));
 }
 
 Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
-  return guess_nearest(point, max_distance, distance_guess, [point, this](Mat<> p, double max_dist) {
-    return buffered_nearest(point, max_dist, 0.);
+  return guess_nearest(point, max_distance, distance_guess, [this](Mat<> p, double max_dist) {
+    Nearest_point<dyn> nearest(p, max_dist);
+    for (auto& surf : _surfaces) nearest.merge(surf.nearest_point(p, max_dist));
+    return nearest;
   });
-}
-
-Nearest_point<dyn> Geom_3d::buffered_nearest(Mat<> point, double max_dist, double buf_dist) {
-  Nearest_point<dyn> nearest(point, max_dist);
-  for (auto& surf : _surfaces) nearest.merge(surf.nearest_point(point, max_dist, buf_dist));
-  return nearest;
 }
 
 std::vector<double> Geom_3d::intersections(Mat<> start, Mat<> end, bool high_prec) {
@@ -1478,9 +1457,9 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
   }
 }
 
-next::Sequence<Trimming_curve&> Geom_3d::_trim_curves() {
+next::Sequence<const Trimming_curve&> Geom_3d::_trim_curves() {
   // concatenate the sequences of bounding curves of all trimmed surfaces
-  next::Sequence<Trimming_curve&> e;
+  next::Sequence<const Trimming_curve&> e;
   for (auto& surf : _surfaces) e = e + surf.trimming_curves();
   return e;
 }

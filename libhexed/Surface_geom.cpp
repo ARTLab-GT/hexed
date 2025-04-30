@@ -2,10 +2,6 @@
 
 namespace hexed {
 
-Nearest_point<dyn> Surface_geom::buffered_nearest(Mat<> point, double max_dist, double buf_dist) {
-  return nearest_point(point, max_dist);
-}
-
 Compound_geom::Compound_geom(std::vector<Surface_geom*> geoms)
 : components(geoms.begin(), geoms.end())
 {}
@@ -13,12 +9,6 @@ Compound_geom::Compound_geom(std::vector<Surface_geom*> geoms)
 Nearest_point<dyn> Compound_geom::nearest_point(Mat<> point, double max_distance, double distance_guess) {
   Nearest_point nearest(point, max_distance);
   for (auto& comp : components) nearest.merge(comp->nearest_point(point, max_distance, distance_guess));
-  return nearest;
-}
-
-Nearest_point<dyn> Compound_geom::buffered_nearest(Mat<> point, double max_dist, double buf_dist) {
-  Nearest_point nearest(point, max_dist);
-  for (auto& comp : components) nearest.merge(comp->buffered_nearest(point, max_dist, buf_dist));
   return nearest;
 }
 

@@ -32,8 +32,6 @@ class Surface_geom {
    * of the input point, you can pass it to this parameter as a hint to possibly improve performance.
    */
   virtual Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) = 0;
-  //! \brief Leaves a buffer of size `buffer_distance` from any sharp edges.
-  virtual Nearest_point<dyn> buffered_nearest(Mat<> point, double max_distance, double buffer_distance);
   /*! \brief Computes the set of intersection points between a line and the surface.
    * \details The line is defined parametrically to be the set of points
    * \f$ [\text{point0}] + t [\text{point1}] \f$ for all \f$ t \in \mathbb{R} \f$.
@@ -59,7 +57,6 @@ class Compound_geom : public Surface_geom {
   public:
   Compound_geom(std::vector<Surface_geom*>); //!< acquires ownership
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-  Nearest_point<dyn> buffered_nearest(Mat<> point, double max_distance, double buffer_distance) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_precision = true) override;
   next::Sequence<const Tree_curve&> edges() override;
   next::Sequence<Mat<3>> points() override;
