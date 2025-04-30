@@ -1,8 +1,7 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Surface_geom.hpp>
 
-TEST_CASE("Compound_geom")
-{
+TEST_CASE("Compound_geom") {
   std::vector<hexed::Surface_geom*> geoms;
   geoms.push_back(new hexed::Hypersphere(Eigen::Vector3d::Zero(), 1.));
   geoms.push_back(new hexed::Hypersphere(Eigen::Vector3d::Unit(0), 1.));
@@ -16,8 +15,7 @@ TEST_CASE("Compound_geom")
                Catch::Matchers::UnorderedRangeEquals(std::vector<double>{-1., 0., 1., 2.}, hexed::math::Approx_equal(0., 1e-12)));
 }
 
-TEST_CASE("Hypersphere")
-{
+TEST_CASE("Hypersphere") {
   hexed::Hypersphere hype(Eigen::Vector2d{.1, .2}, .5);
   REQUIRE_THAT(hype.nearest_point(Eigen::Vector2d{-.5, -.6}).point(),
                Catch::Matchers::RangeEquals(Eigen::Vector2d{-.2, -.2}, hexed::math::Approx_equal(0., 1e-12)));

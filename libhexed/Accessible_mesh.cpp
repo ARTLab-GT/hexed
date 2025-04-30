@@ -158,7 +158,7 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
         pos = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
       }
     } else {
-      pos(seq) = surf_geom->nearest_point(pos(seq), huge, ns/2).point();
+      pos(seq) = surf_geom->buffered_nearest(pos(seq), huge, .03*ns).point();
       pos = _de_intersect(vert, pos);
     }
   }

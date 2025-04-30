@@ -235,6 +235,7 @@ struct Trimming_curve {
   //! \details Vectors are normal to the curve, tangent to the surface, and point toward the interior of the surface.
   //! layout: [i_node][i_dim];
   Array<double> tangents;
+  bool used;
 };
 
 /*! \brief A surface created by trimming a parametric surface with closed curves.
@@ -273,13 +274,15 @@ class Trimmed_surface {
   bool is_inside(Mat<2> parameters) const;
   //! \brief Access the physical bounding curves.
   next::Sequence<const Tree_curve&> curves() const;
+  next::Sequence<Tree_curve&> curves();
   //! \brief Access the full data of the bounding curves.
   next::Sequence<const Trimming_curve&> trimming_curves() const;
+  next::Sequence<Trimming_curve&> trimming_curves();
   /*! \brief Compute the point on the trimmed surface (including the boundary) nearest to `point`.
    * \details If the nearest point would be further than `max_dist` from `point`,
    * the empty `Nearest_point` is returned.
    */
-  Nearest_point<3> nearest_point(Mat<3> point, double max_dist) const;
+  Nearest_point<3> nearest_point(Mat<3> point, double max_dist, double buffer_distance = 0.) const;
   std::vector<double> intersections(Mat<3, 2> endpoints, bool high_prec = true) const;
   Mat<3> normal(Mat<2> params) const;
   Mat<3> point(Mat<2> params) const;
@@ -374,11 +377,12 @@ class Geom_3d : public Surface_geom {
   void visualize(std::string format, std::string file_name,
                  Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose());
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
+  Nearest_point<dyn> buffered_nearest(Mat<> point, double max_dist, double buf_dist) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_prec = true) override;
   next::Sequence<const Tree_curve&> edges() override;
   next::Sequence<const Trimmed_surface&> surfaces();
   private:
-  next::Sequence<const Trimming_curve&> _trim_curves();
+  next::Sequence<Trimming_curve&> _trim_curves();
   std::vector<Trimmed_surface> _surfaces;
   // used for edge matching
   std::vector<Int> _used_curves;
