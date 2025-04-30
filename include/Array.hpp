@@ -334,6 +334,17 @@ class Array {
     CONST Eigen::Map<Eigen::Matrix<T, dyn, 1>, Eigen::Unaligned, Eigen::InnerStride<>> vector() CONST { \
       return {_data, size(), Eigen::InnerStride<>(_strides[_order])}; \
     } \
+    /* \brief Linearly interpolates between rows of the array.
+       \details If `index` is an integer, result is equal to indexing with `()`.
+       Otherwise, linearly interpolates between the two nearest integer indices.
+       If `index` is < 0 or >= `shape()[0]`, the result is linearly extrapolated.
+     */ \
+    CONST Array interp(double index) CONST { \
+      HEXED_ARRAY_ASSERT(_order > 0, "`_order` must be positive") \
+      Int i = std::max<Int>(0, std::min<Int>(_shape[0] - 2, floor(index))); \
+      return (i + 1 - index)*(*this)(i) + (index - i)*(*this)(i + 1); \
+    } \
+
 
   QUALIFIED()
   QUALIFIED(const)

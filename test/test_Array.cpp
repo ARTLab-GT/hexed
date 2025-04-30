@@ -45,6 +45,22 @@ TEST_CASE("Array") {
   arr0[1] = 42;
   REQUIRE(arr1[1] == Catch::Approx(1));
 
+  // interpolation
+  hexed::Array<double> interp_arr({4, 2});
+  interp_arr = hexed::Array<double>::make(.1, .01, .2, .02, .3, .03, .4, .04).reshaped({4, 2});
+  REQUIRE_THAT(interp_arr.interp(0), Catch::Matchers::RangeEquals(std::vector<double>{.1, .01},
+                                     hexed::math::Approx_equal()));
+  REQUIRE_THAT(interp_arr.interp(.1), Catch::Matchers::RangeEquals(std::vector<double>{.11, .011},
+                                      hexed::math::Approx_equal()));
+  REQUIRE_THAT(interp_arr.interp(1.9), Catch::Matchers::RangeEquals(std::vector<double>{.29, .029},
+                                       hexed::math::Approx_equal()));
+  REQUIRE_THAT(interp_arr.interp(3), Catch::Matchers::RangeEquals(std::vector<double>{.4, .04},
+                                     hexed::math::Approx_equal()));
+  REQUIRE_THAT(interp_arr.interp(3.1), Catch::Matchers::RangeEquals(std::vector<double>{.41, .041},
+                                       hexed::math::Approx_equal()));
+  REQUIRE_THAT(interp_arr.interp(-.1), Catch::Matchers::RangeEquals(std::vector<double>{.09, .009},
+                                       hexed::math::Approx_equal()));
+
   // reshaping
   auto reshaped0 = arr0.reshaped({5, 4});
   REQUIRE(&reshaped0(0)[0] == &arr0(0)(0)[0]);
