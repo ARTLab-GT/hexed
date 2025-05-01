@@ -277,7 +277,25 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
                "(ortho = %e; edge = %e; coords = (%e %e %e); glued neighbor = %i).",
                state.worst_ortho, state.worst_edge, _orig_pos(0), _orig_pos(1), _orig_pos(2),
                int(gn)))
-  _step = -nominal_size()*state.gradient.normalized();
+  Mat<3> grad_fd = Mat<3>::Zero();
+  double fd = 1e-5*nominal_size();
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    int fd_step = 0;
+    for (int sign : {-1, 1}) {
+      _pos = _orig_pos;
+      _pos(i_dim) += sign*fd;
+      auto fd_state = _compute_state();
+      if (fd_state.feasible) {
+        grad_fd(i_dim) += sign*fd_state.objective;
+        ++fd_step;
+      } else {
+        grad_fd(i_dim) += sign*state.objective;
+      }
+    }
+    HEXED_ASSERT(fd_step, "no feasible direction");
+    grad_fd(i_dim) /= fd*fd_step;
+  }
+  _step = -nominal_size()*grad_fd.normalized();
   _step_sz = 1.;
   _orig_dist = (get_target(_orig_pos) - _orig_pos).norm();
   _improve_done = false;
