@@ -1021,7 +1021,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
        i_relax < 1000 && (i_relax < 30
                           || (snaps_failed == 0 && obj_monitor.max() - obj_monitor.min()
                                                    > 1e-2*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
-                          || (snaps_failed != 0 && dist_monitor.max() - dist_monitor.min() > 1e-1*dist_monitor.min()));
+                          || (snaps_failed != 0 && dist_monitor.max() - dist_monitor.min() > 1e-2*dist_monitor.min()));
        ++i_relax) {
   #else
   for (Int i_relax = 0; i_relax < 100; ++i_relax) {
