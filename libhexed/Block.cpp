@@ -306,12 +306,6 @@ bool Vertex::check_improve() {
   return _improve_done || _improve_failed;
 }
 
-void Vertex::retreat() {
-  HEXED_ASSERT(mobile(), "Only mobile vertices can retreat.")
-  _step_sz /= 3;
-  _improve_done = false;
-}
-
 void Vertex::init_snap(std::function<Mat<3>(Mat<3>)> get_target) {
   _orig_pos = unwarped_point();
   _step = get_target(_orig_pos) - _orig_pos;
