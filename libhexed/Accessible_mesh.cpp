@@ -340,7 +340,7 @@ void Accessible_mesh::_fit_surface() {
         if (curr.updates < curr.vert->dijkstra_updates) continue;
         for (next::Edge& edge : curr.vert->edges()) if (!edge.glued()) {
           next::Vertex* vert = &edge.vertex(&edge.vertex(0) == curr.vert);
-          double interval = std::max((curr.vert->unwarped_point() - vert->unwarped_point()).norm(),
+          double interval = std::max(edge.element()->nominal_size(),
                                      std::abs(vert->dijkstra_arc_len - curr.vert->dijkstra_arc_len));
           double d = curr.cost + .5*(curr.vert->dijkstra_curve_dist_sq + vert->dijkstra_curve_dist_sq)*interval;
           if (d < vert->dijkstra_dist) {
