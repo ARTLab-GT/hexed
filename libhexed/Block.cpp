@@ -160,14 +160,14 @@ bool Vertex::mobile() const {
 const double ortho_tolerance = .03;
 const double edge_tolerance = .02;
 
-Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors, bool ignore, double extra_tol) {
+Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors, bool ignore, bool ignore_neighb, double extra_tol) {
   _Optimization_state state;
-  _compute_state_recursive(state, 1., include_neighbors, this, ignore ? this : nullptr, extra_tol);
+  _compute_state_recursive(state, 1., include_neighbors, this, ignore ? this : nullptr, ignore_neighb, extra_tol);
   return state;
 }
 
 void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                      Vertex* orig_vertex, Vertex* ignore, double extra_tol) {
+                                      Vertex* orig_vertex, Vertex* ignore, bool ignore_neighb, double extra_tol) {
   if (!orig_vertex) orig_vertex = this;
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
@@ -177,7 +177,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
     int i_this = _get_index(*elem);
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
-      verts(all, i_vert) = elem->vertex(i_vert)._unwarped_point(ignore);
+      verts(all, i_vert) = elem->vertex(i_vert)._unwarped_point(ignore, ignore_neighb);
     }
     Sequence<Mat<3>> vert_seq {
       [&](Int i_vert)->Mat<3> {return verts(all, i_vert);},
@@ -234,7 +234,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
           }
           if (coupled) {
             state.has_glued_neighbor = true;
-            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex, ignore, extra_tol);
+            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex, ignore, ignore_neighb, extra_tol);
           }
         }
       }
@@ -277,6 +277,7 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
                "(ortho = %e; edge = %e; coords = (%e %e %e); glued neighbor = %i).",
                state.worst_ortho, state.worst_edge, _orig_pos(0), _orig_pos(1), _orig_pos(2),
                int(gn)))
+  #if 1
   Mat<3> grad_fd = Mat<3>::Zero();
   double fd = 1e-5*nominal_size();
   for (int i_dim = 0; i_dim < 3; ++i_dim) {
@@ -290,16 +291,25 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
         ++fd_step;
       } else {
         grad_fd(i_dim) += sign*state.objective;
+        printers::warn("active constraint\n", true);
       }
     }
     HEXED_ASSERT(fd_step, "no feasible direction");
     grad_fd(i_dim) /= fd*fd_step;
   }
+  _pos = _orig_pos;
+  _grad = grad_fd;
   _step = -nominal_size()*grad_fd.normalized();
+  #else
+  _grad = state.gradient;
+  _step = -nominal_size()*state.gradient.normalized();
+  #endif
   _step_sz = 1.;
+  _orig_obj = state.objective;
   _orig_dist = (get_target(_orig_pos) - _orig_pos).norm();
   _improve_done = false;
   _improve_failed = false;
+  if (_grad.norm()*nominal_size() < 1e-8*state.objective) _improve_failed = true;
 }
 
 void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
@@ -307,10 +317,28 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   if (_improve_done || _improve_failed) return;
   _step_sz /= 3;
   _pos = _orig_pos + _step_sz*_step;
+  auto state0 = _compute_state(true, true, true);
+  auto state1 = _compute_state(true, false, false, 1e-20);
+  int objective_reduced = state0.feasible && state1.feasible && state0.objective < _orig_obj;
+  double obj = state0.objective;
+  int f0 = state0.feasible;
+  int f1 = state1.feasible;
   Mat<3> target = get_target(_pos);
-  double dist = (target - _pos).norm();
-  if (dist > _orig_dist) _pos += (dist - _orig_dist)/dist*(target - _pos);
+  Mat<3> diff = target - _pos;
+  double dist = diff.norm();
+  if (dist > _orig_dist) {
+    diff *= (dist - _orig_dist)/dist;
+    _pos += diff;
+  }
+  state0 = _compute_state(true, true, true);
+  state1 = _compute_state(true, false, false, 1e-20);
+  int distance_achieved = state0.feasible && state1.feasible && state0.objective < _orig_obj;
   if (_step_sz < 1e-10) {
+    _pos = _orig_pos;
+    _improve_failed = true;
+    printers::warn(format_str("step failed %i %i %e %i %i %s %s\n", (int)state0.feasible, (int)state1.feasible, state0.objective - _orig_obj, objective_reduced, distance_achieved, to_string(_step_sz*_step).c_str(), to_string(diff).c_str()));
+  }
+  if ((_step_sz*_step + diff).norm() < 1e-3*_step_sz*_step.norm()) {
     _pos = _orig_pos;
     _improve_failed = true;
   }
@@ -318,9 +346,9 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
 
 bool Vertex::check_improve() {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
-  auto state0 = _compute_state(true, true);
-  auto state1 = _compute_state(true, false, 1e-3);
-  _improve_done = state0.feasible && state1.feasible && state1.objective < state0.objective;
+  auto state0 = _compute_state(true, true, true);
+  auto state1 = _compute_state(true, false, false, 1e-20);
+  _improve_done = state0.feasible && state1.feasible && state0.objective < _orig_obj;
   return _improve_done || _improve_failed;
 }
 
@@ -339,7 +367,7 @@ void Vertex::compute_snap() {
 
 Vertex::Snap_result Vertex::check_snap() {
   if (_improve_failed) return {true, true, _step.norm()};
-  auto state = _compute_state(true, false, 1e-3);
+  auto state = _compute_state(true, false, false, 1e-20);
   _improve_done = state.feasible;
   if (!_improve_done || _step_sz*_step.norm() > .2*nominal_size()*state.worst_edge) {
     _step_sz /= 3;
@@ -535,10 +563,10 @@ Mat<3> Vertex::_point(const std::vector<int>&, Int recursion_depth) const {
   return _glued_to.value().interpolate(_glued_coords, recursion_depth + 1);
 }
 
-Mat<3> Vertex::unwarped_point() const {return _unwarped_point(nullptr);}
+Mat<3> Vertex::unwarped_point() const {return _unwarped_point(nullptr, false);}
 
-Mat<3> Vertex::_unwarped_point(Vertex* ignore) const {
-  if (!_glued_to) return (this == ignore) ? _orig_pos : _get_pos();
+Mat<3> Vertex::_unwarped_point(Vertex* ignore, bool ignore_neighb) const {
+  if (!_glued_to) return (((this == ignore) != ignore_neighb) && mobile()) ? _orig_pos : _get_pos();
   int nd = _glued_to->n_dim();
   int nv = math::pow(2, nd);
   int nc = _glued_coords.size();
@@ -548,7 +576,7 @@ Mat<3> Vertex::_unwarped_point(Vertex* ignore) const {
     for (int i_dim = 0; i_dim < nc; ++i_dim) {
       skip = skip || std::abs(_glued_coords[i_dim] - !math::row_coordinate(nd, 2, i_dim, i_vert)) < 1e-6;
     }
-    if (!skip) vert_pos(i_vert, all) = _glued_to->vertex(i_vert)._unwarped_point(ignore).transpose();
+    if (!skip) vert_pos(i_vert, all) = _glued_to->vertex(i_vert)._unwarped_point(ignore, ignore_neighb).transpose();
   }
   Mat<3> coords = Mat<3>::Zero();
   for (int i_dim = 0; i_dim < nc; ++i_dim) coords(3 - nc + i_dim) = _glued_coords[i_dim];

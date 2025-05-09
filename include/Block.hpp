@@ -220,10 +220,10 @@ class Vertex : public Block {
     bool has_glued_neighbor = false;
     bool computing_depends = false;
   };
-  _Optimization_state _compute_state(bool include_neighbors = true, bool ignore = false, double extra_tol = 0.);
-  Mat<3> _unwarped_point(Vertex* ignore) const; // will treat the vertex `ignore` as being at its `_orig_pos`;
+  _Optimization_state _compute_state(bool include_neighbors = true, bool ignore = false, bool ignore_neighb = false, double extra_tol = 0.);
+  Mat<3> _unwarped_point(Vertex* ignore, bool ignore_neighb) const; // will treat the vertex `ignore` as being at its `_orig_pos`;
   void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                Vertex* orig_vertex = nullptr, Vertex* ignore = nullptr, double extra_tol = 0.);
+                                Vertex* orig_vertex = nullptr, Vertex* ignore = nullptr, bool ignore_neighb = false, double extra_tol = 0.);
   Improve_quality_result _improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                           bool has_target, bool limit_direction, bool snap);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
@@ -232,6 +232,8 @@ class Vertex : public Block {
   Mat<3> _pos;
   Mat<3> _orig_pos;
   Mat<3> _step;
+  Mat<3> _grad;
+  double _orig_obj;
   double _orig_dist;
   double _step_sz;
   bool _improve_failed;
