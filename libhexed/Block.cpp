@@ -277,7 +277,6 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
                "(ortho = %e; edge = %e; coords = (%e %e %e); glued neighbor = %i).",
                state.worst_ortho, state.worst_edge, _orig_pos(0), _orig_pos(1), _orig_pos(2),
                int(gn)))
-  #if 1
   Mat<3> grad_fd = Mat<3>::Zero();
   double fd = 1e-5*nominal_size();
   for (int i_dim = 0; i_dim < 3; ++i_dim) {
@@ -291,25 +290,19 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
         ++fd_step;
       } else {
         grad_fd(i_dim) += sign*state.objective;
-        printers::warn("active constraint\n", true);
       }
     }
     HEXED_ASSERT(fd_step, "no feasible direction");
     grad_fd(i_dim) /= fd*fd_step;
   }
   _pos = _orig_pos;
-  _grad = grad_fd;
   _step = -nominal_size()*grad_fd.normalized();
-  #else
-  _grad = state.gradient;
-  _step = -nominal_size()*state.gradient.normalized();
-  #endif
   _step_sz = 1.;
   _orig_obj = state.objective;
   _orig_dist = (get_target(_orig_pos) - _orig_pos).norm();
   _improve_done = false;
   _improve_failed = false;
-  if (_grad.norm()*nominal_size() < 1e-8*state.objective) _improve_failed = true;
+  if (grad_fd.norm()*nominal_size() < 1e-8*state.objective) _improve_failed = true;
 }
 
 void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
@@ -320,9 +313,6 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   auto state0 = _compute_state(true, true, true);
   auto state1 = _compute_state(true, false, false, 1e-20);
   int objective_reduced = state0.feasible && state1.feasible && state0.objective < _orig_obj;
-  double obj = state0.objective;
-  int f0 = state0.feasible;
-  int f1 = state1.feasible;
   Mat<3> target = get_target(_pos);
   Mat<3> diff = target - _pos;
   double dist = diff.norm();

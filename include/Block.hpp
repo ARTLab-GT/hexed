@@ -232,7 +232,6 @@ class Vertex : public Block {
   Mat<3> _pos;
   Mat<3> _orig_pos;
   Mat<3> _step;
-  Mat<3> _grad;
   double _orig_obj;
   double _orig_dist;
   double _step_sz;
