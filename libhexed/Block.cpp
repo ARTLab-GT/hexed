@@ -326,7 +326,10 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   if (_step_sz < 1e-10) {
     _pos = _orig_pos;
     _improve_failed = true;
-    printers::warn(format_str("step failed %i %i %e %i %i %s %s\n", (int)state0.feasible, (int)state1.feasible, state0.objective - _orig_obj, objective_reduced, distance_achieved, to_string(_step_sz*_step).c_str(), to_string(diff).c_str()));
+    printers::warn(format_str("step failed %i %i %e %i %i %s %s\n",
+                   (int)state0.feasible, (int)state1.feasible, state0.objective - _orig_obj,
+                   objective_reduced, distance_achieved,
+                   to_string(_step_sz*_step).c_str(), to_string(diff).c_str()));
   }
   if ((_step_sz*_step + diff).norm() < 1e-3*_step_sz*_step.norm()) {
     _pos = _orig_pos;

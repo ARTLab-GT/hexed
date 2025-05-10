@@ -158,14 +158,36 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
         pos = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
       }
     } else {
-      pos(seq) = surf_geom->nearest_point(pos(seq), huge, ns/2).point();
+      int i_dim = -1;
+      int sign = -1;
+      for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+        if (vert.record[i_face]) {
+          i_dim = i_face/2;
+          sign = i_face%2;
+        }
+      }
+      if (i_dim >= 0) {
+        auto edges = surf_geom->edges();
+        Nearest_point<3> nearest_on_edge(pos);
+        for (auto& edge : edges) {
+          Mat<3> nearest = resize(edge.interp_point(edge.nearest_point(pos)), 3);
+          if (std::abs(nearest(i_dim) - tree->origin()(i_dim) + sign*tree->nominal_size()) < 1e-6*ns) {
+            nearest_on_edge.merge(nearest);
+          }
+        }
+        HEXED_ASSERT(!nearest_on_edge.empty(), "no nearest point found within tolerance");
+        pos = nearest_on_edge.point();
+      } else {
+        pos(seq) = surf_geom->nearest_point(pos(seq), huge, ns/2).point();
+      }
       pos = _de_intersect(vert, pos);
     }
-  }
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    for (int sign : {0, 1}) {
-      if (vert.record[2*i_dim + sign]) {
-        pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+  } else {
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      for (int sign : {0, 1}) {
+        if (vert.record[2*i_dim + sign]) {
+          pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+        }
       }
     }
   }
@@ -1063,31 +1085,31 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       }
       bool done;
       do {
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for (next::Vertex* vert : mobile_verts) {
           auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
           vert->compute_improve(get_target);
         }
         done = true;
-        #pragma omp parallel for reduction(&&:done)
+        //#pragma omp parallel for reduction(&&:done)
         for (next::Vertex* vert : mobile_verts) {
           // can't combine these because of short-circuit evaluation
           bool d = vert->check_improve();
           done = done && d;
         }
       } while (!done);
-      #pragma omp parallel for
+      //#pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
         auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
         vert->init_snap(get_target);
       }
       do {
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for (next::Vertex* vert : mobile_verts) vert->compute_snap();
         done = true;
         snaps_failed = 0;
         total_dist = 0;
-        #pragma omp parallel for reduction(&&:done) reduction(+:snaps_failed,total_dist)
+        //#pragma omp parallel for reduction(&&:done) reduction(+:snaps_failed,total_dist)
         for (next::Vertex* vert : mobile_verts) {
           // can't combine these because of short-circuit evaluation
           auto result = vert->check_snap();
