@@ -1019,8 +1019,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   }
   History_monitor obj_monitor(.3, 100);
   History_monitor dist_monitor(.3, 100);
-  double starting_objective = -1;
-  double objective = 0;
   #if HEXED_VIS_MESH_OPT
   int id = rand()%1000;
   printers::info("id: " + std::to_string(id) + "\n");
@@ -1037,7 +1035,12 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   std::string message;
   next::Vertex::misses = 0;
   next::Vertex::tries = 0;
-  for (auto& vert : verts) vert.quality_objective();
+  double objective = 0;
+  #pragma omp parallel for reduction(+:objective)
+  for (auto& vert : verts) {
+    objective += vert.quality_objective();
+  }
+  double starting_objective = objective;
   #if 1
   for (Int i_relax = 0;
        i_relax < 1000 && (i_relax < 30
@@ -1084,20 +1087,33 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         vert->init_improve(get_target);
       }
       bool done;
-      do {
-        //#pragma omp parallel for
-        for (next::Vertex* vert : mobile_verts) {
-          auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
-          vert->compute_improve(get_target);
+      while (true) {
+        do {
+          //#pragma omp parallel for
+          for (next::Vertex* vert : mobile_verts) {
+            auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
+            vert->compute_improve(get_target);
+          }
+          done = true;
+          //#pragma omp parallel for reduction(&&:done)
+          for (next::Vertex* vert : mobile_verts) {
+            // can't combine these because of short-circuit evaluation
+            bool d = vert->check_improve();
+            done = done && d;
+          }
+        } while (!done);
+        double old_objective = objective;
+        objective = 0;
+        {
+          #pragma omp parallel for reduction(+:objective)
+          for (auto& vert : verts) objective += vert.quality_objective();
         }
-        done = true;
-        //#pragma omp parallel for reduction(&&:done)
-        for (next::Vertex* vert : mobile_verts) {
-          // can't combine these because of short-circuit evaluation
-          bool d = vert->check_improve();
-          done = done && d;
+        if (objective <= old_objective) {
+          break;
+        } else {
+          for (next::Vertex* vert : mobile_verts) vert->force_continue_improve();
         }
-      } while (!done);
+      }
       //#pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
         auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
@@ -1127,7 +1143,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       for (auto& vert : verts) objective += vert.quality_objective();
       _stopwatch["update"]["fit surface"]["optimization"]["assessment"].work_units_completed += verts.size();
     }
-    if (starting_objective < 0) starting_objective = objective;
     obj_monitor.add_sample(i_relax, objective - starting_objective);
     dist_monitor.add_sample(i_relax, total_dist);
     message = format_str(

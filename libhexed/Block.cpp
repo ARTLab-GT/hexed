@@ -277,32 +277,14 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
                "(ortho = %e; edge = %e; coords = (%e %e %e); glued neighbor = %i).",
                state.worst_ortho, state.worst_edge, _orig_pos(0), _orig_pos(1), _orig_pos(2),
                int(gn)))
-  Mat<3> grad_fd = Mat<3>::Zero();
-  double fd = 1e-5*nominal_size();
-  for (int i_dim = 0; i_dim < 3; ++i_dim) {
-    int fd_step = 0;
-    for (int sign : {-1, 1}) {
-      _pos = _orig_pos;
-      _pos(i_dim) += sign*fd;
-      auto fd_state = _compute_state();
-      if (fd_state.feasible) {
-        grad_fd(i_dim) += sign*fd_state.objective;
-        ++fd_step;
-      } else {
-        grad_fd(i_dim) += sign*state.objective;
-      }
-    }
-    HEXED_ASSERT(fd_step, "no feasible direction");
-    grad_fd(i_dim) /= fd*fd_step;
-  }
   _pos = _orig_pos;
-  _step = -nominal_size()*grad_fd.normalized();
+  _step = -nominal_size()*state.gradient.normalized();
   _step_sz = 1.;
   _orig_obj = state.objective;
   _orig_dist = (get_target(_orig_pos) - _orig_pos).norm();
   _improve_done = false;
   _improve_failed = false;
-  if (grad_fd.norm()*nominal_size() < 1e-8*state.objective) _improve_failed = true;
+  if (state.gradient.norm()*nominal_size() < 1e-8*state.objective) _improve_failed = true;
 }
 
 void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
@@ -311,8 +293,7 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   _step_sz /= 3;
   _pos = _orig_pos + _step_sz*_step;
   auto state0 = _compute_state(true, true, true);
-  auto state1 = _compute_state(true, false, false, 1e-20);
-  int objective_reduced = state0.feasible && state1.feasible && state0.objective < _orig_obj;
+  auto state1 = _compute_state(true, false, false, 1e-8);
   Mat<3> target = get_target(_pos);
   Mat<3> diff = target - _pos;
   double dist = diff.norm();
@@ -321,15 +302,10 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
     _pos += diff;
   }
   state0 = _compute_state(true, true, true);
-  state1 = _compute_state(true, false, false, 1e-20);
-  int distance_achieved = state0.feasible && state1.feasible && state0.objective < _orig_obj;
+  state1 = _compute_state(true, false, false, 1e-8);
   if (_step_sz < 1e-10) {
     _pos = _orig_pos;
     _improve_failed = true;
-    printers::warn(format_str("step failed %i %i %e %i %i %s %s\n",
-                   (int)state0.feasible, (int)state1.feasible, state0.objective - _orig_obj,
-                   objective_reduced, distance_achieved,
-                   to_string(_step_sz*_step).c_str(), to_string(diff).c_str()));
   }
   if ((_step_sz*_step + diff).norm() < 1e-3*_step_sz*_step.norm()) {
     _pos = _orig_pos;
@@ -337,10 +313,14 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   }
 }
 
+void Vertex::force_continue_improve() {
+  _improve_done = false;
+}
+
 bool Vertex::check_improve() {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
   auto state0 = _compute_state(true, true, true);
-  auto state1 = _compute_state(true, false, false, 1e-20);
+  auto state1 = _compute_state(true, false, false, 1e-8);
   _improve_done = state0.feasible && state1.feasible && state0.objective < _orig_obj;
   return _improve_done || _improve_failed;
 }
@@ -360,7 +340,7 @@ void Vertex::compute_snap() {
 
 Vertex::Snap_result Vertex::check_snap() {
   if (_improve_failed) return {true, true, _step.norm()};
-  auto state = _compute_state(true, false, false, 1e-20);
+  auto state = _compute_state(true, false, false, 1e-8);
   _improve_done = state.feasible;
   if (!_improve_done || _step_sz*_step.norm() > .2*nominal_size()*state.worst_edge) {
     _step_sz /= 3;

@@ -138,6 +138,7 @@ class Vertex : public Block {
   void compute_depends();
   void init_improve(std::function<Mat<3>(Mat<3>)> get_target);
   void compute_improve(std::function<Mat<3>(Mat<3>)> get_target);
+  void force_continue_improve();
   bool check_improve();
   void init_snap(std::function<Mat<3>(Mat<3>)> get_target);
   void compute_snap();
