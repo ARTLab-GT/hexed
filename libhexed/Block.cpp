@@ -292,8 +292,6 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   if (_improve_done || _improve_failed) return;
   _step_sz /= 3;
   _pos = _orig_pos + _step_sz*_step;
-  auto state0 = _compute_state(true, true, true);
-  auto state1 = _compute_state(true, false, false, 1e-8);
   Mat<3> target = get_target(_pos);
   Mat<3> diff = target - _pos;
   double dist = diff.norm();
@@ -301,13 +299,7 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
     diff *= (dist - _orig_dist)/dist;
     _pos += diff;
   }
-  state0 = _compute_state(true, true, true);
-  state1 = _compute_state(true, false, false, 1e-8);
-  if (_step_sz < 1e-10) {
-    _pos = _orig_pos;
-    _improve_failed = true;
-  }
-  if ((_step_sz*_step + diff).norm() < 1e-3*_step_sz*_step.norm()) {
+  if (_step_sz < 1e-10 || (_step_sz*_step + diff).norm() < 1e-3*_step_sz*_step.norm()) {
     _pos = _orig_pos;
     _improve_failed = true;
   }
