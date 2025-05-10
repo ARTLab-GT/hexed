@@ -1,11 +1,11 @@
-/*! \page contributing Contributing guidelines
+/*! \page contributing Contributing Guidelines
 
 When contributing to Hexed, please adhere to these guidelines.
 Some are standard practice in software development,
 which I feel the need to specify since people contributing to Hexed may not be software engineers by training.
 Others are meant to standardize what is otherwise a matter of personal preference.
 
-\section contrib_general General procedures
+\section contrib_general General Procedures
 Please do __not__ commit or push to the `main` branch.
 The standard workflow should be the following:
 -# Create a new branch.
@@ -21,28 +21,47 @@ You are also encouraged to push frequently
 Finally, development should be test-driven as much as possible,
 granted the inherent difficulty of testing a computational physics solver.
 
-\section contrib_pull Pull requests
+\section contrib_pull Pull Requests
 A pull request will not be merged until it meets the following requirements:
 - No merge conflicts.
 - Must compile and run both in `Release` and in `Debug` mode with sanitizers.
 - No unit test failures or sanitizer errors.
 - No compiler warnings.
 
-\section contrib_style Code style
+\section contrib_style Code Style
 Please adhere to the following style conventions whenever possible.
 
-\subsection file_formatting File formatting
+\subsection file_formatting File Formatting
 - File names must not contain whitespace or other characters that have meaning in shell commands.
+- Lines shall be no longer than 120 characters.
 - Prefer underscores (`_`) to hyphens (`-`) or camel case as word separators in file names.
 - Source files must not contain the tab character. C++ code should be indented with 2 spaces
   and Python code should be indented with 4 spaces.
 - There should be no trailing spaces at the ends of lines.
 - Use blank lines sparingly.
 
+\subsubsection brace_style Brace Style
+All C++ code shall use [One True Brace Style](https://en.wikipedia.org/wiki/Indentation_style#One_True_Brace),
+a derivative of [K&R](https://en.wikipedia.org/wiki/Indentation_style#K&R), with a few additional stipulations.
+Specifically:
+- Every multi-statement block has its opening brace on the same line as its control clause,
+  including function, class, and namespace declarations.
+- Every closing brace is placed on a new line with the same indentation level as the opening control clause.
+- A single-statement block must be **either** enclosed in braces **or** placed on the same line as its control clause.
+  This ensures that inserting another line later cannot inadvertently cause control flow to disagree with indentation.
+- A closing brace of an `if` block is placed on the same line as an accompanying `else` clause,
+  and a closing brace of a `do` block is placed on the same line as the accompanying `while` clause.
+
+\subsubsection class_style Class Style
+- Private members shall begin with a single underscore (`_`).
+- `public`, `protected`, and `private` are indented to the same level as the class body.
+
 \subsection Names
 (of variables, functions, namespaces, classes, macros, etc. Anything in the code.)
-- Should contain words, abbreviations, and/or numbers separated by underscores (not camelCase, and not multiplewordswithoutspaces).
-- Names of classes should begin with a capital letter. Otherwise, all letters should be lowercase.
+- Should contain words, abbreviations, and/or numbers separated by underscores
+  (not camelCase, and not multiplewordswithoutspaces).
+- Names of classes should begin with a capital letter and macros should be all-capital.
+  Otherwise, all letters should be lowercase.
 - A name should be a description of the variable it refers to.
   It should not reference mathematical symbols or the sound of words.
   For example, resist the temptation to use `x` to refer to horizontal position.
@@ -65,23 +84,26 @@ If the code encounters a fatal problem, it should throw an exception
 (using the constructs of whatever language it is currently in) with a helpful error message.
 The message should identify _what_ exactly was found to be wrong
 so that someone capable of understanding the problem has a clue _where_ to start trying to figure out _why_.
-In the interest of performance, some functions in the \ref hexed "C++ API" may produce segmentation faults, memory leaks, or undefined behavior
-upon incorrect usage.
+In the interest of performance, some functions in the \ref hexed "C++ API" may produce segmentation faults,
+memory leaks, or undefined behavior upon incorrect usage.
 However, the \ref hexecute "executable" should catch incorrect usage and throw a useful exception.
 If an end user makes a mistake and obtains a segfault instead of an exception, I consider that a bug.
 Some common things I would like to avoid in this code are:
-- Don't just say something vague like "something went wrong" "the operation could not be completed" or give a numeric error code
+- Don't say something vague like "something went wrong", "the operation could not be completed", or give a numeric error code
   that the user then has to look up to get any information.
-  I'm thinking of the error messages commonly encountered in a [certain operating system](https://www.ioccc.org/1993/cmills.hint) whose name ironically evokes transparency.
+  I'm thinking of the error messages commonly encountered in a
+  [certain operating system](https://www.ioccc.org/1993/cmills.hint) whose name ironically evokes transparency.
   Error messages should be as specific as possible.
 - Don't presume to guess exactly why the problem occurred or give verbose suggestions about how to fix it.
   Exceptions generally occur because you _failed_ to anticipate what actually happened,
-  so your speculations are probably a waste of space at best and actively misleading at worst.
+  so your speculations likely unhelpful and potentially misleading.
   Just say what the exact, concrete problem was.
-  For example, if the code encounters a nonphysical state, don't say something like "The solver is unstable. Try reducing `max_safety` and verifying the boundary conditions are correct."
+  For example, if the code encounters a nonphysical state, don't say something like
+  "The solver is unstable. Try reducing `max_safety` and verifying the boundary conditions are correct."
   Instead, say something like "nonpositive density encountered in flux computation".
 
-Hexed provides the \ref HEXED_ASSERT macro to facilitate generating exceptions with detailed information about where the error occurred in the code.
+Hexed provides the \ref HEXED_ASSERT macro to facilitate generating exceptions
+with detailed information about where the error occurred in the code.
 
 \see \ref error_types
 
