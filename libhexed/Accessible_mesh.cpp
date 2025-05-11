@@ -1066,22 +1066,46 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       next::Block::visualize("default", "relax_iter" + to_string(i_relax),
                              _blocks.faces_3d().cast<const next::Block&>(), double(i_relax));
       std::string fname = "vertex_nearest" + to_string(i_relax);
-      auto vis = Visualizer::create("default", 3, 1, fname, {}, (double)i_relax, Visualizer::block);
+      auto vis = Visualizer::create("default", 3, 1, fname, {"snapped_edge", "last_snap_failed", "last_step_rejected"}, (double)i_relax, Visualizer::block);
+      auto vis1 = Visualizer::create("default", 3, 1, "vertex_neighbor" + to_string(i_relax), {}, (double)i_relax, Visualizer::block);
+      auto vis2 = Visualizer::create("default", 3, 1, "vertex_grad" + to_string(i_relax), {}, (double)i_relax, Visualizer::block);
       for (auto& vert : bverts) {
         Array<double> pos({3, 2});
         Mat<3> p0 = vert.unwarped_point();
         Mat<3> p1 = _get_snapping_target(vert, p0);
+        Mat<3> p2 = p0;
+        bool found = false;
+        for (auto& n : vert.neighbors()) if (n) {
+          if (!n->is_surface()) {
+            p2 = n->unwarped_point();
+            found = true;
+          }
+        }
+        HEXED_ASSERT(found, "no non-surface neighbor found")
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
           pos(i_dim)[0] = p0(i_dim);
           pos(i_dim)[1] = p1(i_dim);
         }
-        vis->write_block(pos, Array<double>({}));
+        Array<double> data({3, 2});
+        data(0) = vert.snapped_edge;
+        data(1) = vert.last_snap_failed();
+        data(2) = vert.last_step_rejected();
+        vis->write_block(pos, data);
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          pos(i_dim)[1] = p2(i_dim);
+        }
+        vis1->write_block(pos, Array<double>({0, 2}));
+        Mat<3> vg = vert.last_grad();
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          pos(i_dim)[1] = p0(i_dim) + vg(i_dim);
+        }
+        vis2->write_block(pos, Array<double>({0, 2}));
       }
     }
     #endif
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
-      #pragma omp parallel for
+      //#pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
         auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
         vert->init_improve(get_target);

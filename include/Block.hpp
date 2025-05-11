@@ -150,6 +150,8 @@ class Vertex : public Block {
   Snap_result check_snap();
   bool has_problem() const;
   inline bool last_snap_failed() const {return _last_snap_failed;}
+  inline bool last_step_rejected() const {return _last_step_rejected;}
+  inline Mat<3> last_grad() const {return _last_grad;}
   bool snap_to(Mat<3> target);
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
   double quality_objective();
@@ -238,6 +240,8 @@ class Vertex : public Block {
   double _step_sz;
   bool _improve_failed;
   bool _improve_done;
+  bool _last_step_rejected;
+  Mat<3> _last_grad;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;
   Reciprocal_ptr<Vertex, Element_shape> _glued_to;
