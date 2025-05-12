@@ -9,9 +9,9 @@ namespace hexed {
 struct Mesh_assessment {
   Mesh_assessment();
   Mesh_assessment(next::Sequence<Mat<3>> vertices, int jac_vert, int grad_vert);
-  double orthogonality;
+  Mat<3> orthogonality;
   Mat<3> edge_lengths;
-  Mat<3> grad_orth;
+  Mat<3, 3> grad_orth;
   Mat<3, 3> grad_lengths;
 };
 

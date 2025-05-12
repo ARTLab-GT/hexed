@@ -208,17 +208,18 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         if (!contains) orig_vertex->_depends_on.push_back(&that_vert);
       }
       Mesh_assessment ma(vert_seq, i_that, i_this);
-      state.feasible = state.feasible && ma.orthogonality > ortho_tolerance + extra_tol;
-      state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        state.feasible = state.feasible && ma.orthogonality(i_dim) > ortho_tolerance + extra_tol;
+        state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality(i_dim));
         state.feasible = state.feasible && ma.edge_lengths(i_dim) > (edge_tolerance + extra_tol)*ns;
         state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim)/ns);
       }
       if (state.feasible) {
-        double orth_diff = ma.orthogonality - ortho_tolerance;
-        state.objective += (!skip_obj)*1./orth_diff;
-        state.gradient += (!skip_grad)*gradient_weight*1.*(-1/orth_diff/orth_diff)*ma.grad_orth;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          double orth_diff = ma.orthogonality(i_dim) - ortho_tolerance;
+          state.objective += (!skip_obj)*1./orth_diff;
+          state.gradient += (!skip_grad)*gradient_weight*1.*(-1/orth_diff/orth_diff)
+                            *ma.grad_orth(i_dim, all).transpose();
           double num = ma.edge_lengths(i_dim) - ns;
           double denom = ma.edge_lengths(i_dim) - edge_tolerance*ns;
           state.objective += (!skip_obj)*num*num/denom;
