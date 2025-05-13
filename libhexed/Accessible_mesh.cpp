@@ -815,15 +815,51 @@ void Accessible_mesh::_fit_surface() {
   _offset_vertices(.03, false);
 
   {
-    auto& elem_list = elements();
-    for (int i_elem = 0; i_elem < elem_list.size(); ++i_elem) {
-      elem_list[i_elem].destroy_fake();
+    auto& elem_list = def.elements();
+    Int sz = elem_list.size();
+    for (int i_elem = 0; i_elem < sz; ++i_elem) {
+      Deformed_element& elem = elem_list[i_elem];
+      for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) elem.face_record[i_face] = -1;
+      auto i_face = elem.active_shape().boundary_face();
+      if (i_face != next::Mesh_blocks::no_face) {
+        Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, i_face);
+        Deformed_element& new_elem = def.elems.at(elem.refinement_level(), sn);
+        new_elem.create_fake(_blocks);
+        new_elem.active_shape().extruded_direction = i_face;
+        new_elem.active_shape().for_matching = elem.active_shape().for_matching;
+        elem.face_record[i_face] = sn;
+        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+          Mat<3> pos = elem.active_shape().vertex(i_vert).unwarped_point();
+          elem.shape().vertex(i_vert).set_pos(pos);
+          new_elem.fake_shape()->vertex(i_vert).set_pos(pos);
+          // in connection, for interface vertices, elem.shape and new_elem.fake_shape will cancel out,
+          // but have to set new_elem.shape to the average
+          int i_sign = !(i_face%2);
+          if (math::row_coordinate(params.n_dim, 2, i_face/2, i_vert) == i_sign) {
+            int j_vert = i_vert - math::sign(i_sign)*math::pow(2, params.n_dim - 1 - i_face/2);
+            pos = .5*(pos + elem.active_shape().vertex(j_vert).unwarped_point());
+          }
+          new_elem.shape().vertex(i_vert).set_pos(pos);
+        }
+        elem.destroy_fake();
+      }
     }
-    for (int i_elem = 0; i_elem < elem_list.size(); ++i_elem) {
-      HEXED_ASSERT(elem_list[i_elem].active_shape().boundary_face() == next::Mesh_blocks::no_face,
-                   "left a surface face in")
+    for (int i_elem = 0; i_elem < sz; ++i_elem) {
+      Deformed_element& elem = elem_list[i_elem];
+      int i_face = -1;
+      for (int j_face = 0; j_face < 2*params.n_dim; ++j_face) {
+        if (elem.face_record[j_face] >= 0) i_face = j_face;
+      }
+      if (i_face >= 0) {
+        Deformed_element& new_elem = def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
+        std::array<Deformed_element*, 2> el_arr {&new_elem, &elem};
+        _connect(el_arr, {{i_face/2, i_face/2}, {!(i_face%2), bool(i_face%2)}, 0});
+      }
     }
   }
+  purge();
+  _blocks.verts();
+  _blocks.boundary_sides();
 
   {
     auto faces = _blocks.faces_3d();
