@@ -164,6 +164,10 @@ void Element::destroy_shape() {
   _fake_shape.reset();
 }
 
+void Element::destroy_fake() {
+  _fake_shape.reset();
+}
+
 next::Element_shape& Element::shape() {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.")
   return *_shape;

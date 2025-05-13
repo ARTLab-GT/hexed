@@ -856,6 +856,7 @@ void Element_shape::_glue_edges(std::vector<Element_shape*> those) {
 Element_shape::Element_shape(int nd, const Basis& b)
 : Block(nd, b.row_size)
 , deformed{false}
+, for_matching{false}
 , extruded_direction{Mesh_blocks::no_face}
 , is_new{false}
 , record{0}

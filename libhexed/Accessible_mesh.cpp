@@ -506,7 +506,7 @@ void Accessible_mesh::_fit_surface() {
             }
           }
           auto set_vertices = [&](Element& e) {
-            auto& s = e.shape();
+            auto& s = e.active_shape();
             for (int i_vert = 0; i_vert < 8; ++i_vert) {
               s.vertex(i_vert).set_pos(elem.fake_shape()->vertex(i_vert).unwarped_point());
             }
@@ -515,25 +515,29 @@ void Accessible_mesh::_fit_surface() {
           };
           Int inside_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
           Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
+          inside.create_fake(_blocks);
           set_vertices(inside);
-          inside.shape().is_new = false;
+          inside.active_shape().is_new = false;
+          inside.active_shape().for_matching = true;
           elem.face_record[2*i_dim + !i_sign] = inside_sn;
           Int surface_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, bf);
           Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
+          surface.create_fake(_blocks);
           set_vertices(surface);
-          surface.shape().is_new = false;
+          surface.active_shape().is_new = false;
+          surface.active_shape().for_matching = true;
           _connect({&inside, &surface}, Con_dir<Deformed_element>({i_dim, i_dim}, {i_sign, !i_sign}));
           elem.record = 2;
           std::vector<Deformed_element*> matched_elems(6, nullptr);
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
-            HEXED_ASSERT(std::isfinite(inside.shape().vertex(i_vert).unwarped_point().squaredNorm()),
+            HEXED_ASSERT(std::isfinite(inside.active_shape().vertex(i_vert).unwarped_point().squaredNorm()),
                          "Vertex pos is not finite.")
-            HEXED_ASSERT(std::isfinite(surface.shape().vertex(i_vert).unwarped_point().squaredNorm()),
+            HEXED_ASSERT(std::isfinite(surface.active_shape().vertex(i_vert).unwarped_point().squaredNorm()),
                          "Vertex pos is not finite.")
             // add size constraints to prevent over-large offsets
             int j_vert = i_vert + (i_sign - math::row_coordinate(3, 2, i_dim, i_vert))*math::pow(2, 2 - i_dim);
             double sz_constraint = elem.active_shape().vertex(j_vert).nominal_size();
-            surface.shape().vertex(i_vert).add_size_constraint(sz_constraint);
+            surface.active_shape().vertex(i_vert).add_size_constraint(sz_constraint);
           }
           for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
             for (bool j_sign : {0, 1}) {
@@ -543,8 +547,10 @@ void Accessible_mesh::_fit_surface() {
               if (m != -1) {
                 Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, bf);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
+                match_elem.create_fake(_blocks);
                 set_vertices(match_elem);
-                match_elem.shape().is_new = true;
+                match_elem.active_shape().is_new = true;
+                match_elem.active_shape().for_matching = true;
                 _connect({&surface, &match_elem}, Con_dir<Deformed_element>({j_dim, j_dim}, {j_sign, !j_sign}));
                 _connect({&inside,  &match_elem}, Con_dir<Deformed_element>({j_dim, i_dim}, {j_sign, !i_sign}));
                 matched_elems[2*j_dim + j_sign] = &match_elem;
@@ -557,17 +563,17 @@ void Accessible_mesh::_fit_surface() {
                   int i_snapped = elem_vert.snapped_edge;
                   HEXED_ASSERT(i_snapped != -1 || elem.fake_shape()->boundary_face_3d()->edge(i_edge_matched).glued(),
                                "vertex and edge do not agree on whether they are snapped")
-                  auto& vert = match_elem.shape().vertex(i_vert);
+                  auto& vert = match_elem.active_shape().vertex(i_vert);
                   vert.snapped_edge = i_snapped;
                   vert.snapped_endpoint = elem_vert.snapped_endpoint;
                   vert.incompatible_snap = vert.incompatible_snap || elem_vert.incompatible_snap;
                   // make sure neighboring vertices will agree on their nominal size to avoid quality criterion issues
-                  vert.add_size_constraint(surface.shape().vertex(i_vert).nominal_size());
+                  vert.add_size_constraint(surface.active_shape().vertex(i_vert).nominal_size());
                 }
-                auto& matched_edge = match_elem.shape().boundary_face_3d()->edge(i_edge_matched);
+                auto& matched_edge = match_elem.active_shape().boundary_face_3d()->edge(i_edge_matched);
                 matched_edge.snapped_edge = m;
                 for (int i_vert = 0; i_vert < 8; ++i_vert) {
-                  HEXED_ASSERT(std::isfinite(match_elem.shape().vertex(i_vert).unwarped_point().squaredNorm()),
+                  HEXED_ASSERT(std::isfinite(match_elem.active_shape().vertex(i_vert).unwarped_point().squaredNorm()),
                                "Vertex pos is not finite.")
                 }
               } else {
@@ -590,7 +596,7 @@ void Accessible_mesh::_fit_surface() {
                 pos += offset*(orig_pos(all, i_vert - math::sign(j_sign)*stride) - orig_pos(all, i_vert));
               }
             }
-            surface.shape().vertex(i_vert).set_pos(pos);
+            surface.active_shape().vertex(i_vert).set_pos(pos);
           }
           for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
             int k_dim = 3 - j_dim - i_dim;
@@ -600,7 +606,7 @@ void Accessible_mesh::_fit_surface() {
                              + j_sign*math::pow(2, 2 - j_dim)
                              + k_sign*math::pow(2, 2 - k_dim);
                 std::vector<Int> record {elem.refinement_level(), elem.face_record[2*j_dim + j_sign], k_dim, k_sign, i_dim, i_sign};
-                auto& vert = surface.shape().vertex(i_vert);
+                auto& vert = surface.active_shape().vertex(i_vert);
                 vert.record.insert(vert.record.end(), record.begin(), record.end());
               }
             }
@@ -619,7 +625,7 @@ void Accessible_mesh::_fit_surface() {
     for (int i_element = 0; i_element < elems.size(); ++i_element) {
       if (elems[i_element].record == 2) continue;
       for (int i_vert = 0; i_vert < 8; ++i_vert) {
-        HEXED_ASSERT(std::isfinite(elems[i_element].shape().vertex(i_vert).unwarped_point().squaredNorm()),
+        HEXED_ASSERT(std::isfinite(elems[i_element].active_shape().vertex(i_vert).unwarped_point().squaredNorm()),
                      "Vertex pos is not finite.")
         if (elems[i_element].fake_shape()) {
           HEXED_ASSERT(std::isfinite(elems[i_element].fake_shape()->vertex(i_vert).unwarped_point().squaredNorm()),
@@ -665,10 +671,10 @@ void Accessible_mesh::_fit_surface() {
       }
       if (replace) {
         con.reset();
-        if (bool(elem_arr[0]->fake_shape()) == bool(elem_arr[1]->fake_shape())) {
+        if (bool(surfaces[0]) == bool(surfaces[1])) {
           _connect(elem_arr, dir);
           if (surfaces[0]) {
-            HEXED_ASSERT(surfaces[1], "Both faces must identify a surface element or neither.");
+            HEXED_ASSERT(surfaces[1], "Both faces must identify a surface element or neither.")
             _connect(surfaces, dir);
           }
         } else {
@@ -676,8 +682,9 @@ void Accessible_mesh::_fit_surface() {
           std::vector<Deformed_element*> fine {elem_arr[!coarse_sign], surfaces[!coarse_sign]};
           HEXED_ASSERT(fine[1], "Fine element must identify a surface element");
           std::array<bool, 2> stretch {false, false};
-          HEXED_ASSERT(elem_arr[coarse_sign]->fake_shape(), "Coarse element must have a fake shape.");
-          int i_bf = fine[1]->shape().boundary_face();
+          HEXED_ASSERT(elem_arr[coarse_sign]->active_shape().for_matching,
+                       "Coarse element must have been created for edge_matching.")
+          int i_bf = fine[1]->active_shape().boundary_face();
           int i_dim = i_bf/2;
           stretch[i_dim < 3 - i_dim - dir.i_dim[!coarse_sign]] = true;
           if (!(i_bf%2)) std::swap(fine[0], fine[1]);
@@ -776,8 +783,8 @@ void Accessible_mesh::_fit_surface() {
         for (int r : {-1, 1, 2}) {
           auto inds = vertex_inds(3, {dim_arr, sign_arr, r});
           for (int i_vert = 0; i_vert < 4; ++i_vert) {
-            if (   &elem_arr[0]->shape().vertex(inds[0][i_vert])
-                == &elem_arr[1]->shape().vertex(inds[1][i_vert])) {
+            if (   &elem_arr[0]->active_shape().vertex(inds[0][i_vert])
+                == &elem_arr[1]->active_shape().vertex(inds[1][i_vert])) {
               rotate = r;
             }
           }
@@ -806,6 +813,18 @@ void Accessible_mesh::_fit_surface() {
   }
   purge();
   _offset_vertices(.03, false);
+
+  {
+    auto& elem_list = elements();
+    for (int i_elem = 0; i_elem < elem_list.size(); ++i_elem) {
+      elem_list[i_elem].destroy_fake();
+    }
+    for (int i_elem = 0; i_elem < elem_list.size(); ++i_elem) {
+      HEXED_ASSERT(elem_list[i_elem].active_shape().boundary_face() == next::Mesh_blocks::no_face,
+                   "left a surface face in")
+    }
+  }
+
   {
     auto faces = _blocks.faces_3d();
     #pragma omp parallel for

@@ -449,6 +449,7 @@ class Element_shape : public Block {
   inline int boundary_face() const {return _i_bf;}
 
   bool deformed;
+  bool for_matching;
   int extruded_direction;
   bool is_new;
   int record;
