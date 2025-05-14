@@ -682,8 +682,6 @@ void Accessible_mesh::_fit_surface() {
           std::vector<Deformed_element*> fine {elem_arr[!coarse_sign], surfaces[!coarse_sign]};
           HEXED_ASSERT(fine[1], "Fine element must identify a surface element");
           std::array<bool, 2> stretch {false, false};
-          HEXED_ASSERT(elem_arr[coarse_sign]->active_shape().for_matching,
-                       "Coarse element must have been created for edge_matching.")
           int i_bf = fine[1]->active_shape().boundary_face();
           int i_dim = i_bf/2;
           stretch[i_dim < 3 - i_dim - dir.i_dim[!coarse_sign]] = true;
@@ -817,6 +815,10 @@ void Accessible_mesh::_fit_surface() {
   {
     auto& elem_list = def.elements();
     Int elems_sz = elem_list.size();
+    for (Int i_con = 0; i_con < (Int)def.bound_cons.size(); ++i_con) {
+      auto& con = def.bound_cons[i_con];
+      if (con) if (con->bound_cond_serial_n() == 2*params.n_dim) con.reset();
+    }
     for (int i_elem = 0; i_elem < elems_sz; ++i_elem) {
       Deformed_element& elem = elem_list[i_elem];
       for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) elem.face_record[i_face] = -1;
@@ -829,6 +831,7 @@ void Accessible_mesh::_fit_surface() {
         new_elem.active_shape().extruded_direction = i_face;
         new_elem.active_shape().for_matching = elem.active_shape().for_matching;
         elem.face_record[i_face] = sn;
+        HEXED_ASSERT(!elem.is_connected(i_face), "element face is already connected")
         for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
           Mat<3> pos = elem.active_shape().vertex(i_vert).unwarped_point();
           elem.shape().vertex(i_vert).set_pos(pos);
