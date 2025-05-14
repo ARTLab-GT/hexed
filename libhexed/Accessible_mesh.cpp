@@ -872,6 +872,19 @@ void Accessible_mesh::_fit_surface() {
       }
       if (el_arr[0] && el_arr[1]) _connect(el_arr, con->direction());
     }
+    Int bound_cons_sz = def.bound_cons.size();
+    for (int i_con = 0; i_con < bound_cons_sz; ++i_con) {
+      auto& con = def.bound_cons[i_con];
+      if (!con) continue;
+      auto dir = con->direction();
+      auto& elem = con->element();
+      int i_face = get_i_face(elem);
+      if (i_face >= 0) {
+        int bc_sn = con->bound_cond_serial_n();
+        int ref_level = elem.refinement_level();
+        connect_boundary(ref_level, true, elem.face_record[i_face], dir.i_dim[0], dir.face_sign[0], bc_sn);
+      }
+    }
     for (int i_elem = 0; i_elem < elems_sz; ++i_elem) {
       Deformed_element& elem = elem_list[i_elem];
       int i_face = get_i_face(elem);
