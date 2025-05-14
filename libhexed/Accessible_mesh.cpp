@@ -835,9 +835,16 @@ void Accessible_mesh::_fit_surface() {
           new_elem.fake_shape()->vertex(i_vert).set_pos(pos);
           // in connection, for interface vertices, elem.shape and new_elem.fake_shape will cancel out,
           // but have to set new_elem.shape to the average
-          int i_sign = !(i_face%2);
+          int i_sign = i_face%2;
           if (math::row_coordinate(params.n_dim, 2, i_face/2, i_vert) == i_sign) {
-            int j_vert = i_vert - math::sign(i_sign)*math::pow(2, params.n_dim - 1 - i_face/2);
+            auto& vert0 = elem.active_shape().vertex(i_vert);
+            auto& vert1 = new_elem.active_shape().vertex(i_vert);
+            vert1.snapped_point = vert0.snapped_point;
+            vert1.snapped_edge = vert0.snapped_edge;
+            vert1.snapped_endpoint = vert0.snapped_endpoint;
+            vert0.snapped_point = vert0.snapped_edge = vert0.snapped_endpoint = -1;
+          } else {
+            int j_vert = i_vert - math::sign(!i_sign)*math::pow(2, params.n_dim - 1 - i_face/2);
             pos = .5*(pos + elem.active_shape().vertex(j_vert).unwarped_point());
           }
           new_elem.shape().vertex(i_vert).set_pos(pos);
@@ -881,6 +888,7 @@ void Accessible_mesh::_fit_surface() {
   }
   purge();
   _blocks.verts();
+  _blocks.boundary_verts();
   _blocks.boundary_sides();
 
   {

@@ -483,14 +483,14 @@ class Element_shape : public Block {
 class Mesh_blocks {
   public:
   Mesh_blocks(int n_dim, const Basis&); //!< \brief Creates a `Mesh_blocks` with `n_dim` physical dimensions.
+  //! \brief List of all vertices
+  Sequence<Vertex&> verts();
   //! \brief Access the list of all vertices which are on the \ref surface_bc "surface boundary".
   //! \brief Does not include vertices on the \ref extremal_bc "extremal boundaries".
   Sequence<Vertex&> boundary_verts();
   //! \brief Access the list of all vertices which are __not__ on the \ref surface_bc "surface boundary".
   //! \brief Includes vertices on the \ref extremal_bc "extremal boundaries".
   Sequence<Vertex&> interior_verts();
-  //! \brief List of all vertices
-  inline Sequence<Vertex&> verts() {return boundary_verts() + interior_verts();}
   //! \brief If 2D, obtains the list of surface edges.
   //! \details If not 2D, returns an empty sequence.
   Sequence<Edge&> edges_2d();
@@ -517,8 +517,12 @@ class Mesh_blocks {
   inline Int n_actual_verts() const {return _interior_verts.size() + _boundary_verts.size();}
 
   private:
-  std::vector<Vertex> _interior_verts;
-  std::vector<Vertex> _boundary_verts;
+  void _update_verts();
+  std::vector<Vertex> _verts;
+  std::vector<Int> _interior_verts;
+  std::vector<Int> _boundary_verts;
+  Int _n_interior_verts;
+  Int _n_boundary_verts;
   std::vector<Edge> _edges_2d;
   std::vector<Face> _faces_3d;
 };

@@ -1031,8 +1031,36 @@ Sequence<T&> purge_fetch(std::vector<T>& vec) {
   return Sequence<T&>::vector_view(vec);
 }
 
-Sequence<Vertex&> Mesh_blocks::interior_verts() {return purge_fetch(_interior_verts);}
-Sequence<Vertex&> Mesh_blocks::boundary_verts() {return purge_fetch(_boundary_verts);}
+Sequence<Vertex&> Mesh_blocks::verts() {return purge_fetch(_verts);}
+
+void Mesh_blocks::_update_verts() {
+  purge_fetch(_verts);
+  _interior_verts.resize(_verts.size(), -1);
+  _boundary_verts.resize(_verts.size(), -1);
+  _n_interior_verts = 0;
+  _n_boundary_verts = 0;
+  for (Int i_vert = 0; i_vert < (Int)_verts.size(); ++i_vert) {
+    if (_verts[i_vert].edges().empty()) _interior_verts[_n_interior_verts++] = i_vert;
+    else _boundary_verts[_n_boundary_verts++] = i_vert;
+  }
+}
+
+Sequence<Vertex&> Mesh_blocks::interior_verts() {
+  _update_verts();
+  return {
+    [this](Int index)->Vertex& {return _verts[_interior_verts[index]];},
+    [this]() {return _n_interior_verts;},
+  };
+}
+
+Sequence<Vertex&> Mesh_blocks::boundary_verts() {
+  _update_verts();
+  return {
+    [this](Int index)->Vertex& {return _verts[_boundary_verts[index]];},
+    [this]() {return _n_boundary_verts;},
+  };
+}
+
 Sequence<Edge&> Mesh_blocks::edges_2d() {return purge_fetch(_edges_2d);}
 Sequence<Face&> Mesh_blocks::faces_3d() {return purge_fetch(_faces_3d);}
 
@@ -1059,12 +1087,8 @@ Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_
   // create vertices for the element and connect the element's vertex pointers to it
   int nv = math::pow(2, n_dim);
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
-    auto vec = &_interior_verts;
-    if (boundary_face != no_face) {
-      if ((i_vert/vstride(n_dim, boundary_face/2))%2 == boundary_face%2) vec = &_boundary_verts;
-    }
-    vec->emplace_back(elem.nominal_position(i_vert), basis.row_size);
-    vec->back().pair(elem._verts[i_vert]);
+    _verts.emplace_back(elem.nominal_position(i_vert), basis.row_size);
+    _verts.back().pair(elem._verts[i_vert]);
   }
   // if necessary, create a `Boundary_block` and connect the element's boundary side pointer to it
   elem._i_bf = boundary_face;
@@ -1077,7 +1101,9 @@ Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_
       _edges_2d.back().pair(elem._bf);
     } else if (n_dim == 3) { // if 3D, the `Boundary_block` is a `Face`
       std::array<Vertex*, 4> verts;
-      for (int i_vert = 0; i_vert < 4; ++i_vert) verts[i_vert] = &_boundary_verts.end()[i_vert - 4];
+      for (int i_vert = 0, j_vert = 0; i_vert < 8; ++i_vert) {
+        if (math::row_coordinate(3, 2, i_dim, i_vert) == sign) verts[j_vert++] = &_verts.end()[i_vert - 8];
+      }
       _faces_3d.emplace_back(verts, basis);
       _faces_3d.back().pair(elem._bf);
       for (int i_edge = 0; i_edge < 4; ++i_edge) _faces_3d.back().edge(i_edge).pair(elem._boundary_edges);
