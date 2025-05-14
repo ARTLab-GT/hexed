@@ -816,14 +816,15 @@ void Accessible_mesh::_fit_surface() {
 
   {
     auto& elem_list = def.elements();
-    Int sz = elem_list.size();
-    for (int i_elem = 0; i_elem < sz; ++i_elem) {
+    Int elems_sz = elem_list.size();
+    for (int i_elem = 0; i_elem < elems_sz; ++i_elem) {
       Deformed_element& elem = elem_list[i_elem];
       for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) elem.face_record[i_face] = -1;
       auto i_face = elem.active_shape().boundary_face();
       if (i_face != next::Mesh_blocks::no_face) {
         Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, i_face);
         Deformed_element& new_elem = def.elems.at(elem.refinement_level(), sn);
+        for (int j_face = 0; j_face < 2*params.n_dim; ++j_face) new_elem.face_record[j_face] = -1;
         new_elem.create_fake(_blocks);
         new_elem.active_shape().extruded_direction = i_face;
         new_elem.active_shape().for_matching = elem.active_shape().for_matching;
@@ -841,20 +842,41 @@ void Accessible_mesh::_fit_surface() {
           }
           new_elem.shape().vertex(i_vert).set_pos(pos);
         }
-        elem.destroy_fake();
+        elem.active_shape().destroy_boundary_face();
       }
     }
-    for (int i_elem = 0; i_elem < sz; ++i_elem) {
-      Deformed_element& elem = elem_list[i_elem];
-      int i_face = -1;
-      for (int j_face = 0; j_face < 2*params.n_dim; ++j_face) {
-        if (elem.face_record[j_face] >= 0) i_face = j_face;
+    auto get_i_face = [this](Element& elem)->int {
+      for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+        if (elem.face_record[i_face] >= 0) return i_face;
       }
+      return -1;
+    };
+    Int cons_sz = def.cons.size();
+    for (Int i_con = 0; i_con < cons_sz; ++i_con) {
+      auto& con = def.cons[i_con];
+      if (!con) continue;
+      std::array<Deformed_element*, 2> el_arr {nullptr, nullptr};
+      for (int i_elem = 0; i_elem < 2; ++i_elem) {
+        auto& elem = con->element(i_elem);
+        int i_face = get_i_face(elem);
+        if (i_face >= 0) {
+          el_arr[i_elem] = &def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
+        }
+      }
+      if (el_arr[0] && el_arr[1]) _connect(el_arr, con->direction());
+    }
+    for (int i_elem = 0; i_elem < elems_sz; ++i_elem) {
+      Deformed_element& elem = elem_list[i_elem];
+      int i_face = get_i_face(elem);
       if (i_face >= 0) {
         Deformed_element& new_elem = def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
         std::array<Deformed_element*, 2> el_arr {&new_elem, &elem};
         _connect(el_arr, {{i_face/2, i_face/2}, {!(i_face%2), bool(i_face%2)}, 0});
       }
+    }
+    for (int i_elem = 0; i_elem < elems_sz; ++i_elem) {
+      Deformed_element& elem = elem_list[i_elem];
+      for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) elem.face_record[i_face] = 0;
     }
   }
   purge();

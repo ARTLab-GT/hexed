@@ -439,6 +439,7 @@ class Element_shape : public Block {
   static void connect(std::array<std::vector<Element_shape*>, 2>, Connection_direction);
 
   void glue(Element_shape& that, std::array<std::vector<double>, 2> corners);
+  void destroy_boundary_face();
   inline std::array<std::vector<double>, 2> glued_corners() const {return _glued_corners;}
   inline void set_glued_corners(std::array<std::vector<double>, 2> corners) {_glued_corners = corners;}
   inline void unglue() {_glued_to.set();}

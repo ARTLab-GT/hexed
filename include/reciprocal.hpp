@@ -78,7 +78,11 @@ class Reciprocal_list : public mutual::Multiple<T, U> {
   //! \details In other words, adds `that` to `this`'s list of partners.
   void add(mutual::Base<U, T>& that) {this->_connect(that);}
   //! \brief disconnects all partners
-  void clear() {for (auto& p : this->partners()) this->_disconnect(p);}
+  void clear() {
+    while (!this->partners().empty()) {
+      this->_disconnect(this->partners()[0]);
+    }
+  }
 
   //! \brief Reciprocally disconnects `this` from `that`.
   //! \details In other words, removes `that` from `this`'s list of partners.

@@ -1013,6 +1013,13 @@ void Element_shape::glue(Element_shape& that, std::array<std::vector<double>, 2>
   _glued_corners = corners;
 }
 
+void Element_shape::destroy_boundary_face() {
+  _bf.unpair();
+  _boundary_edges.clear();
+  _sf.set();
+  _i_bf = Mesh_blocks::no_face;
+}
+
 const int Mesh_blocks::no_face = -1;
 
 Mesh_blocks::Mesh_blocks(int nd, const Basis& b): n_dim{nd}, basis{b} {}
