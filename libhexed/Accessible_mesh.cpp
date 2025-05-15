@@ -812,9 +812,10 @@ void Accessible_mesh::_fit_surface() {
   purge();
   _offset_vertices(.03, false);
 
-  {
+  { // add another layer of extruded elements to improve mesh quality on sharp edges
     auto& elem_list = def.elements();
     Int elems_sz = elem_list.size();
+    // delete boundary connections so we can add new elements in their place
     for (Int i_con = 0; i_con < (Int)def.bound_cons.size(); ++i_con) {
       auto& con = def.bound_cons[i_con];
       if (con) if (con->bound_cond_serial_n() == 2*params.n_dim) con.reset();
@@ -862,6 +863,8 @@ void Accessible_mesh::_fit_surface() {
       return -1;
     };
     Int cons_sz = def.cons.size();
+    Int ref_cons_sz [3];
+    for (int i_ref = 0; i_ref < 3; ++i_ref) ref_cons_sz[i_ref] = def.ref_face_cons[i_ref].size();
     for (Int i_con = 0; i_con < cons_sz; ++i_con) {
       auto& con = def.cons[i_con];
       if (!con) continue;
@@ -874,6 +877,36 @@ void Accessible_mesh::_fit_surface() {
         }
       }
       if (el_arr[0] && el_arr[1]) _connect(el_arr, con->direction());
+    }
+    if (params.n_dim == 3) {
+      for (int i_ref = 1; i_ref < 3; ++i_ref) {
+        for (Int i_con = 0; i_con < ref_cons_sz[i_ref]; ++i_con) { // ref cons with exactly 2 fine elements
+          auto& con = def.ref_face_cons[i_ref][i_con];
+          if (!con) continue;
+          Deformed_element* coarse = nullptr;
+          int rl = con->coarse_element().refinement_level();
+          int i_face = get_i_face(con->coarse_element());
+          if (i_face < 0) continue;
+          coarse = &def.elems.at(rl, con->coarse_element().face_record[i_face]);
+          auto stretch = con->stretch();
+          std::vector<Deformed_element*> fine;
+          for (int i_fine = 0, last_fine = -1; i_fine < con->n_fine_elements(); ++i_fine) {
+            auto& elem = con->connection(i_fine).element(!con->order_reversed());
+            i_face = get_i_face(elem);
+            if (i_face >= 0) {
+              fine.push_back(&def.elems.at(elem.refinement_level(), elem.face_record[i_face]));
+              if (last_fine == -1) last_fine = i_fine;
+              else if (i_ref == 2) {
+                stretch[i_fine - last_fine > 1] = true;
+              }
+            }
+          }
+          if (fine.size() != 2) continue;
+          _connect(coarse, fine, con->direction(), stretch);
+        }
+      }
+    } else {
+      HEXED_THROW("need to implement this for 2D", assert::Not_implemented_error)
     }
     Int bound_cons_sz = def.bound_cons.size();
     for (int i_con = 0; i_con < bound_cons_sz; ++i_con) {
