@@ -14,4 +14,9 @@ Face_refinement::Face_refinement(Face& face, int sdim)
   _fine1.associate(*this);
 }
 
+std::array<std::vector<Element*>, 2> Face_refinement::elements() {
+  std::array<std::vector<Element*>, 2> elems;
+  return elems;
+}
+
 }

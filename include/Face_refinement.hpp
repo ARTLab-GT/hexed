@@ -13,6 +13,7 @@ class Face_refinement : public Mortal {
   int split_dim() const {return _split_dim;}
   inline std::array<Face*, 2> fine() {return {&_fine0, &_fine1};}
   inline bool alive() const {return _coarse;}
+  std::array<std::vector<Element*>, 2> elements();
 
   private:
   Reciprocal_ptr<Face_refinement, Face> _coarse;

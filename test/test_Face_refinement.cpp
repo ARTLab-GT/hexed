@@ -22,4 +22,31 @@ TEST_CASE("Face_refinement") {
   f.reset();
   REQUIRE(!fr.alive());
   REQUIRE_THROWS(fr.coarse());
+
+  SECTION("elements") {
+    hexed::Storage_params params {2, 5, 3, 2};
+    std::vector<std::unique_ptr<hexed::Element>> elems;
+    for (int i = 0; i < 4; ++i) elems.push_back(std::make_unique<hexed::Element>(params));
+    std::vector<hexed::Face_refinement> face_refs;
+    face_refs.emplace_back(elems[0]->face(1), 0);
+    face_refs.emplace_back(elems[1]->face(1), 0);
+    face_refs.emplace_back(elems[2]->face(0), 1);
+    face_refs.emplace_back(elems[3]->face(0), 1);
+    std::vector<hexed::Neighbor_connection> neighb_cons;
+    for (int i = 0; i < 2; ++i) {
+      for (int j = 0; j < 2; ++j) {
+        std::array<hexed::Face*, 2> face_arr {face_refs[i].fine()[j], face_refs[2 + j].fine()[i]};
+        neighb_cons.emplace_back(params, face_arr);
+      }
+    }
+    for (auto& ref : face_refs) {
+      auto ref_elems = ref.elements();
+      REQUIRE_THAT(ref_elems[0], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
+        elems[0].get(), elems[1].get(), elems[0].get(), elems[1].get(),
+      }));
+      REQUIRE_THAT(ref_elems[1], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
+        elems[2].get(), elems[2].get(), elems[3].get(), elems[3].get(),
+      }));
+    }
+  }
 }
