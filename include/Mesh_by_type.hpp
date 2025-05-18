@@ -174,7 +174,7 @@ class Mesh_by_type : public View_by_type<element_t>
       auto& elem = elem_seq[i_elem];
       for (int i_dim = 0; i_dim < par.n_dim; ++i_dim) {
         for (int face_sign = 0; face_sign < 2; ++face_sign) {
-          if (elem.face_record[2*i_dim + face_sign] == 0) {
+          if (!elem.is_connected(2*i_dim + face_sign)) {
             bound_cons.emplace_back(new Typed_bound_connection<element_t>(elem, i_dim, face_sign, bc_sn, bound_cond.n_prescribed(par.n_dim)));
             connect_normal(2*i_dim + face_sign);
           }

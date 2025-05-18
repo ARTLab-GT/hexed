@@ -29,6 +29,8 @@ class Accessible_mesh : public Mesh {
   Concatenation<Boundary_connection&> bound_cons;
   Concatenation<Face_connection<Deformed_element>&> def_face_cons;
   Concatenation<Refined_face&> ref_face_v;
+  std::array<std::vector<Neighbor_connection>, 2> _neighbor_cons;
+  std::vector<std::vector<Face_refinement>> _face_refs;
   int surf_bc_sn;
   std::unique_ptr<Surface_geom> surf_geom;
   std::vector<Element_face_connection<Deformed_element>*> extrude_cons;
@@ -82,6 +84,10 @@ class Accessible_mesh : public Mesh {
   void deform();
   void create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
   void read_file(std::string file_name);
+
+  template <typename Elem_t>
+  void _connect(std::array<std::vector<Elem_t*>, 2> elems, Connection_direction dir);
+
   void _connect_shapes(Element&, Element&, Connection_direction);
   void _connect(std::array<Element*, 2>, Con_dir<Element>);
   void _connect(std::array<Deformed_element*, 2>, Con_dir<Deformed_element>);

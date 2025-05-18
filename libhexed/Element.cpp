@@ -124,7 +124,7 @@ void Element::set_face(int i_face, double* data) {
   HEXED_ASSERT(!faces[i_face] || !data, "connecting an already-connected face");
   faces[i_face] = data;
 }
-bool Element::is_connected(int i_face) {return faces[i_face];}
+bool Element::is_connected(int i_face) {return faces[i_face] || _faces[i_face].connected();}
 
 Mat<3> Element::_compute_pos() const {
   Mat<3> pos = Mat<3>::Zero();

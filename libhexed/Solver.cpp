@@ -760,7 +760,7 @@ void Solver::set_uncert_surface_rep(int bc_sn) {
       int i_dim = (elem.record - 2*nd)/2;
       int positive = elem.record%2;
       for (int i_face = 0; i_face < 2*nd; ++i_face) {
-        if (i_face/2 != i_dim) {
+        if (i_face/2 != i_dim && elem.face(i_face, false)) {
           // extrapolate the reference level normal to the wall surface
           // because only at the wall surface is the reference level normal the same as the wall normal
           // and then write that back to the whole face
@@ -812,7 +812,7 @@ void Solver::set_uncert_surface_rep(int bc_sn) {
     auto& elem = elems[i_elem];
     if (elem.record/(2*nd) == 1) {
       for (int i_face = 0; i_face < 2*nd; ++i_face) {
-        if (i_face/2 != (elem.record - 2*nd)/2) {
+        if (i_face/2 != (elem.record - 2*nd)/2 && elem.face(i_face, false)) {
           Eigen::Map<Mat<dyn, dyn>> face(elem.face(i_face, false), nfq, nd);
           Mat<> norm = face.rowwise().norm();
           elem.uncertainty += std::sqrt(norm.dot(weights.asDiagonal()*norm));

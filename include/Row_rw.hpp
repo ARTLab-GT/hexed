@@ -3,8 +3,7 @@
 
 #include "Row_index.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief "row read/write"
  * \details Can read/write to/from a row of quadrature points in an element
@@ -15,8 +14,7 @@ namespace hexed
  * (which is arbitrary regardless of dimensionality).
  */
 template <int n_var, int row_size>
-class Row_rw
-{
+class Row_rw {
   public:
   typedef Mat<row_size, n_var> Row;
   typedef Mat<2, n_var> Bound;
@@ -27,8 +25,7 @@ class Row_rw
   Row_rw(Row_rw&&) = delete; //!< \overload
 
   //! \brief reads from a row of quadrature points
-  static Row read_row(const double* data, Row_index ind)
-  {
+  static Row read_row(const double* data, Row_index ind) {
     Row r;
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int i_row = 0; i_row < row_size; ++i_row) {
@@ -39,8 +36,7 @@ class Row_rw
   }
 
   //! \brief multiples a row of values by `coef` and then adds the values in `w` to it (basically a row-wise axpy)
-  static void write_row(Row w, double* data, Row_index ind, double coef)
-  {
+  static void write_row(Row w, double* data, Row_index ind, double coef) {
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int i_row = 0; i_row < row_size; ++i_row) {
         double& d = data[i_var*ind.n_qpoint + ind.i_qpoint(i_row)];
@@ -50,8 +46,7 @@ class Row_rw
   }
 
   //! \brief reads from the face values associated with a given row
-  static Bound read_bound(const std::array<double*, 6> faces, Row_index ind)
-  {
+  static Bound read_bound(const std::array<double*, 6> faces, Row_index ind) {
     Bound b;
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int is_positive : {0, 1}) {
@@ -62,11 +57,12 @@ class Row_rw
   }
 
   //! \brief writes the values in `b` to the face data associated with the specified row
-  static void write_bound(Bound b, std::array<double*, 6> faces, Row_index ind)
-  {
+  static void write_bound(Bound b, std::array<double*, 6> faces, Row_index ind) {
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int is_positive : {0, 1}) {
-        faces[ind.i_dim*2 + is_positive][i_var*ind.n_fqpoint + ind.i_face_qpoint()] = b(is_positive, i_var);
+        if (faces[ind.i_dim*2 + is_positive]) { //! \todo remove this after fixing face data
+          faces[ind.i_dim*2 + is_positive][i_var*ind.n_fqpoint + ind.i_face_qpoint()] = b(is_positive, i_var);
+        }
       }
     }
   }
