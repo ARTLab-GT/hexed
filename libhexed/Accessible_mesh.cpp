@@ -691,19 +691,6 @@ void Accessible_mesh::_fit_surface() {
           }
         } else {
           _connect(to_connect, dir);
-          #if 0
-          bool coarse_sign = surfaces[0];
-          std::vector<Deformed_element*> fine {elem_arr[!coarse_sign], surfaces[!coarse_sign]};
-          HEXED_ASSERT(fine[1], "Fine element must identify a surface element");
-          std::array<bool, 2> stretch {false, false};
-          int i_bf = fine[1]->active_shape().boundary_face();
-          int i_dim = i_bf/2;
-          stretch[i_dim < 3 - i_dim - dir.i_dim[!coarse_sign]] = true;
-          if (!(i_bf%2)) std::swap(fine[0], fine[1]);
-          Con_dir<Deformed_element> new_dir {{dir.i_dim[coarse_sign], dir.i_dim[!coarse_sign]},
-                                             {dir.face_sign[coarse_sign], dir.face_sign[!coarse_sign]}};
-          _connect(elem_arr[coarse_sign], fine, new_dir, stretch);
-          #endif
         }
       }
     }
@@ -880,6 +867,8 @@ void Accessible_mesh::_fit_surface() {
     Int cons_sz = def.cons.size();
     Int ref_cons_sz [3];
     for (int i_ref = 0; i_ref < 3; ++i_ref) ref_cons_sz[i_ref] = def.ref_face_cons[i_ref].size();
+    Int face_refs_sz = _face_refs.size();
+    Int bound_cons_sz = def.bound_cons.size();
     for (Int i_con = 0; i_con < cons_sz; ++i_con) {
       auto& con = def.cons[i_con];
       if (!con) continue;
@@ -923,7 +912,49 @@ void Accessible_mesh::_fit_surface() {
     } else {
       HEXED_THROW("need to implement this for 2D", assert::Not_implemented_error)
     }
-    Int bound_cons_sz = def.bound_cons.size();
+    for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
+      int n_fine = params.n_vertices()/2;
+      Connection_direction dir = _face_refs[i_ref][0].get_direction();
+      auto orig_elems = _face_refs[i_ref][0].elements();
+      bool any_connected = false;
+      bool all_connected = true;
+      bool has_extrude = false;
+      std::array<std::vector<Deformed_element*>, 2> new_elems;
+      for (int i_side = 0; i_side < 2; ++i_side) {
+        new_elems[i_side].resize(n_fine, nullptr);
+        for (int i_elem = 0; i_elem < n_fine; ++i_elem) {
+          auto& elem = *orig_elems[i_side][i_elem];
+          int i_face = get_i_face(elem);
+          if (i_face >= 0) {
+            has_extrude = true;
+            new_elems[i_side][i_elem] = &def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
+            any_connected = any_connected || new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
+            all_connected = all_connected && new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
+          }
+        }
+        for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
+          int n_row = params.n_dim == 3 ? 2 : 1;
+          int stride = (params.n_dim == 3 && i_dim == 0) ? 2 : 1;
+          for (int i_row = 0; i_row < n_row; ++i_row) {
+            Deformed_element** row [2];
+            for (int i_col = 0; i_col < 2; ++i_col) row[i_col] = &new_elems[i_side][i_row*2/stride + stride*i_col];
+            for (int i_col = 0; i_col < 2; ++i_col) {
+              if ((!*row[i_col]) && bool(*row[!i_col])) *row[i_col] = *row[!i_col];
+            }
+          }
+        }
+      }
+      HEXED_ASSERT(any_connected == all_connected,
+                   "If any of the elements are already connected then they all must be.")
+      if (has_extrude && !any_connected) {
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          for (int i_elem = 0; i_elem < n_fine; ++i_elem) {
+            HEXED_ASSERT(new_elems[i_side][i_elem], "An element is still null.")
+          }
+        }
+        _connect(new_elems, dir);
+      }
+    }
     for (int i_con = 0; i_con < bound_cons_sz; ++i_con) {
       auto& con = def.bound_cons[i_con];
       if (!con) continue;
@@ -1459,6 +1490,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
       }
     }
   }
+  if (_face_refs.back().empty()) _face_refs.pop_back();
   for (int i_face = 0; i_face < nv/2; ++i_face) {
     bool already_connected = false;
     for (int j_face = 0; j_face < i_face; ++j_face) {
