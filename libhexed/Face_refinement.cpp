@@ -1,4 +1,5 @@
 #include <hexed/Face_refinement.hpp>
+#include <hexed/vertex_inds.hpp>
 
 namespace hexed {
 
@@ -63,14 +64,21 @@ std::array<std::vector<Element*>, 2> Face_refinement::elements() {
   std::array<std::vector<Element*>, 2> elems;
   std::array<Face*, 2> start_from {fine()[0], &coarse()};
   auto par = coarse().storage_params();
+  int n_fine = par.n_vertices()/2;
   auto dir_rev = _dir_reverse();
   for (int upstream = 0; upstream < 2; ++upstream) {
     int i_side = upstream != dir_rev.second;
-    elems[i_side].resize(par.n_vertices()/2);
+    elems[i_side].resize(n_fine);
     auto& elem_face = find_element_face(*start_from[upstream], upstream);
     std::vector<int> bounds {0, 1 + (par.n_dim > 2), 0, 1 + (par.n_dim > 1)};
     find_elements(elem_face, elems[i_side], bounds, false);
   }
+  std::vector<int> fvi = face_vertex_inds(par.n_dim, dir_rev.first);
+  std::vector<Element*> permuted(n_fine);
+  for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
+    permuted[fvi[i_fine]] = elems[1][i_fine];
+  }
+  elems[1] = permuted;
   return elems;
 }
 

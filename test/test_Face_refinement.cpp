@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Face_refinement.hpp>
+#include <hexed/vertex_inds.hpp>
 
 TEST_CASE("Face_refinement") {
   hexed::Storage_params params {2, 5, 3, 2};
@@ -26,28 +27,52 @@ TEST_CASE("Face_refinement") {
   SECTION("elements") {
     hexed::Storage_params params {2, 5, 3, 2};
     std::vector<std::unique_ptr<hexed::Element>> elems;
-    for (int i = 0; i < 4; ++i) elems.push_back(std::make_unique<hexed::Element>(params));
     std::vector<hexed::Face_refinement> face_refs;
-    face_refs.emplace_back(elems[0]->face(1), 0);
-    face_refs.emplace_back(elems[1]->face(1), 0);
-    face_refs.emplace_back(elems[2]->face(0), 1);
-    face_refs.emplace_back(elems[3]->face(0), 1);
     std::vector<hexed::Neighbor_connection> neighb_cons;
-    for (int i = 0; i < 2; ++i) {
-      for (int j = 0; j < 2; ++j) {
-        std::array<hexed::Face*, 2> face_arr {face_refs[i].fine()[j], face_refs[2 + j].fine()[i]};
-        neighb_cons.emplace_back(params, face_arr);
+    SECTION("2 on 2") {
+      for (int i = 0; i < 4; ++i) elems.push_back(std::make_unique<hexed::Element>(params));
+      face_refs.emplace_back(elems[0]->face(1), 0);
+      face_refs.emplace_back(elems[1]->face(1), 0);
+      face_refs.emplace_back(elems[2]->face(0), 1);
+      face_refs.emplace_back(elems[3]->face(0), 1);
+      for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j) {
+          std::array<hexed::Face*, 2> face_arr {face_refs[i].fine()[j], face_refs[2 + j].fine()[i]};
+          neighb_cons.emplace_back(params, face_arr);
+        }
+      }
+      for (int i_ref = 0; i_ref < (int)face_refs.size(); ++i_ref) {
+        auto ref_elems = face_refs[i_ref].elements();
+        REQUIRE_THAT(ref_elems[0], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
+          elems[0].get(), elems[1].get(), elems[0].get(), elems[1].get(),
+        }));
+        REQUIRE_THAT(ref_elems[1], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
+          elems[2].get(), elems[2].get(), elems[3].get(), elems[3].get(),
+        }));
+        REQUIRE(face_refs[i_ref].get_direction() == hexed::Connection_direction{{0, 0}, {1, 0}, 0});
       }
     }
-    for (int i_ref = 0; i_ref < (int)face_refs.size(); ++i_ref) {
-      auto ref_elems = face_refs[i_ref].elements();
-      REQUIRE_THAT(ref_elems[0], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
-        elems[0].get(), elems[1].get(), elems[0].get(), elems[1].get(),
-      }));
-      REQUIRE_THAT(ref_elems[1], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
-        elems[2].get(), elems[2].get(), elems[3].get(), elems[3].get(),
-      }));
-      REQUIRE(face_refs[i_ref].get_direction() == hexed::Connection_direction{{0, 0}, {1, 0}, 0});
+    SECTION("1 on 4") {
+      for (int i = 0; i < 5; ++i) elems.push_back(std::make_unique<hexed::Element>(params));
+      face_refs.emplace_back(elems[4]->face(4), 0);
+      face_refs.emplace_back(*face_refs[0].fine()[0], 1);
+      face_refs.emplace_back(*face_refs[0].fine()[1], 1);
+      hexed::Connection_direction dir {{2, 1}, {0, 1}};
+      auto inds = hexed::face_vertex_inds(3, dir);
+      for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j) {
+          std::array<hexed::Face*, 2> face_arr {face_refs[1 + i].fine()[j], &elems[inds[2*i + j]]->face(3)};
+          neighb_cons.emplace_back(params, face_arr);
+        }
+      }
+      for (int i_ref = 0; i_ref < (int)face_refs.size(); ++i_ref) {
+        auto ref_elems = face_refs[i_ref].elements();
+        REQUIRE_THAT(ref_elems[0], Catch::Matchers::RangeEquals(std::vector<hexed::Element*>(4, elems[4].get())));
+        REQUIRE_THAT(ref_elems[1], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
+          elems[0].get(), elems[1].get(), elems[2].get(), elems[3].get(),
+        }));
+        REQUIRE(face_refs[i_ref].get_direction() == dir);
+      }
     }
   }
 }
