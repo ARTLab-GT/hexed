@@ -17,6 +17,7 @@ class Face_refinement : public Mortal {
   Connection_direction get_direction();
 
   private:
+  std::pair<Connection_direction, bool> _dir_reverse();
   Reciprocal_ptr<Face_refinement, Face> _coarse;
   int _split_dim;
   Face _fine0;

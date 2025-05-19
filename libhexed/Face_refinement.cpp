@@ -63,9 +63,11 @@ std::array<std::vector<Element*>, 2> Face_refinement::elements() {
   std::array<std::vector<Element*>, 2> elems;
   std::array<Face*, 2> start_from {fine()[0], &coarse()};
   auto par = coarse().storage_params();
-  for (int i_side = 0; i_side < 2; ++i_side) {
+  auto dir_rev = _dir_reverse();
+  for (int upstream = 0; upstream < 2; ++upstream) {
+    int i_side = upstream != dir_rev.second;
     elems[i_side].resize(par.n_vertices()/2);
-    auto& elem_face = find_element_face(*start_from[i_side], i_side);
+    auto& elem_face = find_element_face(*start_from[upstream], upstream);
     std::vector<int> bounds {0, 1 + (par.n_dim > 2), 0, 1 + (par.n_dim > 1)};
     find_elements(elem_face, elems[i_side], bounds, false);
   }
@@ -73,9 +75,15 @@ std::array<std::vector<Element*>, 2> Face_refinement::elements() {
 }
 
 Connection_direction Face_refinement::get_direction() {
+  return _dir_reverse().first;
+}
+
+std::pair<Connection_direction, bool> Face_refinement::_dir_reverse() {
   HEXED_ASSERT(_fine0.connected(), "Not connected.")
-  if (_fine0.neighbor_connection()) return _fine0.neighbor_connection()->get_direction();
-  return _fine0.face_ref_fine()->get_direction();
+  if (_fine0.neighbor_connection()) {
+    return {_fine0.neighbor_connection()->get_direction(), &_fine0.neighbor_connection()->face(1) == &_fine0};
+  }
+  return _fine0.face_ref_fine()->_dir_reverse();
 }
 
 }
