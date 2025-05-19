@@ -39,12 +39,12 @@ TEST_CASE("Face_refinement") {
         neighb_cons.emplace_back(params, face_arr);
       }
     }
-    for (auto& ref : face_refs) {
-      auto ref_elems = ref.elements();
-      REQUIRE_THAT(ref_elems[0], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
+    for (int i_ref = 0; i_ref < (int)face_refs.size(); ++i_ref) {
+      auto ref_elems = face_refs[i_ref].elements();
+      REQUIRE_THAT(ref_elems[i_ref >= 2], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
         elems[0].get(), elems[1].get(), elems[0].get(), elems[1].get(),
       }));
-      REQUIRE_THAT(ref_elems[1], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
+      REQUIRE_THAT(ref_elems[i_ref < 2], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
         elems[2].get(), elems[2].get(), elems[3].get(), elems[3].get(),
       }));
     }

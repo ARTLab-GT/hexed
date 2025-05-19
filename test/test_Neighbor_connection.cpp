@@ -15,6 +15,8 @@ TEST_CASE("Neighbor_connection") {
     REQUIRE(f2->neighbor_connection() == &con);
     REQUIRE(f0.connected());
     REQUIRE(f2->connected());
+    REQUIRE(&con.opposite_face(*f2) == &f0);
+    REQUIRE(&con.opposite_face(f0) == f2.get());
     f2.reset();
     REQUIRE(!con.alive());
     REQUIRE(&con.face(0) == &f0);
