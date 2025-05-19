@@ -708,6 +708,8 @@ void Accessible_mesh::_fit_surface() {
         replace = true;
       }
       std::vector<next::Element_shape*> coarse_shapes(4, &coarse->active_shape());
+      std::array<std::vector<Deformed_element*>, 2> to_connect;
+      to_connect[0].resize(4, coarse);
       rec = coarse->face_record[dir.i_face(reverse)];
       [[maybe_unused]] bool coarse_surface = false;
       if (rec >= 0) {
@@ -717,6 +719,7 @@ void Accessible_mesh::_fit_surface() {
           if (math::row_coordinate(2, 2, bf/2 > 3 - bf/2 - dir.i_dim[reverse], i_elem) == bf%2) {
             coarse_shapes[i_elem] = &surface->active_shape();
             coarse_surface = true;
+            to_connect[0][i_elem] = surface;
           }
         }
       }
@@ -743,16 +746,17 @@ void Accessible_mesh::_fit_surface() {
               }
             }
             fine_shapes.push_back(&f->active_shape());
+            to_connect[1].push_back(f);
             ++i_elem;
           }
         }
       }
       if (replace) {
-        //HEXED_ASSERT(fine_surface || !coarse_surface, "2-on-2 connection", assert::Not_implemented_error);
         Con_dir<Deformed_element> new_dir {{dir.i_dim[reverse], dir.i_dim[!reverse]},
                                            {dir.face_sign[reverse], dir.face_sign[!reverse]}};
         con.reset();
-        next::Element_shape::connect({coarse_shapes, fine_shapes}, new_dir);
+        //next::Element_shape::connect({coarse_shapes, fine_shapes}, new_dir);
+        _connect(to_connect, new_dir);
       }
     }
     for (Int i_con = 0; i_con < bound_cons_sz; ++i_con) {
@@ -1462,23 +1466,28 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
       shapes[i_side].push_back(&elems[i_side][i_elem]->active_shape());
     }
   }
-  std::vector<int> fvi {face_vertex_inds(nd, dir)};
   _face_refs.emplace_back();
-  for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-    for (int i_row = 0; i_row < nv/4; ++i_row) {
-      int inds [2][2][2];
-      for (int j_row = 0; j_row < 2; ++j_row) {
-        for (int i_vert = 0; i_vert < 2; ++i_vert) {
-          for (int i_side = 0; i_side < 2; ++i_side) {
-            int row = i_row != (nd == 3 && j_row == 1);
-            inds[i_side][j_row][i_vert] = row*math::pow(2, i_dim) + i_vert*math::pow(2, nd - 2 - i_dim);
+  std::vector<int> fvi {face_vertex_inds(nd, dir)};
+  Array<int> permute_inds({2, nv/2});
+  for (int i_face = 0; i_face < nv/2; ++i_face) {
+    permute_inds(0)[i_face] = fvi[i_face];
+    permute_inds(1)[fvi[i_face]] = i_face;
+  }
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+      for (int i_row = 0; i_row < nv/4; ++i_row) {
+        int inds [2][2][2];
+        for (int j_row = 0; j_row < 2; ++j_row) {
+          for (int i_vert = 0; i_vert < 2; ++i_vert) {
+            for (int j_side = 0; j_side < 2; ++j_side) {
+              int row = i_row != (nd == 3 && j_row == 1);
+              inds[j_side][j_row][i_vert] = row*math::pow(2, i_dim) + i_vert*math::pow(2, nd - 2 - i_dim);
+            }
+            inds[!i_side][j_row][i_vert] = permute_inds(i_side)[inds[!i_side][j_row][i_vert]];
           }
-          inds[1][j_row][i_vert] = fvi[inds[1][j_row][i_vert]];
         }
-      }
-      for (int i_side = 0; i_side < 2; ++i_side) {
-        if (faces[4* i_side + inds[i_side][0][1]].get() == faces[4* i_side + inds[i_side][0][0]].get() &&
-            faces[4*!i_side + inds[i_side][0][1]].get() != faces[4*!i_side + inds[i_side][0][0]].get()) {
+        if (faces[4* i_side + inds[ i_side][0][1]].get() == faces[4* i_side + inds[ i_side][0][0]].get() &&
+            faces[4*!i_side + inds[!i_side][0][1]].get() != faces[4*!i_side + inds[!i_side][0][0]].get()) {
           _face_refs.back().emplace_back(faces[4*i_side + inds[i_side][0][0]].value(), i_dim);
           for (int i_face = 0; i_face < 2; ++i_face) {
             auto& f0 = faces[4*i_side + inds[i_side][0][i_face]];
@@ -1497,7 +1506,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
       already_connected = already_connected || faces[j_face].get() == faces[i_face].get();
     }
     if (!already_connected) {
-      std::array<Face*, 2> face_arr {faces[i_face].get(), faces[nv/2 + i_face].get()};
+      std::array<Face*, 2> face_arr {faces[i_face].get(), faces[nv/2 + fvi[i_face]].get()};
       _neighbor_cons[Elem_t::is_deformed].emplace_back(faces[0]->storage_params(), face_arr, dir.rotate);
     }
   }

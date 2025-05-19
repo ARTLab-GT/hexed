@@ -74,5 +74,28 @@ TEST_CASE("Face_refinement") {
         REQUIRE(face_refs[i_ref].get_direction() == dir);
       }
     }
+    SECTION("4 on 1") {
+      for (int i = 0; i < 5; ++i) elems.push_back(std::make_unique<hexed::Element>(params));
+      face_refs.emplace_back(elems[4]->face(3), 0);
+      face_refs.emplace_back(*face_refs[0].fine()[0], 1);
+      face_refs.emplace_back(*face_refs[0].fine()[1], 1);
+      hexed::Connection_direction dir {{0, 1}, {1, 1}};
+      auto inds = hexed::face_vertex_inds(3, dir);
+      for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j) {
+          int ind = inds[2*i + j];
+          std::array<hexed::Face*, 2> face_arr {&elems[2*i + j]->face(1), face_refs[1 + ind/2].fine()[ind%2]};
+          neighb_cons.emplace_back(params, face_arr);
+        }
+      }
+      for (int i_ref = 0; i_ref < (int)face_refs.size(); ++i_ref) {
+        auto ref_elems = face_refs[i_ref].elements();
+        REQUIRE_THAT(ref_elems[0], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
+          elems[0].get(), elems[1].get(), elems[2].get(), elems[3].get(),
+        }));
+        REQUIRE_THAT(ref_elems[1], Catch::Matchers::RangeEquals(std::vector<hexed::Element*>(4, elems[4].get())));
+        REQUIRE(face_refs[i_ref].get_direction() == dir);
+      }
+    }
   }
 }
