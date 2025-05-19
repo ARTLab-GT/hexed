@@ -14,6 +14,7 @@ class Face_refinement : public Mortal {
   inline std::array<Face*, 2> fine() {return {&_fine0, &_fine1};}
   inline bool alive() const {return _coarse;}
   std::array<std::vector<Element*>, 2> elements();
+  Connection_direction get_direction();
 
   private:
   Reciprocal_ptr<Face_refinement, Face> _coarse;

@@ -72,4 +72,10 @@ std::array<std::vector<Element*>, 2> Face_refinement::elements() {
   return elems;
 }
 
+Connection_direction Face_refinement::get_direction() {
+  HEXED_ASSERT(_fine0.connected(), "Not connected.")
+  if (_fine0.neighbor_connection()) return _fine0.neighbor_connection()->get_direction();
+  return _fine0.face_ref_fine()->get_direction();
+}
+
 }

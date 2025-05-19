@@ -47,6 +47,7 @@ TEST_CASE("Face_refinement") {
       REQUIRE_THAT(ref_elems[i_ref < 2], Catch::Matchers::RangeEquals(std::vector<hexed::Element*> {
         elems[2].get(), elems[2].get(), elems[3].get(), elems[3].get(),
       }));
+      REQUIRE(face_refs[i_ref].get_direction() == hexed::Connection_direction{{0, 0}, {1, 0}, 0});
     }
   }
 }
