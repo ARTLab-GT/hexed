@@ -1,6 +1,8 @@
 #ifndef HEXED_KERNEL_CONNECTION_HPP_
 #define HEXED_KERNEL_CONNECTION_HPP_
 
+#include <utils.hpp>
+
 namespace hexed {
 
 class Connection_direction {
@@ -33,9 +35,8 @@ class Connection_direction {
   }
 };
 
-inline bool operator==(Connection_direction dir0, Connection_direction dir1) {
-  return dir0.i_dim == dir1.i_dim && dir0.face_sign == dir1.face_sign && dir0.rotate == dir1.rotate;
-}
+bool operator==(Connection_direction dir0, Connection_direction dir1);
+std::string to_string(Connection_direction);
 
 class Connection {
   public:
