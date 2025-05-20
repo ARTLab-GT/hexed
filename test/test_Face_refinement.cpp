@@ -76,10 +76,10 @@ TEST_CASE("Face_refinement") {
     }
     SECTION("4 on 1") {
       for (int i = 0; i < 5; ++i) elems.push_back(std::make_unique<hexed::Element>(params));
-      face_refs.emplace_back(elems[4]->face(3), 0);
+      face_refs.emplace_back(elems[4]->face(5), 0);
       face_refs.emplace_back(*face_refs[0].fine()[0], 1);
       face_refs.emplace_back(*face_refs[0].fine()[1], 1);
-      hexed::Connection_direction dir {{0, 1}, {1, 1}};
+      hexed::Connection_direction dir {{0, 2}, {1, 1}};
       auto inds = hexed::face_vertex_inds(3, dir);
       for (int i = 0; i < 2; ++i) {
         for (int j = 0; j < 2; ++j) {

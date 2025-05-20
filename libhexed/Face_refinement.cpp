@@ -75,10 +75,12 @@ std::array<std::vector<Element*>, 2> Face_refinement::elements() {
   }
   std::vector<int> fvi = face_vertex_inds(par.n_dim, dir_rev.first);
   std::vector<Element*> permuted(n_fine);
-  for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-    permuted[fvi[i_fine]] = elems[1][i_fine];
+  if (dir_rev.second) {
+    for (int i_fine = 0; i_fine < n_fine; ++i_fine) permuted[i_fine] = elems[0][fvi[i_fine]];
+  } else {
+    for (int i_fine = 0; i_fine < n_fine; ++i_fine) permuted[fvi[i_fine]] = elems[1][i_fine];
   }
-  elems[1] = permuted;
+  elems[!dir_rev.second] = permuted;
   return elems;
 }
 
