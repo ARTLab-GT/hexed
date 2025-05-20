@@ -104,6 +104,11 @@ void Vertex::eat(Vertex& that) {
   // steal pointers
   for (Int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
   for (Int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
+  if (glued()) {
+    for (auto& elem : elements()) {
+      HEXED_ASSERT(&elem != _glued_to.get(), "Vertex is glued to an element that would create infinite recursion.")
+    }
+  }
   record.insert(record.end(), that.record.begin(), that.record.end());
   if ((that.snapped_endpoint >= 0 && snapped_endpoint < 0) || (that.snapped_edge >= 0 && snapped_edge < 0)) {
     snapped_edge = that.snapped_edge;
@@ -114,6 +119,10 @@ void Vertex::eat(Vertex& that) {
 
 void Vertex::glue(Element_shape& to, std::vector<double> coords) {
   HEXED_ASSERT(std::size_t(to.n_dim()) == coords.size(), "wrong number of glued coordinates");
+  for (auto& elem : elements()) {
+    HEXED_ASSERT(&elem != _glued_to.get(),
+                 "Gluing to an element this vertex is already a part of would create infinite recursion.")
+  }
   _glued_to.pair(to._glued_verts);
   _glued_coords = coords;
 }
