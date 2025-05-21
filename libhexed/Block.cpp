@@ -291,7 +291,7 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   Mat<3> grad_fd;
   bool feasible_stencil = false;
   double fd = 1e-5*nominal_size();
-  for (int i = 0; i < 4 && !feasible_stencil; ++i) {
+  for (int i = 0; i < 6 && !feasible_stencil; ++i) {
     grad_fd.setZero();
     feasible_stencil = true;
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
@@ -316,7 +316,7 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   _step_sz = 1.;
   _orig_dist = (get_target(_orig_pos) - _orig_pos).norm();
   _improve_done = false;
-  if (feasible_stencil && grad_fd.norm()*nominal_size() > 1e-8*state.objective) {
+  if (feasible_stencil) {
     _step = -nominal_size()*grad_fd.normalized();
     _orig_obj = state.objective;
     _improve_failed = false;
@@ -335,11 +335,11 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   Mat<3> target = get_target(_pos);
   Mat<3> diff = target - _pos;
   double dist = diff.norm();
-  if (dist > _orig_dist) {
+  if (dist > _orig_dist + 1e-10*nominal_size()) {
     diff *= (dist - _orig_dist)/dist;
     _pos += diff;
   }
-  if (_step_sz < 1e-10 || (_step_sz*_step + diff).norm() < 1e-3*_step_sz*_step.norm()) {
+  if (_step_sz < 1e-10) {
     _pos = _orig_pos;
     _improve_failed = true;
     _last_step_rejected = true;
@@ -350,11 +350,11 @@ void Vertex::force_continue_improve() {
   _improve_done = false;
 }
 
-bool Vertex::check_improve() {
+bool Vertex::check_improve(bool updated_neighbors) {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
   auto state0 = _compute_state(true, true, true);
   auto state1 = _compute_state(true, false, false, 1e-8);
-  _improve_done = state0.feasible && state1.feasible && state0.objective < _orig_obj;
+  _improve_done = state0.feasible && (state1.feasible || !updated_neighbors) && state0.objective < _orig_obj;
   return _improve_done || _improve_failed;
 }
 

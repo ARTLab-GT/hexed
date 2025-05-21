@@ -1394,20 +1394,22 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       }
       bool done;
       while (true) {
-        do {
-          #pragma omp parallel for
-          for (next::Vertex* vert : mobile_verts) {
-            auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
-            vert->compute_improve(get_target);
-          }
-          done = true;
-          #pragma omp parallel for reduction(&&:done)
-          for (next::Vertex* vert : mobile_verts) {
-            // can't combine these because of short-circuit evaluation
-            bool d = vert->check_improve();
-            done = done && d;
-          }
-        } while (!done);
+        for (bool updated_neighbors : {false, true}) {
+          do {
+            #pragma omp parallel for
+            for (next::Vertex* vert : mobile_verts) {
+              auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
+              vert->compute_improve(get_target);
+            }
+            done = true;
+            #pragma omp parallel for reduction(&&:done)
+            for (next::Vertex* vert : mobile_verts) {
+              // can't combine these because of short-circuit evaluation
+              bool d = vert->check_improve(updated_neighbors);
+              done = done && d;
+            }
+          } while (!done);
+        }
         double old_objective = objective;
         objective = 0;
         {
