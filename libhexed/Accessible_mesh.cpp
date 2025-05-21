@@ -2601,6 +2601,12 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       else if (unref && !ref) elem.record = -1;
     }
     // pass refinement requests of extruded elements to their extrusion parents
+    for (auto& con : def.cons) {
+      if (con->element(0).active_shape().boundary_face() != next::Mesh_blocks::no_face &&
+          con->element(1).active_shape().boundary_face() == next::Mesh_blocks::no_face) {
+        con->element(1).record = con->element(0).record;
+      }
+    }
     #pragma omp parallel for
     for (auto con : extrude_cons) {
       auto& inside = con->element(1);
