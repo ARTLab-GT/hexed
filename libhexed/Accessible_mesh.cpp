@@ -217,6 +217,56 @@ Mat<3> Accessible_mesh::_de_intersect(next::Vertex& vert, Mat<3> pos) {
   return pos;
 }
 
+
+void Accessible_mesh::_dijkstra(std::array<next::Vertex*, 2> start_end,
+                                std::function<double(next::Vertex&, next::Vertex&, next::Edge&)> cost,
+                                std::function<void(next::Vertex&)> snap) {
+  auto verts = _blocks.boundary_verts();
+  #pragma omp parallel for
+  for (next::Vertex& vert : verts) {
+    vert.dijkstra_dist = huge;
+    vert.dijkstra_updates = 0;
+    vert.dijkstra_prev_vert = nullptr;
+    vert.dijkstra_prev_edge = nullptr;
+  }
+  std::priority_queue<
+    dijkstra::Node,
+    std::vector<dijkstra::Node>,
+    std::function<bool(dijkstra::Node, dijkstra::Node)>
+  > unvisited(&dijkstra::compare);
+  // Dijkstra's algorithm will start at the second endpoint and go to the first,
+  // so that we can traverse the path in reverse via `Vertex::dijkstra_prev`,
+  // we will end up with a path from the first endpoint to the second
+  unvisited.emplace(start_end[1], 0., 1);
+  start_end[1]->dijkstra_dist = 0;
+  start_end[1]->dijkstra_updates = 1;
+  dijkstra::Node curr {nullptr, 0., 0};
+  while (curr.vert != start_end[0] && !unvisited.empty()) {
+    curr = unvisited.top();
+    unvisited.pop();
+    if (curr.updates < curr.vert->dijkstra_updates) continue;
+    for (next::Edge& edge : curr.vert->edges()) if (!edge.glued()) {
+      next::Vertex* vert = &edge.vertex(&edge.vertex(0) == curr.vert);
+      double d = curr.cost + cost(*vert, *curr.vert, edge);
+      if (d < vert->dijkstra_dist) {
+        vert->dijkstra_dist = d;
+        vert->dijkstra_prev_vert = curr.vert;
+        vert->dijkstra_prev_edge = &edge;
+        ++vert->dijkstra_updates;
+        unvisited.emplace(vert, d, vert->dijkstra_updates);
+      }
+    }
+  }
+  if (curr.vert == start_end[0]) {
+    next::Vertex* vert = curr.vert;
+    do {
+      snap(*vert);
+      vert = vert->dijkstra_prev_vert;
+      if (!vert->dijkstra_prev_edge) break;
+    } while (vert);
+  }
+}
+
 void Accessible_mesh::_fit_surface() {
   if (!surf_geom) return;
   Stopwatch_tree::Starter sw_fit(_stopwatch["update"]["fit surface"]);
@@ -327,10 +377,6 @@ void Accessible_mesh::_fit_surface() {
       if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
       #pragma omp parallel for
       for (next::Vertex& vert : verts) {
-        vert.dijkstra_dist = huge;
-        vert.dijkstra_updates = 0;
-        vert.dijkstra_prev_vert = nullptr;
-        vert.dijkstra_prev_edge = nullptr;
         double d = huge;
         auto nearest = geom_edge.nearest_point(vert.dijkstra_point, d);
         if (nearest.index >= 0 && nearest.distance <= d) {
@@ -344,59 +390,30 @@ void Accessible_mesh::_fit_surface() {
           printers::warn("projection failed\n");
         }
       }
-      std::priority_queue<
-        dijkstra::Node,
-        std::vector<dijkstra::Node>,
-        std::function<bool(dijkstra::Node, dijkstra::Node)>
-      > unvisited(&dijkstra::compare);
-      // Dijkstra's algorithm will start at the second endpoint and go to the first,
-      // so that we can traverse the path in reverse via `Vertex::dijkstra_prev`,
-      // we will end up with a path from the first endpoint to the second
-      unvisited.emplace(start_end[1], 0., 1);
-      start_end[1]->dijkstra_dist = 0;
-      start_end[1]->dijkstra_updates = 1;
-      dijkstra::Node curr {nullptr, 0., 0};
-      while (curr.vert != start_end[0] && !unvisited.empty()) {
-        curr = unvisited.top();
-        unvisited.pop();
-        if (curr.updates < curr.vert->dijkstra_updates) continue;
-        for (next::Edge& edge : curr.vert->edges()) if (!edge.glued()) {
-          next::Vertex* vert = &edge.vertex(&edge.vertex(0) == curr.vert);
-          double interval = std::max(edge.element()->nominal_size(),
-                                     std::abs(vert->dijkstra_arc_len - curr.vert->dijkstra_arc_len));
-          double d = curr.cost + .5*(curr.vert->dijkstra_curve_dist_sq + vert->dijkstra_curve_dist_sq)*interval;
-          if (d < vert->dijkstra_dist) {
-            vert->dijkstra_dist = d;
-            vert->dijkstra_prev_vert = curr.vert;
-            vert->dijkstra_prev_edge = &edge;
-            ++vert->dijkstra_updates;
-            unvisited.emplace(vert, d, vert->dijkstra_updates);
+      auto cost = [this, i_geom_edge](next::Vertex& vert, next::Vertex& curr_vert, next::Edge& edge) {
+        double interval = std::max(edge.element()->nominal_size(),
+                                   std::abs(vert.dijkstra_arc_len - curr_vert.dijkstra_arc_len));
+        return .5*(curr_vert.dijkstra_curve_dist_sq + vert.dijkstra_curve_dist_sq)*interval;
+      };
+      auto snap = [this, &edges, i_geom_edge](next::Vertex& vert) {
+        bool snap = false;
+        Mat<3> unwarped = vert.unwarped_point();
+        Mat<3> edge_point = edges[i_geom_edge].interp_point(edges[i_geom_edge].nearest_point(unwarped));
+        if (vert.snapped_edge < 0 || vert.dijkstra_prev_edge->snapped_edge < 0) {
+          snap = true;
+        } else {
+          if ((edge_point - vert.dijkstra_point).norm() > 1e-3*vert.nominal_size()) vert.incompatible_snap = true;
+          if ((edge_point - unwarped).squaredNorm() < (vert.dijkstra_point - unwarped).squaredNorm()) {
+            snap = true;
           }
         }
-      }
-      if (curr.vert == start_end[0]) {
-        next::Vertex* vert = curr.vert;
-        do {
-          bool snap = false;
-          Mat<3> unwarped = vert->unwarped_point();
-          Mat<3> edge_point = edges[i_geom_edge].interp_point(edges[i_geom_edge].nearest_point(unwarped));
-          if (vert->snapped_edge < 0 || vert->dijkstra_prev_edge->snapped_edge < 0) {
-            snap = true;
-          } else {
-            if ((edge_point - vert->dijkstra_point).norm() > 1e-3*vert->nominal_size()) vert->incompatible_snap = true;
-            if ((edge_point - unwarped).squaredNorm() < (vert->dijkstra_point - unwarped).squaredNorm()) {
-              snap = true;
-            }
-          }
-          if (snap) {
-            vert->dijkstra_prev_edge->snapped_edge = i_geom_edge;
-            vert->dijkstra_point = edge_point;
-            vert->snapped_edge = i_geom_edge;
-          }
-          vert = vert->dijkstra_prev_vert;
-          if (!vert->dijkstra_prev_edge) break;
-        } while (vert);
-      }
+        if (snap) {
+          vert.dijkstra_prev_edge->snapped_edge = i_geom_edge;
+          vert.dijkstra_point = edge_point;
+          vert.snapped_edge = i_geom_edge;
+        }
+      };
+      _dijkstra(start_end, cost, snap);
     }
     // deal with edge endpoints that aren't shared with other edges
     for (auto& vert : verts) {

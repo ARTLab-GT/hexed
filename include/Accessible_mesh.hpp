@@ -106,6 +106,9 @@ class Accessible_mesh : public Mesh {
   void _offset_vertices(double, bool strategy);
   Mat<3> _get_snapping_target(next::Vertex&, Mat<3>);
   Mat<3> _de_intersect(next::Vertex&, Mat<3>);
+  void _dijkstra(std::array<next::Vertex*, 2> start_end,
+                 std::function<double(next::Vertex&, next::Vertex&, next::Edge&)> cost,
+                 std::function<void(next::Vertex&)> snap);
   void _fit_surface();
   void _optimize(int min_pow, int max_pow, bool check_snapping);
 
