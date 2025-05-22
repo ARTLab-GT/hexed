@@ -167,8 +167,8 @@ bool Vertex::mobile() const {
   return has_unglued && !has_cartesian && !glued();
 }
 
-const double ortho_tolerance = .02;
-const double edge_tolerance = .003;
+const double ortho_tolerance = .03;
+const double edge_tolerance = .01;
 
 Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors, bool ignore, bool ignore_neighb, double extra_tol) {
   _Optimization_state state;
@@ -218,19 +218,14 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
       }
       Mesh_assessment ma(vert_seq, i_that, i_this);
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        //state.feasible = state.feasible && ma.orthogonality(i_dim)/ns > ortho_tolerance + extra_tol;
-        //state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality(i_dim)/ns);
-        state.feasible = state.feasible && ma.edge_lengths(i_dim)*ma.orthogonality(i_dim)
-                                           > (edge_tolerance + extra_tol)*ns;
-        state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim)*ma.orthogonality(i_dim)/ns);
+        state.feasible = state.feasible && ma.orthogonality(i_dim) > ortho_tolerance + extra_tol;
+        state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality(i_dim));
+        state.feasible = state.feasible && ma.edge_lengths(i_dim) > (edge_tolerance + extra_tol)*ns;
+        state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim)/ns);
       }
       if (state.feasible) {
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          state.objective += (!skip_obj)*10./ma.orthogonality(i_dim);
-          state.objective += (!skip_obj)*math::pow(ma.edge_lengths(i_dim)/ns - 1, 2)
-                             /(ma.edge_lengths(i_dim)/ns*ma.orthogonality(i_dim) - edge_tolerance);
-          #if 0
-          double orth_diff = ma.orthogonality(i_dim)/ns - ortho_tolerance;
+          double orth_diff = ma.orthogonality(i_dim) - ortho_tolerance;
           state.objective += (!skip_obj)*1./orth_diff;
           state.gradient += (!skip_grad)*gradient_weight*1.*(-1/orth_diff/orth_diff)
                             *ma.grad_orth(i_dim, all).transpose();
@@ -239,7 +234,6 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
           state.objective += (!skip_obj)*num*num/denom;
           state.gradient += (!skip_grad)*gradient_weight*(2*num/denom - num*num/(denom*denom))
                             *ma.grad_lengths(i_dim, all).transpose();
-          #endif
         }
         // note: the valid values for `gradient_weight` are 1., .5, and .25
         if (gradient_weight > .3 && that_vert.glued() && i_this != i_that) {
@@ -324,7 +318,6 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   _improve_done = false;
   if (feasible_stencil) {
     _step = -nominal_size()*grad_fd.normalized();
-    _last_grad = _step;
     _orig_obj = state.objective;
     _improve_failed = false;
     _last_step_rejected = false;
@@ -368,7 +361,6 @@ bool Vertex::check_improve(bool updated_neighbors) {
 void Vertex::init_snap(std::function<Mat<3>(Mat<3>)> get_target) {
   _orig_pos = unwarped_point();
   _step = get_target(_orig_pos) - _orig_pos;
-  _orig_dist = _step_sz;
   _step_sz = 1.;
   _improve_done = false;
   _improve_failed = false;
@@ -382,8 +374,9 @@ void Vertex::compute_snap() {
 Vertex::Snap_result Vertex::check_snap() {
   if (_improve_failed) return {true, true, _step.norm()};
   auto state = _compute_state(true, false, false, 1e-8);
-  _improve_done = state.feasible && _step_sz*_step.norm() < nominal_size()*.02;
-  if (!_improve_done) {
+  _last_grad = state.gradient.normalized()*0.1*nominal_size();
+  _improve_done = state.feasible;
+  if (!_improve_done || _step_sz*_step.norm() > .2*nominal_size()*state.worst_edge) {
     _step_sz /= 3;
     _last_snap_failed = true;
   }
