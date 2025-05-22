@@ -104,11 +104,7 @@ void Vertex::eat(Vertex& that) {
   // steal pointers
   for (Int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
   for (Int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
-  if (glued()) {
-    for (auto& elem : elements()) {
-      HEXED_ASSERT(&elem != _glued_to.get(), "Vertex is glued to an element that would create infinite recursion.")
-    }
-  }
+  if (!glued() && that.glued()) glue(*that._glued_to.get(), that._glued_coords);
   record.insert(record.end(), that.record.begin(), that.record.end());
   if ((that.snapped_endpoint >= 0 && snapped_endpoint < 0) || (that.snapped_edge >= 0 && snapped_edge < 0)) {
     snapped_edge = that.snapped_edge;
@@ -227,8 +223,8 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
       if (state.feasible) {
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
           double orth_diff = ma.orthogonality(i_dim) - ortho_tolerance;
-          state.objective += (!skip_obj)*1./orth_diff;
-          state.gradient += (!skip_grad)*gradient_weight*1.*(-1/orth_diff/orth_diff)
+          state.objective += (!skip_obj)*10./orth_diff;
+          state.gradient += (!skip_grad)*gradient_weight*10.*(-1/orth_diff/orth_diff)
                             *ma.grad_orth(i_dim, all).transpose();
           double num = ma.edge_lengths(i_dim) - 1.;
           double denom = ma.edge_lengths(i_dim) - edge_tolerance;
