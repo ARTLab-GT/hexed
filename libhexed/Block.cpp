@@ -217,11 +217,12 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         if (!contains) orig_vertex->_depends_on.push_back(&that_vert);
       }
       Mesh_assessment ma(vert_seq, i_that, i_this);
+      ma.edge_lengths /= ns;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         state.feasible = state.feasible && ma.orthogonality(i_dim) > ortho_tolerance + extra_tol;
         state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality(i_dim));
-        state.feasible = state.feasible && ma.edge_lengths(i_dim) > (edge_tolerance + extra_tol)*ns;
-        state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim)/ns);
+        state.feasible = state.feasible && ma.edge_lengths(i_dim) > edge_tolerance + extra_tol;
+        state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim));
       }
       if (state.feasible) {
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
@@ -229,8 +230,8 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
           state.objective += (!skip_obj)*1./orth_diff;
           state.gradient += (!skip_grad)*gradient_weight*1.*(-1/orth_diff/orth_diff)
                             *ma.grad_orth(i_dim, all).transpose();
-          double num = ma.edge_lengths(i_dim) - ns;
-          double denom = ma.edge_lengths(i_dim) - edge_tolerance*ns;
+          double num = ma.edge_lengths(i_dim) - 1.;
+          double denom = ma.edge_lengths(i_dim) - edge_tolerance;
           state.objective += (!skip_obj)*num*num/denom;
           state.gradient += (!skip_grad)*gradient_weight*(2*num/denom - num*num/(denom*denom))
                             *ma.grad_lengths(i_dim, all).transpose();
@@ -376,7 +377,8 @@ Vertex::Snap_result Vertex::check_snap() {
   auto state = _compute_state(true, false, false, 1e-8);
   _last_grad = state.gradient.normalized()*0.1*nominal_size();
   _improve_done = state.feasible;
-  if (!_improve_done || _step_sz*_step.norm() > .2*nominal_size()*state.worst_edge) {
+  _improve_done = state.feasible && _step_sz*_step.norm() < .02*nominal_size();
+  if (!_improve_done) {
     _step_sz /= 3;
     _last_snap_failed = true;
   }
