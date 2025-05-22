@@ -222,7 +222,7 @@ typedef std::vector<std::unique_ptr<Parametric<1>>> Composite_curve;
 
 class Trimmed_surface;
 
-//! \brief Represents a curve that is trimmint a `Trimmed_surface`.
+//! \brief Represents a curve that is trimming a `Trimmed_surface`.
 struct Trimming_curve {
   //! \brief Initialize tree curve from nodes in physical space and initialize `parameters` and `tangents` to zero;
   Trimming_curve(Array<double> nodes);
@@ -376,6 +376,8 @@ class Geom_3d : public Surface_geom {
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_prec = true) override;
   next::Sequence<const Tree_curve&> edges() override;
+  next::Sequence<const Array<double>> tangent_averages() override;
+  next::Sequence<const Array<double>> tangent_radii() override;
   next::Sequence<const Trimmed_surface&> surfaces();
   private:
   next::Sequence<const Trimming_curve&> _trim_curves();
@@ -384,6 +386,8 @@ class Geom_3d : public Surface_geom {
   std::vector<Int> _used_curves;
   // used only for visualization
   std::vector<Int> _tangent_curves;
+  std::vector<Array<double>> _tangent_averages;
+  std::vector<Array<double>> _tangent_radii;
 };
 
 }

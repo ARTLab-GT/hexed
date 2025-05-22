@@ -44,6 +44,8 @@ class Surface_geom {
    * Default implementation returns an empty sequence, but derived classes may override.
    */
   inline virtual next::Sequence<const Tree_curve&> edges() {return {};}
+  inline virtual next::Sequence<const Array<double>> tangent_averages() {return {};}
+  inline virtual next::Sequence<const Array<double>> tangent_radii() {return {};}
   inline virtual next::Sequence<Mat<3>> points() {return {};}
 };
 
@@ -59,6 +61,8 @@ class Compound_geom : public Surface_geom {
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_precision = true) override;
   next::Sequence<const Tree_curve&> edges() override;
+  next::Sequence<const Array<double>> tangent_averages() override;
+  next::Sequence<const Array<double>> tangent_radii() override;
   next::Sequence<Mat<3>> points() override;
 };
 

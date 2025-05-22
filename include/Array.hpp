@@ -340,10 +340,19 @@ class Array {
        If `index` is < 0 or >= `shape()[0]`, the result is linearly extrapolated.
      */ \
     CONST Array interp(double index) CONST { \
-      HEXED_ARRAY_ASSERT(_order > 0, "`_order` must be positive") \
+      HEXED_ARRAY_ASSERT(_order > 1, "`_order` must be greater than 1.") \
+      HEXED_ARRAY_ASSERT(_shape[0] >= 2, "Array must have at least 2 rows.") \
       Int i = std::max<Int>(0, std::min<Int>(_shape[0] - 2, floor(index))); \
       return (i + 1 - index)*(*this)(i) + (index - i)*(*this)(i + 1); \
     } \
+
+  //! \brief Linearly interpolates between entries of the array according to flat indexing.
+  //! \details Like `interp(double)`, but with `[]` indexing instead of `()` indexing.
+  T flat_interp(double index) const {
+    HEXED_ARRAY_ASSERT(size() >= 2, "Array must have at least 2 entries.")
+    Int i = std::max<Int>(0, std::min<Int>(size() - 2, floor(index)));
+    return (i + 1 - index)*(*this)[i] + (index - i)*(*this)[i + 1];
+  }
 
 
   QUALIFIED()

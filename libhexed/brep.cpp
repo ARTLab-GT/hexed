@@ -1341,9 +1341,31 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coi
       _tangent_curves.push_back(group[0]);
     } else {
       _used_curves.push_back(group[0]);
+      _tangent_averages.emplace_back(std::vector<Int>{trim_curves[group[0]].curve.n_points(), 3});
+      Array<double> avg = _tangent_averages.back()();
+      avg = 0;
+      _tangent_radii.emplace_back(std::vector<Int>{trim_curves[group[0]].curve.n_points()});
+      Array<double> rad = _tangent_radii.back()();
+      rad = 0;
+      for (int sweep = 0; sweep < 2; ++sweep) {
+        for (Int ind : group) {
+          const Tree_curve* tc [2] {&trim_curves[group[0]].curve, &trim_curves[ind].curve};
+          Array<double> tang = trim_curves[ind].tangents();
+          #pragma omp parallel for
+          for (Int i_node = 0; i_node < tc[0]->n_points(); ++i_node) {
+            Mat<3> point = tc[0]->nodes()(i_node).vector();
+            double param = tc[1]->nearest_point(point).interp_index;
+            Array<double> t = tang.interp(param);
+            if (sweep == 0) {
+              avg(i_node) += t/double(group.size());
+            } else {
+              rad[i_node] = std::max(rad[i_node], (avg(i_node) - t).vector().norm());
+            }
+          }
+        }
+      }
     }
   }
-  printers::info(format_str("%li total %lu used %lu tangent\n", trim_curves.size(), _used_curves.size(), _tangent_curves.size()));
 }
 
 Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
@@ -1371,6 +1393,20 @@ next::Sequence<const Tree_curve&> Geom_3d::edges() {
   return {
     [tc, this](Int index)->const Tree_curve& {return tc[_used_curves[index]].curve;},
     [this]()->Int {return _used_curves.size();},
+  };
+}
+
+next::Sequence<const Array<double>> Geom_3d::tangent_averages() {
+  return {
+    [this](Int index)->const Array<double> {return _tangent_averages[index]();},
+    [this]()->Int {return _tangent_averages.size();},
+  };
+}
+
+next::Sequence<const Array<double>> Geom_3d::tangent_radii() {
+  return {
+    [this](Int index)->const Array<double> {return _tangent_radii[index]();},
+    [this]()->Int {return _tangent_radii.size();},
   };
 }
 

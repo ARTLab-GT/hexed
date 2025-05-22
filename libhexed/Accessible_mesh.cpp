@@ -144,7 +144,25 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
   HEXED_ASSERT(Int(vert.record.size()) == 2*params.n_dim + 1, "Vertex record has not been set correctly.");
   auto seq = Eigen::seqN(0, params.n_dim);
   double ns = vert.nominal_size();
-  if (vert.record[2*params.n_dim]) {
+  if (std::all_of(vert.record.begin(), vert.record.end(), [](int i){return i == 0;})) {
+    next::Vertex* surf_vert = nullptr;
+    for (auto& n : vert.neighbors()) if (n) if (n->is_surface()) surf_vert = n;
+    if (surf_vert) if (surf_vert->snapped_edge >= 0 && surf_vert->snapped_endpoint == -1) {
+      Int i_edge = surf_vert->snapped_edge;
+      auto& edge = surf_geom->edges()[i_edge];
+      auto nearest = edge.nearest_point(pos);
+      if (nearest.index >= 0) {
+        Mat<3> tangent = surf_geom->tangent_averages()[i_edge].interp(nearest.interp_index).vector().normalized();
+        double radius = surf_geom->tangent_radii()[i_edge].flat_interp(nearest.interp_index);
+        Mat<3> diff = edge.interp_point(nearest) - pos;
+        double dot = diff.dot(tangent);
+        Mat<3> orth_diff = diff - dot*tangent;
+        if (orth_diff.norm() > radius*dot) {
+          pos += (orth_diff.norm() - radius*dot)*orth_diff.normalized();
+        }
+      }
+    }
+  } else if (vert.record[2*params.n_dim]) {
     if (vert.snapped_point >= 0) {
       return surf_geom->points()[vert.snapped_point];
     } else if (vert.snapped_edge >= 0) {
@@ -1329,21 +1347,11 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
                              _blocks.faces_3d().cast<const next::Block&>(), double(i_relax));
       std::string fname = "vertex_nearest" + to_string(i_relax);
       auto vis = Visualizer::create("default", 3, 1, fname, {"snapped_edge", "last_snap_failed", "last_step_rejected"}, (double)i_relax, Visualizer::block);
-      auto vis1 = Visualizer::create("default", 3, 1, "vertex_neighbor" + to_string(i_relax), {}, (double)i_relax, Visualizer::block);
       auto vis2 = Visualizer::create("default", 3, 1, "vertex_grad" + to_string(i_relax), {}, (double)i_relax, Visualizer::block);
-      for (auto& vert : bverts) {
+      for (auto& vert : verts) if (vert.mobile()) {
         Array<double> pos({3, 2});
         Mat<3> p0 = vert.unwarped_point();
         Mat<3> p1 = _get_snapping_target(vert, p0);
-        Mat<3> p2 = p0;
-        bool found = false;
-        for (auto& n : vert.neighbors()) if (n) {
-          if (!n->is_surface()) {
-            p2 = n->unwarped_point();
-            found = true;
-          }
-        }
-        HEXED_ASSERT(found, "no non-surface neighbor found")
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
           pos(i_dim)[0] = p0(i_dim);
           pos(i_dim)[1] = p1(i_dim);
@@ -1353,10 +1361,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         data(1) = vert.last_snap_failed();
         data(2) = vert.last_step_rejected();
         vis->write_block(pos, data);
-        for (int i_dim = 0; i_dim < 3; ++i_dim) {
-          pos(i_dim)[1] = p2(i_dim);
-        }
-        vis1->write_block(pos, Array<double>({0, 2}));
         Mat<3> vg = vert.last_grad();
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
           pos(i_dim)[1] = p0(i_dim) + vg(i_dim);

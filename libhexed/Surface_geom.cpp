@@ -27,6 +27,18 @@ next::Sequence<const Tree_curve&> Compound_geom::edges() {
   return e;
 }
 
+next::Sequence<const Array<double>> Compound_geom::tangent_averages() {
+  next::Sequence<const Array<double>> e;
+  for (auto& comp : components) e = e + comp->tangent_averages();
+  return e;
+}
+
+next::Sequence<const Array<double>> Compound_geom::tangent_radii() {
+  next::Sequence<const Array<double>> e;
+  for (auto& comp : components) e = e + comp->tangent_radii();
+  return e;
+}
+
 next::Sequence<Mat<3>> Compound_geom::points() {
   next::Sequence<Mat<3>> p;
   for (auto& comp : components) p = p + comp->points();
