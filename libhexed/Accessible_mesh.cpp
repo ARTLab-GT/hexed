@@ -1054,11 +1054,6 @@ void Accessible_mesh::_fit_surface() {
         HEXED_ASSERT(any_connected == all_connected,
                      "If any of the elements are already connected then they all must be.")
         if (!any_connected) {
-          for (int i_side = 0; i_side < 2; ++i_side) {
-            for (int i_elem = 0; i_elem < n_fine; ++i_elem) {
-              HEXED_ASSERT(new_elems[i_side][i_elem], "An element is still null.")
-            }
-          }
           printers::info(">>");
           _connect(new_elems, dir);
         }
@@ -1570,11 +1565,16 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
   std::array<std::vector<next::Element_shape*>, 2> shapes;
   int n_unique [2] {};
   printers::info("[");
+  bool null_elem = false;
   {
   auto vis_con_elems = Visualizer::create("default", 3, 1, "connect_elements", {"i_side", "i_elem"}, 0., Visualizer::block);
   for (int i_side = 0; i_side < 2; ++i_side) {
     HEXED_ASSERT(Int(elems[i_side].size()) == nv/2, "wrong number of element pointers")
     for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
+      if (!elems[i_side][i_elem]) {
+        null_elem = true;
+        continue;
+      }
       faces.emplace_back(&elems[i_side][i_elem]->face(dir.i_face(i_side)));
       bool unique = true;
       for (int j_elem = 0; j_elem < i_elem; ++j_elem) {
@@ -1603,6 +1603,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
     HEXED_ASSERT(n_unique[i_side] != 3, "3-element connection")
   }
   }
+  HEXED_ASSERT(!null_elem, "an element is null")
   printers::info("]");
   if ((n_unique[0] == 2 && n_unique[1] == 4) || (n_unique[0] == 4 && n_unique[1] == 2)) {
     printers::warn("Warning: ", true);
