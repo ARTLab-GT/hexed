@@ -1566,7 +1566,6 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
   std::vector<Mortal_ptr<Face>> faces;
   std::array<std::vector<next::Element_shape*>, 2> shapes;
   int n_unique [2] {};
-  printers::info("[");
   bool null_elem = false;
   {
   auto vis_con_elems = Visualizer::create("default", 3, 1, "connect_elements", {"i_side", "i_elem"}, 0., Visualizer::block);
@@ -1575,6 +1574,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
     for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
       if (!elems[i_side][i_elem]) {
         null_elem = true;
+        faces.emplace_back();
         continue;
       }
       faces.emplace_back(&elems[i_side][i_elem]->face(dir.i_face(i_side)));
@@ -1606,7 +1606,6 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
   }
   }
   HEXED_ASSERT(!null_elem, "an element is null")
-  printers::info("]");
   if ((n_unique[0] == 2 && n_unique[1] == 4) || (n_unique[0] == 4 && n_unique[1] == 2)) {
     printers::warn("Warning: ", true);
     printers::warn("2-on-4 connection\n");
