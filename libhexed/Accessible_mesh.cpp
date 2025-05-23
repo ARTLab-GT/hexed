@@ -1007,55 +1007,57 @@ void Accessible_mesh::_fit_surface() {
       HEXED_THROW("need to implement this for 2D", assert::Not_implemented_error)
     }
     for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
-      int n_fine = params.n_vertices()/2;
-      Connection_direction dir = _face_refs[i_ref][0].get_direction();
-      auto orig_elems = _face_refs[i_ref][0].elements();
-      bool any_connected = false;
-      bool all_connected = true;
-      bool has_extrude = false;
-      std::array<std::vector<Deformed_element*>, 2> new_elems;
-      printers::info(to_string(dir));
-      for (int i_side = 0; i_side < 2; ++i_side) {
-        new_elems[i_side].resize(n_fine, nullptr);
-        printers::info(to_string(i_side) + ":(");
-        for (int i_elem = 0; i_elem < n_fine; ++i_elem) {
-          auto& elem = *orig_elems[i_side][i_elem];
-          int i_face = get_i_face(elem);
-          if (i_face >= 0) {
-            has_extrude = true;
-            new_elems[i_side][i_elem] = &def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
-            printers::info("[" + to_string(i_face) + "]" + to_string(i_elem));
-            if (params.n_dim == 3) {
-              int i_dim = i_face/2 > 3 - i_face/2 - dir.i_dim[i_side];
-              int j_elem = i_elem - math::sign(math::row_coordinate(2, 2, i_dim, i_elem))*math::pow(2, 1 - i_dim);
-              new_elems[i_side][j_elem] = new_elems[i_side][i_elem];
-              printers::info(to_string(j_elem) + " ");
-            } else HEXED_THROW("implement this for 2D", assert::Not_implemented_error)
-            any_connected = any_connected || new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
-            all_connected = all_connected && new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
-          }
-        }
-        printers::info(")");
-        #if 0
-        for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
-          int n_row = params.n_dim == 3 ? 2 : 1;
-          int stride = (params.n_dim == 3 && i_dim == 0) ? 2 : 1;
-          for (int i_row = 0; i_row < n_row; ++i_row) {
-            Deformed_element** row [2];
-            for (int i_col = 0; i_col < 2; ++i_col) row[i_col] = &new_elems[i_side][i_row*2/stride + stride*i_col];
-            for (int i_col = 0; i_col < 2; ++i_col) {
-              if ((!*row[i_col]) && bool(*row[!i_col])) *row[i_col] = *row[!i_col];
+      for (auto& ref : _face_refs[i_ref]) {
+        int n_fine = params.n_vertices()/2;
+        Connection_direction dir = ref.get_direction();
+        auto orig_elems = ref.elements();
+        bool any_connected = false;
+        bool all_connected = true;
+        bool has_extrude = false;
+        std::array<std::vector<Deformed_element*>, 2> new_elems;
+        printers::info(to_string(dir));
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          new_elems[i_side].resize(n_fine, nullptr);
+          printers::info(to_string(i_side) + ":(");
+          for (int i_elem = 0; i_elem < n_fine; ++i_elem) {
+            auto& elem = *orig_elems[i_side][i_elem];
+            int i_face = get_i_face(elem);
+            if (i_face >= 0) {
+              has_extrude = true;
+              new_elems[i_side][i_elem] = &def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
+              printers::info("[" + to_string(i_face) + "]" + to_string(i_elem));
+              if (params.n_dim == 3) {
+                int i_dim = i_face/2 > 3 - i_face/2 - dir.i_dim[i_side];
+                int j_elem = i_elem - math::sign(math::row_coordinate(2, 2, i_dim, i_elem))*math::pow(2, 1 - i_dim);
+                new_elems[i_side][j_elem] = new_elems[i_side][i_elem];
+                printers::info(to_string(j_elem) + " ");
+              } else HEXED_THROW("implement this for 2D", assert::Not_implemented_error)
+              any_connected = any_connected || new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
+              all_connected = all_connected && new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
             }
           }
+          printers::info(")");
+          #if 0
+          for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
+            int n_row = params.n_dim == 3 ? 2 : 1;
+            int stride = (params.n_dim == 3 && i_dim == 0) ? 2 : 1;
+            for (int i_row = 0; i_row < n_row; ++i_row) {
+              Deformed_element** row [2];
+              for (int i_col = 0; i_col < 2; ++i_col) row[i_col] = &new_elems[i_side][i_row*2/stride + stride*i_col];
+              for (int i_col = 0; i_col < 2; ++i_col) {
+                if ((!*row[i_col]) && bool(*row[!i_col])) *row[i_col] = *row[!i_col];
+              }
+            }
+          }
+          #endif
         }
-        #endif
-      }
-      if (has_extrude) {
-        HEXED_ASSERT(any_connected == all_connected,
-                     "If any of the elements are already connected then they all must be.")
-        if (!any_connected) {
-          printers::info(">>");
-          _connect(new_elems, dir);
+        if (has_extrude) {
+          HEXED_ASSERT(any_connected == all_connected,
+                       "If any of the elements are already connected then they all must be.")
+          if (!any_connected) {
+            printers::info(">>");
+            _connect(new_elems, dir);
+          }
         }
       }
     }
