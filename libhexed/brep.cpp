@@ -1209,6 +1209,10 @@ Geom_2d::Geom_2d(std::string file_name, Int n_div) {
       _tree_curves.emplace_back(nodes.copy(), 4);
     }
   }
+  if (_curves.empty()) {
+    printers::warn("Warning: ", true);
+    printers::warn("File `" + file_name + "` contains no usable geometric entities. ");
+  }
 }
 
 void Geom_2d::visualize(std::string format, std::string file_name, Int n_div) {
@@ -1292,6 +1296,10 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coi
       bbox(all, 1) = bbox(all, 1).cwiseMax(b(all, 1));
       _surfaces.emplace_back(std::move(*surf));
     }
+  }
+  if (_surfaces.empty()) {
+    printers::warn("Warning: ", true);
+    printers::warn("File `" + file_name + "` contains no usable geometric entities. ");
   }
   double max_diff = (bbox(all, 1) - bbox(all, 0)).maxCoeff();
   auto trim_curves = _trim_curves();
