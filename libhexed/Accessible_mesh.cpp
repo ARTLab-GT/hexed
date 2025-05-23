@@ -148,17 +148,23 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
     next::Vertex* surf_vert = nullptr;
     for (auto& n : vert.neighbors()) if (n) if (n->is_surface()) surf_vert = n;
     if (surf_vert) if (surf_vert->snapped_edge >= 0 && surf_vert->snapped_endpoint == -1) {
-      Int i_edge = surf_vert->snapped_edge;
-      auto& edge = surf_geom->edges()[i_edge];
-      auto nearest = edge.nearest_point(pos);
-      if (nearest.index >= 0) {
-        Mat<3> tangent = surf_geom->tangent_averages()[i_edge].interp(nearest.interp_index).vector().normalized();
-        double radius = surf_geom->tangent_radii()[i_edge].flat_interp(nearest.interp_index);
-        Mat<3> diff = edge.interp_point(nearest) - pos;
-        double dot = diff.dot(tangent);
-        Mat<3> orth_diff = diff - dot*tangent;
-        if (orth_diff.norm() > radius*dot) {
-          pos += (orth_diff.norm() - radius*dot)*orth_diff.normalized();
+      bool failed_neighbor = false;
+      for (next::Vertex* n : surf_vert->neighbors()) if (n) {
+        failed_neighbor = failed_neighbor || (n->is_surface() && n->snapped_edge < 0 && n->last_snap_failed());
+      }
+      if (failed_neighbor) {
+        Int i_edge = surf_vert->snapped_edge;
+        auto& edge = surf_geom->edges()[i_edge];
+        auto nearest = edge.nearest_point(pos);
+        if (nearest.index >= 0) {
+          Mat<3> tangent = surf_geom->tangent_averages()[i_edge].interp(nearest.interp_index).vector().normalized();
+          double radius = surf_geom->tangent_radii()[i_edge].flat_interp(nearest.interp_index);
+          Mat<3> diff = edge.interp_point(nearest) - pos;
+          double dot = diff.dot(tangent);
+          Mat<3> orth_diff = diff - dot*tangent;
+          if (orth_diff.norm() > radius*dot) {
+            pos += (orth_diff.norm() - radius*dot)*orth_diff.normalized();
+          }
         }
       }
     }
