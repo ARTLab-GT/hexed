@@ -370,9 +370,9 @@ void Vertex::compute_snap() {
   _pos = _orig_pos + _step_sz*_step;
 }
 
-Vertex::Snap_result Vertex::check_snap() {
-  if (_improve_done || _improve_failed) return {true, _improve_failed, _step.norm()};
-  auto state = _compute_state(true, false, false, 1e-8);
+Vertex::Snap_result Vertex::check_snap(bool updated_neighbors) {
+  if (_improve_failed) return {true, true, _step.norm()};
+  auto state = _compute_state(true, false, !updated_neighbors, 1e-8);
   _last_grad = state.gradient.normalized()*0.1*nominal_size();
   _improve_done = state.feasible && _step_sz*_step.norm() < .02*nominal_size();
   if (!_improve_done) {

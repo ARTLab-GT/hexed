@@ -147,7 +147,7 @@ class Vertex : public Block {
     bool failed;
     double distance;
   };
-  Snap_result check_snap();
+  Snap_result check_snap(bool updated_neighbors);
   bool has_problem() const;
   inline bool last_snap_failed() const {return _last_snap_failed;}
   inline bool last_step_rejected() const {return _last_step_rejected;}
