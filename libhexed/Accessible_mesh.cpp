@@ -146,11 +146,12 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
   double ns = vert.nominal_size();
   if (std::all_of(vert.record.begin(), vert.record.end(), [](int i){return i == 0;})) {
     next::Vertex* surf_vert = nullptr;
-    for (auto& n : vert.neighbors()) if (n) if (n->is_surface()) surf_vert = n;
+    for (auto& n : vert.neighbors()) if (n) if (n->is_surface() && n->mobile()) surf_vert = n;
     if (surf_vert) if (surf_vert->snapped_edge >= 0 && surf_vert->snapped_endpoint == -1) {
       bool failed_neighbor = false;
       for (next::Vertex* n : surf_vert->neighbors()) if (n) {
-        failed_neighbor = failed_neighbor || (n->is_surface() && n->snapped_edge < 0 && n->last_snap_failed());
+        failed_neighbor = failed_neighbor || (n->is_surface() && n->mobile() && n->snapped_edge < 0 &&
+                                              n->last_snap_failed());
       }
       if (failed_neighbor) {
         Int i_edge = surf_vert->snapped_edge;
