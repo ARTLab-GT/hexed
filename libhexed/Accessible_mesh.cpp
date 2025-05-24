@@ -223,7 +223,7 @@ Mat<3> Accessible_mesh::_de_intersect(next::Vertex& vert, Mat<3> pos) {
   bool found = false;
   for (auto& n : vert.neighbors()) if (n) {
     if (!n->is_surface()) {
-      p0 = n->unwarped_point();
+      p0 = n->unwarped_point(true);
       found = true;
     }
   }

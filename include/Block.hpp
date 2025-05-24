@@ -93,7 +93,7 @@ class Vertex : public Block {
   Sequence<Element_shape&> elements() {return _elems.theirs().dereference();}
   inline bool glued() const {return _glued_to;}
   //! \brief Computes the position of the vertex without any face/edge warping.
-  Mat<3> unwarped_point() const;
+  Mat<3> unwarped_point(bool orig = false) const;
 
   /*! \brief Combines this vertex with `that` and steals its resources.
    * \details All `Edge`s and `Element_shape`s that currently have pointers to `that`
@@ -224,9 +224,10 @@ class Vertex : public Block {
     bool computing_depends = false;
   };
   _Optimization_state _compute_state(bool include_neighbors = true, bool ignore = false, bool ignore_neighb = false, double extra_tol = 0.);
-  Mat<3> _unwarped_point(Vertex* ignore, bool ignore_neighb) const; // will treat the vertex `ignore` as being at its `_orig_pos`;
+  // will treat the vertex `ignore` as being at its `_orig_pos`;
+  Mat<3> _unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_others) const;
   void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                Vertex* orig_vertex = nullptr, Vertex* ignore = nullptr, bool ignore_neighb = false, double extra_tol = 0.);
+                                Vertex* orig_vertex = nullptr, Vertex* ignore = nullptr, bool ignore_orig = false, bool ignore_neighb = false, double extra_tol = 0.);
   Improve_quality_result _improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
                                           bool has_target, bool limit_direction, bool snap);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
