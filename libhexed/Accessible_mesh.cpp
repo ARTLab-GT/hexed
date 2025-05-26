@@ -462,45 +462,10 @@ void Accessible_mesh::_fit_surface() {
           return &edge == snapped_edge ? huge : 1.;
         };
         auto snap = [this](next::Vertex& vert) {
-          printers::info(to_string(vert.unwarped_point()) + to_string(vert.snapped_edge));
           if (vert.snapped_edge == -1) vert.snapped_edge = -2;
           if (vert.dijkstra_prev_edge->snapped_edge == -1) vert.dijkstra_prev_edge->snapped_edge = -2;
         };
         _dijkstra({&vert, end_vert}, cost, snap);
-        printers::info("\n");
-
-        #if 0
-        bool successful = false;
-        for (auto& elem : vert.elements()) {
-          auto face = elem.boundary_face_3d();
-          if (face) {
-            std::vector<next::Edge*> dummy_edges(4);
-            bool bad_edge = false;
-            for (int i_edge = 0; i_edge < 4; ++i_edge) {
-              auto* edge = &face->edge(i_edge);
-              if (edge->glued()) {
-                if (edge->glued_half() == next::Edge::no) {
-                  edge = edge->glued_to();
-                } else {
-                  bad_edge = true;
-                }
-              }
-              dummy_edges[i_edge] = edge;
-            }
-            if (!bad_edge) {
-              for (next::Edge* edge : dummy_edges) {
-                if (edge->snapped_edge == -1) edge->snapped_edge = -2;
-                for (int i_vert = 0; i_vert < 2; ++i_vert) {
-                  if (edge->vertex(i_vert).snapped_edge == -1) edge->vertex(i_vert).snapped_edge = -2;
-                }
-              }
-              successful = true;
-              break;
-            }
-          }
-        }
-        HEXED_ASSERT(successful, "We haven't seen this scenario yet. Please report.", assert::Not_implemented_error)
-        #endif
       }
     }
     auto vis = Visualizer::create("default", 3, 1, "edge_match", {"snapped_edge", "vert_snapped_edge"}, 0., Visualizer::block);
@@ -839,7 +804,6 @@ void Accessible_mesh::_fit_surface() {
         Con_dir<Deformed_element> new_dir {{dir.i_dim[reverse], dir.i_dim[!reverse]},
                                            {dir.face_sign[reverse], dir.face_sign[!reverse]}};
         con.reset();
-        printers::info("((");
         _connect(to_connect, new_dir);
       }
     }
@@ -1022,49 +986,28 @@ void Accessible_mesh::_fit_surface() {
         bool all_connected = true;
         bool has_extrude = false;
         std::array<std::vector<Deformed_element*>, 2> new_elems;
-        printers::info(to_string(dir));
         for (int i_side = 0; i_side < 2; ++i_side) {
           new_elems[i_side].resize(n_fine, nullptr);
-          printers::info(to_string(i_side) + ":(");
           for (int i_elem = 0; i_elem < n_fine; ++i_elem) {
             auto& elem = *orig_elems[i_side][i_elem];
             int i_face = get_i_face(elem);
             if (i_face >= 0) {
               has_extrude = true;
               new_elems[i_side][i_elem] = &def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
-              printers::info("[" + to_string(i_face) + "]" + to_string(i_elem));
               if (params.n_dim == 3) {
                 int i_dim = i_face/2 > 3 - i_face/2 - dir.i_dim[i_side];
                 int j_elem = i_elem - math::sign(math::row_coordinate(2, 2, i_dim, i_elem))*math::pow(2, 1 - i_dim);
                 new_elems[i_side][j_elem] = new_elems[i_side][i_elem];
-                printers::info(to_string(j_elem) + " ");
               } else HEXED_THROW("implement this for 2D", assert::Not_implemented_error)
               any_connected = any_connected || new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
               all_connected = all_connected && new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
             }
           }
-          printers::info(")");
-          #if 0
-          for (int i_dim = 0; i_dim < params.n_dim - 1; ++i_dim) {
-            int n_row = params.n_dim == 3 ? 2 : 1;
-            int stride = (params.n_dim == 3 && i_dim == 0) ? 2 : 1;
-            for (int i_row = 0; i_row < n_row; ++i_row) {
-              Deformed_element** row [2];
-              for (int i_col = 0; i_col < 2; ++i_col) row[i_col] = &new_elems[i_side][i_row*2/stride + stride*i_col];
-              for (int i_col = 0; i_col < 2; ++i_col) {
-                if ((!*row[i_col]) && bool(*row[!i_col])) *row[i_col] = *row[!i_col];
-              }
-            }
-          }
-          #endif
         }
         if (has_extrude) {
           HEXED_ASSERT(any_connected == all_connected,
                        "If any of the elements are already connected then they all must be.")
-          if (!any_connected) {
-            printers::info(">>");
-            _connect(new_elems, dir);
-          }
+          if (!any_connected) _connect(new_elems, dir);
         }
       }
     }
@@ -1303,10 +1246,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   }
   History_monitor obj_monitor(.3, 100);
   History_monitor dist_monitor(.3, 100);
-  #if HEXED_VIS_MESH_OPT
-  int id = rand()%1000;
-  printers::info("id: " + std::to_string(id) + "\n");
-  #endif
   std::vector<next::Vertex*> mobile_verts;
   for (auto& vert : verts) if (vert.mobile()) mobile_verts.push_back(&vert);
   #pragma omp parallel for
@@ -1325,17 +1264,13 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     objective += vert.quality_objective();
   }
   double starting_objective = objective;
-  #if 1
   for (Int i_relax = 0;
        i_relax < 300 && (i_relax < 30
                           || (snaps_failed == 0 && obj_monitor.max() - obj_monitor.min()
                                                    > 1e-2*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
                           || (snaps_failed != 0 && dist_monitor.max() - dist_monitor.min() > 1e-2*dist_monitor.min()));
        ++i_relax) {
-  #else
-  for (Int i_relax = 0; i_relax < 100; ++i_relax) {
-  #endif
-    #if 1
+    #if 0
     {
       auto faces = _blocks.faces_3d();
       for (auto& f : faces) {
@@ -1545,39 +1480,11 @@ Element& Accessible_mesh::element(int ref_level, bool is_deformed, int serial_n)
 
 template <typename Elem_t>
 void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connection_direction dir) {
-  printers::info("starting connection with " + to_string(dir));
-  #if 1
-  {
-    auto vis_elems = Visualizer::create("default", 3, 1, "before_connection", {}, 0., Visualizer::block);
-    auto& elems = elements();
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      if (!(elem.get_is_deformed() && elem.has_shape())) continue;
-      for (int i_dim = 0; i_dim < 3; ++i_dim) {
-        for (int i_edge = 0; i_edge < 4; ++i_edge) {
-          Array<double> pos({3, 2});
-          for (int i_end = 0; i_end < 2; ++i_end) {
-            int i_vert = i_end*math::pow(2, 2 - i_dim);
-            for (int j_dim = 0; j_dim < 2; ++j_dim) {
-              i_vert += i_edge/math::pow(2, 1 - j_dim)%2*math::pow(2, 2 - j_dim - (j_dim >= i_dim));
-            }
-            Mat<3> p = elem.active_shape().vertex(i_vert).unwarped_point();
-            for (int j_dim = 0; j_dim < 3; ++j_dim) pos(j_dim)[i_end] = p(j_dim);
-          }
-          vis_elems->write_block(pos, Array<double>({0, 2}));
-        }
-      }
-    }
-  }
-  #endif
   int nd = params.n_dim;
   int nv = params.n_vertices();
   std::vector<Mortal_ptr<Face>> faces;
   std::array<std::vector<next::Element_shape*>, 2> shapes;
-  int n_unique [2] {};
   bool null_elem = false;
-  {
-  auto vis_con_elems = Visualizer::create("default", 3, 1, "connect_elements", {"i_side", "i_elem"}, 0., Visualizer::block);
   for (int i_side = 0; i_side < 2; ++i_side) {
     HEXED_ASSERT(Int(elems[i_side].size()) == nv/2, "wrong number of element pointers")
     for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
@@ -1587,38 +1494,10 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
         continue;
       }
       faces.emplace_back(&elems[i_side][i_elem]->face(dir.i_face(i_side)));
-      bool unique = true;
-      for (int j_elem = 0; j_elem < i_elem; ++j_elem) {
-        unique = unique && faces[j_elem].get() == faces[i_elem].get();
-      }
-      n_unique[i_side] += unique;
       shapes[i_side].push_back(&elems[i_side][i_elem]->active_shape());
-      for (int i_dim = 0; i_dim < 3; ++i_dim) {
-        for (int i_edge = 0; i_edge < 4; ++i_edge) {
-          Array<double> pos({3, 2});
-          Array<double> data({2, 2});
-          for (int i_end = 0; i_end < 2; ++i_end) {
-            int i_vert = i_end*math::pow(2, 2 - i_dim);
-            for (int j_dim = 0; j_dim < 2; ++j_dim) {
-              i_vert += i_edge/math::pow(2, 1 - j_dim)%2*math::pow(2, 2 - j_dim - (j_dim >= i_dim));
-            }
-            Mat<3> p = elems[i_side][i_elem]->active_shape().vertex(i_vert).unwarped_point();
-            for (int j_dim = 0; j_dim < 3; ++j_dim) pos(j_dim)[i_end] = p(j_dim);
-          }
-          data(0) = i_side;
-          data(1) = i_elem;
-          vis_con_elems->write_block(pos(), data());
-        }
-      }
     }
-    HEXED_ASSERT(n_unique[i_side] != 3, "3-element connection")
-  }
   }
   HEXED_ASSERT(!null_elem, "an element is null")
-  if ((n_unique[0] == 2 && n_unique[1] == 4) || (n_unique[0] == 4 && n_unique[1] == 2)) {
-    printers::warn("Warning: ", true);
-    printers::warn("2-on-4 connection\n");
-  }
   _face_refs.emplace_back();
   std::vector<int> fvi {face_vertex_inds(nd, dir)};
   Array<int> permute_inds({2, nv/2});
@@ -1664,7 +1543,6 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
     }
   }
   next::Element_shape::connect(shapes, dir);
-  printers::info("done\n");
 }
 
 void Accessible_mesh::_connect_shapes(Element& elem0, Element& elem1, Connection_direction dir) {
