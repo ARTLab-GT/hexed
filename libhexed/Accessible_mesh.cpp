@@ -698,7 +698,6 @@ void Accessible_mesh::_fit_surface() {
     _blocks.boundary_sides();
     Int cons_sz = def.cons.size();
     Int ref_cons_sz = def.ref_face_cons[1].size();
-    Int bound_cons_sz = def.bound_cons.size();
     for (Int i_con = 0; i_con < cons_sz; ++i_con) {
       auto& con = def.cons[i_con];
       if (!con) continue;
@@ -807,18 +806,6 @@ void Accessible_mesh::_fit_surface() {
         _connect(to_connect, new_dir);
       }
     }
-    for (Int i_con = 0; i_con < bound_cons_sz; ++i_con) {
-      auto& con = def.bound_cons[i_con];
-      if (!con) continue;
-      auto dir = con->direction();
-      Int record = con->element().face_record[dir.i_face(0)];
-      if (record >= 0) {
-        int bc_sn = con->bound_cond_serial_n();
-        int ref_level = con->element().refinement_level();
-        con.reset();
-        connect_boundary(ref_level, true, record, dir.i_dim[0], dir.face_sign[0], bc_sn);
-      }
-    }
     for (auto& vert : all_verts) {
       if (vert.record.size() == 12) {
         std::array<Deformed_element*, 2> elem_arr;
@@ -924,7 +911,6 @@ void Accessible_mesh::_fit_surface() {
     Int ref_cons_sz [3];
     for (int i_ref = 0; i_ref < 3; ++i_ref) ref_cons_sz[i_ref] = def.ref_face_cons[i_ref].size();
     Int face_refs_sz = _face_refs.size();
-    Int bound_cons_sz = def.bound_cons.size();
     for (int i_elem = 0; i_elem < elems_sz; ++i_elem) {
       Deformed_element& elem = elem_list[i_elem];
       int i_face = get_i_face(elem);
@@ -1011,21 +997,19 @@ void Accessible_mesh::_fit_surface() {
         }
       }
     }
-    for (int i_con = 0; i_con < bound_cons_sz; ++i_con) {
-      auto& con = def.bound_cons[i_con];
-      if (!con) continue;
-      auto dir = con->direction();
-      auto& elem = con->element();
-      int i_face = get_i_face(elem);
-      if (i_face >= 0) {
-        int bc_sn = con->bound_cond_serial_n();
-        int ref_level = elem.refinement_level();
-        connect_boundary(ref_level, true, elem.face_record[i_face], dir.i_dim[0], dir.face_sign[0], bc_sn);
-      }
-    }
     for (int i_elem = 0; i_elem < elems_sz; ++i_elem) {
       Deformed_element& elem = elem_list[i_elem];
       for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) elem.face_record[i_face] = 0;
+    }
+    for (Int i_elem = 0; i_elem < elem_list.size(); ++i_elem) {
+      auto& elem = elem_list[i_elem];
+      for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+        if (elem.active_shape().boundary_face() != i_face && !elem.is_connected(i_face)) {
+          def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(
+            elem, i_face/2, i_face%2, i_face, bound_conds[i_face]->n_prescribed(params.n_dim)
+          ));
+        }
+      }
     }
   }
   purge();
