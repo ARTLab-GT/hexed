@@ -2357,7 +2357,10 @@ bool has_existent_children(Tree* t) {
 
 // whether an element is currently set to be deformed at the end of the `update` sweep
 bool is_def(Element& elem) {
-  return (elem.get_is_deformed() && elem.record == 0) || (!elem.get_is_deformed() && elem.record == 3);
+  Int record;
+  #pragma omp atomic read
+  record = elem.record;
+  return (elem.get_is_deformed() && record == 0) || (!elem.get_is_deformed() && record == 3);
 }
 
 // delete elements that would create pathological extrusion topology
@@ -2534,40 +2537,24 @@ void Accessible_mesh::deform() {
     auto& elem = elems[i_elem];
     if (elem.record != 2 && elem.get_is_deformed() && elem.tree) elem.record = 3;
   }
-  // deform all boundary elements and certain of their face neighbors
+  // deform all elements that have a vertex on the boundary
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     if (elem.record != 2 && elem.tree) {
-      // figure out if this element has a face on the boundary
-      std::vector<Tree*> neighbors [6];
-      bool surface [6] {};
-      bool boundary = false;
-      for (int i_face = 0; i_face < 2*nd; ++i_face) {
-        neighbors[i_face] = elem.tree->find_neighbors(math::direction(nd, i_face));
-        if (!neighbors[i_face].empty()) {
-          if (neighbors[i_face][0]->elem) surface[i_face] = neighbors[i_face][0]->elem->record == 2;
-          else surface[i_face] = true;
+      bool def = false;
+      for (int i_direction = 1; i_direction < math::pow(3, params.n_dim); ++i_direction) {
+        Eigen::VectorXi direction(params.n_dim);
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          int dir = i_direction/math::pow(3, i_dim)%3;
+          direction(i_dim) = (dir == 2) ? -1 : dir;
         }
-        boundary = boundary || surface[i_face];
-      }
-      // if it does, deform it and all face neighbors which are not opposite the boundary face
-      if (boundary) {
-        #pragma omp atomic write
-        elem.record = 3*!elem.get_is_deformed();
-        for (int i_face = 0; i_face < 2*nd; ++i_face) {
-          bool def_face = false;
-          for (int j_face = 0; j_face < 2*nd; ++j_face) {
-            if (j_face/2 != i_face/2 && surface[j_face]) def_face = true;
-          }
-          if (def_face) {
-            for (Tree* n : neighbors[i_face]) if (n->elem) if (n->elem->record != 2) {
-              #pragma omp atomic write
-              n->elem->record = 3*!n->elem->get_is_deformed();
-            }
-          }
+        auto neighb = elem.tree->find_neighbors(direction);
+        if (!neighb.empty()) {
+          for (auto n : neighb) def = def || !exists(n);
         }
       }
+      if (def) elem.record = 3*!elem.get_is_deformed();
     }
   }
   // if any refined faces have some elements cartesian and some deformed, make them all deformed
@@ -2845,6 +2832,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
     connect_new<Deformed_element>(0);
     ++_stopwatch["update"]["refinement"].work_units_completed;
   }
+  visualize_deformed("default", "before_extrude");
   extrude(true);
   if (surf_geom) {
     connect_rest(surf_bc_sn);
@@ -2856,7 +2844,8 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   _stopwatch["update"].work_units_completed += 1;
   Int n_after = elems.size();
   for (auto& con : car.cons) {
-    HEXED_ASSERT(!con->element(0).deformed() || !con->element(1).deformed(), "cartesian connection between deformed elements");
+    HEXED_ASSERT(!con->element(0).deformed() || !con->element(1).deformed(),
+                 "cartesian connection between deformed elements")
   }
   return n_after - n_before;
 }
@@ -3442,6 +3431,29 @@ void Accessible_mesh::export_polymesh(std::string dir_name) {
   });
   write_polymesh_file(dir_name, "owner",     "labelList", n_faces,    [&](int i_entry){return format_str(100, "%i", owners   [i_entry]);}, face_note);
   write_polymesh_file(dir_name, "neighbour", "labelList", n_internal, [&](int i_entry){return format_str(100, "%i", neighbors[i_entry]);}, face_note);
+}
+
+void Accessible_mesh::visualize_deformed(std::string format, std::string file_name, double time) {
+  auto vis_elems = Visualizer::create("default", 3, 1, file_name, {}, time, Visualizer::block);
+  auto& elems = elements();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (!elem.get_is_deformed()) continue;
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) {
+        Array<double> pos({3, 2});
+        for (int i_end = 0; i_end < 2; ++i_end) {
+          int i_vert = i_end*math::pow(2, 2 - i_dim);
+          for (int j_dim = 0; j_dim < 2; ++j_dim) {
+            i_vert += i_edge/math::pow(2, 1 - j_dim)%2*math::pow(2, 2 - j_dim - (j_dim >= i_dim));
+          }
+          Mat<3> p = elem.active_shape().vertex(i_vert).unwarped_point();
+          for (int j_dim = 0; j_dim < 3; ++j_dim) pos(j_dim)[i_end] = p(j_dim);
+        }
+        vis_elems->write_block(pos, Array<double>({0, 2}));
+      }
+    }
+  }
 }
 
 void Accessible_mesh::visualize(std::string format, std::string file_name, double time) {

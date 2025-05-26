@@ -242,6 +242,7 @@ class Accessible_mesh : public Mesh {
     extruded_connections() {return {extrude_cons};}
   void write(std::string file_name) override;
   void export_polymesh(std::string dir_name) override;
+  void visualize_deformed(std::string format, std::string file_name, double time = 0);
   void visualize(std::string format, std::string file_name, double time = 0) override;
   inline const Stopwatch_tree& stopwatch_tree() const override {return _stopwatch;}
 
