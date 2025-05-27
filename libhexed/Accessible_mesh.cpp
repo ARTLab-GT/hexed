@@ -2507,7 +2507,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       elem.record = 0;
       bool ref = refine_criterion(elem);
       bool unref = unrefine_criterion(elem);
-      HEXED_ASSERT(!unref, "element requests unrefinement")
       if (ref && !unref) elem.record = 1;
       else if (unref && !ref) elem.record = -1;
     }
