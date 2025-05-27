@@ -191,7 +191,7 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
           sign = i_face%2;
         }
       }
-      if (i_dim >= 0) {
+      if (params.n_dim == 3 && i_dim >= 0) {
         auto edges = surf_geom->edges();
         Nearest_point<3> nearest_on_edge(pos);
         for (auto& edge : edges) {
@@ -940,35 +940,31 @@ void Accessible_mesh::_fit_surface() {
       }
       if (el_arr[0] && el_arr[1]) _connect(el_arr, con->direction());
     }
-    if (params.n_dim == 3) {
-      for (int i_ref = 1; i_ref < 3; ++i_ref) {
-        for (Int i_con = 0; i_con < ref_cons_sz[i_ref]; ++i_con) { // ref cons with exactly 2 fine elements
-          auto& con = def.ref_face_cons[i_ref][i_con];
-          if (!con) continue;
-          Deformed_element* coarse = nullptr;
-          int rl = con->coarse_element().refinement_level();
-          int i_face = get_i_face(con->coarse_element());
-          if (i_face < 0) continue;
-          coarse = &def.elems.at(rl, con->coarse_element().face_record[i_face]);
-          auto stretch = con->stretch();
-          std::vector<Deformed_element*> fine;
-          for (int i_fine = 0, last_fine = -1; i_fine < con->n_fine_elements(); ++i_fine) {
-            auto& elem = con->connection(i_fine).element(!con->order_reversed());
-            i_face = get_i_face(elem);
-            if (i_face >= 0) {
-              fine.push_back(&def.elems.at(elem.refinement_level(), elem.face_record[i_face]));
-              if (last_fine == -1) last_fine = i_fine;
-              else if (i_ref == 2) {
-                stretch[i_fine - last_fine > 1] = true;
-              }
+    for (int i_ref = params.n_dim - 2; i_ref < 3; ++i_ref) { // note that this will only be executed for n_dim >= 2
+      for (Int i_con = 0; i_con < ref_cons_sz[i_ref]; ++i_con) {
+        auto& con = def.ref_face_cons[i_ref][i_con];
+        if (!con) continue;
+        Deformed_element* coarse = nullptr;
+        int rl = con->coarse_element().refinement_level();
+        int i_face = get_i_face(con->coarse_element());
+        if (i_face < 0) continue;
+        coarse = &def.elems.at(rl, con->coarse_element().face_record[i_face]);
+        auto stretch = con->stretch();
+        std::vector<Deformed_element*> fine;
+        for (int i_fine = 0, last_fine = -1; i_fine < con->n_fine_elements(); ++i_fine) {
+          auto& elem = con->connection(i_fine).element(!con->order_reversed());
+          i_face = get_i_face(elem);
+          if (i_face >= 0) {
+            fine.push_back(&def.elems.at(elem.refinement_level(), elem.face_record[i_face]));
+            if (last_fine == -1) last_fine = i_fine;
+            else if (i_ref == 2) {
+              stretch[i_fine - last_fine > 1] = true;
             }
           }
-          if (fine.size() != 2) continue;
-          _connect(coarse, fine, con->direction(), stretch);
         }
+        if (int(fine.size()) != params.n_dim - 1) continue;
+        _connect(coarse, fine, con->direction(), stretch);
       }
-    } else {
-      HEXED_THROW("need to implement this for 2D", assert::Not_implemented_error)
     }
     for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
       for (auto& ref : _face_refs[i_ref]) {
