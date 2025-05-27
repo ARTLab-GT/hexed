@@ -406,6 +406,7 @@ start = {
 mesh_init = false
 mesh = {
     println {meshing...}
+    flow_time = 0
     init_refinement
     add_geom
     i_refinement = 0
@@ -415,6 +416,7 @@ mesh = {
         print({geometry-based refinement sweep } + i_refinement + {... } + newline)
         keep_refining = keep_refining & refine
         i_refinement = i_refinement + 1
+        flow_time = flow_time + 1
         println {done}
     }
     $loop
@@ -433,6 +435,7 @@ mesh = {
     } + min_surface_position0 + { } + max_surface_position0 + {
     } + min_surface_position1 + { } + max_surface_position1 + {
     } + min_surface_position2 + { } + max_surface_position2 + {
+    flow_time = 0
 })
     geom_length = sqrt((max_surface_position0 - min_surface_position0)^2 + (max_surface_position1 - min_surface_position1)^2 + (max_surface_position2 - min_surface_position2)^2)
     println({geometry length: } + geom_length)
