@@ -1314,10 +1314,14 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     #endif
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
-      //#pragma omp parallel for
+      #pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
         auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
         vert->init_improve(get_target);
+      }
+      #pragma omp parallel for
+      for (next::Vertex* vert : mobile_verts) {
+        vert->compute_gradient();
       }
       bool done;
       while (true) {

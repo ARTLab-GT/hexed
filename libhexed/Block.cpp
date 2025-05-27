@@ -273,7 +273,11 @@ bool Vertex::has_problem() const {
 
 void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
-  _orig_pos = unwarped_point();
+  _pos = _orig_pos = unwarped_point();
+  _orig_dist = (get_target(_orig_pos) - _orig_pos).norm();
+}
+
+void Vertex::compute_gradient() {
   auto state = _compute_state();
   bool gn = false;
   for (Vertex* n : neighbors()) gn = gn || n->glued();
@@ -282,6 +286,7 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
                "(ortho = %e; edge = %e; coords = (%e %e %e); glued neighbor = %i).",
                state.worst_ortho, state.worst_edge, _orig_pos(0), _orig_pos(1), _orig_pos(2),
                int(gn)))
+  _orig_obj = state.objective;
   Mat<3> grad_fd;
   bool feasible_stencil = false;
   double fd = 1e-5*nominal_size();
@@ -293,7 +298,7 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
       for (int sign : {-1, 1}) {
         _pos = _orig_pos;
         _pos(i_dim) += sign*fd;
-        auto fd_state = _compute_state(true, false, false);
+        auto fd_state = _compute_state(true, false, true);
         if (fd_state.feasible) {
           grad_fd(i_dim) += sign*fd_state.objective;
           ++fd_step;
@@ -308,11 +313,9 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   }
   _pos = _orig_pos;
   _step_sz = 1.;
-  _orig_dist = (get_target(_orig_pos) - _orig_pos).norm();
   _improve_done = false;
   if (feasible_stencil) {
     _step = -nominal_size()*grad_fd.normalized();
-    _orig_obj = state.objective;
     _improve_failed = false;
     _last_step_rejected = false;
   } else {
