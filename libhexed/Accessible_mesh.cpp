@@ -1254,7 +1254,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
                                                    > 1e-2*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
                           || (snaps_failed != 0 && dist_monitor.max() - dist_monitor.min() > 1e-2*dist_monitor.min()));
        ++i_relax) {
-    #if 0
+    #if 1
     {
       auto faces = _blocks.faces_3d();
       for (auto& f : faces) {
@@ -1290,27 +1290,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         }
         vis2->write_block(pos, Array<double>({0, 2}));
       }
-      auto vis_elems = Visualizer::create("default", 3, 1, "elem_mesh" + to_string(i_relax), {}, (double)i_relax, Visualizer::block);
-      auto& elems = elements();
-      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-        auto& elem = elems[i_elem];
-        if (!elem.get_is_deformed()) continue;
-        for (int i_dim = 0; i_dim < 3; ++i_dim) {
-          for (int i_edge = 0; i_edge < 4; ++i_edge) {
-            Array<double> pos({3, 2});
-            for (int i_end = 0; i_end < 2; ++i_end) {
-              int i_vert = i_end*math::pow(2, 2 - i_dim);
-              for (int j_dim = 0; j_dim < 2; ++j_dim) {
-                i_vert += i_edge/math::pow(2, 1 - j_dim)%2*math::pow(2, 2 - j_dim - (j_dim >= i_dim));
-              }
-              Mat<3> p = elem.active_shape().vertex(i_vert).unwarped_point();
-              for (int j_dim = 0; j_dim < 3; ++j_dim) pos(j_dim)[i_end] = p(j_dim);
-            }
-            vis_elems->write_block(pos, Array<double>({0, 2}));
-          }
-        }
-      }
     }
+    visualize_deformed("default", "elem_mesh" + to_string(i_relax), (double)i_relax);
     #endif
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);

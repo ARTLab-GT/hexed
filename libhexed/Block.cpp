@@ -278,7 +278,7 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
 }
 
 void Vertex::compute_gradient() {
-  auto state = _compute_state();
+  auto state = _compute_state(true, false, true);
   bool gn = false;
   for (Vertex* n : neighbors()) gn = gn || n->glued();
   HEXED_ASSERT(state.feasible, format_str(200,
@@ -350,8 +350,8 @@ void Vertex::force_continue_improve() {
 bool Vertex::check_improve(bool updated_neighbors) {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
   auto state0 = _compute_state(true, false, true);
-  auto state1 = _compute_state(true, false, false, 1e-8);
-  _improve_done = state0.feasible && (state1.feasible || !updated_neighbors) && state0.objective < _orig_obj;
+  auto state1 = _compute_state(true, false, !updated_neighbors, 1e-8);
+  _improve_done = state0.feasible && state1.feasible && state0.objective < _orig_obj;
   return _improve_done || _improve_failed;
 }
 
@@ -365,12 +365,15 @@ void Vertex::init_snap(std::function<Mat<3>(Mat<3>)> get_target) {
 }
 
 void Vertex::compute_snap() {
-  if (_improve_done) return;
+  if (_improve_done || _improve_failed) return;
   _pos = _orig_pos + _step_sz*_step;
+  if (_step_sz < 1e-10) {
+    _improve_failed = true;
+    _pos = _orig_pos;
+  }
 }
 
 Vertex::Snap_result Vertex::check_snap(bool updated_neighbors) {
-  if (_improve_failed) return {true, true, _step.norm()};
   auto state = _compute_state(true, false, !updated_neighbors, 1e-8);
   _last_grad = state.gradient.normalized()*0.1*nominal_size();
   _improve_done = state.feasible && _step_sz*_step.norm() < .02*nominal_size();
@@ -378,8 +381,7 @@ Vertex::Snap_result Vertex::check_snap(bool updated_neighbors) {
     _step_sz /= 3;
     _last_snap_failed = true;
   }
-  _improve_failed = _step_sz < 1e-10;
-  return {_improve_done, _last_snap_failed, (1 - _step_sz)*_step.norm()};
+  return {_improve_done || _improve_failed, _last_snap_failed, (1 - _step_sz)*_step.norm()};
 }
 
 Int Vertex::misses = 0;
