@@ -110,6 +110,7 @@ void Vertex::eat(Vertex& that) {
     snapped_edge = that.snapped_edge;
     snapped_endpoint = that.snapped_endpoint;
   }
+  if (that.snapped_point >= 0 && snapped_point < 0) snapped_point = that.snapped_point;
   _sz_constraint = std::min(_sz_constraint, that._sz_constraint);
 }
 

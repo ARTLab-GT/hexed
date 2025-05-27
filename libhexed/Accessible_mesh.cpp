@@ -511,17 +511,6 @@ void Accessible_mesh::_fit_surface() {
     vert.set_pos(vert.nominal_position());
   }
   _offset_vertices(.2, false);
-  {
-    auto faces = _blocks.faces_3d();
-    #pragma omp parallel for
-    for (auto& f : faces) {
-      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
-    }
-    auto blocks = _blocks.boundary_sides();
-    #pragma omp parallel for
-    for (auto& b : blocks) b.reset();
-    visualize("default", "mesh_diagnostic1", 0.);
-  }
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
