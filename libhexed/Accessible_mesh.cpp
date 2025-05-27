@@ -1247,8 +1247,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   watch.start();
   double last_time = 0;
   std::string message;
-  next::Vertex::misses = 0;
-  next::Vertex::tries = 0;
   double objective = 0;
   #pragma omp parallel for reduction(+:objective)
   for (auto& vert : verts) {

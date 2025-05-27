@@ -247,15 +247,6 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
   }
 }
 
-Vertex::Improve_quality_result Vertex::improve_quality() {
-  return _improve_quality([](Mat<3>){return Mat<3>::Zero();}, false, false, false);
-}
-
-Vertex::Improve_quality_result Vertex::improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                                                       bool limit_direction, bool snap) {
-  return _improve_quality(get_target, true, limit_direction, snap);
-}
-
 void Vertex::compute_depends() {
   _depends_on.clear();
   _Optimization_state state;
@@ -384,100 +375,6 @@ Vertex::Snap_result Vertex::check_snap(bool updated_neighbors) {
   return {_improve_done || _improve_failed, _last_snap_failed, (1 - _step_sz)*_step.norm()};
 }
 
-Int Vertex::misses = 0;
-Int Vertex::tries = 0;
-
-Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                                                        bool has_target, bool limit_direction, bool snap) {
-  bool miss = false;
-  for (Vertex* vert : _depends_on) {
-    if (!vert->_shared_value_lock.test()) {
-      miss = true;
-      break;
-    }
-  }
-  if (miss) {
-    #pragma omp atomic update
-    ++misses;
-  }
-  #pragma omp atomic update
-  ++tries;
-  // acquire locks on all vertices we depend on to prevent simultaneous vertex motions from violating mesh quality
-  std::vector<Lock::Set> locks;
-  for (Vertex* vert : _depends_on) locks.emplace_back(vert->_shared_value_lock);
-  _pos = unwarped_point();
-  Mat<3> orig_pos = _pos;
-  auto state = _compute_state();
-  double ns = nominal_size();
-  bool gn = false;
-  for (Vertex* n : neighbors()) gn = gn || n->glued();
-  HEXED_ASSERT(state.feasible, format_str(200,
-               "Vertex state violates quality criteria "
-               "(ortho = %e; edge = %e; coords = (%e %e %e); glued neighbor = %i).",
-               state.worst_ortho, state.worst_edge, orig_pos(0), orig_pos(1), orig_pos(2),
-               int(gn)))
-  Mat<3> direction = -state.gradient.normalized();
-  Mat<3> target = get_target(orig_pos);
-  double orig_dist = (target - orig_pos).norm();
-  _Optimization_state new_state = state;
-  const double min_step = 1e-8*ns;
-  int n_back_improve = 0;
-  if (state.gradient.norm()*ns > 1e-6*state.objective) {
-    //_pos = orig_pos + 1e-8*ns*direction;
-    _Optimization_state test_state = _compute_state();
-    #if 0
-    if (std::abs(test_state.objective - state.objective + state.gradient.norm()*1e-8*ns)
-        > 1e-1*std::abs(test_state.objective - state.objective)) {
-      printers::warn("badGradient" + std::to_string(state.has_glued_neighbor), true);
-    }
-    #endif
-    double step_sz = ns;
-    double repeat_factor [] {10., 2., 2.};
-    double end_factor [] {10., .9, 1.};
-    for (int i = 0; i < 3; ++i) if (step_sz > min_step) {
-      do {
-        if (step_sz < min_step) {
-          _pos = orig_pos;
-          new_state.objective = state.objective;
-          break;
-        }
-        step_sz /= repeat_factor[i];
-        ++n_back_improve;
-        _pos = orig_pos + step_sz*direction;
-        Mat<3> new_target = get_target(_pos);
-        double dist = (new_target - _pos).norm();
-        if (dist > orig_dist) _pos += (dist - orig_dist)/dist*(new_target - _pos);
-        new_state = _compute_state();
-      } while (!(new_state.feasible && new_state.objective < state.objective));
-      step_sz *= end_factor[i];
-    }
-  }
-  int snap_iters = 0;
-  double target_dist = 0;
-  if (has_target && snap) {
-    orig_pos = _pos;
-    target = get_target(_pos);
-    Mat<3> step = target - _pos;
-    double orig_objective = new_state.objective;
-    do {
-      if (step.norm() < min_step) {
-        _pos = orig_pos;
-        new_state.objective = orig_objective;
-        break;
-      }
-      _pos = orig_pos + step;
-      target_dist = (target - _pos).norm();
-      new_state = _compute_state();
-      step /= 2;
-      ++snap_iters;
-    } while (!new_state.feasible || new_state.objective > 2*state.objective);
-  }
-  new_state = _compute_state();
-  HEXED_ASSERT(new_state.feasible, "something changed");
-  _last_snap_failed = snap_iters > 1;
-  return {new_state.objective - state.objective, _last_snap_failed, target_dist};
-}
-
 bool Vertex::snap_to(Mat<3> target) {
   Mat<3> orig_pos = unwarped_point();
   set_pos(target);
@@ -488,17 +385,10 @@ bool Vertex::snap_to(Mat<3> target) {
 
 double Vertex::quality_objective() {
   auto state = _compute_state(false);
-  std::string dists;
-  std::string neighb_pos;
-  for (Vertex* n : neighbors()) if (n) if (n->mobile()) {
-    dists += to_string(n->dijkstra_dist) + " ";
-    neighb_pos += to_string(n->point({})) + " ";
-  }
   HEXED_ASSERT(state.feasible, format_str(200,
                "Vertex state violates quality criteria "
-               "(ortho = %e; edge = %e; coords = (%e %e %e); offset record = %s; neighbors = %s).",
-               state.worst_ortho, state.worst_edge, point({})(0), point({})(1), point({})(2),
-               dists.c_str(), neighb_pos.c_str()))
+               "(ortho = %e; edge = %e; coords = %s; offset record = %s; neighbors = %s).",
+               state.worst_ortho, state.worst_edge, to_string(unwarped_point())))
   return state.objective;
 }
 

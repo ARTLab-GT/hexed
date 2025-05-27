@@ -127,14 +127,6 @@ class Vertex : public Block {
   void remove_size_constraints();
   Mat<3> nominal_position() const;
   bool mobile() const;
-  struct Improve_quality_result {
-    double objective_diff;
-    bool snap_failed;
-    double target_dist;
-  };
-  Improve_quality_result improve_quality();
-  Improve_quality_result improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                                         bool limit_direction = true, bool snap = true);
   void compute_depends();
   void init_improve(std::function<Mat<3>(Mat<3>)> get_target);
   void compute_gradient();
@@ -205,9 +197,6 @@ class Vertex : public Block {
   double dijkstra_arc_len; //!< \brief arc length of the nearest point on the curve
   bool incompatible_snap;
 
-  static Int misses;
-  static Int tries;
-
   private:
   struct _Gradient_entry {
     const Element_shape* elem;
@@ -229,8 +218,6 @@ class Vertex : public Block {
   Mat<3> _unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_others) const;
   void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
                                 Vertex* orig_vertex = nullptr, Vertex* ignore = nullptr, bool ignore_orig = false, bool ignore_neighb = false, double extra_tol = 0.);
-  Improve_quality_result _improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                                          bool has_target, bool limit_direction, bool snap);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   Mat<3> _get_pos() const; // fetches `_pos` with atomic reads
   int _get_index(const Element_shape&) const;
