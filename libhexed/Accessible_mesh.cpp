@@ -3286,18 +3286,19 @@ void Accessible_mesh::export_polymesh(std::string dir_name) {
 }
 
 void Accessible_mesh::visualize_deformed(std::string format, std::string file_name, double time) {
-  auto vis_elems = Visualizer::create("default", 3, 1, file_name, {}, time, Visualizer::block);
+  int nd = params.n_dim;
+  auto vis_elems = Visualizer::create("default", nd, 1, file_name, {}, time, Visualizer::block);
   auto& elems = elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     if (!elem.get_is_deformed()) continue;
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      for (int i_edge = 0; i_edge < 4; ++i_edge) {
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      for (int i_edge = 0; i_edge < params.n_vertices()/2; ++i_edge) {
         Array<double> pos({3, 2});
         for (int i_end = 0; i_end < 2; ++i_end) {
-          int i_vert = i_end*math::pow(2, 2 - i_dim);
-          for (int j_dim = 0; j_dim < 2; ++j_dim) {
-            i_vert += i_edge/math::pow(2, 1 - j_dim)%2*math::pow(2, 2 - j_dim - (j_dim >= i_dim));
+          int i_vert = i_end*math::pow(2, nd - 1 - i_dim);
+          for (int j_dim = 0; j_dim < nd - 1; ++j_dim) {
+            i_vert += i_edge/math::pow(2, nd - 2 - j_dim)%2*math::pow(2, nd - 1 - j_dim - (j_dim >= i_dim));
           }
           Mat<3> p = elem.active_shape().vertex(i_vert).unwarped_point();
           for (int j_dim = 0; j_dim < 3; ++j_dim) pos(j_dim)[i_end] = p(j_dim);
