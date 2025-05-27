@@ -243,7 +243,7 @@ Mat<3> Accessible_mesh::_de_intersect(next::Vertex& vert, Mat<3> pos) {
 }
 
 
-void Accessible_mesh::_dijkstra(std::array<next::Vertex*, 2> start_end,
+bool Accessible_mesh::_dijkstra(std::array<next::Vertex*, 2> start_end,
                                 std::function<double(next::Vertex&, next::Vertex&, next::Edge&)> cost,
                                 std::function<void(next::Vertex&)> snap) {
   auto verts = _blocks.boundary_verts();
@@ -290,8 +290,9 @@ void Accessible_mesh::_dijkstra(std::array<next::Vertex*, 2> start_end,
       if (!vert) break;
       if (!vert->dijkstra_prev_edge) break;
     }
+    return true;
   } else {
-    HEXED_THROW("Dijkstra's algorithm failed to find a path.")
+    return false;
   }
 }
 
@@ -441,7 +442,10 @@ void Accessible_mesh::_fit_surface() {
           vert.snapped_edge = i_geom_edge;
         }
       };
-      _dijkstra(start_end, cost, snap);
+      if (!_dijkstra(start_end, cost, snap)) {
+        printers::warn("Warning: ", true);
+        printers::warn("Skipping an edge because Dijkstra's algorithm failed.\n");
+      }
     }
     // deal with edge endpoints that aren't shared with other edges
     for (auto& vert : verts) {
@@ -458,6 +462,8 @@ void Accessible_mesh::_fit_surface() {
         for (int i_vert = 0; i_vert < 2; ++i_vert) {
           if (&snapped_edge->vertex(i_vert) != &vert) end_vert = &snapped_edge->vertex(i_vert);
         }
+        HEXED_ASSERT(end_vert, "Opposite vertex not found.")
+        HEXED_ASSERT(!end_vert->glued(), "Opposite vertex is glued.")
         auto cost = [this, &snapped_edge](next::Vertex& vert, next::Vertex& curr_vert, next::Edge& edge) {
           return &edge == snapped_edge ? huge : 1.;
         };
@@ -465,7 +471,8 @@ void Accessible_mesh::_fit_surface() {
           if (vert.snapped_edge == -1) vert.snapped_edge = -2;
           if (vert.dijkstra_prev_edge->snapped_edge == -1) vert.dijkstra_prev_edge->snapped_edge = -2;
         };
-        _dijkstra({&vert, end_vert}, cost, snap);
+        HEXED_ASSERT(_dijkstra({&vert, end_vert}, cost, snap),
+                     "Dijkstra's algorithm failed when correcting a dead-end edge.")
       }
     }
     auto vis = Visualizer::create("default", 3, 1, "edge_match", {"snapped_edge", "vert_snapped_edge"}, 0., Visualizer::block);
