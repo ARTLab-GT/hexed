@@ -894,6 +894,15 @@ void Accessible_mesh::_fit_surface() {
           }
           new_elem.shape().vertex(i_vert).set_pos(pos);
         }
+        if (params.n_dim == 3) {
+          auto face = new_elem.active_shape().boundary_face_3d();
+          auto old_face = elem.active_shape().boundary_face_3d();
+          for (int i_edge = 0; i_edge < 4; ++i_edge) {
+            next::Edge* old_edge = &old_face->edge(i_edge);
+            if (old_edge->glued()) old_edge = old_edge->glued_to();
+            face->edge(i_edge).snapped_edge = old_edge->snapped_edge;
+          }
+        }
         elem.active_shape().destroy_boundary_face();
       }
     }
@@ -1110,7 +1119,6 @@ void Accessible_mesh::_fit_surface() {
   #pragma omp parallel for
   for (auto& edge : edges_2d) plain_snap(edge);
   auto faces_3d = _blocks.faces_3d();
-  #pragma omp parallel for
   for (auto& face : faces_3d) {
     for (int i_edge = 0; i_edge < 4; ++i_edge) face.edge(i_edge).reset();
   }
