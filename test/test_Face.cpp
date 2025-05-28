@@ -3,9 +3,10 @@
 
 TEST_CASE("Face") {
   hexed::Storage_params params {2, 5, 3, 2};
-  hexed::Face f(params, 0, 1);
+  hexed::Face f(params, 0, 1, true);
   REQUIRE(f.i_dim() == 0);
   REQUIRE(f.sign() == 1);
+  REQUIRE(f.is_deformed() == true);
   REQUIRE(f.storage_params().row_size == 2);
   REQUIRE(!f.connected());
   REQUIRE(!f.associated());

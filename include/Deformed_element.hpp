@@ -33,7 +33,6 @@ class Deformed_element : public Element {
   virtual double jacobian_determinant(int i_qpoint);
 
   bool deformed() const override;
-  double* kernel_face_normal(int i_face) override;
 };
 
 }

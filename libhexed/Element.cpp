@@ -24,7 +24,7 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
 {
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
-      _faces.emplace_back(params, i_dim, sign);
+      _faces.emplace_back(params, i_dim, sign, get_is_deformed());
       _faces.back().associate(*this);
     }
   }
@@ -180,11 +180,15 @@ next::Element_shape& Element::active_shape() {
 
 double* Element::state() {return data.data();}
 double* Element::residual_cache() {return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();}
-double* Element::face(int i_face, bool is_ldg) {return faces[i_face] + is_ldg*params.n_dof()/params.row_size;}
+double* Element::face(int i_face, bool is_ldg) {return _faces[i_face].flow_state()(is_ldg).data();}
 bool Element::deformed() const {return false;}
 double* Element::reference_level_normals() {return nullptr;}
 double* Element::jacobian_determinant() {return nullptr;}
-double* Element::kernel_face_normal(int i_face) {return nullptr;}
+
+double* Element::kernel_face_normal(int i_face) {
+  Array<double> nrml = _faces[i_face].normal();
+  return nrml.size() == 0 ? nullptr : nrml.data();
+}
 
 double* Element::debug_variables() {
   HEXED_ASSERT(config::debug_variables, "Attempt to access nonexistant dummy variables.");

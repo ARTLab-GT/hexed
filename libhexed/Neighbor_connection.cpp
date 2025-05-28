@@ -11,6 +11,7 @@ Neighbor_connection::Neighbor_connection(Storage_params params, std::array<Face*
   faces[0]->connect(_faces[0]);
   faces[1]->connect(_faces[1]);
   if (rotate) printers::warn("rotated connection\n", true);
+  _is_def = _faces[0]->is_deformed() && _faces[1]->is_deformed();
 }
 
 Face& Neighbor_connection::opposite_face(Face& f) {

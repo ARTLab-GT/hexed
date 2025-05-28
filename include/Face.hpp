@@ -4,6 +4,7 @@
 #include "reciprocal.hpp"
 #include "Storage_params.hpp"
 #include "Neighbor_connection.hpp"
+#include "Array.hpp"
 
 namespace hexed {
 
@@ -12,9 +13,10 @@ class Face_refinement;
 
 class Face : public Mortal {
   public:
-  Face(Storage_params, int i_dim, int sign);
+  Face(Storage_params, int i_dim, int sign, bool is_deformed);
   inline int i_dim() const {return _i_dim;}
   inline int sign() const {return _sign;}
+  bool is_deformed() const {return _is_def;}
   inline Storage_params storage_params() const {return _params;}
   void associate(Element&);
   void associate(Face_refinement&);
@@ -26,15 +28,24 @@ class Face : public Mortal {
   inline Neighbor_connection* neighbor_connection() {return _neighbor_connection.get();}
   inline Face_refinement* face_ref_fine() {return _face_ref_fine.get();}
   inline bool connected() const {return _neighbor_connection || _face_ref_fine;}
+  Array<double> flow_state();
+  Array<double> advection_state();
+  Array<double> full_state();
+  Array<double> normal();
 
   private:
   Storage_params _params;
   int _i_dim;
   int _sign;
+  bool _is_def;
   Mortal_ptr<Element> _element;
   Mortal_ptr<Face_refinement> _face_ref_coarse;
   Reciprocal_ptr<Face, Neighbor_connection> _neighbor_connection;
   Reciprocal_ptr<Face, Face_refinement> _face_ref_fine;
+  int _n_face_qpoint;
+  int _n_state;
+  int _n_normal;
+  Array<double> _data;
 };
 
 }

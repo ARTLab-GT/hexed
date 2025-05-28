@@ -118,6 +118,5 @@ double Deformed_element::jacobian_determinant(int i_qpoint) {
 }
 
 bool Deformed_element::deformed() const {return true;}
-double* Deformed_element::kernel_face_normal(int i_face) {return face_normal(i_face);}
 
 }

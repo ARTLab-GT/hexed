@@ -7,8 +7,8 @@ namespace hexed {
 Face_refinement::Face_refinement(Face& face, int sdim)
 : _coarse{this}
 , _split_dim{sdim}
-, _fine0{face.storage_params(), face.i_dim(), face.sign()}
-, _fine1{face.storage_params(), face.i_dim(), face.sign()}
+, _fine0{face.storage_params(), face.i_dim(), face.sign(), face.is_deformed()}
+, _fine1{face.storage_params(), face.i_dim(), face.sign(), face.is_deformed()}
 {
   HEXED_ASSERT(0 <= sdim && sdim < face.storage_params().n_dim - 1, "`split_dim` out of bounds")
   face.connect(_coarse);

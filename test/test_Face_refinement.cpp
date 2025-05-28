@@ -4,7 +4,7 @@
 
 TEST_CASE("Face_refinement") {
   hexed::Storage_params params {2, 5, 3, 2};
-  auto f = std::make_unique<hexed::Face>(params, 0, 1);
+  auto f = std::make_unique<hexed::Face>(params, 0, 1, false);
   REQUIRE_THROWS(hexed::Face_refinement(*f, 2)); // split_dim is too large
   hexed::Face_refinement fr(*f, 1);
   REQUIRE(&fr.coarse() == f.get());
@@ -20,9 +20,11 @@ TEST_CASE("Face_refinement") {
   REQUIRE(!fr.fine()[0]->connected());
   REQUIRE(fr.fine()[1]->face_ref_fine() == nullptr);
   REQUIRE(fr.fine()[1]->face_ref_coarse() == &fr);
+  REQUIRE(fr.is_deformed() == false);
   f.reset();
   REQUIRE(!fr.alive());
   REQUIRE_THROWS(fr.coarse());
+  REQUIRE(fr.is_deformed() == false);
 
   SECTION("elements") {
     hexed::Storage_params params {2, 5, 3, 2};

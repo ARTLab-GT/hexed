@@ -16,10 +16,12 @@ class Neighbor_connection : public Mortal, public Connection {
   Face& opposite_face(Face&);
   inline bool alive() const {return _faces[0] && _faces[1];}
   Connection_direction get_direction() const override;
+  inline bool is_deformed() const {return _is_def;}
 
   private:
   std::array<Reciprocal_ptr<Neighbor_connection, Face>, 2> _faces;
   int _rotate;
+  bool _is_def;
 };
 
 }
