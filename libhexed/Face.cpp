@@ -21,6 +21,7 @@ Face::Face(Storage_params params, int i_d, int s, bool is_def)
 #define ASSERT_NOT_ASSOCIATED \
   HEXED_ASSERT(!_element, "already associated with an `Element`") \
   HEXED_ASSERT(!_face_ref_coarse, "already associated with a `Face_refinement`") \
+  HEXED_ASSERT(!_boundary_connection, "already associated with a `Boundary_connection`") \
 
 void Face::associate(Element& elem) {
   ASSERT_NOT_ASSOCIATED
@@ -33,6 +34,8 @@ void Face::associate(Face_refinement& ref) {
 }
 
 void Face::associate(next::Boundary_connection& con) {
+  ASSERT_NOT_ASSOCIATED
+  _boundary_connection.set(&con);
 }
 
 #define ASSERT_NOT_CONNECTED \

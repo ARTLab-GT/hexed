@@ -28,7 +28,8 @@ class Face : public Mortal {
   // note there is no `dissociate` function
   inline Element* element() {return _element.get();}
   inline Face_refinement* face_ref_coarse() {return _face_ref_coarse.get();}
-  inline bool associated() const {return _element || _face_ref_coarse;}
+  inline next::Boundary_connection* boundary_connection() {return _boundary_connection.get();}
+  inline bool associated() const {return _element || _face_ref_coarse || _boundary_connection;}
   void connect(Reciprocal_ptr<Neighbor_connection, Face>&);
   void connect(Reciprocal_ptr<Face_refinement, Face>&);
   void disconnect();
