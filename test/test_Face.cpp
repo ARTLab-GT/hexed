@@ -17,4 +17,6 @@ TEST_CASE("Face") {
   REQUIRE(f.element() == &elem0);
   REQUIRE(f.associated());
   REQUIRE_THROWS(f.associate(elem1));
+  f.disconnect();
+  REQUIRE(!f.connected());
 }

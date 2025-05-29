@@ -296,7 +296,7 @@ class Boundary_block : public Block {
  * \details This class is only used to represent boundary edges, since interior edges are not free
  * (their position is always determined by linear interpolation between the vertices).
  * Both 2D and 3D meshes have `Edge`s, but their role is different.
- * In 3D, boundary `Edges` form the interfaces between boundary `Face`s.
+ * In 3D, boundary `Edges` form the interfaces between boundary `Surface_face`s.
  * In 2D, boundary `Edges` _are_ the boundary faces (or boundary _sides_ might be a better term).
  */
 class Edge : public Boundary_block {
@@ -350,19 +350,19 @@ class Edge : public Boundary_block {
 /*! \brief A 2-dimensional `Block` bounded by 4 `Edge`s.
  * \details This class is only used to represent boundary faces, since interior faces are not free
  * (their position is always determined by linear interpolation between the vertices).
- * Only 3D meshes have `Face`s.
+ * Only 3D meshes have `Surface_face`s.
  * `point({i, j})` will behave as follows:
  * - if `i` and `j` \f$\in\f$ {0, `row_size()` - 1}, returns the position of one of the vertices.
  * - if `i` or `j` \f$\in\f$ {0, `row_size()` - 1}, returns the position of one the edges.
  * - otherwise returns a point in the `interior()`.
  */
-class Face : public Boundary_block {
+class Surface_face : public Boundary_block {
   public:
-  /*! \brief Constructs a `Face` that referes to existing vertices.
+  /*! \brief Constructs a `Surface_face` that referes to existing vertices.
    * \details Vertices are ordered in the standard row-major order.
-   * `this` will construct and own its edges (which can be accessed with `Face::edge`).
+   * `this` will construct and own its edges (which can be accessed with `Surface_face::edge`).
    */
-  Face(std::array<Vertex*, 4>, const Basis&);
+  Surface_face(std::array<Vertex*, 4>, const Basis&);
   //! \brief Access the `i`th edge.
   //! \details The order of the edges is \f$ \{\xi_0 = 0\}, \{\xi_0 = 1\}, \{\xi_1 = 0\}, \{\xi_1 = 1\} \f$.
   inline Edge& edge(int i) {return _edges[i];}
@@ -432,8 +432,8 @@ class Element_shape : public Block {
   inline std::array<std::vector<double>, 2> glued_corners() const {return _glued_corners;}
   inline void set_glued_corners(std::array<std::vector<double>, 2> corners) {_glued_corners = corners;}
   inline void unglue() {_glued_to.set();}
-  inline Face* boundary_face_3d() {return _sf.get();}
-  inline const Face* boundary_face_3d() const {return _sf.get();}
+  inline Surface_face* boundary_face_3d() {return _sf.get();}
+  inline const Surface_face* boundary_face_3d() const {return _sf.get();}
   inline Boundary_block* boundary_block() {return _bf.get();}
   inline const Boundary_block* boundary_block() const {return _bf.get();}
   inline int boundary_face() const {return _i_bf;}
@@ -457,7 +457,7 @@ class Element_shape : public Block {
   int _i_bf;
   Reciprocal_ptr<Element_shape, Boundary_block> _bf;
   Reciprocal_list<Element_shape, Boundary_block> _boundary_edges;
-  Mortal_ptr<Face> _sf;
+  Mortal_ptr<Surface_face> _sf;
   Reciprocal_list<Element_shape, Vertex> _glued_verts;
   Mortal_ptr<Element_shape> _glued_to;
   std::array<std::vector<double>, 2> _glued_corners;
@@ -465,7 +465,7 @@ class Element_shape : public Block {
 
 /*! \brief Stores all the `Block`s for an entire mesh.
  * \details To use, simply create elements with `create_element()` and connect them with `Element_shape::connect`.
- * `create_element()` will automatically allocate any lower-dimensional entities (`Vertex`, `Face`, `Edge`) necessary.
+ * `create_element()` will automatically allocate any lower-dimensional entities (`Vertex`, `Surface_face`, `Edge`) necessary.
  * and destroying elements will automatically free them
  * (although they may not actually be destroyed until the relevant entity sequence is accessed).
  */
@@ -485,7 +485,7 @@ class Mesh_blocks {
   Sequence<Edge&> edges_2d();
   //! \brief If 3D, obtains the list of surface faces.
   //! \details If not 3D, returns an empty sequence.
-  Sequence<Face&> faces_3d();
+  Sequence<Surface_face&> faces_3d();
   //! \brief returns `edges_2d` or `faces_3d`, as appropriate
   Sequence<Boundary_block&> boundary_sides();
 
@@ -513,7 +513,7 @@ class Mesh_blocks {
   Int _n_interior_verts;
   Int _n_boundary_verts;
   std::vector<Edge> _edges_2d;
-  std::vector<Face> _faces_3d;
+  std::vector<Surface_face> _faces_3d;
 };
 
 }

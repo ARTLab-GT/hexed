@@ -562,7 +562,7 @@ std::vector<int> Edge::element_coords(std::vector<int> coords) const {
     int i_face = element()->boundary_face();
     coords.insert(coords.begin() + i_face/2, i_face%2*(row_size() - 1));
   } else if (nd == 3) {
-    const Face* face = element()->boundary_face_3d();
+    const Surface_face* face = element()->boundary_face_3d();
     HEXED_ASSERT(face, "element has no face");
     for (int i_edge = 0; i_edge < 4; ++i_edge) {
       if (&face->edge(i_edge) == this) {
@@ -616,7 +616,7 @@ int Edge::glued_half() const {
   return _half;
 }
 
-Mat<3> Face::_point(const std::vector<int>& coords, Int recursion_depth) const {
+Mat<3> Surface_face::_point(const std::vector<int>& coords, Int recursion_depth) const {
   // if the point is on the boundary of the node array, forward to one of the edges
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     if (coords[i_dim] ==              0) return _edges[2*i_dim    ].point({coords[!i_dim]}, recursion_depth + 1);
@@ -626,7 +626,7 @@ Mat<3> Face::_point(const std::vector<int>& coords, Int recursion_depth) const {
   return _interior(coords[0] - 1)(coords[1] - 1).vector();
 }
 
-Face::Face(std::array<Vertex*, 4> verts, const Basis& b) : Boundary_block(2, b) {
+Surface_face::Surface_face(std::array<Vertex*, 4> verts, const Basis& b) : Boundary_block(2, b) {
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       _edges.emplace_back(*verts[(2 - i_dim)*sign], *verts[(2 - i_dim)*sign + 1 + i_dim], basis());
@@ -635,13 +635,13 @@ Face::Face(std::array<Vertex*, 4> verts, const Basis& b) : Boundary_block(2, b) 
   reset();
 }
 
-std::vector<Element_shape*> Face::dependent_elements() {
+std::vector<Element_shape*> Surface_face::dependent_elements() {
   std::vector<Element_shape*> depend;
   if (alive()) depend.push_back(element());
   return depend;
 }
 
-std::vector<int> Face::element_coords(std::vector<int> coords) const {
+std::vector<int> Surface_face::element_coords(std::vector<int> coords) const {
   HEXED_ASSERT(element(), "must have an `element()` to call `element_coords`");
   HEXED_ASSERT(coords.size() == 2, "wrong number of edge coordinates");
   int i_face = element()->boundary_face();
@@ -649,7 +649,7 @@ std::vector<int> Face::element_coords(std::vector<int> coords) const {
   return coords;
 }
 
-void Face::reset() {
+void Surface_face::reset() {
   int rs = row_size();
   int interior_sz = (rs - 2)*(rs - 2);
   int total_sz = rs*rs;
@@ -970,13 +970,13 @@ Sequence<Vertex&> Mesh_blocks::boundary_verts() {
 }
 
 Sequence<Edge&> Mesh_blocks::edges_2d() {return purge_fetch(_edges_2d);}
-Sequence<Face&> Mesh_blocks::faces_3d() {return purge_fetch(_faces_3d);}
+Sequence<Surface_face&> Mesh_blocks::faces_3d() {return purge_fetch(_faces_3d);}
 
 Sequence<Boundary_block&> Mesh_blocks::boundary_sides() {
   if (n_dim == 2) return edges_2d().cast<Boundary_block&>();
   else if (n_dim == 3) {
     faces_3d(); // calling this performs purge
-    std::vector<Face>& faces = _faces_3d;
+    std::vector<Surface_face>& faces = _faces_3d;
     return {
       [&faces](std::size_t index)->Boundary_block& {
         if (index < 4*faces.size()) return faces[index/4].edge(index%4);
@@ -1007,7 +1007,7 @@ Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_
       int vert0 = sign*vstride(2, i_dim);
       _edges_2d.emplace_back(elem.vertex(vert0), elem.vertex(vert0 + vstride(2, !i_dim)), basis);
       _edges_2d.back().pair(elem._bf);
-    } else if (n_dim == 3) { // if 3D, the `Boundary_block` is a `Face`
+    } else if (n_dim == 3) { // if 3D, the `Boundary_block` is a `Surface_face`
       std::array<Vertex*, 4> verts;
       for (int i_vert = 0, j_vert = 0; i_vert < 8; ++i_vert) {
         if (math::row_coordinate(3, 2, i_dim, i_vert) == sign) verts[j_vert++] = &_verts.end()[i_vert - 8];

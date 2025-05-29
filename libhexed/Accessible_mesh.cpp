@@ -359,7 +359,7 @@ void Accessible_mesh::_fit_surface() {
   }
   auto faces = _blocks.faces_3d();
   #pragma omp parallel for
-  for (next::Face& face : faces) {
+  for (next::Surface_face& face : faces) {
     for (int i_edge = 0; i_edge < 4; ++i_edge) {
       face.edge(i_edge).snapped_edge = -1;
     }
@@ -1076,7 +1076,7 @@ void Accessible_mesh::_fit_surface() {
   auto check_elems = [this](next::Boundary_block& block) {
     bool failed = false;
     for (next::Element_shape* e : block.dependent_elements()) {
-      next::Face* face = e->boundary_face_3d();
+      next::Surface_face* face = e->boundary_face_3d();
       if (face && face != &block) face->reset();
       Array<double> points = e->points();
       int nd = params.n_dim;

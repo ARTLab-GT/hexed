@@ -145,13 +145,13 @@ TEST_CASE("Block") {
     }
   }
 
-  SECTION("Face") {
+  SECTION("Surface_face") {
     std::vector<hexed::next::Vertex> verts;
     verts.emplace_back(hexed::Mat<3>{1., 1.5, 1.}, 5);
     verts.emplace_back(hexed::Mat<3>{2., 1.0, 1.}, 5);
     verts.emplace_back(hexed::Mat<3>{1., 2.0, 3.}, 5);
     verts.emplace_back(hexed::Mat<3>{2., 2.0, 1.}, 5);
-    hexed::next::Face face({&verts[0], &verts[1], &verts[2], &verts[3]}, basis5);
+    hexed::next::Surface_face face({&verts[0], &verts[1], &verts[2], &verts[3]}, basis5);
     REQUIRE(!face.alive());
     REQUIRE_THAT(face.edge(0).point({0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.500, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.edge(0).point({2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.250, 1.0}, hexed::math::Approx_equal()));

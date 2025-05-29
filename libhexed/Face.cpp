@@ -12,7 +12,7 @@ Face::Face(Storage_params params, int i_d, int s, bool is_def)
 , _n_face_qpoint{params.n_qpoint()/params.row_size}
 , _n_state{std::max(2*params.n_var, params.n_dim + params.n_advection(params.row_size))}
 , _n_normal{is_def*params.n_dim}
-, _data{{(_n_state + _n_normal), _n_face_qpoint}}
+, _data({(_n_state + _n_normal), _n_face_qpoint})
 {
   _data = 0;
 }
@@ -32,6 +32,9 @@ void Face::associate(Face_refinement& ref) {
   _face_ref_coarse.set(&ref);
 }
 
+void Face::associate(next::Boundary_connection& con) {
+}
+
 #define ASSERT_NOT_CONNECTED \
   HEXED_ASSERT(!_neighbor_connection, "already connected to a `Neighbor_connection`") \
   HEXED_ASSERT(!_face_ref_fine, "already connected to a `Face_refinement`") \
@@ -44,6 +47,9 @@ void Face::connect(Reciprocal_ptr<Neighbor_connection, Face>& con) {
 void Face::connect(Reciprocal_ptr<Face_refinement, Face>& ref) {
   ASSERT_NOT_CONNECTED
   _face_ref_fine.pair(ref);
+}
+
+void Face::disconnect() {
 }
 
 Array<double> Face::flow_state() {

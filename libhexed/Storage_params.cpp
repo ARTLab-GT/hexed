@@ -43,4 +43,18 @@ std::vector<int> Storage_params::numerical_shape() const {
   return shape;
 }
 
+bool operator==(Storage_params par0, Storage_params par1) {
+  return par0.n_stage == par1.n_stage && par0.n_var == par1.n_var && par0.n_dim == par1.n_dim
+         && par0.row_size == par1.row_size && par0.n_forcing == par1.n_forcing;
+}
+
+bool operator!=(Storage_params par0, Storage_params par1) {
+  return !(par0 == par1);
+}
+
+std::string to_string(Storage_params par) {
+  return format_str("Storage_params{%istage x %ivar x %idim x %i rows (%iforcing)}",
+                    par.n_stage, par.n_var, par.n_dim, par.row_size, par.n_forcing);
+}
+
 }
