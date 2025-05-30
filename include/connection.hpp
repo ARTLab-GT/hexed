@@ -124,9 +124,9 @@ class Refined_connection {
     public:
     Fine_connection(Refined_connection& r, element_t& f)
     : Face_connection<element_t>{r.params}
-    , _fine_face{r.params, r.def_dir.i_dim[ref_con.rev], ref_con.def_dir.face_sign[ref_con.rev], element_t::is_deformed}
-    , _neighbor_con{r.params, {r.rev ? &_fine_face : &fine_elem.face(r.def_dir.i_face(0)),
-                               r.rev ? &fine_elem.face(r.def_dir.i_face(1)) : &_fine_face}, r.def_dir.rotate}
+    , _fine_face{r.params, r.def_dir.i_dim[r.rev], r.def_dir.face_sign[r.rev], element_t::is_deformed}
+    , _neighbor_con{r.params, {r.rev ? &_fine_face : &f.face(r.def_dir.i_face(0)),
+                               r.rev ? &f.face(r.def_dir.i_face(1)) : &_fine_face}, r.def_dir.rotate}
     , ref_con{r}
     , fine_elem{f}
     {}
