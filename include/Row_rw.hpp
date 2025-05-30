@@ -60,9 +60,7 @@ class Row_rw {
   static void write_bound(Bound b, std::array<double*, 6> faces, Row_index ind) {
     for (int i_var = 0; i_var < n_var; ++i_var) {
       for (int is_positive : {0, 1}) {
-        if (faces[ind.i_dim*2 + is_positive]) { //! \todo remove this after fixing face data
-          faces[ind.i_dim*2 + is_positive][i_var*ind.n_fqpoint + ind.i_face_qpoint()] = b(is_positive, i_var);
-        }
+        faces[ind.i_dim*2 + is_positive][i_var*ind.n_fqpoint + ind.i_face_qpoint()] = b(is_positive, i_var);
       }
     }
   }

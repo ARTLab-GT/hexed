@@ -720,23 +720,23 @@ class Spatial {
   //! compute the difference between the numerical (average) viscous flux and
   //! the viscous flux on each face in preparation for reconciling the different face fluxes
   template <int n_dim, int row_size>
-  class Neighbor_reconcile : public Kernel<Kernel_connection&> {
+  class Neighbor_reconcile : public Kernel<Hard_kernel_connection> {
     using Pde = Pde_templ<n_dim, row_size>;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
     const int _mask;
 
     public:
     Neighbor_reconcile(int mask) : _mask{mask} {}
-    virtual void operator()(Sequence<Kernel_connection&>& connections) {
+    virtual void operator()(Sequence<Hard_kernel_connection>& connections) {
       #pragma omp parallel for
       for (int i_con = 0; i_con < connections.size(); ++i_con) {
-        auto& con = connections[i_con];
-        auto dir = con.get_direction();
+        auto con = connections[i_con];
+        auto dir = con.direction;
         double face [2][Pde::n_update*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.state(i_side, true);
+          double* f = con.state[i_side][true];
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) face[i_side][i_dof] = f[i_dof];
         }
         Face_permutation<n_dim, row_size> perm(dir, face[1]); // only used for deformed
@@ -754,8 +754,8 @@ class Spatial {
         }
         if constexpr (is_deformed) perm.restore(); // restore data of face 1 to original order
         // write data to actual face storage on heap
-        for (int i_side = 0; i_side < 2; ++i_side) if (con.mask(i_side) >= _mask) {
-          double* f = con.state(i_side, true);
+        for (int i_side = 0; i_side < 2; ++i_side) if (con.mask[i_side] >= _mask) {
+          double* f = con.state[i_side][true];
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) f[i_dof] = face[i_side][i_dof];
         }
       }
