@@ -16,7 +16,8 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
 , n_dof(params.n_dof())
 , n_vert(params.n_vertices())
 , data_size{params.n_dof_numeric() + config::debug_variables*params.n_qpoint()}
-, data{Eigen::VectorXd::Zero(data_size)}
+, face_size{(is_def*params.n_dim + std::max(2*params.n_var, params.n_dim + params.n_advection(params.row_size)))*params.n_face_qpoint()}
+, data{Eigen::VectorXd::Zero(data_size + 2*n_dim*face_size)}
 , _vertex_data({3, params.n_vertices()})
 , _mask{0}
 , tree(this)
@@ -24,7 +25,7 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
 {
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
-      _faces.emplace_back(params, i_dim, sign, is_def);
+      _faces.emplace_back(params, i_dim, sign, is_def, data.data() + data_size + (2*i_dim + sign)*face_size);
       _faces.back().associate(*this);
     }
   }
@@ -181,7 +182,7 @@ next::Element_shape& Element::active_shape() {
 
 double* Element::state() {return data.data();}
 double* Element::residual_cache() {return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();}
-double* Element::face(int i_face, bool is_ldg) {return _faces[i_face].flow_state()(is_ldg).data();}
+double* Element::face(int i_face, bool is_ldg) {return data.data() + data_size + i_face*face_size + is_ldg*n_dof/params.row_size;}
 bool Element::deformed() const {return false;}
 double* Element::reference_level_normals() {return nullptr;}
 double* Element::jacobian_determinant() {return nullptr;}

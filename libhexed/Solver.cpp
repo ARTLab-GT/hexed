@@ -18,21 +18,8 @@
 
 namespace hexed {
 
-Kernel_mesh Solver::_kernel_mesh() {
-  return {
-    params.n_dim,
-    params.row_size,
-    params.n_var,
-    0,
-    basis,
-    turb,
-    acc_mesh->cartesian().kernel_connections(),
-    acc_mesh->deformed ().kernel_connections(),
-    acc_mesh->cartesian().kernel_elements(),
-    acc_mesh->deformed ().kernel_elements(),
-    acc_mesh->kernel_elements(),
-    acc_mesh->refined_faces(),
-  };
+Kernel_mesh& Solver::_kernel_mesh() {
+  return _preti_masks[0]->kernel_mesh;
 }
 
 void Solver::_put_cache() {

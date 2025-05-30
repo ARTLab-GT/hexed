@@ -46,6 +46,7 @@ class Face_connection : public Kernel_connection {
   Face_connection(Storage_params params) {}
   virtual Con_dir<element_t> direction() const = 0;
   virtual double* normal(int i_side) = 0;
+  virtual Neighbor_connection& neighbor_connection() = 0;
   virtual void set_normal() {};
 };
 
@@ -103,7 +104,7 @@ class Element_face_connection : public Element_connection, public Face_connectio
   double nominal_area() const override {
     return math::pow(elems[0]->nominal_size(), elems[0]->storage_params().n_dim - 1);
   }
-  Neighbor_connection& neighbor_connection() {return _neighbor_con;}
+  Neighbor_connection& neighbor_connection() override {return _neighbor_con;}
 };
 
 /*!
@@ -139,6 +140,7 @@ class Refined_connection {
     element_t& element(int i_side) override {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
     int mask(int i_side) override {return element(i_side).mask();}
     double nominal_area() const override {return math::pow(fine_elem.nominal_size(), ref_con.params.n_dim - 1);}
+    Neighbor_connection& neighbor_connection() override {return _neighbor_con;}
     void set_normal() override {
       if (!this->normal() || ref_con.rev) return;
       Array<double> nrml({ref_con.params.n_var, ref_con.params.n_qpoint()/ref_con.params.row_size});
@@ -300,6 +302,7 @@ class Typed_bound_connection : public Boundary_connection {
   double nominal_area() const override {return math::pow(elem.nominal_size(), params.n_dim - 1);}
   Array<double> prescribed_data() override {return _bound_con.prescribed_data();}
   void set_normal() override {}
+  Neighbor_connection& neighbor_connection() override {return _bound_con.neighbor_connection();}
 };
 
 }

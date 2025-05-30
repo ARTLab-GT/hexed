@@ -43,6 +43,7 @@ class Element : public Kernel_element, public Mortal {
   int n_dof;
   int n_vert;
   int data_size;
+  int face_size;
   Eigen::VectorXd data;
   Array<double> _vertex_data;
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]

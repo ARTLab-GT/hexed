@@ -2743,6 +2743,24 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
   _masked_def_cons.populate(mesh.def.kernel_connections(), [&](Kernel_connection& con){return con.mask() >= mesh._mask_levels;});
   _masked_ref_faces.populate(mesh.ref_face_v, [&](Refined_face& face){return face.mask() >= mesh._mask_levels;});
   _masked_bound_cons.populate(mesh.bound_cons, [&](Boundary_connection& con){return con.mask() >= mesh._mask_levels;});
+  //! \todo fix the `associated() ?` logic. that's just there cause of legacy `Refined_face`s
+  #define POPULATE_CONS(mbt, vec) { \
+    auto& cons = mbt.face_connections(); \
+    for (int i_con = 0; i_con < cons.size(); ++i_con) { \
+      auto& n = cons[i_con].neighbor_connection(); \
+      Hard_kernel_connection ker_con { \
+        n.get_direction(), \
+        {n.face(0).full_state().data(), n.face(1).full_state().data()}, \
+        n.face(0).normal().data(), \
+        {n.face(0).associated() ? n.face(0).mask() : n.face(1).mask(), n.face(1).associated() ? n.face(1).mask() : n.face(0).mask()}, \
+        n.face(0).associated() ? n.face(0).nominal_area() : n.face(1).nominal_area(), \
+      }; \
+      if (std::max(ker_con.mask[0], ker_con.mask[1]) >= mesh._mask_levels) vec.push_back(ker_con); \
+    } \
+  }
+  POPULATE_CONS(mesh.car, kernel_mesh.car_connections)
+  POPULATE_CONS(mesh.def, kernel_mesh.def_connections)
+  #undef POPULATE_CONS
   ++mesh._mask_levels;
 }
 

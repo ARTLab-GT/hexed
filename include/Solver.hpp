@@ -51,7 +51,7 @@ class Solver {
   std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> _preti_masks;
   int _preti_level;
 
-  Kernel_mesh _kernel_mesh();
+  Kernel_mesh& _kernel_mesh();
   void _put_cache(); // copies the flow state to the residual cache
   void _get_cache(); // copies the residual cache to the flow state
 

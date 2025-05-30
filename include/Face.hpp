@@ -14,7 +14,7 @@ namespace next {class Boundary_connection;}
 
 class Face : public Mortal {
   public:
-  Face(Storage_params, int i_dim, int sign, bool is_deformed);
+  Face(Storage_params, int i_dim, int sign, bool is_deformed, double* data = nullptr);
   inline int i_dim() const {return _i_dim;}
   inline int sign() const {return _sign;}
   bool is_deformed() const {return _is_def;}
@@ -37,6 +37,8 @@ class Face : public Mortal {
   Array<double> advection_state();
   Array<double> full_state();
   Array<double> normal();
+  int mask();
+  double nominal_area();
 
   private:
   Storage_params _params;

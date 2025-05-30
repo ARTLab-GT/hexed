@@ -2,7 +2,7 @@
 
 namespace hexed {
 
-Face::Face(Storage_params params, int i_d, int s, bool is_def)
+Face::Face(Storage_params params, int i_d, int s, bool is_def, double* data)
 : _params{params}
 , _i_dim{i_d}
 , _sign{s}
@@ -12,7 +12,7 @@ Face::Face(Storage_params params, int i_d, int s, bool is_def)
 , _n_face_qpoint{params.n_qpoint()/params.row_size}
 , _n_state{std::max(2*params.n_var, params.n_dim + params.n_advection(params.row_size))}
 , _n_normal{is_def*params.n_dim}
-, _data({(_n_state + _n_normal), _n_face_qpoint})
+, _data({(_n_state + _n_normal), _n_face_qpoint}, data)
 {
   _data = 0;
 }
@@ -69,6 +69,28 @@ Array<double> Face::full_state() {
 
 Array<double> Face::normal() {
   return _data(_n_state, end);
+}
+
+int Face::mask() {
+  if (_element) {
+    return _element->mask();
+  } else if (_boundary_connection) {
+    return _boundary_connection->inside().mask();
+  } else if (_face_ref_coarse) {
+    return _face_ref_coarse->coarse().mask();
+  }
+  HEXED_THROW("`Face` must be associated to call `mask()`.") throw;
+}
+
+double Face::nominal_area() {
+  if (_element) {
+    return math::pow(_element->nominal_size(), _params.n_dim - 1);
+  } else if (_boundary_connection) {
+    return _boundary_connection->inside().nominal_area();
+  } else if (_face_ref_coarse) {
+    return _face_ref_coarse->coarse().nominal_area()/2;
+  }
+  HEXED_THROW("`Face` must be associated to call `nominal_area()`.") throw;
 }
 
 }

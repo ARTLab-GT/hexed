@@ -15,7 +15,7 @@ class Connection_direction {
    * Answers the question: Is it necessary to flip the normal of element `i_side` so that it
    * points from element 0 into element 1?
    */
-  bool flip_normal(int i_side) const {return face_sign[i_side] == i_side;}
+  inline bool flip_normal(int i_side) const {return face_sign[i_side] == i_side;}
   /*!
    * Answers the question: Is it neccesary to flip axis `face_index(0).i_dim` of element 1
    * to match the coordinate systems?
@@ -35,8 +35,18 @@ class Connection_direction {
   }
 };
 
+//! \relates Connection_direction
 bool operator==(Connection_direction dir0, Connection_direction dir1);
+//! \relates Connection_direction
 std::string to_string(Connection_direction);
+
+struct Hard_kernel_connection {
+  Connection_direction dir;
+  double* state [2];
+  double* normal;
+  int mask [2];
+  double nominal_area;
+};
 
 class Connection {
   public:
