@@ -1351,7 +1351,8 @@ void Solver::integrate_surface(std::string expr, int bc_sn) {
     auto& elem = con.element();
     double area = math::pow(elem.nominal_size(), nd - 1);
     Array<double> qpoints{evaluator.evaluate(con)};
-    double* nrml = con.normal();
+    Kernel_connection& ker_con = con;
+    double* nrml = ker_con.normal();
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
       double nrml_mag = 0;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {

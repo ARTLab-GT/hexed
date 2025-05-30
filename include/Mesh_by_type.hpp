@@ -43,7 +43,6 @@ class Mesh_by_type : public View_by_type<element_t>
 {
   const int n_faces;
   Storage_params par;
-  void connect_normal(int i_face);
 
   public:
   /*! \name containers
@@ -176,7 +175,6 @@ class Mesh_by_type : public View_by_type<element_t>
         for (int face_sign = 0; face_sign < 2; ++face_sign) {
           if (!elem.is_connected(2*i_dim + face_sign)) {
             bound_cons.emplace_back(new Typed_bound_connection<element_t>(elem, i_dim, face_sign, bc_sn, bound_cond.n_prescribed(par.n_dim)));
-            connect_normal(2*i_dim + face_sign);
           }
         }
       }
@@ -219,14 +217,6 @@ std::vector<Element_face_connection<element_t>> Mesh_by_type<element_t>::empty_c
 
 template <typename element_t>
 Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> Mesh_by_type<element_t>::empty_con_view {Mesh_by_type<element_t>::empty_con_vec};
-
-template <> inline void Mesh_by_type<Element>::connect_normal(int i_face) {}
-
-template <>
-inline void Mesh_by_type<Deformed_element>::connect_normal(int i_face) {
-  auto& con = *bound_cons.back();
-  con.element().face_normal(i_face) = con.normal(0);
-}
 
 }
 #endif

@@ -9,7 +9,7 @@ Boundary_connection::Boundary_connection(Face& inside, int bound_cond, int n_pre
 , _con(_params, {&inside, &_ghost})
 , _nrml({_params.n_dim, inside.storage_params().n_face_qpoint()},
         inside.is_deformed() ? inside.normal().data() : nullptr)
-, _data({_params.n_dim + 2*_params.n_var + n_presc})
+, _data({_params.n_dim + 2*_params.n_var + n_presc, _params.n_face_qpoint()})
 {
   _ghost.associate(*this);
   if (!inside.is_deformed()) {

@@ -10,10 +10,7 @@ namespace hexed {
 
 class Element;
 class Face_refinement;
-
-namespace next {
-class Boundary_connection;
-}
+namespace next {class Boundary_connection;}
 
 class Face : public Mortal {
   public:

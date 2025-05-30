@@ -254,7 +254,8 @@ class Array {
   bool owns() const {return _owns;}
 
   #define QUALIFIED(CONST) \
-    CONST T* data() CONST {return _data;} /*!< \brief fetches pointer to data */ \
+    /*! \brief fetches pointer to data \details `nullptr` if array is empty */ \
+    CONST T* data() CONST {return size() ? _data : nullptr;} \
     /*! \brief Accesses elements by flat indexing.
        \details Equivalent to `data()[i]`, give or take bounds checking
      */ \

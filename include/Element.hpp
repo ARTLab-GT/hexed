@@ -28,7 +28,7 @@ class Element : public Kernel_element, public Mortal {
   protected:
   // constructor that allows the vertices to be created as mobile, for the  benefit of `Deformed_element`
   Element(Storage_params, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
-          bool mobile_vertices, int aniso_r_level);
+          bool mobile_vertices, int aniso_r_level, bool is_def);
   Mat<3> _compute_pos() const;
   Storage_params params;
   int n_dim;

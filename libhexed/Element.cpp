@@ -5,7 +5,7 @@
 namespace hexed {
 
 Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level,
-                 Mat<> origin_arg, bool mobile_vertices, int aniso_r_level)
+                 Mat<> origin_arg, bool mobile_vertices, int aniso_r_level, bool is_def)
 : params(params_arg)
 , n_dim(params.n_dim)
 , _nom_pos(pos)
@@ -24,7 +24,7 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
 {
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
-      _faces.emplace_back(params, i_dim, sign, get_is_deformed());
+      _faces.emplace_back(params, i_dim, sign, is_def);
       _faces.back().associate(*this);
     }
   }
@@ -38,8 +38,9 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
   _vertex_data(1, 3) = 0.;
 }
 
-Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level)
-: Element(params_arg, pos, mesh_size, ref_level, origin_arg, false, aniso_r_level)
+Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
+                 int aniso_r_level)
+: Element(params_arg, pos, mesh_size, ref_level, origin_arg, false, aniso_r_level, false)
 {}
 
 Storage_params Element::storage_params() {

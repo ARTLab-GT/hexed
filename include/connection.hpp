@@ -42,42 +42,10 @@ class Con_dir<Element> {
  */
 template <class element_t>
 class Face_connection : public Kernel_connection {
-  int _state_sz;
-  int _face_sz;
-  Eigen::VectorXd _data;
   public:
-  Face_connection(Storage_params params) :
-    _state_sz{params.n_dof()/params.row_size},
-    _face_sz{std::max(2*_state_sz, (params.n_dim + params.n_advection(params.row_size))*params.n_face_qpoint())},
-    _data(2*_face_sz)
-    {}
+  Face_connection(Storage_params params) {}
   virtual Con_dir<element_t> direction() const = 0;
-  double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}
-  double* normal(int i_side) {return nullptr;}
-  double* normal() override {return nullptr;}
-  virtual void set_normal() {};
-};
-
-template <>
-class Face_connection<Deformed_element> : public Kernel_connection {
-  int _nrml_sz;
-  int _state_sz;
-  int _face_sz;
-  Eigen::VectorXd _data;
-  public:
-  Face_connection(Storage_params params)
-  : _nrml_sz{params.n_dim*params.n_face_qpoint()},
-    _state_sz{params.n_dof()/params.row_size},
-    _face_sz{std::max(2*_state_sz, (params.n_dim + params.n_advection(params.row_size))*params.n_face_qpoint())},
-    _data{Eigen::VectorXd::Zero(2*(_nrml_sz + _face_sz))}
-  {}
-  virtual Con_dir<Deformed_element> direction() const = 0;
-  double* state(int i_side, bool is_ldg) override {return _data.data() + i_side*_face_sz + is_ldg*_state_sz;}
-  double* normal(int i_side) {return _data.data() + 2*_face_sz + i_side*_nrml_sz;}
-  //! \brief area-weighted face normal vector
-  //! \details layout: [i_dim][i_face_qpoint]
-  double* normal() override {return _data.data() + 2*_face_sz;}
-  //! \brief sets the normal data, assuming that all elements involved have just called `Element::set_jacobian()`
+  virtual double* normal(int i_side) = 0;
   virtual void set_normal() {};
 };
 
@@ -121,22 +89,15 @@ class Element_face_connection : public Element_connection, public Face_connectio
     },
     get_rotate(con_dir)
   )
-  {
-    for (int i_side : {0, 1}) {
-      elements[i_side]->set_face(dir.i_face(i_side), Face_connection<element_t>::state(i_side, false));
-    }
-    connect_normal();
-  }
+  {}
   Element_face_connection(const Element_face_connection&) = delete; //!< copy semantics are deleted since only one connection object can connect the same elements
   Element_face_connection& operator=(const Element_face_connection&) = delete;
-  virtual ~Element_face_connection() {
-    for (int i_side : {0, 1}) {
-      elems[i_side]->set_face(dir.i_face(i_side), nullptr);
-    }
-    disconnect_normal();
-  }
+  virtual ~Element_face_connection() = default;
   Con_dir<element_t> direction() const override {return dir;}
   Connection_direction get_direction() const override {return dir;}
+  double* state(int i_side, bool is_ldg) override {return _neighbor_con.face(i_side).flow_state()(is_ldg).data();}
+  double* normal(int i_side) override {return _neighbor_con.face(i_side).normal().data();}
+  double* normal() override {return normal(0);}
   element_t& element(int i_side) override {return *elems[i_side];}
   int mask(int i_side) override {return element(i_side).mask();}
   double nominal_area() const override {
@@ -144,28 +105,6 @@ class Element_face_connection : public Element_connection, public Face_connectio
   }
   Neighbor_connection& neighbor_connection() {return _neighbor_con;}
 };
-
-template <>
-inline void Element_face_connection<Element>::connect_normal()
-{}
-
-template <>
-inline void Element_face_connection<Deformed_element>::connect_normal() {
-  for (int i_side = 0; i_side < 2; ++i_side) {
-    elems[i_side]->face_normal(dir.i_face(i_side)) = normal(i_side);
-  }
-}
-
-template <>
-inline void Element_face_connection<Element>::disconnect_normal()
-{}
-
-template <>
-inline void Element_face_connection<Deformed_element>::disconnect_normal() {
-  for (int i_side = 0; i_side < 2; ++i_side) {
-    elems[i_side]->face_normal(dir.i_face(i_side)) = nullptr;
-  }
-}
 
 /*!
  * Represents a connection between elements whose refinement levels differ by 1. This involves
@@ -178,18 +117,27 @@ class Refined_connection {
   public:
   //! connection subclass to which will represent the connections for the numerical flux calculation
   class Fine_connection : public Element_connection, public Face_connection<element_t> {
+    Face _fine_face;
+    Neighbor_connection _neighbor_con;
     Refined_connection& ref_con;
     element_t& fine_elem;
     public:
     Fine_connection(Refined_connection& r, element_t& f)
-    : Face_connection<element_t>{r.params}, ref_con{r}, fine_elem{f} {
-      f.set_face(ref_con.dir.i_face(!ref_con.rev), Face_connection<element_t>::state(!ref_con.rev, false));
-    }
+    : Face_connection<element_t>{r.params}
+    , _fine_face{r.params, r.def_dir.i_dim[ref_con.rev], ref_con.def_dir.face_sign[ref_con.rev], element_t::is_deformed}
+    , _neighbor_con{r.params, {r.rev ? &_fine_face : &fine_elem.face(r.def_dir.i_face(0)),
+                               r.rev ? &fine_elem.face(r.def_dir.i_face(1)) : &_fine_face}, r.def_dir.rotate}
+    , ref_con{r}
+    , fine_elem{f}
+    {}
     virtual ~Fine_connection() {
       fine_elem.set_face(ref_con.dir.i_face(!ref_con.rev), nullptr);
     }
     Con_dir<element_t> direction() const override {return ref_con.direction();}
     Connection_direction get_direction() const override {return ref_con.direction();}
+    double* state(int i_side, bool is_ldg) override {return _neighbor_con.face(i_side).flow_state()(is_ldg).data();}
+    double* normal(int i_side) override {return _neighbor_con.face(i_side).normal().data();}
+    double* normal() override {return normal(0);}
     element_t& element(int i_side) override {return (i_side != ref_con.rev) ? fine_elem : ref_con.c;}
     int mask(int i_side) override {return element(i_side).mask();}
     double nominal_area() const override {return math::pow(fine_elem.nominal_size(), ref_con.params.n_dim - 1);}
@@ -232,8 +180,6 @@ class Refined_connection {
     return {str[trans], str[!trans]};
   }
 
-  void connect_normal();
-  void disconnect_normal();
 
   public:
   Refined_face refined_face; //!< pretty please don't write to this!! \todo this should be const and/or private, but i have bigger problems rn
@@ -280,15 +226,11 @@ class Refined_connection {
       fine_cons.emplace_back(new Fine_connection(*this, *fine[inds[!rev]]));
       refined_face.fine[inds[rev]] = fine_cons.back()->state(rev, false);
     }
-    connect_normal();
   }
   //! delete copy semantics which would mess up `Fine_connection`. Can implement later if we really need it.
   Refined_connection(const Refined_connection&) = delete;
   Refined_connection& operator=(const Refined_connection&) = delete;
-  virtual ~Refined_connection() {
-    c.set_face(dir.i_face(rev), nullptr);
-    disconnect_normal();
-  }
+  virtual ~Refined_connection() = default;
   Con_dir<element_t> direction() const {return dir;}
   //! fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return *fine_cons[i_fine];}
@@ -298,33 +240,6 @@ class Refined_connection {
   double* coarse_state() {return coarse_state_data.data();}
   element_t& coarse_element() {return c;}
 };
-
-template <>
-inline void Refined_connection<Element>::connect_normal()
-{}
-
-template <>
-inline void Refined_connection<Deformed_element>::connect_normal() {
-  coarse_normal.resize(params.n_dim*params.n_qpoint()/params.row_size);
-  c.face_normal(2*dir.i_dim[rev] + dir.face_sign[rev]) = coarse_normal.data();
-  for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-    auto n = fine_cons[i_fine]->normal(!rev);
-    fine_cons[i_fine]->element(!rev).face_normal(2*dir.i_dim[!rev] + dir.face_sign[!rev]) = n;
-  }
-}
-
-template <>
-inline void Refined_connection<Element>::disconnect_normal()
-{}
-
-template <>
-inline void Refined_connection<Deformed_element>::disconnect_normal() {
-  coarse_normal.resize(params.n_dim*params.n_qpoint()/params.row_size);
-  c.face_normal(2*dir.i_dim[rev] + dir.face_sign[rev]) = nullptr;
-  for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-    fine_cons[i_fine]->element(!rev).face_normal(2*dir.i_dim[!rev] + dir.face_sign[!rev]) = nullptr;
-  }
-}
 
 /*!
  * \brief A `Boundary_face` that also provides details about the connection for the neighbor flux
@@ -345,89 +260,48 @@ template <typename element_t>
 class Typed_bound_connection : public Boundary_connection {
   element_t& elem;
   Storage_params params;
+  next::Boundary_connection _bound_con;
   int i_d;
   bool ifs;
   int bc_sn;
-  int state_size;
-  Mat<> pos;
-  Mat<> cache;
-  void connect_normal();
-  void disconnect_normal();
-  Array<double> _prescribed_data;
 
   public:
   Typed_bound_connection(element_t& elem_arg, int i_dim_arg, bool inside_face_sign_arg, int bc_serial_n,
                          int n_prescribed)
   : Boundary_connection{elem_arg.storage_params()}
+  , _bound_con(elem_arg.face(2*i_dim_arg + inside_face_sign_arg), bc_serial_n, n_prescribed)
   , elem{elem_arg}
   , params{elem.storage_params()}
   , i_d{i_dim_arg}
   , ifs{inside_face_sign_arg}
   , bc_sn{bc_serial_n}
-  , state_size{params.n_var*params.n_qpoint()/params.row_size}
-  , pos(params.n_dim*params.n_qpoint()/params.row_size)
-  , cache{Mat<>::Zero(2*state_size)}
-  , _prescribed_data({n_prescribed, params.n_qpoint()/params.row_size})
-  {
-    connect_normal();
-    elem.set_face(direction().i_face(0), state(0, false));
-    _prescribed_data = 0.;
-  }
+  {}
   Typed_bound_connection(const Typed_bound_connection&) = delete; //!< can only have one `Typed_bound_connection` per face, so delete copy semantics
   Typed_bound_connection& operator=(const Typed_bound_connection&) = delete;
-  virtual ~Typed_bound_connection() {
-    elem.set_face(direction().i_face(0), nullptr);
-    disconnect_normal();
-  }
+  virtual ~Typed_bound_connection() = default;
   Storage_params storage_params() override {return params;}
-  double* ghost_face(bool is_ldg) override {return state(1, is_ldg);}
-  double* inside_face(bool is_ldg) override {return state(0, is_ldg);}
+  double* ghost_face(bool is_ldg) override {return _bound_con.ghost().flow_state()(is_ldg).data();}
+  double* inside_face(bool is_ldg) override {return _bound_con.inside().flow_state()(is_ldg).data();}
   int i_dim() override {return i_d;}
   bool inside_face_sign() override {return ifs;}
-  double* surface_normal() override {return normal();}
-  double* surface_position() override {return pos.data();}
-  double* state_cache() override {return cache.data();}
-  double* flux_cache() override {return cache.data() + state_size;}
+  double* state(int i_side, bool is_ldg) override {
+    return _bound_con.neighbor_connection().face(i_side).flow_state()(is_ldg).data();
+  }
+  double* normal(int i_side) override {return _bound_con.neighbor_connection().face(i_side).normal().data();}
+  double* normal() override {return surface_normal();}
+  double* surface_normal() override {return _bound_con.normal().data();}
+  double* surface_position() override {return _bound_con.position().data();}
+  double* state_cache() override {return _bound_con.state_cache().data();}
+  double* flux_cache() override {return _bound_con.flux_cache().data();}
   Con_dir<Deformed_element> direction() const override {return {{i_d, i_d}, {ifs, !ifs}};}
   Connection_direction get_direction() const override {return direction();}
   int bound_cond_serial_n() override {return bc_sn;}
   element_t& element() override {return elem;}
   int mask(int i_side) override {return i_side ? -1 : element().mask();}
   double nominal_area() const override {return math::pow(elem.nominal_size(), params.n_dim - 1);}
-  Array<double> prescribed_data() override {return _prescribed_data();}
-  void set_normal() override;
+  Array<double> prescribed_data() override {return _bound_con.prescribed_data();}
+  void set_normal() override {}
 };
-
-template <>
-inline void Typed_bound_connection<Element>::connect_normal()
-{}
-
-template <>
-inline void Typed_bound_connection<Deformed_element>::connect_normal() {
-  elem.face_normal(2*i_d + ifs) = normal(0);
-}
-
-template <>
-inline void Typed_bound_connection<Element>::disconnect_normal()
-{}
-
-template <>
-inline void Typed_bound_connection<Deformed_element>::disconnect_normal() {
-  elem.face_normal(2*i_d + ifs) = nullptr;
-}
-
-template<>
-inline void Typed_bound_connection<Element>::set_normal() {
-  Array<double> nrml({params.n_dim, params.n_qpoint()/params.row_size}, normal());
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) nrml(i_dim) = i_dim == i_d;
-  Array<double> ghost_nrml({params.n_dim, params.n_qpoint()/params.row_size}, normal(1));
-  ghost_nrml = std::nan("");
-}
-
-template<> inline void Typed_bound_connection<Deformed_element>::set_normal() {
-  Array<double> ghost_nrml({params.n_dim, params.n_qpoint()/params.row_size}, normal(1));
-  ghost_nrml = std::nan("");
-}
 
 }
 #endif

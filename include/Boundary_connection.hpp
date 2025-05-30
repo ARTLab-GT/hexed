@@ -12,7 +12,7 @@ class Boundary_connection : public Mortal {
   inline Neighbor_connection& neighbor_connection() {return _con;}
   inline Face& inside() {return _con.opposite_face(_ghost);}
   inline Face& ghost() {return _ghost;}
-  inline Array<double> normal() {return _nrml;}
+  inline Array<double> normal() {return _nrml();}
   Array<double> position();
   Array<double> state_cache();
   Array<double> flux_cache();
