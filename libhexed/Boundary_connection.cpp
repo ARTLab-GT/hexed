@@ -6,7 +6,7 @@ Boundary_connection::Boundary_connection(Face& inside, int bound_cond, int n_pre
 : _bound_cond{bound_cond}
 , _params{inside.storage_params()}
 , _ghost(_params, inside.i_dim(), !inside.sign(), inside.is_deformed())
-, _con(_params, {&inside, &_ghost})
+, _con(_params, {inside.sign() ? &inside : &_ghost, inside.sign() ? &_ghost : &inside})
 , _nrml({_params.n_dim, inside.storage_params().n_face_qpoint()},
         inside.is_deformed() ? inside.normal().data() : nullptr)
 , _data({_params.n_dim + 2*_params.n_var + n_presc, _params.n_face_qpoint()})

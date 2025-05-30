@@ -41,8 +41,8 @@ bool operator==(Connection_direction dir0, Connection_direction dir1);
 std::string to_string(Connection_direction);
 
 struct Hard_kernel_connection {
-  Connection_direction dir;
-  double* state [2];
+  Connection_direction direction;
+  double* state [2][2];
   double* normal;
   int mask [2];
   double nominal_area;

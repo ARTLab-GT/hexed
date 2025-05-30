@@ -345,9 +345,6 @@ void Solver::write_state(std::string file_name) {
 
 void Solver::calc_jacobian(bool snap) {
   acc_mesh->valid().assert_valid();
-  const int n_dim = params.n_dim;
-  const int rs = basis.row_size;
-  const int nfq = params.n_qpoint()/rs;
 
   // compute element jacobians
   auto& elements = acc_mesh->elements();
@@ -366,15 +363,11 @@ void Solver::calc_jacobian(bool snap) {
   auto& bc_cons = acc_mesh->boundary_connections();
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    Element& elem = bc_cons[i_con].element();
-    double* surf_pos = bc_cons[i_con].surface_position();
-    int i_face = bc_cons[i_con].direction().i_face(0);
-    Array<double> pos {elem.face_position(basis)(i_face/2)(i_face%2).copy()};
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        surf_pos[i_dim*nfq + i_qpoint] = pos(i_dim)[i_qpoint];
-      }
-    }
+    auto& con = bc_cons[i_con].boundary_connection();
+    HEXED_ASSERT(con.inside().element(), "connection has no element")
+    Element& elem = *con.inside().element();
+    con.position() = elem.face_position(basis)(con.inside().i_dim())(con.inside().sign());
+    if (con.inside().is_deformed()) con.ghost().normal() = con.inside().normal();
   }
   share_vertex_data(&Element::vertex_time_step_scale, { huge, &min_fun});
   _preti_masks = acc_mesh->preti_masks(basis);

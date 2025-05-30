@@ -75,7 +75,7 @@ int Face::mask() {
   if (_element) {
     return _element->mask();
   } else if (_boundary_connection) {
-    return _boundary_connection->inside().mask();
+    return -1;
   } else if (_face_ref_coarse) {
     return _face_ref_coarse->coarse().mask();
   }

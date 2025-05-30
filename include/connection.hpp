@@ -251,6 +251,7 @@ class Boundary_connection : public Boundary_face, public Face_connection<Deforme
   inline Boundary_connection(Storage_params params) : Face_connection<Deformed_element>{params} {}
   virtual Element& element() = 0;
   virtual int bound_cond_serial_n() = 0;
+  virtual next::Boundary_connection& boundary_connection() = 0;
 };
 
 /*!
@@ -294,7 +295,7 @@ class Typed_bound_connection : public Boundary_connection {
   double* surface_position() override {return _bound_con.position().data();}
   double* state_cache() override {return _bound_con.state_cache().data();}
   double* flux_cache() override {return _bound_con.flux_cache().data();}
-  Con_dir<Deformed_element> direction() const override {return {{i_d, i_d}, {ifs, !ifs}};}
+  Con_dir<Deformed_element> direction() const override {return {{i_d, i_d}, {1, 0}};}
   Connection_direction get_direction() const override {return direction();}
   int bound_cond_serial_n() override {return bc_sn;}
   element_t& element() override {return elem;}
@@ -303,6 +304,7 @@ class Typed_bound_connection : public Boundary_connection {
   Array<double> prescribed_data() override {return _bound_con.prescribed_data();}
   void set_normal() override {}
   Neighbor_connection& neighbor_connection() override {return _bound_con.neighbor_connection();}
+  next::Boundary_connection& boundary_connection() override {return _bound_con;}
 };
 
 }

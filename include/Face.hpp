@@ -17,6 +17,7 @@ class Face : public Mortal {
   Face(Storage_params, int i_dim, int sign, bool is_deformed, double* data = nullptr);
   inline int i_dim() const {return _i_dim;}
   inline int sign() const {return _sign;}
+  inline int i_face() const {return 2*_i_dim + _sign;}
   bool is_deformed() const {return _is_def;}
   inline Storage_params storage_params() const {return _params;}
   void associate(Element&);

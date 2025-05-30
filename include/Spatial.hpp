@@ -613,7 +613,7 @@ class Spatial {
    * and replaces the state of both faces with the computed flux.
    */
   template <int n_dim, int row_size>
-  class Neighbor : public Kernel<Kernel_connection&> {
+  class Neighbor : public Kernel<Hard_kernel_connection> {
     using Pde = Pde_templ<n_dim, row_size>;
     const Pde _eq;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
@@ -624,12 +624,12 @@ class Spatial {
     template <typename... pde_args>
     Neighbor(int i_stage, int mask, pde_args... args) : _eq(args...), _stage{i_stage}, _mask{mask} {}
 
-    virtual void operator()(Sequence<Kernel_connection&>& connections) {
+    virtual void operator()(Sequence<Hard_kernel_connection>& connections) {
       #pragma omp parallel for
       for (int i_con = 0; i_con < connections.size(); ++i_con) {
-        auto& con = connections[i_con];
-        auto dir = con.get_direction();
-        double nominal_area = con.nominal_area();
+        auto con = connections[i_con];
+        auto dir = con.direction;
+        double nominal_area = con.nominal_area;
         double face [2 + 2*Pde::has_diffusion][Pde::n_extrap*n_fqpoint] {}; // copying face data to temporary stack storage improves efficiency
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -638,7 +638,7 @@ class Spatial {
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.state(i_side, false);
+          double* f = con.state[i_side][0];
           for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
             face[i_side][i_dof] = f[i_dof];
           }
@@ -647,7 +647,7 @@ class Spatial {
         if constexpr (is_deformed) {
           perm.match_faces(); // if order of quadrature points on both faces does not match, reorder face 1 to match face 0
           for (int i_side : {0, 1}) sign[i_side] = 1 - 2*dir.flip_normal(i_side);
-          double* n = con.normal();
+          double* n = con.normal;
           for (int i_dof = 0; i_dof < n_dim*n_fqpoint; ++i_dof) {
             face_nrml[i_dof] = n[i_dof];
           }
@@ -697,17 +697,17 @@ class Spatial {
           if constexpr (Pde::has_diffusion) Face_permutation<n_dim, row_size>(dir, face[3]).restore();
         }
         // write data to actual face storage on heap
-        for (int i_side = 0; i_side < 2; ++i_side) if (con.mask(i_side) >= _mask) {
+        for (int i_side = 0; i_side < 2; ++i_side) if (con.mask[i_side] >= _mask) {
           // write flux
           if constexpr (Pde::has_convection) {
-            double* f = con.state(i_side, false);
+            double* f = con.state[i_side][0];
             for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
               f[i_dof] = face[i_side][i_dof];
             }
           }
           // write average face state
           if constexpr (Pde::has_diffusion) {
-            double* f = con.state(i_side, true);
+            double* f = con.state[i_side][1];
             for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
               f[i_dof] = face[2 + i_side][i_dof];
             }
