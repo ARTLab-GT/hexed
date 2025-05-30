@@ -125,14 +125,12 @@ class Refined_connection {
     Fine_connection(Refined_connection& r, element_t& f)
     : Face_connection<element_t>{r.params}
     , _fine_face{r.params, r.def_dir.i_dim[r.rev], r.def_dir.face_sign[r.rev], element_t::is_deformed}
-    , _neighbor_con{r.params, {r.rev ? &_fine_face : &f.face(r.def_dir.i_face(0)),
-                               r.rev ? &f.face(r.def_dir.i_face(1)) : &_fine_face}, r.def_dir.rotate}
+    , _neighbor_con{r.params, {r.rev ? &f.face(r.def_dir.i_face(0)) : &_fine_face,
+                               r.rev ? &_fine_face : &f.face(r.def_dir.i_face(1))}, r.def_dir.rotate}
     , ref_con{r}
     , fine_elem{f}
     {}
-    virtual ~Fine_connection() {
-      fine_elem.set_face(ref_con.dir.i_face(!ref_con.rev), nullptr);
-    }
+    virtual ~Fine_connection() = default;
     Con_dir<element_t> direction() const override {return ref_con.direction();}
     Connection_direction get_direction() const override {return ref_con.direction();}
     double* state(int i_side, bool is_ldg) override {return _neighbor_con.face(i_side).flow_state()(is_ldg).data();}
@@ -179,7 +177,7 @@ class Refined_connection {
     bool trans = def_dir.transpose();
     return {str[trans], str[!trans]};
   }
-
+  double* _coarse_state() {return coarse_state_data.data();}
 
   public:
   Refined_face refined_face; //!< pretty please don't write to this!! \todo this should be const and/or private, but i have bigger problems rn
@@ -199,8 +197,8 @@ class Refined_connection {
   , coarse_state_data{3*params.n_dof()/params.row_size}
   {
     refined_face.stretch = coarse_stretch();
-    refined_face.coarse = coarse_state();
-    coarse->set_face(dir.i_face(rev), coarse_state());
+    refined_face.coarse = coarse->face(con_dir.i_face(reverse_order)).full_state().data();
+    coarse->set_face(dir.i_face(rev), _coarse_state());
     int nd = params.n_dim;
     n_fine = params.n_vertices()/2;
     bool any_str = false;
@@ -230,14 +228,15 @@ class Refined_connection {
   //! delete copy semantics which would mess up `Fine_connection`. Can implement later if we really need it.
   Refined_connection(const Refined_connection&) = delete;
   Refined_connection& operator=(const Refined_connection&) = delete;
-  virtual ~Refined_connection() = default;
+  virtual ~Refined_connection() {
+    c.set_face(dir.i_face(rev), nullptr);
+  }
   Con_dir<element_t> direction() const {return dir;}
   //! fetch an object represting a connection between the face of a fine element and one of the mortar faces
   Fine_connection& connection(int i_fine) {return *fine_cons[i_fine];}
   bool order_reversed() {return rev;}
   auto stretch() {return str;}
   int n_fine_elements() {return n_fine;}
-  double* coarse_state() {return coarse_state_data.data();}
   element_t& coarse_element() {return c;}
 };
 

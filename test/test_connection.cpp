@@ -76,7 +76,6 @@ TEST_CASE("Refined_connection<Deformed_element>") {
       REQUIRE(&fine_con.element(0) == &coarse);
       REQUIRE(&fine_con.element(1) == &elem2); // note transposed
       REQUIRE(fine_con.state(0, false) == con.refined_face.fine[1]);
-      REQUIRE(coarse.face(1, false) == con.coarse_state());
       for (int i_con = 0; i_con < 4; ++i_con) {
         auto& c = con.connection(i_con);
         REQUIRE(c.element(1).face(5, false) == c.state(1, false));
