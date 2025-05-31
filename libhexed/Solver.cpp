@@ -811,27 +811,6 @@ void Solver::set_uncert_surface_rep(int bc_sn) {
   compute_write_face(_kernel_mesh());
 }
 
-void Solver::synch_extruded_uncert() {
-  auto cons = acc_mesh->extruded_connections();
-  bool changed = true;
-  while(changed) {
-    changed = false;
-    #pragma omp parallel for reduction(||:changed)
-    for (int i_con = 0; i_con < cons.size(); ++i_con) {
-      double uncert [2];
-      for (int i_side = 0; i_side < 2; ++i_side) {
-        #pragma omp atomic read
-        uncert[i_side] = cons[i_con].element(i_side).uncertainty;
-      }
-      if (uncert[0] > uncert[1] + 1e-14) {
-        #pragma omp atomic write
-        cons[i_con].element(1).uncertainty = uncert[0];
-        changed = true;
-      }
-    }
-  }
-}
-
 void Solver::update() {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   double safety = _namespace->get<double>("max_safety");
@@ -1425,11 +1404,6 @@ void Solver::visualize_contour(std::string format, std::string name, std::string
   }
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"]["contour"].work_units_completed += n_write;
-}
-
-void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, std::string expr) {
-  Mesh::Reset_vertices reset(*acc_mesh);
-  visualize_surface(format, name, bc_sn, expr, 2);
 }
 
 void Solver::vis_lts_constraints(std::string format, std::string name, int n_sample) {

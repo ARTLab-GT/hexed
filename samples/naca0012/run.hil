@@ -31,6 +31,7 @@ iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
 working_dir = {hexed_out_test}
+vis_field_vars = vis_field_vars + {tss = tss;}
 
 {run simulation}
 $simulate

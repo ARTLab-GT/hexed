@@ -191,8 +191,6 @@ class Solver {
    * Fully Cartesian connections trivially contribute zero to this metric of uncertainty.
    */
   void set_uncert_surface_rep(int bc_sn);
-  //! set uncertainty of each element to be at least the maximum uncertainty of any elements extruded from it
-  void synch_extruded_uncert();
   //!\}
 
   //! \name time marching
@@ -269,9 +267,6 @@ class Solver {
                          int n_sample = 10, bool wireframe = false);
   void visualize_contour(std::string format, std::string name, std::string contour_expression,
                          std::string vis_expression, double const_tol = 1e-10, int n_sample = 10);
-  //! \brief visualize the Cartesian surface which theoretically exists after element deletion
-  //! but before any vertex snapping
-  void vis_cart_surf(std::string format, std::string name, int bc_sn, std::string expression = "");
   /*! \brief visualize the local time step constraints imposed by convection and diffusion, respectively
    * \warning This function overwrites the reference state,
    * which will invalidate any residual evaluation until `update` is called again.

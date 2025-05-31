@@ -33,7 +33,7 @@ class Accessible_mesh : public Mesh {
   std::vector<std::vector<Face_refinement>> _face_refs;
   int surf_bc_sn;
   std::unique_ptr<Surface_geom> surf_geom;
-  std::vector<Element_face_connection<Deformed_element>*> extrude_cons;
+  std::vector<Mortal_ptr<Neighbor_connection>> extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
   std::vector<int> tree_bcs;
   bool verts_are_reset;
@@ -85,12 +85,9 @@ class Accessible_mesh : public Mesh {
   void create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
   void read_file(std::string file_name);
 
-  template <typename Elem_t>
-  void _connect(std::array<std::vector<Elem_t*>, 2> elems, Connection_direction dir);
+  template <typename Elem_t> void _connect(std::array<std::vector<Elem_t*>, 2> elems, Connection_direction dir);
+  template <typename Elem_t> void _connect(std::array<Elem_t*, 2>, Connection_direction);
 
-  void _connect_shapes(Element&, Element&, Connection_direction);
-  void _connect(std::array<Element*, 2>, Con_dir<Element>);
-  void _connect(std::array<Deformed_element*, 2>, Con_dir<Deformed_element>);
   void _connect(Element*, std::vector<Element*>, Con_dir<Deformed_element>);
   void _connect(Deformed_element*, std::vector<Deformed_element*>, Con_dir<Deformed_element>,
                 std::array<bool, 2> = {false, false});
@@ -236,19 +233,11 @@ class Accessible_mesh : public Mesh {
   void extrude(bool collapse = false, double offset = 0, bool force = false) override;
   void connect_rest(int bc_sn) override;
   std::vector<elem_handle> elem_handles() override;
-  //! \returns a view of all Element_connection between extruded elements and the elemens they were extruded from
-  inline Vector_view<Element_connection&, Element_face_connection<Deformed_element>*,
-                     ptr_convert<Element_connection&, Element_face_connection<Deformed_element>*>>
-    extruded_connections() {return {extrude_cons};}
   void write(std::string file_name) override;
   void export_polymesh(std::string dir_name) override;
   void visualize_deformed(std::string format, std::string file_name, double time = 0);
   void visualize(std::string format, std::string file_name, double time = 0) override;
   inline const Stopwatch_tree& stopwatch_tree() const override {return _stopwatch;}
-
-  protected:
-  void reset_verts() override;
-  void restore_verts() override;
 };
 
 }

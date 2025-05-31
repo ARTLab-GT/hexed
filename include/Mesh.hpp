@@ -194,15 +194,6 @@ class Mesh {
   struct elem_handle {int ref_level; bool is_deformed; int serial_n;};
   //! get handles for all elements currently in the mesh, in no particular order (mostly for testing/debugging)
   virtual std::vector<elem_handle> elem_handles() = 0;
-  //! Temporarily resets the vertices of a mesh to their nominal positions for debugging
-  class Reset_vertices {
-    Mesh& m;
-    public:
-    //! resets to nominal position
-    inline Reset_vertices(Mesh& mesh) : m{mesh} {m.reset_verts();}
-    //! restores vertices to where they were before this object was constructed
-    inline ~Reset_vertices() {m.restore_verts();}
-  };
   //! \brief Obtain performance data.
   virtual const Stopwatch_tree& stopwatch_tree() const = 0;
   //!\}
@@ -217,9 +208,6 @@ class Mesh {
   //! \details For debugging. For actual simulations, use `Solver::visualize_field`.
   virtual void visualize(std::string format, std::string file_name, double time = 0) = 0;
   //!\}
-  protected:
-  virtual void reset_verts() = 0;
-  virtual void restore_verts() = 0;
 };
 
 }
