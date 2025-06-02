@@ -17,6 +17,7 @@ namespace hexed::vis_variables {
  * - `mask = elem.mask()`
  * - `nom_sz` = elem.nominal_size()`
  * - `uncertainty` = elem.uncertainty`
+ * - `sharp`: `true` iff at least one of the element's vertices has been snapped to a sharp edge or point.
  * - `center0`, `center1`, `center2`: center of mass of vertices (not necessarily of the element itself)
  */
 void element(Namespace&, Element& elem);

@@ -698,7 +698,6 @@ void Solver::set_uncert_surface_rep(int bc_sn) {
       }
     }
     elem.uncertainty = std::sqrt(elem.uncertainty);
-    printers::info(to_string(elem.uncertainty) + "\n");
   }
 }
 

@@ -15,9 +15,13 @@ void element(Namespace& space, Element& elem) {
   auto params = elem.storage_params();
   Mat<3> center;
   center.setZero();
+  int sharp = 0;
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
     center += elem.shape().vertex(i_vert).point({});
+    next::Vertex& v = elem.active_shape().vertex(i_vert);
+    sharp = sharp || v.snapped_edge >= 0 || v.snapped_point >= 0;
   }
+  space.assign("sharp", sharp);
   center /= params.n_vertices();
   for (int i_dim = 0; i_dim < 3; ++i_dim) {
     space.assign(index("center", i_dim), center(i_dim));
