@@ -77,16 +77,16 @@ void field(Namespace& space, Element& elem, const Basis& b) {
   state(space, elem);
 }
 
-void surface(Namespace& space, Boundary_connection& con) {
-  auto params = con.storage_params();
+void surface(Namespace& space, next::Boundary_connection& con) {
+  auto params = con.ghost().storage_params();
   int nfq = params.n_qpoint()/params.row_size;
   // fetch surface data
-  int nrml_sign = 1 - 2*con.inside_face_sign();
-  Array<double> nrml {Array<double>({params.n_dim, nfq}, con.surface_normal()).copy()};
-  Array<double> pos({params.n_dim, nfq}, con.surface_position());
-  Array<double> state({params.n_var, nfq}, con.inside_face(false));
-  Array<double> flux({params.n_var, nfq});
-  double* ref_flux = con.flux_cache();
+  int nrml_sign = 1 - 2*con.inside().sign();
+  Array<double> nrml = con.normal();
+  Array<double> pos = con.position();
+  Array<double> state = con.inside().flow_state()(0);
+  Array<double> flux = con.inside().flow_state()(1);
+  Array<double> ref_flux = con.flux_cache();
   // compute normals and fluxes
   for (int i_fqpoint = 0; i_fqpoint < nfq; ++i_fqpoint) {
     double norm = 0;
@@ -94,7 +94,7 @@ void surface(Namespace& space, Boundary_connection& con) {
     norm = std::sqrt(norm);
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) nrml(i_dim)[i_fqpoint] /= nrml_sign*norm;
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      flux(i_var)[i_fqpoint] = norm > 1e-6 ? -ref_flux[i_var*nfq + i_fqpoint]*nrml_sign/norm : 0;
+      flux(i_var)[i_fqpoint] = norm > 1e-6 ? -ref_flux(i_var)[i_fqpoint]*nrml_sign/norm : 0;
     }
   }
   // assign variables

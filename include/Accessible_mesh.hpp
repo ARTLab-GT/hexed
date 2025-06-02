@@ -25,12 +25,10 @@ class Accessible_mesh : public Mesh {
   Vector_view<Kernel_element&, Element&, &trivial_convert<Kernel_element&, Element&>, Sequence> kernel_elems;
   Concatenation<Element_connection&> elem_cons;
   std::vector<std::unique_ptr<Flow_bc>> bound_conds;
-  Concatenation<Face_connection<Deformed_element>&> bound_face_cons;
-  Concatenation<Boundary_connection&> bound_cons;
-  Concatenation<Face_connection<Deformed_element>&> def_face_cons;
   Concatenation<Refined_face&> ref_face_v;
   std::array<std::vector<Neighbor_connection>, 2> _neighbor_cons;
   std::vector<std::vector<Face_refinement>> _face_refs;
+  std::vector<next::Boundary_connection> _bound_cons;
   int surf_bc_sn;
   std::unique_ptr<Surface_geom> surf_geom;
   std::array<std::vector<Mortal_ptr<Neighbor_connection>>, 3> _extrude_cons;
@@ -199,11 +197,10 @@ class Accessible_mesh : public Mesh {
     Masked<Kernel_connection, Kernel_connection> _masked_car_cons;
     Masked<Kernel_connection, Kernel_connection> _masked_def_cons;
     Masked<Refined_face, Refined_face> _masked_ref_faces;
-    Masked<Boundary_connection, Boundary_connection> _masked_bound_cons;
     public:
     Masked_mesh(Accessible_mesh&, const Basis&, std::function<bool(Element&)> = [](Element&){return true;});
     Kernel_mesh kernel_mesh;
-    Sequence<Boundary_connection&>& bound_cons;
+    std::vector<next::Boundary_connection*> bound_cons;
   };
   //! \brief Resets effective number of masks created to 0 and invalidates existing masks.
   //! \see `Masked_mesh`
@@ -216,12 +213,11 @@ class Accessible_mesh : public Mesh {
   std::vector<std::unique_ptr<Masked_mesh>> preti_masks(const Basis&);
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
-  Vector_view<Flow_bc&, std::unique_ptr<Flow_bc>, &ptr_convert<Flow_bc&, std::unique_ptr<Flow_bc>>>
-  boundary_conditions() {return bound_conds;}
+  next::Sequence<Flow_bc&> boundary_conditions();
   //! get a boundary condition owned by this mesh by its serial number
   Flow_bc& boundary_condition(int bc_sn) {return *bound_conds[bc_sn];}
   //! \returns a view of all connections between an element and a boundary condition
-  Sequence<Boundary_connection&>& boundary_connections() {return bound_cons;}
+  next::Sequence<next::Boundary_connection&> boundary_connections();
   //! \returns a view of all Refined_face objects owned by this mesh
   //! (there will be one for every hanging node connection)
   inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}

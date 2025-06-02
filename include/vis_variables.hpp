@@ -62,7 +62,7 @@ void field(Namespace&, Element&, const Basis&);
  * - `mass_flux`: diffusive mass flux through surface
  * - `heat_flux`: surface heat flux
  */
-void surface(Namespace&, Boundary_connection&);
+void surface(Namespace&, next::Boundary_connection&);
 
 }
 #endif
