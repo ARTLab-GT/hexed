@@ -1523,6 +1523,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
   next::Element_shape::connect(shapes, dir);
   if (!same_active) next::Element_shape::connect(active_shapes, dir);
 }
+
 template <typename Elem_t>
 void Accessible_mesh::_connect(std::array<Elem_t*, 2> el_ar, Connection_direction direction) {
   int n_fine = params.n_vertices()/2;
