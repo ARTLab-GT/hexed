@@ -7,36 +7,6 @@
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/Simplex_geom.hpp>
 
-TEST_CASE("Typed_boundary_connection") {
-  hexed::Storage_params params {3, 4, 2, 4};
-  hexed::Element element {params};
-  hexed::Typed_bound_connection<hexed::Element> tbc0 {element, 1, false, 0, 0};
-  REQUIRE(element.face(2, false) == tbc0.state(0, false));
-  REQUIRE(tbc0.ghost_face(false) == tbc0.state(1, false));
-  hexed::Typed_bound_connection<hexed::Element> tbc1 {element, 1,  true, 1, 0};
-  REQUIRE(element.face(3, false) == tbc1.state(0, false));
-  REQUIRE(tbc1.ghost_face(false) == tbc1.state(1, false));
-  REQUIRE(tbc0.storage_params().n_var == 4);
-  // check that the correct face of the element is retrieved
-  REQUIRE(tbc0.inside_face(false) == element.face(2*1 + 0, false));
-  REQUIRE(tbc1.inside_face(false) == element.face(2*1 + 1, false));
-  // check that ghost data exists (otherwise segfault)
-  tbc0.ghost_face(false)[0] = 1.;
-  tbc0.ghost_face(false)[4*4 - 1] = 1.;
-  // check that order of faces is correct
-  REQUIRE(tbc0.state(0, false) == tbc0.inside_face(false));
-  REQUIRE(tbc0.state(1, false) == tbc0.ghost_face(false));
-  REQUIRE(tbc1.state(0, false) == tbc1.inside_face(false));
-  REQUIRE(tbc1.state(1, false) == tbc1.ghost_face(false));
-  // check that the direction info is correct
-  REQUIRE(tbc0.direction().i_dim[0] == 1);
-  REQUIRE(tbc0.direction().i_dim[1] == 1);
-  REQUIRE(tbc0.direction().face_sign[0] == 0);
-  REQUIRE(tbc0.direction().face_sign[1] == 1);
-  REQUIRE(tbc1.direction().face_sign[0] == 1);
-  REQUIRE(tbc1.direction().face_sign[1] == 0);
-}
-
 TEST_CASE("Freestream") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 5, 3, row_size};
@@ -52,7 +22,7 @@ TEST_CASE("Freestream") {
     tbc.inside_face(false)[3*n_qpoint + i_qpoint] = 0.9;
     tbc.inside_face(false)[4*n_qpoint + i_qpoint] = 1e4;
   }
-  freestream.apply_state(tbc);
+  freestream.apply_state(tbc.boundary_connection());
   // check that ghost face is equal to freestream
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     REQUIRE(tbc.ghost_face(false)[0*n_qpoint + i_qpoint] == Catch::Approx(10.));
@@ -83,7 +53,7 @@ TEST_CASE("Riemann_invariants") {
       }
       for (int i_dim = 0; i_dim < 3; ++i_dim) tbc.surface_normal()[i_dim*n_qpoint + i_qpoint] = (i_dim == 1);
     }
-    ri.apply_state(tbc);
+    ri.apply_state(tbc.boundary_connection());
     // test that the first point is the inside state and the rest are the freestream state
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       for (int i_var = 0; i_var < 5; ++i_var) {
@@ -96,7 +66,7 @@ TEST_CASE("Riemann_invariants") {
         tbc.inside_face(true)[i_var*n_qpoint + i_qpoint] = 1.;
       }
     }
-    ri.apply_flux(tbc);
+    ri.apply_flux(tbc.boundary_connection());
     // test that the flux is left alone at the points where the state was set and set to zero where it was not
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       for (int i_var = 0; i_var < 5; ++i_var) {
@@ -128,7 +98,7 @@ TEST_CASE("Function_bc") {
   // set position at node 4 to have radius 2*e^2
   tbc.surface_position()[0*n_qpoint + 4] =  1.2*std::exp(2.);
   tbc.surface_position()[1*n_qpoint + 4] =  1.6*std::exp(2.);
-  bc.apply_state(tbc);
+  bc.apply_state(tbc.boundary_connection());
   // check that ghost face state is correct at the qpoints where position was set
   REQUIRE(tbc.ghost_face(false)[0*n_qpoint + 0] == Catch::Approx(0.).scale(1.));
   REQUIRE(tbc.ghost_face(false)[1*n_qpoint + 0] == Catch::Approx(0.).scale(1.));
@@ -152,7 +122,7 @@ TEST_CASE("Nonpenetration") {
     }
   }
   SECTION("apply_state") {
-    nonpen.apply_state(tbc);
+    nonpen.apply_state(tbc.boundary_connection());
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       // require tangential momentum unchanged
       REQUIRE(  3*tbc.ghost_face(false)[0*row_size + i_qpoint]
@@ -163,7 +133,7 @@ TEST_CASE("Nonpenetration") {
     }
   }
   SECTION("apply_flux") {
-    nonpen.apply_flux(tbc);
+    nonpen.apply_flux(tbc.boundary_connection());
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       // require tangential momentum flux flipped
       REQUIRE(  3*tbc.ghost_face(true)[0*row_size + i_qpoint]
@@ -193,7 +163,7 @@ TEST_CASE("No_slip") {
       for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face(false)[i_var*row_size + i_qpoint] = state[i_var];
     }
     hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_energy>(1e6), 1., 1.4, hexed::inviscid, hexed::laminar);
-    no_slip.apply_state(tbc);
+    no_slip.apply_state(tbc.boundary_connection());
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_dim = 0; i_dim < 2; ++i_dim) REQUIRE(tbc.ghost_face(false)[i_dim*row_size + i_qpoint] == Catch::Approx(-1.));
       REQUIRE(tbc.ghost_face(false)[2*row_size + i_qpoint] == Catch::Approx(1.2));
@@ -202,7 +172,7 @@ TEST_CASE("No_slip") {
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face(true)[i_var*row_size + i_qpoint] = flux[i_var];
     }
-    no_slip.apply_flux(tbc);
+    no_slip.apply_flux(tbc.boundary_connection());
     flux[2] *= -1; // mass flux should always inverted
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) {
@@ -216,7 +186,7 @@ TEST_CASE("No_slip") {
     }
     hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_heat_flux>(3.),
                            1., 1.4, hexed::inviscid, hexed::laminar);
-    no_slip.apply_state(tbc);
+    no_slip.apply_state(tbc.boundary_connection());
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_dim = 0; i_dim < 2; ++i_dim) REQUIRE(tbc.ghost_face(false)[i_dim*row_size + i_qpoint] == Catch::Approx(-1.));
       REQUIRE(tbc.ghost_face(false)[2*row_size + i_qpoint] == Catch::Approx(state[2]));
@@ -225,7 +195,7 @@ TEST_CASE("No_slip") {
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) tbc.inside_face(true)[i_var*row_size + i_qpoint] = flux[i_var];
     }
-    no_slip.apply_flux(tbc);
+    no_slip.apply_flux(tbc.boundary_connection());
     flux[2] *= -1; // mass flux should always inverted
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 3; ++i_var) {
@@ -246,13 +216,13 @@ TEST_CASE("No_slip") {
     thermal->emissivity = .8;
     hexed::No_slip no_slip(thermal, 1., 1.4, hexed::inviscid, hexed::laminar);
     double temp = 1e5/1.2/hexed::constants::specific_gas_air;
-    no_slip.apply_state(tbc);
+    no_slip.apply_state(tbc.boundary_connection());
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) {
         tbc.inside_face(false)[i_var*row_size + i_qpoint] = 0;
       }
     }
-    no_slip.apply_flux(tbc);
+    no_slip.apply_flux(tbc.boundary_connection());
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       REQUIRE((tbc.ghost_face(true)[3*row_size + i_qpoint] + tbc.inside_face(true)[3*row_size + i_qpoint])/2 == Catch::Approx(-.8*hexed::constants::stefan_boltzmann*std::pow(temp, 4)*.7));
     }
@@ -274,7 +244,7 @@ TEST_CASE("Copy") {
     tbc.inside_face(false)[3*n_qpoint + i_qpoint] = 0.9;
     tbc.inside_face(false)[4*n_qpoint + i_qpoint] = 1e4;
   }
-  copy.apply_state(tbc);
+  copy.apply_state(tbc.boundary_connection());
   // check that ghost face is equal to inside
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     REQUIRE(tbc.ghost_face(false)[0*n_qpoint + i_qpoint] == Catch::Approx(20.));

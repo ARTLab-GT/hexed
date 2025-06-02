@@ -86,7 +86,7 @@ void Solver::apply_state_bcs() {
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).apply_state(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).apply_state(bc_cons[i_con].boundary_connection());
   }
   stopwatch["boundary conditions"].stopwatch.pause();
   stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
@@ -97,12 +97,12 @@ void Solver::apply_flux_bcs() {
   auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+    auto& con = bc_cons[i_con].boundary_connection();
     // write inside flux to flux cache for surface visualization/integrals
-    int n_dof = params.n_dof()/params.row_size;
-    Eigen::Map<Mat<>>(bc_cons[i_con].flux_cache(), n_dof) = Eigen::Map<Mat<>>(bc_cons[i_con].inside_face(true), n_dof);
+    con.flux_cache() = con.inside().flow_state()(1);
     // apply boundary conditions
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).apply_flux(bc_cons[i_con]);
+    int bc_sn = con.boundary_condition();
+    acc_mesh->boundary_condition(bc_sn).apply_flux(con);
   }
   stopwatch["boundary conditions"].stopwatch.pause();
   stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
@@ -114,7 +114,7 @@ void Solver::apply_avc_diff_bcs() {
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).apply_diffusion(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).apply_diffusion(bc_cons[i_con].boundary_connection());
   }
   stopwatch["boundary conditions"].stopwatch.pause();
   stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
@@ -126,22 +126,18 @@ void Solver::apply_avc_diff_flux_bcs() {
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).flux_diffusion(bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).flux_diffusion(bc_cons[i_con].boundary_connection());
   }
   stopwatch["boundary conditions"].stopwatch.pause();
   stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
 }
 
 void Solver::apply_fta_flux_bcs() {
-  int rs = params.row_size;
-  int nq = params.n_qpoint();
-  int nv = params.n_var;
   auto& bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* in_f = bc_cons[i_con].inside_face(true);
-    double* gh_f = bc_cons[i_con].ghost_face(true);
-    for (int i_dof = 0; i_dof < nq*nv/rs; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+    auto& con = bc_cons[i_con].boundary_connection();
+    con.ghost().flow_state()(1) = -con.inside().flow_state()(1);
   }
 }
 
@@ -169,8 +165,8 @@ void Solver::_init_face_state() {
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).init_cache(bc_cons[i_con]);
-    acc_mesh->boundary_condition(bc_sn).set_prescribed(inter, bc_cons[i_con]);
+    acc_mesh->boundary_condition(bc_sn).init_cache(bc_cons[i_con].boundary_connection());
+    acc_mesh->boundary_condition(bc_sn).set_prescribed(inter, bc_cons[i_con].boundary_connection());
   }
 }
 
@@ -510,7 +506,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       #pragma omp parallel for
       for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
         int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-        acc_mesh->boundary_condition(bc_sn).apply_advection(bc_cons[i_con]);
+        acc_mesh->boundary_condition(bc_sn).apply_advection(bc_cons[i_con].boundary_connection());
       }
       sw_adv["BCs"].stopwatch.pause();
       sw_adv["BCs"].work_units_completed += acc_mesh->elements().size();

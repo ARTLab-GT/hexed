@@ -3,7 +3,7 @@
 
 #include "Surface_func.hpp"
 #include "Surface_geom.hpp"
-#include "Boundary_face.hpp"
+#include "Boundary_connection.hpp"
 #include "Interpreter.hpp"
 #include "Transport_model.hpp"
 
@@ -19,17 +19,17 @@ class Flow_bc {
   public:
   //! \brief applies boundary condition to state variables (Dirichlet BCs)
   //! \details writes to the first `n_var()*size()` entries of `ghost_state()` (called on the provided `Boundary_face`.)
-  virtual void apply_state(Boundary_face&) = 0;
+  virtual void apply_state(next::Boundary_connection&) = 0;
   //! applies boundary condition to viscous fluxes (if applicable)
-  virtual void apply_flux(Boundary_face&) = 0;
+  virtual void apply_flux(next::Boundary_connection&) = 0;
   //! applies boundary condition to linear advection equation used to compute nonsmoothness indicator
-  virtual void apply_advection(Boundary_face&);
-  virtual void apply_diffusion(Boundary_face&);
-  virtual void flux_diffusion(Boundary_face&);
-  //! initialize `Boundary_face::state_cache` at beginning of simulation (used by `Cache_bc`)
-  virtual inline void init_cache(Boundary_face&) {}
+  virtual void apply_advection(next::Boundary_connection&);
+  virtual void apply_diffusion(next::Boundary_connection&);
+  virtual void flux_diffusion(next::Boundary_connection&);
+  //! initialize `Boundary_connection::state_cache` at beginning of simulation (used by `Cache_bc`)
+  virtual inline void init_cache(next::Boundary_connection&) {}
   virtual inline int n_prescribed(int n_dim) const {return 0;}
-  virtual inline void set_prescribed(Interpreter&, Boundary_face&) {}
+  virtual inline void set_prescribed(Interpreter&, next::Boundary_connection&) {}
   virtual ~Flow_bc() = default;
 };
 
@@ -41,10 +41,10 @@ class Flow_bc {
 class Freestream : public Flow_bc {
   Mat<> fs;
   public:
-  //! `freestream_state.size()` must equal the `n_var()` of the `Boundary_face` you apply_state it to
+  //! `freestream_state.size()` must equal the `n_var()` of the `Boundary_connection` you apply_state it to
   Freestream(Mat<> freestream_state);
-  virtual void apply_state(Boundary_face&);
-  virtual void apply_flux(Boundary_face&);
+  virtual void apply_state(next::Boundary_connection&);
+  virtual void apply_flux(next::Boundary_connection&);
 };
 
 /*! \brief A freestream boundary condition that sets only the ingoing characteristics.
@@ -55,8 +55,8 @@ class Riemann_invariants : public Flow_bc {
   Mat<> fs;
   public:
   Riemann_invariants(Mat<> freestream_state);
-  virtual void apply_state(Boundary_face&);
-  virtual void apply_flux(Boundary_face&);
+  virtual void apply_state(next::Boundary_connection&);
+  virtual void apply_flux(next::Boundary_connection&);
 };
 
 /*! \brief sets pressure on outflow boundaries
@@ -72,8 +72,8 @@ class Pressure_outflow : public Flow_bc {
   double pres_spec;
   public:
   inline Pressure_outflow(double pressure) : pres_spec{pressure} {}
-  void apply_state(Boundary_face&) override;
-  void apply_flux(Boundary_face&) override;
+  void apply_state(next::Boundary_connection&) override;
+  void apply_flux(next::Boundary_connection&) override;
 };
 
 //! \brief Like `Freestream`, but sets state to the value of an arbitrary `Surface_func` instead of a constant.
@@ -82,13 +82,13 @@ class Function_bc : public Flow_bc {
   public:
   Function_bc(const Surface_func&);
   Function_bc(Surface_func&&) = delete;
-  void apply_state(Boundary_face&) override;
-  void apply_flux(Boundary_face&) override;
+  void apply_state(next::Boundary_connection&) override;
+  void apply_flux(next::Boundary_connection&) override;
 };
 
 /*!
  * Like `Function_bc`, but instead of evaluating the `Surface_func` at every time integration stage,
- * it evaluates it once when the flow is initialized and then stores it in the `Boundary_face::state_cache`.
+ * it evaluates it once when the flow is initialized and then stores it in the `Boundary_connection::state_cache`.
  * Of course, this means that any time-dependence will be ignored.
  */
 class Cache_bc : public Flow_bc {
@@ -96,18 +96,18 @@ class Cache_bc : public Flow_bc {
   public:
   //! takes ownership of `f`
   inline Cache_bc(Surface_func* f) : func{f} {}
-  void apply_state(Boundary_face&) override;
-  void apply_flux(Boundary_face&) override;
-  void init_cache(Boundary_face&) override;
+  void apply_state(next::Boundary_connection&) override;
+  void apply_flux(next::Boundary_connection&) override;
+  void init_cache(next::Boundary_connection&) override;
 };
 
 //! \brief Copies the inside state and flips the sign of the surface-normal velocity.
 //! \details Good for inviscid walls and symmetry planes.
 class Nonpenetration : public Flow_bc {
   public:
-  void apply_state(Boundary_face&) override;
-  void apply_flux(Boundary_face&) override;
-  void apply_advection(Boundary_face&) override;
+  void apply_state(next::Boundary_connection&) override;
+  void apply_flux(next::Boundary_connection&) override;
+  void apply_advection(next::Boundary_connection&) override;
 };
 
 //! \brief specifies the thermal component of a `No_slip` wall boundary condition
@@ -170,21 +170,21 @@ class No_slip : public Flow_bc {
   double roughness; //! \brief set and update this as desired
   No_slip(std::shared_ptr<Thermal_bc>, double roughness, double heat_rat,
           Transport_model viscosity, Turbulence_model, double heat_flux_coercion = 2.);
-  void apply_advection(Boundary_face&) override;
+  void apply_advection(next::Boundary_connection&) override;
   //! \note `apply_state` must be called before `apply_flux` to prime `state_cache`
-  void apply_state(Boundary_face&) override;
-  void apply_flux(Boundary_face&) override;
+  void apply_state(next::Boundary_connection&) override;
+  void apply_flux(next::Boundary_connection&) override;
   inline int n_prescribed(int n_dim) const override {return n_dim;}
-  void set_prescribed(Interpreter&, Boundary_face&) override;
+  void set_prescribed(Interpreter&, next::Boundary_connection&) override;
 };
 
 //! \brief Mostly used for testing, but you can maybe get away with it for supersonic outlets.
 //! \details All members just copy the inside data.
 class Copy : public Flow_bc {
   public:
-  void apply_state(Boundary_face&) override;
-  void apply_flux(Boundary_face&) override;
-  void apply_advection(Boundary_face&) override;
+  void apply_state(next::Boundary_connection&) override;
+  void apply_flux(next::Boundary_connection&) override;
+  void apply_advection(next::Boundary_connection&) override;
 };
 
 //! \brief for supersonic outlets
@@ -192,18 +192,18 @@ class Copy : public Flow_bc {
 class Outflow : public Flow_bc {
   public:
   //! inverts flux (so that avg is zero)
-  void apply_state(Boundary_face&) override;
-  void apply_flux(Boundary_face&) override;
+  void apply_state(next::Boundary_connection&) override;
+  void apply_flux(next::Boundary_connection&) override;
 };
 
 //! \brief Sets the boundary condition explicitly based on a `HIL` expression.
 class Expression_bc : public Flow_bc {
   public:
   Expression_bc(Interpreter&, std::string state_expr, std::string flux_expr);
-  inline void apply_state(Boundary_face& bf) override {_apply(bf, 0);}
-  inline void apply_flux(Boundary_face& bf) override {_apply(bf, 1);}
+  inline void apply_state(next::Boundary_connection& bf) override {_apply(bf, 0);}
+  inline void apply_flux(next::Boundary_connection& bf) override {_apply(bf, 1);}
   private:
-  void _apply(Boundary_face&, bool is_flux);
+  void _apply(next::Boundary_connection&, bool is_flux);
   Interpreter& _inter;
   std::array<std::string, 2> _exprs;
 };
