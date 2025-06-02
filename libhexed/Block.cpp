@@ -509,6 +509,7 @@ std::vector<Int> interior_dims(int n_dim, int row_size) {
 
 Boundary_block::Boundary_block(int n_dim, const Basis& b)
 : Block(n_dim, b.row_size)
+, snapping_problem{false}
 , _interior(interior_dims(n_dim, b.row_size))
 , _basis{&b}
 , _elem(this)

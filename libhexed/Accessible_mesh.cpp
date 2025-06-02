@@ -1119,10 +1119,16 @@ void Accessible_mesh::_fit_surface() {
     block.reset();
     bool failed = snap_intersections(block);
     if (!failed) failed = check_elems(block);
-    if (failed) block.reset();
+    if (failed) {
+      block.reset();
+      block.snapping_problem = true;
+    }
   };
 
   // snap edges to the surface (regardless of dimensionality)
+  auto boundary_sides = _blocks.boundary_sides();
+  #pragma omp parallel for
+  for (auto& block : boundary_sides) block.snapping_problem = false;
   auto edges_2d = _blocks.edges_2d();
   #pragma omp parallel for
   for (auto& edge : edges_2d) plain_snap(edge);
@@ -1159,6 +1165,7 @@ void Accessible_mesh::_fit_surface() {
         if (!failed) failed = check_elems(edge);
         if (failed) {
           if (edge.snapped_edge < 0) {
+            edge.snapping_problem = true;
             edge.reset();
           } else {
             plain_snap(edge);
@@ -1169,33 +1176,24 @@ void Accessible_mesh::_fit_surface() {
   }
   // snap face interiors (if 3D) to surface
   #pragma omp parallel for
-  for (auto& face : faces_3d) plain_snap(face);
+  for (auto& face : faces_3d) {
+    plain_snap(face);
+    for (int i_edge = 0; i_edge < 4; ++i_edge) {
+      next::Edge* edge = &face.edge(i_edge);
+      if (edge->glued()) edge = edge->glued_to();
+      face.snapping_problem = face.snapping_problem || edge->snapping_problem;
+    }
+  }
   ++_stopwatch["update"]["fit surface"].work_units_completed;
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
+    if (elem.active_shape().boundary_block()) {
+      elem.snapping_problem = elem.snapping_problem || elem.active_shape().boundary_block()->snapping_problem;
+    }
     for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
       auto& vert = elem.active_shape().vertex(i_vert);
       elem.snapping_problem = elem.snapping_problem || vert.last_snap_failed() || vert.incompatible_snap;
-    }
-  }
-  #pragma omp parallel for
-  for (Int i_con = 0; i_con < (Int)def.cons.size(); ++i_con) {
-    auto& con = *def.cons[i_con];
-    if (con.element(0).active_shape().is_new || con.element(1).active_shape().is_new) {
-      bool problem = false;
-      for (int i_elem = 0; i_elem < 2; ++i_elem) {
-        bool p;
-        #pragma omp atomic read
-        p = con.element(i_elem).snapping_problem;
-        problem = problem || p;
-      }
-      if (problem) {
-        for (int i_elem = 0; i_elem < 2; ++i_elem) {
-          #pragma omp atomic write
-          con.element(i_elem).snapping_problem = true;
-        }
-      }
     }
   }
   #pragma omp parallel for

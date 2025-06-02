@@ -284,6 +284,8 @@ class Boundary_block : public Block {
    */
   inline Array<double> interior() {return _interior();};
 
+  bool snapping_problem;
+
   protected:
   Array<double> _interior; //!< \brief storage for the interior points
 

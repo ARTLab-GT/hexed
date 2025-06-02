@@ -682,133 +682,24 @@ void Solver::set_uncertainty(double value) {
 }
 
 void Solver::set_uncert_surface_rep(int bc_sn) {
-  const int nv = params.n_var;
   const int nd = params.n_dim;
-  const int nq = params.n_qpoint();
-  const int nfq = nq/params.row_size;
-  // record flow state in reference stage
-  // so that state storage can be used for normal vectors
-  auto& elems = acc_mesh->elements();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    elems[i_elem].uncertainty = 0;
-    elems[i_elem].record = 0;
-    double* state = elems[i_elem].state();
-    double* ref = elems[i_elem].residual_cache();
-    for (int i_var = 0; i_var < nv; ++i_var) {
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        ref[i_var*nq + i_qpoint] = state[i_var*nq + i_qpoint];
-      }
-    }
-  }
-  // identify boundary elements
-  auto& bc_cons {acc_mesh->boundary_connections()};
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    auto& con = bc_cons[i_con];
-    if (con.bound_cond_serial_n() == bc_sn) {
-      // the `2*n_dim` identifies that this is a boundary element and the rest identifies which face is on the boundary
-      // assumes each element has at most face on *this* boundary (might have other faces on other boundaries)
-      con.element().record = 2*nd + 2*con.i_dim() + con.inside_face_sign();
-    }
-  }
-  // first write the (non-unit) normal vectors to the state storage
-  // and then extrapolate those to the face storage
-  auto& def_elems = acc_mesh->deformed().elements();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
-    auto& elem = def_elems[i_elem];
-    if (elem.record/(2*nd) == 1) { // if this element is on the boundary...
-      // pick out the reference level normal vector which is pointing out of the flow domain
-      double* state = elem.state();
-      double* nrml = elem.reference_level_normals() + (elem.record - 2*nd)/2*nd*nq;
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-          state[i_dim*nq + i_qpoint] = nrml[i_dim*nq + i_qpoint]*math::sign(elem.record%2);
-        }
-      }
-    }
-  }
-  // extrapolate to faces
-  compute_write_face(_kernel_mesh());
-  // for each face, compute unit surface normal from the reference level normal
-  Mat<dyn, dyn> bound = basis.boundary();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
-    auto& elem = def_elems[i_elem];
-    if (elem.record/(2*nd) == 1) {
-      int i_dim = (elem.record - 2*nd)/2;
-      int positive = elem.record%2;
-      for (int i_face = 0; i_face < 2*nd; ++i_face) {
-        if (i_face/2 != i_dim && elem.face(i_face, false)) {
-          // extrapolate the reference level normal to the wall surface
-          // because only at the wall surface is the reference level normal the same as the wall normal
-          // and then write that back to the whole face
-          Eigen::Map<Mat<dyn, dyn>> face(elem.face(i_face, false), nfq, nd);
-          int i_dim_extrap = (nd == 3) ? i_dim > 3 - i_dim - i_face/2 : 0;
-          for (int j_dim = 0; j_dim < nd; ++j_dim) {
-            Mat<dyn, dyn> b = Mat<>::Ones(params.row_size)*bound(positive, all);
-            Mat<> extrap = math::dimension_matvec(b, face(all, j_dim), i_dim_extrap);
-            face(all, j_dim) = extrap;
-          }
-          // normalize to get *unit* normals
-          for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-            face(i_qpoint, all).normalize();
-          }
-        }
-      }
-    }
-  }
-  compute_prolong(_kernel_mesh());
-  // compute difference between neighboring elements
-  auto neighb_cons = acc_mesh->neighbor_connections(true);
-  #pragma omp parallel for
-  for (Int i_con = 0; i_con < neighb_cons.size(); ++i_con) {
-    auto& con = neighb_cons[i_con];
-    HEXED_ASSERT(con.alive(), "Dead connection (should have purged mesh).")
-    Array<double> face0 = con.face(0).flow_state()(0);
-    Array<double> face1 = con.face(1).flow_state()(0);
-    auto permute = face_permutation(nd, params.row_size, con.get_direction(), face1.data(), turb);
-    permute->match_faces();
-    Array<double> diff(face0.shape());
-    diff = face0 - face1;
-    face0 = diff;
-    face1 = diff;
-    permute->restore();
-  }
-  // set difference to zero for faces that are on other boundaries
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    auto& con = bc_cons[i_con];
-    double* state = con.inside_face(false);
-    for (int i_dof = 0; i_dof < nv*nfq; ++i_dof) state[i_dof] = 0;
-  }
-  compute_restrict(_kernel_mesh(), false);
-  // total up differences for each boundary element and write to uncertainty
-  // also restore the flow state to what it was at the start of this function
+  Mat<> orth = basis.orthogonal(basis.row_size - 2).cwiseProduct(basis.node_weights());
   Mat<> weights = math::pow_outer(basis.node_weights(), nd - 1);
-  #pragma omp parallel for
+  auto& elems = acc_mesh->elements();
+  //#pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    if (elem.record/(2*nd) == 1) {
-      for (int i_face = 0; i_face < 2*nd; ++i_face) {
-        if (i_face/2 != (elem.record - 2*nd)/2 && elem.face(i_face, false)) {
-          Eigen::Map<Mat<dyn, dyn>> face(elem.face(i_face, false), nfq, nd);
-          Mat<> norm = face.rowwise().norm();
-          elem.uncertainty += std::sqrt(norm.dot(weights.asDiagonal()*norm));
-        }
-      }
-      elem.uncertainty /= 2*std::max(nd - 1, 1);
-    }
-    double* state = elem.state();
-    double* ref = elem.residual_cache();
-    for (int i_var = 0; i_var < nv; ++i_var) {
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        state[i_var*nq + i_qpoint] = ref[i_var*nq + i_qpoint];
+    Element& elem = elems[i_elem];
+    elem.uncertainty = 0;
+    Array<double> pos = elem.position(basis);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      for (int j_dim = 0; j_dim < nd; ++j_dim) {
+        Mat<> ho_component = math::dimension_matvec(orth.transpose(), pos(i_dim).vector(), j_dim);
+        elem.uncertainty += ho_component.dot(weights.cwiseProduct(ho_component))/(nd*nd);
       }
     }
+    elem.uncertainty = std::sqrt(elem.uncertainty);
+    printers::info(to_string(elem.uncertainty) + "\n");
   }
-  compute_write_face(_kernel_mesh());
 }
 
 void Solver::update() {
