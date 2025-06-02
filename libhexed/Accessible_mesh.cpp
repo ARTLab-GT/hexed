@@ -605,7 +605,7 @@ void Accessible_mesh::_fit_surface() {
                 match_elem.active_shape().for_matching = true;
                 _connect<Deformed_element>({&surface, &match_elem},
                                            Connection_direction{{j_dim, j_dim}, {j_sign, !j_sign}});
-                _connect<Deformed_element>({&inside, &match_elem},
+                _connect<Deformed_element>({&match_elem, &inside},
                                            Connection_direction{{i_dim, j_dim}, {!i_sign, j_sign}});
                 _extrude_cons[1].emplace_back(&_neighbor_cons[1].back());
                 matched_elems[2*j_dim + j_sign] = &match_elem;
@@ -1460,6 +1460,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
   std::array<std::vector<next::Element_shape*>, 2> shapes;
   std::array<std::vector<next::Element_shape*>, 2> active_shapes;
   bool null_elem = false;
+  bool same_active = false;
   for (int i_side = 0; i_side < 2; ++i_side) {
     HEXED_ASSERT(Int(elems[i_side].size()) == nv/2, "wrong number of element pointers")
     for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
@@ -1471,6 +1472,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
       faces.emplace_back(&elems[i_side][i_elem]->face(dir.i_face(i_side)));
       shapes[i_side].push_back(&elems[i_side][i_elem]->shape());
       active_shapes[i_side].push_back(&elems[i_side][i_elem]->active_shape());
+      if (i_side) if (active_shapes[i_side][i_elem] == active_shapes[0][i_elem]) same_active = true;
     }
   }
   HEXED_ASSERT(!null_elem, "an element is null")
@@ -1519,7 +1521,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Elem_t*>, 2> elems, Connec
     }
   }
   next::Element_shape::connect(shapes, dir);
-  next::Element_shape::connect(active_shapes, dir);
+  if (!same_active) next::Element_shape::connect(active_shapes, dir);
 }
 template <typename Elem_t>
 void Accessible_mesh::_connect(std::array<Elem_t*, 2> el_ar, Connection_direction direction) {
@@ -1752,13 +1754,6 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     else elem.create_fake(_blocks);
     elem.record = sn;
     elem.needs_snapping = !force;
-    if (collapse) {
-      int stride = math::pow(2, nd - 1 - face.i_dim);
-      for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
-        int i_collapse = i_vert + (face.face_sign - (i_vert/stride)%2)*stride;
-        elem.fake_shape()->vertex(i_vert).point({}) = face.elem.shape().vertex(i_collapse).point({});
-      }
-    }
     elem.fake_shape()->extruded_direction = 2*face.i_dim + face.face_sign;
     std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};
     _connect(el_arr, dir);
