@@ -27,4 +27,7 @@ TEST_CASE("Neighbor_connection") {
   }
   hexed::Neighbor_connection con(params, {&f0, &f1});
   REQUIRE(con.alive());
+  f0.disconnect();
+  REQUIRE(!f0.connected());
+  REQUIRE(!con.alive());
 }

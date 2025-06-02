@@ -578,6 +578,7 @@ void Accessible_mesh::_fit_surface() {
           surface.active_shape().is_new = false;
           surface.active_shape().for_matching = true;
           _connect<Deformed_element>({&inside, &surface}, Connection_direction{{i_dim, i_dim}, {i_sign, !i_sign}});
+          _extrude_cons[1].emplace_back(&_neighbor_cons[1].back());
           elem.record = 2;
           std::vector<Deformed_element*> matched_elems(6, nullptr);
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
@@ -604,8 +605,9 @@ void Accessible_mesh::_fit_surface() {
                 match_elem.active_shape().for_matching = true;
                 _connect<Deformed_element>({&surface, &match_elem},
                                            Connection_direction{{j_dim, j_dim}, {j_sign, !j_sign}});
-                _connect<Deformed_element>({&inside,  &match_elem},
-                                           Connection_direction{{j_dim, i_dim}, {j_sign, !i_sign}});
+                _connect<Deformed_element>({&inside, &match_elem},
+                                           Connection_direction{{i_dim, j_dim}, {!i_sign, j_sign}});
+                _extrude_cons[1].emplace_back(&_neighbor_cons[1].back());
                 matched_elems[2*j_dim + j_sign] = &match_elem;
                 elem.face_record[2*j_dim + j_sign] = sn;
                 for (bool k_sign : {0, 1}) {
@@ -696,7 +698,6 @@ void Accessible_mesh::_fit_surface() {
         }
       }
     }
-    extrude_cons.clear();
     // purge deleted objects
     _blocks.verts();
     _blocks.boundary_sides();
@@ -740,6 +741,10 @@ void Accessible_mesh::_fit_surface() {
           if (surfaces[0]) {
             HEXED_ASSERT(surfaces[1], "Both faces must identify a surface element or neither.")
             _connect(surfaces, dir);
+          } else {
+            HEXED_ASSERT(!elem_arr[0]->tree && elem_arr[1]->tree,
+                         "This should be a connection between a tree element and an extruded element.")
+            _extrude_cons[2].emplace_back(&_neighbor_cons[1].back());
           }
         } else {
           _connect(to_connect, dir);
@@ -841,11 +846,6 @@ void Accessible_mesh::_fit_surface() {
         _connect(elem_arr, {dim_arr, sign_arr, rotate});
       }
     }
-    // rebuild `extrude_cons`
-    for (Int i_con = 0; i_con < (Int)_neighbor_cons[1].size(); ++i_con) {
-      auto& con = _neighbor_cons[1][i_con];
-      if (con.face(1).element()->tree && !con.face(0).element()->tree) extrude_cons.emplace_back(&con);
-    }
   }
 
   #pragma omp parallel for
@@ -929,6 +929,7 @@ void Accessible_mesh::_fit_surface() {
         Deformed_element& new_elem = def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
         std::array<Deformed_element*, 2> el_arr {&new_elem, &elem};
         _connect(el_arr, {{i_face/2, i_face/2}, {!(i_face%2), bool(i_face%2)}, 0});
+        _extrude_cons[0].emplace_back(&_neighbor_cons[1].back());
       }
     }
     for (Int i_con = 0; i_con < cons_sz; ++i_con) {
@@ -1613,6 +1614,10 @@ void Accessible_mesh::connect_hanging(int coarse_ref_level, Int coarse_serial, s
   }
 }
 
+next::Sequence<Neighbor_connection&> Accessible_mesh::neighbor_connections(bool is_deformed) {
+  return next::Sequence<Neighbor_connection&>::vector_view(_neighbor_cons[is_deformed]);
+}
+
 int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc) {
   bound_conds.emplace_back(flow_bc);
   // no reason to delete boundary conditions, so the serial number can just be the index
@@ -1759,7 +1764,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     elem.fake_shape()->extruded_direction = 2*face.i_dim + face.face_sign;
     std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};
     _connect(el_arr, dir);
-    extrude_cons.emplace_back(&_neighbor_cons[1].back());
+    _extrude_cons[2].emplace_back(&_neighbor_cons[1].back());
     // record the faces that still need to be connected at a vertex which is guaranteed to be shared with prospective neighbors
     for (int j_dim = face.i_dim + 1; j_dim%nd != face.i_dim; ++j_dim) {
       j_dim = j_dim%nd;
@@ -2436,8 +2441,10 @@ void Accessible_mesh::purge() {
     for (int is_def : {0, 1}) {
       std::erase_if(_neighbor_cons[is_def], [](Neighbor_connection& con){return !con.alive();});
     }
-    // delete obsolete elements of `extrude_cons`
-    erase_if(extrude_cons, [](Mortal_ptr<Neighbor_connection>& ptr){return !ptr;});
+    // delete obsolete elements of `_extrude_cons`
+    for (int i = 0; i < 3; ++i) {
+      erase_if(_extrude_cons[i], [](Mortal_ptr<Neighbor_connection>& ptr){return !ptr;});
+    }
     // delete old matched vertices and edges
     _blocks.boundary_verts();
     _blocks.interior_verts();
@@ -2471,24 +2478,19 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       if (ref && !unref) elem.record = 1;
       else if (unref && !ref) elem.record = -1;
     }
-    // pass refinement requests of extruded elements to their extrusion parents
-    for (auto& con : def.cons) {
-      if (con->element(0).active_shape().boundary_face() != next::Mesh_blocks::no_face &&
-          con->element(1).active_shape().boundary_face() == next::Mesh_blocks::no_face) {
-        con->element(1).record = con->element(0).record;
+    for (int i = 0; i < 3; ++i) {
+      #pragma omp parallel for
+      for (auto& con : _extrude_cons[i]) {
+        HEXED_ASSERT(con, "null extruded connection")
+        HEXED_ASSERT(con->face(0).element() && con->face(1).element(),
+                     "extruded connection is not connected to elements")
+        auto& inside = *con->face(1).element();
+        auto& extruded = *con->face(0).element();
+        Lock::Set s(inside.lock);
+        if (inside.record == 0) inside.record = extruded.record;
+        else inside.record = std::max(inside.record, extruded.record);
+        inside.unrefinement_locked = inside.unrefinement_locked || extruded.unrefinement_locked;
       }
-    }
-    #pragma omp parallel for
-    for (auto& con : extrude_cons) {
-      HEXED_ASSERT(con, "null extruded connection")
-      HEXED_ASSERT(con->face(0).element() && con->face(1).element(),
-                   "extruded connection is not connected to elements")
-      auto& inside = *con->face(1).element();
-      auto& extruded = *con->face(0).element();
-      Lock::Set s(inside.lock);
-      if (inside.record == 0) inside.record = extruded.record;
-      else inside.record = std::max(inside.record, extruded.record);
-      inside.unrefinement_locked = inside.unrefinement_locked || extruded.unrefinement_locked;
     }
     int n_orig [2];
     // refine elements
@@ -2716,16 +2718,7 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
     auto& cons = mbt.face_connections(); \
     for (int i_con = 0; i_con < cons.size(); ++i_con) { \
       auto& n = cons[i_con].neighbor_connection(); \
-      Hard_kernel_connection ker_con { \
-        n.get_direction(), \
-        { \
-          {n.face(0).flow_state()(0).data(), n.face(0).flow_state()(1).data()}, \
-          {n.face(1).flow_state()(0).data(), n.face(1).flow_state()(1).data()}, \
-        }, \
-        n.face(0).normal().data(), \
-        {n.face(0).associated() ? n.face(0).mask() : n.face(1).mask(), n.face(1).associated() ? n.face(1).mask() : n.face(0).mask()}, \
-        n.face(0).associated() ? n.face(0).nominal_area() : n.face(1).nominal_area(), \
-      }; \
+      Hard_kernel_connection ker_con = n.kernel_connection(); \
       if (std::max(ker_con.mask[0], ker_con.mask[1]) >= mesh._mask_levels) { \
         vecs[n.is_deformed()]->push_back(ker_con); \
       } \
@@ -2733,18 +2726,7 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
   }
   for (bool is_def : {0, 1}) {
     for (Int i_con = 0; i_con < (Int)mesh._neighbor_cons[is_def].size(); ++i_con) {
-      auto& n = mesh._neighbor_cons[is_def][i_con];
-      Hard_kernel_connection ker_con {
-        n.get_direction(),
-        {
-          {n.face(0).flow_state()(0).data(), n.face(0).flow_state()(1).data()}, \
-          {n.face(1).flow_state()(0).data(), n.face(1).flow_state()(1).data()}, \
-        },
-        n.face(0).normal().data(),
-        {n.face(0).associated() ? n.face(0).mask() : n.face(1).mask(),
-         n.face(1).associated() ? n.face(1).mask() : n.face(0).mask()},
-        n.face(0).associated() ? n.face(0).nominal_area() : n.face(1).nominal_area(),
-      };
+      Hard_kernel_connection ker_con = mesh._neighbor_cons[is_def][i_con].kernel_connection();
       if (std::max(ker_con.mask[0], ker_con.mask[1]) >= mesh._mask_levels) {
         vecs[is_def]->push_back(ker_con);
       }

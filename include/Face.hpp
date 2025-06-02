@@ -55,6 +55,11 @@ class Face : public Mortal {
   int _n_state;
   int _n_normal;
   Array<double> _data;
+  //! \todo change `Array` logic so that these aren't necessary
+  Array<double> _flow_state;
+  Array<double> _advection_state;
+  Array<double> _full_state;
+  Array<double> _normal;
 };
 
 }

@@ -13,6 +13,10 @@ Face::Face(Storage_params params, int i_d, int s, bool is_def, double* data)
 , _n_state{std::max(2*params.n_var, params.n_dim + params.n_advection(params.row_size))}
 , _n_normal{is_def*params.n_dim}
 , _data({(_n_state + _n_normal), _n_face_qpoint}, data)
+, _flow_state{_data(0, 2*_params.n_var).reshaped({2, _params.n_var, _n_face_qpoint})}
+, _advection_state{_data(0, _params.n_dim + _params.n_advection(_params.row_size))}
+, _full_state{_data(0, _n_state)}
+, _normal{_data(_n_state, end)}
 {
   _data = 0;
 }
@@ -53,22 +57,24 @@ void Face::connect(Reciprocal_ptr<Face_refinement, Face>& ref) {
 }
 
 void Face::disconnect() {
+  _neighbor_connection.unpair();
+  _face_ref_fine.unpair();
 }
 
 Array<double> Face::flow_state() {
-  return _data(0, 2*_params.n_var).reshaped({2, _params.n_var, _n_face_qpoint});
+  return _flow_state();
 }
 
 Array<double> Face::advection_state() {
-  return _data(0, _params.n_dim + _params.n_advection(_params.row_size));
+  return _advection_state();
 }
 
 Array<double> Face::full_state() {
-  return _data(0, _n_state);
+  return _full_state();
 }
 
 Array<double> Face::normal() {
-  return _data(_n_state, end);
+  return _normal();
 }
 
 int Face::mask() {

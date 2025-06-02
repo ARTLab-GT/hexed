@@ -761,19 +761,19 @@ void Solver::set_uncert_surface_rep(int bc_sn) {
   }
   compute_prolong(_kernel_mesh());
   // compute difference between neighboring elements
-  auto& def_cons = acc_mesh->deformed().face_connections();
+  auto neighb_cons = acc_mesh->neighbor_connections(true);
   #pragma omp parallel for
-  for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
-    auto& con = def_cons[i_con];
-    auto permute = face_permutation(nd, params.row_size, con.direction(), con.state(1, false), turb);
+  for (Int i_con = 0; i_con < neighb_cons.size(); ++i_con) {
+    auto& con = neighb_cons[i_con];
+    HEXED_ASSERT(con.alive(), "Dead connection (should have purged mesh).")
+    Array<double> face0 = con.face(0).flow_state()(0);
+    Array<double> face1 = con.face(1).flow_state()(0);
+    auto permute = face_permutation(nd, params.row_size, con.get_direction(), face1.data(), turb);
     permute->match_faces();
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        double* f [2];
-        for (int i_side : {0, 1}) f[i_side] = con.state(i_side, false) + i_dim*nfq + i_qpoint;
-        *f[0] = *f[1] = *f[0] - *f[1];
-      }
-    }
+    Array<double> diff(face0.shape());
+    diff = face0 - face1;
+    face0 = diff;
+    face1 = diff;
     permute->restore();
   }
   // set difference to zero for faces that are on other boundaries

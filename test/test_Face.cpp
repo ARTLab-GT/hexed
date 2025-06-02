@@ -18,5 +18,4 @@ TEST_CASE("Face") {
   REQUIRE(f.associated());
   REQUIRE_THROWS(f.associate(elem1));
   f.disconnect();
-  REQUIRE(!f.connected());
 }

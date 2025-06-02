@@ -31,4 +31,19 @@ Connection_direction Neighbor_connection::get_direction() const {
   };
 }
 
+Hard_kernel_connection Neighbor_connection::kernel_connection() {
+  Face* assoc_faces [2];
+  for (int i_side : {0, 1}) assoc_faces[i_side] = face(i_side).associated() ? &face(i_side) : &face(!i_side);
+  return {
+    get_direction(),
+    {
+      {face(0).flow_state()(0).data(), face(0).flow_state()(1).data()},
+      {face(1).flow_state()(0).data(), face(1).flow_state()(1).data()},
+    },
+    face(0).normal().data(),
+    {assoc_faces[0]->mask(), assoc_faces[1]->mask()},
+    assoc_faces[0]->nominal_area(),
+  };
+}
+
 }

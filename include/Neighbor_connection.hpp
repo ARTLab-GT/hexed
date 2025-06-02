@@ -17,6 +17,7 @@ class Neighbor_connection : public Mortal, public Connection {
   inline bool alive() const {return _faces[0] && _faces[1];}
   Connection_direction get_direction() const override;
   inline bool is_deformed() const {return _is_def;}
+  Hard_kernel_connection kernel_connection();
 
   private:
   std::array<Reciprocal_ptr<Neighbor_connection, Face>, 2> _faces;

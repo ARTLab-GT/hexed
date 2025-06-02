@@ -33,7 +33,7 @@ class Accessible_mesh : public Mesh {
   std::vector<std::vector<Face_refinement>> _face_refs;
   int surf_bc_sn;
   std::unique_ptr<Surface_geom> surf_geom;
-  std::vector<Mortal_ptr<Neighbor_connection>> extrude_cons;
+  std::array<std::vector<Mortal_ptr<Neighbor_connection>>, 3> _extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
   std::vector<int> tree_bcs;
   bool verts_are_reset;
@@ -152,6 +152,7 @@ class Accessible_mesh : public Mesh {
   void connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial, Con_dir<Deformed_element>,
                        bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
                        std::array<bool, 2> stretch = {false, false}) override;
+  next::Sequence<Neighbor_connection&> neighbor_connections(bool is_deformed);
   //! \returns a view of all connections between elements,
   //! including one connection for every fine element in hanging node connections.
   Sequence<Element_connection&>& element_connections() {return elem_cons;}
