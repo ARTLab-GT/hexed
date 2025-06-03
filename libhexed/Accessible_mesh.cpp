@@ -1217,7 +1217,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   for (auto& con : _bound_cons) {
     int bc_sn = con.boundary_condition();
     if (bc_sn < 2*params.n_dim + 1) {
-      auto dir = con.neighbor_connection().get_direction();
+      Connection_direction dir{{con.inside().i_dim(), con.inside().i_dim()},
+                               {(bool)con.inside().sign(), !con.inside().sign()}};
       std::vector<int> inds = vertex_inds(params.n_dim, dir)[0];
       for (int i_vert : inds) {
         Element* elem = con.inside().element();
