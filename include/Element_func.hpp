@@ -3,7 +3,6 @@
 
 #include "Output_data.hpp"
 #include "Qpoint_func.hpp"
-#include "Boundary_func.hpp"
 
 namespace hexed {
 
@@ -16,12 +15,10 @@ class Element_func : virtual public Qpoint_func {
 };
 
 //! an `Element_func` that doesn't depend on a `Basis` or the time
-class Element_info : virtual public Element_func, virtual public Boundary_func {
+class Element_info : virtual public Element_func {
   public:
   std::vector<double> operator()(Element& elem, const Basis&, double time) const override;
-  std::vector<double> operator()(Boundary_connection&, int i_fqpoint, double time) const override;
   using Element_func::operator();
-  using Boundary_func::operator();
   virtual std::vector<double> operator()(Element& elem) const = 0; //!< \details --
 };
 

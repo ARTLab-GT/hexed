@@ -29,7 +29,6 @@ class View_by_type
   virtual Sequence<Element_connection&>& element_connections() = 0;
   virtual Sequence<Refined_face&>& refined_faces() = 0;
   virtual Sequence<Refined_connection<element_t>&>& refined_connections() = 0;
-  virtual Sequence<Boundary_connection&>& boundary_connections() = 0;
   //! \endcond
 };
 
@@ -54,7 +53,6 @@ class Mesh_by_type : public View_by_type<element_t>
   static constexpr int n_fine [3] {1, 2, 4};
   typedef Refined_connection<element_t> ref_con_t;
   std::array<std::vector<std::unique_ptr<ref_con_t>>, 3> ref_face_cons; // array sorts Refined faces into those with 1, 2, and 4 fine elements respectively
-  std::vector<std::unique_ptr<Typed_bound_connection<element_t>>> bound_cons;
   //!\}
 
   /*! \name views
@@ -105,8 +103,6 @@ class Mesh_by_type : public View_by_type<element_t>
   Concatenation<ref_con_t&> ref_con_v;
   // now that view can be used to view the `Refined_connection`s as other types
   Vector_view<Refined_face&, ref_con_t&, &ref_face, Concatenation> ref_v;
-  Vector_view<Boundary_connection&, std::unique_ptr<Typed_bound_connection<element_t>>, ptr_convert<Boundary_connection&, std::unique_ptr<Typed_bound_connection<element_t>>>> bound_con_v;
-  Vector_view<Face_connection<Deformed_element>&, std::unique_ptr<Typed_bound_connection<element_t>>, ptr_convert<Face_connection<Deformed_element>&, std::unique_ptr<Typed_bound_connection<element_t>>>> bound_face_con_view;
   Concatenation<Face_connection<element_t>&> face_con_v;
   Vector_view<Kernel_connection&, Face_connection<element_t>&, &trivial_convert<Kernel_connection&, Face_connection<element_t>&>, Sequence> kernel_cons;
   //!\}
@@ -123,8 +119,6 @@ class Mesh_by_type : public View_by_type<element_t>
   , ref_con_cat01{ref_con_vs[0], ref_con_vs[1]}
   , ref_con_v{ref_con_cat01, ref_con_vs[2]}
   , ref_v{ref_con_v}
-  , bound_con_v{bound_cons}
-  , bound_face_con_view{bound_cons}
   , face_con_v{elem_face_con_v, empty_con_view}
   , kernel_cons{face_con_v}
   {}
@@ -137,7 +131,6 @@ class Mesh_by_type : public View_by_type<element_t>
   Sequence<Element_connection&>& element_connections() override {return elem_con_v;}
   Sequence<Refined_face&>& refined_faces() override {return ref_v;}
   Sequence<Refined_connection<element_t>&>& refined_connections() override {return ref_con_v;}
-  Sequence<Boundary_connection&>& boundary_connections() override {return bound_con_v;}
 
   //! write the number of connections for each face to `Element::face_record`. Assumes initialized to 0
   void record_connections()
@@ -147,10 +140,6 @@ class Mesh_by_type : public View_by_type<element_t>
       for (int i_side = 0; i_side < 2; ++i_side) {
         ++cons[i_con]->element(i_side).face_record[cons[i_con]->direction().i_face(i_side)];
       }
-    }
-    // boundary connections
-    for (unsigned i_con = 0; i_con < bound_cons.size(); ++i_con) {
-      ++bound_cons[i_con]->element().face_record[bound_cons[i_con]->direction().i_face(0)];
     }
     // hanging node connections
     for (int i_n_fine = 0; i_n_fine < 3; ++i_n_fine) {
@@ -169,15 +158,6 @@ class Mesh_by_type : public View_by_type<element_t>
   //! or connections for boundary faces that have since been covered up
   void purge_connections(std::function<bool(Element&)> predicate = [](Element& elem){return elem.record != 0;})
   {
-    auto bound_predicate = [&](std::unique_ptr<Typed_bound_connection<element_t>>& con){
-      if (!con) return true;
-      if (con->element().tree) {
-        Tree* neighbor = con->element().tree->find_neighbor(math::direction(par.n_dim, con->i_dim(), con->inside_face_sign()));
-        if (neighbor) if (neighbor->elem) return true; // remember that either all neighbors exist or none
-      }
-      return predicate(con->element());
-    };
-    erase_if(bound_cons, bound_predicate);
     erase_if(cons, [predicate](std::unique_ptr<Element_face_connection<element_t>>& con) {
       if (!con) return true;
       return predicate(con->element(0)) || predicate(con->element(1)) || !con->neighbor_connection().alive();

@@ -5,7 +5,7 @@
 #include <hexed/read_csv.hpp>
 #include <hexed/standard_atmosphere.hpp>
 #include <hexed/Occt.hpp>
-#include <hexed/hil_properties.hpp>
+#include <hexed/vis_variables.hpp>
 #include <hexed/Csv.hpp>
 #include <hexed/brep.hpp>
 #include <hexed/Printer.hpp>
@@ -404,7 +404,7 @@ Case::Case(std::string input_script)
     for (std::string code : crit_code) {
       crits.emplace_back([this, code](Element& elem) {
         auto sub = _inter.make_sub();
-        hil_properties::element(*sub.variables, elem);
+        vis_variables::element(*sub.variables, elem);
         sub.exec(code);
         return sub.variables->get<int>("return");
       });

@@ -6,10 +6,9 @@
 #include "Boundary_connection.hpp"
 #include "Interpreter.hpp"
 #include "Transport_model.hpp"
+#include "Boundary_connection.hpp"
 
 namespace hexed {
-
-class Boundary_connection;
 
 /*! \brief Abstract class representing an arbitrary flow boundary condition.
  * \details That is, something that computes a ghost state given an state on the boundary (inside state),
