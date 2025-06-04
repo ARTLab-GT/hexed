@@ -1159,18 +1159,25 @@ class Builder:
         depends = []
         try:
             self.assert_command("ldd")
-            cmd = ["ldd"]
-            delim = "=> "
+            for line in self.subproc(["ldd", file], capture_output=True).stdout.decode().split("\n"):
+                if "=> " in line:
+                    lib = line.split("=> ")[-1].split(" (")[0]
+                    if lib.startswith(self.build_dir):
+                        depends.append(lib)
         except:
             self.assert_command("otool")
-            cmd = ["otool", "-L"]
-            delim = "placeholder"
-        for line in self.subproc(cmd + [file], capture_output=True).stdout.decode().split("\n"):
-            print(line)
-            if delim in line:
-                lib = line.split(delim)[-1].split(" (")[0]
-                if lib.startswith(self.build_dir):
-                    depends.append(lib)
+            for line in self.subproc(["otool", "-L", file], capture_output=True).stdout.decode().split("\n"):
+                print(line)
+                if line[0] == " ":
+                    while line[0] == " ":
+                        line = line[1:]
+                    lib = line.split(" ")[0]
+                    if lib.startswith(self.build_dir):
+                        print(lib)
+                        deps = [lib] + find_lib_depends(lib)
+                        for d in deps:
+                            if d not in depends:
+                                depends.append(d)
         return depends
 
     def __getitem__(self, class_):
