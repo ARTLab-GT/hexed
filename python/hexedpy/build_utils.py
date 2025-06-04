@@ -1166,10 +1166,11 @@ class Builder:
             cmd = ["otool", "-L"]
         for line in self.subproc(cmd + [file], capture_output=True).stdout.decode().split("\n"):
             print(line)
-            if delim in line:
-                lib = line.split(delim)[-1].split(" (")[0]
-                if lib.startswith(self.build_dir):
-                    depends.append(lib)
+            if file not in line:
+                if delim in line:
+                    lib = line.split(delim)[-1].split(" (")[0]
+                    if lib.startswith(self.build_dir):
+                        depends.append(lib)
         return depends
 
     def __getitem__(self, class_):
