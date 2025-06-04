@@ -97,7 +97,7 @@ void Solver::apply_flux_bcs() {
   auto bc_cons {_preti_masks[_preti_level]->bound_cons};
   #pragma omp parallel for
   for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
-    next::Boundary_connection* con = bc_cons[i_con];
+    Boundary_connection* con = bc_cons[i_con];
     // write inside flux to flux cache for surface visualization/integrals
     con->flux_cache() = con->inside().flow_state()(1);
     // apply boundary conditions
@@ -1105,9 +1105,9 @@ void Solver::bounds_surface(std::string expr, int bc_sn, int n_sample = 20) {
   const int nd = params.n_dim;
   auto bc_cons {acc_mesh->boundary_connections()};
   if (!bc_cons.size()) return;
-  Vis_evaluator<next::Boundary_connection> evaluator(
+  Vis_evaluator<Boundary_connection> evaluator(
     _interpreter(),
-    [&](Namespace& space, next::Boundary_connection& con){vis_variables::surface(space, con);},
+    [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
     expr, bc_cons[0], params.n_dim - 1
   );
   std::vector<std::string> var_names = evaluator.var_names();
@@ -1180,9 +1180,9 @@ void Solver::integrate_surface(std::string expr, int bc_sn) {
   const int nfq = nq/basis.row_size;
   auto bc_cons {acc_mesh->boundary_connections()};
   if (!bc_cons.size()) return;
-  Vis_evaluator<next::Boundary_connection> evaluator(
+  Vis_evaluator<Boundary_connection> evaluator(
     _interpreter(),
-    [&](Namespace& space, next::Boundary_connection& con){vis_variables::surface(space, con);},
+    [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
     expr, bc_cons[0], params.n_dim - 1
   );
   std::vector<std::string> var_names = evaluator.var_names();
@@ -1248,14 +1248,14 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");
   auto bc_cons {acc_mesh->boundary_connections()};
   if (!bc_cons.size()) return;
-  Vis_evaluator<next::Boundary_connection> evaluator(
+  Vis_evaluator<Boundary_connection> evaluator(
     _interpreter(),
-    [&](Namespace& space, next::Boundary_connection& con){vis_variables::surface(space, con);},
+    [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
     expr, bc_cons[0], params.n_dim - 1
   );
   evaluator.visualize(format, name, n_sample, wireframe, bc_cons,
                       _namespace->get<double>("flow_time"), basis,
-                      [bc_sn](next::Boundary_connection& con){return con.boundary_condition() == bc_sn;});
+                      [bc_sn](Boundary_connection& con){return con.boundary_condition() == bc_sn;});
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"][sw_name].work_units_completed += bc_cons.size();
 }

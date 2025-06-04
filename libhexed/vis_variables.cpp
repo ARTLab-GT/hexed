@@ -77,7 +77,7 @@ void field(Namespace& space, Element& elem, const Basis& b) {
   state(space, elem);
 }
 
-void surface(Namespace& space, next::Boundary_connection& con) {
+void surface(Namespace& space, Boundary_connection& con) {
   auto params = con.ghost().storage_params();
   int nfq = params.n_qpoint()/params.row_size;
   // fetch surface data

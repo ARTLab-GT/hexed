@@ -1,6 +1,6 @@
 #include <hexed/Boundary_connection.hpp>
 
-namespace hexed::next {
+namespace hexed {
 
 Boundary_connection::Boundary_connection(Face& inside, int bound_cond, int n_presc)
 : _bound_cond{bound_cond}

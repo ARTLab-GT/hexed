@@ -37,7 +37,7 @@ void Face::associate(Face_refinement& ref) {
   _face_ref_coarse.set(&ref);
 }
 
-void Face::associate(next::Boundary_connection& con) {
+void Face::associate(Boundary_connection& con) {
   ASSERT_NOT_ASSOCIATED
   _boundary_connection.set(&con);
 }

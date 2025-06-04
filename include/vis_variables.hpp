@@ -3,7 +3,7 @@
 
 #include "Namespace.hpp"
 #include "Element.hpp"
-#include "connection.hpp"
+#include "Boundary_connection.hpp"
 
 //! \brief functions that assign visualization data to HIL variables
 namespace hexed::vis_variables {
@@ -62,7 +62,7 @@ void field(Namespace&, Element&, const Basis&);
  * - `mass_flux`: diffusive mass flux through surface
  * - `heat_flux`: surface heat flux
  */
-void surface(Namespace&, next::Boundary_connection&);
+void surface(Namespace&, Boundary_connection&);
 
 }
 #endif

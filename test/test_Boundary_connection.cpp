@@ -5,7 +5,7 @@ TEST_CASE("Boundary_connection") {
   hexed::Storage_params params {2, 5, 3, 4};
   hexed::Face f0(params, 2, 0, false);
   hexed::Face f1(params, 1, 1, true);
-  hexed::next::Boundary_connection bc0(f0, 5, 1);
+  hexed::Boundary_connection bc0(f0, 5, 1);
   REQUIRE(bc0.boundary_condition() == 5);
   REQUIRE(&bc0.neighbor_connection().face(1) == &f0);
   REQUIRE(&bc0.inside() == &f0);
@@ -16,8 +16,8 @@ TEST_CASE("Boundary_connection") {
   REQUIRE(bc0.ghost().associated());
   REQUIRE(bc0.ghost().boundary_connection() == &bc0);
   REQUIRE(f0.connected());
-  REQUIRE_THROWS(hexed::next::Boundary_connection(f0, 5, 1));
-  hexed::next::Boundary_connection bc1(f1, 0, 6);
+  REQUIRE_THROWS(hexed::Boundary_connection(f0, 5, 1));
+  hexed::Boundary_connection bc1(f1, 0, 6);
   REQUIRE(&bc1.neighbor_connection().face(0) == &f1);
   REQUIRE(bc1.ghost().i_dim() == 1);
   REQUIRE(bc1.ghost().sign() == 0);

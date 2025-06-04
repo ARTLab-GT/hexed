@@ -8,11 +8,11 @@
 
 namespace hexed {
 
-void copy_state(next::Boundary_connection& con) {
+void copy_state(Boundary_connection& con) {
   con.ghost().full_state() = con.inside().full_state();
 }
 
-void Flow_bc::apply_advection(next::Boundary_connection& con) {
+void Flow_bc::apply_advection(Boundary_connection& con) {
   int nd = con.ghost().storage_params().n_dim;
   Array<double> inside_state = con.inside().advection_state();
   Array<double> ghost_state = con.ghost().advection_state();
@@ -20,11 +20,11 @@ void Flow_bc::apply_advection(next::Boundary_connection& con) {
   ghost_state(nd, end) = 2. - inside_state(nd, end);
 }
 
-void Flow_bc::apply_diffusion(next::Boundary_connection& con) {
+void Flow_bc::apply_diffusion(Boundary_connection& con) {
   con.ghost().flow_state()(0) = con.inside().flow_state()(0);
 }
 
-void Flow_bc::flux_diffusion(next::Boundary_connection& con) {
+void Flow_bc::flux_diffusion(Boundary_connection& con) {
   con.ghost().flow_state()(1) = -con.inside().flow_state()(1);
 }
 
@@ -32,7 +32,7 @@ Freestream::Freestream(Mat<> freestream_state)
 : fs{freestream_state}
 {}
 
-void Freestream::apply_state(next::Boundary_connection& con) {
+void Freestream::apply_state(Boundary_connection& con) {
   Array<double> ghost_state = con.ghost().flow_state()(0);
   auto params = con.ghost().storage_params();
   for (int i_var = 0; i_var < params.n_var; ++i_var) ghost_state(i_var) = fs(i_var);
@@ -56,7 +56,7 @@ Mat<> apply_char(Mat<> state, Mat<> normal, int sign, Mat<> inside, Mat<> outsid
   return decomp.rowwise().sum();
 }
 
-void Riemann_invariants::apply_state(next::Boundary_connection& con) {
+void Riemann_invariants::apply_state(Boundary_connection& con) {
   auto params = con.ghost().storage_params();
   const int nfq = params.n_qpoint()/params.row_size;
   Array<double> ghost_state = con.ghost().flow_state()(0);
@@ -100,7 +100,7 @@ void Riemann_invariants::apply_state(next::Boundary_connection& con) {
   con.state_cache() = inside_state();
 }
 
-void Riemann_invariants::apply_flux(next::Boundary_connection& con) {
+void Riemann_invariants::apply_flux(Boundary_connection& con) {
   auto params = con.ghost().storage_params();
   const int nfq = params.n_qpoint()/params.row_size;
   Array<double> ghost_flux = con.ghost().flow_state()(1);
@@ -140,7 +140,7 @@ void Riemann_invariants::apply_flux(next::Boundary_connection& con) {
   }
 }
 
-void Pressure_outflow::apply_state(next::Boundary_connection& con) {
+void Pressure_outflow::apply_state(Boundary_connection& con) {
   auto params = con.ghost().storage_params();
   const int nfq = params.n_qpoint()/params.row_size;
   Array<double> ghost_state = con.ghost().flow_state()(0);
@@ -169,13 +169,13 @@ void Pressure_outflow::apply_state(next::Boundary_connection& con) {
 }
 
 //! \todo make this formally well-posed
-void Pressure_outflow::apply_flux(next::Boundary_connection& con) {
+void Pressure_outflow::apply_flux(Boundary_connection& con) {
   con.ghost().flow_state()(1) = -con.inside().flow_state()(1);
 }
 
 Function_bc::Function_bc(const Surface_func& func_arg) : func{func_arg} {}
 
-void Function_bc::apply_state(next::Boundary_connection& con) {
+void Function_bc::apply_state(Boundary_connection& con) {
   auto params = con.ghost().storage_params();
   const int nfq = params.n_qpoint()/params.row_size;
   Array<double> ghost_state = con.ghost().flow_state()(0);
@@ -201,12 +201,12 @@ void Function_bc::apply_state(next::Boundary_connection& con) {
   }
 }
 
-void Cache_bc::apply_state(next::Boundary_connection& con) {
+void Cache_bc::apply_state(Boundary_connection& con) {
   con.ghost().flow_state()(0) = con.state_cache();
   con.ghost().flow_state()(1) = con.inside().flow_state()(1);
 }
 
-void Cache_bc::init_cache(next::Boundary_connection& con) {
+void Cache_bc::init_cache(Boundary_connection& con) {
   auto params = con.ghost().storage_params();
   const int nfq = params.n_qpoint()/params.row_size;
   Array<double> inside_state = con.inside().flow_state()(0);
@@ -232,9 +232,9 @@ void Cache_bc::init_cache(next::Boundary_connection& con) {
   }
 }
 
-void Function_bc::apply_flux(next::Boundary_connection& con) {copy_state(con);}
-void Freestream::apply_flux(next::Boundary_connection& con) {copy_state(con);}
-void Cache_bc::apply_flux(next::Boundary_connection& con) {copy_state(con);}
+void Function_bc::apply_flux(Boundary_connection& con) {copy_state(con);}
+void Freestream::apply_flux(Boundary_connection& con) {copy_state(con);}
+void Cache_bc::apply_flux(Boundary_connection& con) {copy_state(con);}
 
 void reflect_normal(double* gh_f, double* nrml, int nq, int nd) {
   for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
@@ -251,7 +251,7 @@ void reflect_normal(double* gh_f, double* nrml, int nq, int nd) {
   }
 }
 
-void reflect_momentum(next::Boundary_connection& con) {
+void reflect_momentum(Boundary_connection& con) {
   auto params = con.ghost().storage_params();
   Array<double> ghost_state = con.ghost().flow_state()(0);
   Array<double> inside_state = con.inside().flow_state()(0);
@@ -259,11 +259,11 @@ void reflect_momentum(next::Boundary_connection& con) {
   reflect_normal(ghost_state.data(), con.normal().data(), params.n_qpoint()/params.row_size, params.n_dim);
 }
 
-void Nonpenetration::apply_state(next::Boundary_connection& con) {
+void Nonpenetration::apply_state(Boundary_connection& con) {
   reflect_momentum(con);
 }
 
-void Nonpenetration::apply_flux(next::Boundary_connection& con) {
+void Nonpenetration::apply_flux(Boundary_connection& con) {
   auto params = con.ghost().storage_params();
   Array<double> ghost_state = con.ghost().flow_state()(1);
   Array<double> inside_state = con.inside().flow_state()(1);
@@ -271,7 +271,7 @@ void Nonpenetration::apply_flux(next::Boundary_connection& con) {
   reflect_normal(ghost_state.data(), con.normal().data(), params.n_qpoint()/params.row_size, params.n_dim);
 }
 
-void Nonpenetration::apply_advection(next::Boundary_connection& con) {
+void Nonpenetration::apply_advection(Boundary_connection& con) {
   auto params = con.ghost().storage_params();
   const int nfq = params.n_qpoint()/params.row_size;
   Array<double> ghost_state = con.ghost().advection_state();
@@ -308,7 +308,7 @@ double Thermal_equilibrium::ghost_heat_flux(Mat<> state, double) {
   return radiative_flux + conductive_flux;
 }
 
-void No_slip::apply_state(next::Boundary_connection& con) {
+void No_slip::apply_state(Boundary_connection& con) {
   auto params = con.ghost().storage_params();
   const int nfq = params.n_qpoint()/params.row_size;
   Array<double> ghost_state = con.ghost().flow_state()(0);
@@ -348,7 +348,7 @@ void No_slip::apply_state(next::Boundary_connection& con) {
   state_cache = (ghost_state + inside_state)/2.;
 }
 
-void No_slip::apply_flux(next::Boundary_connection& con) {
+void No_slip::apply_flux(Boundary_connection& con) {
   auto params = con.ghost().storage_params();
   const int nfq = params.n_qpoint()/params.row_size;
   Array<double> ghost_state = con.ghost().flow_state()(1);
@@ -377,7 +377,7 @@ void No_slip::apply_flux(next::Boundary_connection& con) {
   ghost_state(params.n_dim + 2, end) = inside_state(params.n_dim + 2, end);
 }
 
-void No_slip::apply_advection(next::Boundary_connection& con) {
+void No_slip::apply_advection(Boundary_connection& con) {
   auto params = con.ghost().storage_params();
   Array<double> ghost_state = con.ghost().advection_state();
   Array<double> inside_state = con.inside().advection_state();
@@ -387,7 +387,7 @@ void No_slip::apply_advection(next::Boundary_connection& con) {
   ghost_state(params.n_dim, end) = inside_state(params.n_dim, end);
 }
 
-void No_slip::set_prescribed(Interpreter& inter, next::Boundary_connection& con) {
+void No_slip::set_prescribed(Interpreter& inter, Boundary_connection& con) {
   auto sub = inter.make_sub();
   auto params = con.ghost().storage_params();
   const int nd = params.n_dim;
@@ -405,23 +405,23 @@ void No_slip::set_prescribed(Interpreter& inter, next::Boundary_connection& con)
   }
 }
 
-void Copy::apply_state(next::Boundary_connection& con) {
+void Copy::apply_state(Boundary_connection& con) {
   copy_state(con);
 }
 
-void Copy::apply_flux(next::Boundary_connection& con) {
+void Copy::apply_flux(Boundary_connection& con) {
   copy_state(con);
 }
 
-void Copy::apply_advection(next::Boundary_connection& con) {
+void Copy::apply_advection(Boundary_connection& con) {
   copy_state(con);
 }
 
-void Outflow::apply_state(next::Boundary_connection& con) {
+void Outflow::apply_state(Boundary_connection& con) {
   copy_state(con);
 }
 
-void Outflow::apply_flux(next::Boundary_connection& con) {
+void Outflow::apply_flux(Boundary_connection& con) {
   // set to negative of inside flux
   con.ghost().flow_state()(1) = -con.inside().flow_state()(1);
 }
@@ -430,7 +430,7 @@ Expression_bc::Expression_bc(Interpreter& inter, std::string state_expr, std::st
 : _inter{inter}, _exprs{state_expr, flux_expr}
 {}
 
-void Expression_bc::_apply(next::Boundary_connection& con, bool is_flux) {
+void Expression_bc::_apply(Boundary_connection& con, bool is_flux) {
   auto sub = _inter.make_sub();
   auto params = con.ghost().storage_params();
   sub.variables->assign("pos", con.position());

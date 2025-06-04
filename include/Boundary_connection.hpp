@@ -3,7 +3,7 @@
 
 #include "Face.hpp"
 
-namespace hexed::next {
+namespace hexed {
 
 class Boundary_connection : public Mortal {
   public:

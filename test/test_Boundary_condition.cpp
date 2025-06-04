@@ -13,7 +13,7 @@ TEST_CASE("Freestream") {
   hexed::Element element {params};
   const int n_qpoint = row_size*row_size;
   hexed::Freestream freestream {hexed::Mat<5>{10., 30., -20., 1.3, 1.2e5}};
-  hexed::next::Boundary_connection con(element.face(2), 0, 0);
+  hexed::Boundary_connection con(element.face(2), 0, 0);
   // set inside face to something arbitrary
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     con.inside().flow_state()(0)(0)[i_qpoint] = 20.;
@@ -40,7 +40,7 @@ TEST_CASE("Riemann_invariants") {
   const int n_qpoint = row_size*row_size;
   hexed::Mat<5> fs {10., 30., -20., 1.3, 4e5};
   hexed::Riemann_invariants ri {fs};
-  hexed::next::Boundary_connection con(element.face(2), 0, 0);
+  hexed::Boundary_connection con(element.face(2), 0, 0);
   hexed::Mat<5> inside_state {1/1.2, -600/1.2, 1/1.2, 1.2, 101325/.4 + .5*1.2*360002};
   SECTION("supersonic inflow")
   {
@@ -83,7 +83,7 @@ TEST_CASE("Function_bc") {
   const int n_qpoint = row_size;
   hexed::Annular_diffusion_test func(1.7, 2., 1e5);
   hexed::Function_bc bc(func);
-  hexed::next::Boundary_connection con(element.face(2), 0, 0);
+  hexed::Boundary_connection con(element.face(2), 0, 0);
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     // set inside face to something arbitrary
     con.inside().flow_state()(0)(0)[i_qpoint] = 20.;
@@ -112,7 +112,7 @@ TEST_CASE("Nonpenetration") {
   hexed::Storage_params params {3, 4, 2, row_size};
   hexed::Deformed_element element {params};
   hexed::Nonpenetration nonpen;
-  hexed::next::Boundary_connection con(element.face(2), 0, 0);
+  hexed::Boundary_connection con(element.face(2), 0, 0);
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
     double qpoint_nrml [] {-4., 3.};
     for (int i_dim = 0; i_dim < 2; ++i_dim) con.normal()(i_dim)[i_qpoint] = qpoint_nrml[i_dim];
@@ -152,7 +152,7 @@ TEST_CASE("No_slip") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 4, 2, row_size};
   hexed::Deformed_element element {params};
-  hexed::next::Boundary_connection con(element.face(0), 0, 0);
+  hexed::Boundary_connection con(element.face(0), 0, 0);
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
     for (int i_dim = 0; i_dim < 2; ++i_dim) con.normal()(i_dim)[i_qpoint] = .7/std::sqrt(2.);
   }
@@ -235,7 +235,7 @@ TEST_CASE("Copy") {
   hexed::Element element {params};
   const int n_qpoint = row_size*row_size;
   hexed::Copy copy;
-  hexed::next::Boundary_connection con(element.face(2), 0, 0);
+  hexed::Boundary_connection con(element.face(2), 0, 0);
   // set inside face to something arbitrary
   for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
     con.inside().flow_state()(0)(0)[i_qpoint] = 20.;

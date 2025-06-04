@@ -10,7 +10,7 @@ namespace hexed {
 
 class Element;
 class Face_refinement;
-namespace next {class Boundary_connection;}
+class Boundary_connection;
 
 class Face : public Mortal {
   public:
@@ -22,11 +22,11 @@ class Face : public Mortal {
   inline Storage_params storage_params() const {return _params;}
   void associate(Element&);
   void associate(Face_refinement&);
-  void associate(next::Boundary_connection&);
+  void associate(Boundary_connection&);
   // note there is no `dissociate` function
   inline Element* element() {return _element.get();}
   inline Face_refinement* face_ref_coarse() {return _face_ref_coarse.get();}
-  inline next::Boundary_connection* boundary_connection() {return _boundary_connection.get();}
+  inline Boundary_connection* boundary_connection() {return _boundary_connection.get();}
   inline bool associated() const {return _element || _face_ref_coarse || _boundary_connection;}
   void connect(Reciprocal_ptr<Neighbor_connection, Face>&);
   void connect(Reciprocal_ptr<Face_refinement, Face>&);
@@ -48,7 +48,7 @@ class Face : public Mortal {
   bool _is_def;
   Mortal_ptr<Element> _element;
   Mortal_ptr<Face_refinement> _face_ref_coarse;
-  Mortal_ptr<next::Boundary_connection> _boundary_connection;
+  Mortal_ptr<Boundary_connection> _boundary_connection;
   Reciprocal_ptr<Face, Neighbor_connection> _neighbor_connection;
   Reciprocal_ptr<Face, Face_refinement> _face_ref_fine;
   int _n_face_qpoint;

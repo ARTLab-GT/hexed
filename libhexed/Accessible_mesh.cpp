@@ -1628,7 +1628,7 @@ void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, Int elem
 }
 
 void Accessible_mesh::disconnect_boundary(int bc_sn) {
-  erase_if(_bound_cons, [bc_sn](next::Boundary_connection& con){return con.boundary_condition() == bc_sn;});
+  erase_if(_bound_cons, [bc_sn](Boundary_connection& con){return con.boundary_condition() == bc_sn;});
 }
 
 void Accessible_mesh::cleanup() {
@@ -2429,7 +2429,7 @@ void Accessible_mesh::purge() {
     for (int i = 0; i < 3; ++i) {
       erase_if(_extrude_cons[i], [](Mortal_ptr<Neighbor_connection>& ptr){return !ptr;});
     }
-    erase_if(_bound_cons, [](next::Boundary_connection& con){return !con.neighbor_connection().alive();});
+    erase_if(_bound_cons, [](Boundary_connection& con){return !con.neighbor_connection().alive();});
     // delete old matched vertices and edges
     _blocks.boundary_verts();
     _blocks.interior_verts();
@@ -2749,8 +2749,8 @@ next::Sequence<Flow_bc&> Accessible_mesh::boundary_conditions() {
   return next::Sequence<std::unique_ptr<Flow_bc>&>::vector_view(bound_conds).dereference<Flow_bc&>();
 }
 
-next::Sequence<next::Boundary_connection&> Accessible_mesh::boundary_connections() {
-  return next::Sequence<next::Boundary_connection&>::vector_view(_bound_cons);
+next::Sequence<Boundary_connection&> Accessible_mesh::boundary_connections() {
+  return next::Sequence<Boundary_connection&>::vector_view(_bound_cons);
 }
 
 template <typename T>
