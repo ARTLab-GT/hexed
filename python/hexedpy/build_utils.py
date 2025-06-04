@@ -488,7 +488,7 @@ class Xdmf(C_project):
         text = text.replace("typedef int hid_t", "typedef int64_t hid_t")
         with open(problem_file, "w") as out_file:
             out_file.write(text)
-        self.builder.cmake(directory, opts=["-Wno-dev", "-DBUILD_STATIC_LIBS=OFF", "-DBUILD_SHARED_LIBS=ON"])
+        self.builder.cmake(directory, opts=["-Wno-dev", "-DBUILD_STATIC_LIBS=OFF", "-DBUILD_SHARED_LIBS=ON", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"])
 
 class Catch2(C_project):
     version = "3.6.0"
