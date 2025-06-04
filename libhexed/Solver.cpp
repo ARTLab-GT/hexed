@@ -83,7 +83,7 @@ void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get
 void Solver::apply_state_bcs() {
   stopwatch["boundary conditions"].stopwatch.start();
   auto bc_cons {_preti_masks[_preti_level]->bound_cons};
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con]->boundary_condition();
     acc_mesh->boundary_condition(bc_sn).apply_state(*bc_cons[i_con]);
@@ -736,8 +736,12 @@ void Solver::update() {
                 .conv_substep = (sub_iters > 1) && use_ldg(),
               };
               apply_state_bcs();
-              if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
-              else compute_euler(km, opts);
+              if (use_ldg() && !i && !i_sub) {
+                compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond,
+                                      _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
+              } else {
+                compute_euler(km, opts);
+              }
               // note that function call must come first to ensure it is evaluated despite short-circuiting
               fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
             }
@@ -1194,7 +1198,7 @@ void Solver::integrate_surface(std::string expr, int bc_sn) {
     auto& elem = *con.inside().element();
     double area = math::pow(elem.nominal_size(), nd - 1);
     Array<double> qpoints{evaluator.evaluate(con)};
-    Array<double> nrml = con.normal();
+    Array<double> nrml = con.normal().copy();
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
       double nrml_mag = 0;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {

@@ -5,13 +5,13 @@ namespace hexed::next {
 Boundary_connection::Boundary_connection(Face& inside, int bound_cond, int n_presc)
 : _bound_cond{bound_cond}
 , _params{inside.storage_params()}
-, _ghost(_params, inside.i_dim(), !inside.sign(), inside.is_deformed())
-, _con(_params, {inside.sign() ? &inside : &_ghost, inside.sign() ? &_ghost : &inside})
+, _ghost{std::make_unique<Face>(_params, inside.i_dim(), !inside.sign(), inside.is_deformed())}
+, _con(_params, {inside.sign() ? &inside : _ghost.get(), inside.sign() ? _ghost.get() : &inside})
 , _nrml({_params.n_dim, inside.storage_params().n_face_qpoint()},
         inside.is_deformed() ? inside.normal().data() : nullptr)
 , _data({_params.n_dim + 2*_params.n_var + n_presc, _params.n_face_qpoint()})
 {
-  _ghost.associate(*this);
+  _ghost->associate(*this);
   if (!inside.is_deformed()) {
     for (int i_dim = 0; i_dim < inside.storage_params().n_dim; ++i_dim) {
       _nrml(i_dim) = i_dim == inside.i_dim();

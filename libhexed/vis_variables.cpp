@@ -82,11 +82,12 @@ void surface(Namespace& space, next::Boundary_connection& con) {
   int nfq = params.n_qpoint()/params.row_size;
   // fetch surface data
   int nrml_sign = 1 - 2*con.inside().sign();
-  Array<double> nrml = con.normal();
-  Array<double> pos = con.position();
-  Array<double> state = con.inside().flow_state()(0);
-  Array<double> flux = con.inside().flow_state()(1);
-  Array<double> ref_flux = con.flux_cache();
+  // copying prevents these things from being inadvertently modified
+  Array<double> nrml = con.normal().copy();
+  Array<double> pos = con.position().copy();
+  Array<double> state = con.inside().flow_state()(0).copy();
+  Array<double> flux = con.inside().flow_state()(1).copy();
+  Array<double> ref_flux = con.flux_cache().copy();
   // compute normals and fluxes
   for (int i_fqpoint = 0; i_fqpoint < nfq; ++i_fqpoint) {
     double norm = 0;
@@ -99,10 +100,10 @@ void surface(Namespace& space, next::Boundary_connection& con) {
   }
   // assign variables
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    space.assign(index("pos", i_dim), pos(i_dim).copy());
-    space.assign(index("normal", i_dim), nrml(i_dim).copy());
-    space.assign(index("visc_stress", i_dim), flux(i_dim).copy());
-    space.assign(index("momentum", i_dim), state(i_dim).copy());
+    space.assign(index("pos", i_dim), pos(i_dim));
+    space.assign(index("normal", i_dim), nrml(i_dim));
+    space.assign(index("visc_stress", i_dim), flux(i_dim));
+    space.assign(index("momentum", i_dim), state(i_dim));
   }
   for (int i_dim = params.n_dim; i_dim < 3; ++i_dim) {
     space.assign(index("pos", i_dim), 0.);
@@ -110,10 +111,10 @@ void surface(Namespace& space, next::Boundary_connection& con) {
     space.assign(index("visc_stress", i_dim), 0.);
     space.assign(index("momentum", i_dim), 0.);
   }
-  space.assign("density", state(params.n_dim).copy());
-  space.assign("energy", state(params.n_dim + 1).copy());
-  space.assign("mass_flux", flux(params.n_dim).copy());
-  space.assign("heat_flux", flux(params.n_dim + 1).copy());
+  space.assign("density", state(params.n_dim));
+  space.assign("energy", state(params.n_dim + 1));
+  space.assign("mass_flux", flux(params.n_dim));
+  space.assign("heat_flux", flux(params.n_dim + 1));
 }
 
 }

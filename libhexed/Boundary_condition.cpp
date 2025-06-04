@@ -1,10 +1,10 @@
-#include <Boundary_condition.hpp>
-#include <connection.hpp>
-#include <math.hpp>
-#include <kernel_factory.hpp>
-#include <constants.hpp>
-#include <pde.hpp>
-#include <Gauss_lobatto.hpp>
+#include <hexed/Boundary_condition.hpp>
+#include <hexed/connection.hpp>
+#include <hexed/math.hpp>
+#include <hexed/kernel_factory.hpp>
+#include <hexed/constants.hpp>
+#include <hexed/pde.hpp>
+#include <hexed/Gauss_lobatto.hpp>
 
 namespace hexed {
 
