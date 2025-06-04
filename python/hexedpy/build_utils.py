@@ -1157,9 +1157,17 @@ class Builder:
 
     def find_lib_depends(self, file):
         depends = []
-        for line in self.subproc(["ldd", file], capture_output=True).stdout.decode().split("\n"):
-            if "=> " in line:
-                lib = line.split("=> ")[-1].split(" (")[0]
+        try:
+            self.assert_command("ldd")
+            cmd = ["ldd"]
+            delim = "=> "
+        except:
+            self.assert_command("otool")
+            cmd = ["otool", "-L"]
+        for line in self.subproc(cmd + [file], capture_output=True).stdout.decode().split("\n"):
+            print(line)
+            if delim in line:
+                lib = line.split(delim)[-1].split(" (")[0]
                 if lib.startswith(self.build_dir):
                     depends.append(lib)
         return depends
