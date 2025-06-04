@@ -83,8 +83,8 @@ class Accessible_mesh : public Mesh {
   void create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
   void read_file(std::string file_name);
 
-  template <typename Elem_t> void _connect(std::array<std::vector<Elem_t*>, 2> elems, Connection_direction dir);
-  template <typename Elem_t> void _connect(std::array<Elem_t*, 2>, Connection_direction);
+  void _connect(std::array<std::vector<Element*>, 2> elems, Connection_direction dir);
+  void _connect(std::array<Element*, 2>, Connection_direction);
 
   void _connect(Element*, std::vector<Element*>, Con_dir<Deformed_element>);
   void _connect(Deformed_element*, std::vector<Deformed_element*>, Con_dir<Deformed_element>,
