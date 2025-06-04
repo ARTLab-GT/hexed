@@ -1,13 +1,13 @@
 #ifndef HEXED_ASSERT_HPP_
 #define HEXED_ASSERT_HPP_
 
+#include "config.hpp"
 #include <stdexcept>
 #include <vector>
 #include <string>
 #if HEXED_THREADED
 #include <omp.h>
 #endif
-#include "config.hpp"
 
 //! \file assert.hpp utilities for custom assertions
 

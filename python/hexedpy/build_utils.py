@@ -642,12 +642,12 @@ class Compiler:
             self.c_command = "gcc"
             self.cpp_command = "g++"
             package = "build-essential"
-        if (self.collection == "clang"):
+        elif (self.collection == "clang"):
             self.c_command = "clang"
             self.cpp_command = "clang++"
             package = "clang"
         else:
-            raise Exception(f"Invalid compiler collection `--compiler={collection}`. Supported options are `gcc` and `clang`")
+            raise Exception(f"Invalid compiler collection `--compiler={self.collection}`. Supported options are `gcc` and `clang`")
         builder.assert_command(self.c_command, package)
         builder.assert_command(self.cpp_command, package)
     def flags(self):
@@ -662,8 +662,16 @@ class Compiler:
             else:
                 fs.append("-DDEBUG")
             if self.debug: fs.append(f"-g{self.debug}")
-            if self.sanitize: fs += [f"-fsanitize={f}" for f in ["bounds-strict", "undefined", "address", "leak", "pointer-compare", "pointer-subtract"]]
-            if self.openmp: fs.append("-fopenmp")
+            if self.sanitize:
+                san_flags = ["undefined", "address", "leak", "pointer-compare", "pointer-subtract"]
+                if self.collection == "gcc":
+                    san_flags += ["bounds-strict"]
+                fs += [f"-fsanitize={f}" for f in san_flags]
+            if self.openmp:
+                if self.collection == "clang":
+                    fs.append("-fopenmp=libomp")
+                else:
+                    fs.append("-fopenmp")
             if self.architecture: fs.append("-march=" + self.architecture)
             if self.profile: fs.append("-pg")
         assert isinstance(self.extra_flags, list)

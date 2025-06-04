@@ -481,10 +481,10 @@ std::string to_string(Array<T> arr) {
 }
 
 #pragma omp declare reduction (max : Array<double> : omp_out = omp_out.extreme(1, omp_in)) \
-  initializer(omp_priv = Array<double>::make_uniform(omp_orig.shape(), -huge))
+  initializer(omp_priv = Array<double>::make_uniform(omp_orig.shape(), -std::numeric_limits<double>::max()))
 
 #pragma omp declare reduction (min : Array<double> : omp_out = omp_out.extreme(0, omp_in)) \
-  initializer(omp_priv = Array<double>::make_uniform(omp_orig.shape(), huge))
+  initializer(omp_priv = Array<double>::make_uniform(omp_orig.shape(), std::numeric_limits<double>::max()))
 
 }
 #endif
