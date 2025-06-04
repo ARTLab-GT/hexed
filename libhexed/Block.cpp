@@ -31,7 +31,8 @@ void Block::visualize(std::string format, std::string file_name, double time) co
 void Block::visualize(std::string format, std::string file_name, next::Sequence<const Block&> blocks, double time) {
   // construct the Visualizer
   int block_dim = blocks.empty() ? 1 : blocks[0]._n_dim;
-  auto visualizer = Visualizer::create(format, 3, block_dim, file_name, {}, time, Visualizer::block);
+  std::vector<std::string> vars;
+  auto visualizer = Visualizer::create(format, 3, block_dim, file_name, vars, time, Visualizer::block);
   // write each block via the Visualizer
   for (const Block& block : blocks) {
     visualizer->write_block(block.points(), Array<double>({}));

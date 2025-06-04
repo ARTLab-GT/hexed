@@ -4,7 +4,9 @@
 #include <stdexcept>
 #include <vector>
 #include <string>
+#if HEXED_THREADED
 #include <omp.h>
+#endif
 #include "config.hpp"
 
 //! \file assert.hpp utilities for custom assertions

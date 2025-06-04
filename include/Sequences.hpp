@@ -19,6 +19,8 @@ ref_t ptr_convert(ptr_t& ptr)
   return *ptr;
 }
 
+template <typename T> using reduced_vector = std::vector<T>;
+
 /*! \brief Provides a view of an existing container (e.g., `std::vector`) as a `Sequence`.
  * \details `Vector_view` also allows the vector elements to be viewed as a different type than they
  * are stored as with a user-supplied conversion function
@@ -27,7 +29,7 @@ ref_t ptr_convert(ptr_t& ptr)
  */
 template<typename reference_t, typename storage_t = reference_t,
          reference_t (*convert)(storage_t&) = &trivial_convert<reference_t, storage_t>,
-         template<typename> typename sequence_template = std::vector>
+         template<typename> typename sequence_template = reduced_vector>
 class Vector_view : public Sequence<reference_t>
 {
   sequence_template<storage_t>& vec;

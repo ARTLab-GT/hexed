@@ -636,6 +636,20 @@ class Compiler:
     architecture = None
     profile = False
     extra_flags = []
+    def __init__(self, builder):
+        self.collection = builder.options["compiler"]
+        if (self.collection == "gcc"):
+            self.c_command = "gcc"
+            self.cpp_command = "g++"
+            package = "build-essential"
+        if (self.collection == "clang"):
+            self.c_command = "clang"
+            self.cpp_command = "clang++"
+            package = "clang"
+        else:
+            raise Exception(f"Invalid compiler collection `--compiler={collection}`. Supported options are `gcc` and `clang`")
+        builder.assert_command(self.c_command, package)
+        builder.assert_command(self.cpp_command, package)
     def flags(self):
         fs = []
         if self.high_level_flags:
@@ -657,7 +671,8 @@ class Compiler:
         return fs
 
 class Compile(Subprocess):
-    def __init__(self, builder, source, output=None, compiler=Compiler()):
+    def __init__(self, builder, source, output=None):
+        compiler = Compiler(builder)
         src = absolute(source, self.sdir)
         if source.startswith(self.bdir):
             root = self.bdir
@@ -669,14 +684,13 @@ class Compile(Subprocess):
             output = self.bdir + "object/" + src[len(root):]
         obj = ".".join(output.split(".")[:-1] + ["o"])
         builder.mkdir(parent(obj))
-        self.builder.assert_command("g++", "build-essential")
-        command = ["g++", "-c"] + compiler.flags() + ["-I" + d for d in builder.prefices["include"]] + ["-o", obj, src]
+        command = [compiler.cpp_command, "-c"] + compiler.flags() + ["-I" + d for d in builder.prefices["include"]] + ["-o", obj, src]
         super().__init__(builder, command, obj, depends=self.builder.find_source_depends(src).find().assets)
 
 class Link(Subprocess):
-    def __init__(self, builder, name, objects, libs=[], compiler=Compiler()):
-        self.builder.assert_command("g++", "build-essential")
-        args = ["g++"] + compiler.flags()
+    def __init__(self, builder, name, objects, libs=[]):
+        compiler = Compiler(builder)
+        args = [compiler.cpp_command] + compiler.flags()
         if re.fullmatch(r"lib\w+\.so", name):
             args.append("-shared")
             name = absolute(name, builder.build_dir + "lib/")
@@ -895,6 +909,7 @@ class Builder:
             "build_dir": Option("build", convert=lambda p: absolute(slash(p))),
             "venv": Option(True, convert=as_bool),
             "n_build_procs": Option(1, convert=int),
+            "compiler": Option("gcc"),
             "install_prefix": Option.directory("/usr/local"),
             "verbose": Option(False, convert=as_bool),
             "use_system_paths": Option(True, convert=as_bool),
@@ -1024,9 +1039,8 @@ class Builder:
         return found
 
     def cmake(self, source_dir, opts=[], build_dir="build"):
-        self.assert_command("g++", "build-essential")
-        self.assert_command("gcc", "build-essential")
         self.assert_command("make", "build-essential")
+        compiler = Compiler(self)
         cwd = os.getcwd()
         os.chdir(source_dir)
         self.mkdir(build_dir)
@@ -1034,9 +1048,11 @@ class Builder:
         args = [
             self.venv_dir + "bin/cmake",
             "-DCMAKE_INSTALL_PREFIX=" + self.build_dir,
+            "-DCMAKE_C_COMPILER=" + compiler.c_command,
+            "-DCMAKE_CXX_COMPILER=" + compiler.cpp_command,
         ]
-        if Compiler.sanitize:
-            args.append('-DCMAKE_CXX_FLAGS=' + " ".join([f for f in Compiler().flags() if f.startswith("-fsanitize=")]))
+        if compiler.sanitize:
+            args.append('-DCMAKE_CXX_FLAGS=' + " ".join([f for f in compiler.flags() if f.startswith("-fsanitize=")]))
         self.subproc(args + opts + [".."])
         self.make()
         os.chdir(cwd)

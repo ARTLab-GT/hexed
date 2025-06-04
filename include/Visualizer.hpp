@@ -76,8 +76,8 @@ class Visualizer {
                                             double time, elem_type element_type);
   //! \brief overload of `create(std::string, int, int, std::string, std::vector<std::string>, double, elem_type)`
   //! \details The number and names of variables are determined from the `Output_data` supplied.
-  static std::unique_ptr<Visualizer> create(std::string format, int n_dim_geom, int n_dim_topo,
-                                            std::string file_name, const Output_data&, double time, elem_type);
+  static std::unique_ptr<Visualizer> create_legacy(std::string format, int n_dim_geom, int n_dim_topo,
+                                                   std::string file_name, const Output_data&, double time, elem_type);
 };
 
 }

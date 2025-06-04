@@ -1,7 +1,9 @@
 #ifndef HEXED_LOCK_HPP_
 #define HEXED_LOCK_HPP_
 
+#if HEXED_THREADED
 #include <omp.h>
+#endif
 #include "config.hpp"
 
 namespace hexed {
