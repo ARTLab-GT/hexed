@@ -83,7 +83,7 @@ void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get
 void Solver::apply_state_bcs() {
   stopwatch["boundary conditions"].stopwatch.start();
   auto bc_cons {_preti_masks[_preti_level]->bound_cons};
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con]->boundary_condition();
     acc_mesh->boundary_condition(bc_sn).apply_state(*bc_cons[i_con]);
