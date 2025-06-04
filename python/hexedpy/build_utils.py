@@ -1164,13 +1164,13 @@ class Builder:
         except:
             self.assert_command("otool")
             cmd = ["otool", "-L"]
+            delim = "placeholder"
         for line in self.subproc(cmd + [file], capture_output=True).stdout.decode().split("\n"):
             print(line)
-            if file not in line:
-                if delim in line:
-                    lib = line.split(delim)[-1].split(" (")[0]
-                    if lib.startswith(self.build_dir):
-                        depends.append(lib)
+            if delim in line:
+                lib = line.split(delim)[-1].split(" (")[0]
+                if lib.startswith(self.build_dir):
+                    depends.append(lib)
         return depends
 
     def __getitem__(self, class_):
