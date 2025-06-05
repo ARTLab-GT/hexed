@@ -416,7 +416,7 @@ class C_project(Buildable):
         for prefix in self.installed_files.keys():
             for name in self.installed_files[prefix]:
                 if prefix == "lib":
-                    outs.append(self.builder.find_in(prefix, f"lib{name}.so") | self.builder.find_in(prefix, f"lib{name}.a"))
+                    outs.append(self.builder.find_in(prefix, f"lib{name}.so") | self.builder.find_in(prefix, f"lib{name}.a") | self.builder.find_in(prefix, f"lib{name}.dylib"))
                 else:
                     outs.append(self.builder.find_in(prefix, name))
         return all_(outs)
