@@ -388,8 +388,8 @@ double Vertex::quality_objective() {
   auto state = _compute_state(false);
   HEXED_ASSERT(state.feasible, format_str(200,
                "Vertex state violates quality criteria "
-               "(ortho = %e; edge = %e; coords = %s; offset record = %s; neighbors = %s).",
-               state.worst_ortho, state.worst_edge, to_string(unwarped_point())))
+               "(ortho = %e; edge = %e; coords = %s).",
+               state.worst_ortho, state.worst_edge, to_string(unwarped_point()).c_str()))
   return state.objective;
 }
 

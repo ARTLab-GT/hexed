@@ -703,7 +703,7 @@ void Accessible_mesh::_fit_surface() {
     _blocks.verts();
     _blocks.boundary_sides();
     Int cons_sz = _neighbor_cons[1].size();
-    Int ref_cons_sz = def.ref_face_cons[1].size();
+    Int face_refs_sz = _face_refs.size();
     for (Int i_con = 0; i_con < cons_sz; ++i_con) {
       auto& con = _neighbor_cons[1][i_con];
       // skip dead or refined connections
@@ -752,68 +752,36 @@ void Accessible_mesh::_fit_surface() {
         }
       }
     }
-    for (Int i_con = 0; i_con < ref_cons_sz; ++i_con) {
-      auto& con = def.ref_face_cons[1][i_con];
-      if (!con) continue;
-      auto dir = con->direction();
-      bool reverse = con->order_reversed();
-      Element* coarse;
-      coarse = &con->coarse_element();
+    for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
+      auto& ref = _face_refs[i_ref][0];
+      std::array<std::vector<Element*>, 2> old_elems = ref.elements();
+      auto dir = ref.get_direction();
       bool replace = false;
-      Int rec = coarse->face_record[dir.i_face(reverse)];
-      if (rec >= 0) {
-        coarse = &def.elems.at(coarse->refinement_level(), rec);
-        replace = true;
-      }
-      std::vector<next::Element_shape*> coarse_shapes(4, &coarse->active_shape());
-      std::array<std::vector<Element*>, 2> to_connect;
-      to_connect[0].resize(4, coarse);
-      rec = coarse->face_record[dir.i_face(reverse)];
-      [[maybe_unused]] bool coarse_surface = false;
-      if (rec >= 0) {
-        Element* surface = &def.elems.at(coarse->refinement_level(), rec);
-        int bf = surface->active_shape().boundary_face();
-        for (int i_elem = 0; i_elem < 4; ++i_elem) {
-          if (math::row_coordinate(2, 2, bf/2 > 3 - bf/2 - dir.i_dim[reverse], i_elem) == bf%2) {
-            coarse_shapes[i_elem] = &surface->active_shape();
-            coarse_surface = true;
-            to_connect[0][i_elem] = surface;
-          }
-        }
-      }
-      auto stretch = con->stretch();
-      std::vector<next::Element_shape*> fine_shapes;
-      [[maybe_unused]] bool fine_surface = false;
-      for (int i = 0, i_elem = 0; i < 1 + stretch[0]; ++i) {
-        for (int i_fine = 0; i_fine < con->n_fine_elements(); ++i_fine) {
-          Element* fine = &con->connection(i_fine).element(!reverse);
-          rec = fine->face_record[dir.i_face(!reverse)];
-          if (rec >= 0) {
-            fine = &def.elems.at(fine->refinement_level(), rec);
+      std::array<std::vector<Element*>, 2> new_elems = old_elems;
+      int n_fine = params.n_vertices()/2;
+      for (int i_side = 0; i_side < 2; ++i_side) {
+        for (int i_elem = 0; i_elem < n_fine; ++i_elem) {
+          int rec = old_elems[i_side][i_elem]->face_record[dir.i_face(i_side)];
+          if (rec >= 0 && old_elems[i_side][i_elem]->deformed()) {
+            Element& elem = def.elems.at(old_elems[i_side][i_elem]->refinement_level(), rec);
+            new_elems[i_side][i_elem] = &elem;
             replace = true;
-          }
-          for (int j = 0; j < 1 + stretch[1]; ++j) {
-            Element* f = fine;
-            rec = f->face_record[dir.i_face(!reverse)];
+            rec = elem.face_record[dir.i_face(i_side)];
             if (rec >= 0) {
-              Element* surface = &def.elems.at(fine->refinement_level(), rec);
-              int bf = surface->active_shape().boundary_face();
-              if (bf >= 0) if (math::row_coordinate(2, 2, bf/2 > 3 - bf/2 - dir.i_dim[!reverse], i_elem) == bf%2) {
-                f = surface;
-                fine_surface = true;
+              Element& surface = def.elems.at(elem.refinement_level(), rec);
+              int bf = surface.active_shape().boundary_face();
+              if (bf >= 0 && math::row_coordinate(2, 2, bf/2 > 3 - bf/2 - dir.i_dim[i_side], i_elem) == bf%2) {
+                new_elems[i_side][i_elem] = &surface;
               }
             }
-            fine_shapes.push_back(&f->active_shape());
-            to_connect[1].push_back(f);
-            ++i_elem;
           }
         }
       }
       if (replace) {
-        Connection_direction new_dir {{dir.i_dim[reverse], dir.i_dim[!reverse]},
-                                      {dir.face_sign[reverse], dir.face_sign[!reverse]}};
-        con.reset();
-        _connect(to_connect, new_dir);
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          for (Element* elem : old_elems[i_side]) elem->face(dir.i_face(i_side)).disconnect();
+        }
+        _connect(new_elems, dir);
       }
     }
     for (auto& vert : all_verts) {
@@ -948,13 +916,13 @@ void Accessible_mesh::_fit_surface() {
       for (Int i_con = 0; i_con < ref_cons_sz[i_ref]; ++i_con) {
         auto& con = def.ref_face_cons[i_ref][i_con];
         if (!con) continue;
-        Deformed_element* coarse = nullptr;
+        Element* coarse = nullptr;
         int rl = con->coarse_element().refinement_level();
         int i_face = get_i_face(con->coarse_element());
         if (i_face < 0) continue;
         coarse = &def.elems.at(rl, con->coarse_element().face_record[i_face]);
         auto stretch = con->stretch();
-        std::vector<Deformed_element*> fine;
+        std::vector<Element*> fine;
         for (int i_fine = 0, last_fine = -1; i_fine < con->n_fine_elements(); ++i_fine) {
           auto& elem = con->connection(i_fine).element(!con->order_reversed());
           i_face = get_i_face(elem);
@@ -970,37 +938,37 @@ void Accessible_mesh::_fit_surface() {
         _connect(coarse, fine, con->direction(), stretch);
       }
     }
-    for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
-      for (auto& ref : _face_refs[i_ref]) {
-        int n_fine = params.n_vertices()/2;
-        Connection_direction dir = ref.get_direction();
-        auto orig_elems = ref.elements();
-        bool any_connected = false;
-        bool all_connected = true;
-        bool has_extrude = false;
-        std::array<std::vector<Element*>, 2> new_elems;
-        for (int i_side = 0; i_side < 2; ++i_side) {
-          new_elems[i_side].resize(n_fine, nullptr);
-          for (int i_elem = 0; i_elem < n_fine; ++i_elem) {
-            auto& elem = *orig_elems[i_side][i_elem];
-            int i_face = get_i_face(elem);
-            if (i_face >= 0) {
-              has_extrude = true;
-              new_elems[i_side][i_elem] = &def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
-              if (params.n_dim == 3) {
+    if (params.n_dim == 3) { // for 2D there will be no face refinements on the surface
+      for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
+        for (auto& ref : _face_refs[i_ref]) {
+          int n_fine = params.n_vertices()/2;
+          Connection_direction dir = ref.get_direction();
+          auto orig_elems = ref.elements();
+          bool any_connected = false;
+          bool all_connected = true;
+          bool has_extrude = false;
+          std::array<std::vector<Element*>, 2> new_elems;
+          for (int i_side = 0; i_side < 2; ++i_side) {
+            new_elems[i_side].resize(n_fine, nullptr);
+            for (int i_elem = 0; i_elem < n_fine; ++i_elem) {
+              auto& elem = *orig_elems[i_side][i_elem];
+              int i_face = get_i_face(elem);
+              if (i_face >= 0) {
+                has_extrude = true;
+                new_elems[i_side][i_elem] = &def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
                 int i_dim = i_face/2 > 3 - i_face/2 - dir.i_dim[i_side];
                 int j_elem = i_elem - math::sign(math::row_coordinate(2, 2, i_dim, i_elem))*math::pow(2, 1 - i_dim);
                 new_elems[i_side][j_elem] = new_elems[i_side][i_elem];
-              } else HEXED_THROW("implement this for 2D", assert::Not_implemented_error)
-              any_connected = any_connected || new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
-              all_connected = all_connected && new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
+                any_connected = any_connected || new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
+                all_connected = all_connected && new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
+              }
             }
           }
-        }
-        if (has_extrude) {
-          HEXED_ASSERT(any_connected == all_connected,
-                       "If any of the elements are already connected then they all must be.")
-          if (!any_connected) _connect(new_elems, dir);
+          if (has_extrude) {
+            HEXED_ASSERT(any_connected == all_connected,
+                         "If any of the elements are already connected then they all must be.")
+            if (!any_connected) _connect(new_elems, dir);
+          }
         }
       }
     }
@@ -1551,20 +1519,19 @@ void Accessible_mesh::_connect_shapes(Elem_t* coarse, std::vector<Elem_t*> fine,
   }
 }
 
-void Accessible_mesh::_connect(Element* coarse, std::vector<Element*> fine, Con_dir<Deformed_element> dir) {
-  HEXED_ASSERT(dir.i_dim[0] == dir.i_dim[1], "dimensions in Cartesian hanging-node connection must match");
-  car.ref_face_cons[params.n_dim - 1].emplace_back(
-    new Refined_connection<Element>(coarse, fine, {dir.i_dim[0]}, dir.face_sign[1])
-  );
-  _connect_shapes(coarse, fine, dir, {false, false});
-}
-
-void Accessible_mesh::_connect(Deformed_element* coarse, std::vector<Deformed_element*> fine,
+void Accessible_mesh::_connect(Element* coarse, std::vector<Element*> fine,
                                Con_dir<Deformed_element> dir, std::array<bool, 2> stretch) {
-  def.ref_face_cons[math::log(2, fine.size())].emplace_back(
-    new Refined_connection<Deformed_element>(coarse, fine, dir, false, stretch)
-  );
-  _connect_shapes(coarse, fine, dir, stretch);
+  int nv = params.n_vertices()/2;
+  std::array<std::vector<Element*>, 2> elems;
+  elems[0].resize(nv, coarse);
+  for (int i = 0; i < 1 + stretch[0]; ++i) {
+    for (Element* elem : fine) {
+      for (int j = 0; j < 1 + stretch[1]; ++j) {
+        elems[1].push_back(elem);
+      }
+    }
+  }
+  _connect(elems, dir);
 }
 
 void Accessible_mesh::connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Con_dir<Element> direction,
@@ -1589,25 +1556,11 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<Int, 2> serial_
 void Accessible_mesh::connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial,
                                       Con_dir<Deformed_element> dir, bool coarse_deformed,
                                       std::vector<bool> fine_deformed, std::array<bool, 2> stretch) {
-  bool is_car = !coarse_deformed;
-  for (bool fine_def : fine_deformed) is_car = (is_car||!fine_def);
-  if (is_car) {
-    Element* coarse = &element(coarse_ref_level, coarse_deformed, coarse_serial);
-    std::vector<Element*> fine;
-    for (int i_fine = 0; i_fine < n_vert/2; ++i_fine) {
-      fine.push_back(&element(coarse_ref_level + 1, fine_deformed[i_fine], fine_serial[i_fine]));
-    }
-    HEXED_ASSERT((dir.i_dim[0] == dir.i_dim[1]) && (dir.face_sign[0] != dir.face_sign[1]),
-                 "attempted to form a cartesian hanging-node connection with incompatible `Con_dir`.");
-    _connect(coarse, fine, dir);
-  } else {
-    Deformed_element* coarse = &def.elems.at(coarse_ref_level, coarse_serial);
-    std::vector<Deformed_element*> fine;
-    for (unsigned i_fine = 0; i_fine < fine_serial.size(); ++i_fine) {
-      fine.push_back(&def.elems.at(coarse_ref_level + 1, fine_serial[i_fine]));
-    }
-    _connect(coarse, fine, dir, stretch);
+  std::vector<Element*> fine;
+  for (int i_fine = 0; i_fine < (int)fine_serial.size(); ++i_fine) {
+    fine.push_back(&element(coarse_ref_level + 1, fine_deformed[i_fine], fine_serial[i_fine]));
   }
+  _connect(&element(coarse_ref_level, coarse_deformed, coarse_serial), fine, dir, stretch);
 }
 
 next::Sequence<Neighbor_connection&> Accessible_mesh::neighbor_connections(bool is_deformed) {
@@ -2029,15 +1982,9 @@ void Accessible_mesh::connect_new(int start_at) {
       is_def = is_def && neighbor->elem->get_is_deformed();
     }
     Con_dir<Deformed_element> dir {{i_dim, i_dim}, {!sign, bool(sign)}};
-    if (is_def) {
-      std::vector<Deformed_element*> fine;
-      for (Tree* neighbor : neighbors) fine.push_back(neighbor->def_elem);
-      _connect(elem.tree->def_elem, fine, dir);
-    } else {
-      std::vector<Element*> fine;
-      for (Tree* neighbor : neighbors) fine.push_back(neighbor->elem.get());
-      _connect(&elem, fine, dir);
-    }
+    std::vector<Element*> fine;
+    for (Tree* neighbor : neighbors) fine.push_back(neighbor->elem.get());
+    _connect(&elem, fine, dir);
   };
   for (int i_elem = start_at; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
@@ -3056,14 +3003,7 @@ void Accessible_mesh::read_file(std::string file_name) {
       is_def = is_def && fine[i_fine]->get_is_deformed();
     }
     Con_dir<Deformed_element> dir {{data[7], data[8]}, {bool(data[9]), bool(data[10])}};
-    if (is_def) {
-      Deformed_element* def_coarse = def_elem_ptrs[data[0]];
-      std::vector<Deformed_element*> def_fine(n_fine);
-      for (int i_fine = 0; i_fine < n_fine; ++i_fine) def_fine[i_fine] = def_elem_ptrs[data[1 + i_fine]];
-      _connect(def_coarse, def_fine, dir, stretch);
-    } else {
-      _connect(coarse, fine, dir);
-    }
+    _connect(coarse, fine, dir, stretch);
   }
   // read boundary connections
   #if 0

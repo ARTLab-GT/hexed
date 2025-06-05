@@ -55,7 +55,7 @@ void find_elements(Face& face, std::vector<Element*>& elems, std::vector<int> bo
       for (int i_fine = 0; i_fine < 2; ++i_fine) {
         auto& ref = *face.face_ref_fine();
         auto b = bounds;
-        b[2*ref.split_dim() + !i_fine] += math::sign(i_fine);
+        b[2*(ref.split_dim() + (ref.coarse().storage_params().n_dim < 3)) + !i_fine] += math::sign(i_fine);
         find_elements(*ref.fine()[i_fine], elems, b, false);
       }
     }
@@ -70,7 +70,7 @@ std::array<std::vector<Element*>, 2> Face_refinement::elements() {
   auto dir_rev = _dir_reverse();
   for (int upstream = 0; upstream < 2; ++upstream) {
     int i_side = upstream != dir_rev.second;
-    elems[i_side].resize(n_fine);
+    elems[i_side].resize(n_fine, nullptr);
     auto& elem_face = find_element_face(*start_from[upstream], upstream);
     std::vector<int> bounds {0, 1 + (par.n_dim > 2), 0, 1 + (par.n_dim > 1)};
     find_elements(elem_face, elems[i_side], bounds, false);
@@ -78,11 +78,12 @@ std::array<std::vector<Element*>, 2> Face_refinement::elements() {
   std::vector<int> fvi = face_vertex_inds(par.n_dim, dir_rev.first);
   std::array<std::vector<Element*>, 2> permuted;
   for (int i_side = 0; i_side < 2; ++i_side) {
-    permuted[i_side].resize(n_fine);
+    permuted[i_side].resize(n_fine, nullptr);
     for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
       if (dir_rev.second) permuted[i_side][i_fine] = elems[i_side][fvi[i_fine]];
       else permuted[i_side][fvi[i_fine]] = elems[i_side][i_fine];
     }
+    for (Element* p : permuted[i_side]) HEXED_ASSERT(p, "null element")
   }
   return permuted;
 }
