@@ -200,8 +200,7 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
           sign = i_face%2;
         }
       }
-      //if (params.n_dim == 3 && i_dim >= 0) {
-      if (false) {
+      if (params.n_dim == 3 && i_dim >= 0) {
         auto edges = surf_geom->edges();
         Nearest_point<3> nearest_on_edge(pos);
         for (auto& edge : edges) {
