@@ -885,8 +885,6 @@ void Accessible_mesh::_fit_surface() {
       return -1;
     };
     Int cons_sz = _neighbor_cons[1].size();
-    Int ref_cons_sz [3];
-    for (int i_ref = 0; i_ref < 3; ++i_ref) ref_cons_sz[i_ref] = def.ref_face_cons[i_ref].size();
     Int face_refs_sz = _face_refs.size();
     for (int i_elem = 0; i_elem < elems_sz; ++i_elem) {
       Deformed_element& elem = elem_list[i_elem];
@@ -911,32 +909,6 @@ void Accessible_mesh::_fit_surface() {
         }
       }
       if (el_arr[0] && el_arr[1]) _connect(el_arr, con.get_direction());
-    }
-    for (int i_ref = params.n_dim - 2; i_ref < 3; ++i_ref) { // note that this will only be executed for n_dim >= 2
-      for (Int i_con = 0; i_con < ref_cons_sz[i_ref]; ++i_con) {
-        auto& con = def.ref_face_cons[i_ref][i_con];
-        if (!con) continue;
-        Element* coarse = nullptr;
-        int rl = con->coarse_element().refinement_level();
-        int i_face = get_i_face(con->coarse_element());
-        if (i_face < 0) continue;
-        coarse = &def.elems.at(rl, con->coarse_element().face_record[i_face]);
-        auto stretch = con->stretch();
-        std::vector<Element*> fine;
-        for (int i_fine = 0, last_fine = -1; i_fine < con->n_fine_elements(); ++i_fine) {
-          auto& elem = con->connection(i_fine).element(!con->order_reversed());
-          i_face = get_i_face(elem);
-          if (i_face >= 0) {
-            fine.push_back(&def.elems.at(elem.refinement_level(), elem.face_record[i_face]));
-            if (last_fine == -1) last_fine = i_fine;
-            else if (i_ref == 2) {
-              stretch[i_fine - last_fine > 1] = true;
-            }
-          }
-        }
-        if (int(fine.size()) != params.n_dim - 1) continue;
-        _connect(coarse, fine, con->direction(), stretch);
-      }
     }
     if (params.n_dim == 3) { // for 2D there will be no face refinements on the surface
       for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
@@ -1373,7 +1345,6 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 , elems{car.elements(), def_as_car}
 , kernel_elems{elems}
 , elem_cons{car.element_connections(), def.element_connections()}
-, ref_face_v{car.refined_faces(), def.refined_faces()}
 , surf_bc_sn{-1} // set to -1 to prevent uninitialized comparisons
 , verts_are_reset{false}
 , _mask_levels{0}
@@ -2611,8 +2582,6 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
     mesh._mask_levels,
     basis,
     mesh._turb,
-    _masked_car_cons.slice,
-    _masked_def_cons.slice,
     _masked_car_elems.slice,
     _masked_def_elems.slice,
     _masked_elems.slice,
@@ -2625,37 +2594,10 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
       mesh.elems[i_elem]._mask = mesh._mask_levels;
     }
   }
-  #define MASK_REF_CONS(mbt) \
-    for (int i_con = 0; i_con < mbt.refined_connections().size(); ++i_con) { \
-      auto& con = mbt.refined_connections()[i_con]; \
-      con.refined_face.coarse_mask = con.coarse_element().mask(); \
-      for (int i_fine = 0; i_fine < con.n_fine_elements(); ++i_fine) { \
-        con.refined_face.fine_masks[i_fine] = con.connection(i_fine).element(!con.order_reversed()).mask(); \
-      } \
-      for (int i_fine = con.n_fine_elements(); i_fine < 4; ++i_fine) con.refined_face.fine_masks[i_fine] = 0; \
-    }
-  #pragma omp parallel for
-  MASK_REF_CONS(mesh.car)
-  #pragma omp parallel for
-  MASK_REF_CONS(mesh.def)
-  #undef MASK_REF_CONS
   _masked_elems.populate(mesh.elems, [&](Element& elem){return elem.mask() >= mesh._mask_levels;});
   _masked_car_elems.populate(mesh.car.elements(), [&](Element& elem){return elem.mask() >= mesh._mask_levels;});
   _masked_def_elems.populate(mesh.def.elements(), [&](Element& elem){return elem.mask() >= mesh._mask_levels;});
-  _masked_car_cons.populate(mesh.car.kernel_connections(), [&](Kernel_connection& con){return con.mask() >= mesh._mask_levels;});
-  _masked_def_cons.populate(mesh.def.kernel_connections(), [&](Kernel_connection& con){return con.mask() >= mesh._mask_levels;});
-  _masked_ref_faces.populate(mesh.ref_face_v, [&](Refined_face& face){return face.mask() >= mesh._mask_levels;});
   std::vector<Hard_kernel_connection>* vecs [2] {&kernel_mesh.car_connections, &kernel_mesh.def_connections};
-  #define POPULATE_CONS(mbt) { \
-    auto& cons = mbt.face_connections(); \
-    for (int i_con = 0; i_con < cons.size(); ++i_con) { \
-      auto& n = cons[i_con].neighbor_connection(); \
-      Hard_kernel_connection ker_con = n.kernel_connection(); \
-      if (std::max(ker_con.mask[0], ker_con.mask[1]) >= mesh._mask_levels) { \
-        vecs[n.is_deformed()]->push_back(ker_con); \
-      } \
-    } \
-  }
   for (bool is_def : {0, 1}) {
     for (Int i_con = 0; i_con < (Int)mesh._neighbor_cons[is_def].size(); ++i_con) {
       Hard_kernel_connection ker_con = mesh._neighbor_cons[is_def][i_con].kernel_connection();
@@ -2668,9 +2610,6 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
     bound_cons.push_back(&con);
     vecs[con.inside().is_deformed()]->push_back(con.neighbor_connection().kernel_connection());
   }
-  POPULATE_CONS(mesh.car)
-  POPULATE_CONS(mesh.def)
-  #undef POPULATE_CONS
   ++mesh._mask_levels;
 }
 
@@ -2841,6 +2780,7 @@ void Accessible_mesh::write(std::string name) {
   WRITE_CONS(0, car.cons);
   WRITE_CONS(car.cons.size(), def.cons);
   #undef WRITE_CONS
+  #if 0
   // write refined connections
   auto& car_cons = car.refined_connections();
   auto& def_cons = def.refined_connections();
@@ -2871,6 +2811,7 @@ void Accessible_mesh::write(std::string name) {
     }
   WRITE_REF_CONS(0, car_cons);
   WRITE_REF_CONS(car_cons.size(), def_cons);
+  #endif
   #undef WRITE_REF_CONS
   // write boundary connections
   #if 0

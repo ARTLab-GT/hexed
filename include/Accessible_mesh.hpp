@@ -25,7 +25,6 @@ class Accessible_mesh : public Mesh {
   Vector_view<Kernel_element&, Element&, &trivial_convert<Kernel_element&, Element&>, Sequence> kernel_elems;
   Concatenation<Element_connection&> elem_cons;
   std::vector<std::unique_ptr<Flow_bc>> bound_conds;
-  Concatenation<Refined_face&> ref_face_v;
   std::array<std::vector<Neighbor_connection>, 2> _neighbor_cons;
   std::vector<std::vector<Face_refinement>> _face_refs;
   std::vector<Boundary_connection> _bound_cons;
@@ -193,8 +192,6 @@ class Accessible_mesh : public Mesh {
     Masked<Kernel_element, Element> _masked_elems;
     Masked<Kernel_element, Element> _masked_car_elems;
     Masked<Kernel_element, Element> _masked_def_elems;
-    Masked<Kernel_connection, Kernel_connection> _masked_car_cons;
-    Masked<Kernel_connection, Kernel_connection> _masked_def_cons;
     Masked<Refined_face, Refined_face> _masked_ref_faces;
     public:
     Masked_mesh(Accessible_mesh&, const Basis&, std::function<bool(Element&)> = [](Element&){return true;});
@@ -217,9 +214,6 @@ class Accessible_mesh : public Mesh {
   Flow_bc& boundary_condition(int bc_sn) {return *bound_conds[bc_sn];}
   //! \returns a view of all connections between an element and a boundary condition
   next::Sequence<Boundary_connection&> boundary_connections();
-  //! \returns a view of all Refined_face objects owned by this mesh
-  //! (there will be one for every hanging node connection)
-  inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}
   inline int n_elements() override {return elements().size();}
   Connection_validity valid() override;
   //! \brief if any invalid mesh connections are found, throws an exception with a diagnostic visualization

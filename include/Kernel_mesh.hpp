@@ -18,8 +18,6 @@ struct Kernel_mesh {
   const int mask_level;
   const Basis& basis;
   Turbulence_model turb_model; //! \note this is relevant because it affects the number/treatment of state variables
-  Sequence<Kernel_connection&>& car_cons;
-  Sequence<Kernel_connection&>& def_cons;
   Sequence<Kernel_element&>& car_elems;
   Sequence<Kernel_element&>& def_elems;
   Sequence<Kernel_element&>& elems;

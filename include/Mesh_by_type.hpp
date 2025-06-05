@@ -27,8 +27,6 @@ class View_by_type
   virtual Sequence<Face_connection<element_t>&>& face_connections() = 0;
   virtual Sequence<Kernel_connection&>& kernel_connections() = 0;
   virtual Sequence<Element_connection&>& element_connections() = 0;
-  virtual Sequence<Refined_face&>& refined_faces() = 0;
-  virtual Sequence<Refined_connection<element_t>&>& refined_connections() = 0;
   //! \endcond
 };
 
@@ -50,9 +48,6 @@ class Mesh_by_type : public View_by_type<element_t>
   //!\{
   Complete_element_container<element_t> elems;
   std::vector<std::unique_ptr<Element_face_connection<element_t>>> cons;
-  static constexpr int n_fine [3] {1, 2, 4};
-  typedef Refined_connection<element_t> ref_con_t;
-  std::array<std::vector<std::unique_ptr<ref_con_t>>, 3> ref_face_cons; // array sorts Refined faces into those with 1, 2, and 4 fine elements respectively
   //!\}
 
   /*! \name views
@@ -72,20 +67,12 @@ class Mesh_by_type : public View_by_type<element_t>
     virtual int size()
     {
       int sz = parent.cons.size();
-      for (int i = 0; i < 3; ++i) sz += n_fine[i]*parent.ref_face_cons[i].size();
       return sz;
     }
     virtual view_t operator[](int index)
     {
       int i_start = index - parent.cons.size();
       if (i_start < 0) return *parent.cons[index];
-      for (int i = 0; i < 3; ++i) {
-        int n_total = n_fine[i]*parent.ref_face_cons[i].size();
-        if (i_start < n_total) {
-          return parent.ref_face_cons[i][i_start/n_fine[i]]->connection(i_start%n_fine[i]);
-        }
-        i_start -= n_total;
-      }
       throw std::runtime_error("`Connection_view` indexed out of bounds.");
     }
   };
@@ -94,16 +81,6 @@ class Mesh_by_type : public View_by_type<element_t>
   static std::vector<Element_face_connection<element_t>> empty_con_vec;
   static Vector_view<Face_connection<element_t>&, Element_face_connection<element_t>> empty_con_view;
   Connection_view<Element_connection&> elem_con_v;
-  static Refined_face& ref_face(ref_con_t& ref_con) {return ref_con.refined_face;}
-  // need to build up a vector view over the whole array `ref_face_cons`
-  std::array<Vector_view<ref_con_t&, std::unique_ptr<ref_con_t>,
-                         &ptr_convert<ref_con_t&, std::unique_ptr<ref_con_t>>>,
-             3> ref_con_vs;
-  Concatenation<ref_con_t&> ref_con_cat01;
-  Concatenation<ref_con_t&> ref_con_v;
-  // now that view can be used to view the `Refined_connection`s as other types
-  Vector_view<Refined_face&, ref_con_t&, &ref_face, Concatenation> ref_v;
-  Concatenation<Face_connection<element_t>&> face_con_v;
   Vector_view<Kernel_connection&, Face_connection<element_t>&, &trivial_convert<Kernel_connection&, Face_connection<element_t>&>, Sequence> kernel_cons;
   //!\}
 
@@ -115,22 +92,15 @@ class Mesh_by_type : public View_by_type<element_t>
   , kernel_elems{elem_v}
   , elem_face_con_v{*this}
   , elem_con_v{*this}
-  , ref_con_vs{ref_face_cons[0], ref_face_cons[1], ref_face_cons[2]}
-  , ref_con_cat01{ref_con_vs[0], ref_con_vs[1]}
-  , ref_con_v{ref_con_cat01, ref_con_vs[2]}
-  , ref_v{ref_con_v}
-  , face_con_v{elem_face_con_v, empty_con_view}
-  , kernel_cons{face_con_v}
+  , kernel_cons{elem_face_con_v}
   {}
 
   // `View_by_type` interface implementation
   Sequence<element_t&>& elements() override {return elem_v;}
   Sequence<Kernel_element&>& kernel_elements() override {return kernel_elems;}
-  Sequence<Face_connection<element_t>&>& face_connections() override {return face_con_v;}
+  Sequence<Face_connection<element_t>&>& face_connections() override {return elem_face_con_v;}
   Sequence<Kernel_connection&>& kernel_connections() override {return kernel_cons;}
   Sequence<Element_connection&>& element_connections() override {return elem_con_v;}
-  Sequence<Refined_face&>& refined_faces() override {return ref_v;}
-  Sequence<Refined_connection<element_t>&>& refined_connections() override {return ref_con_v;}
 
   //! write the number of connections for each face to `Element::face_record`. Assumes initialized to 0
   void record_connections()
@@ -139,17 +109,6 @@ class Mesh_by_type : public View_by_type<element_t>
     for (unsigned i_con = 0; i_con < cons.size(); ++i_con) {
       for (int i_side = 0; i_side < 2; ++i_side) {
         ++cons[i_con]->element(i_side).face_record[cons[i_con]->direction().i_face(i_side)];
-      }
-    }
-    // hanging node connections
-    for (int i_n_fine = 0; i_n_fine < 3; ++i_n_fine) {
-      for (unsigned i_con = 0; i_con < ref_face_cons[i_n_fine].size(); ++i_con) {
-        auto& con {ref_face_cons[i_n_fine][i_con]};
-        bool rev = con->order_reversed();
-        ++con->connection(0).element(rev).face_record[con->direction().i_face(rev)];
-        for (int i_fine = 0; i_fine < n_fine[i_n_fine]; ++i_fine) {
-          ++con->connection(i_fine).element(!rev).face_record[con->direction().i_face(!rev)];
-        }
       }
     }
   }
@@ -162,17 +121,6 @@ class Mesh_by_type : public View_by_type<element_t>
       if (!con) return true;
       return predicate(con->element(0)) || predicate(con->element(1)) || !con->neighbor_connection().alive();
     });
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      auto pred = [predicate](std::unique_ptr<Refined_connection<element_t>>& con){
-        if (!con) return true;
-        bool result = predicate(con->coarse_element());
-        for (int i_fine = 0; i_fine < con->n_fine_elements(); ++i_fine) {
-          result = result || predicate(con->connection(i_fine).element(!con->order_reversed()));
-        }
-        return result;
-      };
-      erase_if(ref_face_cons[i_dim], pred);
-    }
   }
 };
 
