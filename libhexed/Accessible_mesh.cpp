@@ -1538,6 +1538,10 @@ next::Sequence<Neighbor_connection&> Accessible_mesh::neighbor_connections(bool 
   return next::Sequence<Neighbor_connection&>::vector_view(_neighbor_cons[is_deformed]);
 }
 
+next::Sequence<std::vector<Face_refinement>&> Accessible_mesh::face_refinements() {
+  return next::Sequence<std::vector<Face_refinement>&>::vector_view(_face_refs);
+}
+
 int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc) {
   bound_conds.emplace_back(flow_bc);
   // no reason to delete boundary conditions, so the serial number can just be the index

@@ -340,7 +340,7 @@ void Solver::write_state(std::string file_name) {
 
 void Solver::calc_jacobian(bool snap) {
   acc_mesh->valid().assert_valid();
-
+  _preti_masks = acc_mesh->preti_masks(basis);
   // compute element jacobians
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for
@@ -348,12 +348,22 @@ void Solver::calc_jacobian(bool snap) {
     elements[i_elem].set_jacobian(basis);
   }
   // do some extra work to make sure each face knows its normal vectors
-  auto& car_cons {acc_mesh->cartesian().face_connections()};
+  auto face_refs = acc_mesh->face_refinements();
   #pragma omp parallel for
-  for (int i_con = 0; i_con < car_cons.size(); ++i_con) car_cons[i_con].set_normal();
-  auto& def_cons {acc_mesh->deformed().face_connections()};
+  for (auto& vec : face_refs) {
+    for (auto& ref : vec) if (ref.is_deformed()) {
+      ref.coarse().flow_state()(1)(0, params.n_dim) = ref.coarse().normal();
+    }
+  }
+  compute_prolong(_preti_masks[0]->kernel_mesh, 0, 1);
   #pragma omp parallel for
-  for (int i_con = 0; i_con < def_cons.size(); ++i_con) def_cons[i_con].set_normal();
+  for (auto& vec : face_refs) {
+    for (auto& ref : vec) if (ref.is_deformed()) {
+      for (int i_fine = 0; i_fine < 2; ++i_fine) {
+        ref.fine()[i_fine]->normal() = ref.fine()[i_fine]->flow_state()(1)(0, params.n_dim);
+      }
+    }
+  }
   // set position at boundary faces
   auto bc_cons = acc_mesh->boundary_connections();
   #pragma omp parallel for
@@ -365,7 +375,6 @@ void Solver::calc_jacobian(bool snap) {
     if (con.inside().is_deformed()) con.ghost().normal() = con.inside().normal();
   }
   share_vertex_data(&Element::vertex_time_step_scale, { huge, &min_fun});
-  _preti_masks = acc_mesh->preti_masks(basis);
 }
 
 void Solver::initialize(std::string(expr)) {

@@ -149,6 +149,7 @@ class Accessible_mesh : public Mesh {
                        bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
                        std::array<bool, 2> stretch = {false, false}) override;
   next::Sequence<Neighbor_connection&> neighbor_connections(bool is_deformed);
+  next::Sequence<std::vector<Face_refinement>&> face_refinements();
   //! \returns a view of all connections between elements,
   //! including one connection for every fine element in hanging node connections.
   Sequence<Element_connection&>& element_connections() {return elem_cons;}
