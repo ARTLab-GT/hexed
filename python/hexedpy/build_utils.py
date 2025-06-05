@@ -711,7 +711,7 @@ class Link(Subprocess):
         args += depends
         for lib in libs:
             args.append("-l" + lib)
-            depends.append(builder.find_in("lib", f"lib{lib}.so") | builder.find_in("lib", f"lib{lib}.a"))
+            depends.append(builder.find_in("lib", f"lib{lib}.so") | builder.find_in("lib", f"lib{lib}.a") | self.builder.find_in("lib", f"lib{lib}.dylib"))
         super().__init__(builder, args, name, depends=depends)
 
 class Python_package(Buildable):
