@@ -30,9 +30,7 @@ TEST_CASE("Restrict_refined") {
     ref.fine[i_fine][0] = fine[i_fine][0][0];
     ref.fine[i_fine][1] = nullptr;
   }
-  ref.coarse_mask = 0;
-  ref.fine_mask[0] = 0;
-  ref.fine_mask[1] = 0;
+  ref.mask = 0;
 
   SECTION("split dimension 0") {
     ref.split_dim = 0;

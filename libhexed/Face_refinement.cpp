@@ -98,4 +98,17 @@ std::pair<Connection_direction, bool> Face_refinement::_dir_reverse() {
   return _fine0.face_ref_fine()->_dir_reverse();
 }
 
+Kernel_face_refinement Face_refinement::kernel_face_refinement() {
+  Kernel_face_refinement kfr;
+  for (int is_ldg = 0; is_ldg < 2; ++is_ldg) {
+    kfr.coarse[is_ldg] = coarse().flow_state()(is_ldg).data();
+    for (int i_fine = 0; i_fine < 2; ++i_fine) {
+      kfr.fine[i_fine][is_ldg] = fine()[i_fine]->flow_state()(is_ldg).data();
+    }
+  }
+  kfr.mask = coarse().mask();
+  kfr.split_dim = split_dim();
+  return kfr;
+}
+
 }

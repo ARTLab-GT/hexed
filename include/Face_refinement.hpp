@@ -16,6 +16,7 @@ class Face_refinement : public Mortal {
   inline bool alive() const {return _coarse;}
   std::array<std::vector<Element*>, 2> elements();
   Connection_direction get_direction();
+  Kernel_face_refinement kernel_face_refinement();
 
   private:
   std::pair<Connection_direction, bool> _dir_reverse();

@@ -2609,6 +2609,12 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
     bound_cons.push_back(&con);
     vecs[con.inside().is_deformed()]->push_back(con.neighbor_connection().kernel_connection());
   }
+  for (auto& vec : mesh._face_refs) {
+    kernel_mesh.face_refinements.emplace_back();
+    for (auto& ref : vec) {
+      kernel_mesh.face_refinements.back().push_back(ref.kernel_face_refinement());
+    }
+  }
   ++mesh._mask_levels;
 }
 

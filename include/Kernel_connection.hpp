@@ -52,8 +52,7 @@ struct Kernel_face_refinement {
   public:
   double* coarse [2];
   double* fine [2][2];
-  int coarse_mask;
-  int fine_mask [2];
+  int mask;
   int split_dim;
 };
 

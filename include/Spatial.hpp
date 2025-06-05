@@ -152,9 +152,9 @@ class Spatial {
       #pragma omp parallel for
       for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face) {
         for (Kernel_face_refinement ref : ref_faces[i_ref_face]) {
-          if (ref.fine_mask[0] < _mask && ref.fine_mask[1] < _mask) continue;
+          if (ref.mask < _mask) continue;
           double* coarse = ref.coarse[off];
-          for (int i_face = 0; i_face < 2; ++i_face) if (ref.fine_mask[i_face] >= _mask) {
+          for (int i_face = 0; i_face < 2; ++i_face) {
             double* fine = ref.fine[i_face][off];
             for (int i_var = 0; i_var < n_var; ++i_var) {
               double* var_face {fine + i_var*nfq};
@@ -216,30 +216,29 @@ class Spatial {
       for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face) {
         for (int i_ref = ref_faces[i_ref_face].size() - 1; i_ref >= 0; --i_ref) {
           auto ref = ref_faces[i_ref_face][i_ref];
-          if (ref.coarse_mask >= _mask) {
-            double* coarse = ref.coarse[off];
-            for (int i_dof = 0; i_dof < n_var*nfq; ++i_dof) coarse[i_dof] = 0.;
-            for (int i_face = 0; i_face < 2; ++i_face) {
-              double* fine = ref.fine[i_face][off];
-              for (int i_var = 0; i_var < n_var; ++i_var) {
-                double* var_face {fine + i_var*nfq};
-                const int pow {n_dim - 2 - ref.split_dim};
-                const int qpoint_stride {math::pow(row_size, pow)};
-                for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer) {
-                  for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner) {
-                    Eigen::Matrix<double, row_size, 1> row;
-                    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                      row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
-                    }
-                    row = restrict_mat[i_face]*row;
-                    for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                      var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint)*(1 + scl);
-                    }
+          if (ref.mask < _mask) continue;
+          double* coarse = ref.coarse[off];
+          for (int i_dof = 0; i_dof < n_var*nfq; ++i_dof) coarse[i_dof] = 0.;
+          for (int i_face = 0; i_face < 2; ++i_face) {
+            double* fine = ref.fine[i_face][off];
+            for (int i_var = 0; i_var < n_var; ++i_var) {
+              double* var_face {fine + i_var*nfq};
+              const int pow {n_dim - 2 - ref.split_dim};
+              const int qpoint_stride {math::pow(row_size, pow)};
+              for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer) {
+                for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner) {
+                  Eigen::Matrix<double, row_size, 1> row;
+                  for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                    row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
+                  }
+                  row = restrict_mat[i_face]*row;
+                  for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                    var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint)*(1 + scl);
                   }
                 }
-                for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-                  coarse[i_var*nfq + i_qpoint] += var_face[i_qpoint];
-                }
+              }
+              for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
+                coarse[i_var*nfq + i_qpoint] += var_face[i_qpoint];
               }
             }
           }
