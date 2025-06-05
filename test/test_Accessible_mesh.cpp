@@ -210,7 +210,7 @@ TEST_CASE("masking") {
     REQUIRE(masked.kernel_mesh.elems.size() == 10);
     REQUIRE(masked.kernel_mesh.car_connections.size() == 16);
     REQUIRE(masked.kernel_mesh.def_connections.size() == 12);
-    REQUIRE(masked.kernel_mesh.ref_faces.size() == 4);
+    REQUIRE(masked.kernel_mesh.face_refinements.size() == 4);
     REQUIRE(masked.bound_cons.size()  == 12);
   }
   SECTION("custom mask") {
@@ -230,7 +230,7 @@ TEST_CASE("masking") {
     REQUIRE(masked.kernel_mesh.def_elems.size() == 0);
     REQUIRE(masked.kernel_mesh.car_connections.size() == 10);
     REQUIRE(masked.kernel_mesh.def_connections.size() == 6);
-    REQUIRE(masked.kernel_mesh.ref_faces.size() == 3);
+    REQUIRE(masked.kernel_mesh.face_refinements.size() == 3);
     REQUIRE(masked.bound_cons.size() == 6);
   }
 }

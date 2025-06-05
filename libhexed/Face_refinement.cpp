@@ -1,6 +1,5 @@
 #include <hexed/Face_refinement.hpp>
 #include <hexed/vertex_inds.hpp>
-#include <hexed/Printer.hpp>
 
 namespace hexed {
 
@@ -14,7 +13,6 @@ Face_refinement::Face_refinement(Face& face, int sdim)
   face.connect(_coarse);
   _fine0.associate(*this);
   _fine1.associate(*this);
-  printers::warn("New-style face refinement\n", true);
 }
 
 Face& find_element_face(Face& face, bool upstream) {

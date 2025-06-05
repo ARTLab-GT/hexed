@@ -861,15 +861,14 @@ bool Solver::is_admissible() {
     if (!elem_admis) elem.record = 1;
     admiss = admiss && elem_admis;
   }
-  auto& ref_faces = _preti_masks[_preti_level]->kernel_mesh.ref_faces;
+  auto& face_refs = _preti_masks[_preti_level]->kernel_mesh.face_refinements;
   bool refined_admiss = 1;
   #pragma omp parallel for reduction (&&:refined_admiss)
-  for (int i_face = 0; i_face < ref_faces.size(); ++i_face) {
-    auto& ref = ref_faces[i_face];
-    int n_fine = params.n_vertices()/2;
-    for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
-    for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-      refined_admiss = refined_admiss && check_admis(ref.fine[i_fine], nq/rs, nd + 2);
+  for (auto& vec : face_refs) {
+    for (auto& ref : vec) {
+      for (int i_fine = 0; i_fine < 2; ++i_fine) {
+        refined_admiss = refined_admiss && check_admis(ref.fine[i_fine][0], nq/rs, nd + 2);
+      }
     }
   }
   sw.work_units_completed += acc_mesh->elements().size();

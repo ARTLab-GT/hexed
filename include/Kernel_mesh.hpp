@@ -21,9 +21,9 @@ struct Kernel_mesh {
   Sequence<Kernel_element&>& car_elems;
   Sequence<Kernel_element&>& def_elems;
   Sequence<Kernel_element&>& elems;
-  Sequence<Refined_face&>& ref_faces;
   std::vector<Hard_kernel_connection> car_connections;
   std::vector<Hard_kernel_connection> def_connections;
+  std::vector<std::vector<Kernel_face_refinement>> face_refinements;
 };
 
 }

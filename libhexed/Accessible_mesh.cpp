@@ -2585,7 +2585,6 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
     _masked_car_elems.slice,
     _masked_def_elems.slice,
     _masked_elems.slice,
-    _masked_ref_faces.slice,
   }
 {
   #pragma omp parallel for

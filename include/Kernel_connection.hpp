@@ -48,6 +48,15 @@ struct Hard_kernel_connection {
   double nominal_area;
 };
 
+struct Kernel_face_refinement {
+  public:
+  double* coarse [2];
+  double* fine [2][2];
+  int coarse_mask;
+  int fine_mask [2];
+  int split_dim;
+};
+
 class Connection {
   public:
   virtual Connection_direction get_direction() const = 0;
