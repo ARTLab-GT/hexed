@@ -607,7 +607,7 @@ void Accessible_mesh::_fit_surface() {
                 set_vertices(match_elem);
                 match_elem.active_shape().is_new = true;
                 match_elem.active_shape().for_matching = true;
-                _connect({&surface, &match_elem}, Connection_direction{{j_dim, j_dim}, {j_sign, !j_sign}});
+                _connect({&match_elem, &surface}, Connection_direction{{j_dim, j_dim}, {!j_sign, j_sign}});
                 _connect({&match_elem, &inside}, Connection_direction{{i_dim, j_dim}, {!i_sign, j_sign}});
                 _extrude_cons[1].emplace_back(&_neighbor_cons[1].back());
                 matched_elems[2*j_dim + j_sign] = &match_elem;
@@ -746,8 +746,6 @@ void Accessible_mesh::_fit_surface() {
             HEXED_ASSERT(surfaces[1], "Both faces must identify a surface element or neither.")
             _connect(surfaces, dir);
           } else {
-            HEXED_ASSERT(!elem_arr[0]->tree && elem_arr[1]->tree,
-                         "This should be a connection between a tree element and an extruded element.")
             _extrude_cons[2].emplace_back(&_neighbor_cons[1].back());
           }
         } else {

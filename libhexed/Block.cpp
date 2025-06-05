@@ -912,6 +912,9 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
       }
     }
   }
+  for (int i_elem = 0; i_elem < nv; ++i_elem) {
+    elems[0][i_elem]->_glue_edges(elems[1]);
+  }
 }
 
 void Element_shape::glue(Element_shape& that, std::array<std::vector<double>, 2> corners) {
