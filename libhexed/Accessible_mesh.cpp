@@ -1198,7 +1198,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
                                                    > 1e-2*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
                           || (snaps_failed != 0 && dist_monitor.max() - dist_monitor.min() > 1e-2*dist_monitor.min()));
        ++i_relax) {
-    #if 1
+    #if 0
     {
       auto faces = _blocks.faces_3d();
       for (auto& f : faces) {
