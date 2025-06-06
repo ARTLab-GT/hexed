@@ -2268,8 +2268,8 @@ void Accessible_mesh::deform() {
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       if (elem.tree && is_def(elem)) {
-        for (int i_face = 0; i_face < 2*nd; ++i_face) {
-          auto neighbors = elem.tree->find_neighbors(math::direction(nd, i_face));
+        auto check_direction = [&](Eigen::VectorXi dir) {
+          auto neighbors = elem.tree->find_neighbors(dir);
           bool any_deformed = false;
           bool all_deformed = true;
           for (Tree* neighbor : neighbors) {
@@ -2284,6 +2284,23 @@ void Accessible_mesh::deform() {
                 changed = true;
                 #pragma omp atomic write
                 neighbor->elem->record = 3*!neighbor->elem->get_is_deformed();
+              }
+            }
+          }
+        };
+        for (int i_face = 0; i_face < 2*nd; ++i_face) {
+          check_direction(math::direction(nd, i_face));
+        }
+        if (nd == 3) { // also check edges
+          for (int i_dim = 0; i_dim < 3; ++i_dim) {
+            for (int i_sign : {-1, 0, 1}) {
+              for (int j_sign : {-1, 0, 1}) {
+                if (i_sign != 0 || j_sign != 0) {
+                  Eigen::VectorXi direction = Eigen::VectorXi::Zero(3);
+                  direction(i_dim) = i_sign;
+                  direction((i_dim + 1)%3) = j_sign;
+                  check_direction(direction);
+                }
               }
             }
           }
