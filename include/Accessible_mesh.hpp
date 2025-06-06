@@ -84,12 +84,8 @@ class Accessible_mesh : public Mesh {
 
   void _connect(std::array<std::vector<Element*>, 2> elems, Connection_direction dir);
   void _connect(std::array<Element*, 2>, Connection_direction);
-
-  void _connect(Element*, std::vector<Element*>, Con_dir<Deformed_element>,
+  void _connect(Element*, std::vector<Element*>, Connection_direction,
                 std::array<bool, 2> = {false, false});
-
-  template <typename Elem_t>
-  void _connect_shapes(Elem_t*, std::vector<Elem_t*>, Con_dir<Deformed_element>, std::array<bool, 2>);
 
   struct Edge_match {
     Mortal_ptr<next::Edge> edge;

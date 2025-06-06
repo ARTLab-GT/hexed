@@ -1394,7 +1394,6 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems, Conne
   std::array<std::vector<next::Element_shape*>, 2> active_shapes;
   bool null_elem = false;
   bool same_active = false;
-  bool is_deformed = true;
   for (int i_side = 0; i_side < 2; ++i_side) {
     HEXED_ASSERT(Int(elems[i_side].size()) == nv/2, "wrong number of element pointers")
     for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
@@ -1407,7 +1406,6 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems, Conne
       shapes[i_side].push_back(&elems[i_side][i_elem]->shape());
       active_shapes[i_side].push_back(&elems[i_side][i_elem]->active_shape());
       if (i_side) if (active_shapes[i_side][i_elem] == active_shapes[0][i_elem]) same_active = true;
-      is_deformed = is_deformed && elems[i_side][i_elem]->deformed();
     }
   }
   HEXED_ASSERT(!null_elem, "an element is null")
@@ -1452,6 +1450,12 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems, Conne
     }
     if (!already_connected) {
       std::array<Face*, 2> face_arr {faces[i_face].get(), faces[nv/2 + fvi[i_face]].get()};
+      bool is_deformed = face_arr[0]->is_deformed() && face_arr[1]->is_deformed();
+      if (!is_deformed) {
+        HEXED_ASSERT(dir.i_dim[0] == dir.i_dim[1] && dir.face_sign[0] != dir.face_sign[1] && dir.rotate == 0,
+                     "invalid direction for Cartesian connection")
+        if (!face_arr[0]->sign()) std::swap(face_arr[0], face_arr[1]);
+      }
       _neighbor_cons[is_deformed].emplace_back(faces[0]->storage_params(), face_arr, dir.rotate);
     }
   }
@@ -1466,32 +1470,8 @@ void Accessible_mesh::_connect(std::array<Element*, 2> el_ar, Connection_directi
   _connect(full_arr, direction);
 }
 
-template <typename Elem_t>
-void Accessible_mesh::_connect_shapes(Elem_t* coarse, std::vector<Elem_t*> fine, Con_dir<Deformed_element> dir,
-              std::array<bool, 2> stretch) {
-  std::vector<next::Element_shape*> fine_shapes;
-  std::vector<next::Element_shape*> fake_fine_shapes;
-  for (int i = 0; i < 1 + stretch[0]; ++i) {
-    for (Elem_t* elem : fine) {
-      for (int i = 0; i < 1 + stretch[1]; ++i) {
-        fine_shapes.push_back(&elem->shape());
-        fake_fine_shapes.push_back(elem->fake_shape());
-      }
-    }
-  }
-  coarse->shape().connect(fine_shapes, dir);
-  HEXED_ASSERT(   std::all_of(fake_fine_shapes.begin(), fake_fine_shapes.end(), [](void* p)->bool{return  p;})
-               || std::all_of(fake_fine_shapes.begin(), fake_fine_shapes.end(), [](void* p)->bool{return !p;}),
-               "All of the fine elements must have fake shapes or none.");
-  next::Element_shape* coarse_fake = coarse->fake_shape();
-  if (coarse_fake || fake_fine_shapes[0]) {
-    next::Element_shape* shape = coarse_fake ? coarse_fake : &coarse->shape();
-    shape->connect(fake_fine_shapes[0] ? fake_fine_shapes : fine_shapes, dir);
-  }
-}
-
 void Accessible_mesh::_connect(Element* coarse, std::vector<Element*> fine,
-                               Con_dir<Deformed_element> dir, std::array<bool, 2> stretch) {
+                               Connection_direction dir, std::array<bool, 2> stretch) {
   int nv = params.n_vertices()/2;
   std::array<std::vector<Element*>, 2> elems;
   elems[0].resize(nv, coarse);
