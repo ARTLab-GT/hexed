@@ -89,7 +89,7 @@ class Spatial {
       Index_mat m = Index_mat::Identity();
       if (dir.flip_tangential()) {
         if constexpr (n_dim == 3) {
-          int i = (dir.i_dim[0] > 3 - dir.i_dim[0] - dir.i_dim[1]) == dir.transpose();
+          int i = (dir.i_dim[0] > 3 - dir.i_dim[0] - dir.i_dim[1]) != dir.transpose();
           m(i, i) = -1;
         } else {
           m(1, 1) = -1;
@@ -103,15 +103,15 @@ class Spatial {
       for (int i = n; i > 0; --i) {
         Index_mat r;
         r <<
-           0, 1,
-          -1, 0;
+          0, -1,
+          1,  0;
         m = r*m;
       }
       for (int i = 0; i > n; --i) {
         Index_mat r;
         r <<
-          0, -1,
-          1,  0;
+           0, 1,
+          -1, 0;
         m = r*m;
       }
       return m;
@@ -131,7 +131,7 @@ class Spatial {
         for (int row = 0; row < n_qpoint/row_size; ++row) {
           for (int col = 0; col < row_size; ++col) {
             Index_vec inds = mat*Index_vec{row, col} + offset;
-            temp[row*row_size + col] = var[inds(0)*row_size + inds(1)];
+            temp[inds(0)*row_size + inds(1)] = var[row*row_size + col];
           }
         }
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) var[i_qpoint] = temp[i_qpoint];
