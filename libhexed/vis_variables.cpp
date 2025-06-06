@@ -88,6 +88,7 @@ void surface(Namespace& space, Boundary_connection& con) {
   Array<double> state = con.inside().flow_state()(0).copy();
   Array<double> flux = con.inside().flow_state()(1).copy();
   Array<double> ref_flux = con.flux_cache().copy();
+  double area = con.inside().nominal_area();
   // compute normals and fluxes
   for (int i_fqpoint = 0; i_fqpoint < nfq; ++i_fqpoint) {
     double norm = 0;
@@ -95,7 +96,7 @@ void surface(Namespace& space, Boundary_connection& con) {
     norm = std::sqrt(norm);
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) nrml(i_dim)[i_fqpoint] /= nrml_sign*norm;
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      flux(i_var)[i_fqpoint] = norm > 1e-6 ? -ref_flux(i_var)[i_fqpoint]*nrml_sign/norm : 0;
+      flux(i_var)[i_fqpoint] = norm > 1e-6 ? -ref_flux(i_var)[i_fqpoint]*nrml_sign/norm/area : 0;
     }
   }
   // assign variables

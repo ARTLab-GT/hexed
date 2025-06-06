@@ -4,6 +4,8 @@
 #include <hexed/Accessible_mesh.hpp>
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/kernels.hpp>
+#include <hexed/Spatial.hpp>
+#include <hexed/pde.hpp>
 
 void test_mesh(hexed::Accessible_mesh& mesh) {
   // construct a mesh that has every possible connection configuration by creating a single element
@@ -70,5 +72,59 @@ TEST_CASE("Face_permutation") {
   SECTION("3d") {
     hexed::Accessible_mesh mesh {{1, 5, 3, hexed::config::max_row_size}, 1., hexed::laminar};
     test_mesh(mesh);
+  }
+  SECTION("rotation") {
+    constexpr int rs = hexed::config::max_row_size;
+    hexed::Array<double> data({5, rs, rs});
+    for (int i = 0; i < rs; ++i) {
+      for (int j = 0; j < rs; ++j) {
+        data(0)(i)[j] = i + .1*j;
+      }
+    }
+    SECTION("+1") {
+      hexed::Spatial<hexed::pde::Navier_stokes<>::Pde, false>::Face_permutation<3, rs> perm({{0, 0}, {1, 0}, 1}, data.data());
+      perm.match_faces();
+      for (int i = 0; i < rs; ++i) {
+        for (int j = 0; j < rs; ++j) {
+          REQUIRE(data(0)(i)[j] == Catch::Approx(.1*(rs - 1 - i) + j).scale(1.));
+        }
+      }
+      perm.restore();
+      for (int i = 0; i < rs; ++i) {
+        for (int j = 0; j < rs; ++j) {
+          REQUIRE(data(0)(i)[j] == Catch::Approx(i + .1*j).scale(1.));
+        }
+      }
+    }
+    SECTION("-1") {
+      hexed::Spatial<hexed::pde::Navier_stokes<>::Pde, false>::Face_permutation<3, rs> perm({{0, 0}, {1, 0}, -1}, data.data());
+      perm.match_faces();
+      for (int i = 0; i < rs; ++i) {
+        for (int j = 0; j < rs; ++j) {
+          REQUIRE(data(0)(i)[j] == Catch::Approx(.1*i + rs - 1 - j).scale(1.));
+        }
+      }
+      perm.restore();
+      for (int i = 0; i < rs; ++i) {
+        for (int j = 0; j < rs; ++j) {
+          REQUIRE(data(0)(i)[j] == Catch::Approx(i + .1*j).scale(1.));
+        }
+      }
+    }
+    SECTION("+2") {
+      hexed::Spatial<hexed::pde::Navier_stokes<>::Pde, false>::Face_permutation<3, rs> perm({{0, 0}, {1, 0}, 2}, data.data());
+      perm.match_faces();
+      for (int i = 0; i < rs; ++i) {
+        for (int j = 0; j < rs; ++j) {
+          REQUIRE(data(0)(i)[j] == Catch::Approx(rs - 1 - i + .1*(rs - 1 - j)).scale(1.));
+        }
+      }
+      perm.restore();
+      for (int i = 0; i < rs; ++i) {
+        for (int j = 0; j < rs; ++j) {
+          REQUIRE(data(0)(i)[j] == Catch::Approx(i + .1*j).scale(1.));
+        }
+      }
+    }
   }
 }

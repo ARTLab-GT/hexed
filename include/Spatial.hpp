@@ -71,41 +71,70 @@ class Spatial {
     static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
     Connection_direction dir;
     double* tgt;
+    typedef Eigen::Matrix<int, 2, 2> Index_mat;
+    typedef Eigen::Matrix<int, 2, 1> Index_vec;
 
-    /*
-     * For 3d connections, the dimensions corresponding to major/minor indices may not match.
-     * To solve this problem, this function transposes the major/minor axes if necessary.
-     */
-    virtual void transpose() {
-      if (dir.transpose()) {
-        if constexpr (n_dim == 3) {
-          for (int i_var = 0; i_var < n_var; ++i_var) {
-            Eigen::Map<Eigen::Matrix<double, row_size, row_size>> rows {tgt + i_var*n_qpoint};
-            rows.transposeInPlace();
-          }
-        }
+    Index_mat _transpose() {
+      Index_mat m;
+      if (n_dim == 3 && dir.transpose()) {
+        m << 0, 1,
+             1, 0;
+      } else {
+        m.setIdentity();
       }
+      return m;
     }
 
-    /* For 2d and 3d connections, the ordering of quadrature points in the plane of the
-     * normal vectors might be opposite.
-     * To solve this problem, this function reverses the order in `i_dim[0]` if necessary.
-     */
-    virtual void flip() {
+    Index_mat _flip() {
+      Index_mat m = Index_mat::Identity();
       if (dir.flip_tangential()) {
         if constexpr (n_dim == 3) {
-          // figure out if the dimension we want to reverse is the major or minor axis of face 1
-          bool colwise = (dir.i_dim[0] > 3 - dir.i_dim[0] - dir.i_dim[1]) != dir.transpose();
-          for (int i_var = 0; i_var < n_var; ++i_var) {
-            Eigen::Map<Eigen::Matrix<double, row_size, row_size>> rows {tgt + i_var*n_qpoint};
-            if (colwise) rows.colwise().reverseInPlace();
-            else         rows.rowwise().reverseInPlace();
-          }
-        } else if constexpr (n_dim == 2) {
-          // for 2d, there is no major/minor axis distinction
-          Eigen::Map<Eigen::Matrix<double, row_size, n_var*n_qpoint/row_size>> rows {tgt};
-          rows.colwise().reverseInPlace();
+          int i = (dir.i_dim[0] > 3 - dir.i_dim[0] - dir.i_dim[1]) == dir.transpose();
+          m(i, i) = -1;
+        } else {
+          m(1, 1) = -1;
         }
+      }
+      return m;
+    }
+
+    Index_mat _rotate(int n) {
+      Index_mat m = Index_mat::Identity();
+      for (int i = n; i > 0; --i) {
+        Index_mat r;
+        r <<
+           0, 1,
+          -1, 0;
+        m = r*m;
+      }
+      for (int i = 0; i > n; --i) {
+        Index_mat r;
+        r <<
+          0, -1,
+          1,  0;
+        m = r*m;
+      }
+      return m;
+    }
+
+    void _permute(Index_mat mat) {
+      if constexpr (n_dim == 1) return;
+      double temp [n_qpoint];
+      Index_vec offset = Index_vec::Zero();
+      for (int row = 0; row < 2; ++row) {
+        for (int col = 0; col < 2; ++col) {
+          offset(row) += (mat(row, col) < 0)*(row_size - 1);
+        }
+      }
+      for (int i_var = 0; i_var < n_var; ++i_var) {
+        double* var = tgt + i_var*n_qpoint;
+        for (int row = 0; row < n_qpoint/row_size; ++row) {
+          for (int col = 0; col < row_size; ++col) {
+            Index_vec inds = mat*Index_vec{row, col} + offset;
+            temp[row*row_size + col] = var[inds(0)*row_size + inds(1)];
+          }
+        }
+        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) var[i_qpoint] = temp[i_qpoint];
       }
     }
 
@@ -117,8 +146,8 @@ class Spatial {
     Face_permutation(Connection_direction direction, double* target)
     : dir{direction}, tgt{target} {}
     // reordering can consist of order reversal and/or transpose operations
-    virtual void match_faces() {transpose(); flip();}
-    virtual void restore()     {flip(); transpose();}
+    void match_faces() override {_permute(_rotate(dir.rotate)*_flip()*_transpose());}
+    void restore()     override {_permute(_transpose()*_flip()*_rotate(-dir.rotate));}
     typedef std::unique_ptr<Face_permutation_dynamic> ptr_t;
   };
 
