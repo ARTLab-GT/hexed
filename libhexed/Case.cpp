@@ -409,11 +409,6 @@ Case::Case(std::string input_script)
         return sub.variables->get<int>("return");
       });
     }
-    if (_has_geom) {
-      _solver().set_uncert_surface_rep(2*_vari("n_dim"));
-    } else {
-      _solver().set_uncertainty(0.);
-    }
     _solver().mesh().set_unref_locks(criteria::if_extruded);
     bool changed = _solver().mesh().update(crits[0], crits[1]);
     _solver().calc_jacobian();

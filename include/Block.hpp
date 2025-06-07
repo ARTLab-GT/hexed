@@ -445,6 +445,7 @@ class Element_shape : public Block {
   int extruded_direction;
   bool is_new;
   int record;
+  double uncertainty;
   Lock lock;
 
   private:

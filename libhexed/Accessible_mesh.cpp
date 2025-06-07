@@ -12,6 +12,7 @@
 #include <hexed/Printer.hpp>
 #include <hexed/Visualizer.hpp>
 #include <hexed/vertex_inds.hpp>
+#include <hexed/Gauss_legendre.hpp>
 
 namespace hexed {
 
@@ -2349,6 +2350,37 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   int nd = params.n_dim;
   auto& elems = elements();
   Int n_before = elems.size();
+  // determine uncertainty in surface fit
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < n_before; ++i_elem) elems[i_elem].active_shape().uncertainty = 0;
+  if (surf_geom) {
+    next::Sequence<next::Boundary_block&> sides = params.n_dim == 3
+                                                  ? _blocks.faces_3d().cast<next::Boundary_block&>()
+                                                  : _blocks.edges_2d().cast<next::Boundary_block&>();
+    #pragma omp parallel for
+    for (next::Boundary_block& block : sides) {
+      Gauss_legendre sample_basis(params.row_size);
+      Mat<dyn, dyn> interp = block.basis().interpolate(sample_basis.nodes());
+      Mat<> weights = math::pow_outer(sample_basis.node_weights(), params.n_dim - 1);
+      Array<double> interp_points = block.points();
+      Array<double> sample_points({params.n_dim, params.n_face_qpoint()});
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        sample_points(i_dim).vector() = math::hypercube_matvec(interp, interp_points(i_dim).vector());
+      }
+      double uncert_sq = 0;
+      for (int i_qpoint = 0; i_qpoint < params.n_face_qpoint(); ++i_qpoint) {
+        Mat<3> point = Mat<3>::Zero();
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) point(i_dim) = sample_points(i_dim)[i_qpoint];
+        Mat<3> nearest = surf_geom->nearest_point(point).point();
+        uncert_sq += weights(i_qpoint)*(point - nearest).squaredNorm();
+      }
+      block.element()->uncertainty = std::sqrt(uncert_sq);
+    }
+  }
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < n_before; ++i_elem) {
+    elems[i_elem].uncertainty = elems[i_elem].active_shape().uncertainty;
+  }
   {
     Stopwatch_tree::Starter sw_refine(_stopwatch["update"]["refinement"]);
     // decide which elements to (un)refine
