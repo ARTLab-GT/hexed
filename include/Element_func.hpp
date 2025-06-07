@@ -3,6 +3,7 @@
 
 #include "Output_data.hpp"
 #include "Qpoint_func.hpp"
+#include "Element.hpp"
 
 namespace hexed {
 

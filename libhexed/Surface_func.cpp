@@ -2,7 +2,6 @@
 #include <hexed/Surface_func.hpp>
 #include <hexed/Domain_func.hpp>
 #include <hexed/Boundary_condition.hpp>
-#include <hexed/connection.hpp>
 
 namespace hexed {
 

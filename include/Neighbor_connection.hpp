@@ -9,13 +9,13 @@ namespace hexed {
 
 class Face;
 
-class Neighbor_connection : public Mortal, public Connection {
+class Neighbor_connection : public Mortal {
   public:
   Neighbor_connection(Storage_params, std::array<Face*, 2> faces, int rotate = 0);
   inline Face& face(int i_side) {return _faces[i_side].value();}
   Face& opposite_face(Face&);
   inline bool alive() const {return _faces[0] && _faces[1];}
-  Connection_direction get_direction() const override;
+  Connection_direction get_direction() const;
   inline bool is_deformed() const {return _is_def;}
   Hard_kernel_connection kernel_connection();
 

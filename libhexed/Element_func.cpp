@@ -1,6 +1,5 @@
 #include <hexed/Element_func.hpp>
 #include <hexed/math.hpp>
-#include <hexed/connection.hpp>
 
 namespace hexed
 {

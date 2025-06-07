@@ -23,7 +23,6 @@ class Accessible_mesh : public Mesh {
   Vector_view<Element&, Deformed_element&, &trivial_convert<Element&, Deformed_element&>, Sequence> def_as_car;
   Concatenation<Element&> elems;
   Vector_view<Kernel_element&, Element&, &trivial_convert<Kernel_element&, Element&>, Sequence> kernel_elems;
-  Concatenation<Element_connection&> elem_cons;
   std::vector<std::unique_ptr<Flow_bc>> bound_conds;
   std::array<std::vector<Neighbor_connection>, 2> _neighbor_cons;
   std::vector<std::vector<Face_refinement>> _face_refs;
@@ -91,7 +90,6 @@ class Accessible_mesh : public Mesh {
     Mortal_ptr<next::Edge> edge;
     std::array<Geom_edge::Node, 2> nodes;
   };
-  void _record_connections();
   void _offset_vertices(double, bool strategy);
   Mat<3> _get_snapping_target(next::Vertex&, Mat<3>);
   Mat<3> _de_intersect(next::Vertex&, Mat<3>);
@@ -125,7 +123,6 @@ class Accessible_mesh : public Mesh {
    * This variant is not for tree meshing.
    */
   Accessible_mesh(std::string file_name, std::vector<Flow_bc*>, Turbulence_model);
-  virtual ~Accessible_mesh();
   inline double root_size() override {return root_sz;}
   inline Storage_params storage_params() {return params;}
   //! \returns a View_by_type containing only the Cartesian elements in the mesh
@@ -138,17 +135,14 @@ class Accessible_mesh : public Mesh {
   //! access all elements, both Cartesian and deformed
   Sequence<Element&>& elements() {return elems;}
   Sequence<Kernel_element&>& kernel_elements() {return kernel_elems;}
-  void connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Con_dir<Element> dir,
+  void connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Connection_direction dir,
                          std::array<bool, 2> is_deformed = {false, false}) override;
-  void connect_deformed(int ref_level, std::array<Int, 2> serial_n, Con_dir<Deformed_element> direction) override;
-  void connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial, Con_dir<Deformed_element>,
+  void connect_deformed(int ref_level, std::array<Int, 2> serial_n, Connection_direction direction) override;
+  void connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial, Connection_direction,
                        bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
                        std::array<bool, 2> stretch = {false, false}) override;
   next::Sequence<Neighbor_connection&> neighbor_connections(bool is_deformed);
   next::Sequence<std::vector<Face_refinement>&> face_refinements();
-  //! \returns a view of all connections between elements,
-  //! including one connection for every fine element in hanging node connections.
-  Sequence<Element_connection&>& element_connections() {return elem_cons;}
   int add_boundary_condition(Flow_bc*) override;
   void connect_boundary(int ref_level, bool is_deformed, Int element_serial_n, int i_dim, int face_sign,
                         int bc_serial_n) override;
@@ -189,7 +183,6 @@ class Accessible_mesh : public Mesh {
     Masked<Kernel_element, Element> _masked_elems;
     Masked<Kernel_element, Element> _masked_car_elems;
     Masked<Kernel_element, Element> _masked_def_elems;
-    Masked<Refined_face, Refined_face> _masked_ref_faces;
     public:
     Masked_mesh(Accessible_mesh&, const Basis&, std::function<bool(Element&)> = [](Element&){return true;});
     Kernel_mesh kernel_mesh;

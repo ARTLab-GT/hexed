@@ -1,5 +1,4 @@
 #include <hexed/Boundary_condition.hpp>
-#include <hexed/connection.hpp>
 #include <hexed/math.hpp>
 #include <hexed/kernel_factory.hpp>
 #include <hexed/constants.hpp>

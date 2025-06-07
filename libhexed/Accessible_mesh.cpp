@@ -11,6 +11,7 @@
 #include <hexed/History_monitor.hpp>
 #include <hexed/Printer.hpp>
 #include <hexed/Visualizer.hpp>
+#include <hexed/vertex_inds.hpp>
 
 namespace hexed {
 
@@ -35,19 +36,6 @@ Element_container& Accessible_mesh::container(bool is_deformed) {
 
 template<> Mesh_by_type<         Element>& Accessible_mesh::mbt() {return car;}
 template<> Mesh_by_type<Deformed_element>& Accessible_mesh::mbt() {return def;}
-
-void Accessible_mesh::_record_connections() {
-  auto& elem_seq = elements();
-  // locate unconnected faces
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elem_seq.size(); ++i_elem) {
-    for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
-      elem_seq[i_elem].face_record[i_face] = 0;
-    }
-  }
-  car.record_connections();
-  def.record_connections();
-}
 
 namespace dijkstra {
   struct Node {
@@ -1344,7 +1332,6 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 , def_as_car{def.elements()}
 , elems{car.elements(), def_as_car}
 , kernel_elems{elems}
-, elem_cons{car.element_connections(), def.element_connections()}
 , surf_bc_sn{-1} // set to -1 to prevent uninitialized comparisons
 , verts_are_reset{false}
 , _mask_levels{0}
@@ -1363,12 +1350,6 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   _stopwatch["update"]["fit surface"]["optimization"].emplace("relaxation", "vertex update");
   _stopwatch["update"]["fit surface"]["optimization"].emplace("assessment", "vertex assessment");
   _stopwatch.work_units_completed = 1;
-}
-
-Accessible_mesh::~Accessible_mesh() {
-  // delete connections before anything else so that deleting elements doesn't create dangling references
-  car.purge_connections(criteria::always);
-  def.purge_connections(criteria::always);
 }
 
 int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<Int> position, Mat<> origin, int aniso_ref_level, int surface_face) {
@@ -1485,7 +1466,7 @@ void Accessible_mesh::_connect(Element* coarse, std::vector<Element*> fine,
   _connect(elems, dir);
 }
 
-void Accessible_mesh::connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Con_dir<Element> direction,
+void Accessible_mesh::connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Connection_direction direction,
                                         std::array<bool, 2> is_deformed) {
   std::array<Element*, 2> el_ar;
   for (int i_side : {0, 1}) el_ar[i_side] = &element(ref_level, is_deformed[i_side], serial_n[i_side]);
@@ -1493,7 +1474,7 @@ void Accessible_mesh::connect_cartesian(int ref_level, std::array<Int, 2> serial
 }
 
 void Accessible_mesh::connect_deformed(int ref_level, std::array<Int, 2> serial_n,
-                                       Con_dir<Deformed_element> direction) {
+                                       Connection_direction direction) {
   if ((direction.i_dim[0] == direction.i_dim[1]) && (direction.face_sign[0] == direction.face_sign[1])) {
     throw std::runtime_error("attempt to connect faces of same sign along same dimension which is forbidden");
   }
@@ -1505,7 +1486,7 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<Int, 2> serial_
 }
 
 void Accessible_mesh::connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial,
-                                      Con_dir<Deformed_element> dir, bool coarse_deformed,
+                                      Connection_direction dir, bool coarse_deformed,
                                       std::vector<bool> fine_deformed, std::array<bool, 2> stretch) {
   std::vector<Element*> fine;
   for (int i_fine = 0; i_fine < (int)fine_serial.size(); ++i_fine) {
@@ -1574,20 +1555,20 @@ struct Empty_face {
 struct Connection_plan {
   int ref_level;
   std::array<Int, 2> serial_ns;
-  Con_dir<Deformed_element> dir;
+  Connection_direction dir;
 };
 struct Refined_connection_plan {
   int coarse_ref;
   Int coarse_sn;
   std::vector<Int> fine_sn;
-  Con_dir<Deformed_element> dir;
+  Connection_direction dir;
   std::array<bool, 2> stretch;
 };
-bool aligned_same_dim(Con_dir<Deformed_element> dir, std::array<Int, 2> extrude_dim) {
+bool aligned_same_dim(Connection_direction dir, std::array<Int, 2> extrude_dim) {
   return (dir.i_dim[0] == dir.i_dim[1]) && (dir.face_sign[0] != dir.face_sign[1])
          && (extrude_dim[0] == extrude_dim[1]);
 }
-bool aligned_different_dim(Con_dir<Deformed_element> dir, std::array<Int, 2> extrude_dim) {
+bool aligned_different_dim(Connection_direction dir, std::array<Int, 2> extrude_dim) {
   return (dir.i_dim[0] == extrude_dim[1]) && (dir.i_dim[1] == extrude_dim[0]);
 }
 //! \endcond
@@ -1644,7 +1625,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
     const int ref_level = face.elem.refinement_level();
     int sn = add_element(ref_level, true, nom_pos, face.elem.origin, face.elem.aniso_ref_level() + 1, 2*face.i_dim + face.face_sign);
-    Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
+    Connection_direction dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
     if (face.elem.fake_shape()) elem.split_shape(_blocks, face.elem, offset, 2*face.i_dim + face.face_sign);
     else elem.create_fake(_blocks);
@@ -1705,14 +1686,14 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
       /* first make connections where dimension matches and then make connections among differing dimensions.
          This order prevents incorrect connections where both same-dimension and different-dimension candidates
          are available. */ \
-      for (bool (*aligned)(Con_dir<Deformed_element>, std::array<Int, 2>) \
+      for (bool (*aligned)(Connection_direction, std::array<Int, 2>) \
            : {&aligned_same_dim, &aligned_different_dim}) { \
         /* iterate through every possible pair of records created by an extruded elements above */ \
         for (int i_record = 0; i_record < int(vert.record.size()); i_record += n_record) { \
           for (int j_record = i_record + n_record; j_record < int(vert.record.size()); j_record += n_record) { \
             int ref_level = vert.record[i_record]; \
-            Con_dir<Deformed_element> dir({ int(vert.record[i_record + 2]/2),  int(vert.record[j_record + 2]/2)}, \
-                                          {bool(vert.record[i_record + 2]%2), bool(vert.record[j_record + 2]%2)}); \
+            Connection_direction dir{{ int(vert.record[i_record + 2]/2),  int(vert.record[j_record + 2]/2)}, \
+                                     {bool(vert.record[i_record + 2]%2), bool(vert.record[j_record + 2]%2)}}; \
             /* only connect elements that are suitably positioned. */ \
             /* This prevents incorrect connections at places like a 3D corner where there are many (incorrect) candidates available */ \
             if (aligned(dir, {vert.record[i_record + 3]/2, vert.record[j_record + 3]/2})) { \
@@ -1936,7 +1917,7 @@ void Accessible_mesh::connect_new(int start_at) {
       if (!neighbor->elem) return;
       is_def = is_def && neighbor->elem->get_is_deformed();
     }
-    Con_dir<Deformed_element> dir {{i_dim, i_dim}, {!sign, bool(sign)}};
+    Connection_direction dir {{i_dim, i_dim}, {!sign, bool(sign)}};
     std::vector<Element*> fine;
     for (Tree* neighbor : neighbors) fine.push_back(neighbor->elem.get());
     _connect(&elem, fine, dir);
@@ -1970,7 +1951,7 @@ void Accessible_mesh::connect_new(int start_at) {
                     std::array<Element*, 2> el_ar;
                     el_ar[!sign] = &elem;
                     el_ar[sign] = &other;
-                    _connect(el_ar, Con_dir<Element>{i_dim});
+                    _connect(el_ar, Connection_direction{{i_dim, i_dim}, {1, 0}});
                   }
                 } else {
                   // if neighbor is coarser, form a hanging node connection
@@ -2326,9 +2307,6 @@ void Accessible_mesh::deform() {
 
 void Accessible_mesh::purge() {
   if (tree) {
-    // delete legacy connections to old elements (has to happen before deleting elements or else use after free)
-    car.purge_connections();
-    def.purge_connections();
     // delete old elements
     car.elems.purge();
     def.elems.purge();
@@ -2562,10 +2540,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   _n_verts = _blocks.verts().size();
   _stopwatch["update"].work_units_completed += 1;
   Int n_after = elems.size();
-  for (auto& con : car.cons) {
-    HEXED_ASSERT(!con->element(0).deformed() || !con->element(1).deformed(),
-                 "cartesian connection between deformed elements")
-  }
   return n_after - n_before;
 }
 
@@ -2766,7 +2740,7 @@ void Accessible_mesh::write(std::string name) {
     elem.record = i_elem;
   }
   // write conformal connections
-  dims[0] = car.cons.size() + def.cons.size();
+  dims[0] = _neighbor_cons[0].size() + _neighbor_cons[1].size();
   dims[1] = 6;
   file.createGroup("/connections");
   auto con_dset = file.createDataSet("/connections/conformal", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
@@ -2782,8 +2756,8 @@ void Accessible_mesh::write(std::string name) {
       } \
       h5_write_row(con_dset, 6, start + i_con, data); \
     }
-  WRITE_CONS(0, car.cons);
-  WRITE_CONS(car.cons.size(), def.cons);
+  //WRITE_CONS(0, car.cons);
+  //WRITE_CONS(car.cons.size(), def.cons);
   #undef WRITE_CONS
   #if 0
   // write refined connections
@@ -2802,7 +2776,7 @@ void Accessible_mesh::write(std::string name) {
       } \
       for (int i_fine = con.n_fine_elements(); i_fine < 4; ++i_fine) data[1 + i_fine] = -1; \
       for (int i_dim : {0, 1}) data[5 + i_dim] = con.stretch()[i_dim]; \
-      Con_dir<Deformed_element> dir = con.direction(); \
+      Connection_direction dir = con.direction(); \
       for (int i_side = 0; i_side < 2; ++i_side) { \
         data[7 + i_side] = dir.i_dim[i_side]; \
         data[9 + i_side] = dir.face_sign[i_side]; \
@@ -2948,7 +2922,7 @@ void Accessible_mesh::read_file(std::string file_name) {
       fine[i_fine] = elem_ptrs[data[1 + i_fine]];
       is_def = is_def && fine[i_fine]->get_is_deformed();
     }
-    Con_dir<Deformed_element> dir {{data[7], data[8]}, {bool(data[9]), bool(data[10])}};
+    Connection_direction dir {{data[7], data[8]}, {bool(data[9]), bool(data[10])}};
     _connect(coarse, fine, dir, stretch);
   }
   // read boundary connections

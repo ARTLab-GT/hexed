@@ -56,23 +56,5 @@ struct Kernel_face_refinement {
   int split_dim;
 };
 
-class Connection {
-  public:
-  virtual Connection_direction get_direction() const = 0;
-};
-
-//! \brief Represents a connection between elements as the kernel sees it.
-//! \details Similar idea to `Kernel_element`.
-class Kernel_connection : virtual public Connection {
-  public:
-  //! \brief state data for one side and for either the extrapolated state or the LDG storage
-  //! \details layout: [i_var][i_face_qpoint]
-  virtual double* state(int i_side, bool is_ldg) = 0;
-  virtual double* normal() = 0; //!< \brief face normal vector \details `nullptr` for Cartesian
-  virtual int mask(int i_side) = 0; //!< \brief whether the element on side `i_side` is included in mesh masking
-  int mask() {return std::max(mask(0), mask(1));}
-  virtual double nominal_area() const = 0;
-};
-
 }
 #endif
