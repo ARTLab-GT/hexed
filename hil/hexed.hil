@@ -161,7 +161,7 @@ set_aerothermo = {
 }
 
 set_geometry_refinement = {
-    refine_if = {((uncertainty > geometry_uncertainty) & ref_level < max_ref_level & nom_sz > min_elem_size)}
+    refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level < max_ref_level & nom_sz > min_elem_size)}
     unrefine_if = {ref_level > init_ref_level & !is_extruded}
     hexed_min_sz = (mesh_extreme01 - mesh_extreme00)*2.^-max_ref_level
     case0 = {}
@@ -178,7 +178,8 @@ plot_history = {shell({python3 -c "from hexedpy.utils import History_plot;Histor
 row_size = 6
 init_ref_level = 3
 max_ref_level = 1000
-geometry_uncertainty = 1e-5
+geom_rtol = 1e-5
+geom_atol = 0.
 viscosity_model = {}
 conductivity_model = {}
 turbulence_model = {}
@@ -407,6 +408,7 @@ mesh_init = false
 mesh = {
     println {meshing...}
     flow_time = 0
+    geom_length = 0.
     init_refinement
     add_geom
     i_refinement = 0
@@ -417,6 +419,19 @@ mesh = {
         keep_refining = keep_refining & refine
         i_refinement = i_refinement + 1
         flow_time = flow_time + 1
+        bounds_surface_vars = {
+            position0 = pos0
+            position1 = pos1
+            position2 = pos2
+        }
+        bounds_surface
+        geom_bbox00 = min_surface_position0
+        geom_bbox01 = max_surface_position0
+        geom_bbox10 = min_surface_position1
+        geom_bbox11 = max_surface_position1
+        geom_bbox20 = min_surface_position2
+        geom_bbox21 = max_surface_position2
+        geom_length = sqrt((geom_bbox01 - geom_bbox00)^2 + (geom_bbox11 - geom_bbox10)^2 + (geom_bbox21 - geom_bbox20)^2)
         println {done}
     }
     $loop
@@ -425,19 +440,12 @@ mesh = {
     do = {split_layers; i_split = i_split + 1}
     $loop
     mesh_init = true
-    bounds_surface_vars = {
-        position0 = pos0
-        position1 = pos1
-        position2 = pos2
-    }
-    bounds_surface
     print({geometry bounding box:
-    } + min_surface_position0 + { } + max_surface_position0 + {
-    } + min_surface_position1 + { } + max_surface_position1 + {
-    } + min_surface_position2 + { } + max_surface_position2 + {
+    } + geom_bbox00 + { } + geom_bbox01 + {
+    } + geom_bbox10 + { } + geom_bbox11 + {
+    } + geom_bbox20 + { } + geom_bbox21 + {
     flow_time = 0
 })
-    geom_length = sqrt((max_surface_position0 - min_surface_position0)^2 + (max_surface_position1 - min_surface_position1)^2 + (max_surface_position2 - min_surface_position2)^2)
     println({geometry length: } + geom_length)
     case0 = {}
     case1 = {
