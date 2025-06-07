@@ -1,5 +1,4 @@
 #include <hexed/Neighbor_connection.hpp>
-#include <hexed/Printer.hpp>
 
 namespace hexed {
 
@@ -10,7 +9,6 @@ Neighbor_connection::Neighbor_connection(Storage_params params, std::array<Face*
   HEXED_ASSERT(faces[0] && faces[1], "null pointers not accepted");
   faces[0]->connect(_faces[0]);
   faces[1]->connect(_faces[1]);
-  if (rotate) printers::warn("rotated connection\n", true);
   _is_def = _faces[0]->is_deformed() && _faces[1]->is_deformed();
 }
 

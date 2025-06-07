@@ -2551,7 +2551,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
     connect_new<Deformed_element>(0);
     ++_stopwatch["update"]["refinement"].work_units_completed;
   }
-  visualize_deformed("default", "before_extrude");
   extrude(true);
   if (surf_geom) {
     connect_rest(surf_bc_sn);
