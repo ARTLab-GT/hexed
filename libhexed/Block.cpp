@@ -147,7 +147,7 @@ Mat<3> Vertex::nominal_position() const {
   Mat<3> p = Mat<3>::Zero();
   int n = 0;
   for (auto elem : _elems.theirs()) if (elem) if (!elem->glued()) {
-    p += elem->nominal_position(_get_index(*elem));
+    p += elem->nominal_position(get_index(*elem));
     ++n;
   }
   if (n) return p/n;
@@ -182,7 +182,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
   for (Element_shape* elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
     if (elem->glued()) continue;
-    int i_this = _get_index(*elem);
+    int i_this = get_index(*elem);
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
       verts(all, i_vert) = elem->vertex(i_vert)._unwarped_point(ignore, ignore_orig, ignore_neighb);
@@ -405,7 +405,7 @@ std::vector<CONST Vertex*> Vertex::neighbors() CONST { \
   for (auto elem : _elems.theirs()) { \
     HEXED_ASSERT(_elems.theirs()[0], "element is null"); \
     int nv = math::pow(2, elem->n_dim()); \
-    int i_this = _get_index(*elem); \
+    int i_this = get_index(*elem); \
     for (int i_vert = 0; i_vert < nv; ++i_vert) { \
       CONST Vertex* vert = &elem->vertex(i_vert); \
       for (int stride = 1; stride < nv; stride *= 2) { \
@@ -491,7 +491,7 @@ Mat<3> Vertex::_unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_ot
   return p;
 }
 
-int Vertex::_get_index(const Element_shape& elem) const {
+int Vertex::get_index(const Element_shape& elem) const {
   int i_this = -1;
   int nv = math::pow(2, elem.n_dim());
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
@@ -515,6 +515,29 @@ Boundary_block::Boundary_block(int n_dim, const Basis& b)
 , _elem(this)
 {}
 
+double Boundary_block::scale_factor() {
+  HEXED_ASSERT(_elem, "`Boundary_block` has no element.")
+  int n_vert = math::pow(2, _elem->n_dim());
+  Mat<3, dyn> verts(3, n_vert);
+  for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
+    verts(all, i_vert) = _elem->vertex(i_vert).point({});
+  }
+  Sequence<Mat<3>> vert_seq {
+    [&](Int i_vert)->Mat<3> {return verts(all, i_vert);},
+    [n_vert]()->Int {return n_vert;},
+  };
+  std::vector<Vertex*> bound_verts = vertices();
+  double worst = huge;
+  for (Vertex* vert : bound_verts) {
+    int i_vert = vert->get_index(*_elem);
+    Mesh_assessment ma(vert_seq, i_vert, i_vert);
+    for (int i_dim = 0; i_dim < _elem->n_dim(); ++i_dim) {
+      worst = std::min(worst, ma.edge_lengths(i_dim)*ma.orthogonality(i_dim));
+    }
+  }
+  return worst;
+}
+
 Mat<3> Edge::_point(const std::vector<int>& coords, Int recursion_depth) const {
   int coord = coords[0];
   if (glued()) {
@@ -529,7 +552,7 @@ Mat<3> Edge::_point(const std::vector<int>& coords, Int recursion_depth) const {
       return pts*basis().prolong(_half)(coord, all).transpose();
     }
   }
-  if (coord ==       0) return _verts[0].value().point({}, recursion_depth + 1);
+  if (coord ==              0) return _verts[0].value().point({}, recursion_depth + 1);
   if (coord == row_size() - 1) return _verts[1].value().point({}, recursion_depth + 1);
   return _interior(coord - 1).vector();
 }
@@ -576,6 +599,10 @@ std::vector<int> Edge::element_coords(std::vector<int> coords) const {
     HEXED_THROW("`n_dim` for an `Edge` must be 2 or 3")
   }
   return coords;
+}
+
+std::vector<Vertex*> Edge::vertices() {
+  return {&vertex(0), &vertex(1)};
 }
 
 void Edge::reset() {
@@ -648,6 +675,16 @@ std::vector<int> Surface_face::element_coords(std::vector<int> coords) const {
   int i_face = element()->boundary_face();
   coords.insert(coords.begin() + i_face/2, i_face%2*(row_size() - 1));
   return coords;
+}
+
+std::vector<Vertex*> Surface_face::vertices() {
+  std::vector<Vertex*> verts;
+  for (int i = 0; i < 2; ++i) {
+    for (int j = 0; j < 2; ++j) {
+      verts.push_back(&edge(i).vertex(j));
+    }
+  }
+  return verts;
 }
 
 void Surface_face::reset() {

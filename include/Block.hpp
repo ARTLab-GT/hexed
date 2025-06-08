@@ -157,6 +157,7 @@ class Vertex : public Block {
    */
   std::vector<Vertex*> neighbors();
   std::vector<const Vertex*> neighbors() const; //!< \overload
+  int get_index(const Element_shape&) const;
 
   /*! \brief Accesses a `double` value used for transmitting shared data between elements.
    * \details There are several cases where elements have some data which needs to match their vertex neighbors.
@@ -220,7 +221,6 @@ class Vertex : public Block {
                                 Vertex* orig_vertex = nullptr, Vertex* ignore = nullptr, bool ignore_orig = false, bool ignore_neighb = false, double extra_tol = 0.);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   Mat<3> _get_pos() const; // fetches `_pos` with atomic reads
-  int _get_index(const Element_shape&) const;
   Mat<3> _pos;
   Mat<3> _orig_pos;
   Mat<3> _step;
@@ -261,6 +261,8 @@ class Boundary_block : public Block {
   inline const Element_shape* element() const {return _elem.get();} //!< \overload
   //! \brief Obtains all the `Element_shape`s whose `point()` depends on `this`
   virtual std::vector<Element_shape*> dependent_elements() = 0;
+  virtual std::vector<Vertex*> vertices() = 0;
+  double scale_factor();
 
   /*! \brief Transforms node coordinates from the space of the `Block` to its `Element_shape`
    * \details That is, `element()->point(elemement_coords(coords))`
@@ -316,6 +318,7 @@ class Edge : public Boundary_block {
   inline const Vertex& vertex(int i_vert) const {return _verts[i_vert].value();} //!< \overload
   std::vector<Element_shape*> dependent_elements() override;
   std::vector<int> element_coords(std::vector<int>) const override;
+  std::vector<Vertex*> vertices() override;
   void reset() override; //!< \brief sets `interior()` to linear interpolation between vertices
 
   /*! \brief Glues the edge to another edge (or half of it).
@@ -371,6 +374,7 @@ class Surface_face : public Boundary_block {
   inline const Edge& edge(int i) const {return _edges[i];}
   std::vector<Element_shape*> dependent_elements() override;
   std::vector<int> element_coords(std::vector<int>) const override;
+  std::vector<Vertex*> vertices() override;
 
   /*! \brief sets `interior()` to minimize the Laplacian.
    * \details Specifically, the Laplacian of each physical coordinate as a function of the reference coordinates

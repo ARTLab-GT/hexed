@@ -41,6 +41,9 @@ TEST_CASE("Block") {
     REQUIRE(edge0.n_dim() == 1);
     REQUIRE(edge0.row_size() == 4);
     REQUIRE(!edge0.alive());
+    REQUIRE(&edge0.vertex(0) == &vert0);
+    REQUIRE(&edge0.vertex(1) == &vert1);
+    REQUIRE_THAT(edge0.vertices(), Catch::Matchers::RangeEquals(std::vector<hexed::next::Vertex*>{&vert0, &vert1}));
     auto test_interp = [&](hexed::next::Edge& edge){
       for (int i = 0; i < 4; ++i) {
         REQ_VEC_EQ(edge.point({i}), hexed::Mat<3>{.1, -.3, .2} + i*hexed::Mat<3>::Constant(.2/3.));
@@ -162,6 +165,7 @@ TEST_CASE("Block") {
     REQUIRE_THAT(face.point({0, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.250, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.point({2, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 1.500, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.625, 1.5}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.vertices(), Catch::Matchers::RangeEquals(std::vector<hexed::next::Vertex*>{&verts[0], &verts[1], &verts[2], &verts[3]}));
     REQUIRE(face.point({1, 2})(0) == Catch::Approx(face.point({2, 2})(0)));
     face.interior()(1)(1)[1] = -5.;
     REQUIRE_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, -5., 1.5}, hexed::math::Approx_equal()));
