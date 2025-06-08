@@ -12,7 +12,6 @@ mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
 max_ref_level = 13
-geometry_uncertainty = 1e-7
 $set_geometry_refinement
 
 {generate geometry with external script}
