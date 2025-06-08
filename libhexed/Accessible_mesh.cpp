@@ -973,10 +973,11 @@ void Accessible_mesh::_fit_surface() {
   #pragma omp parallel for
   for (auto& vert : all_verts) vert.record.clear();
 
-  auto snap_intersections = [this](next::Boundary_block& block) {
+  auto plain_snap = [this](next::Boundary_block& block) {
+    block.reset();
     Array<double> interior {block.interior().reshaped({whatever, 3})};
     const Basis& b = block.basis();
-    bool failed = false;
+    block.snapping_problem = false;
     int i_face = block.element()->boundary_face();
     Array<double> line_points({2, interior.shape()[0], 3});
     int block_nd = block.n_dim();
@@ -991,6 +992,8 @@ void Accessible_mesh::_fit_surface() {
       elem_coords[i_face/2] = b.row_size - 1 - elem_coords[i_face/2];
       line_points(0)(i_point).vector() = block.element()->point(elem_coords);
     }
+    Array<double> interp_coefs({n_point});
+    interp_coefs = 1;
     for (int i_point = 0; i_point < n_point; ++i_point) {
       Mat<3> p0 = line_points(0)(i_point).vector();
       Mat<3> p1 = line_points(1)(i_point).vector();
@@ -998,55 +1001,23 @@ void Accessible_mesh::_fit_surface() {
       double sect = huge;
       for (double s : sects) if (s > 0.) sect = std::min(sect, s);
       if (sect < 2.) {
-        interior(i_point).vector() = p0*(1 - sect) + p1*sect;
+        interp_coefs[i_point] = sect - 1.;
       } else {
-        failed = true;
+        block.snapping_problem = true;
       }
     }
-    return failed;
-  };
-
-  auto check_elems = [this](next::Boundary_block& block) {
-    bool failed = false;
-    for (next::Element_shape* e : block.dependent_elements()) {
-      next::Surface_face* face = e->boundary_face_3d();
-      if (face && face != &block) face->reset();
-      Array<double> points = e->points();
-      int nd = params.n_dim;
-      int n_check_point = math::pow(_basis.row_size + 1, nd);
-      Array<double> check_points({nd, n_check_point});
-      Gauss_lobatto check_basis(_basis.row_size + 1);
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        check_points(i_dim).vector() = math::hypercube_matvec(_basis.interpolate(check_basis.nodes()),
-                                                              points(i_dim).vector());
-      }
-      Array<double> jacobian({nd, nd, n_check_point});
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        for (int j_dim = 0; j_dim < nd; ++j_dim) {
-          jacobian(i_dim)(j_dim).vector() = math::dimension_matvec(check_basis.diff_mat(),
-                                                                   check_points(i_dim).vector(), j_dim);
-        }
-      }
-      for (int i_check_point = 0; i_check_point < n_check_point; ++i_check_point) {
-        Mat<dyn, dyn> point_jac(nd, nd);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          for (int j_dim = 0; j_dim < nd; ++j_dim) {
-            point_jac(i_dim, j_dim) = jacobian(i_dim)(j_dim)[i_check_point];
-          }
-        }
-        if (!(point_jac.determinant() > 0)) failed = true;
+    Mat<dyn, dyn> diff_mat = b.diff_mat()(Eigen::all, Eigen::seqN(1, b.row_size - 2));
+    for (int i_dim = 0; i_dim < block.n_dim(); ++i_dim) {
+      Mat<> deriv = math::dimension_matvec(diff_mat, interp_coefs.vector(), i_dim);
+      double max_deriv = deriv.maxCoeff();
+      if (max_deriv > 1) {
+        block.snapping_problem = true;
+        interp_coefs /= max_deriv;
       }
     }
-    return failed;
-  };
-
-  auto plain_snap = [snap_intersections, check_elems](next::Boundary_block& block) {
-    block.reset();
-    bool failed = snap_intersections(block);
-    if (!failed) failed = check_elems(block);
-    if (failed) {
-      block.reset();
-      block.snapping_problem = true;
+    for (int i_point = 0; i_point < n_point; ++i_point) {
+      double sect = interp_coefs[i_point] + 1.;
+      interior(i_point) = line_points(0)(i_point)*(1 - sect) + line_points(1)(i_point)*sect;
     }
   };
 
@@ -1055,47 +1026,38 @@ void Accessible_mesh::_fit_surface() {
   #pragma omp parallel for
   for (auto& block : boundary_sides) block.snapping_problem = false;
   auto edges_2d = _blocks.edges_2d();
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for (auto& edge : edges_2d) plain_snap(edge);
   auto faces_3d = _blocks.faces_3d();
-  for (auto& face : faces_3d) {
-    for (int i_edge = 0; i_edge < 4; ++i_edge) face.edge(i_edge).reset();
-  }
-  #pragma omp parallel for
+  std::vector<next::Edge*> edges_3d;
   for (auto& face : faces_3d) {
     for (int i_edge = 0; i_edge < 4; ++i_edge) {
-      auto& edge = face.edge(i_edge);
-      if (!edge.glued()) {
-        std::vector<next::Element_shape*> dependent_elems = edge.dependent_elements();
-        std::sort(dependent_elems.begin(), dependent_elems.end(), std::less());
-        std::vector<std::unique_ptr<Lock::Set>> sets;
-        for (next::Element_shape* e : dependent_elems) sets.emplace_back(new Lock::Set(e->lock));
-        bool failed = false;
-        if (edge.snapped_edge >= 0) {
-          HEXED_ASSERT(edge.snapped_edge < edges.size(), "clearly erroneous `snapped_edge` value")
-          auto& geom_edge = edges[edge.snapped_edge];
-          Array<double> interior = edge.interior();
-          for (int i_node = 0; i_node < interior.shape()[0]; ++i_node) {
-            auto node = interior(i_node);
-            auto nearest = geom_edge.nearest_point(node.vector());
-            if (nearest.index >= 0) {
-              node = geom_edge.nodes()(nearest.index);
-            } else {
-              failed = true;
-            }
-          }
-        } else {
-          failed = snap_intersections(edge);
-        }
-        if (!failed) failed = check_elems(edge);
-        if (failed) {
-          if (edge.snapped_edge < 0) {
-            edge.snapping_problem = true;
-            edge.reset();
+      if (!face.edge(i_edge).glued()) edges_3d.push_back(&face.edge(i_edge));
+    }
+  }
+  std::sort(edges_3d.begin(), edges_3d.end(), [](next::Edge* edge0, next::Edge* edge1) {
+    return edge0->element()->nominal_size() > edge1->element()->nominal_size();
+  });
+  for (next::Edge* edge : edges_3d) {
+    if (!edge->glued()) {
+      if (edge->snapped_edge >= 0) {
+        edge->reset();
+        edge->snapping_problem = false;
+        HEXED_ASSERT(edge->snapped_edge < edges.size(), "clearly erroneous `snapped_edge` value")
+        auto& geom_edge = edges[edge->snapped_edge];
+        Array<double> interior = edge->interior();
+        for (int i_node = 0; i_node < interior.shape()[0]; ++i_node) {
+          auto node = interior(i_node);
+          auto nearest = geom_edge.nearest_point(node.vector());
+          if (nearest.index >= 0) {
+            node = geom_edge.nodes()(nearest.index);
           } else {
-            plain_snap(edge);
+            edge->snapping_problem = true;
           }
         }
+        if (edge->snapping_problem) edge->reset();
+      } else {
+        plain_snap(*edge);
       }
     }
   }
