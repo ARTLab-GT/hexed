@@ -362,6 +362,8 @@ void Accessible_mesh::_fit_surface() {
       face.edge(i_edge).snapped_edge = -1;
     }
   }
+  auto edges = surf_geom->edges();
+
   auto find_nearest_vert = [&](Mat<3> point, int i_geom_edge = -1)->next::Vertex* {
     next::Vertex* nearest_vert = nullptr;
     double dist_sq = huge;
@@ -385,10 +387,13 @@ void Accessible_mesh::_fit_surface() {
         }
       }
     }
+    if (nearest_vert && i_geom_edge >= 0) {
+      auto& edge = edges[i_geom_edge];
+      if (edge.arc_length()[edge.n_points() - 1] < .1*nearest_vert->nominal_size()) return nullptr;
+    }
     return nearest_vert;
   };
 
-  auto edges = surf_geom->edges();
   if (params.n_dim == 3) {
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
       auto& geom_edge = edges[i_geom_edge];
@@ -989,8 +994,11 @@ void Accessible_mesh::_fit_surface() {
   }
   if (n_failed) {
     printers::warn("  Warning: ", true);
-    printers::warn(to_string(n_failed) " vertices could not be snapped to their target points.");
-    printers::warn(to_string(n_total_failure) " vertices could not be snapped to the surface at all.\n");
+    printers::warn(to_string(n_failed) + " vertices could not be snapped to their target points.");
+    if (n_total_failure) {
+      printers::warn("  " + to_string(n_total_failure) + " vertices could not be snapped to the surface at all.");
+    }
+    printers::warn("\n");
   }
   #pragma omp parallel for
   for (auto& vert : all_verts) vert.record.clear();
@@ -1017,8 +1025,10 @@ void Accessible_mesh::_fit_surface() {
     Array<double> interp_coefs({n_point});
     interp_coefs = 1;
     for (int i_point = 0; i_point < n_point; ++i_point) {
-      Mat<3> p0 = line_points(0)(i_point).vector();
-      Mat<3> p1 = line_points(1)(i_point).vector();
+      Mat<3> p0;
+      p0 = line_points(0)(i_point).vector();
+      Mat<3> p1;
+      p1 = line_points(1)(i_point).vector();
       auto sects = surf_geom->intersections(resize(p0, params.n_dim), resize(p1, params.n_dim));
       double sect = huge;
       for (double s : sects) if (s > 0.) sect = std::min(sect, s);
