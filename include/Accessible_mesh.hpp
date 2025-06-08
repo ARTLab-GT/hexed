@@ -81,10 +81,10 @@ class Accessible_mesh : public Mesh {
   void create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
   void read_file(std::string file_name);
 
-  void _connect(std::array<std::vector<Element*>, 2> elems, Connection_direction dir);
-  void _connect(std::array<Element*, 2>, Connection_direction);
+  void _connect(std::array<std::vector<Element*>, 2> elems, Connection_direction dir, std::string context);
+  void _connect(std::array<Element*, 2>, Connection_direction, std::string context = "");
   void _connect(Element*, std::vector<Element*>, Connection_direction,
-                std::array<bool, 2> = {false, false});
+                std::array<bool, 2> = {false, false}, std::string context = "");
 
   struct Edge_match {
     Mortal_ptr<next::Edge> edge;

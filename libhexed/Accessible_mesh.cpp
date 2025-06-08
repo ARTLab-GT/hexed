@@ -574,7 +574,7 @@ void Accessible_mesh::_fit_surface() {
           set_vertices(surface);
           surface.active_shape().is_new = false;
           surface.active_shape().for_matching = true;
-          _connect({&inside, &surface}, Connection_direction{{i_dim, i_dim}, {i_sign, !i_sign}});
+          _connect({&inside, &surface}, Connection_direction{{i_dim, i_dim}, {i_sign, !i_sign}}, "inside to surface");
           _extrude_cons[1].emplace_back(&_neighbor_cons[1].back());
           elem.record = 2;
           std::vector<Deformed_element*> matched_elems(6, nullptr);
@@ -600,8 +600,10 @@ void Accessible_mesh::_fit_surface() {
                 set_vertices(match_elem);
                 match_elem.active_shape().is_new = true;
                 match_elem.active_shape().for_matching = true;
-                _connect({&match_elem, &surface}, Connection_direction{{j_dim, j_dim}, {!j_sign, j_sign}});
-                _connect({&match_elem, &inside}, Connection_direction{{i_dim, j_dim}, {!i_sign, j_sign}});
+                _connect({&match_elem, &surface}, Connection_direction{{j_dim, j_dim}, {!j_sign, j_sign}},
+                         "match to surface");
+                _connect({&match_elem, &inside}, Connection_direction{{i_dim, j_dim}, {!i_sign, j_sign}},
+                         "match to inside");
                 _extrude_cons[1].emplace_back(&_neighbor_cons[1].back());
                 matched_elems[2*j_dim + j_sign] = &match_elem;
                 elem.face_record[2*j_dim + j_sign] = sn;
@@ -734,15 +736,15 @@ void Accessible_mesh::_fit_surface() {
       if (replace) {
         for (int i_face = 0; i_face < 2; ++i_face) con.face(i_face).disconnect();
         if (bool(surfaces[0]) == bool(surfaces[1])) {
-          _connect(elem_arr, dir);
+          _connect(elem_arr, dir, "neighbor replacement");
           if (surfaces[0]) {
             HEXED_ASSERT(surfaces[1], "Both faces must identify a surface element or neither.")
-            _connect(surfaces, dir);
+            _connect(surfaces, dir, "neighbor replacement (surface)");
           } else {
             _extrude_cons[2].emplace_back(&_neighbor_cons[1].back());
           }
         } else {
-          _connect(to_connect, dir);
+          _connect(to_connect, dir, "neighbor replacement (refined)");
         }
       }
     }
@@ -775,7 +777,7 @@ void Accessible_mesh::_fit_surface() {
         for (int i_side = 0; i_side < 2; ++i_side) {
           for (Element* elem : old_elems[i_side]) elem->face(dir.i_face(i_side)).disconnect();
         }
-        _connect(new_elems, dir);
+        _connect(new_elems, dir, "hanging replacement");
       }
     }
     for (auto& vert : all_verts) {
@@ -806,7 +808,7 @@ void Accessible_mesh::_fit_surface() {
             center += elem_arr[i_side]->active_shape().vertex(i_vert).unwarped_point()/8;
           }
         }
-        _connect(elem_arr, {dim_arr, sign_arr, rotate});
+        _connect(elem_arr, {dim_arr, sign_arr, rotate}, "matched to matched");
       }
     }
   }
@@ -886,7 +888,7 @@ void Accessible_mesh::_fit_surface() {
       if (i_face >= 0) {
         Element& new_elem = def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
         std::array<Element*, 2> el_arr {&new_elem, &elem};
-        _connect(el_arr, {{i_face/2, i_face/2}, {!(i_face%2), bool(i_face%2)}, 0});
+        _connect(el_arr, {{i_face/2, i_face/2}, {!(i_face%2), bool(i_face%2)}, 0}, "old to new");
         _extrude_cons[0].emplace_back(&_neighbor_cons[1].back());
       }
     }
@@ -902,7 +904,7 @@ void Accessible_mesh::_fit_surface() {
           }
         }
       }
-      if (el_arr[0] && el_arr[1]) _connect(el_arr, con.get_direction());
+      if (el_arr[0] && el_arr[1]) _connect(el_arr, con.get_direction(), "secondary neighbor replacement");
     }
     if (params.n_dim == 3) { // for 2D there will be no face refinements on the surface
       for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
@@ -933,7 +935,7 @@ void Accessible_mesh::_fit_surface() {
           if (has_extrude) {
             HEXED_ASSERT(any_connected == all_connected,
                          "If any of the elements are already connected then they all must be.")
-            if (!any_connected) _connect(new_elems, dir);
+            if (!any_connected) _connect(new_elems, dir, "secondary hanging replacment");
           }
         }
       }
@@ -1363,7 +1365,9 @@ Element& Accessible_mesh::element(int ref_level, bool is_deformed, int serial_n)
   return container(is_deformed).at(ref_level, serial_n);
 }
 
-void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems, Connection_direction dir) {
+void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
+                               Connection_direction dir, std::string context) {
+  context = " [" + context + "]";
   int nd = params.n_dim;
   int nv = params.n_vertices();
   std::vector<Mortal_ptr<Face>> faces;
@@ -1372,7 +1376,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems, Conne
   bool null_elem = false;
   bool same_active = false;
   for (int i_side = 0; i_side < 2; ++i_side) {
-    HEXED_ASSERT(Int(elems[i_side].size()) == nv/2, "wrong number of element pointers")
+    HEXED_ASSERT(Int(elems[i_side].size()) == nv/2, "wrong number of element pointers" + context)
     for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
       if (!elems[i_side][i_elem]) {
         null_elem = true;
@@ -1385,7 +1389,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems, Conne
       if (i_side) if (active_shapes[i_side][i_elem] == active_shapes[0][i_elem]) same_active = true;
     }
   }
-  HEXED_ASSERT(!null_elem, "an element is null")
+  HEXED_ASSERT(!null_elem, "an element is null" + context)
   _face_refs.emplace_back();
   std::vector<int> fvi {face_vertex_inds(nd, dir)};
   Array<int> permute_inds({2, nv/2});
@@ -1430,7 +1434,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems, Conne
       bool is_deformed = face_arr[0]->is_deformed() && face_arr[1]->is_deformed();
       if (!is_deformed) {
         HEXED_ASSERT(dir.i_dim[0] == dir.i_dim[1] && dir.face_sign[0] != dir.face_sign[1] && dir.rotate == 0,
-                     "invalid direction for Cartesian connection")
+                     "invalid direction for Cartesian connection" + context)
         if (!face_arr[0]->sign()) std::swap(face_arr[0], face_arr[1]);
       }
       _neighbor_cons[is_deformed].emplace_back(faces[0]->storage_params(), face_arr, dir.rotate);
@@ -1440,15 +1444,15 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems, Conne
   if (!same_active) next::Element_shape::connect(active_shapes, dir);
 }
 
-void Accessible_mesh::_connect(std::array<Element*, 2> el_ar, Connection_direction direction) {
+void Accessible_mesh::_connect(std::array<Element*, 2> el_ar, Connection_direction direction, std::string context) {
   int n_fine = params.n_vertices()/2;
   std::array<std::vector<Element*>, 2> full_arr {std::vector<Element*>(n_fine, el_ar[0]),
                                                  std::vector<Element*>(n_fine, el_ar[1])};
-  _connect(full_arr, direction);
+  _connect(full_arr, direction, context);
 }
 
 void Accessible_mesh::_connect(Element* coarse, std::vector<Element*> fine,
-                               Connection_direction dir, std::array<bool, 2> stretch) {
+                               Connection_direction dir, std::array<bool, 2> stretch, std::string context) {
   int nv = params.n_vertices()/2;
   std::array<std::vector<Element*>, 2> elems;
   elems[0].resize(nv, coarse);
@@ -1459,7 +1463,7 @@ void Accessible_mesh::_connect(Element* coarse, std::vector<Element*> fine,
       }
     }
   }
-  _connect(elems, dir);
+  _connect(elems, dir, context);
 }
 
 void Accessible_mesh::connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Connection_direction direction,
