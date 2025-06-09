@@ -134,6 +134,7 @@ class Vertex : public Block {
   void force_continue_improve();
   bool check_improve(bool updated_neighbors);
   void init_snap(std::function<Mat<3>(Mat<3>)> get_target);
+  inline int last_improve_iters() const {return _last_improve_iters;}
   void compute_snap();
   struct Snap_result {
     bool done;
@@ -230,6 +231,7 @@ class Vertex : public Block {
   bool _improve_failed;
   bool _improve_done;
   bool _last_step_rejected;
+  int _last_improve_iters;
   Mat<3> _last_grad;
   Reciprocal_list<Vertex, Edge> _edges;
   Reciprocal_list<Vertex, Element_shape> _elems;

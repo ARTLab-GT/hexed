@@ -75,6 +75,7 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , _improve_failed{false}
 , _improve_done{true}
 , _last_step_rejected{false}
+, _last_improve_iters{0}
 , _edges(this)
 , _elems(this)
 , _glued_to(this)
@@ -267,6 +268,7 @@ void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
   _pos = _orig_pos = unwarped_point();
   _orig_dist = (get_target(_orig_pos) - _orig_pos).norm();
+  _last_improve_iters = 0;
 }
 
 void Vertex::compute_gradient() {
@@ -320,6 +322,7 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
   if (_improve_done || _improve_failed) return;
   _step_sz /= 3;
+  ++_last_improve_iters;
   _pos = _orig_pos + _step_sz*_step;
   Mat<3> target = get_target(_pos);
   Mat<3> diff = target - _pos;

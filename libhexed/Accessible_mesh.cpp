@@ -1244,6 +1244,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     }
     visualize_deformed("default", "elem_mesh" + to_string(i_relax), (double)i_relax);
     #endif
+    double total_iters = 0;
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
       #pragma omp parallel for
@@ -1312,8 +1313,11 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     objective = 0;
     {
       Stopwatch_tree::Starter sw_assess(_stopwatch["update"]["fit surface"]["optimization"]["assessment"]);
-      #pragma omp parallel for reduction(+:objective)
-      for (auto& vert : verts) objective += vert.quality_objective();
+      #pragma omp parallel for reduction(+:objective,total_iters)
+      for (auto& vert : verts) {
+        objective += vert.quality_objective();
+        total_iters += vert.last_improve_iters();
+      }
       _stopwatch["update"]["fit surface"]["optimization"]["assessment"].work_units_completed += verts.size();
     }
     obj_monitor.add_sample(i_relax, objective - starting_objective);
@@ -1325,7 +1329,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       " Objective = %.18e (%+.5e);"
       " Number of vertex snaps failed = %li;"
       " Total distance from surface = %.5e;"
-      , i_relax, objective, objective - starting_objective, snaps_failed, total_dist
+      " Average backtracking iterations = %.3e;"
+      , i_relax, objective, objective - starting_objective, snaps_failed, total_dist, total_iters/mobile_verts.size()
     );
     if (watch.time() > last_time) {
       last_time += .1;
