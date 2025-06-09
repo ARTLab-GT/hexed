@@ -444,7 +444,7 @@ void Accessible_mesh::_fit_surface() {
         }
       };
       if (!_dijkstra(start_end, cost, snap)) {
-        printers::warn("Warning: ", true);
+        printers::warn("  Warning: ", true);
         printers::warn("Skipping an edge because Dijkstra's algorithm failed.\n");
       }
     }
