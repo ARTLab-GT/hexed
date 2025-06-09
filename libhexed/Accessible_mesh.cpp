@@ -449,32 +449,41 @@ void Accessible_mesh::_fit_surface() {
       }
     }
     // deal with edge endpoints that aren't shared with other edges
-    bool dijkstra_failed = false;
     for (auto& vert : verts) {
-      int n_snapped_edges = 0;
-      next::Edge* snapped_edge = nullptr;
-      for (auto& edge : vert.edges()) if (!edge.glued()) {
-        if (edge.snapped_edge >= 0) {
-          ++n_snapped_edges;
-          snapped_edge = &edge;
+      next::Vertex* v = &vert;
+      while (true) {
+        int n_snapped_edges = 0;
+        next::Edge* snapped_edge = nullptr;
+        for (auto& edge : v->edges()) if (!edge.glued()) {
+          if (edge.snapped_edge >= 0) {
+            ++n_snapped_edges;
+            snapped_edge = &edge;
+          }
         }
-      }
-      if (n_snapped_edges == 1) {
-        next::Vertex* end_vert = nullptr;
-        for (int i_vert = 0; i_vert < 2; ++i_vert) {
-          if (&snapped_edge->vertex(i_vert) != &vert) end_vert = &snapped_edge->vertex(i_vert);
+        if (n_snapped_edges == 1) {
+          next::Vertex* end_vert = nullptr;
+          for (int i_vert = 0; i_vert < 2; ++i_vert) {
+            if (&snapped_edge->vertex(i_vert) != v) end_vert = &snapped_edge->vertex(i_vert);
+          }
+          HEXED_ASSERT(end_vert, "Opposite vertex not found.")
+          HEXED_ASSERT(!end_vert->glued(), "Opposite vertex is glued.")
+          auto cost = [this, &snapped_edge](next::Vertex&, next::Vertex&, next::Edge& edge) {
+            return &edge == snapped_edge ? huge : 1.;
+          };
+          auto snap = [this](next::Vertex& arg) {
+            if (arg.snapped_edge == -1) arg.snapped_edge = -2;
+            if (arg.dijkstra_prev_edge->snapped_edge == -1) arg.dijkstra_prev_edge->snapped_edge = -2;
+          };
+          if (!_dijkstra({v, end_vert}, cost, snap)) {
+            v->snapped_edge = v->snapped_endpoint = snapped_edge->snapped_edge = -1;
+            v = end_vert;
+            printers::warn("  Retreating from dead end vertex (diagnostic info for developers).\n", true);
+          } else {
+            break;
+          }
+        } else {
+          break;
         }
-        HEXED_ASSERT(end_vert, "Opposite vertex not found.")
-        HEXED_ASSERT(!end_vert->glued(), "Opposite vertex is glued.")
-        auto cost = [this, &snapped_edge](next::Vertex& vert, next::Vertex& curr_vert, next::Edge& edge) {
-          return &edge == snapped_edge ? huge : 1.;
-        };
-        auto snap = [this](next::Vertex& vert) {
-          if (vert.snapped_edge == -1) vert.snapped_edge = -2;
-          if (vert.dijkstra_prev_edge->snapped_edge == -1) vert.dijkstra_prev_edge->snapped_edge = -2;
-        };
-        bool failed = !_dijkstra({&vert, end_vert}, cost, snap);
-        dijkstra_failed = dijkstra_failed || failed;
       }
     }
     auto vis = Visualizer::create("default", 3, 1, "edge_match", {"snapped_edge", "vert_snapped_edge"}, 0., Visualizer::block);
@@ -495,7 +504,6 @@ void Accessible_mesh::_fit_surface() {
         vis->write_block(pos(), data());
       }
     }
-    HEXED_ASSERT(!dijkstra_failed, "Dijkstra's algorithm failed when correcting a dead-end edge.")
   } else if (params.n_dim == 2) {
     auto points = surf_geom->points();
     for (int i_point = 0; i_point < points.size(); ++i_point) {
