@@ -1049,10 +1049,10 @@ void Accessible_mesh::_fit_surface() {
       }
     }
     Mat<dyn, dyn> diff_mat = b.diff_mat()(Eigen::all, Eigen::seqN(1, b.row_size - 2));
-    double scale = block.scale_factor()/block.element()->nominal_size();
+    double scale = .5 + .1*block.element()->nominal_size()/block.scale_factor();
     for (int i_dim = 0; i_dim < block.n_dim(); ++i_dim) {
       Mat<> deriv = math::dimension_matvec(diff_mat, interp_coefs.vector(), i_dim);
-      double max_deriv = deriv.maxCoeff()/scale;
+      double max_deriv = deriv.maxCoeff()*scale;
       if (max_deriv > 1) {
         block.snapping_problem = true;
         interp_coefs /= max_deriv;
@@ -1107,7 +1107,7 @@ void Accessible_mesh::_fit_surface() {
           deriv(i_dim).vector() = diff_mat*interior.column(i_dim).vector();
         }
         double max_deriv = std::sqrt((deriv(0)*deriv(0) + deriv(1)*deriv(1) + deriv(2)*deriv(2)).extreme(1));
-        max_deriv /= edge->scale_factor();
+        max_deriv *= .5*edge->element()->nominal_size() + .1*edge->scale_factor();
         if (max_deriv > 1) {
           edge->snapping_problem = true;
           interior = orig_interior + (interior - orig_interior)/max_deriv;
