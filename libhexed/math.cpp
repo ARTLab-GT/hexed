@@ -183,4 +183,14 @@ std::vector<double> correct_values(std::vector<double> estimates, std::vector<do
   return estimates;
 }
 
+Objective_finite_diff::Objective_finite_diff(std::function<Objective_sample(Mat<>)> fun, Mat<> at, double diff,
+                                             double min_ratio) {
+  feasible = false;
+  objective = 0;
+  gradient.setZero();
+  hessian.setZero();
+  critical = at;
+  crit_type = not_found;
+}
+
 }

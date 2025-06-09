@@ -276,15 +276,45 @@ double chebyshev_step(int n_steps, int i_step, double safety = .9);
 
 /*! \details Suppose that you compute some values, `estimates`, with a method that is very robust but has low accuracy.
  * Suppose you also recompute these values as `exacts`
- * with a method that is very accurate but not robust---It may give you extraneous values and/or fail to produce some of the correct values.
- * The purpose of this function is to filter out the implausible values from `exacts` and give you only the ones that appear to be correct.
+ * with a method that is very accurate but not robust---It may give you extraneous values
+ * and/or fail to produce some of the correct values.
+ * The purpose of this function is to filter out the implausible values from `exacts`
+ * and give you only the ones that appear to be correct.
  * The return value will have the same number of values as `estimates`,
  * but some of them will be replaced with values from `exacts` in a way that obtains the best possible agreement.
- * Replacements will be considered only if the difference between the "exact" value and the "estimate" is less than `tol`.
+ * Replacements will be considered only if the difference between the "exact" value and the "estimate"
+ * is less than `tol`.
  * The order of `exacts` does not matter.
  * Values will be returned in the same order as `estimates`.
  */
 std::vector<double> correct_values(std::vector<double> estimates, std::vector<double> exacts, double tol = huge);
+
+//! \brief Estimates the derivatives of an optimization objective function by finite difference.
+struct Objective_finite_diff {
+  public:
+  struct Objective_sample {double objective; bool feasible;};
+  enum Critical_type {minimum, maximum, saddle, not_found};
+  //! \brief Estimates derivatives of `objective_fun` at the point `at` with a finite difference of `finite_diff`.
+  //! \details `objective_fun` should take vectors of the same size as `at` and return an `Objective_sample`
+  //! indicating the values of the objective function and also whether the argument is a feasible point.
+  //! If `Objective_sample::feasible` is `false`, then `Objective_sample::objective` will not be evaluated,
+  //! so it can be safely set to any value you choose.
+  //! All sample points `p` will satisfy `std::abs(p(i) - at(i)) <= finite_diff` for all valid indices `i`.
+  //! If any of the sampled points are not feasible,
+  //! the finite difference will be reduced and another attempt will be made.
+  //! If the finite difference is reduced by a factor exceeding `min_diff_ratio`,
+  //! it will give up and declare the point infeasible.
+  Objective_finite_diff(std::function<Objective_sample(Mat<>)> objective_fun, Mat<> at, double finite_diff,
+                        double min_diff_ratio = 1e-8);
+  bool feasible; //!< \brief is `at` a feasible point?
+  double objective; //!< \brief objective at point `at`
+  Mat<> gradient; //!< \brief gradient at point `at`
+  Mat<dyn, dyn> hessian; //!< \brief Hessian matrix at point `at`
+  //! \brief Estimated point where gradient will be zero (based on current gradient and hessian).
+  //! \details If `crit_type` is `not_found`, then the Hessian is singular and this value is unspecified.
+  Mat<> critical;
+  Critical_type crit_type; //!< \brief Type of critical point that `critical` is.
+};
 
 }
 #endif
