@@ -158,5 +158,7 @@ TEST_CASE("Array") {
     auto arr1 = hexed::Array<int>::make(2, -1, 3);
     REQUIRE_THAT(arr0.extreme(0, arr1), Catch::Matchers::RangeEquals(std::vector<int>{1, -2, 3}));
     REQUIRE_THAT(arr0.extreme(1, arr1), Catch::Matchers::RangeEquals(std::vector<int>{2, -1, 4}));
+    REQUIRE(arr0.extreme(0) == -2);
+    REQUIRE(arr0.extreme(1) == 4);
   }
 }

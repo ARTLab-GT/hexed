@@ -355,7 +355,6 @@ class Array {
     return (i + 1 - index)*(*this)[i] + (index - i)*(*this)[i + 1];
   }
 
-
   QUALIFIED()
   QUALIFIED(const)
   #undef QUALIFIED
@@ -390,10 +389,20 @@ class Array {
   DEFINE_OPERATOR(%=)
   #undef DEFINE_OPERATOR
 
+  //! \brief Entrywise extreme (min or max) of `this` and `that`.
+  //! \details Computes maximum if `minmax` is `true`, otherwise minimum.
   Array extreme(bool minmax, Array that) {
     HEXED_ARRAY_ASSERT(that.size() == size(), "array sizes must match")
     Array result(shape());
     for (Int i = 0; i < size(); ++i) result[i] = math::extreme(minmax, _data[i], that[i]);
+    return result;
+  }
+
+  //! \brief Extremal (minimum or maximum) entry of this array.
+  //! \details Computes maximum if `minmax` is `true`, otherwise minimum.
+  T extreme(bool minmax) {
+    T result = minmax ? std::numeric_limits<T>::lowest() : std::numeric_limits<T>::max();
+    for (Int i = 0; i < size(); ++i) result = math::extreme(minmax, result, _data[i]);
     return result;
   }
 
