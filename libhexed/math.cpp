@@ -185,12 +185,64 @@ std::vector<double> correct_values(std::vector<double> estimates, std::vector<do
 
 Objective_finite_diff::Objective_finite_diff(std::function<Objective_sample(Mat<>)> fun, Mat<> at, double diff,
                                              double min_ratio) {
-  feasible = false;
+  Int n_var = at.size();
+  Int n_sample = math::pow(3, n_var);
   objective = 0;
-  gradient.setZero();
-  hessian.setZero();
+  gradient = Mat<>::Zero(n_var);
+  hessian = Mat<dyn, dyn>::Zero(n_var, n_var);
   critical = at;
   crit_type = not_found;
+  Objective_sample sample_at = fun(at);
+  feasible = sample_at.feasible;
+  bool all_feasible = true;
+  if (feasible) {
+    objective = sample_at.objective;
+    Mat<dyn, dyn> vandermonde(n_sample, n_sample);
+    for (Int i_sample = 0; i_sample < n_sample; ++i_sample) {
+      for (Int j_sample = 0; j_sample < n_sample; ++j_sample) {
+        int entry = 1;
+        for (Int i_var = 0; i_var < n_var; ++i_var) {
+          int coord = row_coordinate(n_var, 3, i_var, i_sample) - 1;
+          entry *= pow(coord, row_coordinate(n_var, 3, i_var, j_sample));
+        }
+        vandermonde(i_sample, j_sample) = entry;
+      }
+    }
+    auto decomp = vandermonde.partialPivLu();
+    double ratio = 1;
+    Mat<> sample(n_sample);
+    for (Int i_sample = 0; i_sample < n_sample; ++i_sample) {
+      Mat<> point(n_var);
+      bool orig_sample = true;
+      for (Int i_var = 0; i_var < n_var; ++i_var) {
+        Int coord = row_coordinate(n_var, 3, i_var, i_sample);
+        orig_sample = orig_sample && coord == 1;
+        point(i_var) = at(i_var) + (coord - 1)*diff*ratio;
+      }
+      if (orig_sample) {
+        sample(i_sample) = objective;
+      } else {
+        Objective_sample s = fun(point);
+        sample(i_sample) = s.objective;
+        all_feasible = all_feasible && s.feasible;
+      }
+    }
+    Mat<> coefs = decomp.solve(sample);
+    if (n_var <= 2) {
+      std::cout << to_string(vandermonde) << std::endl;
+      std::cout << to_string(sample) << std::endl;
+      std::cout << to_string(coefs) << std::endl;
+    }
+    double scale = 1./diff*ratio;
+    for (Int i_var = 0; i_var < n_var; ++i_var) {
+      Int s = stride(n_var, 3, i_var);
+      gradient(i_var) = coefs(s)*scale;
+      for (Int j_var = 0; j_var < n_var; ++j_var) {
+        hessian(i_var, j_var) = (1 + (i_var == j_var))*coefs(s + stride(n_var, 3, j_var))*scale*scale;
+      }
+    }
+  }
+  HEXED_ASSERT(all_feasible, "Recovery from infeasible samples is not implemented.", assert::Not_implemented_error)
 }
 
 }

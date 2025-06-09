@@ -276,8 +276,8 @@ TEST_CASE("Objective_finite_diff") {
     REQUIRE(obj.hessian.rows() == 1);
     REQUIRE(obj.hessian.cols() == 1);
     REQUIRE(obj.critical.size() == 1);
-    REQUIRE(obj.gradient(0) == Catch::Approx(2*-4. + 2*-.4*-.3));
-    REQUIRE(obj.hessian(0, 0) == -2);
+    REQUIRE(obj.gradient(0) == Catch::Approx(-2*-4. - 2*-.3));
+    REQUIRE(obj.hessian(0, 0) == Catch::Approx(-2));
     REQUIRE(obj.critical(0) == Catch::Approx(.3));
     REQUIRE(obj.crit_type == hexed::math::Objective_finite_diff::maximum);
   }

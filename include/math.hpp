@@ -297,8 +297,8 @@ struct Objective_finite_diff {
   //! \brief Estimates derivatives of `objective_fun` at the point `at` with a finite difference of `finite_diff`.
   //! \details `objective_fun` should take vectors of the same size as `at` and return an `Objective_sample`
   //! indicating the values of the objective function and also whether the argument is a feasible point.
-  //! If `Objective_sample::feasible` is `false`, then `Objective_sample::objective` will not be evaluated,
-  //! so it can be safely set to any value you choose.
+  //! If `Objective_sample::feasible` is `false`, then `Objective_sample::objective` is irrelevant
+  //! and may be set to any value you choose.
   //! All sample points `p` will satisfy `std::abs(p(i) - at(i)) <= finite_diff` for all valid indices `i`.
   //! If any of the sampled points are not feasible,
   //! the finite difference will be reduced and another attempt will be made.
@@ -307,7 +307,7 @@ struct Objective_finite_diff {
   Objective_finite_diff(std::function<Objective_sample(Mat<>)> objective_fun, Mat<> at, double finite_diff,
                         double min_diff_ratio = 1e-8);
   bool feasible; //!< \brief is `at` a feasible point?
-  double objective; //!< \brief objective at point `at`
+  double objective; //!< \brief if `feasible`, then the objective at point `at`, otherwise unspecified
   Mat<> gradient; //!< \brief gradient at point `at`
   Mat<dyn, dyn> hessian; //!< \brief Hessian matrix at point `at`
   //! \brief Estimated point where gradient will be zero (based on current gradient and hessian).
