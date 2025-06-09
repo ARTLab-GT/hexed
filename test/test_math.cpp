@@ -275,29 +275,23 @@ TEST_CASE("Objective_finite_diff") {
     REQUIRE(obj.gradient.size() == 1);
     REQUIRE(obj.hessian.rows() == 1);
     REQUIRE(obj.hessian.cols() == 1);
-    REQUIRE(obj.critical.size() == 1);
     REQUIRE(obj.gradient(0) == Catch::Approx(-2*-4. - 2*-.3));
     REQUIRE(obj.hessian(0, 0) == Catch::Approx(-2));
-    REQUIRE(obj.critical(0) == Catch::Approx(.3));
-    REQUIRE(obj.crit_type == hexed::math::Objective_finite_diff::maximum);
   }
   SECTION("2 variables") {
     auto fun = [](hexed::Mat<> point)->hexed::math::Objective_finite_diff::Objective_sample {
       return {hexed::math::pow(.2*(point(0) - .6) + (point(1) + .7), 2)
               + hexed::math::pow(-.1*(point(0) - .6) + .9*(point(1) + .7), 2) - 4.3,
-              true};
+              point(0) > .1 - 1e-4};
     };
     hexed::math::Objective_finite_diff obj(fun, hexed::Mat<2>{.1, .3}, 1e-3);
     REQUIRE(obj.feasible);
     REQUIRE(obj.gradient.size() == 2);
     REQUIRE(obj.hessian.rows() == 2);
     REQUIRE(obj.hessian.cols() == 2);
-    REQUIRE(obj.critical.size() == 2);
     REQUIRE((obj.gradient - hexed::Mat<2>{2*(.2*.2*.1 + .2*(.3 + .7 - .2*.6) + .1*.1*.1 - .1*(.9*(.3 + .7) + .1*.6)),
                                           2*(.3 + .2*(.1 - .6) + .7 + .9*.9*.3 + .9*(-.1*(.1 - .6) + .9*.7))}).norm()
              < 1e-6);
-    REQUIRE((obj.critical - hexed::Mat<2>{.6, -.7}).norm() < 1e-6);
-    REQUIRE(obj.crit_type == hexed::math::Objective_finite_diff::minimum);
   }
   SECTION("3 variables") {
     auto fun = [](hexed::Mat<> point)->hexed::math::Objective_finite_diff::Objective_sample {
@@ -308,15 +302,19 @@ TEST_CASE("Objective_finite_diff") {
     REQUIRE(obj.gradient.size() == 3);
     REQUIRE(obj.hessian.rows() == 3);
     REQUIRE(obj.hessian.cols() == 3);
-    REQUIRE(obj.critical.size() == 3);
     REQUIRE((obj.gradient - hexed::Mat<3>{.8, -1., .4}).norm() < 1e-6);
-    hexed::Mat<hexed::dyn, hexed::dyn> correct_hessian;
+    hexed::Mat<hexed::dyn, hexed::dyn> correct_hessian(3, 3);
     correct_hessian <<
       2.,  0., 0.,
       0., -2., 0.,
       0.,  0., 2.;
     REQUIRE((obj.hessian - correct_hessian).norm() < 1e-6);
-    REQUIRE((obj.critical - hexed::Mat<3>::Zero()).norm() < 1e-6);
-    REQUIRE(obj.crit_type == hexed::math::Objective_finite_diff::saddle);
+  }
+  SECTION("infeasible") {
+    auto fun = [](hexed::Mat<> point)->hexed::math::Objective_finite_diff::Objective_sample {
+      return {0., false};
+    };
+    hexed::math::Objective_finite_diff obj(fun, hexed::Mat<1>{-4.}, 1e-3);
+    REQUIRE(!obj.feasible);
   }
 }

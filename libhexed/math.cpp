@@ -190,11 +190,8 @@ Objective_finite_diff::Objective_finite_diff(std::function<Objective_sample(Mat<
   objective = 0;
   gradient = Mat<>::Zero(n_var);
   hessian = Mat<dyn, dyn>::Zero(n_var, n_var);
-  critical = at;
-  crit_type = not_found;
   Objective_sample sample_at = fun(at);
   feasible = sample_at.feasible;
-  bool all_feasible = true;
   if (feasible) {
     objective = sample_at.objective;
     Mat<dyn, dyn> vandermonde(n_sample, n_sample);
@@ -211,38 +208,39 @@ Objective_finite_diff::Objective_finite_diff(std::function<Objective_sample(Mat<
     auto decomp = vandermonde.partialPivLu();
     double ratio = 1;
     Mat<> sample(n_sample);
-    for (Int i_sample = 0; i_sample < n_sample; ++i_sample) {
-      Mat<> point(n_var);
-      bool orig_sample = true;
-      for (Int i_var = 0; i_var < n_var; ++i_var) {
-        Int coord = row_coordinate(n_var, 3, i_var, i_sample);
-        orig_sample = orig_sample && coord == 1;
-        point(i_var) = at(i_var) + (coord - 1)*diff*ratio;
+    do {
+      feasible = true;
+      for (Int i_sample = 0; i_sample < n_sample; ++i_sample) {
+        Mat<> point(n_var);
+        bool orig_sample = true;
+        for (Int i_var = 0; i_var < n_var; ++i_var) {
+          Int coord = row_coordinate(n_var, 3, i_var, i_sample);
+          orig_sample = orig_sample && coord == 1;
+          point(i_var) = at(i_var) + (coord - 1)*diff*ratio;
+        }
+        if (orig_sample) {
+          sample(i_sample) = objective;
+        } else {
+          Objective_sample s = fun(point);
+          sample(i_sample) = s.objective;
+          feasible = feasible && s.feasible;
+        }
       }
-      if (orig_sample) {
-        sample(i_sample) = objective;
+      if (feasible) {
+        Mat<> coefs = decomp.solve(sample);
+        double scale = 1./(diff*ratio);
+        for (Int i_var = 0; i_var < n_var; ++i_var) {
+          Int s = stride(n_var, 3, i_var);
+          gradient(i_var) = coefs(s)*scale;
+          for (Int j_var = 0; j_var < n_var; ++j_var) {
+            hessian(i_var, j_var) = (1 + (i_var == j_var))*coefs(s + stride(n_var, 3, j_var))*scale*scale;
+          }
+        }
       } else {
-        Objective_sample s = fun(point);
-        sample(i_sample) = s.objective;
-        all_feasible = all_feasible && s.feasible;
+        ratio /= 3;
       }
-    }
-    Mat<> coefs = decomp.solve(sample);
-    if (n_var <= 2) {
-      std::cout << to_string(vandermonde) << std::endl;
-      std::cout << to_string(sample) << std::endl;
-      std::cout << to_string(coefs) << std::endl;
-    }
-    double scale = 1./diff*ratio;
-    for (Int i_var = 0; i_var < n_var; ++i_var) {
-      Int s = stride(n_var, 3, i_var);
-      gradient(i_var) = coefs(s)*scale;
-      for (Int j_var = 0; j_var < n_var; ++j_var) {
-        hessian(i_var, j_var) = (1 + (i_var == j_var))*coefs(s + stride(n_var, 3, j_var))*scale*scale;
-      }
-    }
+    } while (ratio >= min_ratio && !feasible);
   }
-  HEXED_ASSERT(all_feasible, "Recovery from infeasible samples is not implemented.", assert::Not_implemented_error)
 }
 
 }

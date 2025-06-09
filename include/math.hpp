@@ -293,7 +293,6 @@ std::vector<double> correct_values(std::vector<double> estimates, std::vector<do
 struct Objective_finite_diff {
   public:
   struct Objective_sample {double objective; bool feasible;};
-  enum Critical_type {minimum, maximum, saddle, not_found};
   //! \brief Estimates derivatives of `objective_fun` at the point `at` with a finite difference of `finite_diff`.
   //! \details `objective_fun` should take vectors of the same size as `at` and return an `Objective_sample`
   //! indicating the values of the objective function and also whether the argument is a feasible point.
@@ -310,10 +309,6 @@ struct Objective_finite_diff {
   double objective; //!< \brief if `feasible`, then the objective at point `at`, otherwise unspecified
   Mat<> gradient; //!< \brief gradient at point `at`
   Mat<dyn, dyn> hessian; //!< \brief Hessian matrix at point `at`
-  //! \brief Estimated point where gradient will be zero (based on current gradient and hessian).
-  //! \details If `crit_type` is `not_found`, then the Hessian is singular and this value is unspecified.
-  Mat<> critical;
-  Critical_type crit_type; //!< \brief Type of critical point that `critical` is.
 };
 
 }
