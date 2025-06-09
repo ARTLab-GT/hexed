@@ -70,6 +70,7 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , _pos{pos}
 , _orig_pos{Mat<3>::Zero()}
 , _step{Mat<3>::Zero()}
+, _last_obj{0.}
 , _orig_dist{0.}
 , _step_sz{0.}
 , _improve_failed{false}
@@ -281,35 +282,20 @@ void Vertex::compute_gradient() {
                state.worst_ortho, state.worst_edge, _orig_pos(0), _orig_pos(1), _orig_pos(2),
                int(gn)))
   _orig_obj = state.objective;
-  Mat<3> grad_fd;
-  bool feasible_stencil = false;
-  double fd = 1e-5*nominal_size();
-  for (int i = 0; i < 6 && !feasible_stencil; ++i) {
-    grad_fd.setZero();
-    feasible_stencil = true;
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      int fd_step = 0;
-      for (int sign : {-1, 1}) {
-        _pos = _orig_pos;
-        _pos(i_dim) += sign*fd;
-        auto fd_state = _compute_state(true, false, true);
-        if (fd_state.feasible) {
-          grad_fd(i_dim) += sign*fd_state.objective;
-          ++fd_step;
-        } else {
-          grad_fd(i_dim) += sign*state.objective;
-        }
-      }
-      if (fd_step) grad_fd(i_dim) /= fd*fd_step;
-      else feasible_stencil = false;
-    }
-    fd /= 10;
-  }
+  int nd = _elems.theirs()[0]->n_dim();
+  double ns = nominal_size();
+  math::Objective_finite_diff finite_diff([this](Mat<> point)->math::Objective_finite_diff::Objective_sample {
+    _pos = resize(point, 3);
+    auto fd_state = _compute_state(true, false, true);
+    return {fd_state.objective, fd_state.feasible};
+  }, resize(_orig_pos, nd), 1e-5*ns);
   _pos = _orig_pos;
   _step_sz = 1.;
   _improve_done = false;
-  if (feasible_stencil) {
-    _step = -nominal_size()*grad_fd.normalized();
+  if (finite_diff.feasible) {
+    _last_grad = resize(finite_diff.gradient, 3);
+    _step = resize(finite_diff.hessian.colPivHouseholderQr().solve(-finite_diff.gradient), 3);
+    if (!(_step.dot(_last_grad) < 0.)) _step = -.1*ns*_last_grad.normalized();
     _improve_failed = false;
     _last_step_rejected = false;
   } else {
@@ -321,7 +307,6 @@ void Vertex::compute_gradient() {
 void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
   if (_improve_done || _improve_failed) return;
-  _step_sz /= 3;
   ++_last_improve_iters;
   _pos = _orig_pos + _step_sz*_step;
   Mat<3> target = get_target(_pos);
@@ -336,6 +321,7 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
     _improve_failed = true;
     _last_step_rejected = true;
   }
+  _step_sz /= 3;
 }
 
 void Vertex::force_continue_improve() {
@@ -347,6 +333,7 @@ bool Vertex::check_improve(bool updated_neighbors) {
   auto state0 = _compute_state(true, false, true);
   auto state1 = _compute_state(true, false, !updated_neighbors, 1e-8);
   _improve_done = state0.feasible && state1.feasible && state0.objective < _orig_obj;
+  _last_obj = state1.objective;
   return _improve_done || _improve_failed;
 }
 
@@ -371,7 +358,7 @@ void Vertex::compute_snap() {
 Vertex::Snap_result Vertex::check_snap(bool updated_neighbors) {
   auto state = _compute_state(true, false, !updated_neighbors, 1e-8);
   _last_grad = state.gradient.normalized()*0.1*nominal_size();
-  _improve_done = state.feasible && _step_sz*_step.norm() < .02*nominal_size();
+  _improve_done = state.feasible && state.objective < 1.1*_last_obj;
   if (!_improve_done) {
     _step_sz /= 3;
     _last_snap_failed = true;

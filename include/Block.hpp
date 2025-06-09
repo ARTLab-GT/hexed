@@ -226,6 +226,7 @@ class Vertex : public Block {
   Mat<3> _orig_pos;
   Mat<3> _step;
   double _orig_obj;
+  double _last_obj;
   double _orig_dist;
   double _step_sz;
   bool _improve_failed;
