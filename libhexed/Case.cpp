@@ -409,7 +409,6 @@ Case::Case(std::string input_script)
         return sub.variables->get<int>("return");
       });
     }
-    _solver().mesh().set_unref_locks(criteria::if_extruded);
     bool changed = _solver().mesh().update(crits[0], crits[1]);
     _solver().calc_jacobian();
     _visualize("_ref_sweep" + to_string(_vari("i_refinement") + 1));

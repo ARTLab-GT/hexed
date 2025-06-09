@@ -449,6 +449,7 @@ void Accessible_mesh::_fit_surface() {
       }
     }
     // deal with edge endpoints that aren't shared with other edges
+    bool dijkstra_failed = false;
     for (auto& vert : verts) {
       int n_snapped_edges = 0;
       next::Edge* snapped_edge = nullptr;
@@ -472,8 +473,8 @@ void Accessible_mesh::_fit_surface() {
           if (vert.snapped_edge == -1) vert.snapped_edge = -2;
           if (vert.dijkstra_prev_edge->snapped_edge == -1) vert.dijkstra_prev_edge->snapped_edge = -2;
         };
-        HEXED_ASSERT(_dijkstra({&vert, end_vert}, cost, snap),
-                     "Dijkstra's algorithm failed when correcting a dead-end edge.")
+        bool failed = !_dijkstra({&vert, end_vert}, cost, snap);
+        dijkstra_failed = dijkstra_failed || failed;
       }
     }
     auto vis = Visualizer::create("default", 3, 1, "edge_match", {"snapped_edge", "vert_snapped_edge"}, 0., Visualizer::block);
@@ -494,6 +495,7 @@ void Accessible_mesh::_fit_surface() {
         vis->write_block(pos(), data());
       }
     }
+    HEXED_ASSERT(!dijkstra_failed, "Dijkstra's algorithm failed when correcting a dead-end edge.")
   } else if (params.n_dim == 2) {
     auto points = surf_geom->points();
     for (int i_point = 0; i_point < points.size(); ++i_point) {
