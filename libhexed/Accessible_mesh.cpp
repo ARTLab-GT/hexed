@@ -387,10 +387,6 @@ void Accessible_mesh::_fit_surface() {
         }
       }
     }
-    if (nearest_vert && i_geom_edge >= 0) {
-      auto& edge = edges[i_geom_edge];
-      if (edge.arc_length()[edge.n_points() - 1] < .1*nearest_vert->nominal_size()) return nullptr;
-    }
     return nearest_vert;
   };
 
@@ -401,12 +397,14 @@ void Accessible_mesh::_fit_surface() {
       for (int i_endpoint = 0; i_endpoint < 2; ++i_endpoint) {
         Mat<3> endpoint = geom_edge.nodes()(i_endpoint*(geom_edge.nodes().shape()[0] - 1)).vector();
         start_end[i_endpoint] = find_nearest_vert(endpoint, i_geom_edge);
+      }
+      if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
+      for (int i_endpoint = 0; i_endpoint < 2; ++i_endpoint) {
         if (start_end[i_endpoint]) {
           start_end[i_endpoint]->snapped_edge = i_geom_edge;
           start_end[i_endpoint]->snapped_endpoint = i_endpoint;
         }
       }
-      if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
       #pragma omp parallel for
       for (next::Vertex& vert : verts) {
         double d = huge;
@@ -1081,7 +1079,9 @@ void Accessible_mesh::_fit_surface() {
         HEXED_ASSERT(edge->snapped_edge < edges.size(), "clearly erroneous `snapped_edge` value")
         auto& geom_edge = edges[edge->snapped_edge];
         Array<double> interior = edge->interior();
-        for (int i_node = 0; i_node < interior.shape()[0]; ++i_node) {
+        Array<double> orig_interior = interior.copy();
+        int n_node = interior.shape()[0];
+        for (int i_node = 0; i_node < n_node; ++i_node) {
           auto node = interior(i_node);
           auto nearest = geom_edge.nearest_point(node.vector());
           if (nearest.index >= 0) {
@@ -1091,6 +1091,17 @@ void Accessible_mesh::_fit_surface() {
           }
         }
         if (edge->snapping_problem) edge->reset();
+        Mat<dyn, dyn> diff_mat = _basis.diff_mat()(Eigen::all, Eigen::seqN(1, _basis.row_size - 2));
+        Array<double> deriv({3, n_node});
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          deriv(i_dim).vector() = diff_mat*interior.column(i_dim).vector();
+        }
+        double max_deriv = std::sqrt((deriv(0)*deriv(0) + deriv(1)*deriv(1) + deriv(2)*deriv(2)).extreme(1));
+        max_deriv /= edge->scale_factor();
+        if (max_deriv > 1) {
+          edge->snapping_problem = true;
+          interior = orig_interior + (interior - orig_interior)/max_deriv;
+        }
       } else {
         plain_snap(*edge);
       }
