@@ -25,6 +25,10 @@ TEST_CASE("Array") {
   REQUIRE(zero_size.shape().empty());
   REQUIRE(zero_size.size() == 0);
 
+  arr0(1)(1) = {.1, .2, .3, .4};
+  REQUIRE_THAT(arr0(1)(1), Catch::Matchers::RangeEquals(std::vector<double>{.1, .2, .3, .4},
+                                                        hexed::math::Approx_equal()));
+
   // indexing
   auto view = arr0();
   view[1] = 0.6;

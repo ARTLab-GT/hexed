@@ -4,7 +4,6 @@
 #include "Surface_geom.hpp"
 #include "Stopwatch_tree.hpp"
 #include "Tree.hpp"
-#include "Geom_edge.hpp"
 
 namespace hexed {
 
@@ -134,15 +133,12 @@ class Simplex_geom : public Simplex_geom_nd {
 
   void visualize(std::string format, std::string file_name) override;
 
-  void add_edge(Array<double> points) {_geom_edges.emplace_back(points);}
-
   private:
   std::vector<Mat<n_dim, n_dim>> _simplices;
   std::vector<Mat<n_dim - 1, n_dim>> _parameters;
   std::vector<int> _faces;
   Mat<n_dim, 2> _bounding_box;
   Tree _tree;
-  std::vector<Geom_edge> _geom_edges;
   std::vector<Mat<3>> _snap_points;
 
   void merge(Nearest_point<n_dim>& nearest, Mat<n_dim, n_dim> sim, Mat<n_dim> point); // helper for `nearest_point`

@@ -51,11 +51,11 @@ inline std::vector<Int> hypercubes(Int n_var, Int n_dim, Int row_size) {
  * Also, here is an overview of how to manage ownership with this class,
  * although this information is also scattered through the member documentation.
  * - To create a new array that owns its data, use `Array(std::vector<Int>)`.
- * - To create a new array that references data in another array, use `Array(other())`.
+ * - To create a new array that references data in another array `other`, use `Array(other())`.
  * - To create a new array that references existing data that is not in an array, use `Array(std::vector<Int>, T*)`
  * - To create a new array that is a copy of an existing array (allocating new data), use `Array(other.copy())`
- * - To copy data from an existing array to another (of the same size) without allocating or creating references,
- *   use the `=` operator.
+ * - To copy data from an existing array to another existing array (of the same size)
+ *   without allocating or creating references, use the `=` operator.
  *
  * If you want to pass an `Array` as a function argument,
  * you should be able to pass it by value without thinking about it.
@@ -63,6 +63,12 @@ inline std::vector<Int> hypercubes(Int n_var, Int n_dim, Int row_size) {
  * That said, for performance it's better to try to use the move constructor
  * instead of the copy constructor whenever appropriate,
  * because this will avoid unnecessary allocations for arrays that own their data.
+ *
+ * \note I want to emphasize that the copy and move constructors will copy/move the data **if the array owns it**
+ * and only keep a pointer to the data if the array does not own it,
+ * so the ownership status of the new array is the same as the old one.
+ * If you want to explicitly control whether the new array owns data or references existing data,
+ * use `operator()()` or `copy()`.
  *
  * By default, if `DEBUG` is defined,
  * then dynamic bounds checking is performed and out-of-bounds access will result in an exception.
@@ -201,13 +207,20 @@ class Array {
   //! \brief Sets all entries to the specified value.
   template <typename U>
   Array<T>& operator=(const U& value) {
-    for (Int i = 0; i < size(); ++i) _data[i] = value;
+    for (Int i = 0; i < size(); ++i) (*this)[i] = value;
     return *this;
   }
   //! \brief Sets the entries to the first `size()` objects pointed to by `ptr`.
   template <typename U>
   Array<T>& operator=(U* ptr) {
-    for (Int i = 0; i < size(); ++i) _data[i] = ptr[i];
+    for (Int i = 0; i < size(); ++i) (*this)[i] = ptr[i];
+    return *this;
+  }
+  //! \brief Sets the entries to the entries of `list`, which must have the same size as `this`.
+  Array<T>& operator=(std::initializer_list<T> list) {
+    HEXED_ARRAY_ASSERT(list.size() == size(), "Initializer list for entry assignment has wrong size.")
+    const double* d = std::data(list);
+    for (Int i = 0; i < size(); ++i) (*this)[i] = d[i];
     return *this;
   }
   /*! \brief Creates a new array that owns its data, which is a copy of `this`'s data (i.e. new data is allocated).
@@ -264,13 +277,14 @@ class Array {
       HEXED_ARRAY_ASSERT(i < size(), "indexing an `Array` out of bounds with `[]`"); \
       return _data[i*_strides[_order]]; \
     } \
-    /*! \brief Creates an array as a reference to `this`'s data */ \
+    /*! \brief Creates an array as a reference to `this`'s data. */ \
+    /*! \details Obviously, don't do this to a temporary array, or you will create a dangling reference. */ \
     CONST Array<T> operator()() CONST {return {_order, _data, false, _shape, _strides};} \
     /*! \brief Creates an array which is a view of the `i`th "row" of `this`.
        \details Resulting array will have 1 less `order()`
        and shape equal to the shape of `this` but with the first element removed.
        You can think of it as equivalent to the operator `[]` of multidimensional builtin arrays
-       or [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
+       or [NumPy arrays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
        For example, if you have an order 3 array `a` with shape {10, 4, 5}, you can access the element at (5, 2, 3)
        with either `a[113]` (5*4*5 + 2*5 + 3 = 113) or `a(5)(2)[3]`.
      */ \
@@ -341,7 +355,7 @@ class Array {
        If `index` is < 0 or >= `shape()[0]`, the result is linearly extrapolated.
      */ \
     CONST Array interp(double index) CONST { \
-      HEXED_ARRAY_ASSERT(_order > 1, "`_order` must be greater than 1.") \
+      HEXED_ARRAY_ASSERT(_order > 1, "`order` must be greater than 1 (for order 1 use `flat_interp`).") \
       HEXED_ARRAY_ASSERT(_shape[0] >= 2, "Array must have at least 2 rows.") \
       Int i = std::max<Int>(0, std::min<Int>(_shape[0] - 2, floor(index))); \
       return (i + 1 - index)*(*this)(i) + (index - i)*(*this)(i + 1); \
@@ -370,14 +384,14 @@ class Array {
     Array<T>& operator BIN_OP(const Array<T>& that) { \
       HEXED_ARRAY_ASSERT(that.size() == size(), "array sizes must match for arithmetic"); \
       for (Int i = 0; i < size(); ++i) { \
-        _data[i] BIN_OP that[i]; \
+        (*this)[i] BIN_OP that[i]; \
       } \
       return *this; \
     } \
     template <typename Scalar> \
     Array<T>& operator BIN_OP(Scalar s) { \
       for (Int i = 0; i < size(); ++i) { \
-        _data[i] BIN_OP s; \
+        (*this)[i] BIN_OP s; \
       } \
       return *this; \
     } \
@@ -394,7 +408,7 @@ class Array {
   Array extreme(bool minmax, Array that) {
     HEXED_ARRAY_ASSERT(that.size() == size(), "array sizes must match")
     Array result(shape());
-    for (Int i = 0; i < size(); ++i) result[i] = math::extreme(minmax, _data[i], that[i]);
+    for (Int i = 0; i < size(); ++i) result[i] = math::extreme(minmax, (*this)[i], that[i]);
     return result;
   }
 
@@ -402,7 +416,7 @@ class Array {
   //! \details Computes maximum if `minmax` is `true`, otherwise minimum.
   T extreme(bool minmax) {
     T result = minmax ? std::numeric_limits<T>::lowest() : std::numeric_limits<T>::max();
-    for (Int i = 0; i < size(); ++i) result = math::extreme(minmax, result, _data[i]);
+    for (Int i = 0; i < size(); ++i) result = math::extreme(minmax, result, (*this)[i]);
     return result;
   }
 

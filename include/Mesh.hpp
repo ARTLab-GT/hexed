@@ -6,7 +6,6 @@
 #include "Boundary_condition.hpp"
 #include "Layer_sequence.hpp"
 #include "Surface_geom.hpp"
-#include "Geom_edge.hpp"
 #include "Stopwatch_tree.hpp"
 #include "Kernel_connection.hpp"
 

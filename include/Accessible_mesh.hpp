@@ -86,10 +86,6 @@ class Accessible_mesh : public Mesh {
   void _connect(Element*, std::vector<Element*>, Connection_direction,
                 std::array<bool, 2> = {false, false}, std::string context = "");
 
-  struct Edge_match {
-    Mortal_ptr<next::Edge> edge;
-    std::array<Geom_edge::Node, 2> nodes;
-  };
   void _offset_vertices(double, bool strategy);
   Mat<3> _get_snapping_target(next::Vertex&, Mat<3>);
   Mat<3> _de_intersect(next::Vertex&, Mat<3>);

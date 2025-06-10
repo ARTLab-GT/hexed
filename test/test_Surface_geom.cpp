@@ -1,5 +1,36 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Surface_geom.hpp>
+#include <hexed/Tree_curve_edge.hpp>
+
+TEST_CASE("Compound_edge") {
+  hexed::Array<double> nodes({4, 3});
+  nodes(0) = 0.;
+  nodes(1) = {1., 0., 0.};
+  nodes(2) = {1., 1., 0.};
+  nodes(3) = {1., 0., 0.};
+  hexed::Array<double> tangent_averages({4, 3});
+  tangent_averages(0) = .1;
+  tangent_averages(1) = .2;
+  tangent_averages(2) = .3;
+  tangent_averages(3) = .2;
+  hexed::Array<double> tangent_radii = hexed::Array<double>::make(.4, .5, .6, .5);
+  std::vector<std::shared_ptr<hexed::Geom_edge>> edges;
+  edges.push_back(std::make_shared<hexed::Tree_curve_edge>(nodes(0, 2), tangent_averages(0, 2), tangent_radii(0, 2)));
+  edges.push_back(std::make_shared<hexed::Tree_curve_edge>(nodes(2, 4), tangent_averages(2, 4), tangent_radii(2, 4)));
+  hexed::Compound_edge edge(edges, {false, true});
+  REQUIRE(edge.arc_length(0.) == Catch::Approx(0.).scale(1.));
+  REQUIRE(edge.arc_length(.25) == Catch::Approx(.5).scale(1.));
+  REQUIRE(edge.arc_length(.75) == Catch::Approx(1.5).scale(1.));
+  REQUIRE(edge.arc_length(1.) == Catch::Approx(2.).scale(1.));
+  REQUIRE((edge.point(0.) - hexed::Mat<3>::Zero()).norm() < 1e-6);
+  REQUIRE((edge.point(.25) - hexed::Mat<3>{.5, 0., 0.}).norm() < 1e-6);
+  REQUIRE((edge.point(.75) - hexed::Mat<3>{1., .5, 0.}).norm() < 1e-6);
+  REQUIRE((edge.point(1.) - hexed::Mat<3>{1., 1., 0.}).norm() < 1e-6);
+  REQUIRE((edge.tangent_average(.25) - hexed::Mat<3>{.15, .15, .15}).norm() < 1e-6);
+  REQUIRE(edge.tangent_radius(1.) == Catch::Approx(.6).scale(1.));
+  REQUIRE(edge.arg_nearest_point(hexed::Mat<3>{0.2, 0.01, 0.}) == Catch::Approx(.1));
+  REQUIRE(edge.arg_nearest_point(hexed::Mat<3>{1.01, .2, 0.}) == Catch::Approx(.6));
+}
 
 TEST_CASE("Compound_geom") {
   std::vector<hexed::Surface_geom*> geoms;

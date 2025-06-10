@@ -9,6 +9,30 @@
 
 namespace hexed {
 
+class Geom_edge {
+  public:
+  virtual Mat<3> point(double) = 0;
+  virtual double arc_length(double) = 0;
+  virtual Mat<3> tangent_average(double) = 0;
+  virtual double tangent_radius(double) = 0;
+  virtual double arg_nearest_point(Mat<3>) = 0;
+};
+
+class Compound_edge : public Geom_edge {
+  public:
+  Compound_edge(std::vector<std::shared_ptr<Geom_edge>> _edges, std::vector<bool> reverse);
+  Mat<3> point(double) override;
+  double arc_length(double) override;
+  Mat<3> tangent_average(double) override;
+  double tangent_radius(double) override;
+  double arg_nearest_point(Mat<3>) override;
+  private:
+  std::pair<Int, double> _global_index(double);
+  std::vector<std::shared_ptr<Geom_edge>> _edges;
+  std::vector<bool> _reverse;
+  std::vector<double> _arc_length_start;
+};
+
 /*! \brief Represents a surface geometry implicitly for meshing.
  * \details Abstract class which represents geometry by supporting
  * the operations `Surface_geom::nearest_point` and `Surface_geom::intersections`.

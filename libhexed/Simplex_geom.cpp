@@ -51,14 +51,6 @@ void Simplex_geom<3>::visualize(std::string format, std::string fname) {
   }
   Visualizer::create(format, 3, 2, fname, {}, 0., Visualizer::simplex)->write_unstruct(triangles, pos, vars);
   auto edge_vis = Visualizer::create(format, 3, 1, fname + "_edges", {}, 0., Visualizer::block);
-  for (auto& edge : _geom_edges) {
-    Array<double> points = edge.points();
-    Array<double> transposed({3, edge.n_points()});
-    for (int i_point = 0; i_point < edge.n_points(); ++i_point) {
-      for (int i_dim = 0; i_dim < 3; ++i_dim) transposed(i_dim)[i_point] = points(i_point)[i_dim];
-    }
-    edge_vis->write_block(transposed, Array<double>({0, edge.n_points()}));
-  }
 }
 //! \endcond
 
