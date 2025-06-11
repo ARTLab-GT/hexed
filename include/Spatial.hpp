@@ -99,6 +99,7 @@ class Spatial {
     }
 
     Index_mat _rotate(int n) {
+      n *= math::sign(dir.i_dim[0] != 1);
       Index_mat m = Index_mat::Identity();
       for (int i = n; i > 0; --i) {
         Index_mat r;

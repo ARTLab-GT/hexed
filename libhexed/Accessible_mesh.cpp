@@ -798,12 +798,6 @@ void Accessible_mesh::_fit_surface() {
             }
           }
         }
-        for (int i_side = 0; i_side < 2; ++i_side) {
-          Mat<3> center = Mat<3>::Zero();
-          for (int i_vert = 0; i_vert < 8; ++i_vert) {
-            center += elem_arr[i_side]->active_shape().vertex(i_vert).unwarped_point()/8;
-          }
-        }
         _connect(elem_arr, {dim_arr, sign_arr, rotate}, "matched to matched");
       }
     }

@@ -6,6 +6,7 @@
 #include <hexed/kernels.hpp>
 #include <hexed/Spatial.hpp>
 #include <hexed/pde.hpp>
+#include <hexed/vertex_inds.hpp>
 
 void test_mesh(hexed::Accessible_mesh& mesh) {
   // construct a mesh that has every possible connection configuration by creating a single element
@@ -76,6 +77,7 @@ TEST_CASE("Face_permutation") {
   SECTION("rotation") {
     constexpr int rs = hexed::config::max_row_size;
     hexed::Array<double> data({5, rs, rs});
+    data = 0;
     for (int i = 0; i < rs; ++i) {
       for (int j = 0; j < rs; ++j) {
         data(0)(i)[j] = i + .1*j;
@@ -123,6 +125,30 @@ TEST_CASE("Face_permutation") {
       for (int i = 0; i < rs; ++i) {
         for (int j = 0; j < rs; ++j) {
           REQUIRE(data(0)(i)[j] == Catch::Approx(i + .1*j).scale(1.));
+        }
+      }
+    }
+  }
+  SECTION("`vertex_inds` compatibility") {
+    hexed::Array<double> data({5, 2, 2});
+    data = 0;
+    for (int i = 0; i < 4; ++i) data(0)[i] = i;
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      for (int j_dim = 0; j_dim < 3; ++j_dim) {
+        for (bool i_sign : {0, 1}) {
+          for (bool j_sign : {0, 1}) {
+            if (i_dim == j_dim && i_sign == j_sign) continue;
+            for (int rotate : {-1, 0, 1, 2}) {
+              hexed::Connection_direction dir {{i_dim, j_dim}, {i_sign, j_sign}, rotate};
+              hexed::Spatial<hexed::pde::Navier_stokes<>::Pde, false>::Face_permutation<3, 2> perm(dir, data.data());
+              perm.match_faces();
+              auto inds = hexed::face_vertex_inds(3, dir);
+              for (int i = 0; i < 4; ++i) {
+                REQUIRE(data(0)[i] == Catch::Approx(double(inds[i])).scale(1));
+              }
+              perm.restore();
+            }
+          }
         }
       }
     }
