@@ -15,28 +15,28 @@ Compound_edge::Compound_edge(std::vector<std::shared_ptr<Geom_edge>> edges, std:
   _arc_length_start.push_back(arc);
 }
 
-Mat<3> Compound_edge::point(double param) {
+Mat<3> Compound_edge::point(double param) const {
   auto ind = _global_index(param);
   return _edges[ind.first]->point(ind.second);
 }
 
-double Compound_edge::arc_length(double param) {
+double Compound_edge::arc_length(double param) const {
   auto ind = _global_index(param);
   bool rev = _reverse[ind.first];
   return _arc_length_start[ind.first + rev] + math::sign(!rev)*_edges[ind.first]->arc_length(ind.second);
 }
 
-Mat<3> Compound_edge::tangent_average(double param) {
+Mat<3> Compound_edge::tangent_average(double param) const {
   auto ind = _global_index(param);
   return _edges[ind.first]->tangent_average(ind.second);
 }
 
-double Compound_edge::tangent_radius(double param) {
+double Compound_edge::tangent_radius(double param) const {
   auto ind = _global_index(param);
   return _edges[ind.first]->tangent_radius(ind.second);
 }
 
-double Compound_edge::arg_nearest_point(Mat<3> point) {
+double Compound_edge::arg_nearest_point(Mat<3> point) const {
   double dist_sq = huge;
   double param = 0;
   for (Int i_edge = 0; i_edge < (Int)_edges.size(); ++i_edge) {
@@ -51,7 +51,7 @@ double Compound_edge::arg_nearest_point(Mat<3> point) {
   return param;
 }
 
-std::pair<Int, double> Compound_edge::_global_index(double param) {
+std::pair<Int, double> Compound_edge::_global_index(double param) const {
   Int n = _edges.size();
   param *= n;
   Int edge = std::max<Int>(0, std::min<Int>(n - 1, floor(param)));
@@ -79,21 +79,9 @@ std::vector<double> Compound_geom::intersections(Mat<> point0, Mat<> point1, boo
   return inters;
 }
 
-next::Sequence<const Tree_curve&> Compound_geom::edges() {
-  next::Sequence<const Tree_curve&> e;
+next::Sequence<const Geom_edge&> Compound_geom::edges() {
+  next::Sequence<const Geom_edge&> e;
   for (auto& comp : components) e = e + comp->edges();
-  return e;
-}
-
-next::Sequence<const Array<double>> Compound_geom::tangent_averages() {
-  next::Sequence<const Array<double>> e;
-  for (auto& comp : components) e = e + comp->tangent_averages();
-  return e;
-}
-
-next::Sequence<const Array<double>> Compound_geom::tangent_radii() {
-  next::Sequence<const Array<double>> e;
-  for (auto& comp : components) e = e + comp->tangent_radii();
   return e;
 }
 

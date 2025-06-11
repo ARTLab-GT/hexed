@@ -6,6 +6,7 @@
 #include <hexed/utils.hpp>
 #include <hexed/constants.hpp>
 #include <hexed/Printer.hpp>
+#include <hexed/Tree_curve_edge.hpp>
 
 namespace hexed::brep {
 
@@ -1372,6 +1373,9 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coi
           }
         }
       }
+      _geom_edges.push_back(std::make_shared<Tree_curve_edge>(
+        _trim_curves()[_used_curves.back()].curve.nodes().copy(),
+        _tangent_averages.back()(), _tangent_radii.back()()));
     }
   }
 }
@@ -1396,26 +1400,8 @@ std::vector<double> Geom_3d::intersections(Mat<> start, Mat<> end, bool high_pre
   return sects;
 }
 
-next::Sequence<const Tree_curve&> Geom_3d::edges() {
-  auto tc = _trim_curves();
-  return {
-    [tc, this](Int index)->const Tree_curve& {return tc[_used_curves[index]].curve;},
-    [this]()->Int {return _used_curves.size();},
-  };
-}
-
-next::Sequence<const Array<double>> Geom_3d::tangent_averages() {
-  return {
-    [this](Int index)->const Array<double> {return _tangent_averages[index]();},
-    [this]()->Int {return _tangent_averages.size();},
-  };
-}
-
-next::Sequence<const Array<double>> Geom_3d::tangent_radii() {
-  return {
-    [this](Int index)->const Array<double> {return _tangent_radii[index]();},
-    [this]()->Int {return _tangent_radii.size();},
-  };
+next::Sequence<const Geom_edge&> Geom_3d::edges() {
+  return next::Sequence<std::shared_ptr<Geom_edge>&>::vector_view(_geom_edges).dereference<const Geom_edge&>();
 }
 
 next::Sequence<const Trimmed_surface&> Geom_3d::surfaces() {
@@ -1445,22 +1431,34 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
     }
   }
   {
-    auto vis = Visualizer::create(format, 3, 1, file_name + "_curves", {"is_tangent"}, 0., Visualizer::block);
+    auto vis = Visualizer::create(format, 3, 1, file_name + "_tangent_curves", {}, 0.,
+                                  Visualizer::block);
     auto tc = _trim_curves();
-    for (bool is_tangent : {0, 1}) {
-      std::vector<Int>& vec = is_tangent ? _tangent_curves : _used_curves;
-      for (Int i_curve : vec) {
-        Array<double> nodes = tc[i_curve].curve.nodes();
-        Array<double> transposed({3, nodes.shape()[0]});
-        for (int i = 0; i < nodes.shape()[0]; ++i) {
-          for (int i_dim = 0; i_dim < 3; ++i_dim) {
-            transposed(i_dim)[i] = nodes(i)[i_dim];
-          }
+    std::vector<Int>& vec = _tangent_curves;
+    for (Int i_curve : vec) {
+      Array<double> nodes = tc[i_curve].curve.nodes();
+      Array<double> transposed({3, nodes.shape()[0]});
+      for (int i = 0; i < nodes.shape()[0]; ++i) {
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          transposed(i_dim)[i] = nodes(i)[i_dim];
         }
-        Array<double> data({1, nodes.shape()[0]});
-        data = is_tangent;
-        vis->write_block(transposed, data);
       }
+      vis->write_block(transposed, Array<double>({0, nodes.shape()[0]}));
+    }
+  }
+  {
+    auto vis = Visualizer::create(format, 3, 1, file_name + "_edges", {"index"}, 0.,
+                                  Visualizer::block);
+    auto tc = _trim_curves();
+    for (Int i_edge = 0; i_edge < (Int)_geom_edges.size(); ++i_edge) {
+      Geom_edge& edge = *_geom_edges[i_edge];
+      Array<double> pos({3, n_div + 1});
+      for (Int i_node = 0; i_node <= n_div; ++i_node) {
+        pos.column(i_node).vector() = edge.point(i_node*sz);
+      }
+      Array<double> data({1, n_div + 1});
+      data = i_edge;
+      vis->write_block(pos(), data());
     }
   }
   {
@@ -1477,7 +1475,7 @@ void Geom_3d::visualize(std::string format, std::string file_name, Int n_div, bo
             nodes(i_dim)[0] = .5*(curve.curve.nodes()(i_node)[i_dim] + curve.curve.nodes()(i_node + 1)[i_dim]);
             nodes(i_dim)[1] = nodes(i_dim)[0] + tang_mag*curve.tangents(i_node)[i_dim];
           }
-          vis->write_block(nodes, data);
+          vis->write_block(nodes(), data());
         }
       }
     }

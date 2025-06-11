@@ -154,16 +154,14 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
       if (failed_neighbor) {
         Int i_edge = surf_vert->snapped_edge;
         auto& edge = surf_geom->edges()[i_edge];
-        auto nearest = edge.nearest_point(pos);
-        if (nearest.index >= 0) {
-          Mat<3> tangent = surf_geom->tangent_averages()[i_edge].interp(nearest.interp_index).vector().normalized();
-          double radius = surf_geom->tangent_radii()[i_edge].flat_interp(nearest.interp_index);
-          Mat<3> diff = edge.interp_point(nearest) - pos;
-          double dot = diff.dot(tangent);
-          Mat<3> orth_diff = diff - dot*tangent;
-          if (orth_diff.norm() > radius*dot) {
-            pos += (orth_diff.norm() - radius*dot)*orth_diff.normalized();
-          }
+        double nearest = edge.arg_nearest_point(pos);
+        Mat<3> tangent = edge.tangent_average(nearest).normalized();
+        double radius = edge.tangent_radius(nearest);
+        Mat<3> diff = edge.point(nearest) - pos;
+        double dot = diff.dot(tangent);
+        Mat<3> orth_diff = diff - dot*tangent;
+        if (orth_diff.norm() > radius*dot) {
+          pos += (orth_diff.norm() - radius*dot)*orth_diff.normalized();
         }
       }
     }
@@ -172,13 +170,10 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
       return surf_geom->points()[vert.snapped_point];
     } else if (vert.snapped_edge >= 0) {
       auto& geom_edge = surf_geom->edges()[vert.snapped_edge];
-      Array<double> nodes{geom_edge.nodes()};
-      Int n_points = nodes.shape()[0];
       if (vert.snapped_endpoint == -1) {
-        Int nearest = geom_edge.nearest_point(pos(seq), huge).index;
-        if (nearest >= 0) pos = nodes(nearest).vector();
+        pos = geom_edge.point(geom_edge.arg_nearest_point(pos));
       } else {
-        pos = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
+        pos = geom_edge.point(vert.snapped_endpoint);
       }
     } else {
       int i_dim = -1;
@@ -193,7 +188,7 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
         auto edges = surf_geom->edges();
         Nearest_point<3> nearest_on_edge(pos);
         for (auto& edge : edges) {
-          Mat<3> nearest = resize(edge.interp_point(edge.nearest_point(pos)), 3);
+          Mat<3> nearest = edge.point(edge.arg_nearest_point(pos));
           if (std::abs(nearest(i_dim) - tree->origin()(i_dim) + sign*tree->nominal_size()) < 1e-6*ns) {
             nearest_on_edge.merge(nearest);
           }
@@ -395,7 +390,7 @@ void Accessible_mesh::_fit_surface() {
       auto& geom_edge = edges[i_geom_edge];
       std::array<next::Vertex*, 2> start_end {nullptr, nullptr};
       for (int i_endpoint = 0; i_endpoint < 2; ++i_endpoint) {
-        Mat<3> endpoint = geom_edge.nodes()(i_endpoint*(geom_edge.nodes().shape()[0] - 1)).vector();
+        Mat<3> endpoint = geom_edge.point(i_endpoint);
         start_end[i_endpoint] = find_nearest_vert(endpoint, i_geom_edge);
       }
       if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
@@ -407,18 +402,11 @@ void Accessible_mesh::_fit_surface() {
       }
       #pragma omp parallel for
       for (next::Vertex& vert : verts) {
-        double d = huge;
-        auto nearest = geom_edge.nearest_point(vert.dijkstra_point, d);
-        if (nearest.index >= 0 && nearest.distance <= d) {
-          vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
-          Mat<3> edge_point = geom_edge.interp_point(nearest);
-          vert.dijkstra_curve_dist_sq += 1e6*(_de_intersect(vert, edge_point) - edge_point).squaredNorm();
-          vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
-        } else {
-          vert.dijkstra_curve_dist_sq = std::sqrt(huge);
-          vert.dijkstra_arc_len = std::sqrt(huge);
-          printers::warn("projection failed\n");
-        }
+        double nearest = geom_edge.arg_nearest_point(vert.dijkstra_point);
+        Mat<3> edge_point = geom_edge.point(nearest);
+        vert.dijkstra_curve_dist_sq = (vert.dijkstra_point - edge_point).squaredNorm();
+        vert.dijkstra_curve_dist_sq += 1e6*(_de_intersect(vert, edge_point) - edge_point).squaredNorm();
+        vert.dijkstra_arc_len = geom_edge.arc_length(nearest);
       }
       auto cost = [this, i_geom_edge](next::Vertex& vert, next::Vertex& curr_vert, next::Edge& edge) {
         double interval = std::max(edge.element()->nominal_size(),
@@ -428,7 +416,7 @@ void Accessible_mesh::_fit_surface() {
       auto snap = [this, &edges, i_geom_edge](next::Vertex& vert) {
         bool snap = false;
         Mat<3> unwarped = vert.unwarped_point();
-        Mat<3> edge_point = edges[i_geom_edge].interp_point(edges[i_geom_edge].nearest_point(unwarped));
+        Mat<3> edge_point = edges[i_geom_edge].point(edges[i_geom_edge].arg_nearest_point(unwarped));
         if (vert.snapped_edge < 0 || vert.dijkstra_prev_edge->snapped_edge < 0) {
           snap = true;
         } else {
@@ -1093,12 +1081,8 @@ void Accessible_mesh::_fit_surface() {
         int n_node = interior.shape()[0];
         for (int i_node = 0; i_node < n_node; ++i_node) {
           auto node = interior(i_node);
-          auto nearest = geom_edge.nearest_point(node.vector());
-          if (nearest.index >= 0) {
-            node = geom_edge.nodes()(nearest.index);
-          } else {
-            edge->snapping_problem = true;
-          }
+          auto nearest = geom_edge.arg_nearest_point(node.vector());
+          node.vector() = geom_edge.point(nearest);
         }
         if (edge->snapping_problem) edge->reset();
         Mat<dyn, dyn> diff_mat = _basis.diff_mat()(Eigen::all, Eigen::seqN(1, _basis.row_size - 2));

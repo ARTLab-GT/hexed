@@ -375,9 +375,7 @@ class Geom_3d : public Surface_geom {
                  Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose());
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_prec = true) override;
-  next::Sequence<const Tree_curve&> edges() override;
-  next::Sequence<const Array<double>> tangent_averages() override;
-  next::Sequence<const Array<double>> tangent_radii() override;
+  next::Sequence<const Geom_edge&> edges() override;
   next::Sequence<const Trimmed_surface&> surfaces();
   private:
   next::Sequence<const Trimming_curve&> _trim_curves();
@@ -388,6 +386,7 @@ class Geom_3d : public Surface_geom {
   std::vector<Int> _tangent_curves;
   std::vector<Array<double>> _tangent_averages;
   std::vector<Array<double>> _tangent_radii;
+  std::vector<std::shared_ptr<Geom_edge>> _geom_edges;
 };
 
 }
