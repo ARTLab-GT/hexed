@@ -1307,6 +1307,8 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coi
   std::list<Int> curve_inds;
   for (Int i = 0; i < trim_curves.size(); ++i) curve_inds.push_back(i);
   std::vector<std::vector<Int>> coincident_groups;
+  #define COINC_TOL (coinc_prec_tol*arc_len/double(n_div_max) + coinc_bbox_tol*max_diff + coinc_abs_tol)
+  #define TANG_TOL (tang_prec_tol*2*constants::pi/n_div_max + tang_angle_tol)
   for (auto it0 = curve_inds.begin(); it0 != curve_inds.end(); ++it0) {
     auto& group = coincident_groups.emplace_back();
     group.push_back(*it0);
@@ -1322,14 +1324,14 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coi
         Mat<3> point = tc[0]->interp_point(i_test/double(n_div_min)*tc[0]->n_points());
         total_diff += tc[1]->nearest_point(point).distance;
       }
-      double tol = coinc_prec_tol*arc_len/double(n_div_max) + coinc_bbox_tol*max_diff + coinc_abs_tol;
-      if (total_diff/(n_div_min - 1) < tol) {
+      if (total_diff/(n_div_min - 1) < COINC_TOL) {
         group.push_back(*it1);
         it1 = curve_inds.erase(it1);
         --it1; // compensates for increment in loop declaration, since we just erased what used to be `it1`
       }
     }
   }
+  std::vector<std::shared_ptr<Geom_edge>> unmerged_edges;
   for (auto& group : coincident_groups) {
     bool tangent = false;
     if (group.size() == 2) {
@@ -1344,7 +1346,7 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coi
         double param1 = tc[1]->nearest_point(point).interp_index;
         total_diff += (tang0.interp(param0) + tang1.interp(param1)).vector().norm();
       }
-      tangent = total_diff/n_div_min < tang_prec_tol*2*constants::pi/n_div_max + tang_angle_tol;
+      tangent = total_diff/n_div_min < TANG_TOL;
     }
     if (tangent) {
       _tangent_curves.push_back(group[0]);
@@ -1373,11 +1375,56 @@ Geom_3d::Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coi
           }
         }
       }
-      _geom_edges.push_back(std::make_shared<Tree_curve_edge>(
+      unmerged_edges.push_back(std::make_shared<Tree_curve_edge>(
         _trim_curves()[_used_curves.back()].curve.nodes().copy(),
         _tangent_averages.back()(), _tangent_radii.back()()));
     }
   }
+  while (!unmerged_edges.empty()) {
+    std::vector<std::shared_ptr<Geom_edge>> group;
+    std::vector<bool> reverse;
+    group.push_back(unmerged_edges.back());
+    unmerged_edges.pop_back();
+    reverse.push_back(false);
+    double total_arc_length = group[0]->arc_length(1.);
+    bool found;
+    do {
+      found = false;
+      for (Int i_edge = unmerged_edges.size() - 1; i_edge >= 0; --i_edge) {
+        Geom_edge* edge1 = unmerged_edges[i_edge].get();
+        bool f = false;
+        for (int i_endpoint = 0; i_endpoint < 2 && !f; ++i_endpoint) {
+          Int i_edge0 = i_endpoint*(group.size() - 1);
+          Geom_edge* edge0 = group[i_edge0].get();
+          int i_edge_endpoint = i_endpoint != reverse[i_edge0];
+          Mat<3> point0 = edge0->point(i_edge_endpoint);
+          Mat<3> tangent0 = point0 - edge0->point(i_edge_endpoint - math::sign(i_edge_endpoint)/double(n_div_max));
+          tangent0.normalize();
+          double arc_len = std::min(edge1->arc_length(1.), edge0->arc_length(1.));
+          for (int j_endpoint = 0; j_endpoint < 2 && !f; ++j_endpoint) {
+            Mat<3> point1 = edge1->point(j_endpoint);
+            Mat<3> tangent1 = point1 - edge1->point(j_endpoint - math::sign(j_endpoint)/double(n_div_max));
+            tangent1.normalize();
+            if ((point0 - point1).norm() < COINC_TOL && (tangent0 + tangent1).norm() < TANG_TOL) {
+              Int i_edge2 = (!i_endpoint)*(group.size() - 1);
+              if ((edge1->point(!j_endpoint) - group[i_edge2]->point(i_endpoint == reverse[i_edge2])).norm()
+                  >= .25*(total_arc_length + edge1->arc_length(1.))) {
+                f = true;
+                total_arc_length += edge1->arc_length(1.);
+                group.insert(group.begin() + i_endpoint*group.size(), unmerged_edges[i_edge]);
+                reverse.insert(reverse.begin() + i_endpoint*reverse.size(), i_endpoint == j_endpoint);
+                unmerged_edges.erase(unmerged_edges.begin() + i_edge);
+              }
+            }
+          }
+        }
+        found = found || f;
+      }
+    } while (found);
+    _geom_edges.push_back(std::make_shared<Compound_edge>(group, reverse));
+  }
+  #undef COINC_TOL
+  #undef TANG_TOL
 }
 
 Nearest_point<dyn> Geom_3d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
