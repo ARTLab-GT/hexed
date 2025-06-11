@@ -27,7 +27,7 @@ double Tree_curve_edge::tangent_radius(double param) const {
 
 double Tree_curve_edge::arg_nearest_point(Mat<3> p) const {
   auto index = _curve.nearest_point(p);
-  if (index.index >= 0) return index.interp_index;
+  if (index.index >= 0) return index.interp_index/(_curve.n_points() - 1);
   return 0.;
 }
 
