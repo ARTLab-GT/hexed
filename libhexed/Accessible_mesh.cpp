@@ -1183,7 +1183,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
                                                    > 1e-2*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
                           || (snaps_failed != 0 && dist_monitor.max() - dist_monitor.min() > 1e-2*dist_monitor.min()));
        ++i_relax) {
-    #if 0
+    #if 1
     {
       auto faces = _blocks.faces_3d();
       for (auto& f : faces) {
@@ -1227,12 +1227,12 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
       #pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
-        auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
-        vert->init_improve(get_target);
+        vert->init_improve();
       }
       #pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
-        vert->compute_gradient();
+        auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
+        vert->compute_gradient(get_target);
       }
       bool done;
       while (true) {
@@ -3116,7 +3116,7 @@ void Accessible_mesh::export_polymesh(std::string dir_name) {
 
 void Accessible_mesh::visualize_deformed(std::string format, std::string file_name, double time) {
   int nd = params.n_dim;
-  auto vis_elems = Visualizer::create("default", nd, 1, file_name, {}, time, Visualizer::block);
+  auto vis_elems = Visualizer::create("default", nd, 1, file_name, {"last_improve_iters"}, time, Visualizer::block);
   auto& elems = elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
@@ -3124,15 +3124,17 @@ void Accessible_mesh::visualize_deformed(std::string format, std::string file_na
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
       for (int i_edge = 0; i_edge < params.n_vertices()/2; ++i_edge) {
         Array<double> pos({3, 2});
+        Array<double> data({1, 2});
         for (int i_end = 0; i_end < 2; ++i_end) {
           int i_vert = i_end*math::pow(2, nd - 1 - i_dim);
           for (int j_dim = 0; j_dim < nd - 1; ++j_dim) {
             i_vert += i_edge/math::pow(2, nd - 2 - j_dim)%2*math::pow(2, nd - 1 - j_dim - (j_dim >= i_dim));
           }
-          Mat<3> p = elem.active_shape().vertex(i_vert).unwarped_point();
-          for (int j_dim = 0; j_dim < 3; ++j_dim) pos(j_dim)[i_end] = p(j_dim);
+          auto& vert = elem.active_shape().vertex(i_vert);
+          pos.column(i_end).vector() = vert.unwarped_point();
+          data[i_end] = vert.last_improve_iters();
         }
-        vis_elems->write_block(pos, Array<double>({0, 2}));
+        vis_elems->write_block(pos, data);
       }
     }
   }

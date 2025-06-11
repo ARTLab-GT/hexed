@@ -128,8 +128,8 @@ class Vertex : public Block {
   Mat<3> nominal_position() const;
   bool mobile() const;
   void compute_depends();
-  void init_improve(std::function<Mat<3>(Mat<3>)> get_target);
-  void compute_gradient();
+  void init_improve();
+  void compute_gradient(std::function<Mat<3>(Mat<3>)> get_target);
   void compute_improve(std::function<Mat<3>(Mat<3>)> get_target);
   void force_continue_improve();
   bool check_improve(bool updated_neighbors);
@@ -225,6 +225,7 @@ class Vertex : public Block {
   Mat<3> _pos;
   Mat<3> _orig_pos;
   Mat<3> _step;
+  Mat<3> _grad_step;
   double _orig_obj;
   double _last_obj;
   double _orig_dist;

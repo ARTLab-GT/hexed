@@ -265,14 +265,13 @@ bool Vertex::has_problem() const {
   return false;
 }
 
-void Vertex::init_improve(std::function<Mat<3>(Mat<3>)> get_target) {
+void Vertex::init_improve() {
   HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
   _pos = _orig_pos = unwarped_point();
-  _orig_dist = (get_target(_orig_pos) - _orig_pos).norm();
   _last_improve_iters = 0;
 }
 
-void Vertex::compute_gradient() {
+void Vertex::compute_gradient(std::function<Mat<3>(Mat<3>)> get_target) {
   auto state = _compute_state(true, false, true);
   bool gn = false;
   for (Vertex* n : neighbors()) gn = gn || n->glued();
@@ -290,17 +289,22 @@ void Vertex::compute_gradient() {
     return {fd_state.objective, fd_state.feasible};
   }, resize(_orig_pos, nd), 1e-5*ns);
   _pos = _orig_pos;
+  Mat<3> target = get_target(_orig_pos);
+  _orig_dist = (target - _orig_pos).norm();
   _step_sz = 1.;
   _improve_done = false;
+  _improve_failed = true;
+  _last_step_rejected = true;
   if (finite_diff.feasible) {
     _last_grad = resize(finite_diff.gradient, 3);
     _step = resize(finite_diff.hessian.colPivHouseholderQr().solve(-finite_diff.gradient), 3);
-    if (!(_step.dot(_last_grad) < 0.)) _step = -.1*ns*_last_grad.normalized();
-    _improve_failed = false;
-    _last_step_rejected = false;
-  } else {
-    _improve_failed = true;
-    _last_step_rejected = true;
+    _grad_step = -ns*_last_grad.normalized();
+    if (!(_step.dot(_last_grad) < 0.)) _step = _grad_step;
+    _last_grad = _step;
+    if (_orig_dist < 1e-4*ns || _step.normalized().dot((target - _orig_pos)/_orig_dist) > -1. + 1e-2) {
+      _improve_failed = false;
+      _last_step_rejected = false;
+    }
   }
 }
 
@@ -316,12 +320,13 @@ void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
     diff *= (dist - _orig_dist)/dist;
     _pos += diff;
   }
-  if (_step_sz < 1e-10) {
+  if (_step_sz < 1e-5) {
     _pos = _orig_pos;
     _improve_failed = true;
     _last_step_rejected = true;
   }
-  _step_sz /= 3;
+  _step_sz /= 10;
+  _step = _grad_step;
 }
 
 void Vertex::force_continue_improve() {
@@ -357,7 +362,6 @@ void Vertex::compute_snap() {
 
 Vertex::Snap_result Vertex::check_snap(bool updated_neighbors) {
   auto state = _compute_state(true, false, !updated_neighbors, 1e-8);
-  _last_grad = state.gradient.normalized()*0.1*nominal_size();
   _improve_done = state.feasible && state.objective < 1.1*_last_obj;
   if (!_improve_done) {
     _step_sz /= 3;
