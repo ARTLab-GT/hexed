@@ -300,7 +300,7 @@ class Array {
        _This will not result in an exception nor undefined behavior_,
        unless of course you attempt to access data from this empty array.
        Equivalent to `array[start:stop]` for
-       [NumPy arays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
+       [NumPy arrays](https://numpy.org/doc/stable/user/absolute_beginners.html#what-is-an-array).
        The resulting array will have the same order as `this`.
        The first entry of `shape()` will be `stop - start` and the rest will be the same as `this`
        (granted the above caveat about empty results).
@@ -405,7 +405,7 @@ class Array {
 
   //! \brief Entrywise extreme (min or max) of `this` and `that`.
   //! \details Computes maximum if `minmax` is `true`, otherwise minimum.
-  Array extreme(bool minmax, Array that) {
+  Array extreme(bool minmax, Array that) const {
     HEXED_ARRAY_ASSERT(that.size() == size(), "array sizes must match")
     Array result(shape());
     for (Int i = 0; i < size(); ++i) result[i] = math::extreme(minmax, (*this)[i], that[i]);
@@ -414,11 +414,22 @@ class Array {
 
   //! \brief Extremal (minimum or maximum) entry of this array.
   //! \details Computes maximum if `minmax` is `true`, otherwise minimum.
-  T extreme(bool minmax) {
+  T extreme(bool minmax) const {
     T result = minmax ? std::numeric_limits<T>::lowest() : std::numeric_limits<T>::max();
     for (Int i = 0; i < size(); ++i) result = math::extreme(minmax, result, (*this)[i]);
     return result;
   }
+
+  //! \brief Sum of the squares of all entries.
+  T norm_squared() const {
+    T result = 0;
+    for (Int i = 0; i < size(); ++i) result += (*this)[i]*(*this)[i];
+    return result;
+  }
+
+  //! \brief Square root of the sum of the squares of all entries.
+  //! \details For vectors, this is the \f$ L^2 \f$ norm and for matrices this is the Frobenius norm.
+  T norm() const {return std::sqrt(norm_squared());}
 
   private:
   Array(Int o, T* d, bool own, Int* sh, Int* st) : _order{o}, _data{d}, _owns{own}, _shape{sh}, _strides{st} {}

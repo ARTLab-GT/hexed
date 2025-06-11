@@ -375,6 +375,19 @@ void Solver::calc_jacobian(bool snap) {
     if (con.inside().is_deformed()) con.ghost().normal() = con.inside().normal();
   }
   share_vertex_data(&Element::vertex_time_step_scale, { huge, &min_fun});
+  // check that all the normals agree on both faces of every connection
+  for (Neighbor_connection& con : acc_mesh->neighbor_connections(1)) {
+    auto dir = con.get_direction();
+    Array<double> temp_storage = Array<double>::make_uniform({params.n_var, params.n_face_qpoint()}, 0.);
+    temp_storage(0, params.n_dim) = con.face(1).normal();
+    auto perm = face_permutation(params.n_dim, params.row_size, dir, temp_storage.data(), turb);
+    perm->match_faces();
+    double diff = (con.face(0).normal()*(double)math::sign(!dir.flip_normal(0))*con.face(0).nominal_area()
+                   - temp_storage(0, params.n_dim)*(double)math::sign(!dir.flip_normal(1))*con.face(1).nominal_area()
+                  ).norm();
+    HEXED_ASSERT(diff < 1e-3, "normal mismatch: " + to_string(dir) + "\n"
+                              + to_string(con.face(0).normal()) + to_string(temp_storage(0, params.n_dim)))
+  }
 }
 
 void Solver::initialize(std::string(expr)) {
