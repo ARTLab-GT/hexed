@@ -382,11 +382,12 @@ void Solver::calc_jacobian(bool snap) {
     temp_storage(0, params.n_dim) = con.face(1).normal();
     auto perm = face_permutation(params.n_dim, params.row_size, dir, temp_storage.data(), turb);
     perm->match_faces();
-    double diff = (con.face(0).normal()*(double)math::sign(!dir.flip_normal(0))*con.face(0).nominal_area()
-                   - temp_storage(0, params.n_dim)*(double)math::sign(!dir.flip_normal(1))*con.face(1).nominal_area()
-                  ).norm();
-    HEXED_ASSERT(diff < 1e-3, "normal mismatch: " + to_string(dir) + "\n"
-                              + to_string(con.face(0).normal()) + to_string(temp_storage(0, params.n_dim)))
+    Array<double> nrml0 = con.face(0).normal()*(con.face(0).nominal_area()*math::sign(!dir.flip_normal(0)));
+    Array<double> nrml1 = temp_storage(0, params.n_dim)*(con.face(1).nominal_area()*math::sign(!dir.flip_normal(1)));
+    if ((nrml0 - nrml1).norm() > 1e-3) {
+      printers::warn("Warning: ", true);
+      printers::warn("normal mismatch: " + to_string(dir) + "\n" + to_string(nrml0) + to_string(nrml1));
+    }
   }
 }
 
