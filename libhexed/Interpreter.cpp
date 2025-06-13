@@ -224,7 +224,7 @@ std::string Interpreter::_Dynamic_value::to_string(std::string fd) const {
     }
     return result;
   }
-  HEXED_THROW("empty_variable");
+  HEXED_THROW("empty_variable") throw;
 }
 
 Interpreter::_Dynamic_value Interpreter::_general_add(const Interpreter::_Dynamic_value& o0, const Interpreter::_Dynamic_value& o1) {
@@ -242,7 +242,7 @@ std::function<Interpreter::_Dynamic_value(const Interpreter::_Dynamic_value&)> I
       for (Int i = 0; i < val.a->size(); ++i) (*r.a)[i] = f((*val.a)[i]);
       return r;
     }
-    HEXED_THROW("unary operator `" + name + "` requires numeric argument", Hil_exception); throw;
+    HEXED_THROW("unary operator `" + name + "` requires numeric argument", Hil_exception) throw;
   };
 }
 
@@ -251,17 +251,17 @@ Interpreter::Interpreter(std::vector<std::string> preload)
     std::chrono::steady_clock::now().time_since_epoch()
   ).count()*1e-9}
 , _un_ops {
-    {"-", [this](const _Dynamic_value& val) {
+    {"-", [](const _Dynamic_value& val) {
       if      (val.i) return _Dynamic_value((*val.i)*-1);
       else if (val.d) return _Dynamic_value((*val.d)*-1);
       else if (val.a) return _Dynamic_value((*val.a)*-1.);
-      else HEXED_ASSERT(false, "unary operator `-` cannot be applied to type `string`.", Hil_exception);
+      else HEXED_THROW("unary operator `-` cannot be applied to type `string`.", Hil_exception) throw;
     }},
-    {"!", [this](const _Dynamic_value& val) {
+    {"!", [](const _Dynamic_value& val) {
       HEXED_ASSERT(val.i.has_value(), "unary operator `!` requires integer argument", Hil_exception);
       return _Dynamic_value(!*val.i);
     }},
-    {"#", [this](const _Dynamic_value& val) {
+    {"#", [](const _Dynamic_value& val) {
       HEXED_ASSERT(val.s.has_value(), "unary operator `#` requires string argument", Hil_exception);
       return _Dynamic_value(int(val.s.value().size()));
     }},
@@ -274,15 +274,17 @@ Interpreter::Interpreter(std::vector<std::string> preload)
     {"asin", _numeric_unary(&std::asin, "asin")},
     {"acos", _numeric_unary(&std::acos, "acos")},
     {"atan", _numeric_unary(&std::atan, "atan")},
-    {"round", [this](const _Dynamic_value& val){return _Dynamic_value((int)std::lround(_numeric_unary(&std::round, "round")(val).d.value()));}},
+    {"round", [](const _Dynamic_value& val){
+      return _Dynamic_value((int)std::lround(_numeric_unary(&std::round, "round")(val).d.value()));}
+    },
     {"floor", [this](const _Dynamic_value& val){return _un_ops["round"](_numeric_unary(&std::floor, "floor")(val));}},
     {"ceil" , [this](const _Dynamic_value& val){return _un_ops["round"](_numeric_unary(&std::ceil , "ceil" )(val));}},
     {"abs", [](const _Dynamic_value& val) {
       if      (val.i) return _Dynamic_value(std::abs(*val.i));
       else if (val.d) return _Dynamic_value(std::abs(*val.d));
-      else HEXED_ASSERT(false, "unary operator `abs` requires numeric argument")
+      else HEXED_THROW("unary operator `abs` requires numeric argument") throw;
     }},
-    {"read", [this](const _Dynamic_value& val) {
+    {"read", [](const _Dynamic_value& val) {
       HEXED_ASSERT(val.s.has_value(), "operand of `read` must be `string`", Hil_exception);
       std::ifstream file(Path("lib/hexed").find(*val.s));
       HEXED_ASSERT(file.good(), format_str(1000, "failed to open file `%s`", (*val.s).c_str()), Hil_exception);
@@ -320,8 +322,8 @@ Interpreter::Interpreter(std::vector<std::string> preload)
   }
 , _bin_ops {
     {"^" , {1, _arithmetic_op<_pow<double>, _pow<int>>}}, // note: 0 is for unary ops
-    {"#" , {1, [this](const _Dynamic_value& str, const _Dynamic_value& i) {
-      HEXED_ASSERT(str.s && i.i, "firt operand of binary `#` must be `string` and second must be `int`", Hil_exception);
+    {"#" , {1, [](const _Dynamic_value& str, const _Dynamic_value& i) {
+      HEXED_ASSERT(str.s && i.i, "firt operand of binary `#` must be `string` and second must be `int`", Hil_exception)
       return _Dynamic_value(std::string(1, (*str.s)[*i.i]));
     }}},
     {"%" , {2, _mod}},
@@ -349,7 +351,7 @@ Interpreter::Interpreter(std::vector<std::string> preload)
     _text.clear();
     return "";
   }));
-  variables->create("throw", new Namespace::Heisenberg<std::string>([this]() {
+  variables->create("throw", new Namespace::Heisenberg<std::string>([]() {
     throw Hil_exception("Exception thrown from HIL by evaluating `throw`.");
     return "";
   }));
