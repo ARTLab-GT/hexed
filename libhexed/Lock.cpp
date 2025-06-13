@@ -22,6 +22,9 @@ Lock::Lock() {
   #endif
 }
 
+Lock::Lock(const Lock&) : Lock() {}
+void Lock::operator=(const Lock&) {}
+
 Lock::~Lock() {
   #if HEXED_THREADED
   omp_destroy_nest_lock(&l);

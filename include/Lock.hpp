@@ -37,6 +37,8 @@ class Lock {
     ~Acquire();
   };
   Lock();
+  Lock(const Lock&);
+  void operator=(const Lock&);
   ~Lock();
 };
 
