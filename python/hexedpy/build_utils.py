@@ -667,11 +667,7 @@ class Compiler:
                 if self.collection == "gcc":
                     san_flags += ["bounds-strict"]
                 fs += [f"-fsanitize={f}" for f in san_flags]
-            if self.openmp:
-                if self.collection == "clang":
-                    fs.append("-fopenmp=libomp")
-                else:
-                    fs.append("-fopenmp")
+            if self.openmp: fs.append("-fopenmp")
             if self.architecture: fs.append("-march=" + self.architecture)
             if self.profile: fs.append("-pg")
         assert isinstance(self.extra_flags, list)
