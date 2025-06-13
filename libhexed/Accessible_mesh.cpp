@@ -2374,7 +2374,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       for (int i_qpoint = 0; i_qpoint < params.n_face_qpoint(); ++i_qpoint) {
         Mat<3> point = Mat<3>::Zero();
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) point(i_dim) = sample_points(i_dim)[i_qpoint];
-        Mat<3> nearest = surf_geom->nearest_point(point).point();
+        Mat<3> nearest = resize(surf_geom->nearest_point(point).point(), 2);
         uncert_sq += weights(i_qpoint)*(point - nearest).squaredNorm();
       }
       block.element()->uncertainty = std::sqrt(uncert_sq);

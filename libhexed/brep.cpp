@@ -1272,17 +1272,14 @@ Nearest_point<dyn> guess_nearest(Mat<> point, double max_distance, double distan
 }
 
 Nearest_point<dyn> Geom_2d::nearest_point(Mat<> point, double max_distance, double distance_guess) {
-  return guess_nearest(point, max_distance, distance_guess, [this](Mat<> p, double max_dist) {
-    Nearest_point<dyn> nearest(resize(p, 2), max_dist);
-    Mat<3> p3d = resize(p, 3);
-    for (auto& curve : _tree_curves) {
-      auto index = curve.nearest_point(p3d, max_dist);
-      if (index.index >= 0) {
-        nearest.merge(resize(curve.interp_point(index), 2));
-      }
+  Nearest_point<dyn> nearest(resize(point, 2), max_distance);
+  for (auto& curve : _tree_curves) {
+    auto index = curve.nearest_point(resize(point, 3), max_distance);
+    if (index.index >= 0) {
+      nearest.merge(resize(curve.interp_point(index), 2));
     }
-    return nearest;
-  });
+  }
+  return nearest;
 }
 
 next::Sequence<Mat<3>> Geom_2d::points() {
