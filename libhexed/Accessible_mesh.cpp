@@ -1015,7 +1015,7 @@ void Accessible_mesh::_fit_surface() {
       line_points(0)(i_point).vector() = block.element()->point(elem_coords);
     }
     Array<double> interp_coefs({n_point});
-    interp_coefs = 1;
+    interp_coefs = 0;
     for (int i_point = 0; i_point < n_point; ++i_point) {
       Mat<3> p0;
       p0 = line_points(0)(i_point).vector();

@@ -26,8 +26,7 @@ Line_segment::Line_segment(Mat<3, 2> endpoints)
 {}
 
 Mat<2, 1> Line_segment::orig_param_bounds() const {
-  HEXED_THROW("not yet implemented for this entity", assert::Not_implemented_error)
-  throw;
+  return {0., 1.};
 }
 
 Circular_arc::Circular_arc(Mat<3> center, double radius, double start_angle, double end_angle)
@@ -52,8 +51,7 @@ Mat<3> Circular_arc::point(Mat<1> params) const {
 }
 
 Mat<2, 1> Circular_arc::orig_param_bounds() const {
-  HEXED_THROW("not yet implemented for this entity", assert::Not_implemented_error)
-  throw;
+  return {_start_angle, _end_angle};
 }
 
 Mat<2, 2> Plane::reparameterize(Mat<2, 2> bounds) {
@@ -123,8 +121,11 @@ Mat<3> Revolution_surface::point(Mat<2> params) const {
 }
 
 Mat<2, 2> Revolution_surface::orig_param_bounds() const {
-  HEXED_THROW("not yet implemented for this entity", assert::Not_implemented_error)
-  throw;
+  Mat<2, 2> bounds;
+  bounds(all, 0) = _generatrix->orig_param_bounds();
+  bounds(0, 1) = _start_angle;
+  bounds(1, 1) = _end_angle;
+  return bounds;
 }
 
 template class Nurbs<1>;
@@ -375,8 +376,10 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
       auto& param_nodes = disc_curve.back();
       auto& phys_nodes = disc_curve_phys.back();
       Mat<3> start;
+      Mat<3> end;
       if (is_model_space[i_composite]) {
         start = curve->point(Mat<1>{0.});
+        end = curve->point(Mat<1>{1.});
         #pragma omp parallel for
         for (Int i_node = 0; i_node < _n_div_max + 1; ++i_node) {
           Mat<3> pt = curve->point(Mat<1>{i_node*_sz_max});
@@ -394,6 +397,7 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
           return p;
         };
         start = _surf->point(get_params(0.));
+        end = _surf->point(get_params(1.));
         #pragma omp parallel for
         for (Int i_node = 0; i_node < _n_div_max + 1; ++i_node) {
           Mat<2> params = get_params(i_node*_sz_max);
@@ -405,7 +409,7 @@ Trimmed_surface::Trimmed_surface(Parametric<2>* surface, std::vector<Composite_c
       }
       mean_squared_dist /= (n_div_max + 1);
       // if the start and end points are close together, split the curve in half to simplify edge matching
-      split.back().push_back((curve->point(Mat<1>{1.}) - start).squaredNorm() < .1*mean_squared_dist);
+      split.back().push_back((end - start).squaredNorm() < .2*.2*mean_squared_dist);
     }
     // check for any curves that may be oriented backward (which does happen, apparently) and flip them
     std::size_t reversal = 0;
@@ -1228,6 +1232,15 @@ void Geom_2d::visualize(std::string format, std::string file_name, Int n_div) {
     }
     vis->write_block(coords, Array<double>({0, n_nodes}));
   }
+}
+
+std::vector<double> Geom_2d::intersections(Mat<> point0, Mat<> point1, bool high_prec) {
+  std::vector<double> sects;
+  for (Tree_curve& curve : _tree_curves) {
+    std::vector<double> curve_sects = curve.intersections_2d(resize(point0, 3), resize(point1, 3));
+    sects.insert(sects.end(), curve_sects.begin(), curve_sects.end());
+  }
+  return sects;
 }
 
 double component_bound = default_max_dist/2;

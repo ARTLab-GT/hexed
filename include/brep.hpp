@@ -336,8 +336,7 @@ class Geom_2d : public Surface_geom {
    */
   void visualize(std::string format, std::string file_name, Int n_div = 100);
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-  //! \brief Dummy implementation that returns an empty vector.
-  inline std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_prec = true) override {return {};}
+  std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_prec = true) override;
   next::Sequence<Mat<3>> points() override;
   private:
   std::vector<std::unique_ptr<Parametric<1>>> _curves;

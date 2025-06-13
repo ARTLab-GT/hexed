@@ -6,7 +6,7 @@ mesh_extreme11 =  10.
 altitude = 0.
 freestream_speed = 0.
 geom0 = {crmhl-2dcut.igs}
-max_ref_level = 14
+geom_rtol = 1e-2
 $set_geometry_refinement
 diffusive_admissibility = true
 done = {normalized_residual < 1e-4}
