@@ -96,6 +96,7 @@ Hypersphere::Hypersphere(Mat<> center, double radius)
 {}
 
 Nearest_point<dyn> Hypersphere::nearest_point(Mat<> point, double max_distance, double distance_guess) {
+  point = resize(point, c.size());
   Nearest_point<dyn> nearest(point, max_distance);
   nearest.merge(c + r*(point - c).normalized());
   return nearest;

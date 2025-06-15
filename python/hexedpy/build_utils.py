@@ -372,7 +372,7 @@ class Wget(Subprocess):
                 super().build()
                 break
             except AssertionError:
-                print(f"`wget` failed. Waiting {self.wait_seconds} and retrying " +
+                print(f"`wget` failed. Waiting {self.wait_seconds} seconds and retrying " +
                       f"({self.n_tries - i - 1} tries remaining)...")
                 time.sleep(self.wait_seconds)
 

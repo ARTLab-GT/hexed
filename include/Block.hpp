@@ -193,8 +193,10 @@ class Vertex : public Block {
   Mat<3> dijkstra_point; //!< \brief nominal location of this vertex used in Dijkstra's algorithm
   double dijkstra_dist; //!< \brief the "distance" from the start node to this node in Dijkstra's algorithm
   int dijkstra_updates; //!< \brief number of times `dijkstra_dist` has been updated in Dijkstra's algorithm
-  Vertex* dijkstra_prev_vert; //!< \brief holds the previous node in the shortest path to this node in Dijkstra's algorithm
-  Edge* dijkstra_prev_edge; //!< \brief holds the previous node in the shortest path to this node in Dijkstra's algorithm
+  //! \brief holds the previous node in the shortest path to this node in Dijkstra's algorithm
+  Vertex* dijkstra_prev_vert;
+  //! \brief holds the previous node in the shortest path to this node in Dijkstra's algorithm
+  Edge* dijkstra_prev_edge;
   double dijkstra_curve_dist_sq; //!< \brief squared distance from the curve
   double dijkstra_arc_len; //!< \brief arc length of the nearest point on the curve
   bool incompatible_snap;
@@ -208,18 +210,19 @@ class Vertex : public Block {
   struct _Optimization_state {
     bool feasible = true;
     double objective = 0;
-    Mat<3> gradient = Mat<3>::Zero();
     std::vector<_Gradient_entry> skip;
     double worst_ortho = 1;
     double worst_edge = 1;
     bool has_glued_neighbor = false;
     bool computing_depends = false;
   };
-  _Optimization_state _compute_state(bool include_neighbors = true, bool ignore = false, bool ignore_neighb = false, double extra_tol = 0.);
+  _Optimization_state _compute_state(bool include_neighbors = true, bool ignore = false, bool ignore_neighb = false,
+                                     double extra_tol = 0.);
   // will treat the vertex `ignore` as being at its `_orig_pos`;
   Mat<3> _unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_others) const;
   void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                Vertex* orig_vertex = nullptr, Vertex* ignore = nullptr, bool ignore_orig = false, bool ignore_neighb = false, double extra_tol = 0.);
+                                Vertex* orig_vertex = nullptr, Vertex* ignore = nullptr, bool ignore_orig = false,
+                                bool ignore_neighb = false, double extra_tol = 0.);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   Mat<3> _get_pos() const; // fetches `_pos` with atomic reads
   Mat<3> _pos;

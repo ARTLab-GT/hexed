@@ -217,7 +217,7 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         for (Vertex* v : orig_vertex->_depends_on) contains = contains || &that_vert == v;
         if (!contains) orig_vertex->_depends_on.push_back(&that_vert);
       }
-      Mesh_assessment ma(vert_seq, i_that, i_this);
+      Mesh_assessment ma(vert_seq, i_that);
       ma.edge_lengths /= ns;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         state.feasible = state.feasible && ma.orthogonality(i_dim) > ortho_tolerance + extra_tol;
@@ -226,14 +226,6 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim));
       }
       if (state.feasible) {
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          double orth_diff = ma.orthogonality(i_dim) - ortho_tolerance;
-          state.objective += (!skip_obj)*10./orth_diff;
-          double num = ma.edge_lengths(i_dim)*ma.orthogonality(i_dim) - 1.;
-          double denom = ma.edge_lengths(i_dim) - edge_tolerance;
-          state.objective += (!skip_obj)*num*num/denom;
-        }
-        // note: the valid values for `gradient_weight` are 1., .5, and .25
         if (gradient_weight > .3 && that_vert.glued() && i_this != i_that) {
           bool coupled = false;
           for (Vertex* v : {this, orig_vertex}) {
@@ -243,7 +235,8 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
           }
           if (coupled) {
             state.has_glued_neighbor = true;
-            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex, ignore, ignore_orig, ignore_neighb, extra_tol);
+            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex, ignore, ignore_orig,
+                                               ignore_neighb, extra_tol);
           }
         }
       }
@@ -525,7 +518,7 @@ double Boundary_block::scale_factor() {
   double worst = huge;
   for (Vertex* vert : bound_verts) {
     int i_vert = vert->get_index(*_elem);
-    Mesh_assessment ma(vert_seq, i_vert, i_vert);
+    Mesh_assessment ma(vert_seq, i_vert);
     for (int i_dim = 0; i_dim < _elem->n_dim(); ++i_dim) {
       worst = std::min(worst, ma.edge_lengths(i_dim)*ma.orthogonality(i_dim));
     }
