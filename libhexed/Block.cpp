@@ -31,7 +31,8 @@ void Block::visualize(std::string format, std::string file_name, double time) co
 void Block::visualize(std::string format, std::string file_name, next::Sequence<const Block&> blocks, double time) {
   // construct the Visualizer
   int block_dim = blocks.empty() ? 1 : blocks[0]._n_dim;
-  auto visualizer = Visualizer::create(format, 3, block_dim, file_name, {}, time, Visualizer::block);
+  std::vector<std::string> vars;
+  auto visualizer = Visualizer::create(format, 3, block_dim, file_name, vars, time, Visualizer::block);
   // write each block via the Visualizer
   for (const Block& block : blocks) {
     visualizer->write_block(block.points(), Array<double>({}));
@@ -542,7 +543,8 @@ Mat<3> Edge::_point(const std::vector<int>& coords, Int recursion_depth) const {
       return _glued_to.value()._point({coord}, recursion_depth + 1);
     } else {
       Mat<3, dyn> pts(3, row_size());
-      for (int c = 0; c < row_size(); ++c) pts(all, c) = _glued_to.value().point({c}, recursion_depth + 1);
+      for (int c = 0; c < row_size(); ++c) pts(all, c) = _glued_to.value().point(std::vector<int>{c},
+                                                                                 recursion_depth + 1);
       return pts*basis().prolong(_half)(coord, all).transpose();
     }
   }
@@ -641,8 +643,12 @@ int Edge::glued_half() const {
 Mat<3> Surface_face::_point(const std::vector<int>& coords, Int recursion_depth) const {
   // if the point is on the boundary of the node array, forward to one of the edges
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
-    if (coords[i_dim] ==              0) return _edges[2*i_dim    ].point({coords[!i_dim]}, recursion_depth + 1);
-    if (coords[i_dim] == row_size() - 1) return _edges[2*i_dim + 1].point({coords[!i_dim]}, recursion_depth + 1);
+    if (coords[i_dim] ==              0) {
+      return _edges[2*i_dim    ].point(std::vector<int>{coords[!i_dim]}, recursion_depth + 1);
+    }
+    if (coords[i_dim] == row_size() - 1) {
+      return _edges[2*i_dim + 1].point(std::vector<int>{coords[!i_dim]}, recursion_depth + 1);
+    }
   }
   // otherwise, return an interior node
   return _interior(coords[0] - 1)(coords[1] - 1).vector();
@@ -705,15 +711,15 @@ void Surface_face::reset() {
       }
       // add influence of edge (not corner) nodes on boundary-normal rows
       for (int col : {0, rs - 1}) {
-        rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(    bool(col)).point({j_row});
-        rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(2 + bool(col)).point({j_row});
+        rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(    bool(col)).point(std::vector<int>{j_row});
+        rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(2 + bool(col)).point(std::vector<int>{j_row});
       }
     }
     // add influence of edges (including corners) nodes on other nodes on the same edge
     for (int j_row : {0, rs - 1}) {
       for (int col = 0; col < rs; ++col) {
-        rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(    bool(j_row)).point({col});
-        rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(2 + bool(j_row)).point({col});
+        rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(    bool(j_row)).point(std::vector<int>{col});
+        rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(2 + bool(j_row)).point(std::vector<int>{col});
       }
     }
   }

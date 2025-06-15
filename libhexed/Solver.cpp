@@ -1076,7 +1076,7 @@ class Vis_evaluator {
     _assign(*sub.variables, t);
     sub.exec(_expr);
     for (int i_dim = 0; i_dim < _n_dim; ++i_dim) {
-      qpoints(i_dim) = sub.variables->get<Array<double>>("pos" + std::to_string(i_dim));
+      qpoints(i_dim) = sub.variables->template get<Array<double>>("pos" + std::to_string(i_dim));
     }
     for (int i_var = 0; i_var < _n_var; ++i_var) {
       sub.variables->assign_array(qpoints(_n_dim + i_var), _var_names[i_var]);

@@ -1,9 +1,11 @@
 #ifndef HEXED_LOCK_HPP_
 #define HEXED_LOCK_HPP_
 
-#include <omp.h>
-#include <optional>
 #include "config.hpp"
+#if HEXED_THREADED
+#include <omp.h>
+#endif
+#include <optional>
 
 namespace hexed {
 
@@ -41,6 +43,8 @@ class Lock {
     Lock* _lock;
   };
   Lock();
+  Lock(const Lock&);
+  void operator=(const Lock&);
   ~Lock();
   //! \brief If the lock is available, set it and return a `Set` object. Otherwise, return empty `std::optional`.
   //! \note Doesn't block if the lock isn't available.
