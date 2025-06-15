@@ -147,6 +147,13 @@ This can significantly speed up the build, but it also uses more memory.
 You can easily max out your RAM this way, so use caution.
 As a rule of thumb, I usually use 1 process for every 2 GB of RAM available.
 
+\subsubsection venv
+__Expects:__ Boolean \n
+__Default:__ True \n
+If true, all python packages needed for the build process will be installed
+in an automatically-created virtual environment in the build directory.
+If false they will be installed in your current Python environment (not recommended).
+
 \subsubsection compiler
 __Expects:__ `gcc` or `clang` \n
 __Default:__ `gcc` \n
@@ -185,6 +192,7 @@ If False, the build script will avoid internet usage to install dependencies.
 As a result, if some dependencies are not available, the build process will fail instead of downloading them.
 This option is generally only appropriate for repeat builds,
 where time may be wasted in unnecessary internet access.
+Even still, the difference in build time is usually modest.
 
 \subsubsection build_mode
 __Expects:__ `release` or `debug` \n
