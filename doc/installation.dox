@@ -34,6 +34,10 @@ or else you won't be able to use your `hexed` installation.
 See [this tutorial](https://docs.python.org/3/tutorial/venv.html)
 for more information about Python packages and virtual environments.
 
+\warning Do not create a virtual environment within the Hexed source directory.
+This will break the build script, most likely with a Python max recursion depth error.
+Yes, it really ought to be able to handle or at least diagnose that, but it currently cannot.
+
 Currently, Hexed is installed via a Python package,
 which includes both a Python library of helper functions and the binaries for the Hexed solver.
 This could be construed as an abuse of the Python packaging system,
@@ -73,6 +77,12 @@ Again, if you're reading this, you probably already have these, but if you don't
 ```{.sh}
 sudo apt install build-essential git
 ```
+Hexed also supports [Clang](https://clang.llvm.org/), in which you will need to install it,
+along with [LLVM OpenMP](https://openmp.llvm.org/) runtime:
+```{.sh}
+sudo apt install clang libomp-dev
+```
+\see \ref compiler for the corresponding build option.
 
 Once you have these basic prerequisites, all you have to do is:
 ```{.sh}
@@ -136,6 +146,12 @@ When compiling, use up to this many parallel processes.
 This can significantly speed up the build, but it also uses more memory.
 You can easily max out your RAM this way, so use caution.
 As a rule of thumb, I usually use 1 process for every 2 GB of RAM available.
+
+\subsubsection compiler
+__Expects:__ `gcc` or `clang` \n
+__Default:__ `gcc` \n
+Which compiler family to use.
+The vast majority of development and testing has been performed with GCC, so `gcc` is recommended.
 
 \subsubsection verbose
 __Expects:__ Boolean \n
