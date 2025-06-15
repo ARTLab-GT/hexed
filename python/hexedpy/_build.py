@@ -122,9 +122,9 @@ class Hexed(bu.C_project):
         sources.sort()
         sources.sort(key=lambda s: "kernels" not in s)
         self[bu.Union]([self[bu.Compile](s) for s in sources], name="compile", parallel=True).do
-        libs = ["hdf5_cpp"]
+        libs = ["hdf5_cpp", "hdf5"]
         if self.builder.options["use_xdmf"]:
-            libs.append("Xdmf")
+            libs += ["Xdmf", "XdmfCore", "xml2"]
         if self.builder.options["use_occt"]:
             libs += ["TKDEIGES", "TKDESTEP", "TKDESTL", "TKBRep"]
 

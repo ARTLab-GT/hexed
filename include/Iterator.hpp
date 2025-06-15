@@ -20,9 +20,9 @@ class Iterator {
   using pointer = std::remove_reference<T>*;
   using reference = std::add_lvalue_reference<T>;
 
-  Iterator(std::function<T(Int)> get, Int index) : _get{get}, _index{index} {}
+  Iterator(const std::function<T(Int)>& get, Int index) : _get{&get}, _index{index} {}
   Int index() const {return _index;} //!< \brief Obtains the current index of this iterator.
-  std::function<T(Int)> get() const {return _get;} //!< \brief Obtains this iterator's access function.
+  const std::function<T(Int)>& get() const {return *_get;} //!< \brief Obtains this iterator's access function.
   Iterator& operator++() {return *this += 1;}
   Iterator& operator--() {return *this -= 1;}
   Iterator& operator-=(difference_type diff) {return *this += -diff;}
@@ -44,12 +44,12 @@ class Iterator {
     return *this;
   }
 
-  T operator*() const {return _get(_index);}
-  std::add_pointer<std::remove_reference<T>> operator->() const {return addr_if_possible(_get(_index));}
-  T operator[](difference_type diff) {return _get(_index + diff);}
+  T operator*() const {return (*_get)(_index);}
+  std::add_pointer<std::remove_reference<T>> operator->() const {return addr_if_possible((*_get)(_index));}
+  T operator[](difference_type diff) {return (*_get)(_index + diff);}
 
   private:
-  std::function<T(Int)> _get;
+  const std::function<T(Int)>* _get;
   Int _index;
 };
 

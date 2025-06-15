@@ -1,8 +1,10 @@
 #ifndef HEXED_LOCK_HPP_
 #define HEXED_LOCK_HPP_
 
-#include <omp.h>
 #include "config.hpp"
+#if HEXED_THREADED
+#include <omp.h>
+#endif
 
 namespace hexed {
 
@@ -35,6 +37,8 @@ class Lock {
     ~Acquire();
   };
   Lock();
+  Lock(const Lock&);
+  void operator=(const Lock&);
   ~Lock();
 };
 

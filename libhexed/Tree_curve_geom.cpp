@@ -29,7 +29,7 @@ std::vector<double> Tree_curve_geom::intersections(Mat<> point0, Mat<> point1, b
 next::Sequence<Mat<3>> Tree_curve_geom::points() {
   return {
     [this](Int ind)->Mat<3>{return _curve.nodes()(ind*(_curve.n_points() - 1)).vector();},
-    [this]()->Int{return 2;}
+    []()->Int{return 2;}
   };
 }
 

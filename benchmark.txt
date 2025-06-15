@@ -10042,3 +10042,186 @@ lift coefficient: -0.00404789
 side force coefficient: 0
 visualizing... done
 
+execution context:
+case: naca0012
+system: micaiah-legion
+approx execution start time: 1749953466.336171
+commit hash: 176a39c4d345c151a41edb22d89eaa610eb10109
+commit time: 1749953444
+elapsed execution time: 25.429587364196777 s
+
+output:
+[0mwall clock time = 25.3187s = 0.421979min = 0.00703298hr
+
+performance summary:
+26660000 (element*update)s completed in 18.8075 s at 7.05458e-07 s / (element*update).
+    boundary conditions: 14111134 (boundary connection)*(time integration stage)s completed in 2.6713 s at 1.89304e-07 s / (boundary connection)*(time integration stage).
+    cartesian: 17372000 (element*update)s completed in 5.80292 s at 3.34039e-07 s / (element*update).
+        compute time step: 17372000 (element*update)s completed in 0.797945 s at 4.59328e-08 s / (element*update).
+        local: 34761574 (element*(time integration stage))s completed in 2.45599 s at 7.06524e-08 s / (element*(time integration stage)).
+        neighbor: 78127498 (connection*(time integration stage))s completed in 1.71961 s at 2.20103e-08 s / (connection*(time integration stage)).
+        reconcile LDG flux: 0 (element*(time integration stage))s completed in 0 s.
+    deformed: 9288000 (element*update)s completed in 4.79455 s at 5.16209e-07 s / (element*update).
+        compute time step: 9288000 (element*update)s completed in 0.617284 s at 6.64604e-08 s / (element*update).
+        local: 18585396 (element*(time integration stage))s completed in 2.05609 s at 1.10629e-07 s / (element*(time integration stage)).
+        neighbor: 44742620 (connection*(time integration stage))s completed in 1.28982 s at 2.88275e-08 s / (connection*(time integration stage)).
+        reconcile LDG flux: 0 (element*(time integration stage))s completed in 0 s.
+    fix admis.: 0 (element*(fix admis. iter))s completed in 0 s.
+        cartesian: 0 (element*update)s completed in 0 s.
+            compute time step: 0 (element*update)s completed in 0 s.
+            local: 0 (element*(time integration stage))s completed in 0 s.
+            neighbor: 0 (connection*(time integration stage))s completed in 0 s.
+            reconcile LDG flux: 0 (element*(time integration stage))s completed in 0 s.
+        check admis.: 0 (element*update)s completed in 0 s.
+        deformed: 0 (element*update)s completed in 0 s.
+            compute time step: 0 (element*update)s completed in 0 s.
+            local: 0 (element*(time integration stage))s completed in 0 s.
+            neighbor: 0 (connection*(time integration stage))s completed in 0 s.
+            reconcile LDG flux: 0 (element*(time integration stage))s completed in 0 s.
+    integrals: 174 integrals completed in 0.0585877 s at 0.000336711 s / integral.
+        field: 87 integrals completed in 0.00903305 s at 0.000103828 s / integral.
+        surface: 87 integrals completed in 0.0495713 s at 0.000569785 s / integral.
+    prolong/restrict: 43365924 (element*(time integration stage))s completed in 1.94015 s at 4.47391e-08 s / (element*(time integration stage)).
+    set art visc: 0 (element*update)s completed in 0 s.
+        advection: 0 (element*update)s completed in 0 s.
+            BCs: 0 (element*(time integration stage))s completed in 0 s.
+            cartesian: 0 (element*update)s completed in 0 s.
+                compute time step: 0 (element*update)s completed in 0 s.
+                local: 0 (element*(time integration stage))s completed in 0 s.
+                neighbor: 0 (connection*(time integration stage))s completed in 0 s.
+            deformed: 0 (element*update)s completed in 0 s.
+                compute time step: 0 (element*update)s completed in 0 s.
+                local: 0 (element*(time integration stage))s completed in 0 s.
+                neighbor: 0 (connection*(time integration stage))s completed in 0 s.
+            setup: 0 (element*update)s completed in 0 s.
+            update: 0 (element*(time integration stage))s completed in 0 s.
+        diffusion: 0 (element*update)s completed in 0 s.
+            cartesian: 0 (element*update)s completed in 0 s.
+                compute time step: 0 (element*update)s completed in 0 s.
+                local: 0 (element*(time integration stage))s completed in 0 s.
+                neighbor: 0 (connection*(time integration stage))s completed in 0 s.
+                reconcile LDG flux: 0 (element*(time integration stage))s completed in 0 s.
+            deformed: 0 (element*update)s completed in 0 s.
+                compute time step: 0 (element*update)s completed in 0 s.
+                local: 0 (element*(time integration stage))s completed in 0 s.
+                neighbor: 0 (connection*(time integration stage))s completed in 0 s.
+                reconcile LDG flux: 0 (element*(time integration stage))s completed in 0 s.
+        initialize: 0 (element*update)s completed in 0 s.
+    visualization: 57 files completed in 1.07071 s at 0.0187844 s / file.
+        contour: 0 elements completed in 0 s.
+        field: 4566 elements completed in 0.437613 s at 9.58417e-05 s / element.
+        field wireframe: 4566 elements completed in 0.306861 s at 6.72056e-05 s / element.
+        surface: 1268 surface faces completed in 0.326245 s at 0.000257291 s / surface face.
+        surface wireframe: 0 surface faces completed in 0 s.
+1 meshs completed in 5.17479 s at 5.17479 s / mesh.
+    update: 16 updates completed in 5.17479 s at 0.323424 s / update.
+        extrusion: 17 extrusions completed in 0.0153685 s at 0.00090403 s / extrusion.
+        fit surface: 14 fits completed in 5.07239 s at 0.362314 s / fit.
+            optimization: 28 optimizations completed in 4.66812 s at 0.166719 s / optimization.
+                assessment: 266430 vertex assessments completed in 0.164898 s at 6.18917e-07 s / vertex assessment.
+                relaxation: 50536 vertex updates completed in 4.44605 s at 8.79779e-05 s / vertex update.
+        refinement: 16 refinements completed in 0.0789963 s at 0.00493727 s / refinement.
+
+writing mesh... done
+writing state... done
+writing status... done
+visualizing... done
+drag: 4.80218 N
+lift: 3155.98 N
+side force: 0 N
+drag coefficient: 0.000752283
+lift coefficient: 0.494399
+side force coefficient: 0
+
+execution context:
+case: flat_plate
+system: micaiah-legion
+approx execution start time: 1749953491.7687478
+commit hash: 176a39c4d345c151a41edb22d89eaa610eb10109
+commit time: 1749953444
+elapsed execution time: 40.05305242538452 s
+
+output:
+[0mwall clock time = 39.93s = 0.6655min = 0.0110917hr
+
+performance summary:
+19767000 (element*update)s completed in 37.1143 s at 1.87759e-06 s / (element*update).
+    boundary conditions: 15844352 (boundary connection)*(time integration stage)s completed in 2.9243 s at 1.84564e-07 s / (boundary connection)*(time integration stage).
+    cartesian: 4653000 (element*update)s completed in 9.06139 s at 1.94743e-06 s / (element*update).
+        compute time step: 18612000 (element*update)s completed in 1.79275 s at 9.63223e-08 s / (element*update).
+        local: 9310794 (element*(time integration stage))s completed in 2.50325 s at 2.68854e-07 s / (element*(time integration stage)).
+        neighbor: 30512944 (connection*(time integration stage))s completed in 2.22391 s at 7.28841e-08 s / (connection*(time integration stage)).
+        reconcile LDG flux: 4657794 (element*(time integration stage))s completed in 0.768516 s at 1.64996e-07 s / (element*(time integration stage)).
+    deformed: 15114000 (element*update)s completed in 14.9015 s at 9.85943e-07 s / (element*update).
+        compute time step: 22440000 (element*update)s completed in 2.10082 s at 9.36193e-08 s / (element*update).
+        local: 30233780 (element*(time integration stage))s completed in 6.67338 s at 2.20726e-07 s / (element*(time integration stage)).
+        neighbor: 103876636 (connection*(time integration stage))s completed in 3.17801 s at 3.05941e-08 s / (connection*(time integration stage)).
+        reconcile LDG flux: 15119780 (element*(time integration stage))s completed in 1.16841 s at 7.7277e-08 s / (element*(time integration stage)).
+    fix admis.: 0 (element*(fix admis. iter))s completed in 0 s.
+        cartesian: 0 (element*update)s completed in 0 s.
+            compute time step: 0 (element*update)s completed in 0 s.
+            local: 0 (element*(time integration stage))s completed in 0 s.
+            neighbor: 0 (connection*(time integration stage))s completed in 0 s.
+            reconcile LDG flux: 0 (element*(time integration stage))s completed in 0 s.
+        check admis.: 0 (element*update)s completed in 0 s.
+        deformed: 0 (element*update)s completed in 0 s.
+            compute time step: 0 (element*update)s completed in 0 s.
+            local: 0 (element*(time integration stage))s completed in 0 s.
+            neighbor: 0 (connection*(time integration stage))s completed in 0 s.
+            reconcile LDG flux: 0 (element*(time integration stage))s completed in 0 s.
+    integrals: 34 integrals completed in 0.00349662 s at 0.000102842 s / integral.
+        field: 34 integrals completed in 0.003499 s at 0.000102912 s / integral.
+        surface: 0 integrals completed in 0 s.
+    prolong/restrict: 38361980 (element*(time integration stage))s completed in 4.44351 s at 1.15831e-07 s / (element*(time integration stage)).
+    set art visc: 0 (element*update)s completed in 0 s.
+        advection: 0 (element*update)s completed in 0 s.
+            BCs: 0 (element*(time integration stage))s completed in 0 s.
+            cartesian: 0 (element*update)s completed in 0 s.
+                compute time step: 0 (element*update)s completed in 0 s.
+                local: 0 (element*(time integration stage))s completed in 0 s.
+                neighbor: 0 (connection*(time integration stage))s completed in 0 s.
+            deformed: 0 (element*update)s completed in 0 s.
+                compute time step: 0 (element*update)s completed in 0 s.
+                local: 0 (element*(time integration stage))s completed in 0 s.
+                neighbor: 0 (connection*(time integration stage))s completed in 0 s.
+            setup: 0 (element*update)s completed in 0 s.
+            update: 0 (element*(time integration stage))s completed in 0 s.
+        diffusion: 0 (element*update)s completed in 0 s.
+            cartesian: 0 (element*update)s completed in 0 s.
+                compute time step: 0 (element*update)s completed in 0 s.
+                local: 0 (element*(time integration stage))s completed in 0 s.
+                neighbor: 0 (connection*(time integration stage))s completed in 0 s.
+                reconcile LDG flux: 0 (element*(time integration stage))s completed in 0 s.
+            deformed: 0 (element*update)s completed in 0 s.
+                compute time step: 0 (element*update)s completed in 0 s.
+                local: 0 (element*(time integration stage))s completed in 0 s.
+                neighbor: 0 (connection*(time integration stage))s completed in 0 s.
+                reconcile LDG flux: 0 (element*(time integration stage))s completed in 0 s.
+        initialize: 0 (element*update)s completed in 0 s.
+    visualization: 30 files completed in 0.756561 s at 0.0252187 s / file.
+        contour: 0 elements completed in 0 s.
+        field: 1826 elements completed in 0.270975 s at 0.000148398 s / element.
+        field wireframe: 1826 elements completed in 0.212521 s at 0.000116386 s / element.
+        surface: 530 surface faces completed in 0.273055 s at 0.000515198 s / surface face.
+        surface wireframe: 0 surface faces completed in 0 s.
+1 meshs completed in 2.17627 s at 2.17627 s / mesh.
+    update: 11 updates completed in 2.17627 s at 0.197843 s / update.
+        extrusion: 15 extrusions completed in 0.00699324 s at 0.000466216 s / extrusion.
+        fit surface: 9 fits completed in 2.09947 s at 0.233274 s / fit.
+            optimization: 18 optimizations completed in 1.76354 s at 0.0979745 s / optimization.
+                assessment: 497165 vertex assessments completed in 0.316545 s at 6.36699e-07 s / vertex assessment.
+                relaxation: 82262 vertex updates completed in 1.42765 s at 1.73549e-05 s / vertex update.
+        refinement: 11 refinements completed in 0.0521739 s at 0.00474308 s / refinement.
+
+writing mesh... done
+writing state... done
+writing status... done
+visualizing... done
+drag: 0.0881332 N
+lift: -0.546465 N
+side force: 0 N
+drag coefficient: 0.000652838
+lift coefficient: -0.00404789
+side force coefficient: 0
+visualizing... done
+

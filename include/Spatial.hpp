@@ -393,7 +393,7 @@ class Spatial {
         // compute flux
         double flux [n_dim][Pde::n_update][n_qpoint];
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-          typename Pde::Computation<n_dim> comp(_eq);
+          typename Pde::template Computation<n_dim> comp(_eq);
           comp.fetch_state(n_qpoint, state + i_qpoint);
           if constexpr (is_deformed) {
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -665,7 +665,7 @@ class Spatial {
           }
           if constexpr (Pde::has_convection) {
             // fetch data
-            typename Pde::Computation<1> comp [2] {_eq, _eq};
+            typename Pde::template Computation<1> comp [2] {_eq, _eq};
             if constexpr (is_deformed) {
               for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
                 comp[0].normal(i_dim) = sign[0]*face_nrml[i_dim*n_fqpoint + i_qpoint];
@@ -804,7 +804,7 @@ class Spatial {
           }
           double spacing = math::interp(vertex_spacing, coords);
           // fetch state
-          typename Pde::Computation<n_dim> comp(_eq);
+          typename Pde::template Computation<n_dim> comp(_eq);
           comp.fetch_state(n_qpoint, state + i_qpoint);
           // compute time step
           double scale = 0;
