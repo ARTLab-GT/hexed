@@ -62,7 +62,7 @@ TEST_CASE("Riemann_invariants") {
     // set an arbitrary viscous flux
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       for (int i_var = 0; i_var < 5; ++i_var) {
-        con.inside().flow_state()(0)(i_var)[i_qpoint] = 1.;
+        con.inside().flow_state()(1)(i_var)[i_qpoint] = 1.;
       }
     }
     ri.apply_flux(con);
@@ -90,10 +90,10 @@ TEST_CASE("Function_bc") {
     con.inside().flow_state()(0)(2)[i_qpoint] = 5.;
     con.inside().flow_state()(0)(3)[i_qpoint] = 1e4;
   }
-  // set position at node 0 to have radius 2*e (not the actual position, but for this test that doesn't matter)
   con.normal() = 0.;
-  con.normal()(0)[0] =  1.2*std::exp(1.);
-  con.normal()(1)[0] = -1.6*std::exp(1.);
+  // set position at node 0 to have radius 2*e (not the actual position, but for this test that doesn't matter)
+  con.position()(0)[0] =  1.2*std::exp(1.);
+  con.position()(1)[0] = -1.6*std::exp(1.);
   // set position at node 4 to have radius 2*e^2
   con.position()(0)[4] =  1.2*std::exp(2.);
   con.position()(1)[4] =  1.6*std::exp(2.);
@@ -151,7 +151,7 @@ TEST_CASE("No_slip") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 4, 2, row_size};
   hexed::Deformed_element element {params};
-  hexed::Boundary_connection con(element.face(0), 0, 0);
+  hexed::Boundary_connection con(element.face(0), 0, 3);
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
     for (int i_dim = 0; i_dim < 2; ++i_dim) con.normal()(i_dim)[i_qpoint] = .7/std::sqrt(2.);
   }
@@ -164,12 +164,15 @@ TEST_CASE("No_slip") {
     hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_energy>(1e6), 1., 1.4, hexed::inviscid, hexed::laminar);
     no_slip.apply_state(con);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      for (int i_dim = 0; i_dim < 2; ++i_dim) REQUIRE(con.ghost().flow_state()(0)(i_dim)[i_qpoint] == Catch::Approx(-1.));
+      for (int i_dim = 0; i_dim < 2; ++i_dim) {
+        REQUIRE(con.ghost().flow_state()(0)(i_dim)[i_qpoint] == Catch::Approx(-1.));
+      }
       REQUIRE(con.ghost().flow_state()(0)(2)[i_qpoint] == Catch::Approx(1.2));
-      REQUIRE(std::sqrt(con.ghost().flow_state()(0)(3)[i_qpoint]*con.inside().flow_state()(0)(3)[i_qpoint]) == Catch::Approx(1e6*1.2));
+      REQUIRE(std::sqrt(con.ghost().flow_state()(0)(3)[i_qpoint]*con.inside().flow_state()(0)(3)[i_qpoint])
+              == Catch::Approx(1e6*1.2));
     }
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-      for (int i_var = 0; i_var < 4; ++i_var) con.inside().flow_state()(0)(i_var)[i_qpoint] = flux[i_var];
+      for (int i_var = 0; i_var < 4; ++i_var) con.inside().flow_state()(1)(i_var)[i_qpoint] = flux[i_var];
     }
     no_slip.apply_flux(con);
     flux[2] *= -1; // mass flux should always inverted
