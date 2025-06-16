@@ -408,12 +408,12 @@ void Accessible_mesh::_fit_surface() {
         vert.dijkstra_curve_dist_sq += 1e6*(_de_intersect(vert, edge_point) - edge_point).squaredNorm();
         vert.dijkstra_arc_len = geom_edge.arc_length(nearest);
       }
-      auto cost = [this, i_geom_edge](next::Vertex& vert, next::Vertex& curr_vert, next::Edge& edge) {
+      auto cost = [](next::Vertex& vert, next::Vertex& curr_vert, next::Edge& edge) {
         double interval = std::max(edge.element()->nominal_size(),
                                    std::abs(vert.dijkstra_arc_len - curr_vert.dijkstra_arc_len));
         return .5*(curr_vert.dijkstra_curve_dist_sq + vert.dijkstra_curve_dist_sq)*interval;
       };
-      auto snap = [this, &edges, i_geom_edge](next::Vertex& vert) {
+      auto snap = [&edges, i_geom_edge](next::Vertex& vert) {
         bool snap = false;
         Mat<3> unwarped = vert.unwarped_point();
         Mat<3> edge_point = edges[i_geom_edge].point(edges[i_geom_edge].arg_nearest_point(unwarped));
@@ -455,10 +455,10 @@ void Accessible_mesh::_fit_surface() {
           }
           HEXED_ASSERT(end_vert, "Opposite vertex not found.")
           HEXED_ASSERT(!end_vert->glued(), "Opposite vertex is glued.")
-          auto cost = [this, &snapped_edge](next::Vertex&, next::Vertex&, next::Edge& edge) {
+          auto cost = [&snapped_edge](next::Vertex&, next::Vertex&, next::Edge& edge) {
             return &edge == snapped_edge ? huge : 1.;
           };
-          auto snap = [this](next::Vertex& arg) {
+          auto snap = [](next::Vertex& arg) {
             if (arg.snapped_edge == -1) arg.snapped_edge = -2;
             if (arg.dijkstra_prev_edge->snapped_edge == -1) arg.dijkstra_prev_edge->snapped_edge = -2;
           };
