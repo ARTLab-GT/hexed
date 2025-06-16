@@ -11,7 +11,8 @@ surface_max_iters = 0
 done = {flow_time >= 6e-3}
 print_freq = 10
 vis_freq = 100
-local_time = false
+steady = false
+implicit = false
 
 $simulate
 integrand_field = {errsq = (density - $vortex_mass)^2}

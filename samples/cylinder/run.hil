@@ -7,12 +7,11 @@ mesh_extreme01 =  0.*.02
 mesh_extreme10 =  0.*.02
 mesh_extreme11 =  4.*.02
 init_ref_level = 2
-max_refinement_iters = 3
-refine_if = {center0 > -2.0*0.02 & center1 < 2.8*0.02}
+refine_if = {center0 > -2.0*0.02 & center1 < 2.8*0.02 & ref_level < 5}
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {outflow}
 geom0 = {auto.csv}
-init_layer_splits = 4
+init_layer_splits = 3
 
 {freestream/wall definition}
 freestream_mach = 8.1
@@ -34,7 +33,4 @@ vis_lts_constraints = true
 vis_field_vars = vis_field_vars + field_residual_expr
 
 $plot_history
-$start
-$mesh
-init_state
-$run
+$simulate
