@@ -51,7 +51,7 @@ class Solver {
   std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> _preti_masks;
   int _preti_level;
 
-  Kernel_mesh _kernel_mesh();
+  Kernel_mesh& _kernel_mesh();
   void _put_cache(); // copies the flow state to the residual cache
   void _get_cache(); // copies the residual cache to the flow state
 
@@ -158,9 +158,8 @@ class Solver {
   /*! \brief compute the Jacobian of all elements based on the current position of the vertices
    * and value of any face warping.
    * \details Mesh topology must be valid (no duplicate or missing connections) before calling this function.
-   * \param snap_faces if `true`, this function will go ahead and perform face snapping for you
    */
-  void calc_jacobian(bool snap_faces = true);
+  void calc_jacobian();
   //! \brief set the flow state from an HIL expression
   //! \details `espression` must set the variables `momentum0`, ..., `momentum[n_dim - 1]`, `density`, `energy`
   void initialize(std::string expression);
@@ -191,8 +190,6 @@ class Solver {
    * Fully Cartesian connections trivially contribute zero to this metric of uncertainty.
    */
   void set_uncert_surface_rep(int bc_sn);
-  //! set uncertainty of each element to be at least the maximum uncertainty of any elements extruded from it
-  void synch_extruded_uncert();
   //!\}
 
   //! \name time marching
@@ -269,9 +266,6 @@ class Solver {
                          int n_sample = 10, bool wireframe = false);
   void visualize_contour(std::string format, std::string name, std::string contour_expression,
                          std::string vis_expression, double const_tol = 1e-10, int n_sample = 10);
-  //! \brief visualize the Cartesian surface which theoretically exists after element deletion
-  //! but before any vertex snapping
-  void vis_cart_surf(std::string format, std::string name, int bc_sn, std::string expression = "");
   /*! \brief visualize the local time step constraints imposed by convection and diffusion, respectively
    * \warning This function overwrites the reference state,
    * which will invalidate any residual evaluation until `update` is called again.

@@ -25,7 +25,7 @@ std::vector<int> face_vertex_inds(int n_dim, const Connection_direction& directi
   int r = direction.rotate;
   while (n_dim == 3 && r != 0) {
     std::swap(inds[1], inds[2]);
-    int stride = 1 + ((r > 0) == (direction.i_dim[1] != 1));
+    int stride = 1 + ((r > 0) == (direction.i_dim[0] != 1));
     for (int i = 0; i < 2; ++i) {
       std::swap(inds[i*(2/stride)], inds[i*(2/stride) + stride]);
     }

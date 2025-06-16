@@ -2,15 +2,14 @@
 #define HEXED_SURFACE_FUNC_HPP_
 
 #include <vector>
-#include "Boundary_func.hpp"
+#include "Output_data.hpp"
 
 namespace hexed {
 
 //! A class of functions that can be evaluated at a point on a surface, without reference to a `Boundary_connection` object.
-class Surface_func : virtual public Boundary_func {
+class Surface_func : virtual public Output_data {
   public:
   virtual ~Surface_func() = default;
-  std::vector<double> operator()(Boundary_connection&, int i_fqpoint, double time) const override;
   //! `normal` is surface unit normal vector pointing out of the surface (into the domain).
   virtual std::vector<double> operator()(std::vector<double> pos, double time,
                                          std::vector<double> state, std::vector<double> outward_normal) const = 0;

@@ -5,7 +5,7 @@
 #include <hexed/read_csv.hpp>
 #include <hexed/standard_atmosphere.hpp>
 #include <hexed/Occt.hpp>
-#include <hexed/hil_properties.hpp>
+#include <hexed/vis_variables.hpp>
 #include <hexed/Csv.hpp>
 #include <hexed/brep.hpp>
 #include <hexed/Printer.hpp>
@@ -130,7 +130,9 @@ Surface_geom* Case::_make_geom() {
       geoms.emplace_back(geom);
     } else if ((ext == "igs" || ext == "iges") && !(HEXED_USE_OCCT && _vari("prefer_occt"))) {
       if (nd == 3) {
-        auto ptr = std::make_unique<brep::Geom_3d>(geom.value(), n_div_min, n_div_max);
+        auto ptr = std::make_unique<brep::Geom_3d>(geom.value(), n_div_min, n_div_max, _vard("coincidence_tol_bbox"),
+                                                   _vard("coincidence_tol_abs"), _vard("coincidence_tol_subdiv"),
+                                                   _vard("tangency_tol_angle"), _vard("tangency_tol_subdiv"));
         if (_vari("vis_geom")) {
           Mat<3, 2> bounds;
           for (int i_dim = 0; i_dim < 3; ++i_dim) {
@@ -402,17 +404,11 @@ Case::Case(std::string input_script)
     for (std::string code : crit_code) {
       crits.emplace_back([this, code](Element& elem) {
         auto sub = _inter.make_sub();
-        hil_properties::element(*sub.variables, elem);
+        vis_variables::element(*sub.variables, elem);
         sub.exec(code);
         return sub.variables->get<int>("return");
       });
     }
-    if (_has_geom) {
-      _solver().set_uncert_surface_rep(2*_vari("n_dim"));
-    } else {
-      _solver().set_uncertainty(0.);
-    }
-    _solver().mesh().set_unref_locks(criteria::if_extruded);
     bool changed = _solver().mesh().update(crits[0], crits[1]);
     _solver().calc_jacobian();
     _visualize("_ref_sweep" + to_string(_vari("i_refinement") + 1));

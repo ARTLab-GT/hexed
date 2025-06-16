@@ -372,7 +372,7 @@ class Wget(Subprocess):
                 super().build()
                 break
             except AssertionError:
-                print(f"`wget` failed. Waiting {self.wait_seconds} and retrying " +
+                print(f"`wget` failed. Waiting {self.wait_seconds} seconds and retrying " +
                       f"({self.n_tries - i - 1} tries remaining)...")
                 time.sleep(self.wait_seconds)
 
@@ -924,6 +924,7 @@ class Builder:
         self.indent = ""
         for opt in opts:
             self._merge_option(opt)
+        assert self.build_dir.split("/")[-2].startswith("build"), "build directory names must start with `build`"
         self.mkdir(self.build_dir)
         self.cache_dir = self.build_dir + "cache/"
         self.mkdir(self.cache_dir)

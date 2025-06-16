@@ -106,6 +106,11 @@ TEST_CASE("Trimmed_surface") {
   CHECK(!trim.is_inside(hexed::Mat<2>{.55, .55}));
   CHECK(!trim.is_inside(hexed::Mat<2>{-.1, .50}));
   CHECK(!trim.is_inside(hexed::Mat<2>{.50, -.1}));
+  // bounding_box
+  REQUIRE_THAT(trim.bounding_box()(Eigen::all, 0),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., 0.}, hexed::math::Approx_equal(0, 1e-3)));
+  REQUIRE_THAT(trim.bounding_box()(Eigen::all, 1),
+               Catch::Matchers::RangeEquals(hexed::Mat<3>{3., 3., 0.}, hexed::math::Approx_equal(0, 1e-3)));
 
   // test nearest_point
   REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{.1, .1, .1}, .2).point(),
@@ -115,6 +120,24 @@ TEST_CASE("Trimmed_surface") {
   REQUIRE_THAT(trim.nearest_point(hexed::Mat<3>{-.1, -.1, .1}, .2).point(),
                Catch::Matchers::RangeEquals(hexed::Mat<3>{0., 0., .0}, hexed::math::Approx_equal(0, 1e-3)));
   REQUIRE(trim.nearest_point(hexed::Mat<3>{.1, .1, .1}, .01).empty());
+
+  // test trimming curves
+  const auto& trim_curve = trim.trimming_curves()[1];
+  REQUIRE(trim_curve.parameters(0)[0] == Catch::Approx(1.).margin(1e-4));
+  REQUIRE(trim_curve.parameters(0)[1] == Catch::Approx(0.).margin(1e-4));
+  REQUIRE(trim_curve.parameters(512)[0] == Catch::Approx(.5).margin(1e-4));
+  REQUIRE(trim_curve.parameters(512)[1] == Catch::Approx(.5).margin(1e-4));
+  REQUIRE(trim_curve.parameters(1024)[0] == Catch::Approx(0.).margin(1e-4));
+  REQUIRE(trim_curve.parameters(1024)[1] == Catch::Approx(1.).margin(1e-4));
+  CHECK(trim_curve.tangents(0)[0] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
+  CHECK(trim_curve.tangents(0)[1] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
+  CHECK(trim_curve.tangents(0)[2] == Catch::Approx(0.).margin(1e-4));
+  CHECK(trim_curve.tangents(512)[0] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
+  CHECK(trim_curve.tangents(512)[1] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
+  CHECK(trim_curve.tangents(512)[2] == Catch::Approx(0.).margin(1e-4));
+  CHECK(trim_curve.tangents(1023)[0] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
+  CHECK(trim_curve.tangents(1023)[1] == Catch::Approx(-std::sqrt(.5)).margin(1e-4));
+  CHECK(trim_curve.tangents(1023)[2] == Catch::Approx(0.).margin(1e-4));
 }
 
 TEST_CASE("Geom_3d", "[.slow]") {
@@ -128,15 +151,15 @@ TEST_CASE("Geom_3d", "[.slow]") {
   bool vis_volume = true;
   #endif
   SECTION("cylinder_extruded") {
-    hexed::brep::Geom_3d geom("../test_assets/cylinder_extruded.iges", n_div_min, n_div_max);
+    hexed::brep::Geom_3d geom("../test_assets/cylinder_extruded.iges", n_div_min, n_div_max, 0, 0, 1., 0, 10.);
     geom.visualize("default", "cylinder_extruded", 100, vis_volume);
   }
   SECTION("prism_twisted") {
-    hexed::brep::Geom_3d geom("../test_assets/prism_twisted.iges", n_div_min, n_div_max);
+    hexed::brep::Geom_3d geom("../test_assets/prism_twisted.iges", n_div_min, n_div_max, 0, 0, 1., 0, 10.);
     geom.visualize("default", "prism_twisted", 30, vis_volume);
   }
   SECTION("weird_surface") {
-    hexed::brep::Geom_3d geom("../test_assets/weird_surface.iges", n_div_min, n_div_max);
+    hexed::brep::Geom_3d geom("../test_assets/weird_surface.iges", n_div_min, n_div_max, 0, 0, 1., 0, 10.);
     hexed::Mat<3, 2> bounds;
     bounds <<
       -.1, .1,
@@ -147,7 +170,7 @@ TEST_CASE("Geom_3d", "[.slow]") {
   SECTION("misleading_normal") {
     hexed::Stopwatch sw;
     sw.start();
-    hexed::brep::Geom_3d geom("../test_assets/misleading_normal.iges", n_div_min, n_div_max);
+    hexed::brep::Geom_3d geom("../test_assets/misleading_normal.iges", n_div_min, n_div_max, 0, 0, 1., 0, 10.);
     sw.pause();
     std::cout << "startup time: " << sw.time() << std::endl;
     sw.reset();

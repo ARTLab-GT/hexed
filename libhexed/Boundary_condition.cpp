@@ -1,72 +1,40 @@
-#include <Boundary_condition.hpp>
-#include <connection.hpp>
-#include <math.hpp>
-#include <kernel_factory.hpp>
-#include <constants.hpp>
-#include <pde.hpp>
-#include <Gauss_lobatto.hpp>
+#include <hexed/Boundary_condition.hpp>
+#include <hexed/math.hpp>
+#include <hexed/kernel_factory.hpp>
+#include <hexed/constants.hpp>
+#include <hexed/pde.hpp>
+#include <hexed/Gauss_lobatto.hpp>
 
 namespace hexed {
 
-void copy_state(Boundary_face& bf) {
-  int n_face_dof = bf.storage_params().n_dof()/bf.storage_params().row_size;
-  for (bool is_ldg : {0, 1}) {
-    double* in_f = bf.inside_face(is_ldg);
-    double* gh_f = bf.ghost_face(is_ldg);
-    for (int i_dof = 0; i_dof < n_face_dof; ++i_dof) {
-      gh_f[i_dof] = in_f[i_dof];
-    }
-  }
+void copy_state(Boundary_connection& con) {
+  con.ghost().full_state() = con.inside().full_state();
 }
 
-void Flow_bc::apply_advection(Boundary_face& bf) {
-  auto params = bf.storage_params();
-  const int nd = params.n_dim;
-  const int nq = params.n_qpoint()/params.row_size;
-  double* in_f = bf.inside_face(false);
-  double* gh_f = bf.ghost_face(false);
-  // set velocity equal to inside
-  for (int i_dim = 0; i_dim < nd; ++i_dim) {
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      gh_f[i_dim*nq + i_qpoint] = in_f[i_dim*nq + i_qpoint];
-    }
-  }
-  // set advected scalar to initial value
-  for (int i_adv = 0; i_adv < params.n_advection(params.row_size)*nq; ++i_adv) {
-    gh_f[nd*nq + i_adv] = 2. - in_f[nd*nq + i_adv];
-  }
+void Flow_bc::apply_advection(Boundary_connection& con) {
+  int nd = con.ghost().storage_params().n_dim;
+  Array<double> inside_state = con.inside().advection_state();
+  Array<double> ghost_state = con.ghost().advection_state();
+  ghost_state(0, nd) = inside_state(0, nd);
+  ghost_state(nd, end) = 2. - inside_state(nd, end);
 }
 
-void Flow_bc::apply_diffusion(Boundary_face& bf) {
-  auto params = bf.storage_params();
-  double* in_f = bf.inside_face(false);
-  double* gh_f = bf.ghost_face(false);
-  // set state equal to inside
-  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) {
-    gh_f[i_dof] = in_f[i_dof];
-  }
+void Flow_bc::apply_diffusion(Boundary_connection& con) {
+  con.ghost().flow_state()(0) = con.inside().flow_state()(0);
 }
 
-void Flow_bc::flux_diffusion(Boundary_face& bf) {
-  auto params = bf.storage_params();
-  double* gh_f = bf.ghost_face(true);
-  double* in_f = bf.inside_face(true);
-  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+void Flow_bc::flux_diffusion(Boundary_connection& con) {
+  con.ghost().flow_state()(1) = -con.inside().flow_state()(1);
 }
 
 Freestream::Freestream(Mat<> freestream_state)
 : fs{freestream_state}
 {}
 
-void Freestream::apply_state(Boundary_face& bf) {
-  auto params = bf.storage_params();
-  const int nq = params.n_qpoint()/params.row_size;
-  double* gf = bf.ghost_face(false);
-  for (int i_var = 0; i_var < params.n_var; ++i_var) {
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      gf[i_var*nq + i_qpoint] = fs(i_var);
-    }
-  }
+void Freestream::apply_state(Boundary_connection& con) {
+  Array<double> ghost_state = con.ghost().flow_state()(0);
+  auto params = con.ghost().storage_params();
+  for (int i_var = 0; i_var < params.n_var; ++i_var) ghost_state(i_var) = fs(i_var);
 }
 
 Riemann_invariants::Riemann_invariants(Mat<> freestream_state)
@@ -87,20 +55,20 @@ Mat<> apply_char(Mat<> state, Mat<> normal, int sign, Mat<> inside, Mat<> outsid
   return decomp.rowwise().sum();
 }
 
-void Riemann_invariants::apply_state(Boundary_face& bf) {
-  auto params = bf.storage_params();
+void Riemann_invariants::apply_state(Boundary_connection& con) {
+  auto params = con.ghost().storage_params();
   const int nfq = params.n_qpoint()/params.row_size;
-  double* in_f = bf.inside_face(false);
-  double* gh_f = bf.ghost_face(false);
-  double* nrml = bf.surface_normal();
-  int sign = 1 - 2*bf.inside_face_sign(); // sign of velocity of incoming characteristics
+  Array<double> ghost_state = con.ghost().flow_state()(0);
+  Array<double> inside_state = con.inside().flow_state()(0);
+  Array<double> normal = con.normal();
+  int sign = 1 - 2*con.inside().sign(); // sign of velocity of incoming characteristics
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-    Mat<> state;
+    Mat<> state(params.n_var);
     // fetch data
     Mat<> inside(params.n_var);
-    for (int i_var = 0; i_var < params.n_var; ++i_var) inside(i_var) = in_f[i_var*nfq + i_qpoint];
+    for (int i_var = 0; i_var < params.n_var; ++i_var) inside(i_var) = inside_state(i_var)[i_qpoint];
     Mat<> n(params.n_dim);
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = normal(i_dim)[i_qpoint];
     // compute characteristics
     switch (params.n_dim) {
       case 1:
@@ -124,34 +92,31 @@ void Riemann_invariants::apply_state(Boundary_face& bf) {
                                                            (inside(params.n_dim + 1) - inside_kin_ener)/2), 0.);
     // write to ghost state
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      gh_f[i_var*nfq + i_qpoint] = state(i_var);
+      ghost_state(i_var)[i_qpoint] = state(i_var);
     }
   }
   // prime state cache with inside state
-  double* sc = bf.state_cache();
-  for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
-    sc[i_dof] = in_f[i_dof];
-  }
+  con.state_cache() = inside_state();
 }
 
-void Riemann_invariants::apply_flux(Boundary_face& bf) {
-  auto params = bf.storage_params();
+void Riemann_invariants::apply_flux(Boundary_connection& con) {
+  auto params = con.ghost().storage_params();
   const int nfq = params.n_qpoint()/params.row_size;
-  double* sc = bf.state_cache();
-  double* in_f = bf.inside_face(true);
-  double* gh_f = bf.ghost_face(true);
-  double* nrml = bf.surface_normal();
-  int sign = 1 - 2*bf.inside_face_sign();
+  Array<double> ghost_flux = con.ghost().flow_state()(1);
+  Array<double> inside_flux = con.inside().flow_state()(1);
+  Array<double> state_cache = con.state_cache();
+  Array<double> normal = con.normal();
+  int sign = 1 - 2*con.inside().sign();
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     // fetch data
     Mat<> inside(params.n_var); // flux
     Mat<> cache(params.n_var); // state
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      inside(i_var) = in_f[i_var*nfq + i_qpoint];
-      cache(i_var) = sc[i_var*nfq + i_qpoint];
+      inside(i_var) = inside_flux(i_var)[i_qpoint];
+      cache(i_var) = state_cache(i_var)[i_qpoint];
     }
     Mat<> n(params.n_dim);
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = normal(i_dim)[i_qpoint];
     // compute characteristics
     Mat<> state;
     switch (params.n_dim) {
@@ -169,26 +134,24 @@ void Riemann_invariants::apply_flux(Boundary_face& bf) {
     }
     // write to ghost flux
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      gh_f[i_var*nfq + i_qpoint] = state(i_var);
+      ghost_flux(i_var)[i_qpoint] = state(i_var);
     }
   }
 }
 
-void Pressure_outflow::apply_state(Boundary_face& bf) {
-  auto params = bf.storage_params();
+void Pressure_outflow::apply_state(Boundary_connection& con) {
+  auto params = con.ghost().storage_params();
   const int nfq = params.n_qpoint()/params.row_size;
-  double* in_f = bf.inside_face(false);
-  double* gh_f = bf.ghost_face(false);
-  double* nrml = bf.surface_normal();
-  int sign = 2*bf.inside_face_sign() - 1;
+  Array<double> ghost_state = con.ghost().flow_state()(0);
+  Array<double> inside_state = con.inside().flow_state()(0);
+  Array<double> normal = con.normal();
+  int sign = 2*con.inside().sign() - 1;
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     // fetch data
     Mat<> inside(params.n_var);
-    for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      inside(i_var) = in_f[i_var*nfq + i_qpoint];
-    }
+    for (int i_var = 0; i_var < params.n_var; ++i_var) inside(i_var) = inside_state(i_var)[i_qpoint];
     Mat<> n(params.n_dim);
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = nrml[i_dim*nfq + i_qpoint];
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) n(i_dim) = normal(i_dim)[i_qpoint];
     Mat<> ghost = inside;
     // if subsonic, set pressure to specified value
     Mat<> mmtm = inside(Eigen::seqN(0, params.n_dim));
@@ -199,93 +162,78 @@ void Pressure_outflow::apply_state(Boundary_face& bf) {
     if (nrml_veloc*sign < sound_speed) ghost(params.n_dim + 1) = pres_spec/.4 + kin_ener;
     // write to ghost flux
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      gh_f[i_var*nfq + i_qpoint] = ghost(i_var);
+      ghost_state(i_var)[i_qpoint] = ghost(i_var);
     }
   }
 }
 
 //! \todo make this formally well-posed
-void Pressure_outflow::apply_flux(Boundary_face& bf) {
-  // set to negative of inside flux
-  auto params = bf.storage_params();
-  double* gh_f = bf.ghost_face(true);
-  double* in_f = bf.inside_face(true);
-  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+void Pressure_outflow::apply_flux(Boundary_connection& con) {
+  con.ghost().flow_state()(1) = -con.inside().flow_state()(1);
 }
 
 Function_bc::Function_bc(const Surface_func& func_arg) : func{func_arg} {}
 
-void Function_bc::apply_state(Boundary_face& bf) {
-  auto params = bf.storage_params();
-  const int nq = params.n_qpoint()/params.row_size;
-  const int nd = params.n_dim;
-  const int nv = params.n_var;
-  double* gh_f = bf.ghost_face(false);
-  double* in_f = bf.inside_face(false);
-  double* nrml = bf.surface_normal();
-  double* pos = bf.surface_position();
-  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+void Function_bc::apply_state(Boundary_connection& con) {
+  auto params = con.ghost().storage_params();
+  const int nfq = params.n_qpoint()/params.row_size;
+  Array<double> ghost_state = con.ghost().flow_state()(0);
+  Array<double> inside_state = con.inside().flow_state()(0);
+  Array<double> normal = con.normal();
+  Array<double> position = con.position();
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     // fetch shared/inside face data
-    std::vector<double> n(nd);
-    std::vector<double> p(nd);
-    std::vector<double> s(nv);
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      n[i_dim] = nrml[i_dim*nq + i_qpoint];
-      p[i_dim] =  pos[i_dim*nq + i_qpoint];
+    std::vector<double> n(params.n_dim);
+    std::vector<double> p(params.n_dim);
+    std::vector<double> s(params.n_var);
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      n[i_dim] = normal(i_dim)[i_qpoint];
+      p[i_dim] = position(i_dim)[i_qpoint];
     }
-    for (int i_var = 0; i_var < nv; ++i_var) s[i_var] = in_f[i_var*nq + i_qpoint];
+    for (int i_var = 0; i_var < params.n_var; ++i_var) s[i_var] = inside_state(i_var)[i_qpoint];
     // apply function
     auto state = func(p, 0, s, n);
     // write result to ghost face
-    for (int i_var = 0; i_var < nv; ++i_var) {
-      gh_f[i_var*nq + i_qpoint] = state[i_var];
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      ghost_state(i_var)[i_qpoint] = state[i_var];
     }
   }
 }
 
-void Cache_bc::apply_state(Boundary_face& bf) {
-  int n_face_dof = bf.storage_params().n_dof()/bf.storage_params().row_size;
-  double* sc = bf.state_cache();
-  double* gh_state = bf.ghost_face(false);
-  double* in_flux = bf.inside_face(true);
-  double* gh_flux = bf.ghost_face(true);
-  for (int i_dof = 0; i_dof < n_face_dof; ++i_dof) {
-    gh_state[i_dof] = sc[i_dof];
-    gh_flux[i_dof] = in_flux[i_dof];
-  }
+void Cache_bc::apply_state(Boundary_connection& con) {
+  con.ghost().flow_state()(0) = con.state_cache();
+  con.ghost().flow_state()(1) = con.inside().flow_state()(1);
 }
 
-void Cache_bc::init_cache(Boundary_face& bf) {
-  auto params = bf.storage_params();
-  const int nq = params.n_qpoint()/params.row_size;
-  const int nd = params.n_dim;
-  const int nv = params.n_var;
-  double* cache = bf.state_cache();
-  double* in_f = bf.inside_face(false);
-  double* nrml = bf.surface_normal();
-  double* pos = bf.surface_position();
-  for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+void Cache_bc::init_cache(Boundary_connection& con) {
+  auto params = con.ghost().storage_params();
+  const int nfq = params.n_qpoint()/params.row_size;
+  Array<double> inside_state = con.inside().flow_state()(0);
+  Array<double> state_cache = con.state_cache();
+  Array<double> normal = con.normal();
+  Array<double> position = con.position();
+  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     // fetch shared/inside face data
-    std::vector<double> n(nd);
-    std::vector<double> p(nd);
-    std::vector<double> s(nv);
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      n[i_dim] = nrml[i_dim*nq + i_qpoint];
-      p[i_dim] =  pos[i_dim*nq + i_qpoint];
+    std::vector<double> n(params.n_dim);
+    std::vector<double> p(params.n_dim);
+    std::vector<double> s(params.n_var);
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      n[i_dim] = normal(i_dim)[i_qpoint];
+      p[i_dim] = position(i_dim)[i_qpoint];
     }
-    for (int i_var = 0; i_var < nv; ++i_var) s[i_var] = in_f[i_var*nq + i_qpoint];
+    for (int i_var = 0; i_var < params.n_var; ++i_var) s[i_var] = inside_state(i_var)[i_qpoint];
     // apply function
     auto state = (*func)(p, 0, s, n);
     // write result to ghost face
-    for (int i_var = 0; i_var < nv; ++i_var) {
-      cache[i_var*nq + i_qpoint] = state[i_var];
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      state_cache(i_var)[i_qpoint] = state[i_var];
     }
   }
 }
 
-void Function_bc::apply_flux(Boundary_face& bf) {copy_state(bf);}
-void Freestream::apply_flux(Boundary_face& bf) {copy_state(bf);}
-void Cache_bc::apply_flux(Boundary_face& bf) {copy_state(bf);}
+void Function_bc::apply_flux(Boundary_connection& con) {copy_state(con);}
+void Freestream::apply_flux(Boundary_connection& con) {copy_state(con);}
+void Cache_bc::apply_flux(Boundary_connection& con) {copy_state(con);}
 
 void reflect_normal(double* gh_f, double* nrml, int nq, int nd) {
   for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
@@ -302,52 +250,44 @@ void reflect_normal(double* gh_f, double* nrml, int nq, int nd) {
   }
 }
 
-void reflect_momentum(Boundary_face& bf) {
-  auto params = bf.storage_params();
-  double* gh_f = bf.ghost_face(false);
-  double* in_f = bf.inside_face(false);
-  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = in_f[i_dof];
-  reflect_normal(gh_f, bf.surface_normal(), params.n_qpoint()/params.row_size, params.n_dim);
+void reflect_momentum(Boundary_connection& con) {
+  auto params = con.ghost().storage_params();
+  Array<double> ghost_state = con.ghost().flow_state()(0);
+  Array<double> inside_state = con.inside().flow_state()(0);
+  ghost_state = inside_state;
+  reflect_normal(ghost_state.data(), con.normal().data(), params.n_qpoint()/params.row_size, params.n_dim);
 }
 
-void Nonpenetration::apply_state(Boundary_face& bf) {
-  reflect_momentum(bf);
+void Nonpenetration::apply_state(Boundary_connection& con) {
+  reflect_momentum(con);
 }
 
-void Nonpenetration::apply_flux(Boundary_face& bf) {
-  // fetch data
-  auto params = bf.storage_params();
-  int nfq = params.n_qpoint()/params.row_size;
-  double* gh_f = bf.ghost_face(true);
-  double* in_f = bf.inside_face(true);
-  // initialize to negative of inside flux
-  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
-  // un-invert normal component of momentum
-  reflect_normal(gh_f, bf.surface_normal(), nfq, params.n_dim);
+void Nonpenetration::apply_flux(Boundary_connection& con) {
+  auto params = con.ghost().storage_params();
+  Array<double> ghost_state = con.ghost().flow_state()(1);
+  Array<double> inside_state = con.inside().flow_state()(1);
+  ghost_state = -inside_state;
+  reflect_normal(ghost_state.data(), con.normal().data(), params.n_qpoint()/params.row_size, params.n_dim);
 }
 
-void Nonpenetration::apply_advection(Boundary_face& bf) {
-  Storage_params params = bf.storage_params();
-  double* in_f = bf.inside_face(false);
-  double* gh_f = bf.ghost_face(false);
-  double* nrml = bf.surface_normal();
-  int nfq = params.n_qpoint()/params.row_size;
+void Nonpenetration::apply_advection(Boundary_connection& con) {
+  auto params = con.ghost().storage_params();
+  const int nfq = params.n_qpoint()/params.row_size;
+  Array<double> ghost_state = con.ghost().advection_state();
+  Array<double> inside_state = con.inside().advection_state();
+  Array<double> normal = con.normal();
   int nd = params.n_dim;
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     Mat<> veloc(nd);
     Mat<> n(nd);
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      n(i_dim) = nrml[i_dim*nfq + i_qpoint];
-      veloc(i_dim) = in_f[i_dim*nfq + i_qpoint];
+      n(i_dim) = normal(i_dim)[i_qpoint];
+      veloc(i_dim) = inside_state(i_dim)[i_qpoint];
     }
     veloc -= 2*veloc.dot(n)*n/n.squaredNorm();
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      gh_f[i_dim*nfq + i_qpoint] = veloc(i_dim);
-    }
-    for (int i_adv = 0; i_adv < params.n_advection(params.row_size); ++i_adv) {
-      gh_f[(nd + i_adv)*nfq + i_qpoint] = in_f[(nd + i_adv)*nfq + i_qpoint];
-    }
+    for (int i_dim = 0; i_dim < nd; ++i_dim) ghost_state(i_dim)[i_qpoint] = veloc(i_dim);
   }
+  ghost_state(nd, end) = inside_state(nd, end);
 }
 
 No_slip::No_slip(std::shared_ptr<Thermal_bc> thermal, double r, double heat_rat, Transport_model visc,
@@ -367,120 +307,96 @@ double Thermal_equilibrium::ghost_heat_flux(Mat<> state, double) {
   return radiative_flux + conductive_flux;
 }
 
-void No_slip::apply_state(Boundary_face& bf) {
-  auto params = bf.storage_params();
-  double* gh_f = bf.ghost_face(false);
-  double* in_f = bf.inside_face(false);
-  double* sc = bf.state_cache();
-  Array<double> presc = bf.prescribed_data();
+void No_slip::apply_state(Boundary_connection& con) {
+  auto params = con.ghost().storage_params();
+  const int nfq = params.n_qpoint()/params.row_size;
+  Array<double> ghost_state = con.ghost().flow_state()(0);
+  Array<double> inside_state = con.inside().flow_state()(0);
+  Array<double> state_cache = con.state_cache();
+  Array<double> presc = con.prescribed_data();
   int nd = params.n_dim;
-  int nfq = params.n_qpoint()/params.row_size; // number of face quadrature points
   // set ghost state
   // momentum
   for (int i_dim = 0; i_dim < nd; ++i_dim) {
-    for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-      gh_f[i_dim*nfq + i_qpoint] = 2*presc(i_dim)[i_qpoint]*in_f[nd*nfq + i_qpoint] - in_f[i_dim*nfq + i_qpoint];
-    }
+    ghost_state(i_dim) = 2.*presc(i_dim)*inside_state(nd) - inside_state(i_dim);
   }
   // density
-  for (int i_dof = params.n_dim*nfq; i_dof < (nd + 1)*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+  ghost_state(nd) = inside_state(nd);
   // energy
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     Mat<> state(params.n_dim + 2); // yes, this should be ignoring turbulence variables
-    for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) state(i_var) = in_f[i_var*nfq + i_qpoint];
-    gh_f[(params.n_dim + 1)*nfq + i_qpoint] = math::pow(_thermal->ghost_energy(state), 2)/state(last);
+    for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) state(i_var) = inside_state(i_var)[i_qpoint];
+    ghost_state(nd + 1)[i_qpoint] = math::pow(_thermal->ghost_energy(state), 2)/state(last);
   }
   if (_turb == k_omega) {
+    ghost_state(nd + 2) = inside_state(nd + 2); // set turbulent kinetic energy to 0
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-      // set turbulent kinetic energy to 0
-      gh_f[(params.n_dim + 2)*nfq + i_qpoint] = -in_f[(params.n_dim + 2)*nfq + i_qpoint];
       // set dissipation based on wall roughness
-      double mass = in_f[params.n_dim*nfq + i_qpoint];
-      double energy = in_f[(params.n_dim + 1)*nfq + i_qpoint]/mass;
+      double mass = inside_state(nd)[i_qpoint];
+      double energy = inside_state(nd + 1)[i_qpoint]/mass;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        energy -= .5*math::pow(in_f[i_dim*nfq + i_qpoint]/mass, 2);
+        energy -= .5*math::pow(inside_state(i_dim)[i_qpoint]/mass, 2);
       }
-      double dyn_visc = _viscosity.coefficient(std::sqrt(std::abs(energy*(_heat_rat - 1.)/constants::specific_gas_air)));
+      double dyn_visc = _viscosity.coefficient(std::sqrt(std::abs(energy*(_heat_rat - 1.)
+                                                         /constants::specific_gas_air)));
       double omega_wall = 4e4*dyn_visc/(mass*roughness*roughness);
-      gh_f[(params.n_dim + 3)*nfq + i_qpoint] = 2*std::log(omega_wall)*mass - in_f[(params.n_dim + 3)*nfq + i_qpoint];
+      ghost_state(nd + 3)[i_qpoint] = 2*std::log(omega_wall)*mass - inside_state(params.n_dim + 3)[i_qpoint];
     }
   }
   // prime `state_cache` with average state for use in emissivity BC
-  for (int i_dof = 0; i_dof < params.n_var*nfq; ++i_dof) {
-    sc[i_dof] = (gh_f[i_dof] + in_f[i_dof])/2;
-  }
+  state_cache = (ghost_state + inside_state)/2.;
 }
 
-void No_slip::apply_flux(Boundary_face& bf) {
-  auto params = bf.storage_params();
-  int nfq = params.n_qpoint()/params.row_size;
-  double* gh_f = bf.ghost_face(true);
-  double* in_f = bf.inside_face(true);
-  double* sc = bf.state_cache();
-  double* nrml = bf.surface_normal();
+void No_slip::apply_flux(Boundary_connection& con) {
+  auto params = con.ghost().storage_params();
+  const int nfq = params.n_qpoint()/params.row_size;
+  Array<double> ghost_state = con.ghost().flow_state()(1);
+  Array<double> inside_state = con.inside().flow_state()(1);
+  Array<double> normal = con.normal();
+  Array<double> state_cache = con.state_cache();
+  Array<double> presc = con.prescribed_data();
   // set momentum and mass flux (pretty straightforward)
-  for (int i_dof = 0; i_dof < params.n_dim*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
-  for (int i_dof = params.n_dim*nfq; i_dof < (params.n_dim + 1)*nfq; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  ghost_state(0, params.n_dim) = inside_state(0, params.n_dim);
+  ghost_state(params.n_dim) = -inside_state(params.n_dim);
   // set energy flux depending on thermal boundary condition
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-    int i_dof = i_qpoint + (params.n_dim + 1)*nfq;
-    double normal = 0;
+    double nrml = 0;
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-      double n = nrml[i_dim*nfq + i_qpoint];
-      normal += n*n;
+      nrml += normal(i_dim)[i_qpoint]*normal(i_dim)[i_qpoint];
     }
-    normal = std::sqrt(normal);
-    int flux_sign = 2*bf.inside_face_sign() - 1;
+    nrml = std::sqrt(nrml);
+    int flux_sign = 2*con.inside().sign() - 1;
     Mat<> state(params.n_var);
-    for (int i_var = 0; i_var < params.n_var; ++i_var) state(i_var) = sc[i_var*nfq + i_qpoint];
-    double ghost_heat = _thermal->ghost_heat_flux(state, in_f[i_dof]*flux_sign/normal);
-    gh_f[i_dof] = _coercion*(normal*flux_sign*ghost_heat - in_f[i_dof]) + in_f[i_dof];
+    for (int i_var = 0; i_var < params.n_var; ++i_var) state(i_var) = state_cache(i_var)[i_qpoint];
+    double inside_ener = inside_state(params.n_dim + 1)[i_qpoint];
+    double ghost_heat = _thermal->ghost_heat_flux(state, inside_ener*flux_sign/nrml);
+    ghost_state(params.n_dim + 1)[i_qpoint] = _coercion*(nrml*flux_sign*ghost_heat - inside_ener) + inside_ener;
   }
   // set turbulence variables
-  for (int i_dof = (params.n_dim + 2)*nfq; i_dof < params.n_var*nfq; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+  ghost_state(params.n_dim + 2, end) = inside_state(params.n_dim + 2, end);
 }
 
-void No_slip::apply_advection(Boundary_face& bf) {
-  auto params = bf.storage_params();
-  const int nd = params.n_dim;
-  const int nq = params.n_qpoint()/params.row_size;
-  double* in_f = bf.inside_face(false);
-  double* gh_f = bf.ghost_face(false);
+void No_slip::apply_advection(Boundary_connection& con) {
+  auto params = con.ghost().storage_params();
+  Array<double> ghost_state = con.ghost().advection_state();
+  Array<double> inside_state = con.inside().advection_state();
   // set velocity to 0
-  for (int i_dim = 0; i_dim < nd; ++i_dim) {
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      gh_f[i_dim*nq + i_qpoint] = -in_f[i_dim*nq + i_qpoint];
-    }
-  }
+  ghost_state(0, params.n_dim) = -inside_state(0, params.n_dim);
   // don't change advected scalar
-  for (int i_adv = 0; i_adv < params.n_advection(params.row_size); ++i_adv) {
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      gh_f[(nd + i_adv)*nq + i_qpoint] = in_f[(nd + i_adv)*nq + i_qpoint];
-    }
-  }
+  ghost_state(params.n_dim, end) = inside_state(params.n_dim, end);
 }
 
-void No_slip::set_prescribed(Interpreter& inter, Boundary_face& bf) {
+void No_slip::set_prescribed(Interpreter& inter, Boundary_connection& con) {
   auto sub = inter.make_sub();
-  auto params = bf.storage_params();
+  auto params = con.ghost().storage_params();
   const int nd = params.n_dim;
   const int nq = params.n_qpoint()/params.row_size;
-  std::array<std::string, 2> surface_properties {"pos", "normal"};
-  Array<double> surface({2, nd, nq});
-  surface(0) = Array<double>({nd, nq}, bf.surface_position());
-  surface(1) = Array<double>({nd, nq}, bf.surface_normal());
-  for (int i = 0; i < 2; ++i) {
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      sub.variables->assign(surface_properties[i] + std::to_string(i_dim), surface(i)(i_dim));
-    }
-    for (int i_dim = nd; i_dim < 3; ++i_dim) {
-      sub.variables->assign(surface_properties[i] + std::to_string(i_dim), 0.);
-    }
-  }
+  sub.variables->assign("pos", con.position());
+  sub.variables->assign("normal", con.normal());
   auto expr = inter.variables->lookup<std::string>("wall_velocity");
   HEXED_ASSERT(expr, "`wall_velocity` must be specified for `No_slip`");
   sub.exec(expr.value());
-  Array<double> data {bf.prescribed_data()};
+  Array<double> data = con.prescribed_data();
   HEXED_ASSERT(data.shape()[0] == nd && data.size() == nd*nq,
                "`prescribed_data` is not the right shape to hold the velocity");
   for (int i_dim = 0; i_dim < nd; ++i_dim) {
@@ -488,60 +404,46 @@ void No_slip::set_prescribed(Interpreter& inter, Boundary_face& bf) {
   }
 }
 
-void Copy::apply_state(Boundary_face& bf) {
-  copy_state(bf);
+void Copy::apply_state(Boundary_connection& con) {
+  copy_state(con);
 }
 
-void Copy::apply_flux(Boundary_face& bf) {
-  copy_state(bf);
+void Copy::apply_flux(Boundary_connection& con) {
+  copy_state(con);
 }
 
-void Copy::apply_advection(Boundary_face& bf) {
-  copy_state(bf);
+void Copy::apply_advection(Boundary_connection& con) {
+  copy_state(con);
 }
 
-void Outflow::apply_state(Boundary_face& bf) {
-  copy_state(bf);
+void Outflow::apply_state(Boundary_connection& con) {
+  copy_state(con);
 }
 
-void Outflow::apply_flux(Boundary_face& bf) {
+void Outflow::apply_flux(Boundary_connection& con) {
   // set to negative of inside flux
-  auto params = bf.storage_params();
-  double* gh_f = bf.ghost_face(true);
-  double* in_f = bf.inside_face(true);
-  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  con.ghost().flow_state()(1) = -con.inside().flow_state()(1);
 }
 
 Expression_bc::Expression_bc(Interpreter& inter, std::string state_expr, std::string flux_expr)
 : _inter{inter}, _exprs{state_expr, flux_expr}
 {}
 
-void Expression_bc::_apply(Boundary_face& bf, bool is_flux) {
+void Expression_bc::_apply(Boundary_connection& con, bool is_flux) {
   auto sub = _inter.make_sub();
-  auto params = bf.storage_params();
-  const int nd = params.n_dim;
-  const int nv = params.n_var;
-  const int nq = params.n_qpoint()/params.row_size;
-  std::array<std::string, 2> surface_properties {"pos", "normal"};
+  auto params = con.ghost().storage_params();
+  sub.variables->assign("pos", con.position());
+  sub.variables->assign("normal", con.normal());
+  Array<double> inside = con.inside().flow_state();
   std::array<std::string, 2> names {"state", "flux"};
-  Array<double> surface({2, nd, nq});
-  surface(0) = Array<double>({nd, nq}, bf.surface_position());
-  surface(1) = Array<double>({nd, nq}, bf.surface_normal());
   for (int i = 0; i < 2; ++i) {
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      sub.variables->assign(surface_properties[i] + std::to_string(i_dim), surface(i)(i_dim));
-    }
-    for (int i_dim = nd; i_dim < 3; ++i_dim) {
-      sub.variables->assign(surface_properties[i] + std::to_string(i_dim), 0.);
-    }
-    Array<double> inside({nv, nq}, bf.inside_face(i));
-    for (int i_var = 0; i_var < nv; ++i_var) {
-      sub.variables->assign(names[i] + std::to_string(i_var), inside(i_var).copy());
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      sub.variables->assign(names[i] + std::to_string(i_var), inside(i)(i_var));
     }
   }
   sub.exec(_exprs[is_flux]);
-  Array<double> ghost({nv, nq}, bf.ghost_face(is_flux));
-  for (int i_var = 0; i_var < nv; ++i_var) {
+  Array<double> ghost = con.ghost().flow_state()(is_flux);
+  for (int i_var = 0; i_var < params.n_var; ++i_var) {
     sub.variables->assign_array(ghost(i_var), "ghost_" + names[is_flux] + std::to_string(i_var));
   }
 }

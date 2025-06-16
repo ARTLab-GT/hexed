@@ -28,7 +28,7 @@ class Element : public Kernel_element, public Mortal {
   protected:
   // constructor that allows the vertices to be created as mobile, for the  benefit of `Deformed_element`
   Element(Storage_params, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
-          bool mobile_vertices, int aniso_r_level);
+          bool mobile_vertices, int aniso_r_level, bool is_def);
   Mat<3> _compute_pos() const;
   Storage_params params;
   int n_dim;
@@ -43,6 +43,7 @@ class Element : public Kernel_element, public Mortal {
   int n_dof;
   int n_vert;
   int data_size;
+  int face_size;
   Eigen::VectorXd data;
   Array<double> _vertex_data;
   std::array<double*, 6> faces; //!< layout: [2*i_dim + face_sign][i_var][i_qpoint]
@@ -124,6 +125,7 @@ class Element : public Kernel_element, public Mortal {
   void create_fake(next::Mesh_blocks&);
   void split_shape(next::Mesh_blocks&, Element& split_from, double at, int from_face);
   void destroy_shape();
+  void destroy_fake();
   next::Element_shape& shape();
   inline next::Element_shape* fake_shape() {return _fake_shape.get();}
   inline bool has_shape() const {return bool(_shape);}

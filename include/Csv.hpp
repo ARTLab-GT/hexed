@@ -24,8 +24,8 @@ class Csv : public Visualizer {
   /*! \brief Writes some data to the CSV.
    * \details `data.cols()` must be the same as the number of columns in this file.
    * The number of rows is arbitrary.
-   * If you have already written some data to this file with previous calls to `write` (but with this same `Csv` instance),
-   * the new data will be appended.
+   * If you have already written some data to this file with previous calls to `write`
+   * (but with this same `Csv` instance), the new data will be appended.
    */
   void write(Array<double> data);
   //! \brief Accepts physical mesh data and writes only the node values. \show_details

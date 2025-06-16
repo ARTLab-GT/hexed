@@ -3,7 +3,7 @@
 
 #include "Namespace.hpp"
 #include "Element.hpp"
-#include "connection.hpp"
+#include "Boundary_connection.hpp"
 
 //! \brief functions that assign visualization data to HIL variables
 namespace hexed::vis_variables {
@@ -17,6 +17,9 @@ namespace hexed::vis_variables {
  * - `mask = elem.mask()`
  * - `nom_sz` = elem.nominal_size()`
  * - `uncertainty` = elem.uncertainty`
+ * - `snapping_problem`: Whether there was any problem snapping this element to geometry features.
+ * - `is_deformed`: True if this element is deformed, false if it is Cartesian.
+ * - `sharp`: `true` iff at least one of the element's vertices has been snapped to a sharp edge or point.
  * - `center0`, `center1`, `center2`: center of mass of vertices (not necessarily of the element itself)
  */
 void element(Namespace&, Element& elem);

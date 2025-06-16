@@ -18,21 +18,8 @@
 
 namespace hexed {
 
-Kernel_mesh Solver::_kernel_mesh() {
-  return {
-    params.n_dim,
-    params.row_size,
-    params.n_var,
-    0,
-    basis,
-    turb,
-    acc_mesh->cartesian().kernel_connections(),
-    acc_mesh->deformed ().kernel_connections(),
-    acc_mesh->cartesian().kernel_elements(),
-    acc_mesh->deformed ().kernel_elements(),
-    acc_mesh->kernel_elements(),
-    acc_mesh->refined_faces(),
-  };
+Kernel_mesh& Solver::_kernel_mesh() {
+  return _preti_masks[0]->kernel_mesh;
 }
 
 void Solver::_put_cache() {
@@ -95,11 +82,11 @@ void Solver::share_vertex_data(std::function<double(Element&, int i_vertex)> get
 
 void Solver::apply_state_bcs() {
   stopwatch["boundary conditions"].stopwatch.start();
-  auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
+  auto bc_cons {_preti_masks[_preti_level]->bound_cons};
   #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).apply_state(bc_cons[i_con]);
+  for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con]->boundary_condition();
+    acc_mesh->boundary_condition(bc_sn).apply_state(*bc_cons[i_con]);
   }
   stopwatch["boundary conditions"].stopwatch.pause();
   stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
@@ -107,15 +94,15 @@ void Solver::apply_state_bcs() {
 
 void Solver::apply_flux_bcs() {
   stopwatch["boundary conditions"].stopwatch.start();
-  auto& bc_cons {_preti_masks[_preti_level]->bound_cons};
+  auto bc_cons {_preti_masks[_preti_level]->bound_cons};
   #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+  for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
+    Boundary_connection* con = bc_cons[i_con];
     // write inside flux to flux cache for surface visualization/integrals
-    int n_dof = params.n_dof()/params.row_size;
-    Eigen::Map<Mat<>>(bc_cons[i_con].flux_cache(), n_dof) = Eigen::Map<Mat<>>(bc_cons[i_con].inside_face(true), n_dof);
+    con->flux_cache() = con->inside().flow_state()(1);
     // apply boundary conditions
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
-    acc_mesh->boundary_condition(bc_sn).apply_flux(bc_cons[i_con]);
+    int bc_sn = con->boundary_condition();
+    acc_mesh->boundary_condition(bc_sn).apply_flux(*con);
   }
   stopwatch["boundary conditions"].stopwatch.pause();
   stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
@@ -123,10 +110,10 @@ void Solver::apply_flux_bcs() {
 
 void Solver::apply_avc_diff_bcs() {
   stopwatch["boundary conditions"].stopwatch.start();
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+  for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].boundary_condition();
     acc_mesh->boundary_condition(bc_sn).apply_diffusion(bc_cons[i_con]);
   }
   stopwatch["boundary conditions"].stopwatch.pause();
@@ -135,10 +122,10 @@ void Solver::apply_avc_diff_bcs() {
 
 void Solver::apply_avc_diff_flux_bcs() {
   stopwatch["boundary conditions"].stopwatch.start();
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+    int bc_sn = bc_cons[i_con].boundary_condition();
     acc_mesh->boundary_condition(bc_sn).flux_diffusion(bc_cons[i_con]);
   }
   stopwatch["boundary conditions"].stopwatch.pause();
@@ -146,15 +133,10 @@ void Solver::apply_avc_diff_flux_bcs() {
 }
 
 void Solver::apply_fta_flux_bcs() {
-  int rs = params.row_size;
-  int nq = params.n_qpoint();
-  int nv = params.n_var;
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    double* in_f = bc_cons[i_con].inside_face(true);
-    double* gh_f = bc_cons[i_con].ghost_face(true);
-    for (int i_dof = 0; i_dof < nq*nv/rs; ++i_dof) gh_f[i_dof] = -in_f[i_dof];
+  for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
+    bc_cons[i_con].ghost().flow_state()(1) = -bc_cons[i_con].inside().flow_state()(1);
   }
 }
 
@@ -178,10 +160,10 @@ void Solver::_init_face_state() {
   compute_write_face(_kernel_mesh());
   compute_prolong(_kernel_mesh());
   auto inter {_interpreter()};
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+  for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].boundary_condition();
     acc_mesh->boundary_condition(bc_sn).init_cache(bc_cons[i_con]);
     acc_mesh->boundary_condition(bc_sn).set_prescribed(inter, bc_cons[i_con]);
   }
@@ -313,7 +295,7 @@ void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs
                "attempt to read a mesh file with a different `row_size`");
   HEXED_ASSERT(acc_mesh->storage_params().n_forcing == params.n_forcing,
                "attempt to read a mesh file with a different `n_forcing`");
-  calc_jacobian(false);
+  calc_jacobian();
 }
 
 void Solver::read_state(std::string file_name) {
@@ -356,41 +338,60 @@ void Solver::write_state(std::string file_name) {
   }
 }
 
-void Solver::calc_jacobian(bool snap) {
+void Solver::calc_jacobian() {
   acc_mesh->valid().assert_valid();
-  const int n_dim = params.n_dim;
-  const int rs = basis.row_size;
-  const int nfq = params.n_qpoint()/rs;
-
+  _preti_masks = acc_mesh->preti_masks(basis);
   // compute element jacobians
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
+    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+      HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
+    }
   }
   // do some extra work to make sure each face knows its normal vectors
-  auto& car_cons {acc_mesh->cartesian().face_connections()};
+  auto face_refs = acc_mesh->face_refinements();
   #pragma omp parallel for
-  for (int i_con = 0; i_con < car_cons.size(); ++i_con) car_cons[i_con].set_normal();
-  auto& def_cons {acc_mesh->deformed().face_connections()};
+  for (auto& vec : face_refs) {
+    for (auto& ref : vec) if (ref.is_deformed()) {
+      ref.coarse().flow_state()(1)(0, params.n_dim) = ref.coarse().normal();
+    }
+  }
+  compute_prolong(_preti_masks[0]->kernel_mesh, 0, 1);
   #pragma omp parallel for
-  for (int i_con = 0; i_con < def_cons.size(); ++i_con) def_cons[i_con].set_normal();
-  // set position at boundary faces
-  auto& bc_cons = acc_mesh->boundary_connections();
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    Element& elem = bc_cons[i_con].element();
-    double* surf_pos = bc_cons[i_con].surface_position();
-    int i_face = bc_cons[i_con].direction().i_face(0);
-    Array<double> pos {elem.face_position(basis)(i_face/2)(i_face%2).copy()};
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        surf_pos[i_dim*nfq + i_qpoint] = pos(i_dim)[i_qpoint];
+  for (auto& vec : face_refs) {
+    for (auto& ref : vec) if (ref.is_deformed()) {
+      for (int i_fine = 0; i_fine < 2; ++i_fine) {
+        ref.fine()[i_fine]->normal() = ref.fine()[i_fine]->flow_state()(1)(0, params.n_dim);
       }
     }
   }
+  // set position at boundary faces
+  auto bc_cons = acc_mesh->boundary_connections();
+  #pragma omp parallel for
+  for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
+    auto& con = bc_cons[i_con];
+    HEXED_ASSERT(con.inside().element(), "connection has no element")
+    Element& elem = *con.inside().element();
+    con.position() = elem.face_position(basis)(con.inside().i_dim())(con.inside().sign());
+    if (con.inside().is_deformed()) con.ghost().normal() = con.inside().normal();
+  }
   share_vertex_data(&Element::vertex_time_step_scale, { huge, &min_fun});
-  _preti_masks = acc_mesh->preti_masks(basis);
+  // check that all the normals agree on both faces of every connection
+  for (Neighbor_connection& con : acc_mesh->neighbor_connections(1)) {
+    auto dir = con.get_direction();
+    Array<double> temp_storage = Array<double>::make_uniform({params.n_var, params.n_face_qpoint()}, 0.);
+    temp_storage(0, params.n_dim) = con.face(1).normal();
+    auto perm = face_permutation(params.n_dim, params.row_size, dir, temp_storage.data(), turb);
+    perm->match_faces();
+    Array<double> nrml0 = con.face(0).normal()*(con.face(0).nominal_area()*math::sign(!dir.flip_normal(0)));
+    Array<double> nrml1 = temp_storage(0, params.n_dim)*(con.face(1).nominal_area()*math::sign(!dir.flip_normal(1)));
+    if ((nrml0 - nrml1).norm() > 1e-3) {
+      printers::warn("Warning: ", true);
+      printers::warn("normal mismatch: " + to_string(dir) + "\n" + to_string(nrml0) + to_string(nrml1));
+    }
+  }
 }
 
 void Solver::initialize(std::string(expr)) {
@@ -526,10 +527,10 @@ void Solver::update_art_visc_smoothness(double advect_length) {
     sw_adv["setup"].stopwatch.pause();
     for (int i = 0; i < 2; ++i) {
       sw_adv["BCs"].stopwatch.start();
-      auto& bc_cons {acc_mesh->boundary_connections()};
+      auto bc_cons {acc_mesh->boundary_connections()};
       #pragma omp parallel for
-      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-        int bc_sn = bc_cons[i_con].bound_cond_serial_n();
+      for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
+        int bc_sn = bc_cons[i_con].boundary_condition();
         acc_mesh->boundary_condition(bc_sn).apply_advection(bc_cons[i_con]);
       }
       sw_adv["BCs"].stopwatch.pause();
@@ -702,153 +703,22 @@ void Solver::set_uncertainty(double value) {
 }
 
 void Solver::set_uncert_surface_rep(int bc_sn) {
-  const int nv = params.n_var;
   const int nd = params.n_dim;
-  const int nq = params.n_qpoint();
-  const int nfq = nq/params.row_size;
-  // record flow state in reference stage
-  // so that state storage can be used for normal vectors
-  auto& elems = acc_mesh->elements();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    elems[i_elem].uncertainty = 0;
-    elems[i_elem].record = 0;
-    double* state = elems[i_elem].state();
-    double* ref = elems[i_elem].residual_cache();
-    for (int i_var = 0; i_var < nv; ++i_var) {
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        ref[i_var*nq + i_qpoint] = state[i_var*nq + i_qpoint];
-      }
-    }
-  }
-  // identify boundary elements
-  auto& bc_cons {acc_mesh->boundary_connections()};
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    auto& con = bc_cons[i_con];
-    if (con.bound_cond_serial_n() == bc_sn) {
-      // the `2*n_dim` identifies that this is a boundary element and the rest identifies which face is on the boundary
-      // assumes each element has at most face on *this* boundary (might have other faces on other boundaries)
-      con.element().record = 2*nd + 2*con.i_dim() + con.inside_face_sign();
-    }
-  }
-  // first write the (non-unit) normal vectors to the state storage
-  // and then extrapolate those to the face storage
-  auto& def_elems = acc_mesh->deformed().elements();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
-    auto& elem = def_elems[i_elem];
-    if (elem.record/(2*nd) == 1) { // if this element is on the boundary...
-      // pick out the reference level normal vector which is pointing out of the flow domain
-      double* state = elem.state();
-      double* nrml = elem.reference_level_normals() + (elem.record - 2*nd)/2*nd*nq;
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-          state[i_dim*nq + i_qpoint] = nrml[i_dim*nq + i_qpoint]*math::sign(elem.record%2);
-        }
-      }
-    }
-  }
-  // extrapolate to faces
-  compute_write_face(_kernel_mesh());
-  // for each face, compute unit surface normal from the reference level normal
-  Mat<dyn, dyn> bound = basis.boundary();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
-    auto& elem = def_elems[i_elem];
-    if (elem.record/(2*nd) == 1) {
-      int i_dim = (elem.record - 2*nd)/2;
-      int positive = elem.record%2;
-      for (int i_face = 0; i_face < 2*nd; ++i_face) {
-        if (i_face/2 != i_dim) {
-          // extrapolate the reference level normal to the wall surface
-          // because only at the wall surface is the reference level normal the same as the wall normal
-          // and then write that back to the whole face
-          Eigen::Map<Mat<dyn, dyn>> face(elem.face(i_face, false), nfq, nd);
-          int i_dim_extrap = (nd == 3) ? i_dim > 3 - i_dim - i_face/2 : 0;
-          for (int j_dim = 0; j_dim < nd; ++j_dim) {
-            Mat<dyn, dyn> b = Mat<>::Ones(params.row_size)*bound(positive, all);
-            Mat<> extrap = math::dimension_matvec(b, face(all, j_dim), i_dim_extrap);
-            face(all, j_dim) = extrap;
-          }
-          // normalize to get *unit* normals
-          for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-            face(i_qpoint, all).normalize();
-          }
-        }
-      }
-    }
-  }
-  compute_prolong(_kernel_mesh());
-  // compute difference between neighboring elements
-  auto& def_cons = acc_mesh->deformed().face_connections();
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < def_cons.size(); ++i_con) {
-    auto& con = def_cons[i_con];
-    auto permute = face_permutation(nd, params.row_size, con.direction(), con.state(1, false), turb);
-    permute->match_faces();
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-        double* f [2];
-        for (int i_side : {0, 1}) f[i_side] = con.state(i_side, false) + i_dim*nfq + i_qpoint;
-        *f[0] = *f[1] = *f[0] - *f[1];
-      }
-    }
-    permute->restore();
-  }
-  // set difference to zero for faces that are on other boundaries
-  #pragma omp parallel for
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    auto& con = bc_cons[i_con];
-    double* state = con.inside_face(false);
-    for (int i_dof = 0; i_dof < nv*nfq; ++i_dof) state[i_dof] = 0;
-  }
-  compute_restrict(_kernel_mesh(), false);
-  // total up differences for each boundary element and write to uncertainty
-  // also restore the flow state to what it was at the start of this function
+  Mat<> orth = basis.orthogonal(basis.row_size - 2).cwiseProduct(basis.node_weights());
   Mat<> weights = math::pow_outer(basis.node_weights(), nd - 1);
-  #pragma omp parallel for
+  auto& elems = acc_mesh->elements();
+  //#pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    if (elem.record/(2*nd) == 1) {
-      for (int i_face = 0; i_face < 2*nd; ++i_face) {
-        if (i_face/2 != (elem.record - 2*nd)/2) {
-          Eigen::Map<Mat<dyn, dyn>> face(elem.face(i_face, false), nfq, nd);
-          Mat<> norm = face.rowwise().norm();
-          elem.uncertainty += std::sqrt(norm.dot(weights.asDiagonal()*norm));
-        }
-      }
-      elem.uncertainty /= 2*std::max(nd - 1, 1);
-    }
-    double* state = elem.state();
-    double* ref = elem.residual_cache();
-    for (int i_var = 0; i_var < nv; ++i_var) {
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        state[i_var*nq + i_qpoint] = ref[i_var*nq + i_qpoint];
+    Element& elem = elems[i_elem];
+    elem.uncertainty = 0;
+    Array<double> pos = elem.position(basis);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      for (int j_dim = 0; j_dim < nd; ++j_dim) {
+        Mat<> ho_component = math::dimension_matvec(orth.transpose(), pos(i_dim).vector(), j_dim);
+        elem.uncertainty += ho_component.dot(weights.cwiseProduct(ho_component))/(nd*nd);
       }
     }
-  }
-  compute_write_face(_kernel_mesh());
-}
-
-void Solver::synch_extruded_uncert() {
-  auto cons = acc_mesh->extruded_connections();
-  bool changed = true;
-  while(changed) {
-    changed = false;
-    #pragma omp parallel for reduction(||:changed)
-    for (int i_con = 0; i_con < cons.size(); ++i_con) {
-      double uncert [2];
-      for (int i_side = 0; i_side < 2; ++i_side) {
-        #pragma omp atomic read
-        uncert[i_side] = cons[i_con].element(i_side).uncertainty;
-      }
-      if (uncert[0] > uncert[1] + 1e-14) {
-        #pragma omp atomic write
-        cons[i_con].element(1).uncertainty = uncert[0];
-        changed = true;
-      }
-    }
+    elem.uncertainty = std::sqrt(elem.uncertainty);
   }
 }
 
@@ -892,8 +762,12 @@ void Solver::update() {
                 .conv_substep = (sub_iters > 1) && use_ldg(),
               };
               apply_state_bcs();
-              if (use_ldg() && !i && !i_sub) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
-              else compute_euler(km, opts);
+              if (use_ldg() && !i && !i_sub) {
+                compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond,
+                                      _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
+              } else {
+                compute_euler(km, opts);
+              }
               // note that function call must come first to ensure it is evaluated despite short-circuiting
               fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
             }
@@ -1013,15 +887,14 @@ bool Solver::is_admissible() {
     if (!elem_admis) elem.record = 1;
     admiss = admiss && elem_admis;
   }
-  auto& ref_faces = _preti_masks[_preti_level]->kernel_mesh.ref_faces;
+  auto& face_refs = _preti_masks[_preti_level]->kernel_mesh.face_refinements;
   bool refined_admiss = 1;
   #pragma omp parallel for reduction (&&:refined_admiss)
-  for (int i_face = 0; i_face < ref_faces.size(); ++i_face) {
-    auto& ref = ref_faces[i_face];
-    int n_fine = params.n_vertices()/2;
-    for (int i_dim = 0; i_dim < nd - 1; ++i_dim) n_fine /= 1 + ref.stretch[i_dim];
-    for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
-      refined_admiss = refined_admiss && check_admis(ref.fine[i_fine], nq/rs, nd + 2);
+  for (auto& vec : face_refs) {
+    for (auto& ref : vec) {
+      for (int i_fine = 0; i_fine < 2; ++i_fine) {
+        refined_admiss = refined_admiss && check_admis(ref.fine[i_fine][0], nq/rs, nd + 2);
+      }
     }
   }
   sw.work_units_completed += acc_mesh->elements().size();
@@ -1120,12 +993,10 @@ bool Solver::fix_admissibility(double stability_ratio) {
     step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
     step[0] = quadratic/step[1];
     for (double s : step) {
-      auto& bc_cons {acc_mesh->boundary_connections()};
+      auto bc_cons {acc_mesh->boundary_connections()};
       #pragma omp parallel for
       for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-        double* in_f = bc_cons[i_con].inside_face(false);
-        double* gh_f = bc_cons[i_con].ghost_face(false);
-        for (int i_dof = 0; i_dof < nq*params.n_var/rs; ++i_dof) gh_f[i_dof] = in_f[i_dof];
+        bc_cons[i_con].ghost().flow_state()(0) = bc_cons[i_con].inside().flow_state()(0);
       }
       opts.dt = s;
       compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
@@ -1187,7 +1058,8 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand) {
 template <typename T>
 class Vis_evaluator {
   public:
-  Vis_evaluator(Interpreter&& inter, std::function<void(Namespace&, T&)> assign, std::string expr, T& t, int n_dim_topo)
+  Vis_evaluator(Interpreter&& inter, std::function<void(Namespace&, T&)> assign, std::string expr, T& t,
+                int n_dim_topo)
   : _inter{inter}, _assign{assign}, _expr{expr}, _n_dim_topo{n_dim_topo}
   {
     Storage_params params = t.storage_params();
@@ -1216,7 +1088,7 @@ class Vis_evaluator {
   }
   std::vector<std::string> var_names() {return _var_names;}
 
-  void visualize(std::string format, std::string name, int n_sample, bool wireframe, Sequence<T&>& seq,
+  void visualize(std::string format, std::string name, int n_sample, bool wireframe, next::Sequence<T&> seq,
                  double time, const Basis& basis, std::function<bool(T&)> mask) {
     auto visualizer = Visualizer::create(format, _n_dim, wireframe ? 1 : _n_dim_topo, name, _var_names,
                                          time, Visualizer::block);
@@ -1256,7 +1128,7 @@ class Vis_evaluator {
 void Solver::bounds_surface(std::string expr, int bc_sn, int n_sample = 20) {
   // setup
   const int nd = params.n_dim;
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto bc_cons {acc_mesh->boundary_connections()};
   if (!bc_cons.size()) return;
   Vis_evaluator<Boundary_connection> evaluator(
     _interpreter(),
@@ -1275,9 +1147,9 @@ void Solver::bounds_surface(std::string expr, int bc_sn, int n_sample = 20) {
     bounds(1)[i_var] = -huge;
   }
   //#pragma omp parallel for reduction(+:integral)
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+  for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
     auto& con {bc_cons[i_con]};
-    if (con.bound_cond_serial_n() != bc_sn) continue;
+    if (con.boundary_condition() != bc_sn) continue;
     Array<double> qpoints{evaluator.evaluate(con)};
     Vis_data vis_dat(qpoints(nd, end), basis);
     Array<double> interior = vis_dat.interior(n_sample);
@@ -1331,7 +1203,7 @@ void Solver::integrate_surface(std::string expr, int bc_sn) {
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int nfq = nq/basis.row_size;
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto bc_cons {acc_mesh->boundary_connections()};
   if (!bc_cons.size()) return;
   Vis_evaluator<Boundary_connection> evaluator(
     _interpreter(),
@@ -1347,15 +1219,15 @@ void Solver::integrate_surface(std::string expr, int bc_sn) {
   #pragma omp parallel for reduction(+:integral)
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     auto& con {bc_cons[i_con]};
-    if (con.bound_cond_serial_n() != bc_sn) continue;
-    auto& elem = con.element();
+    if (con.boundary_condition() != bc_sn) continue;
+    auto& elem = *con.inside().element();
     double area = math::pow(elem.nominal_size(), nd - 1);
     Array<double> qpoints{evaluator.evaluate(con)};
-    double* nrml = con.normal();
+    Array<double> nrml = con.normal().copy();
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
       double nrml_mag = 0;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        nrml_mag += math::pow(nrml[i_dim*nfq + i_qpoint], 2);
+        nrml_mag += math::pow(nrml(i_dim)[i_qpoint], 2);
       }
       nrml_mag = std::sqrt(nrml_mag);
       for (int i_var = 0; i_var < (int)var_names.size(); ++i_var) {
@@ -1382,7 +1254,11 @@ void Solver::visualize_field(std::string format, std::string name, std::string e
     [&](Namespace& space, Element& elem) {vis_variables::field(space, elem, basis);},
     expr, elems[0], params.n_dim
   );
-  evaluator.visualize(format, name, n_sample, wireframe, elems,
+  next::Sequence<Element&> elem_seq = {
+    [&elems](Int index)->Element& {return elems[index];},
+    [&elems]()->Int {return elems.size();},
+  };
+  evaluator.visualize(format, name, n_sample, wireframe, elem_seq,
                       _namespace->get<double>("flow_time"), basis, [](Element&){return true;});
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"][sw_name].work_units_completed += elems.size();
@@ -1395,7 +1271,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   Stopwatch_tree::Starter sw_starter(stopwatch["visualization"][sw_name]);
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
   HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");
-  auto& bc_cons {acc_mesh->boundary_connections()};
+  auto bc_cons {acc_mesh->boundary_connections()};
   if (!bc_cons.size()) return;
   Vis_evaluator<Boundary_connection> evaluator(
     _interpreter(),
@@ -1404,7 +1280,7 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   );
   evaluator.visualize(format, name, n_sample, wireframe, bc_cons,
                       _namespace->get<double>("flow_time"), basis,
-                      [bc_sn](Boundary_connection& con){return con.bound_cond_serial_n() == bc_sn;});
+                      [bc_sn](Boundary_connection& con){return con.boundary_condition() == bc_sn;});
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"][sw_name].work_units_completed += bc_cons.size();
 }
@@ -1444,11 +1320,6 @@ void Solver::visualize_contour(std::string format, std::string name, std::string
   }
   ++stopwatch["visualization"].work_units_completed;
   stopwatch["visualization"]["contour"].work_units_completed += n_write;
-}
-
-void Solver::vis_cart_surf(std::string format, std::string name, int bc_sn, std::string expr) {
-  Mesh::Reset_vertices reset(*acc_mesh);
-  visualize_surface(format, name, bc_sn, expr, 2);
 }
 
 void Solver::vis_lts_constraints(std::string format, std::string name, int n_sample) {

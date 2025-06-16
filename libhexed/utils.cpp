@@ -24,4 +24,21 @@ std::string to_string(double d) {return format_str(100, "%+.6e", d);}
 std::string to_string(std::string s) {return s;}
 std::string to_string(bool b) {return b ? "true" : "false";}
 
+std::string to_string(Mat<dyn, dyn> mat) {
+  if (mat.cols() <= 1) {
+    return "Mat<>{" + to_string(mat.data(), mat.size()) + "}";
+  }
+  std::string s = "Mat<>{\n";
+  for (Int row = 0; row < (Int)mat.rows(); ++row) {
+    s += "  ";
+    for (Int col = 0; col < (Int)mat.cols(); ++col) {
+      s += to_string(mat(row, col)) + ", ";
+    }
+    s.pop_back();
+    s += "\n";
+  }
+  s += "}";
+  return s;
+}
+
 }

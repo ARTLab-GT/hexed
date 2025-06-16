@@ -10,3 +10,5 @@ auto*.csv
 resolution.hil
 *results.svg
 *results.pdf
+*.xmf
+*.h5

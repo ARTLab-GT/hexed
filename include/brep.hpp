@@ -220,6 +220,23 @@ class Nurbs : public Parametric<n_param> {
 //! \brief A list of curves, where the end point of each should coincide with start of the next.
 typedef std::vector<std::unique_ptr<Parametric<1>>> Composite_curve;
 
+class Trimmed_surface;
+
+//! \brief Represents a curve that is trimming a `Trimmed_surface`.
+struct Trimming_curve {
+  //! \brief Initialize tree curve from nodes in physical space and initialize `parameters` and `tangents` to zero;
+  Trimming_curve(Array<double> nodes);
+  //! \brief The curve in physical space
+  Tree_curve curve;
+  //! \brief The surface parameter values of the tree curve nodes
+  //! \details layout: [i_node][i_dim];
+  Array<double> parameters;
+  //! \brief The surface tangent vectors at the midpoint of each segment
+  //! \details Vectors are normal to the curve, tangent to the surface, and point toward the interior of the surface.
+  //! layout: [i_node][i_dim];
+  Array<double> tangents;
+};
+
 /*! \brief A surface created by trimming a parametric surface with closed curves.
  * \details Specifically, given a parametric surface and a set of closed curves on that surface,
  * the resulting trimmed surface is the set of points on the surface such a ray originating from that point
@@ -254,8 +271,10 @@ class Trimmed_surface {
   inline const Parametric<2>& surface() const {return *_surf;}
   //! \brief Test whether a point `parameters` is inside the bounding curves in parameter space.
   bool is_inside(Mat<2> parameters) const;
-  //! \brief Access the bounding curves.
+  //! \brief Access the physical bounding curves.
   next::Sequence<const Tree_curve&> curves() const;
+  //! \brief Access the full data of the bounding curves.
+  next::Sequence<const Trimming_curve&> trimming_curves() const;
   /*! \brief Compute the point on the trimmed surface (including the boundary) nearest to `point`.
    * \details If the nearest point would be further than `max_dist` from `point`,
    * the empty `Nearest_point` is returned.
@@ -264,6 +283,7 @@ class Trimmed_surface {
   std::vector<double> intersections(Mat<3, 2> endpoints, bool high_prec = true) const;
   Mat<3> normal(Mat<2> params) const;
   Mat<3> point(Mat<2> params) const;
+  Mat<3, 2> bounding_box() const;
   private:
   // Performs the real initialization work once the curves have been discretized.
   // Discretization is performed by the constructor.
@@ -279,17 +299,19 @@ class Trimmed_surface {
   Int _n_div_max;
   double _sz_min;
   double _sz_max;
+  double _inside_tol;
   std::unique_ptr<Parametric<2>> _surf;
-  std::vector<Tree_curve> _curves;
+  std::vector<Trimming_curve> _curves;
   std::vector<Tree_curve> _extremal_boundaries;
   Array<double> _nodes_normals;
   Array<double> _nodes;
   Array<double> _normals;
+  Mat<3, 2> _bbox;
   Int _levels;
   Array<double> _excession;
   Array<double> _excession_epsilon;
   // No simple way to explain this.
-  // Need to write a dedicated article about distinguishing inside/outside points, which _param_segmetns is a part of.
+  // Need to write a dedicated article about distinguishing inside/outside points, which _param_segments is a part of.
   std::array<std::vector<std::vector<Mat<2>>>, 3> _param_segments;
 };
 
@@ -314,8 +336,7 @@ class Geom_2d : public Surface_geom {
    */
   void visualize(std::string format, std::string file_name, Int n_div = 100);
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-  //! \brief Dummy implementation that returns an empty vector.
-  inline std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_prec = true) override {return {};}
+  std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_prec = true) override;
   next::Sequence<Mat<3>> points() override;
   private:
   std::vector<std::unique_ptr<Parametric<1>>> _curves;
@@ -328,7 +349,8 @@ class Geom_3d : public Surface_geom {
   //! \param file_name Name of file containing geometry. Must be in IGES format.
   //! \param n_div_min See `Trimmed_surface::Trimmed_surface`
   //! \param n_div_max See `Trimmed_surface::Trimmed_surface`
-  Geom_3d(std::string file_name, Int n_div_min, Int n_div_max);
+  Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coincidence_bbox_tol, double coincidence_abs_tol,
+          double coincidence_precision_tol, double tangency_angle_tol, double tangency_precision_tol);
   /*! \brief Writes visualization files of the geometry to help diagnose import/translation bugs.
    * \details For visualization purposes, entities will be discretized with `n_div` segments.
    * This is not the same as the `n_div` passed to the constructor, and need not be a power of 2.
@@ -352,10 +374,18 @@ class Geom_3d : public Surface_geom {
                  Int n_div = 100, bool vis_volume = true, Mat<3, 2> bounds = Mat<3>::Ones()*Mat<2>::Unit(1).transpose());
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_prec = true) override;
-  next::Sequence<const Tree_curve&> edges() override;
+  next::Sequence<const Geom_edge&> edges() override;
   next::Sequence<const Trimmed_surface&> surfaces();
   private:
+  next::Sequence<const Trimming_curve&> _trim_curves();
   std::vector<Trimmed_surface> _surfaces;
+  // used for edge matching
+  std::vector<Int> _used_curves;
+  // used only for visualization
+  std::vector<Int> _tangent_curves;
+  std::vector<Array<double>> _tangent_averages;
+  std::vector<Array<double>> _tangent_radii;
+  std::vector<std::shared_ptr<Geom_edge>> _geom_edges;
 };
 
 }

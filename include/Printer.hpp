@@ -115,6 +115,7 @@ class Task_message {
   Printer& _printer;
   std::string _sep1;
   public:
+  //! \details `sep0` inserted after ellipsis, `sep1` inserted before "done".
   Task_message(Printer& p, std::string message, std::string sep0 = " ", std::string sep1 = "");
   ~Task_message();
 };

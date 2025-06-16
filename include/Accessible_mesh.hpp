@@ -23,15 +23,13 @@ class Accessible_mesh : public Mesh {
   Vector_view<Element&, Deformed_element&, &trivial_convert<Element&, Deformed_element&>, Sequence> def_as_car;
   Concatenation<Element&> elems;
   Vector_view<Kernel_element&, Element&, &trivial_convert<Kernel_element&, Element&>, Sequence> kernel_elems;
-  Concatenation<Element_connection&> elem_cons;
   std::vector<std::unique_ptr<Flow_bc>> bound_conds;
-  Concatenation<Face_connection<Deformed_element>&> bound_face_cons;
-  Concatenation<Boundary_connection&> bound_cons;
-  Concatenation<Face_connection<Deformed_element>&> def_face_cons;
-  Concatenation<Refined_face&> ref_face_v;
+  std::array<std::vector<Neighbor_connection>, 2> _neighbor_cons;
+  std::vector<std::vector<Face_refinement>> _face_refs;
+  std::vector<Boundary_connection> _bound_cons;
   int surf_bc_sn;
   std::unique_ptr<Surface_geom> surf_geom;
-  std::vector<Element_face_connection<Deformed_element>*> extrude_cons;
+  std::array<std::vector<Mortal_ptr<Neighbor_connection>>, 3> _extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
   std::vector<int> tree_bcs;
   bool verts_are_reset;
@@ -40,9 +38,6 @@ class Accessible_mesh : public Mesh {
   next::Mesh_blocks _blocks;
   int _n_verts;
   Stopwatch_tree _stopwatch;
-  std::vector<Mortal_ptr<next::Vertex>> point_matched_vertices;
-  std::vector<std::vector<Mortal_ptr<next::Vertex>>> matched_vertices;
-  std::vector<std::vector<Mortal_ptr<next::Edge>>> matched_edges;
   Turbulence_model _turb;
 
   // masked sequences
@@ -85,23 +80,18 @@ class Accessible_mesh : public Mesh {
   void deform();
   void create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
   void read_file(std::string file_name);
-  void _connect_shapes(Element&, Element&, Connection_direction);
-  void _connect(std::array<Element*, 2>, Con_dir<Element>);
-  void _connect(std::array<Deformed_element*, 2>, Con_dir<Deformed_element>);
-  void _connect(Element*, std::vector<Element*>, Con_dir<Deformed_element>);
-  void _connect(Deformed_element*, std::vector<Deformed_element*>, Con_dir<Deformed_element>,
-                std::array<bool, 2> = {false, false});
 
-  template <typename Elem_t>
-  void _connect_shapes(Elem_t*, std::vector<Elem_t*>, Con_dir<Deformed_element>, std::array<bool, 2>);
+  void _connect(std::array<std::vector<Element*>, 2> elems, Connection_direction dir, std::string context);
+  void _connect(std::array<Element*, 2>, Connection_direction, std::string context = "");
+  void _connect(Element*, std::vector<Element*>, Connection_direction,
+                std::array<bool, 2> = {false, false}, std::string context = "");
 
-  struct Edge_match {
-    Mortal_ptr<next::Edge> edge;
-    std::array<Geom_edge::Node, 2> nodes;
-  };
-  void _record_connections();
-  void _offset_vertices(double);
+  void _offset_vertices(double, bool strategy);
   Mat<3> _get_snapping_target(next::Vertex&, Mat<3>);
+  Mat<3> _de_intersect(next::Vertex&, Mat<3>);
+  bool _dijkstra(std::array<next::Vertex*, 2> start_end,
+                 std::function<double(next::Vertex&, next::Vertex&, next::Edge&)> cost,
+                 std::function<void(next::Vertex&)> snap);
   void _fit_surface();
   void _optimize(int min_pow, int max_pow, bool check_snapping);
 
@@ -129,7 +119,6 @@ class Accessible_mesh : public Mesh {
    * This variant is not for tree meshing.
    */
   Accessible_mesh(std::string file_name, std::vector<Flow_bc*>, Turbulence_model);
-  virtual ~Accessible_mesh();
   inline double root_size() override {return root_sz;}
   inline Storage_params storage_params() {return params;}
   //! \returns a View_by_type containing only the Cartesian elements in the mesh
@@ -142,15 +131,14 @@ class Accessible_mesh : public Mesh {
   //! access all elements, both Cartesian and deformed
   Sequence<Element&>& elements() {return elems;}
   Sequence<Kernel_element&>& kernel_elements() {return kernel_elems;}
-  void connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Con_dir<Element> dir,
+  void connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Connection_direction dir,
                          std::array<bool, 2> is_deformed = {false, false}) override;
-  void connect_deformed(int ref_level, std::array<Int, 2> serial_n, Con_dir<Deformed_element> direction) override;
-  void connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial, Con_dir<Deformed_element>,
+  void connect_deformed(int ref_level, std::array<Int, 2> serial_n, Connection_direction direction) override;
+  void connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial, Connection_direction,
                        bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
                        std::array<bool, 2> stretch = {false, false}) override;
-  //! \returns a view of all connections between elements,
-  //! including one connection for every fine element in hanging node connections.
-  Sequence<Element_connection&>& element_connections() {return elem_cons;}
+  next::Sequence<Neighbor_connection&> neighbor_connections(bool is_deformed);
+  next::Sequence<std::vector<Face_refinement>&> face_refinements();
   int add_boundary_condition(Flow_bc*) override;
   void connect_boundary(int ref_level, bool is_deformed, Int element_serial_n, int i_dim, int face_sign,
                         int bc_serial_n) override;
@@ -191,14 +179,10 @@ class Accessible_mesh : public Mesh {
     Masked<Kernel_element, Element> _masked_elems;
     Masked<Kernel_element, Element> _masked_car_elems;
     Masked<Kernel_element, Element> _masked_def_elems;
-    Masked<Kernel_connection, Kernel_connection> _masked_car_cons;
-    Masked<Kernel_connection, Kernel_connection> _masked_def_cons;
-    Masked<Refined_face, Refined_face> _masked_ref_faces;
-    Masked<Boundary_connection, Boundary_connection> _masked_bound_cons;
     public:
     Masked_mesh(Accessible_mesh&, const Basis&, std::function<bool(Element&)> = [](Element&){return true;});
     Kernel_mesh kernel_mesh;
-    Sequence<Boundary_connection&>& bound_cons;
+    std::vector<Boundary_connection*> bound_cons;
   };
   //! \brief Resets effective number of masks created to 0 and invalidates existing masks.
   //! \see `Masked_mesh`
@@ -211,15 +195,11 @@ class Accessible_mesh : public Mesh {
   std::vector<std::unique_ptr<Masked_mesh>> preti_masks(const Basis&);
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
-  Vector_view<Flow_bc&, std::unique_ptr<Flow_bc>, &ptr_convert<Flow_bc&, std::unique_ptr<Flow_bc>>>
-  boundary_conditions() {return bound_conds;}
+  next::Sequence<Flow_bc&> boundary_conditions();
   //! get a boundary condition owned by this mesh by its serial number
   Flow_bc& boundary_condition(int bc_sn) {return *bound_conds[bc_sn];}
   //! \returns a view of all connections between an element and a boundary condition
-  Sequence<Boundary_connection&>& boundary_connections() {return bound_cons;}
-  //! \returns a view of all Refined_face objects owned by this mesh
-  //! (there will be one for every hanging node connection)
-  inline Sequence<Refined_face&>& refined_faces() {return ref_face_v;}
+  next::Sequence<Boundary_connection&> boundary_connections();
   inline int n_elements() override {return elements().size();}
   Connection_validity valid() override;
   //! \brief if any invalid mesh connections are found, throws an exception with a diagnostic visualization
@@ -229,18 +209,11 @@ class Accessible_mesh : public Mesh {
   void extrude(bool collapse = false, double offset = 0, bool force = false) override;
   void connect_rest(int bc_sn) override;
   std::vector<elem_handle> elem_handles() override;
-  //! \returns a view of all Element_connection between extruded elements and the elemens they were extruded from
-  inline Vector_view<Element_connection&, Element_face_connection<Deformed_element>*,
-                     ptr_convert<Element_connection&, Element_face_connection<Deformed_element>*>>
-    extruded_connections() {return {extrude_cons};}
   void write(std::string file_name) override;
   void export_polymesh(std::string dir_name) override;
+  void visualize_deformed(std::string format, std::string file_name, double time = 0);
   void visualize(std::string format, std::string file_name, double time = 0) override;
   inline const Stopwatch_tree& stopwatch_tree() const override {return _stopwatch;}
-
-  protected:
-  void reset_verts() override;
-  void restore_verts() override;
 };
 
 }

@@ -11,6 +11,8 @@
 #include <hexed/History_monitor.hpp>
 #include <hexed/Printer.hpp>
 #include <hexed/Visualizer.hpp>
+#include <hexed/vertex_inds.hpp>
+#include <hexed/Gauss_legendre.hpp>
 
 namespace hexed {
 
@@ -36,19 +38,6 @@ Element_container& Accessible_mesh::container(bool is_deformed) {
 template<> Mesh_by_type<         Element>& Accessible_mesh::mbt() {return car;}
 template<> Mesh_by_type<Deformed_element>& Accessible_mesh::mbt() {return def;}
 
-void Accessible_mesh::_record_connections() {
-  auto& elem_seq = elements();
-  // locate unconnected faces
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elem_seq.size(); ++i_elem) {
-    for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
-      elem_seq[i_elem].face_record[i_face] = 0;
-    }
-  }
-  car.record_connections();
-  def.record_connections();
-}
-
 namespace dijkstra {
   struct Node {
     next::Vertex* vert;
@@ -60,7 +49,15 @@ namespace dijkstra {
   }
 }
 
-void Accessible_mesh::_offset_vertices(double offset) {
+void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
+  for (auto& con : _neighbor_cons[0]) {
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      if (con.face(i_side).element()) {
+        HEXED_ASSERT(con.face(i_side).element()->active_shape().is_new == false,
+                     "Cartesian connection has a new element")
+      }
+    }
+  }
   int nd = params.n_dim;
   auto verts = _blocks.verts();
   #pragma omp parallel for
@@ -69,42 +66,69 @@ void Accessible_mesh::_offset_vertices(double offset) {
     vert.dijkstra_dist = 0;
   }
   int nv = params.n_vertices()/2;
-  for (auto& con : def.cons) {
-    auto dir = con->get_direction();
+  for (auto& con : _neighbor_cons[1]) {
+    auto dir = con.get_direction();
     if (dir.i_dim[0] != dir.i_dim[1]) continue;
     bool is_new [2] {false, false};
+    bool has_elements = true;
     for (int i_side = 0; i_side < 2; ++i_side) {
-      is_new[i_side] = con->element(i_side).active_shape().is_new;
-    }
-    if (is_new[0] != is_new[1]) {
-      int new_elem = is_new[1];
-      auto i_verts = vertex_inds(nd, dir)[0];
-      Mat<3, dyn> vert_pos(3, nv);
-      std::vector<next::Vertex*> con_verts(nv);
-      for (int i_vert = 0; i_vert < nv; ++i_vert) {
-        con_verts[i_vert] = &con->element(0).active_shape().vertex(i_verts[i_vert]);
-        vert_pos(all, i_vert) = con_verts[i_vert]->unwarped_point();
+      Element* elem = con.face(i_side).element();
+      if (elem) {
+        is_new[i_side] = elem->active_shape().is_new;
+      } else {
+        has_elements = false;
       }
-      for (int i_vert = 0; i_vert < nv; ++i_vert) {
-        Mat<3, 2> edges;
-        edges(all, 1).setUnit(2);
-        for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-          int stride = math::pow(2, nd - 2 - i_dim);
-          int start = i_vert - i_vert/stride%2*stride;
-          edges(all, i_dim) = vert_pos(all, start + stride) - vert_pos(all, start);
-        }
-        Mat<3> nrml = edges(all, 0).cross(edges(all, 1)).normalized()
-                      *math::sign(dir.face_sign[0])*math::sign(new_elem)*math::sign(dir.i_dim[0] == 1);
-        double dot = nrml.dot(con_verts[i_vert]->offset);
-        Mat<3> diff = nrml;
-        if (dot < 0) {
-          double norm_sq = con_verts[i_vert]->offset.squaredNorm();
-          if (norm_sq > .1) { // `offset` should be 0 or >= 1
-            diff -= con_verts[i_vert]->offset*dot/norm_sq;
-            diff /= diff.dot(nrml);
+    }
+    if (is_new[0] != is_new[1] && has_elements) {
+      bool new_elem = is_new[1];
+      if (strategy) {
+        auto& shape = con.face(!new_elem).element()->active_shape();
+        if (shape.boundary_face() != next::Mesh_blocks::no_face) {
+          for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+            int row_coord = math::row_coordinate(nd, 2, dir.i_dim[!new_elem], i_vert);
+            auto& vert = shape.vertex(i_vert);
+            if (row_coord == dir.face_sign[!new_elem]) {
+              int opposite = i_vert - math::sign(row_coord)*math::pow(2, nd - 1 - dir.i_dim[!new_elem]);
+              vert.offset += .5*(shape.vertex(opposite).unwarped_point() - vert.unwarped_point())/vert.nominal_size();
+            }
           }
         }
-        con_verts[i_vert]->offset += std::max(0., 1 - dot)*diff;
+      } else {
+        // compute the positions of all the vertices on the face
+        auto i_verts = vertex_inds(nd, dir)[0];
+        Mat<3, dyn> vert_pos(3, nv);
+        std::vector<next::Vertex*> con_verts(nv);
+        for (int i_vert = 0; i_vert < nv; ++i_vert) {
+          con_verts[i_vert] = &con.face(0).element()->active_shape().vertex(i_verts[i_vert]);
+          vert_pos(all, i_vert) = con_verts[i_vert]->unwarped_point();
+        }
+        for (int i_vert = 0; i_vert < nv; ++i_vert) {
+          // compute the face normal
+          Mat<3, 2> edges;
+          edges(all, 1).setUnit(2);
+          for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+            int stride = math::pow(2, nd - 2 - i_dim);
+            int start = i_vert - i_vert/stride%2*stride;
+            edges(all, i_dim) = vert_pos(all, start + stride) - vert_pos(all, start);
+          }
+          Mat<3> nrml = edges(all, 0).cross(edges(all, 1)).normalized()
+                        *math::sign(dir.face_sign[0])*math::sign(new_elem)*math::sign(dir.i_dim[0] == 1);
+          HEXED_ASSERT(std::abs(nrml.norm() - 1.) < 1e-6, "normal magnitude is 0")
+          // if this normal is in the opposite direction of the current vertex offset,
+          // orthogonalize it against the current offset
+          double dot = nrml.dot(con_verts[i_vert]->offset);
+          Mat<3> diff = nrml;
+          if (dot < 0) {
+            double norm_sq = con_verts[i_vert]->offset.squaredNorm();
+            if (norm_sq > .1) { // `offset` should be 0 or >= 1
+              diff -= con_verts[i_vert]->offset*dot/norm_sq;
+              diff /= diff.dot(nrml);
+            }
+          }
+          // make sure that the vertex offset dot `nrml` will be >= 1
+          con_verts[i_vert]->offset += std::max(0., 1 - dot)*diff;
+          con_verts[i_vert]->dijkstra_dist += math::pow(10, dir.i_dim[new_elem]);
+        }
       }
     }
   }
@@ -118,53 +142,151 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
   HEXED_ASSERT(Int(vert.record.size()) == 2*params.n_dim + 1, "Vertex record has not been set correctly.");
   auto seq = Eigen::seqN(0, params.n_dim);
   double ns = vert.nominal_size();
-  if (vert.record[2*params.n_dim]) {
+  if (std::all_of(vert.record.begin(), vert.record.end(), [](int i){return i == 0;})) {
+    next::Vertex* surf_vert = nullptr;
+    for (auto& n : vert.neighbors()) if (n) if (n->is_surface() && n->mobile()) surf_vert = n;
+    if (surf_vert) if (surf_vert->snapped_edge >= 0 && surf_vert->snapped_endpoint == -1) {
+      bool failed_neighbor = false;
+      for (next::Vertex* n : surf_vert->neighbors()) if (n) {
+        failed_neighbor = failed_neighbor || (n->is_surface() && n->mobile() && n->snapped_edge < 0 &&
+                                              n->last_snap_failed());
+      }
+      if (failed_neighbor) {
+        Int i_edge = surf_vert->snapped_edge;
+        auto& edge = surf_geom->edges()[i_edge];
+        double nearest = edge.arg_nearest_point(pos);
+        Mat<3> tangent = edge.tangent_average(nearest).normalized();
+        double radius = edge.tangent_radius(nearest);
+        Mat<3> diff = edge.point(nearest) - pos;
+        double dot = diff.dot(tangent);
+        Mat<3> orth_diff = diff - dot*tangent;
+        if (orth_diff.norm() > radius*dot) {
+          pos += (orth_diff.norm() - radius*dot)*orth_diff.normalized();
+        }
+      }
+    }
+  } else if (vert.record[2*params.n_dim]) {
     if (vert.snapped_point >= 0) {
       return surf_geom->points()[vert.snapped_point];
     } else if (vert.snapped_edge >= 0) {
       auto& geom_edge = surf_geom->edges()[vert.snapped_edge];
-      Array<double> nodes{geom_edge.nodes()};
-      Int n_points = nodes.shape()[0];
       if (vert.snapped_endpoint == -1) {
-        Int nearest = geom_edge.nearest_point(pos(seq), huge).index;
-        if (nearest >= 0) pos = nodes(nearest).vector();
+        pos = geom_edge.point(geom_edge.arg_nearest_point(pos));
       } else {
-        pos = nodes(vert.snapped_endpoint*(n_points - 1)).vector();
+        pos = geom_edge.point(vert.snapped_endpoint);
       }
     } else {
-      #if 1
-      pos(seq) = surf_geom->nearest_point(pos(seq), huge, ns/2).point();
-      #else
-      Mat<3> p0 = pos;
-      bool found = false;
-      for (auto n : vert.neighbors()) if (n) {
-        if (!n->is_surface()) {
-          p0 = n->unwarped_point();
-          found = true;
+      int i_dim = -1;
+      int sign = -1;
+      for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+        if (vert.record[i_face]) {
+          i_dim = i_face/2;
+          sign = i_face%2;
         }
       }
-      HEXED_ASSERT(found, "no non-surface neighbor found")
-      auto sects = surf_geom->intersections(p0(seq), pos(seq));
-      double best_sect = huge;
-      found = false;
-      for (double sect : sects) {
-        if (sect > 0 && sect < best_sect) {
-          best_sect = sect;
-          found = true;
+      if (params.n_dim == 3 && i_dim >= 0) {
+        auto edges = surf_geom->edges();
+        Nearest_point<3> nearest_on_edge(pos);
+        for (auto& edge : edges) {
+          Mat<3> nearest = edge.point(edge.arg_nearest_point(pos));
+          if (std::abs(nearest(i_dim) - tree->origin()(i_dim) + sign*tree->nominal_size()) < 1e-6*ns) {
+            nearest_on_edge.merge(nearest);
+          }
         }
+        HEXED_ASSERT(!nearest_on_edge.empty(), "no nearest point found within tolerance");
+        pos = nearest_on_edge.point();
+      } else {
+        pos(seq) = surf_geom->nearest_point(pos(seq), huge, ns/2).point();
       }
-      if (found) pos = best_sect*pos + (1 - best_sect)*p0;
-      #endif
+      pos = _de_intersect(vert, pos);
     }
-  }
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    for (int sign : {0, 1}) {
-      if (vert.record[2*i_dim + sign]) {
-        pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+  } else {
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      for (int sign : {0, 1}) {
+        if (vert.record[2*i_dim + sign]) {
+          pos(i_dim) = tree->origin()(i_dim) + sign*tree->nominal_size();
+        }
       }
     }
   }
   return pos;
+}
+
+Mat<3> Accessible_mesh::_de_intersect(next::Vertex& vert, Mat<3> pos) {
+  Mat<3> p0 = pos;
+  bool found = false;
+  for (auto& n : vert.neighbors()) if (n) {
+    if (!n->is_surface()) {
+      p0 = n->unwarped_point(true);
+      found = true;
+    }
+  }
+  HEXED_ASSERT(found, "no non-surface neighbor found")
+  auto sects = surf_geom->intersections(resize(p0, params.n_dim), resize(pos, params.n_dim), false);
+  double best_sect = 1.;
+  found = false;
+  for (double sect : sects) {
+    if (sect > 0 && sect < best_sect) {
+      best_sect = sect;
+      found = true;
+    }
+  }
+  if (found) pos = best_sect*pos + (1 - best_sect)*p0;
+  return pos;
+}
+
+
+bool Accessible_mesh::_dijkstra(std::array<next::Vertex*, 2> start_end,
+                                std::function<double(next::Vertex&, next::Vertex&, next::Edge&)> cost,
+                                std::function<void(next::Vertex&)> snap) {
+  auto verts = _blocks.boundary_verts();
+  #pragma omp parallel for
+  for (next::Vertex& vert : verts) {
+    vert.dijkstra_dist = huge;
+    vert.dijkstra_updates = 0;
+    vert.dijkstra_prev_vert = nullptr;
+    vert.dijkstra_prev_edge = nullptr;
+  }
+  std::priority_queue<
+    dijkstra::Node,
+    std::vector<dijkstra::Node>,
+    std::function<bool(dijkstra::Node, dijkstra::Node)>
+  > unvisited(&dijkstra::compare);
+  // Dijkstra's algorithm will start at the second endpoint and go to the first,
+  // so that we can traverse the path in reverse via `Vertex::dijkstra_prev`,
+  // we will end up with a path from the first endpoint to the second
+  unvisited.emplace(start_end[1], 0., 1);
+  start_end[1]->dijkstra_dist = 0;
+  start_end[1]->dijkstra_updates = 1;
+  dijkstra::Node curr {nullptr, 0., 0};
+  while (curr.vert != start_end[0] && !unvisited.empty()) {
+    curr = unvisited.top();
+    unvisited.pop();
+    if (curr.updates < curr.vert->dijkstra_updates) continue;
+    for (next::Edge& edge : curr.vert->edges()) if (!edge.glued()) {
+      next::Vertex* vert = &edge.vertex(&edge.vertex(0) == curr.vert);
+      double d = curr.cost + cost(*vert, *curr.vert, edge);
+      if (d < vert->dijkstra_dist) {
+        vert->dijkstra_dist = d;
+        vert->dijkstra_prev_vert = curr.vert;
+        vert->dijkstra_prev_edge = &edge;
+        ++vert->dijkstra_updates;
+        unvisited.emplace(vert, d, vert->dijkstra_updates);
+      }
+    }
+  }
+  if (curr.vert == start_end[0]) {
+    next::Vertex* vert = curr.vert;
+    while (true) {
+      snap(*vert);
+      vert = vert->dijkstra_prev_vert;
+      if (!vert) break;
+      if (!vert->dijkstra_prev_edge) break;
+    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void Accessible_mesh::_fit_surface() {
@@ -176,19 +298,44 @@ void Accessible_mesh::_fit_surface() {
   auto& elems = def.elements();
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    if (!elems[i_elem].tree) elems[i_elem].active_shape().is_new = true;
+    elems[i_elem].active_shape().is_new = !elems[i_elem].tree;
   }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.set_pos(vert.nominal_position());
   }
-  _offset_vertices(.2);
-  #if 1
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    elem.snapping_problem = false;
+  }
+  _offset_vertices(.2, false);
+  {
+    auto faces = _blocks.faces_3d();
+    #pragma omp parallel for
+    for (auto& f : faces) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+    }
+    auto blocks = _blocks.boundary_sides();
+    #pragma omp parallel for
+    for (auto& b : blocks) b.reset();
+    visualize("default", "mesh_diagnostic2", 0.);
+  }
   {
     Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
     _optimize(1, 10, true);
   }
-  #endif
+  {
+    auto faces = _blocks.faces_3d();
+    #pragma omp parallel for
+    for (auto& f : faces) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+    }
+    auto blocks = _blocks.boundary_sides();
+    #pragma omp parallel for
+    for (auto& b : blocks) b.reset();
+    next::Block::visualize("default", "surf_pre_edge_match", _blocks.faces_3d().cast<const next::Block&>(), 0.);
+  }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
     vert.record.clear();
@@ -201,126 +348,148 @@ void Accessible_mesh::_fit_surface() {
     vert.snapped_point = -1;
     vert.snapped_edge = -1;
     vert.snapped_endpoint = -1;
+    vert.incompatible_snap = false;
   }
   auto faces = _blocks.faces_3d();
   #pragma omp parallel for
-  for (next::Face& face : faces) {
+  for (next::Surface_face& face : faces) {
     for (int i_edge = 0; i_edge < 4; ++i_edge) {
       face.edge(i_edge).snapped_edge = -1;
     }
   }
+  auto edges = surf_geom->edges();
+
   auto find_nearest_vert = [&](Mat<3> point, int i_geom_edge = -1)->next::Vertex* {
     next::Vertex* nearest_vert = nullptr;
     double dist_sq = huge;
     for (auto& vert : verts) {
       if (!vert.glued()) {
         double ns = vert.nominal_size();
-        double d = (vert.dijkstra_point - point).squaredNorm();
+        Mat<3> unwarped = vert.unwarped_point();
+        double d = (unwarped - point).squaredNorm();
+        d += 1e6*(_de_intersect(vert, point) - point).squaredNorm();
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
           for (int sign : {0, 1}) {
             double extreme = tree->origin()(i_dim) + sign*tree->nominal_size();
             if ((std::abs(point(i_dim) - extreme) > 3e-2*ns) !=
-                (std::abs(vert.dijkstra_point(i_dim) - extreme) > 3e-2*ns)) d = huge;
+                (std::abs(unwarped(i_dim) - extreme) > 3e-2*ns)) d = huge;
           }
         }
         // don't bother to account for snapped neighbors unless d is initially < dist_sq
         if (d < std::min(ns, dist_sq)) {
-          bool snapped_neighbor = false;
-          for (next::Vertex* v : vert.neighbors()) {
-            if (v) snapped_neighbor = snapped_neighbor || (v->snapped_edge != -1 && v->snapped_edge != i_geom_edge)
-                                                       || v->snapped_point != -1;
-          }
-          if (snapped_neighbor) d *= 10;
-          if (d < dist_sq) { // now we know d accounting for snapped neighbors, so this is the real comparison
-            dist_sq = d;
-            nearest_vert = &vert;
-          }
+          dist_sq = d;
+          nearest_vert = &vert;
         }
       }
     }
     return nearest_vert;
   };
 
-  auto edges = surf_geom->edges();
   if (params.n_dim == 3) {
     for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
       auto& geom_edge = edges[i_geom_edge];
       std::array<next::Vertex*, 2> start_end {nullptr, nullptr};
       for (int i_endpoint = 0; i_endpoint < 2; ++i_endpoint) {
-        Mat<3> endpoint = geom_edge.nodes()(i_endpoint*(geom_edge.nodes().shape()[0] - 1)).vector();
+        Mat<3> endpoint = geom_edge.point(i_endpoint);
         start_end[i_endpoint] = find_nearest_vert(endpoint, i_geom_edge);
+      }
+      if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
+      for (int i_endpoint = 0; i_endpoint < 2; ++i_endpoint) {
         if (start_end[i_endpoint]) {
-          start_end[i_endpoint]->dijkstra_point = endpoint;
           start_end[i_endpoint]->snapped_edge = i_geom_edge;
           start_end[i_endpoint]->snapped_endpoint = i_endpoint;
         }
       }
-      if (!start_end[0] || !start_end[1] || start_end[0] == start_end[1]) continue;
       #pragma omp parallel for
       for (next::Vertex& vert : verts) {
-        vert.dijkstra_dist = huge;
-        vert.dijkstra_updates = 0;
-        vert.dijkstra_prev_vert = nullptr;
-        vert.dijkstra_prev_edge = nullptr;
-        double d = huge;
-        auto nearest = geom_edge.nearest_point(vert.dijkstra_point, d);
-        if (nearest.index >= 0 && nearest.distance <= d) {
-          vert.dijkstra_curve_dist_sq = nearest.distance*nearest.distance;
-          if (vert.snapped_edge >= 0) {
-            vert.dijkstra_curve_dist_sq *= 100;
-          }
-          vert.dijkstra_arc_len = geom_edge.arc_length()[nearest.index];
+        double nearest = geom_edge.arg_nearest_point(vert.dijkstra_point);
+        Mat<3> edge_point = geom_edge.point(nearest);
+        vert.dijkstra_curve_dist_sq = (vert.dijkstra_point - edge_point).squaredNorm();
+        vert.dijkstra_curve_dist_sq += 1e6*(_de_intersect(vert, edge_point) - edge_point).squaredNorm();
+        vert.dijkstra_arc_len = geom_edge.arc_length(nearest);
+      }
+      auto cost = [](next::Vertex& vert, next::Vertex& curr_vert, next::Edge& edge) {
+        double interval = std::max(edge.element()->nominal_size(),
+                                   std::abs(vert.dijkstra_arc_len - curr_vert.dijkstra_arc_len));
+        return .5*(curr_vert.dijkstra_curve_dist_sq + vert.dijkstra_curve_dist_sq)*interval;
+      };
+      auto snap = [&edges, i_geom_edge](next::Vertex& vert) {
+        bool snap = false;
+        Mat<3> unwarped = vert.unwarped_point();
+        Mat<3> edge_point = edges[i_geom_edge].point(edges[i_geom_edge].arg_nearest_point(unwarped));
+        if (vert.snapped_edge < 0 || vert.dijkstra_prev_edge->snapped_edge < 0) {
+          snap = true;
         } else {
-          vert.dijkstra_curve_dist_sq = std::sqrt(huge);
-          vert.dijkstra_arc_len = std::sqrt(huge);
-        }
-      }
-      std::priority_queue<
-        dijkstra::Node,
-        std::vector<dijkstra::Node>,
-        std::function<bool(dijkstra::Node, dijkstra::Node)>
-      > unvisited(&dijkstra::compare);
-      // Dijkstra's algorithm will start at the second endpoint and go to the first,
-      // so that we can traverse the path in reverse via `Vertex::dijkstra_prev`,
-      // we will end up with a path from the first endpoint to the second
-      unvisited.emplace(start_end[1], 0., 1);
-      start_end[1]->dijkstra_dist = 0;
-      start_end[1]->dijkstra_updates = 1;
-      dijkstra::Node curr {nullptr, 0., 0};
-      while (curr.vert != start_end[0] && !unvisited.empty()) {
-        curr = unvisited.top();
-        unvisited.pop();
-        if (curr.updates < curr.vert->dijkstra_updates) continue;
-        for (next::Edge& edge : curr.vert->edges()) if (!edge.glued()) {
-          next::Vertex* vert = &edge.vertex(&edge.vertex(0) == curr.vert);
-          double interval = std::max((curr.vert->dijkstra_point - vert->dijkstra_point).norm(),
-                                     std::abs(vert->dijkstra_arc_len - curr.vert->dijkstra_arc_len));
-          double d = curr.cost + .5*(curr.vert->dijkstra_curve_dist_sq + vert->dijkstra_curve_dist_sq)*interval;
-          if (d < vert->dijkstra_dist) {
-            vert->dijkstra_dist = d;
-            vert->dijkstra_prev_vert = curr.vert;
-            vert->dijkstra_prev_edge = &edge;
-            ++vert->dijkstra_updates;
-            unvisited.emplace(vert, d, vert->dijkstra_updates);
+          if ((edge_point - vert.dijkstra_point).norm() > 1e-3*vert.nominal_size()) vert.incompatible_snap = true;
+          if ((edge_point - unwarped).squaredNorm() < (vert.dijkstra_point - unwarped).squaredNorm()) {
+            snap = true;
           }
         }
+        if (snap) {
+          vert.dijkstra_prev_edge->snapped_edge = i_geom_edge;
+          vert.dijkstra_point = edge_point;
+          vert.snapped_edge = i_geom_edge;
+        }
+      };
+      if (!_dijkstra(start_end, cost, snap)) {
+        printers::warn("  Warning: ", true);
+        printers::warn("Skipping an edge because Dijkstra's algorithm failed.\n");
       }
-      matched_vertices[i_geom_edge].clear();
-      matched_edges[i_geom_edge].clear();
-      if (curr.vert == start_end[0]) {
-        next::Vertex* vert = curr.vert;
-        do {
-          matched_vertices[i_geom_edge].emplace_back(vert);
-          if (vert->dijkstra_prev_edge) {
-            vert->dijkstra_prev_edge->snapped_edge = i_geom_edge;
+    }
+    // deal with edge endpoints that aren't shared with other edges
+    for (auto& vert : verts) {
+      next::Vertex* v = &vert;
+      while (true) {
+        int n_snapped_edges = 0;
+        next::Edge* snapped_edge = nullptr;
+        for (auto& edge : v->edges()) if (!edge.glued()) {
+          if (edge.snapped_edge >= 0) {
+            ++n_snapped_edges;
+            snapped_edge = &edge;
           }
-          if (vert->snapped_edge < 0) {
-            Int ind = geom_edge.nearest_point(vert->dijkstra_point, huge).index;
-            if (ind >= 0) vert->dijkstra_point = geom_edge.nodes()(ind).vector();
-            vert->snapped_edge = i_geom_edge;
+        }
+        if (n_snapped_edges == 1) {
+          next::Vertex* end_vert = nullptr;
+          for (int i_vert = 0; i_vert < 2; ++i_vert) {
+            if (&snapped_edge->vertex(i_vert) != v) end_vert = &snapped_edge->vertex(i_vert);
           }
-          vert = vert->dijkstra_prev_vert;
-        } while (vert);
+          HEXED_ASSERT(end_vert, "Opposite vertex not found.")
+          HEXED_ASSERT(!end_vert->glued(), "Opposite vertex is glued.")
+          auto cost = [&snapped_edge](next::Vertex&, next::Vertex&, next::Edge& edge) {
+            return &edge == snapped_edge ? huge : 1.;
+          };
+          auto snap = [](next::Vertex& arg) {
+            if (arg.snapped_edge == -1) arg.snapped_edge = -2;
+            if (arg.dijkstra_prev_edge->snapped_edge == -1) arg.dijkstra_prev_edge->snapped_edge = -2;
+          };
+          if (!_dijkstra({v, end_vert}, cost, snap)) {
+            v->snapped_edge = v->snapped_endpoint = snapped_edge->snapped_edge = -1;
+            v = end_vert;
+            printers::warn("  Retreating from dead end vertex (diagnostic info for developers).\n", true);
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
+      }
+    }
+    auto vis = Visualizer::create("default", 3, 1, "edge_match", {"snapped_edge", "vert_snapped_edge"}, 0., Visualizer::block);
+    auto faces = _blocks.faces_3d();
+    for (auto& face : faces) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) {
+        auto& edge = face.edge(i_edge);
+        if (edge.glued()) continue;
+        Array<double> pos({3, 2});
+        Array<double> data({2, 2});
+        data(0) = edge.snapped_edge;
+        for (int i_vert = 0; i_vert < 2; ++i_vert) {
+          auto& vert = edge.vertex(i_vert);
+          Mat<3> p = vert.unwarped_point();
+          for (int i_dim = 0; i_dim < 3; ++i_dim) pos(i_dim)[i_vert] = p(i_dim);
+          data(1)[i_vert] = vert.snapped_edge;
+        }
+        vis->write_block(pos(), data());
       }
     }
   } else if (params.n_dim == 2) {
@@ -329,30 +498,6 @@ void Accessible_mesh::_fit_surface() {
       Mat<3> point {points[i_point][0], points[i_point][1], 0.};
       next::Vertex* vert = find_nearest_vert(point);
       if (vert) vert->snapped_point = i_point;
-    }
-  }
-  for (auto& vert : verts) {
-    if (vert.snapped_endpoint >= 0) {
-      int n_snapped_edges = 0;
-      for (auto& edge : vert.edges()) {
-        n_snapped_edges += edge.snapped_edge != -1;
-      }
-      if (n_snapped_edges == 1) {
-        for (auto& elem : vert.elements()) {
-          auto face = elem.boundary_face_3d();
-          if (face) {
-            for (int i_edge = 0; i_edge < 4; ++i_edge) {
-              auto* edge = &face->edge(i_edge);
-              if (edge->glued()) edge = edge->glued_to();
-              if (edge->snapped_edge == -1) edge->snapped_edge = -2;
-              for (int i_vert = 0; i_vert < 2; ++i_vert) {
-                if (edge->vertex(i_vert).snapped_edge == -1) edge->vertex(i_vert).snapped_edge = -2;
-              }
-            }
-            break;
-          }
-        }
-      }
     }
   }
 
@@ -364,7 +509,7 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) {
     vert.set_pos(vert.nominal_position());
   }
-  _offset_vertices(.2);
+  _offset_vertices(.2, false);
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
@@ -377,28 +522,27 @@ void Accessible_mesh::_fit_surface() {
     for (Int i_element = 0; i_element < elems_sz; ++i_element) {
       auto& elem = elems[i_element];
       for (int i_face = 0; i_face < 6; ++i_face) elem.face_record[i_face] = -1;
-      const next::Element_shape* shape = elem.fake_shape();
-      if (shape) {
-        const next::Face* face = shape->boundary_face_3d();
-        if (face) {
-          int bf = shape->boundary_face();
+      if (elem.fake_shape()) {
+        if (elem.fake_shape()->boundary_face_3d()) {
+          int bf = elem.fake_shape()->boundary_face();
           int i_dim = bf/2;
           bool i_sign = bf%2;
-          std::vector<Int> matched_to(4);
           bool matched = false;
           for (int i_vert = 0; i_vert < 8; ++i_vert) if (i_vert/math::pow(2, 2 - i_dim)%2 == i_sign) {
-            matched = matched || shape->vertex(i_vert).snapped_edge != -1;
+            matched = matched || elem.fake_shape()->vertex(i_vert).snapped_edge != -1;
           }
           for (int i_edge = 0; i_edge < 4; ++i_edge) {
-            if (face->edge(i_edge).glued()) {
+            if (elem.fake_shape()->boundary_face_3d()->edge(i_edge).glued()) {
               for (int i_vert = 0; i_vert < 2; ++i_vert) {
-                matched = matched || face->edge(i_edge).glued_to()->vertex(i_vert).snapped_edge != -1;
+                const auto& edge = elem.fake_shape()->boundary_face_3d()->edge(i_edge).glued_to();
+                matched = matched || edge->vertex(i_vert).snapped_edge != -1;
               }
             }
           }
           if (!matched) continue;
+          std::vector<Int> matched_to(4);
           for (int i_edge = 0; i_edge < 4; ++i_edge) {
-            auto& edge = face->edge(i_edge);
+            auto& edge = elem.fake_shape()->boundary_face_3d()->edge(i_edge);
             if (edge.glued()) {
               matched_to[i_edge] = edge.glued_to()->snapped_edge;
             } else {
@@ -406,30 +550,39 @@ void Accessible_mesh::_fit_surface() {
             }
           }
           auto set_vertices = [&](Element& e) {
-            auto& s = e.shape();
+            auto& s = e.active_shape();
             for (int i_vert = 0; i_vert < 8; ++i_vert) {
-              s.vertex(i_vert).set_pos(shape->vertex(i_vert).unwarped_point());
+              s.vertex(i_vert).set_pos(elem.fake_shape()->vertex(i_vert).unwarped_point());
             }
             for (int i_face = 0; i_face < 6; ++i_face) e.face_record[i_face] = -1;
-            s.extruded_direction = shape->extruded_direction;
+            s.extruded_direction = elem.fake_shape()->extruded_direction;
           };
           Int inside_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0);
           Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
+          inside.create_fake(_blocks);
           set_vertices(inside);
-          inside.shape().is_new = false;
+          inside.active_shape().is_new = false;
+          inside.active_shape().for_matching = true;
           elem.face_record[2*i_dim + !i_sign] = inside_sn;
           Int surface_sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, bf);
           Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
+          surface.create_fake(_blocks);
           set_vertices(surface);
-          surface.shape().is_new = false;
-          _connect({&inside, &surface}, Con_dir<Deformed_element>({i_dim, i_dim}, {i_sign, !i_sign}));
+          surface.active_shape().is_new = false;
+          surface.active_shape().for_matching = true;
+          _connect({&inside, &surface}, Connection_direction{{i_dim, i_dim}, {i_sign, !i_sign}}, "inside to surface");
+          _extrude_cons[1].emplace_back(&_neighbor_cons[1].back());
           elem.record = 2;
           std::vector<Deformed_element*> matched_elems(6, nullptr);
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
-            HEXED_ASSERT(std::isfinite(inside.shape().vertex(i_vert).unwarped_point().squaredNorm()),
+            HEXED_ASSERT(std::isfinite(inside.active_shape().vertex(i_vert).unwarped_point().squaredNorm()),
                          "Vertex pos is not finite.")
-            HEXED_ASSERT(std::isfinite(surface.shape().vertex(i_vert).unwarped_point().squaredNorm()),
+            HEXED_ASSERT(std::isfinite(surface.active_shape().vertex(i_vert).unwarped_point().squaredNorm()),
                          "Vertex pos is not finite.")
+            // add size constraints to prevent over-large offsets
+            int j_vert = i_vert + (i_sign - math::row_coordinate(3, 2, i_dim, i_vert))*math::pow(2, 2 - i_dim);
+            double sz_constraint = elem.active_shape().vertex(j_vert).nominal_size();
+            surface.active_shape().vertex(i_vert).add_size_constraint(sz_constraint);
           }
           for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
             for (bool j_sign : {0, 1}) {
@@ -439,29 +592,36 @@ void Accessible_mesh::_fit_surface() {
               if (m != -1) {
                 Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, bf);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
+                match_elem.create_fake(_blocks);
                 set_vertices(match_elem);
-                match_elem.shape().is_new = true;
-                _connect({&surface, &match_elem}, Con_dir<Deformed_element>({j_dim, j_dim}, {j_sign, !j_sign}));
-                _connect({&inside,  &match_elem}, Con_dir<Deformed_element>({j_dim, i_dim}, {j_sign, !i_sign}));
+                match_elem.active_shape().is_new = true;
+                match_elem.active_shape().for_matching = true;
+                _connect({&match_elem, &surface}, Connection_direction{{j_dim, j_dim}, {!j_sign, j_sign}},
+                         "match to surface");
+                _connect({&match_elem, &inside}, Connection_direction{{i_dim, j_dim}, {!i_sign, j_sign}},
+                         "match to inside");
+                _extrude_cons[1].emplace_back(&_neighbor_cons[1].back());
                 matched_elems[2*j_dim + j_sign] = &match_elem;
                 elem.face_record[2*j_dim + j_sign] = sn;
                 for (bool k_sign : {0, 1}) {
                   int i_vert =   i_sign*math::pow(2, 2 - i_dim)
                                + j_sign*math::pow(2, 2 - j_dim)
                                + k_sign*math::pow(2, 2 - k_dim);
-                  int i_snapped = shape->vertex(i_vert).snapped_edge;
-                  HEXED_ASSERT(i_snapped != -1 || face->edge(i_edge_matched).glued(),
+                  auto& elem_vert = elem.fake_shape()->vertex(i_vert);
+                  int i_snapped = elem_vert.snapped_edge;
+                  HEXED_ASSERT(i_snapped != -1 || elem.fake_shape()->boundary_face_3d()->edge(i_edge_matched).glued(),
                                "vertex and edge do not agree on whether they are snapped")
-                  auto& vert = match_elem.shape().vertex(i_vert);
+                  auto& vert = match_elem.active_shape().vertex(i_vert);
                   vert.snapped_edge = i_snapped;
-                  vert.snapped_endpoint = shape->vertex(i_vert).snapped_endpoint;
-                  if (i_snapped >= 0) matched_vertices[i_snapped].emplace_back(&vert);
+                  vert.snapped_endpoint = elem_vert.snapped_endpoint;
+                  vert.incompatible_snap = vert.incompatible_snap || elem_vert.incompatible_snap;
+                  // make sure neighboring vertices will agree on their nominal size to avoid quality criterion issues
+                  vert.add_size_constraint(surface.active_shape().vertex(i_vert).nominal_size());
                 }
-                auto& matched_edge = match_elem.shape().boundary_face_3d()->edge(i_edge_matched);
+                auto& matched_edge = match_elem.active_shape().boundary_face_3d()->edge(i_edge_matched);
                 matched_edge.snapped_edge = m;
-                if (m >= 0) matched_edges[m].emplace_back(&matched_edge);
                 for (int i_vert = 0; i_vert < 8; ++i_vert) {
-                  HEXED_ASSERT(std::isfinite(match_elem.shape().vertex(i_vert).unwarped_point().squaredNorm()),
+                  HEXED_ASSERT(std::isfinite(match_elem.active_shape().vertex(i_vert).unwarped_point().squaredNorm()),
                                "Vertex pos is not finite.")
                 }
               } else {
@@ -472,7 +632,7 @@ void Accessible_mesh::_fit_surface() {
           }
           Mat<3, 8> orig_pos;
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
-            orig_pos(all, i_vert) = shape->vertex(i_vert).unwarped_point();
+            orig_pos(all, i_vert) = elem.fake_shape()->vertex(i_vert).unwarped_point();
           }
           for (int i_vert = 0; i_vert < 8; ++i_vert) {
             Mat<3> pos = orig_pos(all, i_vert);
@@ -484,7 +644,7 @@ void Accessible_mesh::_fit_surface() {
                 pos += offset*(orig_pos(all, i_vert - math::sign(j_sign)*stride) - orig_pos(all, i_vert));
               }
             }
-            surface.shape().vertex(i_vert).set_pos(pos);
+            surface.active_shape().vertex(i_vert).set_pos(pos);
           }
           for (int j_dim = 0; j_dim < 3; ++j_dim) if (j_dim != i_dim) {
             int k_dim = 3 - j_dim - i_dim;
@@ -494,7 +654,7 @@ void Accessible_mesh::_fit_surface() {
                              + j_sign*math::pow(2, 2 - j_dim)
                              + k_sign*math::pow(2, 2 - k_dim);
                 std::vector<Int> record {elem.refinement_level(), elem.face_record[2*j_dim + j_sign], k_dim, k_sign, i_dim, i_sign};
-                auto& vert = surface.shape().vertex(i_vert);
+                auto& vert = surface.active_shape().vertex(i_vert);
                 vert.record.insert(vert.record.end(), record.begin(), record.end());
               }
             }
@@ -513,7 +673,7 @@ void Accessible_mesh::_fit_surface() {
     for (int i_element = 0; i_element < elems.size(); ++i_element) {
       if (elems[i_element].record == 2) continue;
       for (int i_vert = 0; i_vert < 8; ++i_vert) {
-        HEXED_ASSERT(std::isfinite(elems[i_element].shape().vertex(i_vert).unwarped_point().squaredNorm()),
+        HEXED_ASSERT(std::isfinite(elems[i_element].active_shape().vertex(i_vert).unwarped_point().squaredNorm()),
                      "Vertex pos is not finite.")
         if (elems[i_element].fake_shape()) {
           HEXED_ASSERT(std::isfinite(elems[i_element].fake_shape()->vertex(i_vert).unwarped_point().squaredNorm()),
@@ -531,155 +691,114 @@ void Accessible_mesh::_fit_surface() {
         }
       }
     }
-    extrude_cons.clear();
+    // purge deleted objects
+    _blocks.verts();
     _blocks.boundary_sides();
-    Int cons_sz = def.cons.size();
-    Int ref_cons_sz = def.ref_face_cons[1].size();
-    Int bound_cons_sz = def.bound_cons.size();
+    Int cons_sz = _neighbor_cons[1].size();
+    Int face_refs_sz = _face_refs.size();
     for (Int i_con = 0; i_con < cons_sz; ++i_con) {
-      auto& con = def.cons[i_con];
-      if (!con) continue;
-      auto dir = con->direction();
+      auto& con = _neighbor_cons[1][i_con];
+      // skip dead or refined connections
+      if (!con.alive()) continue;
+      if (!con.face(0).element() || !con.face(1).element()) continue;
+      auto dir = con.get_direction();
       bool replace = false;
-      std::array<Deformed_element*, 2> elem_arr;
-      std::array<Deformed_element*, 2> surfaces {nullptr, nullptr};
+      std::array<Element*, 2> elem_arr;
+      std::array<Element*, 2> surfaces {nullptr, nullptr};
+      std::array<std::vector<Element*>, 2> to_connect;
       for (int i_side = 0; i_side < 2; ++i_side) {
-        Deformed_element& elem = con->element(i_side);
+        Element& elem = *con.face(i_side).element();
         if (elem.face_record[dir.i_face(i_side)] >= 0) {
           replace = true;
-          elem_arr[i_side] = &def.elems.at(elem.refinement_level(), elem.face_record[dir.i_face(i_side)]);
+          Element* new_elem = &def.elems.at(elem.refinement_level(), elem.face_record[dir.i_face(i_side)]);
+          elem_arr[i_side] = new_elem;
+          to_connect[i_side] = std::vector<Element*>(4, new_elem);
           if (elem_arr[i_side]->face_record[dir.i_face(i_side)] >= 0) {
-            surfaces[i_side] = &def.elems.at(elem.refinement_level(), elem_arr[i_side]->face_record[dir.i_face(i_side)]);
+            Element* surf_elem = &def.elems.at(elem.refinement_level(),
+                                               elem_arr[i_side]->face_record[dir.i_face(i_side)]);
+            surfaces[i_side] = surf_elem;
+            for (int i = 0; i < 2; ++i) {
+              int i_bf = surf_elem->active_shape().boundary_face();
+              HEXED_ASSERT(i_bf >= 0, "Surface element must have a boundary face.")
+              int stride = math::pow(2, i_bf/2 < 3 - i_bf/2 - dir.i_dim[i_side]);
+              to_connect[i_side][i_bf%2*stride + i*2/stride] = surf_elem;
+            }
           }
         } else {
           elem_arr[i_side] = &elem;
+          to_connect[i_side] = std::vector<Element*>(4, &elem);
         }
       }
       if (replace) {
-        con.reset();
-        if (bool(elem_arr[0]->fake_shape()) == bool(elem_arr[1]->fake_shape())) {
-          _connect(elem_arr, dir);
+        for (int i_face = 0; i_face < 2; ++i_face) con.face(i_face).disconnect();
+        if (bool(surfaces[0]) == bool(surfaces[1])) {
+          _connect(elem_arr, dir, "neighbor replacement");
           if (surfaces[0]) {
-            HEXED_ASSERT(surfaces[1], "Both faces must identify a surface element or neither.");
-            _connect(surfaces, dir);
+            HEXED_ASSERT(surfaces[1], "Both faces must identify a surface element or neither.")
+            _connect(surfaces, dir, "neighbor replacement (surface)");
+          } else {
+            _extrude_cons[2].emplace_back(&_neighbor_cons[1].back());
           }
         } else {
-          bool coarse_sign = surfaces[0];
-          std::vector<Deformed_element*> fine {elem_arr[!coarse_sign], surfaces[!coarse_sign]};
-          HEXED_ASSERT(fine[1], "Fine element must identify a surface element");
-          std::array<bool, 2> stretch {false, false};
-          HEXED_ASSERT(elem_arr[coarse_sign]->fake_shape(), "Coarse element must have a fake shape.");
-          int i_bf = fine[1]->shape().boundary_face();
-          int i_dim = i_bf/2;
-          stretch[i_dim < 3 - i_dim - dir.i_dim[!coarse_sign]] = true;
-          if (!(i_bf%2)) std::swap(fine[0], fine[1]);
-          Con_dir<Deformed_element> new_dir {{dir.i_dim[coarse_sign], dir.i_dim[!coarse_sign]},
-                                             {dir.face_sign[coarse_sign], dir.face_sign[!coarse_sign]}};
-          _connect(elem_arr[coarse_sign], fine, new_dir, stretch);
+          _connect(to_connect, dir, "neighbor replacement (refined)");
         }
       }
     }
-    for (Int i_con = 0; i_con < ref_cons_sz; ++i_con) {
-      auto& con = def.ref_face_cons[1][i_con];
-      if (!con) continue;
-      auto dir = con->direction();
-      bool reverse = con->order_reversed();
-      Deformed_element* coarse;
-      coarse = &con->coarse_element();
+    for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
+      auto& ref = _face_refs[i_ref][0];
+      std::array<std::vector<Element*>, 2> old_elems = ref.elements();
+      auto dir = ref.get_direction();
       bool replace = false;
-      Int rec = coarse->face_record[dir.i_face(reverse)];
-      if (rec >= 0) {
-        coarse = &def.elems.at(coarse->refinement_level(), rec);
-        replace = true;
-      }
-      std::vector<next::Element_shape*> coarse_shapes(4, &coarse->active_shape());
-      rec = coarse->face_record[dir.i_face(reverse)];
-      [[maybe_unused]] bool coarse_surface = false;
-      if (rec >= 0) {
-        Deformed_element* surface = &def.elems.at(coarse->refinement_level(), rec);
-        int bf = surface->active_shape().boundary_face();
-        for (int i_elem = 0; i_elem < 4; ++i_elem) {
-          if (math::row_coordinate(2, 2, bf/2 > 3 - bf/2 - dir.i_dim[reverse], i_elem) == bf%2) {
-            coarse_shapes[i_elem] = &surface->active_shape();
-            coarse_surface = true;
-          }
-        }
-      }
-      auto stretch = con->stretch();
-      std::vector<next::Element_shape*> fine_shapes;
-      [[maybe_unused]] bool fine_surface = false;
-      for (int i = 0, i_elem = 0; i < 1 + stretch[0]; ++i) {
-        for (int i_fine = 0; i_fine < con->n_fine_elements(); ++i_fine) {
-          Deformed_element* fine = &con->connection(i_fine).element(!reverse);
-          rec = fine->face_record[dir.i_face(!reverse)];
-          if (rec >= 0) {
-            fine = &def.elems.at(fine->refinement_level(), rec);
+      std::array<std::vector<Element*>, 2> new_elems = old_elems;
+      int n_fine = params.n_vertices()/2;
+      for (int i_side = 0; i_side < 2; ++i_side) {
+        for (int i_elem = 0; i_elem < n_fine; ++i_elem) {
+          int rec = old_elems[i_side][i_elem]->face_record[dir.i_face(i_side)];
+          if (rec >= 0 && old_elems[i_side][i_elem]->deformed()) {
+            Element& elem = def.elems.at(old_elems[i_side][i_elem]->refinement_level(), rec);
+            new_elems[i_side][i_elem] = &elem;
             replace = true;
-          }
-          for (int j = 0; j < 1 + stretch[1]; ++j) {
-            Deformed_element* f = fine;
-            rec = f->face_record[dir.i_face(!reverse)];
+            rec = elem.face_record[dir.i_face(i_side)];
             if (rec >= 0) {
-              Deformed_element* surface = &def.elems.at(fine->refinement_level(), rec);
-              int bf = surface->active_shape().boundary_face();
-              if (bf >= 0) if (math::row_coordinate(2, 2, bf/2 > 3 - bf/2 - dir.i_dim[!reverse], i_elem) == bf%2) {
-                f = surface;
-                fine_surface = true;
+              Element& surface = def.elems.at(elem.refinement_level(), rec);
+              int bf = surface.active_shape().boundary_face();
+              if (bf >= 0 && math::row_coordinate(2, 2, bf/2 > 3 - bf/2 - dir.i_dim[i_side], i_elem) == bf%2) {
+                new_elems[i_side][i_elem] = &surface;
               }
             }
-            fine_shapes.push_back(&f->active_shape());
-            ++i_elem;
           }
         }
       }
       if (replace) {
-        //HEXED_ASSERT(fine_surface || !coarse_surface, "2-on-2 connection", assert::Not_implemented_error);
-        Con_dir<Deformed_element> new_dir {{dir.i_dim[reverse], dir.i_dim[!reverse]},
-                                           {dir.face_sign[reverse], dir.face_sign[!reverse]}};
-        con.reset();
-        next::Element_shape::connect({coarse_shapes, fine_shapes}, new_dir);
-      }
-    }
-    for (Int i_con = 0; i_con < bound_cons_sz; ++i_con) {
-      auto& con = def.bound_cons[i_con];
-      if (!con) continue;
-      auto dir = con->direction();
-      Int record = con->element().face_record[dir.i_face(0)];
-      if (record >= 0) {
-        int bc_sn = con->bound_cond_serial_n();
-        int ref_level = con->element().refinement_level();
-        con.reset();
-        connect_boundary(ref_level, true, record, dir.i_dim[0], dir.face_sign[0], bc_sn);
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          for (Element* elem : old_elems[i_side]) elem->face(dir.i_face(i_side)).disconnect();
+        }
+        _connect(new_elems, dir, "hanging replacement");
       }
     }
     for (auto& vert : all_verts) {
       if (vert.record.size() == 12) {
-        std::array<Deformed_element*, 2> elem_arr;
+        std::array<Element*, 2> elem_arr;
         std::array<int, 2> dim_arr;
         std::array<bool, 2> sign_arr;
         for (int i_side = 0; i_side < 2; ++i_side) {
           elem_arr[i_side] = &def.elems.at(vert.record[6*i_side], vert.record[6*i_side + 1]);
           dim_arr[i_side] = vert.record[6*i_side + 2];
           sign_arr[i_side] = vert.record[6*i_side + 3];
+          HEXED_ASSERT(elem_arr[i_side]->record != 2, "attempt to connect with doomed element")
         }
+        HEXED_ASSERT(dim_arr[0] != dim_arr[1] || sign_arr[0] != sign_arr[1], "cannot connect same faces")
         int rotate = 0;
         for (int r : {-1, 1, 2}) {
           auto inds = vertex_inds(3, {dim_arr, sign_arr, r});
           for (int i_vert = 0; i_vert < 4; ++i_vert) {
-            if (   &elem_arr[0]->shape().vertex(inds[0][i_vert])
-                == &elem_arr[1]->shape().vertex(inds[1][i_vert])) {
+            if (   &elem_arr[0]->active_shape().vertex(inds[0][i_vert])
+                == &elem_arr[1]->active_shape().vertex(inds[1][i_vert])) {
               rotate = r;
             }
           }
         }
-        _connect(elem_arr, {dim_arr, sign_arr, rotate});
-      }
-    }
-    // rebuild `extrude_cons`
-    for (int i_con = 0; i_con < (Int)def.cons.size(); ++i_con) {
-      auto& con = def.cons[i_con];
-      if (def.cons[i_con]) {
-        if (def.cons[i_con]->element(1).tree && !def.cons[i_con]->element(0).tree) extrude_cons.push_back(con.get());
+        _connect(elem_arr, {dim_arr, sign_arr, rotate}, "matched to matched");
       }
     }
   }
@@ -689,10 +808,156 @@ void Accessible_mesh::_fit_surface() {
     vert.record.clear();
   }
   purge();
-  _offset_vertices(.01);
-  #pragma omp parallel for
-  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    elems[i_elem].active_shape().is_new = false;
+  _offset_vertices(.03, false);
+
+  { // add another layer of extruded elements to improve mesh quality on sharp edges
+    auto& elem_list = def.elements();
+    Int elems_sz = elem_list.size();
+    // delete boundary connections so we can add new elements in their place
+    disconnect_boundary(2*params.n_dim);
+    auto& all_elems = elements();
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < all_elems.size(); ++i_elem) {
+      for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) all_elems[i_elem].face_record[i_face] = -1;
+    }
+    for (int i_elem = 0; i_elem < elems_sz; ++i_elem) {
+      Deformed_element& elem = elem_list[i_elem];
+      auto i_face = elem.active_shape().boundary_face();
+      if (i_face != next::Mesh_blocks::no_face) {
+        Int sn = add_element(elem.refinement_level(), true, elem.nominal_position(), tree->origin(), 0, i_face);
+        Deformed_element& new_elem = def.elems.at(elem.refinement_level(), sn);
+        for (int j_face = 0; j_face < 2*params.n_dim; ++j_face) new_elem.face_record[j_face] = -1;
+        new_elem.create_fake(_blocks);
+        new_elem.active_shape().extruded_direction = i_face;
+        new_elem.active_shape().for_matching = elem.active_shape().for_matching;
+        elem.face_record[i_face] = sn;
+        HEXED_ASSERT(!elem.is_connected(i_face), "element face is already connected")
+        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+          Mat<3> pos = elem.active_shape().vertex(i_vert).unwarped_point();
+          elem.shape().vertex(i_vert).set_pos(pos);
+          new_elem.fake_shape()->vertex(i_vert).set_pos(pos);
+          // in connection, for interface vertices, elem.shape and new_elem.fake_shape will cancel out,
+          // but have to set new_elem.shape to the average
+          int i_sign = i_face%2;
+          if (math::row_coordinate(params.n_dim, 2, i_face/2, i_vert) == i_sign) {
+            auto& vert0 = elem.active_shape().vertex(i_vert);
+            auto& vert1 = new_elem.active_shape().vertex(i_vert);
+            vert1.snapped_point = vert0.snapped_point;
+            vert1.snapped_edge = vert0.snapped_edge;
+            vert1.snapped_endpoint = vert0.snapped_endpoint;
+            vert0.snapped_point = vert0.snapped_edge = vert0.snapped_endpoint = -1;
+          } else {
+            int j_vert = i_vert - math::sign(!i_sign)*math::pow(2, params.n_dim - 1 - i_face/2);
+            pos = .5*(pos + elem.active_shape().vertex(j_vert).unwarped_point());
+          }
+          new_elem.shape().vertex(i_vert).set_pos(pos);
+        }
+        if (params.n_dim == 3) {
+          auto face = new_elem.active_shape().boundary_face_3d();
+          auto old_face = elem.active_shape().boundary_face_3d();
+          for (int i_edge = 0; i_edge < 4; ++i_edge) {
+            next::Edge* old_edge = &old_face->edge(i_edge);
+            if (old_edge->glued()) old_edge = old_edge->glued_to();
+            face->edge(i_edge).snapped_edge = old_edge->snapped_edge;
+          }
+        }
+        elem.active_shape().destroy_boundary_face();
+      }
+    }
+    auto get_i_face = [this](Element& elem)->int {
+      for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+        if (elem.face_record[i_face] >= 0) return i_face;
+      }
+      return -1;
+    };
+    Int cons_sz = _neighbor_cons[1].size();
+    Int face_refs_sz = _face_refs.size();
+    for (int i_elem = 0; i_elem < elems_sz; ++i_elem) {
+      Deformed_element& elem = elem_list[i_elem];
+      int i_face = get_i_face(elem);
+      if (i_face >= 0) {
+        Element& new_elem = def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
+        std::array<Element*, 2> el_arr {&new_elem, &elem};
+        _connect(el_arr, {{i_face/2, i_face/2}, {!(i_face%2), bool(i_face%2)}, 0}, "old to new");
+        _extrude_cons[0].emplace_back(&_neighbor_cons[1].back());
+      }
+    }
+    for (Int i_con = 0; i_con < cons_sz; ++i_con) {
+      auto& con = _neighbor_cons[1][i_con];
+      std::array<Element*, 2> el_arr {nullptr, nullptr};
+      for (int i_elem = 0; i_elem < 2; ++i_elem) {
+        Element* elem = con.face(i_elem).element();
+        if (elem) {
+          int i_face = get_i_face(*elem);
+          if (i_face >= 0) {
+            el_arr[i_elem] = &def.elems.at(elem->refinement_level(), elem->face_record[i_face]);
+          }
+        }
+      }
+      if (el_arr[0] && el_arr[1]) _connect(el_arr, con.get_direction(), "secondary neighbor replacement");
+    }
+    if (params.n_dim == 3) { // for 2D there will be no face refinements on the surface
+      for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
+        for (auto& ref : _face_refs[i_ref]) {
+          int n_fine = params.n_vertices()/2;
+          Connection_direction dir = ref.get_direction();
+          auto orig_elems = ref.elements();
+          bool any_connected = false;
+          bool all_connected = true;
+          bool has_extrude = false;
+          std::array<std::vector<Element*>, 2> new_elems;
+          for (int i_side = 0; i_side < 2; ++i_side) {
+            new_elems[i_side].resize(n_fine, nullptr);
+            for (int i_elem = 0; i_elem < n_fine; ++i_elem) {
+              auto& elem = *orig_elems[i_side][i_elem];
+              int i_face = get_i_face(elem);
+              if (i_face >= 0) {
+                has_extrude = true;
+                new_elems[i_side][i_elem] = &def.elems.at(elem.refinement_level(), elem.face_record[i_face]);
+                int i_dim = i_face/2 > 3 - i_face/2 - dir.i_dim[i_side];
+                int j_elem = i_elem - math::sign(math::row_coordinate(2, 2, i_dim, i_elem))*math::pow(2, 1 - i_dim);
+                new_elems[i_side][j_elem] = new_elems[i_side][i_elem];
+                any_connected = any_connected || new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
+                all_connected = all_connected && new_elems[i_side][i_elem]->is_connected(dir.i_face(i_side));
+              }
+            }
+          }
+          if (has_extrude) {
+            HEXED_ASSERT(any_connected == all_connected,
+                         "If any of the elements are already connected then they all must be.")
+            if (!any_connected) _connect(new_elems, dir, "secondary hanging replacment");
+          }
+        }
+      }
+    }
+    for (int i_elem = 0; i_elem < elems_sz; ++i_elem) {
+      Element& elem = elem_list[i_elem];
+      for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) elem.face_record[i_face] = 0;
+    }
+    for (Int i_elem = 0; i_elem < elem_list.size(); ++i_elem) {
+      auto& elem = elem_list[i_elem];
+      for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+        if (elem.active_shape().boundary_face() != i_face && !elem.is_connected(i_face)) {
+          _bound_cons.emplace_back(elem.face(i_face), i_face, bound_conds[i_face]->n_prescribed(params.n_dim));
+        }
+      }
+    }
+  }
+  purge();
+  _blocks.verts();
+  _blocks.boundary_verts();
+  _blocks.boundary_sides();
+
+  {
+    auto faces = _blocks.faces_3d();
+    #pragma omp parallel for
+    for (auto& f : faces) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+    }
+    auto blocks = _blocks.boundary_sides();
+    #pragma omp parallel for
+    for (auto& b : blocks) b.reset();
+    visualize("default", "mesh_diagnostic", 0.);
   }
   {
     Task_message message(printers::info, "  Post-edge-matching mesh optimization", "\n", "  ");
@@ -700,25 +965,41 @@ void Accessible_mesh::_fit_surface() {
   }
   Int n_failed = 0;
   for (auto& vert : all_verts) {
-    n_failed += !vert.snap_to(_get_snapping_target(vert, vert.unwarped_point()));
+    bool failed = !vert.snap_to(_get_snapping_target(vert, vert.unwarped_point()));
+    if (failed) {
+      vert.snapped_edge = -1;
+      vert.snapped_endpoint = -1;
+      vert.snapped_point = -1;
+      for (auto& edge : vert.edges()) {
+        edge.snapped_edge = -1;
+      }
+    }
+    n_failed += failed;
   }
   if (n_failed) {
-    printers::warn(format_str(200, "%li vertices could not be snapped to the surface.\n", n_failed), true);
+    Task_message message(printers::info, "  Snap failure mitigation optimization", "\n", "  ");
+    _optimize(1, 10, true);
+  }
+  Int n_total_failure = 0;
+  for (auto& vert : all_verts) {
+    n_total_failure += !vert.snap_to(_get_snapping_target(vert, vert.unwarped_point()));
+  }
+  if (n_failed) {
+    printers::warn("  Warning: ", true);
+    printers::warn(to_string(n_failed) + " vertices could not be snapped to their target points.");
+    if (n_total_failure) {
+      printers::warn("  " + to_string(n_total_failure) + " vertices could not be snapped to the surface at all.");
+    }
+    printers::warn("\n");
   }
   #pragma omp parallel for
   for (auto& vert : all_verts) vert.record.clear();
 
-  // snaps faces and edges to the surface
-  // snaps a `Boundary_block` to the geometry surface
-  auto snap_block = [this](next::Boundary_block& block) {
-    std::vector<next::Element_shape*> dependent_elems = block.dependent_elements();
-    std::sort(dependent_elems.begin(), dependent_elems.end(), std::less());
-    std::vector<std::unique_ptr<Lock::Acquire>> acquires;
-    for (next::Element_shape* e : dependent_elems) acquires.emplace_back(new Lock::Acquire(e->lock));
+  auto plain_snap = [this](next::Boundary_block& block) {
     block.reset();
     Array<double> interior {block.interior().reshaped({whatever, 3})};
     const Basis& b = block.basis();
-    bool failed = false;
+    block.snapping_problem = false;
     int i_face = block.element()->boundary_face();
     Array<double> line_points({2, interior.shape()[0], 3});
     int block_nd = block.n_dim();
@@ -733,85 +1014,118 @@ void Accessible_mesh::_fit_surface() {
       elem_coords[i_face/2] = b.row_size - 1 - elem_coords[i_face/2];
       line_points(0)(i_point).vector() = block.element()->point(elem_coords);
     }
+    Array<double> interp_coefs({n_point});
+    interp_coefs = 0;
     for (int i_point = 0; i_point < n_point; ++i_point) {
-      Mat<3> p0 = line_points(0)(i_point).vector();
-      Mat<3> p1 = line_points(1)(i_point).vector();
+      Mat<3> p0;
+      p0 = line_points(0)(i_point).vector();
+      Mat<3> p1;
+      p1 = line_points(1)(i_point).vector();
       auto sects = surf_geom->intersections(resize(p0, params.n_dim), resize(p1, params.n_dim));
       double sect = huge;
       for (double s : sects) if (s > 0.) sect = std::min(sect, s);
       if (sect < 2.) {
-        interior(i_point).vector() = p0*(1 - sect) + p1*sect;
+        interp_coefs[i_point] = sect - 1.;
       } else {
-        failed = true;
+        block.snapping_problem = true;
       }
     }
-    for (next::Element_shape* e : dependent_elems) {
-      next::Face* face = e->boundary_face_3d();
-      if (face && face != &block) face->reset();
-      Array<double> points = e->points();
-      int nd = params.n_dim;
-      int n_check_point = math::pow(_basis.row_size + 1, nd);
-      Array<double> check_points({nd, n_check_point});
-      Gauss_lobatto check_basis(_basis.row_size + 1);
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        check_points(i_dim).vector() = math::hypercube_matvec(_basis.interpolate(check_basis.nodes()),
-                                                              points(i_dim).vector());
-      }
-      Array<double> jacobian({nd, nd, n_check_point});
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        for (int j_dim = 0; j_dim < nd; ++j_dim) {
-          jacobian(i_dim)(j_dim).vector() = math::dimension_matvec(check_basis.diff_mat(),
-                                                                   check_points(i_dim).vector(), j_dim);
-        }
-      }
-      for (int i_check_point = 0; i_check_point < n_check_point; ++i_check_point) {
-        Mat<dyn, dyn> point_jac(nd, nd);
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          for (int j_dim = 0; j_dim < nd; ++j_dim) {
-            point_jac(i_dim, j_dim) = jacobian(i_dim)(j_dim)[i_check_point];
-          }
-        }
-        if (!(point_jac.determinant() > 0)) failed = true;
+    Mat<dyn, dyn> diff_mat = b.diff_mat()(Eigen::all, Eigen::seqN(1, b.row_size - 2));
+    double scale = .5 + 1.*block.element()->nominal_size()/block.scale_factor();
+    for (int i_dim = 0; i_dim < block.n_dim(); ++i_dim) {
+      Mat<> deriv = math::dimension_matvec(diff_mat, interp_coefs.vector(), i_dim);
+      double max_deriv = deriv.maxCoeff()*scale;
+      if (max_deriv > 1) {
+        block.snapping_problem = true;
+        interp_coefs /= max_deriv;
       }
     }
-    if (failed) block.reset();
+    for (int i_point = 0; i_point < n_point; ++i_point) {
+      double sect = interp_coefs[i_point] + 1.;
+      interior(i_point) = line_points(0)(i_point)*(1 - sect) + line_points(1)(i_point)*sect;
+    }
   };
+
   // snap edges to the surface (regardless of dimensionality)
+  auto boundary_sides = _blocks.boundary_sides();
+  #pragma omp parallel for
+  for (auto& block : boundary_sides) block.snapping_problem = false;
   auto edges_2d = _blocks.edges_2d();
-  #pragma omp parallel for
-  for (auto& edge : edges_2d) snap_block(edge);
+  //#pragma omp parallel for
+  for (auto& edge : edges_2d) plain_snap(edge);
   auto faces_3d = _blocks.faces_3d();
-  #pragma omp parallel for
-  for (auto& face : faces_3d) {
-    for (int i_edge = 0; i_edge < 4; ++i_edge) face.edge(i_edge).reset();
-  }
-  #pragma omp parallel for
+  std::vector<next::Edge*> edges_3d;
   for (auto& face : faces_3d) {
     for (int i_edge = 0; i_edge < 4; ++i_edge) {
-      if (!face.edge(i_edge).glued()) snap_block(face.edge(i_edge));
+      if (!face.edge(i_edge).glued()) edges_3d.push_back(&face.edge(i_edge));
     }
   }
-  // Snap mesh edges to geometry edges.
-  // This has to happen after snapping edges to the surface (which would undo this)
-  // but before snapping faces to the surface
-  // (or else the `reset()` function would be called with incorrect edge data)
-  for (Int i_geom_edge = 0; i_geom_edge < (Int)edges.size(); ++i_geom_edge) {
-    auto& geom_edge = edges[i_geom_edge];
-    Array<double> nodes {geom_edge.nodes()};
-    for (auto& edge : matched_edges[i_geom_edge]) {
-      edge.value().reset();
-      Array<double> interior {edge.value().interior()};
-      double max_dist = .5*edge.value().element()->nominal_size();
-      for (int i_point = 0; i_point < interior.shape()[0]; ++i_point) {
-        Int nearest = geom_edge.nearest_point(interior(i_point).vector(), max_dist).index;
-        if (nearest >= 0) interior(i_point) = nodes(nearest);
+  std::sort(edges_3d.begin(), edges_3d.end(), [](next::Edge* edge0, next::Edge* edge1) {
+    return edge0->element()->nominal_size() > edge1->element()->nominal_size();
+  });
+  for (next::Edge* edge : edges_3d) {
+    if (!edge->glued()) {
+      if (edge->snapped_edge >= 0) {
+        edge->reset();
+        edge->snapping_problem = false;
+        HEXED_ASSERT(edge->snapped_edge < edges.size(), "clearly erroneous `snapped_edge` value")
+        auto& geom_edge = edges[edge->snapped_edge];
+        Array<double> interior = edge->interior();
+        Array<double> orig_interior = interior.copy();
+        int n_node = interior.shape()[0];
+        for (int i_node = 0; i_node < n_node; ++i_node) {
+          auto node = interior(i_node);
+          auto nearest = geom_edge.arg_nearest_point(node.vector());
+          node.vector() = geom_edge.point(nearest);
+        }
+        if (edge->snapping_problem) edge->reset();
+        Mat<dyn, dyn> diff_mat = _basis.diff_mat()(Eigen::all, Eigen::seqN(1, _basis.row_size - 2));
+        Array<double> deriv({3, n_node});
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          deriv(i_dim).vector() = diff_mat*interior.column(i_dim).vector();
+        }
+        double max_deriv = std::sqrt((deriv(0)*deriv(0) + deriv(1)*deriv(1) + deriv(2)*deriv(2)).extreme(1));
+        max_deriv *= .5*edge->element()->nominal_size() + .1*edge->scale_factor();
+        if (max_deriv > 1) {
+          edge->snapping_problem = true;
+          interior = orig_interior + (interior - orig_interior)/max_deriv;
+        }
+      } else {
+        plain_snap(*edge);
       }
     }
   }
   // snap face interiors (if 3D) to surface
   #pragma omp parallel for
-  for (auto& face : faces_3d) snap_block(face);
+  for (auto& face : faces_3d) {
+    plain_snap(face);
+    for (int i_edge = 0; i_edge < 4; ++i_edge) {
+      next::Edge* edge = &face.edge(i_edge);
+      if (edge->glued()) edge = edge->glued_to();
+      face.snapping_problem = face.snapping_problem || edge->snapping_problem;
+    }
+  }
   ++_stopwatch["update"]["fit surface"].work_units_completed;
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (elem.active_shape().boundary_block()) {
+      elem.snapping_problem = elem.snapping_problem || elem.active_shape().boundary_block()->snapping_problem;
+    }
+    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      auto& vert = elem.active_shape().vertex(i_vert);
+      elem.snapping_problem = elem.snapping_problem || vert.last_snap_failed() || vert.incompatible_snap;
+    }
+  }
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    elems[i_elem].active_shape().is_new = false;
+  }
+  {
+    auto new_all_verts = _blocks.verts();
+    #pragma omp parallel for
+    for (auto& vert : new_all_verts) vert.remove_size_constraints();
+  }
 }
 
 void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
@@ -826,13 +1140,17 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     for (int i = 0; i < 2*params.n_dim + 1; ++i) vert.record[i] = 0;
   }
   #pragma omp parallel for
-  for (auto& con : def.bound_cons) {
-    int bc_sn = con->bound_cond_serial_n();
+  for (auto& con : _bound_cons) {
+    int bc_sn = con.boundary_condition();
     if (bc_sn < 2*params.n_dim + 1) {
-      std::vector<int> inds = vertex_inds(params.n_dim, con->get_direction())[0];
+      Connection_direction dir{{con.inside().i_dim(), con.inside().i_dim()},
+                               {(bool)con.inside().sign(), !con.inside().sign()}};
+      std::vector<int> inds = vertex_inds(params.n_dim, dir)[0];
       for (int i_vert : inds) {
+        Element* elem = con.inside().element();
+        HEXED_ASSERT(elem, "Element is null.")
         #pragma omp atomic write
-        con->element().active_shape().vertex(i_vert).record[bc_sn] = 1;
+        elem->active_shape().vertex(i_vert).record[bc_sn] = 1;
       }
     }
   }
@@ -843,26 +1161,29 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   }
   History_monitor obj_monitor(.3, 100);
   History_monitor dist_monitor(.3, 100);
-  double starting_objective = -1;
-  double objective = 0;
-  #if HEXED_VIS_MESH_OPT
-  int id = rand()%1000;
-  printers::info("id: " + std::to_string(id) + "\n");
-  #endif
+  std::vector<next::Vertex*> mobile_verts;
+  for (auto& vert : verts) if (vert.mobile()) mobile_verts.push_back(&vert);
+  #pragma omp parallel for
+  for (auto vert : mobile_verts) vert->compute_depends();
   Int snaps_failed = 0;
   double total_dist = 0;
   Stopwatch watch;
   watch.start();
   double last_time = 0;
   std::string message;
-  Int snap_succeeded = -1;
+  double objective = 0;
+  #pragma omp parallel for reduction(+:objective)
+  for (auto& vert : verts) {
+    objective += vert.quality_objective();
+  }
+  double starting_objective = objective;
   for (Int i_relax = 0;
-       i_relax < 1000 && (i_relax < 30
+       i_relax < 300 && (i_relax < 30
                           || (snaps_failed == 0 && obj_monitor.max() - obj_monitor.min()
                                                    > 1e-2*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
-                          || dist_monitor.max() - dist_monitor.min() > 1e-2*dist_monitor.min());
+                          || (snaps_failed != 0 && dist_monitor.max() - dist_monitor.min() > 1e-2*dist_monitor.min()));
        ++i_relax) {
-    #if HEXED_VIS_MESH_OPT
+    #if 0
     {
       auto faces = _blocks.faces_3d();
       for (auto& f : faces) {
@@ -874,10 +1195,12 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       auto edges = _blocks.edges_2d();
       #pragma omp parallel for
       for (auto& e : edges) e.reset();
-      visualize("default", "meshing_diagnostic" + std::to_string(id) + "_" + std::to_string(i_relax), (double)i_relax);
-      std::string fname = "vertex_nearest" + to_string(id) + "_" + to_string(i_relax);
-      auto vis = Visualizer::create("default", 3, 1, fname, {}, (double)i_relax, Visualizer::block);
-      for (auto& vert : bverts) {
+      next::Block::visualize("default", "relax_iter" + to_string(i_relax),
+                             _blocks.faces_3d().cast<const next::Block&>(), double(i_relax));
+      std::string fname = "vertex_nearest" + to_string(i_relax);
+      auto vis = Visualizer::create("default", 3, 1, fname, {"snapped_edge", "last_snap_failed", "last_step_rejected"}, (double)i_relax, Visualizer::block);
+      auto vis2 = Visualizer::create("default", 3, 1, "vertex_grad" + to_string(i_relax), {}, (double)i_relax, Visualizer::block);
+      for (auto& vert : verts) if (vert.mobile()) {
         Array<double> pos({3, 2});
         Mat<3> p0 = vert.unwarped_point();
         Mat<3> p1 = _get_snapping_target(vert, p0);
@@ -885,91 +1208,112 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
           pos(i_dim)[0] = p0(i_dim);
           pos(i_dim)[1] = p1(i_dim);
         }
-        vis->write_block(pos, Array<double>({}));
+        Array<double> data({3, 2});
+        data(0) = vert.snapped_edge;
+        data(1) = vert.last_snap_failed();
+        data(2) = vert.last_step_rejected();
+        vis->write_block(pos, data);
+        Mat<3> vg = vert.last_grad();
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
+          pos(i_dim)[1] = p0(i_dim) + vg(i_dim);
+        }
+        vis2->write_block(pos, Array<double>({0, 2}));
       }
     }
+    visualize_deformed("default", "elem_mesh" + to_string(i_relax), (double)i_relax);
     #endif
-    // snap vertices to surface boundary
-    Mat<> o = tree->origin();
-    double tns = tree->nominal_size();
-    double objective_diff = 0;
-    bool try_snap = true;
-    if (try_snap) {
-      snaps_failed = 0;
-      total_dist = 0;
-    }
+    double total_iters = 0;
     {
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
-      for (auto& vert : verts) if (vert.mobile()) {
-        auto satisfy = [&](Mat<3> p)->Mat<3> {
-          for (int i_dim = 0; i_dim < (int)o.size(); ++i_dim) {
-            p(i_dim) = std::max(p(i_dim), o(i_dim));
-            p(i_dim) = std::min(p(i_dim), o(i_dim) + tns);
-          }
-          if (vert.record[2*params.n_dim]) {
-            for (auto n : vert.neighbors()) if (n) {
-              if ((int)n->record.size() == 2*params.n_dim + 1) {
-                if (!n->record[2*params.n_dim]) {
-                  auto seq = Eigen::seqN(0, params.n_dim);
-                  Mat<> start = n->point({})(seq);
-                  Mat<> end = p(Eigen::seqN(0, params.n_dim));
-                  std::vector<double> intersections = surf_geom->intersections(start, end, false);
-                  double min_sect = 1;
-                  for (double s : intersections) min_sect = std::min(min_sect, s);
-                  p(seq) = start + min_sect*(p(seq) - start);
-                }
-              }
-            }
-          }
-          return p;
-        };
-        auto get_target = [&vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(vert, p);};
-        bool on_surface = false;
-        for (int i = 0; i < 2*params.n_dim + 1; ++i) on_surface = on_surface || vert.record[i];
-        next::Vertex::Improve_quality_result iqr;
-        if (on_surface) {
-          iqr = vert.improve_quality(get_target, satisfy, true, try_snap);
-        } else {
-          iqr = vert.improve_quality();
-        }
-        objective_diff += iqr.objective_diff;
-        snaps_failed += iqr.snap_failed;
-        total_dist += iqr.target_dist;
-        ++_stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed;
+      #pragma omp parallel for
+      for (next::Vertex* vert : mobile_verts) {
+        vert->init_improve();
       }
+      #pragma omp parallel for
+      for (next::Vertex* vert : mobile_verts) {
+        auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
+        vert->compute_gradient(get_target);
+      }
+      bool done;
+      while (true) {
+        for (bool updated_neighbors : {false, true}) {
+          do {
+            #pragma omp parallel for
+            for (next::Vertex* vert : mobile_verts) {
+              auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
+              vert->compute_improve(get_target);
+            }
+            done = true;
+            #pragma omp parallel for reduction(&&:done)
+            for (next::Vertex* vert : mobile_verts) {
+              // can't combine these because of short-circuit evaluation
+              bool d = vert->check_improve(updated_neighbors);
+              done = done && d;
+            }
+          } while (!done);
+        }
+        double old_objective = objective;
+        objective = 0;
+        {
+          #pragma omp parallel for reduction(+:objective)
+          for (auto& vert : verts) objective += vert.quality_objective();
+        }
+        if (objective <= old_objective) {
+          break;
+        } else {
+          for (next::Vertex* vert : mobile_verts) vert->force_continue_improve();
+        }
+      }
+      #pragma omp parallel for
+      for (next::Vertex* vert : mobile_verts) {
+        auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
+        vert->init_snap(get_target);
+      }
+      for (bool updated_neighbors : {false, true}) {
+        do {
+          #pragma omp parallel for
+          for (next::Vertex* vert : mobile_verts) vert->compute_snap();
+          done = true;
+          snaps_failed = 0;
+          total_dist = 0;
+          #pragma omp parallel for reduction(&&:done) reduction(+:snaps_failed,total_dist)
+          for (next::Vertex* vert : mobile_verts) {
+            // can't combine these because of short-circuit evaluation
+            auto result = vert->check_snap(updated_neighbors);
+            done = done && result.done;
+            snaps_failed += result.failed;
+            total_dist += result.distance;
+          }
+        } while (!done);
+      }
+      _stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed += mobile_verts.size();
     }
-    double prev_obj = objective;
     objective = 0;
     {
       Stopwatch_tree::Starter sw_assess(_stopwatch["update"]["fit surface"]["optimization"]["assessment"]);
-      for (auto& vert : verts) objective += vert.quality_objective();
-      _stopwatch["update"]["fit surface"]["optimization"]["assessment"].work_units_completed += verts.size();
-    }
-    if (starting_objective < 0) starting_objective = objective;
-    if (i_relax) {
-      if (std::abs(objective_diff - (objective - prev_obj)) > 1e-4*verts.size()) {
-        printers::warn(" Warning: ", true);
-        printers::warn(format_str(100, "inaccurate objective change: %e vs %e (please report as a bug)\n",
-                                  -objective_diff, objective - prev_obj));
+      #pragma omp parallel for reduction(+:objective,total_iters)
+      for (auto& vert : verts) {
+        objective += vert.quality_objective();
+        total_iters += vert.last_improve_iters();
       }
+      _stopwatch["update"]["fit surface"]["optimization"]["assessment"].work_units_completed += verts.size();
     }
     obj_monitor.add_sample(i_relax, objective - starting_objective);
     dist_monitor.add_sample(i_relax, total_dist);
     message = format_str(
-      400,
+      800,
       "   "
       " Iteration = %4li;"
       " Objective = %.18e (%+.5e);"
       " Number of vertex snaps failed = %li;"
       " Total distance from surface = %.5e;"
-      , i_relax, objective, objective - starting_objective, snaps_failed, total_dist
+      " Average backtracking iterations = %.3e;"
+      , i_relax, objective, objective - starting_objective, snaps_failed, total_dist, total_iters/mobile_verts.size()
     );
     if (watch.time() > last_time) {
       last_time += .1;
       printers::info(message, false, true);
     }
-    if (try_snap && snaps_failed == 0 && snap_succeeded < 0) snap_succeeded = i_relax;
-    if (i_relax > 2*snap_succeeded && snap_succeeded >= 0 && i_relax > 30) break;
   }
   printers::info(message, false, true);
   printers::info("\n");
@@ -990,11 +1334,6 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 , def_as_car{def.elements()}
 , elems{car.elements(), def_as_car}
 , kernel_elems{elems}
-, elem_cons{car.element_connections(), def.element_connections()}
-, bound_face_cons{car.bound_face_con_view, def.bound_face_con_view}
-, bound_cons{car.boundary_connections(), def.boundary_connections()}
-, def_face_cons{def.elem_face_con_v, bound_face_cons}
-, ref_face_v{car.refined_faces(), def.refined_faces()}
 , surf_bc_sn{-1} // set to -1 to prevent uninitialized comparisons
 , verts_are_reset{false}
 , _mask_levels{0}
@@ -1005,7 +1344,6 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 , _turb{turb}
 , buffer_dist{std::sqrt(params.n_dim)/2} // if you're getting snapping problems, try multiplying this by 2
 {
-  def.face_con_v = def_face_cons;
   _stopwatch.emplace("update", "update");
   _stopwatch["update"].emplace("refinement", "refinement");
   _stopwatch["update"].emplace("extrusion", "extrusion");
@@ -1014,12 +1352,6 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   _stopwatch["update"]["fit surface"]["optimization"].emplace("relaxation", "vertex update");
   _stopwatch["update"]["fit surface"]["optimization"].emplace("assessment", "vertex assessment");
   _stopwatch.work_units_completed = 1;
-}
-
-Accessible_mesh::~Accessible_mesh() {
-  // delete connections before anything else so that deleting elements doesn't create dangling references
-  car.purge_connections(criteria::always);
-  def.purge_connections(criteria::always);
 }
 
 int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<Int> position, Mat<> origin, int aniso_ref_level, int surface_face) {
@@ -1037,67 +1369,108 @@ Element& Accessible_mesh::element(int ref_level, bool is_deformed, int serial_n)
   return container(is_deformed).at(ref_level, serial_n);
 }
 
-void Accessible_mesh::_connect_shapes(Element& elem0, Element& elem1, Connection_direction dir) {
-  next::Element_shape* shapes [2] {&elem0.shape(), &elem1.shape()};
-  shapes[0]->connect(*shapes[1], dir);
-  next::Element_shape* fake_shapes [2] {elem0.fake_shape(), elem1.fake_shape()};
-  if (fake_shapes[0] || fake_shapes[1]) {
-    for (int i = 0; i < 2; ++i) shapes[i] = fake_shapes[i] ? fake_shapes[i] : shapes[i];
-    shapes[0]->connect(*shapes[1], dir);
+void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
+                               Connection_direction dir, std::string context) {
+  context = " [" + context + "]";
+  int nd = params.n_dim;
+  int nv = params.n_vertices();
+  std::vector<Mortal_ptr<Face>> faces;
+  std::array<std::vector<next::Element_shape*>, 2> shapes;
+  std::array<std::vector<next::Element_shape*>, 2> active_shapes;
+  bool null_elem = false;
+  bool same_active = false;
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    HEXED_ASSERT(Int(elems[i_side].size()) == nv/2, "wrong number of element pointers" + context)
+    for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
+      if (!elems[i_side][i_elem]) {
+        null_elem = true;
+        faces.emplace_back();
+        continue;
+      }
+      faces.emplace_back(&elems[i_side][i_elem]->face(dir.i_face(i_side)));
+      shapes[i_side].push_back(&elems[i_side][i_elem]->shape());
+      active_shapes[i_side].push_back(&elems[i_side][i_elem]->active_shape());
+      if (i_side) if (active_shapes[i_side][i_elem] == active_shapes[0][i_elem]) same_active = true;
+    }
   }
-}
-
-void Accessible_mesh::_connect(std::array<Element*, 2> el_ar, Con_dir<Element> direction) {
-  car.cons.emplace_back(new Element_face_connection<Element>(el_ar, direction));
-  _connect_shapes(*el_ar[0], *el_ar[1], direction);
-}
-
-void Accessible_mesh::_connect(std::array<Deformed_element*, 2> el_ar, Con_dir<Deformed_element> direction) {
-  def.cons.emplace_back(new Element_face_connection<Deformed_element>(el_ar, direction));
-  _connect_shapes(*el_ar[0], *el_ar[1], direction);
-}
-
-template <typename Elem_t>
-void Accessible_mesh::_connect_shapes(Elem_t* coarse, std::vector<Elem_t*> fine, Con_dir<Deformed_element> dir,
-              std::array<bool, 2> stretch) {
-  std::vector<next::Element_shape*> fine_shapes;
-  std::vector<next::Element_shape*> fake_fine_shapes;
-  for (int i = 0; i < 1 + stretch[0]; ++i) {
-    for (Elem_t* elem : fine) {
-      for (int i = 0; i < 1 + stretch[1]; ++i) {
-        fine_shapes.push_back(&elem->shape());
-        fake_fine_shapes.push_back(elem->fake_shape());
+  HEXED_ASSERT(!null_elem, "an element is null" + context)
+  _face_refs.emplace_back();
+  std::vector<int> fvi {face_vertex_inds(nd, dir)};
+  Array<int> permute_inds({2, nv/2});
+  for (int i_face = 0; i_face < nv/2; ++i_face) {
+    permute_inds(0)[i_face] = fvi[i_face];
+    permute_inds(1)[fvi[i_face]] = i_face;
+  }
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+      for (int i_row = 0; i_row < nv/4; ++i_row) {
+        int inds [2][2][2];
+        for (int j_row = 0; j_row < 2; ++j_row) {
+          for (int i_vert = 0; i_vert < 2; ++i_vert) {
+            for (int j_side = 0; j_side < 2; ++j_side) {
+              int row = i_row != (nd == 3 && j_row == 1);
+              inds[j_side][j_row][i_vert] = row*math::pow(2, i_dim) + i_vert*math::pow(2, nd - 2 - i_dim);
+            }
+            inds[!i_side][j_row][i_vert] = permute_inds(i_side)[inds[!i_side][j_row][i_vert]];
+          }
+        }
+        if (faces[nv/2* i_side + inds[ i_side][0][1]].get() == faces[nv/2* i_side + inds[ i_side][0][0]].get() &&
+            faces[nv/2*!i_side + inds[!i_side][0][1]].get() != faces[nv/2*!i_side + inds[!i_side][0][0]].get()) {
+          _face_refs.back().emplace_back(faces[4*i_side + inds[i_side][0][0]].value(), i_dim);
+          for (int i_face = 0; i_face < 2; ++i_face) {
+            auto& f0 = faces[nv/2*i_side + inds[i_side][0][i_face]];
+            auto& f1 = faces[nv/2*i_side + inds[i_side][1][i_face]];
+            if (f1.get() == f0.get()) f1.set(_face_refs.back().back().fine()[i_face]);
+            f0.set(_face_refs.back().back().fine()[i_face]);
+          }
+        }
       }
     }
   }
-  coarse->shape().connect(fine_shapes, dir);
-  HEXED_ASSERT(   std::all_of(fake_fine_shapes.begin(), fake_fine_shapes.end(), [](void* p)->bool{return  p;})
-               || std::all_of(fake_fine_shapes.begin(), fake_fine_shapes.end(), [](void* p)->bool{return !p;}),
-               "All of the fine elements must have fake shapes or none.");
-  next::Element_shape* coarse_fake = coarse->fake_shape();
-  if (coarse_fake || fake_fine_shapes[0]) {
-    next::Element_shape* shape = coarse_fake ? coarse_fake : &coarse->shape();
-    shape->connect(fake_fine_shapes[0] ? fake_fine_shapes : fine_shapes, dir);
+  if (_face_refs.back().empty()) _face_refs.pop_back();
+  for (int i_face = 0; i_face < nv/2; ++i_face) {
+    bool already_connected = false;
+    for (int j_face = 0; j_face < i_face; ++j_face) {
+      already_connected = already_connected || faces[j_face].get() == faces[i_face].get();
+    }
+    if (!already_connected) {
+      std::array<Face*, 2> face_arr {faces[i_face].get(), faces[nv/2 + fvi[i_face]].get()};
+      bool is_deformed = face_arr[0]->is_deformed() && face_arr[1]->is_deformed();
+      if (!is_deformed) {
+        HEXED_ASSERT(dir.i_dim[0] == dir.i_dim[1] && dir.face_sign[0] != dir.face_sign[1] && dir.rotate == 0,
+                     "invalid direction for Cartesian connection" + context)
+        if (!face_arr[0]->sign()) std::swap(face_arr[0], face_arr[1]);
+      }
+      _neighbor_cons[is_deformed].emplace_back(faces[0]->storage_params(), face_arr, dir.rotate);
+    }
   }
+  next::Element_shape::connect(shapes, dir);
+  if (!same_active) next::Element_shape::connect(active_shapes, dir);
 }
 
-void Accessible_mesh::_connect(Element* coarse, std::vector<Element*> fine, Con_dir<Deformed_element> dir) {
-  HEXED_ASSERT(dir.i_dim[0] == dir.i_dim[1], "dimensions in Cartesian hanging-node connection must match");
-  car.ref_face_cons[params.n_dim - 1].emplace_back(
-    new Refined_connection<Element>(coarse, fine, {dir.i_dim[0]}, dir.face_sign[1])
-  );
-  _connect_shapes(coarse, fine, dir, {false, false});
+void Accessible_mesh::_connect(std::array<Element*, 2> el_ar, Connection_direction direction, std::string context) {
+  int n_fine = params.n_vertices()/2;
+  std::array<std::vector<Element*>, 2> full_arr {std::vector<Element*>(n_fine, el_ar[0]),
+                                                 std::vector<Element*>(n_fine, el_ar[1])};
+  _connect(full_arr, direction, context);
 }
 
-void Accessible_mesh::_connect(Deformed_element* coarse, std::vector<Deformed_element*> fine,
-                               Con_dir<Deformed_element> dir, std::array<bool, 2> stretch) {
-  def.ref_face_cons[math::log(2, fine.size())].emplace_back(
-    new Refined_connection<Deformed_element>(coarse, fine, dir, false, stretch)
-  );
-  _connect_shapes(coarse, fine, dir, stretch);
+void Accessible_mesh::_connect(Element* coarse, std::vector<Element*> fine,
+                               Connection_direction dir, std::array<bool, 2> stretch, std::string context) {
+  int nv = params.n_vertices()/2;
+  std::array<std::vector<Element*>, 2> elems;
+  elems[0].resize(nv, coarse);
+  for (int i = 0; i < 1 + stretch[0]; ++i) {
+    for (Element* elem : fine) {
+      for (int j = 0; j < 1 + stretch[1]; ++j) {
+        elems[1].push_back(elem);
+      }
+    }
+  }
+  _connect(elems, dir, context);
 }
 
-void Accessible_mesh::connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Con_dir<Element> direction,
+void Accessible_mesh::connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Connection_direction direction,
                                         std::array<bool, 2> is_deformed) {
   std::array<Element*, 2> el_ar;
   for (int i_side : {0, 1}) el_ar[i_side] = &element(ref_level, is_deformed[i_side], serial_n[i_side]);
@@ -1105,11 +1478,11 @@ void Accessible_mesh::connect_cartesian(int ref_level, std::array<Int, 2> serial
 }
 
 void Accessible_mesh::connect_deformed(int ref_level, std::array<Int, 2> serial_n,
-                                       Con_dir<Deformed_element> direction) {
+                                       Connection_direction direction) {
   if ((direction.i_dim[0] == direction.i_dim[1]) && (direction.face_sign[0] == direction.face_sign[1])) {
     throw std::runtime_error("attempt to connect faces of same sign along same dimension which is forbidden");
   }
-  std::array<Deformed_element*, 2> el_ar;
+  std::array<Element*, 2> el_ar;
   for (int i_side : {0, 1}) {
     el_ar[i_side] = &def.elems.at(ref_level, serial_n[i_side]);
   }
@@ -1117,27 +1490,21 @@ void Accessible_mesh::connect_deformed(int ref_level, std::array<Int, 2> serial_
 }
 
 void Accessible_mesh::connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial,
-                                      Con_dir<Deformed_element> dir, bool coarse_deformed,
+                                      Connection_direction dir, bool coarse_deformed,
                                       std::vector<bool> fine_deformed, std::array<bool, 2> stretch) {
-  bool is_car = !coarse_deformed;
-  for (bool fine_def : fine_deformed) is_car = (is_car||!fine_def);
-  if (is_car) {
-    Element* coarse = &element(coarse_ref_level, coarse_deformed, coarse_serial);
-    std::vector<Element*> fine;
-    for (int i_fine = 0; i_fine < n_vert/2; ++i_fine) {
-      fine.push_back(&element(coarse_ref_level + 1, fine_deformed[i_fine], fine_serial[i_fine]));
-    }
-    HEXED_ASSERT((dir.i_dim[0] == dir.i_dim[1]) && (dir.face_sign[0] != dir.face_sign[1]),
-                 "attempted to form a cartesian hanging-node connection with incompatible `Con_dir`.");
-    _connect(coarse, fine, dir);
-  } else {
-    Deformed_element* coarse = &def.elems.at(coarse_ref_level, coarse_serial);
-    std::vector<Deformed_element*> fine;
-    for (unsigned i_fine = 0; i_fine < fine_serial.size(); ++i_fine) {
-      fine.push_back(&def.elems.at(coarse_ref_level + 1, fine_serial[i_fine]));
-    }
-    _connect(coarse, fine, dir, stretch);
+  std::vector<Element*> fine;
+  for (int i_fine = 0; i_fine < (int)fine_serial.size(); ++i_fine) {
+    fine.push_back(&element(coarse_ref_level + 1, fine_deformed[i_fine], fine_serial[i_fine]));
   }
+  _connect(&element(coarse_ref_level, coarse_deformed, coarse_serial), fine, dir, stretch);
+}
+
+next::Sequence<Neighbor_connection&> Accessible_mesh::neighbor_connections(bool is_deformed) {
+  return next::Sequence<Neighbor_connection&>::vector_view(_neighbor_cons[is_deformed]);
+}
+
+next::Sequence<std::vector<Face_refinement>&> Accessible_mesh::face_refinements() {
+  return next::Sequence<std::vector<Face_refinement>&>::vector_view(_face_refs);
 }
 
 int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc) {
@@ -1146,24 +1513,16 @@ int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc) {
   return bound_conds.size() - 1;
 }
 
-void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, Int element_serial_n, int i_dim, int face_sign, int bc_serial_n) {
+void Accessible_mesh::connect_boundary(int ref_level, bool is_deformed, Int element_serial_n, int i_dim,
+                                       int face_sign, int bc_serial_n) {
   // create boundary condition
   HEXED_ASSERT(bc_serial_n < int(bound_conds.size()), "demand for non-existent `Boundary_condition`");
-  Flow_bc& bc = *bound_conds[bc_serial_n];
-  if (is_deformed) {
-    def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(
-      def.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n, bc.n_prescribed(params.n_dim)
-     ));
-  } else {
-    car.bound_cons.emplace_back(new Typed_bound_connection<Element>(
-      car.elems.at(ref_level, element_serial_n), i_dim, face_sign, bc_serial_n, bc.n_prescribed(params.n_dim)
-    ));
-  }
+  Face& face = element(ref_level, is_deformed, element_serial_n).face(2*i_dim + face_sign);
+  _bound_cons.emplace_back(face, bc_serial_n, bound_conds[bc_serial_n]->n_prescribed(params.n_dim));
 }
 
 void Accessible_mesh::disconnect_boundary(int bc_sn) {
-  erase_if(car.bound_cons, [bc_sn](std::unique_ptr<Typed_bound_connection<         Element>>& con){return con->bound_cond_serial_n() == bc_sn;});
-  erase_if(def.bound_cons, [bc_sn](std::unique_ptr<Typed_bound_connection<Deformed_element>>& con){return con->bound_cond_serial_n() == bc_sn;});
+  erase_if(_bound_cons, [bc_sn](Boundary_connection& con){return con.boundary_condition() == bc_sn;});
 }
 
 void Accessible_mesh::cleanup() {
@@ -1173,26 +1532,14 @@ void Accessible_mesh::cleanup() {
 Mesh::Connection_validity Accessible_mesh::valid() {
   auto& elems = elements();
   const int n_faces = 2*params.n_dim;
-  // initialize number of connections of each face to 0
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    for (int i_face = 0; i_face < n_faces; ++i_face) {
-      elems[i_elem].face_record[i_face] = 0;
-    }
-  }
-  // count up the number of connections for each face
-  car.record_connections();
-  def.record_connections();
   // count up the number of faces with problems
   int n_missing = 0;
-  int n_redundant = 0;
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     for (int i_face = 0; i_face < n_faces; ++i_face) {
-      int rec = elems[i_elem].face_record[i_face];
-      if (rec == 0) ++n_missing;
-      if (rec > 1) n_redundant += rec - 1;
+      if (!elems[i_elem].is_connected(i_face)) ++n_missing;
     }
   }
-  return {n_redundant, n_missing};
+  return {0, n_missing};
 }
 
 void Accessible_mesh::assert_valid() {
@@ -1212,20 +1559,20 @@ struct Empty_face {
 struct Connection_plan {
   int ref_level;
   std::array<Int, 2> serial_ns;
-  Con_dir<Deformed_element> dir;
+  Connection_direction dir;
 };
 struct Refined_connection_plan {
   int coarse_ref;
   Int coarse_sn;
   std::vector<Int> fine_sn;
-  Con_dir<Deformed_element> dir;
+  Connection_direction dir;
   std::array<bool, 2> stretch;
 };
-bool aligned_same_dim(Con_dir<Deformed_element> dir, std::array<Int, 2> extrude_dim) {
+bool aligned_same_dim(Connection_direction dir, std::array<Int, 2> extrude_dim) {
   return (dir.i_dim[0] == dir.i_dim[1]) && (dir.face_sign[0] != dir.face_sign[1])
          && (extrude_dim[0] == extrude_dim[1]);
 }
-bool aligned_different_dim(Con_dir<Deformed_element> dir, std::array<Int, 2> extrude_dim) {
+bool aligned_different_dim(Connection_direction dir, std::array<Int, 2> extrude_dim) {
   return (dir.i_dim[0] == extrude_dim[1]) && (dir.i_dim[1] == extrude_dim[0]);
 }
 //! \endcond
@@ -1248,47 +1595,10 @@ void request_connection(Element& elem, int n_dim, int i_dim, bool i_sign, int j_
 void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
   Stopwatch_tree::Starter sw_extrude(_stopwatch["update"]["extrusion"]);
   const int nd = params.n_dim;
-  const int n_faces = 2*nd;
-  { // initialize number of connections of each face to 0
-    auto& elems = elements();
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      for (int i_face = 0; i_face < n_faces; ++i_face) {
-        elems[i_elem].face_record[i_face] = 0;
-      }
-    }
-  }
   { // initialize vertex records to empty
     auto verts = _blocks.verts();
     for (Int i_vert = 0; i_vert < verts.size(); ++i_vert) {
       verts[i_vert].record.clear();
-    }
-  }
-  // count up the number of connections for each face
-  car.record_connections();
-  def.record_connections();
-  // record which faces have boundary conditions
-  auto& bc_cons {boundary_connections()};
-  for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-    auto& con {bc_cons[i_con]};
-    // no face has more than one connection (I really hope!) so use numbers greater than one to indentify boundary conditions
-    con.element().face_record[2*con.i_dim() + con.inside_face_sign()] = 2 + con.bound_cond_serial_n();
-  }
-
-  // request connections for existing extruded elements
-  if (tree) {
-    def.elems.write_sns();
-    for (auto con : extrude_cons) {
-      if (con->element(1).tree) {
-        auto dir = con->direction();
-        for (int j_dim = dir.i_dim[1] + 1; j_dim%nd != dir.i_dim[1]; ++j_dim) {
-          j_dim = j_dim%nd;
-          for (int face_sign = 0; face_sign < 2; ++face_sign) {
-            if (con->element(0).face_record[2*j_dim + face_sign] == 0) {
-              request_connection(con->element(0), nd, dir.i_dim[1], dir.face_sign[1], j_dim, face_sign);
-            }
-          }
-        }
-      }
     }
   }
   {
@@ -1307,9 +1617,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
         for (int face_sign = 0; face_sign < 2; ++face_sign) {
           const int i_face = 2*i_dim + face_sign;
           auto& elem {elems[i_elem]};
-          if (elem.face_record[i_face] == 0) {
-            empty_faces.push_back({elem, i_dim, face_sign});
-          }
+          if (!elem.is_connected(i_face)) empty_faces.push_back({elem, i_dim, face_sign});
         }
       }
     }
@@ -1321,34 +1629,31 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
     const int ref_level = face.elem.refinement_level();
     int sn = add_element(ref_level, true, nom_pos, face.elem.origin, face.elem.aniso_ref_level() + 1, 2*face.i_dim + face.face_sign);
-    Con_dir<Deformed_element> dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
+    Connection_direction dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
     if (face.elem.fake_shape()) elem.split_shape(_blocks, face.elem, offset, 2*face.i_dim + face.face_sign);
     else elem.create_fake(_blocks);
     elem.record = sn;
     elem.needs_snapping = !force;
-    if (collapse) {
-      int stride = math::pow(2, nd - 1 - face.i_dim);
-      for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
-        int i_collapse = i_vert + (face.face_sign - (i_vert/stride)%2)*stride;
-        elem.fake_shape()->vertex(i_vert).point({}) = face.elem.shape().vertex(i_collapse).point({});
-      }
-    }
     elem.fake_shape()->extruded_direction = 2*face.i_dim + face.face_sign;
-    std::array<Deformed_element*, 2> el_arr {&elem, &face.elem};
+    std::array<Element*, 2> el_arr {&elem, &face.elem};
     _connect(el_arr, dir);
-    extrude_cons.push_back(def.cons.back().get());
+    _extrude_cons[2].emplace_back(&_neighbor_cons[1].back());
     // record the faces that still need to be connected at a vertex which is guaranteed to be shared with prospective neighbors
     for (int j_dim = face.i_dim + 1; j_dim%nd != face.i_dim; ++j_dim) {
       j_dim = j_dim%nd;
       for (int face_sign = 0; face_sign < 2; ++face_sign) {
-        int face_rec = face.elem.face_record[2*j_dim + face_sign];
-        if (face_rec >= 2) {
-          // if parent element has boundary connections on other faces
-          def.bound_cons.emplace_back(new Typed_bound_connection<Deformed_element>(
-            elem, j_dim, face_sign, face_rec - 2, bound_conds[face_rec - 2]->n_prescribed(nd)
-          ));
-        } else request_connection(elem, nd, face.i_dim, face.face_sign, j_dim, face_sign);
+        auto& f = face.elem.face(2*j_dim + face_sign);
+        bool connected_boundary = false;
+        if (f.neighbor_connection()) {
+          if (f.neighbor_connection()->opposite_face(f).boundary_connection()) {
+            int bc_sn = f.neighbor_connection()->opposite_face(f).boundary_connection()->boundary_condition();
+            auto& bound_face = elem.face(2*j_dim + face_sign);
+            _bound_cons.emplace_back(bound_face, bc_sn, bound_conds[bc_sn]->n_prescribed(params.n_dim));
+            connected_boundary = true;
+          }
+        }
+        if (!connected_boundary) request_connection(elem, nd, face.i_dim, face.face_sign, j_dim, face_sign);
       }
     }
     if (offset > 0) {
@@ -1382,15 +1687,17 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     /* connections without hanging nodes */ \
     for (int i_vert = 0; i_vert < verts.size(); ++i_vert) { \
       auto& vert {verts[i_vert]}; \
-      /* first make connections where dimension matches and then make connections among differing dimensions. */ \
-      /* This order prevents incorrect connections where both same-dimension and different-dimension candidates are available. */ \
-      for (bool (*aligned)(Con_dir<Deformed_element>, std::array<Int, 2>) : {&aligned_same_dim, &aligned_different_dim}) { \
+      /* first make connections where dimension matches and then make connections among differing dimensions.
+         This order prevents incorrect connections where both same-dimension and different-dimension candidates
+         are available. */ \
+      for (bool (*aligned)(Connection_direction, std::array<Int, 2>) \
+           : {&aligned_same_dim, &aligned_different_dim}) { \
         /* iterate through every possible pair of records created by an extruded elements above */ \
         for (int i_record = 0; i_record < int(vert.record.size()); i_record += n_record) { \
           for (int j_record = i_record + n_record; j_record < int(vert.record.size()); j_record += n_record) { \
             int ref_level = vert.record[i_record]; \
-            Con_dir<Deformed_element> dir({ int(vert.record[i_record + 2]/2),  int(vert.record[j_record + 2]/2)}, \
-                                          {bool(vert.record[i_record + 2]%2), bool(vert.record[j_record + 2]%2)}); \
+            Connection_direction dir{{ int(vert.record[i_record + 2]/2),  int(vert.record[j_record + 2]/2)}, \
+                                     {bool(vert.record[i_record + 2]%2), bool(vert.record[j_record + 2]%2)}}; \
             /* only connect elements that are suitably positioned. */ \
             /* This prevents incorrect connections at places like a 3D corner where there are many (incorrect) candidates available */ \
             if (aligned(dir, {vert.record[i_record + 3]/2, vert.record[j_record + 3]/2})) { \
@@ -1484,21 +1791,15 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
 }
 
 void Accessible_mesh::connect_rest(int bc_sn) {
-  HEXED_ASSERT((Int)bound_conds.size() > bc_sn, "nonexistant boundary condition");
-  HEXED_ASSERT(bound_conds[bc_sn], "BC pointer is null");
-  auto& elem_seq = elements();
-  // locate unconnected faces
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elem_seq.size(); ++i_elem) {
+  auto& elems = elements();
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
     for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
-      elem_seq[i_elem].face_record[i_face] = 0;
+      if (!elem.is_connected(i_face)) {
+        _bound_cons.emplace_back(elem.face(i_face), bc_sn, bound_conds[bc_sn]->n_prescribed(params.n_dim));
+      }
     }
   }
-  car.record_connections();
-  def.record_connections();
-  // make connections
-  car.connect_empty(bc_sn, *bound_conds[bc_sn]);
-  def.connect_empty(bc_sn, *bound_conds[bc_sn]);
 }
 
 std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles() {
@@ -1562,13 +1863,6 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   // take ownership of the surface geometries (do this first to avoid memory leak)
   surf_bc_sn = add_boundary_condition(surface_bc);
   surf_geom.reset(geometry);
-  Int n_edges = surf_geom->edges().size();
-  matched_vertices.clear();
-  matched_vertices.resize(n_edges);
-  matched_edges.clear();
-  matched_edges.resize(n_edges);
-  point_matched_vertices.clear();
-  point_matched_vertices.resize(surf_geom->points().size());
   if (!tree) return;
   // identify surface elements
   auto& elems = elements();
@@ -1624,19 +1918,13 @@ void Accessible_mesh::connect_new(int start_at) {
                           neighbors.size()))
     bool is_def = elem.get_is_deformed();
     for (Tree* neighbor : neighbors) {
-      VIS_ASSERT(neighbor->elem, "hanging-node connection with nonexistant elements");
+      if (!neighbor->elem) return;
       is_def = is_def && neighbor->elem->get_is_deformed();
     }
-    Con_dir<Deformed_element> dir {{i_dim, i_dim}, {!sign, bool(sign)}};
-    if (is_def) {
-      std::vector<Deformed_element*> fine;
-      for (Tree* neighbor : neighbors) fine.push_back(neighbor->def_elem);
-      _connect(elem.tree->def_elem, fine, dir);
-    } else {
-      std::vector<Element*> fine;
-      for (Tree* neighbor : neighbors) fine.push_back(neighbor->elem.get());
-      _connect(&elem, fine, dir);
-    }
+    Connection_direction dir {{i_dim, i_dim}, {!sign, bool(sign)}};
+    std::vector<Element*> fine;
+    for (Tree* neighbor : neighbors) fine.push_back(neighbor->elem.get());
+    _connect(&elem, fine, dir);
   };
   for (int i_elem = start_at; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
@@ -1650,9 +1938,9 @@ void Accessible_mesh::connect_new(int start_at) {
             // if this element is at the boundary of the tree (as opposed to a surface geometry boundary),
             // set an extremal boundary condition
             if (neighbors.empty()) {
-              m.bound_cons.emplace_back(new Typed_bound_connection<element_t>(
-                elem, i_dim, sign, tree_bcs[2*i_dim + sign], bound_conds[tree_bcs[2*i_dim + sign]]->n_prescribed(nd)
-              ));
+              int bc_sn = tree_bcs[2*i_dim + sign];
+              auto& bound_face = elem.face(2*i_dim + sign);
+              _bound_cons.emplace_back(bound_face, bc_sn, bound_conds[bc_sn]->n_prescribed(nd));
             }
             // otherwise, if the element has not only a tree neighbor but also an element neighbor...
             else if (neighbors[0]->elem) {
@@ -1661,13 +1949,13 @@ void Accessible_mesh::connect_new(int start_at) {
                 // if ref levels are the same, make a conformal connection
                 if (other.refinement_level() == elem.refinement_level()) {
                   if (elem.deformed() && other.deformed()) {
-                    std::array<Deformed_element*, 2> el_ar {elem.tree->def_elem, neighbors[0]->def_elem};
-                    _connect(el_ar, Con_dir<Deformed_element>{{i_dim, i_dim}, {bool(sign), !sign}});
+                    std::array<Element*, 2> el_ar {elem.tree->def_elem, neighbors[0]->def_elem};
+                    _connect(el_ar, Connection_direction{{i_dim, i_dim}, {bool(sign), !sign}});
                   } else {
                     std::array<Element*, 2> el_ar;
                     el_ar[!sign] = &elem;
                     el_ar[sign] = &other;
-                    _connect(el_ar, Con_dir<Element>{i_dim});
+                    _connect(el_ar, Connection_direction{{i_dim, i_dim}, {1, 0}});
                   }
                 } else {
                   // if neighbor is coarser, form a hanging node connection
@@ -1757,7 +2045,10 @@ bool has_existent_children(Tree* t) {
 
 // whether an element is currently set to be deformed at the end of the `update` sweep
 bool is_def(Element& elem) {
-  return (elem.get_is_deformed() && elem.record == 0) || (!elem.get_is_deformed() && elem.record == 3);
+  Int record;
+  #pragma omp atomic read
+  record = elem.record;
+  return (elem.get_is_deformed() && record == 0) || (!elem.get_is_deformed() && record == 3);
 }
 
 // delete elements that would create pathological extrusion topology
@@ -1793,17 +2084,34 @@ void Accessible_mesh::delete_bad_extrusions() {
               }
             }
           }
-          // for all faces that share an edge with `i_face` (but only the ones with lower index to avoid redundancy)
+          // for all faces that share an edge with `i_face`
+          // (but only the ones with lower index to avoid redundancy)
           for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) {
-            if (exposed[i_face] || exposed[j_face]) {
-              auto dir = math::direction(nd, i_face);
-              dir(j_face/2) = math::sign(j_face%2);
-              auto diag_neighbs = elem.tree->find_neighbors(dir);
-              // if there are elements that are connected diagonally but have no mutual face neighbors, delete at least one of them
-              if (exposed[i_face] && exposed[j_face]) {
-                for (Tree* n : diag_neighbs) if (exists(n)) {
-                  // To make results repeatable, if the elements have different refinement levels, delete the finer one(s).
-                  // If they have the same refinement level, delete both
+            auto dir = math::direction(nd, i_face);
+            dir(j_face/2) = math::sign(j_face%2);
+            auto diag_neighbs = elem.tree->find_neighbors(dir);
+            // if there are elements that are connected diagonally but have no mutual face neighbors,
+            // delete at least one of them
+            if (exposed[i_face] && exposed[j_face]) {
+              for (Tree* n : diag_neighbs) if (exists(n)) {
+                // To make results repeatable, if the elements have different refinement levels,
+                // delete the finer one(s).
+                // If they have the same refinement level, delete both
+                if (n->refinement_level() >= elem.refinement_level()) {
+                  changed = true;
+                  #pragma omp atomic write
+                  n->elem->record = 2;
+                  if (n->refinement_level() == elem.refinement_level()) {
+                    #pragma omp atomic write
+                    elem.record = 2;
+                  }
+                }
+              }
+              for (int k_face = 0; k_face < 2*(j_face/2); ++k_face) if (exposed[k_face]) {
+                auto d = dir;
+                d(k_face/2) = math::sign(k_face%2);
+                auto neighbs = elem.tree->find_neighbors(d);
+                for (Tree* n : neighbs) if (exists(n)) {
                   if (n->refinement_level() >= elem.refinement_level()) {
                     changed = true;
                     #pragma omp atomic write
@@ -1814,32 +2122,16 @@ void Accessible_mesh::delete_bad_extrusions() {
                     }
                   }
                 }
-                for (int k_face = 0; k_face < 2*(j_face/2); ++k_face) if (exposed[k_face]) {
-                  auto d = dir;
-                  d(k_face/2) = math::sign(k_face%2);
-                  auto neighbs = elem.tree->find_neighbors(d);
-                  for (Tree* n : neighbs) if (exists(n)) {
-                    if (n->refinement_level() >= elem.refinement_level()) {
-                      changed = true;
-                      #pragma omp atomic write
-                      n->elem->record = 2;
-                      if (n->refinement_level() == elem.refinement_level()) {
-                        #pragma omp atomic write
-                        elem.record = 2;
-                      }
-                    }
-                  }
-                }
-              } else if (nd == 3) {
-                // if the edge is partially covered with fine elements, delete them
-                if (  !std::all_of(diag_neighbs.begin(), diag_neighbs.end(), exists)
-                    && std::any_of(diag_neighbs.begin(), diag_neighbs.end(), exists)) {
-                  changed = true;
-                  for (Tree* n : diag_neighbs) {
-                    if (n->elem) {
-                      #pragma omp atomic write
-                      n->elem->record = 2;
-                    }
+              }
+            } else {
+              // if the edge is partially covered with fine elements, delete them
+              if (  !std::all_of(diag_neighbs.begin(), diag_neighbs.end(), exists)
+                  && std::any_of(diag_neighbs.begin(), diag_neighbs.end(), exists)) {
+                changed = true;
+                for (Tree* n : diag_neighbs) {
+                  if (n->elem) {
+                    #pragma omp atomic write
+                    n->elem->record = 2;
                   }
                 }
               }
@@ -1902,14 +2194,20 @@ void Accessible_mesh::delete_bad_extrusions() {
       if (!elem.tree || !elem.has_shape() || elem.record == 2) continue;
       for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
         auto& vert = elem.active_shape().vertex(i_vert);
-        for (int i = 0; i < Int(vert.record.size()); ++i) {
-          for (int j = 0; j < Int(vert.record.size()); ++j) if (i != j) {
+        for (Int i = 0; i < Int(vert.record.size()); ++i) {
+          for (Int j = i + 1; j < Int(vert.record.size()); ++j) {
             if (vert.record[i]/2 == vert.record[j]/2 && vert.record[i]%2 != vert.record[j]%2) {
               changed = true;
               elem.record = 2;
-              vert.record.clear();
             }
           }
+        }
+      }
+      // if this element is being deleted, all its vertices should be reassessed in the next sweep
+      // and we know there will be another sweep, because if `elem.record == 2` then `changed == true`
+      if (elem.record == 2) {
+        for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+          elem.active_shape().vertex(i_vert).record.clear();
         }
       }
     }
@@ -1927,40 +2225,24 @@ void Accessible_mesh::deform() {
     auto& elem = elems[i_elem];
     if (elem.record != 2 && elem.get_is_deformed() && elem.tree) elem.record = 3;
   }
-  // deform all boundary elements and certain of their face neighbors
+  // deform all elements that have a vertex on the boundary
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     if (elem.record != 2 && elem.tree) {
-      // figure out if this element has a face on the boundary
-      std::vector<Tree*> neighbors [6];
-      bool surface [6] {};
-      bool boundary = false;
-      for (int i_face = 0; i_face < 2*nd; ++i_face) {
-        neighbors[i_face] = elem.tree->find_neighbors(math::direction(nd, i_face));
-        if (!neighbors[i_face].empty()) {
-          if (neighbors[i_face][0]->elem) surface[i_face] = neighbors[i_face][0]->elem->record == 2;
-          else surface[i_face] = true;
+      bool def = false;
+      for (int i_direction = 1; i_direction < math::pow(3, params.n_dim); ++i_direction) {
+        Eigen::VectorXi direction(params.n_dim);
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          int dir = i_direction/math::pow(3, i_dim)%3;
+          direction(i_dim) = (dir == 2) ? -1 : dir;
         }
-        boundary = boundary || surface[i_face];
-      }
-      // if it does, deform it and all face neighbors which are not opposite the boundary face
-      if (boundary) {
-        #pragma omp atomic write
-        elem.record = 3*!elem.get_is_deformed();
-        for (int i_face = 0; i_face < 2*nd; ++i_face) {
-          bool def_face = false;
-          for (int j_face = 0; j_face < 2*nd; ++j_face) {
-            if (j_face/2 != i_face/2 && surface[j_face]) def_face = true;
-          }
-          if (def_face) {
-            for (Tree* n : neighbors[i_face]) if (n->elem) if (n->elem->record != 2) {
-              #pragma omp atomic write
-              n->elem->record = 3*!n->elem->get_is_deformed();
-            }
-          }
+        auto neighb = elem.tree->find_neighbors(direction);
+        if (!neighb.empty()) {
+          for (auto n : neighb) def = def || !exists(n);
         }
       }
+      if (def) elem.record = 3*!elem.get_is_deformed();
     }
   }
   // if any refined faces have some elements cartesian and some deformed, make them all deformed
@@ -1971,8 +2253,8 @@ void Accessible_mesh::deform() {
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       if (elem.tree && is_def(elem)) {
-        for (int i_face = 0; i_face < 2*nd; ++i_face) {
-          auto neighbors = elem.tree->find_neighbors(math::direction(nd, i_face));
+        auto check_direction = [&](Eigen::VectorXi dir) {
+          auto neighbors = elem.tree->find_neighbors(dir);
           bool any_deformed = false;
           bool all_deformed = true;
           for (Tree* neighbor : neighbors) {
@@ -1987,6 +2269,23 @@ void Accessible_mesh::deform() {
                 changed = true;
                 #pragma omp atomic write
                 neighbor->elem->record = 3*!neighbor->elem->get_is_deformed();
+              }
+            }
+          }
+        };
+        for (int i_face = 0; i_face < 2*nd; ++i_face) {
+          check_direction(math::direction(nd, i_face));
+        }
+        if (nd == 3) { // also check edges
+          for (int i_dim = 0; i_dim < 3; ++i_dim) {
+            for (int i_sign : {-1, 0, 1}) {
+              for (int j_sign : {-1, 0, 1}) {
+                if (i_sign != 0 || j_sign != 0) {
+                  Eigen::VectorXi direction = Eigen::VectorXi::Zero(3);
+                  direction(i_dim) = i_sign;
+                  direction((i_dim + 1)%3) = j_sign;
+                  check_direction(direction);
+                }
               }
             }
           }
@@ -2012,20 +2311,31 @@ void Accessible_mesh::deform() {
 
 void Accessible_mesh::purge() {
   if (tree) {
-    // delete obsolete elements of `extrude_cons`
-    erase_if(extrude_cons, [](Element_face_connection<Deformed_element>* con){return con->element(0).record == 2 || con->element(1).record == 2;});
-    // delete connections to old elements (has to happen before deleting elements or else use after free)
-    car.purge_connections();
-    def.purge_connections();
     // delete old elements
     car.elems.purge();
     def.elems.purge();
+    // delete dangling connections
+    for (int is_def : {0, 1}) {
+      std::erase_if(_neighbor_cons[is_def], [](Neighbor_connection& con){return !con.alive();});
+    }
+    std::erase_if(_face_refs, [](std::vector<Face_refinement>& vec) {
+      for (Face_refinement& face_ref : vec) {
+        if (!(face_ref.alive() && face_ref.fine()[0]->connected() && face_ref.fine()[1]->connected())) return true;
+      }
+      return false;
+    });
+    for (int is_def : {0, 1}) {
+      std::erase_if(_neighbor_cons[is_def], [](Neighbor_connection& con){return !con.alive();});
+    }
+    // delete obsolete elements of `_extrude_cons`
+    for (int i = 0; i < 3; ++i) {
+      erase_if(_extrude_cons[i], [](Mortal_ptr<Neighbor_connection>& ptr){return !ptr;});
+    }
+    erase_if(_bound_cons, [](Boundary_connection& con){return !con.neighbor_connection().alive();});
     // delete old matched vertices and edges
-    _blocks.verts(); // evaluating `verts` and `boundary_sides` automatically purges the vertex and face/edge lists
+    _blocks.boundary_verts();
+    _blocks.interior_verts();
     _blocks.boundary_sides();
-    std::erase(point_matched_vertices, nullptr);
-    for (auto& vec : matched_vertices) std::erase(vec, nullptr);
-    for (auto& vec : matched_edges) std::erase(vec, nullptr);
   }
 }
 
@@ -2043,6 +2353,37 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   int nd = params.n_dim;
   auto& elems = elements();
   Int n_before = elems.size();
+  // determine uncertainty in surface fit
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < n_before; ++i_elem) elems[i_elem].active_shape().uncertainty = 0;
+  if (surf_geom) {
+    next::Sequence<next::Boundary_block&> sides = params.n_dim == 3
+                                                  ? _blocks.faces_3d().cast<next::Boundary_block&>()
+                                                  : _blocks.edges_2d().cast<next::Boundary_block&>();
+    #pragma omp parallel for
+    for (next::Boundary_block& block : sides) {
+      Gauss_legendre sample_basis(params.row_size);
+      Mat<dyn, dyn> interp = block.basis().interpolate(sample_basis.nodes());
+      Mat<> weights = math::pow_outer(sample_basis.node_weights(), params.n_dim - 1);
+      Array<double> interp_points = block.points();
+      Array<double> sample_points({params.n_dim, params.n_face_qpoint()});
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        sample_points(i_dim).vector() = math::hypercube_matvec(interp, interp_points(i_dim).vector());
+      }
+      double uncert_sq = 0;
+      for (int i_qpoint = 0; i_qpoint < params.n_face_qpoint(); ++i_qpoint) {
+        Mat<3> point = Mat<3>::Zero();
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) point(i_dim) = sample_points(i_dim)[i_qpoint];
+        Mat<3> nearest = resize(surf_geom->nearest_point(point).point(), 3);
+        uncert_sq += weights(i_qpoint)*(point - nearest).squaredNorm();
+      }
+      block.element()->uncertainty = std::sqrt(uncert_sq);
+    }
+  }
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < n_before; ++i_elem) {
+    elems[i_elem].uncertainty = elems[i_elem].active_shape().uncertainty;
+  }
   {
     Stopwatch_tree::Starter sw_refine(_stopwatch["update"]["refinement"]);
     // decide which elements to (un)refine
@@ -2055,14 +2396,19 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       if (ref && !unref) elem.record = 1;
       else if (unref && !ref) elem.record = -1;
     }
-    // pass refinement requests of extruded elements to their extrusion parents
-    #pragma omp parallel for
-    for (auto con : extrude_cons) {
-      auto& inside = con->element(1);
-      Lock::Acquire a(inside.lock);
-      if (inside.record == 0) inside.record = con->element(0).record;
-      else inside.record = std::max(inside.record, con->element(0).record);
-      inside.unrefinement_locked = inside.unrefinement_locked || con->element(0).unrefinement_locked;
+    for (int i = 0; i < 3; ++i) {
+      #pragma omp parallel for
+      for (auto& con : _extrude_cons[i]) {
+        HEXED_ASSERT(con, "null extruded connection")
+        HEXED_ASSERT(con->face(0).element() && con->face(1).element(),
+                     "extruded connection is not connected to elements")
+        auto& inside = *con->face(1).element();
+        auto& extruded = *con->face(0).element();
+        Lock::Set s(inside.lock);
+        if (inside.record == 0) inside.record = extruded.record;
+        else inside.record = std::max(inside.record, extruded.record);
+        inside.unrefinement_locked = inside.unrefinement_locked || extruded.unrefinement_locked;
+      }
     }
     int n_orig [2];
     // refine elements
@@ -2208,11 +2554,10 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       if (!elems[i_elem].tree) elems[i_elem].record = 2;
     }
     purge();
-    delete_bad_extrusions();
-    purge();
     // connect new elements
     connect_new<         Element>(0);
     connect_new<Deformed_element>(0);
+    delete_bad_extrusions();
     deform();
     purge();
     connect_new<         Element>(0);
@@ -2222,22 +2567,14 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   extrude(true);
   if (surf_geom) {
     connect_rest(surf_bc_sn);
-    for (auto& ptr : point_matched_vertices) ptr.set();
-    for (Int i_edge = 0; i_edge < (Int)surf_geom->edges().size(); ++i_edge) {
-      matched_vertices[i_edge].clear();
-      matched_edges[i_edge].clear();
-    }
     _fit_surface();
     connect_rest(surf_bc_sn);
     _n_verts = _blocks.verts().size();
   }
+  purge();
   _n_verts = _blocks.verts().size();
   _stopwatch["update"].work_units_completed += 1;
   Int n_after = elems.size();
-  printers::info(format_str(100, "  %li net elements created\n", n_after - n_before));
-  for (auto& con : car.cons) {
-    HEXED_ASSERT(!con->element(0).deformed() || !con->element(1).deformed(), "cartesian connection between deformed elements");
-  }
   return n_after - n_before;
 }
 
@@ -2254,14 +2591,10 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
     mesh._mask_levels,
     basis,
     mesh._turb,
-    _masked_car_cons.slice,
-    _masked_def_cons.slice,
     _masked_car_elems.slice,
     _masked_def_elems.slice,
     _masked_elems.slice,
-    _masked_ref_faces.slice,
-  },
-  bound_cons{_masked_bound_cons.slice}
+  }
 {
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < mesh.elems.size(); ++i_elem) {
@@ -2269,27 +2602,34 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
       mesh.elems[i_elem]._mask = mesh._mask_levels;
     }
   }
-  #define MASK_REF_CONS(mbt) \
-    for (int i_con = 0; i_con < mbt.refined_connections().size(); ++i_con) { \
-      auto& con = mbt.refined_connections()[i_con]; \
-      con.refined_face.coarse_mask = con.coarse_element().mask(); \
-      for (int i_fine = 0; i_fine < con.n_fine_elements(); ++i_fine) { \
-        con.refined_face.fine_masks[i_fine] = con.connection(i_fine).element(!con.order_reversed()).mask(); \
-      } \
-      for (int i_fine = con.n_fine_elements(); i_fine < 4; ++i_fine) con.refined_face.fine_masks[i_fine] = 0; \
-    }
-  #pragma omp parallel for
-  MASK_REF_CONS(mesh.car)
-  #pragma omp parallel for
-  MASK_REF_CONS(mesh.def)
-  #undef MASK_REF_CONS
   _masked_elems.populate(mesh.elems, [&](Element& elem){return elem.mask() >= mesh._mask_levels;});
   _masked_car_elems.populate(mesh.car.elements(), [&](Element& elem){return elem.mask() >= mesh._mask_levels;});
   _masked_def_elems.populate(mesh.def.elements(), [&](Element& elem){return elem.mask() >= mesh._mask_levels;});
-  _masked_car_cons.populate(mesh.car.kernel_connections(), [&](Kernel_connection& con){return con.mask() >= mesh._mask_levels;});
-  _masked_def_cons.populate(mesh.def.kernel_connections(), [&](Kernel_connection& con){return con.mask() >= mesh._mask_levels;});
-  _masked_ref_faces.populate(mesh.ref_face_v, [&](Refined_face& face){return face.mask() >= mesh._mask_levels;});
-  _masked_bound_cons.populate(mesh.bound_cons, [&](Boundary_connection& con){return con.mask() >= mesh._mask_levels;});
+  std::vector<Hard_kernel_connection>* vecs [2] {&kernel_mesh.car_connections, &kernel_mesh.def_connections};
+  for (bool is_def : {0, 1}) {
+    for (Int i_con = 0; i_con < (Int)mesh._neighbor_cons[is_def].size(); ++i_con) {
+      Hard_kernel_connection ker_con = mesh._neighbor_cons[is_def][i_con].kernel_connection();
+      if (std::max(ker_con.mask[0], ker_con.mask[1]) >= mesh._mask_levels) {
+        vecs[is_def]->push_back(ker_con);
+      }
+    }
+  }
+  for (auto& con : mesh._bound_cons) if (con.inside().mask() >= mesh._mask_levels) {
+    bound_cons.push_back(&con);
+    vecs[con.inside().is_deformed()]->push_back(con.neighbor_connection().kernel_connection());
+  }
+  for (auto& vec : mesh._face_refs) {
+    kernel_mesh.face_refinements.emplace_back();
+    for (auto& ref : vec) {
+      auto ref_elems = ref.elements();
+      int mask = -1;
+      for (int i_side = 0; i_side < 2; ++i_side) {
+        for (Element* elem : ref_elems[i_side]) mask = std::max(mask, elem->mask());
+      }
+      if (mask >= mesh._mask_levels) kernel_mesh.face_refinements.back().push_back(ref.kernel_face_refinement());
+    }
+    if (kernel_mesh.face_refinements.back().empty()) kernel_mesh.face_refinements.pop_back();
+  }
   ++mesh._mask_levels;
 }
 
@@ -2312,56 +2652,12 @@ std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::pret
   return masks;
 }
 
-void Accessible_mesh::reset_verts() {
-  #if 0
-  int nv = params.n_vertices();
-  auto verts = vertices();
-  #pragma omp parallel for
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
-    verts[i_vert].temp_vector = verts[i_vert].pos;
-  }
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements().size(); ++i_elem) {
-    auto& elem = elements()[i_elem];
-    if (elem.tree) {
-      for (int i_vert = 0; i_vert < nv; ++i_vert) {
-        auto& vert = elem.vertex(i_vert);
-        Lock::Acquire a(vert.lock);
-        vert.pos = elem.tree->nominal_position();
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          vert.pos(i_dim) += elem.tree->nominal_size()*((i_vert/math::pow(2, params.n_dim - 1 - i_dim))%2);
-        }
-      }
-    }
-  }
-  #pragma omp parallel for
-  for (unsigned i_con = 0; i_con < extrude_cons.size(); ++i_con) {
-    auto con = extrude_cons[i_con];
-    auto& elem = con->element(0);
-    auto dir = con->direction();
-    int stride = math::pow(2, params.n_dim - 1 - dir.i_dim[0]);
-    for (int i_vert = 0; i_vert < nv; ++i_vert) {
-      auto& vert = elem.vertex(i_vert);
-      Lock::Acquire a(vert.lock);
-      int face_sign = (i_vert/stride)%2;
-      if (face_sign == dir.face_sign[1]) {
-        vert.pos = elem.vertex(i_vert + stride*(dir.face_sign[0] - face_sign)).pos;
-      }
-    }
-  }
-  verts_are_reset = true;
-  #endif
+next::Sequence<Flow_bc&> Accessible_mesh::boundary_conditions() {
+  return next::Sequence<std::unique_ptr<Flow_bc>&>::vector_view(bound_conds).dereference<Flow_bc&>();
 }
 
-void Accessible_mesh::restore_verts() {
-  #if 0
-  verts_are_reset = false;
-  auto verts = vertices();
-  #pragma omp parallel for
-  for (int i_vert = 0; i_vert < verts.size(); ++i_vert) {
-    verts[i_vert].pos = verts[i_vert].temp_vector;
-  }
-  #endif
+next::Sequence<Boundary_connection&> Accessible_mesh::boundary_connections() {
+  return next::Sequence<Boundary_connection&>::vector_view(_bound_cons);
 }
 
 template <typename T>
@@ -2485,7 +2781,8 @@ void Accessible_mesh::write(std::string name) {
     elem.record = i_elem;
   }
   // write conformal connections
-  dims[0] = car.cons.size() + def.cons.size();
+  #if 0
+  dims[0] = _neighbor_cons[0].size() + _neighbor_cons[1].size();
   dims[1] = 6;
   file.createGroup("/connections");
   auto con_dset = file.createDataSet("/connections/conformal", H5::PredType::NATIVE_INT, H5::DataSpace(2, dims));
@@ -2501,8 +2798,8 @@ void Accessible_mesh::write(std::string name) {
       } \
       h5_write_row(con_dset, 6, start + i_con, data); \
     }
-  WRITE_CONS(0, car.cons);
-  WRITE_CONS(car.cons.size(), def.cons);
+  //WRITE_CONS(0, car.cons);
+  //WRITE_CONS(car.cons.size(), def.cons);
   #undef WRITE_CONS
   // write refined connections
   auto& car_cons = car.refined_connections();
@@ -2520,7 +2817,7 @@ void Accessible_mesh::write(std::string name) {
       } \
       for (int i_fine = con.n_fine_elements(); i_fine < 4; ++i_fine) data[1 + i_fine] = -1; \
       for (int i_dim : {0, 1}) data[5 + i_dim] = con.stretch()[i_dim]; \
-      Con_dir<Deformed_element> dir = con.direction(); \
+      Connection_direction dir = con.direction(); \
       for (int i_side = 0; i_side < 2; ++i_side) { \
         data[7 + i_side] = dir.i_dim[i_side]; \
         data[9 + i_side] = dir.face_sign[i_side]; \
@@ -2534,8 +2831,10 @@ void Accessible_mesh::write(std::string name) {
     }
   WRITE_REF_CONS(0, car_cons);
   WRITE_REF_CONS(car_cons.size(), def_cons);
+  #endif
   #undef WRITE_REF_CONS
   // write boundary connections
+  #if 0
   auto& bound_cons = boundary_connections();
   dims[0] = bound_cons.size();
   dims[1] = 4;
@@ -2549,6 +2848,7 @@ void Accessible_mesh::write(std::string name) {
     data[3] = con.inside_face_sign();
     h5_write_row(bound_con_dset, 4, i_con, data);
   }
+  #endif
   // write tree
   if (tree) {
     file.createGroup("/tree");
@@ -2632,6 +2932,7 @@ void Accessible_mesh::read_file(std::string file_name) {
     read_tree(tree.get(), 0);
   }
   // read conformal connections
+  #if 0
   auto con_dset = file.openDataSet("/connections/conformal");
   con_dset.getSpace().getSimpleExtentDims(dims);
   int n_con = dims[0];
@@ -2641,11 +2942,10 @@ void Accessible_mesh::read_file(std::string file_name) {
     std::array<Element*, 2> el_ar;
     for (int i_side = 0; i_side < 2; ++i_side) el_ar[i_side] = elem_ptrs[data[i_side]];
     if (el_ar[0]->get_is_deformed() && el_ar[1]->get_is_deformed()) {
-      std::array<Deformed_element*, 2> def_el_ar {def_elem_ptrs[data[0]], def_elem_ptrs[data[1]]};
-      _connect(def_el_ar, {{data[2], data[3]}, {bool(data[4]), bool(data[5])}});
-      if (bool(def_el_ar[0]->tree) != bool(def_el_ar[1]->tree)) extrude_cons.push_back(def.cons.back().get());
+      _connect(el_ar, {{data[2], data[3]}, {bool(data[4]), bool(data[5])}}, "read deformed");
+      //if (bool(def_el_ar[0]->tree) != bool(def_el_ar[1]->tree)) extrude_cons.push_back(def.cons.back().get());
     } else {
-      _connect(el_ar, {data[2]});
+      _connect(el_ar, {data[2]}, "read hanging");
     }
   }
   // read refined connections
@@ -2659,20 +2959,11 @@ void Accessible_mesh::read_file(std::string file_name) {
     int n_fine = math::pow(2, params.n_dim - 1 - stretch[0] - stretch[1]);
     Element* coarse = elem_ptrs[data[0]];
     std::vector<Element*> fine(n_fine);
-    bool is_def = coarse->get_is_deformed();
     for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
       fine[i_fine] = elem_ptrs[data[1 + i_fine]];
-      is_def = is_def && fine[i_fine]->get_is_deformed();
     }
-    Con_dir<Deformed_element> dir {{data[7], data[8]}, {bool(data[9]), bool(data[10])}};
-    if (is_def) {
-      Deformed_element* def_coarse = def_elem_ptrs[data[0]];
-      std::vector<Deformed_element*> def_fine(n_fine);
-      for (int i_fine = 0; i_fine < n_fine; ++i_fine) def_fine[i_fine] = def_elem_ptrs[data[1 + i_fine]];
-      _connect(def_coarse, def_fine, dir, stretch);
-    } else {
-      _connect(coarse, fine, dir);
-    }
+    Connection_direction dir {{data[7], data[8]}, {bool(data[9]), bool(data[10])}};
+    _connect(coarse, fine, dir, stretch, "read hanging");
   }
   // read boundary connections
   auto bound_con_dset = file.openDataSet("/connections/boundary");
@@ -2691,6 +2982,7 @@ void Accessible_mesh::read_file(std::string file_name) {
       ));
     }
   }
+  #endif
   cleanup();
 }
 
@@ -2745,6 +3037,7 @@ void write_polymesh_file(std::string dir_name, std::string name, std::string cls
 }
 
 void Accessible_mesh::export_polymesh(std::string dir_name) {
+  #if 0
   dir_name = dir_name + "polyMesh/";
   if (std::filesystem::exists(dir_name)) std::filesystem::remove_all(dir_name);
   std::filesystem::create_directory(dir_name);
@@ -2822,14 +3115,43 @@ void Accessible_mesh::export_polymesh(std::string dir_name) {
   });
   write_polymesh_file(dir_name, "owner",     "labelList", n_faces,    [&](int i_entry){return format_str(100, "%i", owners   [i_entry]);}, face_note);
   write_polymesh_file(dir_name, "neighbour", "labelList", n_internal, [&](int i_entry){return format_str(100, "%i", neighbors[i_entry]);}, face_note);
+  #endif
+}
+
+void Accessible_mesh::visualize_deformed(std::string format, std::string file_name, double time) {
+  int nd = params.n_dim;
+  auto vis_elems = Visualizer::create("default", nd, 1, file_name, {"last_improve_iters"}, time, Visualizer::block);
+  auto& elems = elements();
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (!elem.get_is_deformed()) continue;
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      for (int i_edge = 0; i_edge < params.n_vertices()/2; ++i_edge) {
+        Array<double> pos({3, 2});
+        Array<double> data({1, 2});
+        for (int i_end = 0; i_end < 2; ++i_end) {
+          int i_vert = i_end*math::pow(2, nd - 1 - i_dim);
+          for (int j_dim = 0; j_dim < nd - 1; ++j_dim) {
+            i_vert += i_edge/math::pow(2, nd - 2 - j_dim)%2*math::pow(2, nd - 1 - j_dim - (j_dim >= i_dim));
+          }
+          auto& vert = elem.active_shape().vertex(i_vert);
+          pos.column(i_end).vector() = vert.unwarped_point();
+          data[i_end] = vert.last_improve_iters();
+        }
+        vis_elems->write_block(pos, data);
+      }
+    }
+  }
 }
 
 void Accessible_mesh::visualize(std::string format, std::string file_name, double time) {
-  next::Sequence<const next::Block&> shapes(
-    [this](std::size_t index)->const next::Block& {return elements()[index].shape();},
-    [this]()->std::size_t {return elements().size();}
-  );
-  next::Block::visualize(format, file_name, shapes, time);
+  std::vector<next::Element_shape*> shapes;
+  auto& elems = elements();
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    if (elems[i_elem].has_shape()) shapes.push_back(&elems[i_elem].shape());
+  }
+  auto seq = next::Sequence<next::Element_shape*>::vector_view(shapes).dereference<const next::Block&>();
+  next::Block::visualize(format, file_name, seq, time);
 }
 
 }

@@ -5,7 +5,7 @@
 namespace hexed {
 
 Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level,
-                 Mat<> origin_arg, bool mobile_vertices, int aniso_r_level)
+                 Mat<> origin_arg, bool mobile_vertices, int aniso_r_level, bool is_def)
 : params(params_arg)
 , n_dim(params.n_dim)
 , _nom_pos(pos)
@@ -16,7 +16,8 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
 , n_dof(params.n_dof())
 , n_vert(params.n_vertices())
 , data_size{params.n_dof_numeric() + config::debug_variables*params.n_qpoint()}
-, data{Eigen::VectorXd::Zero(data_size)}
+, face_size{(is_def*params.n_dim + std::max(2*params.n_var, params.n_dim + params.n_advection(params.row_size)))*params.n_face_qpoint()}
+, data{Eigen::VectorXd::Zero(data_size + 2*n_dim*face_size)}
 , _vertex_data({3, params.n_vertices()})
 , _mask{0}
 , tree(this)
@@ -24,7 +25,7 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
 {
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
-      _faces.emplace_back(params, i_dim, sign);
+      _faces.emplace_back(params, i_dim, sign, is_def, data.data() + data_size + (2*i_dim + sign)*face_size);
       _faces.back().associate(*this);
     }
   }
@@ -38,8 +39,9 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
   _vertex_data(1, 3) = 0.;
 }
 
-Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level)
-: Element(params_arg, pos, mesh_size, ref_level, origin_arg, false, aniso_r_level)
+Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
+                 int aniso_r_level)
+: Element(params_arg, pos, mesh_size, ref_level, origin_arg, false, aniso_r_level, false)
 {}
 
 Storage_params Element::storage_params() {
@@ -124,7 +126,7 @@ void Element::set_face(int i_face, double* data) {
   HEXED_ASSERT(!faces[i_face] || !data, "connecting an already-connected face");
   faces[i_face] = data;
 }
-bool Element::is_connected(int i_face) {return faces[i_face];}
+bool Element::is_connected(int i_face) {return faces[i_face] || _faces[i_face].connected();}
 
 Mat<3> Element::_compute_pos() const {
   Mat<3> pos = Mat<3>::Zero();
@@ -164,8 +166,12 @@ void Element::destroy_shape() {
   _fake_shape.reset();
 }
 
+void Element::destroy_fake() {
+  _fake_shape.reset();
+}
+
 next::Element_shape& Element::shape() {
-  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
+  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.")
   return *_shape;
 }
 
@@ -175,12 +181,22 @@ next::Element_shape& Element::active_shape() {
 }
 
 double* Element::state() {return data.data();}
-double* Element::residual_cache() {return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();}
-double* Element::face(int i_face, bool is_ldg) {return faces[i_face] + is_ldg*params.n_dof()/params.row_size;}
+double* Element::residual_cache() {
+  return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();
+}
+
+double* Element::face(int i_face, bool is_ldg) {
+  return data.data() + data_size + i_face*face_size + is_ldg*n_dof/params.row_size;
+}
+
 bool Element::deformed() const {return false;}
 double* Element::reference_level_normals() {return nullptr;}
 double* Element::jacobian_determinant() {return nullptr;}
-double* Element::kernel_face_normal(int i_face) {return nullptr;}
+
+double* Element::kernel_face_normal(int i_face) {
+  Array<double> nrml = _faces[i_face].normal();
+  return nrml.size() == 0 ? nullptr : nrml.data();
+}
 
 double* Element::debug_variables() {
   HEXED_ASSERT(config::debug_variables, "Attempt to access nonexistant dummy variables.");

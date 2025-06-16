@@ -6,8 +6,7 @@
 #include "Kernel_connection.hpp"
 #include "math.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 /*
  * Permutes quadrature points on a face to match another face.
@@ -15,8 +14,7 @@ namespace hexed
  * the ordering of quadrature points on the respective faces to mismatch.
  * This class reorders the data corresponding to face 1 to match face 0.
  */
-class Face_permutation_dynamic
-{
+class Face_permutation_dynamic {
   public:
   virtual ~Face_permutation_dynamic() = default;
   // reorder face 1 data to match face 0
