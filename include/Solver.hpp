@@ -158,9 +158,8 @@ class Solver {
   /*! \brief compute the Jacobian of all elements based on the current position of the vertices
    * and value of any face warping.
    * \details Mesh topology must be valid (no duplicate or missing connections) before calling this function.
-   * \param snap_faces if `true`, this function will go ahead and perform face snapping for you
    */
-  void calc_jacobian(bool snap_faces = true);
+  void calc_jacobian();
   //! \brief set the flow state from an HIL expression
   //! \details `espression` must set the variables `momentum0`, ..., `momentum[n_dim - 1]`, `density`, `energy`
   void initialize(std::string expression);

@@ -295,7 +295,7 @@ void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs
                "attempt to read a mesh file with a different `row_size`");
   HEXED_ASSERT(acc_mesh->storage_params().n_forcing == params.n_forcing,
                "attempt to read a mesh file with a different `n_forcing`");
-  calc_jacobian(false);
+  calc_jacobian();
 }
 
 void Solver::read_state(std::string file_name) {
@@ -338,7 +338,7 @@ void Solver::write_state(std::string file_name) {
   }
 }
 
-void Solver::calc_jacobian(bool snap) {
+void Solver::calc_jacobian() {
   acc_mesh->valid().assert_valid();
   _preti_masks = acc_mesh->preti_masks(basis);
   // compute element jacobians
@@ -346,6 +346,9 @@ void Solver::calc_jacobian(bool snap) {
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
+    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+      HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
+    }
   }
   // do some extra work to make sure each face knows its normal vectors
   auto face_refs = acc_mesh->face_refinements();

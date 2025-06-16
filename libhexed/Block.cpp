@@ -226,6 +226,14 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim));
       }
       if (state.feasible) {
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          double orth_diff = ma.orthogonality(i_dim) - ortho_tolerance;
+          state.objective += (!skip_obj)*10./orth_diff;
+          double num = ma.edge_lengths(i_dim)*ma.orthogonality(i_dim) - 1.;
+          double denom = ma.edge_lengths(i_dim) - edge_tolerance;
+          state.objective += (!skip_obj)*num*num/denom;
+        }
+        // note: the valid values for `gradient_weight` are 1., .5, and .25
         if (gradient_weight > .3 && that_vert.glued() && i_this != i_that) {
           bool coupled = false;
           for (Vertex* v : {this, orig_vertex}) {
