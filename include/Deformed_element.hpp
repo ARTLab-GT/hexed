@@ -13,7 +13,6 @@ class Deformed_element : public Element {
   // jacobian data (first `n_dim*n_dim*n_qpoints` are `reference_level_normals`
   // and rest is `jacobian_determinant`)
   Eigen::VectorXd jac_dat;
-  double* f_nrml [6];
 
   public:
   bool degenerate = 0;
@@ -27,13 +26,11 @@ class Deformed_element : public Element {
 
   double* reference_level_normals() override;
   double* jacobian_determinant() override;
-  double*& face_normal(int i_face);
 
   virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
   virtual double jacobian_determinant(int i_qpoint);
 
   bool deformed() const override;
-  double* kernel_face_normal(int i_face) override;
 };
 
 }

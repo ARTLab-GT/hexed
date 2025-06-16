@@ -1,0 +1,7 @@
+#include <catch2/catch_all.hpp>
+#include <hexed/format_str.hpp>
+
+TEST_CASE("format_str") {
+  REQUIRE(hexed::format_str(100, "%.2f == %d", M_PI, 3) == std::string{"3.14 == 3"});
+}
+

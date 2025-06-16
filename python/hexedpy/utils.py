@@ -94,6 +94,26 @@ def joukowsky(thickness, camber = 0., n_points = 1000, scale = True):
 ## \brief alternative transliteration
 zhukovsky = joukowsky
 
+def sort_curve(data, coords, start_at=0, closed=True):
+    r"""! \brief Returns data sorted into a continuous curve.
+    \param data A [pandas.DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html)
+        containing the data (coordinates and flow variables) to be sorted
+    \param coords Labels of columns to treat as coordinates
+    \param start_at Index of point to start at
+    \param closed If true, will append an additional copy of the start point to the end
+        to ensure that the final curve is closed.
+    """
+    old_inds = list(range(len(data)))
+    new_inds = [old_inds.pop(start_at)]
+    while len(old_inds):
+        def get_dist(ind):
+            return np.linalg.norm(data[coords].iloc[ind] - data[coords].iloc[new_inds[-1]])
+        nearest = np.argmin([get_dist(ind) for ind in old_inds])
+        new_inds.append(old_inds.pop(nearest))
+    if closed:
+        new_inds.append(new_inds[0])
+    return data.reindex(index=new_inds)
+
 class History_plot:
     r"""! \brief creates a real-time, interactive plot of the convergence history
     \details Convergence history is obtained from the `output.txt` file which contains the console output of \ref hexecute.

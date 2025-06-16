@@ -25,6 +25,10 @@ TEST_CASE("Array") {
   REQUIRE(zero_size.shape().empty());
   REQUIRE(zero_size.size() == 0);
 
+  arr0(1)(1) = {.1, .2, .3, .4};
+  REQUIRE_THAT(arr0(1)(1), Catch::Matchers::RangeEquals(std::vector<double>{.1, .2, .3, .4},
+                                                        hexed::math::Approx_equal()));
+
   // indexing
   auto view = arr0();
   view[1] = 0.6;
@@ -44,6 +48,22 @@ TEST_CASE("Array") {
   for (int i = 0; i < 24; ++i) REQUIRE(arr0[i] == Catch::Approx(i));
   arr0[1] = 42;
   REQUIRE(arr1[1] == Catch::Approx(1));
+
+  // interpolation
+  hexed::Array<double> interp_arr({4, 2});
+  interp_arr = hexed::Array<double>::make(.1, .01, .2, .02, .3, .03, .4, .04).reshaped({4, 2});
+  REQUIRE_THAT(interp_arr.interp(0), Catch::Matchers::RangeEquals(std::vector<double>{.1, .01},
+                                     hexed::math::Approx_equal()));
+  REQUIRE_THAT(interp_arr.interp(.1), Catch::Matchers::RangeEquals(std::vector<double>{.11, .011},
+                                      hexed::math::Approx_equal()));
+  REQUIRE_THAT(interp_arr.interp(1.9), Catch::Matchers::RangeEquals(std::vector<double>{.29, .029},
+                                       hexed::math::Approx_equal()));
+  REQUIRE_THAT(interp_arr.interp(3), Catch::Matchers::RangeEquals(std::vector<double>{.4, .04},
+                                     hexed::math::Approx_equal()));
+  REQUIRE_THAT(interp_arr.interp(3.1), Catch::Matchers::RangeEquals(std::vector<double>{.41, .041},
+                                       hexed::math::Approx_equal()));
+  REQUIRE_THAT(interp_arr.interp(-.1), Catch::Matchers::RangeEquals(std::vector<double>{.09, .009},
+                                       hexed::math::Approx_equal()));
 
   // reshaping
   auto reshaped0 = arr0.reshaped({5, 4});
@@ -135,5 +155,14 @@ TEST_CASE("Array") {
     REQUIRE(col1.vector()(6) == whole(6)(2)[4]);
     REQUIRE(whole.order() == 3);
     REQUIRE_THAT(whole.shape(), Catch::Matchers::RangeEquals(std::vector<int>{10, 10, 10}));
+  }
+
+  SECTION("comparisons") {
+    auto arr0 = hexed::Array<int>::make(1, -2, 4);
+    auto arr1 = hexed::Array<int>::make(2, -1, 3);
+    REQUIRE_THAT(arr0.extreme(0, arr1), Catch::Matchers::RangeEquals(std::vector<int>{1, -2, 3}));
+    REQUIRE_THAT(arr0.extreme(1, arr1), Catch::Matchers::RangeEquals(std::vector<int>{2, -1, 4}));
+    REQUIRE(arr0.extreme(0) == -2);
+    REQUIRE(arr0.extreme(1) == 4);
   }
 }

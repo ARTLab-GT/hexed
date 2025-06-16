@@ -1,8 +1,7 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Row_rw.hpp>
 
-TEST_CASE("Row_rw")
-{
+TEST_CASE("Row_rw") {
   // test interior row operations
   double interior [3*7*7];
   for (int i = 0; i < 3*7*7; ++i) interior[i] = i;

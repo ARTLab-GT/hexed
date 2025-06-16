@@ -75,17 +75,17 @@ freestream_spec_int_ener = {(freestream3/freestream2 - 0.5*(freestream0^2 + free
 freestream_sound_speed_expr = {((heat_rat*(heat_rat - 1)*$freestream_spec_int_ener)^0.5)}
 vortex_nondim_veloc = 0.3
 vortex_argmax_radius = 0.1
-vortex_gaussian = {(vortex_nondim_veloc*exp((1. - ((pos0 - freestream0/freestream2*time)^2 + (pos1 - freestream1/freestream2*time)^2)/vortex_argmax_radius^2)/2.))}
+vortex_gaussian = {(vortex_nondim_veloc*exp((1. - ((pos0 - freestream0/freestream2*flow_time)^2 + (pos1 - freestream1/freestream2*flow_time)^2)/vortex_argmax_radius^2)/2.))}
 vortex_scalar = {(1 - (heat_rat - 1.)/2*$vortex_gaussian^2)}
 vortex_momentum0 = {((freestream0/freestream2 - pos1/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed_expr)*$vortex_mass)}
 vortex_momentum1 = {((freestream1/freestream2 + pos0/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed_expr)*$vortex_mass)}
 vortex_mass = {(freestream2*$vortex_scalar^(1./(heat_rat - 1.)))}
 vortex_energy = {($freestream_spec_int_ener*$vortex_scalar*$vortex_mass + 0.5*($vortex_momentum0^2 + $vortex_momentum1^2)/$vortex_mass)}
 vortex = {
-    state0 = $vortex_momentum0
-    state1 = $vortex_momentum1
-    state2 = $vortex_mass
-    state3 = $vortex_energy
+    momentum0 = $vortex_momentum0
+    momentum1 = $vortex_momentum1
+    density = $vortex_mass
+    energy = $vortex_energy
 }
 air_visc_ref = 1.716e-5
 air_visc_ref_temp = 273.
@@ -161,7 +161,7 @@ set_aerothermo = {
 }
 
 set_geometry_refinement = {
-    refine_if = {((uncertainty > geometry_uncertainty | snapping_problem) & ref_level < max_ref_level & nom_sz > min_elem_size)}
+    refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level < max_ref_level & nom_sz > min_elem_size)}
     unrefine_if = {(ref_level > init_ref_level & !is_extruded)}
     hexed_min_sz = (mesh_extreme01 - mesh_extreme00)*2.^-max_ref_level
     case0 = {}
@@ -180,8 +180,9 @@ init_ref_level = 3
 steady = true
 implicit = true
 implicit_scheme = {backward Euler}
-max_ref_level = 10
-geometry_uncertainty = 1e-3
+max_ref_level = 1000
+geom_rtol = 1e-5
+geom_atol = 0.
 viscosity_model = {}
 conductivity_model = {}
 turbulence_model = {}
@@ -208,7 +209,6 @@ refine_if = {false}
 unrefine_if = {false}
 max_refinement_iters = 100
 n_smooth = 30
-geom_n_segments = 1000
 vis_surface = true
 vis_field = true
 vis_contour = true
@@ -240,8 +240,14 @@ heat_flux_coercion = 2.
 min_elem_size = 0.
 elementwise_art_visc_pde = false
 prefer_occt = false
-geom_subdivision_levels = 15
+min_geom_subdiv_levels = 8
+max_geom_subdiv_levels = 15
 geom_vis_subdivisions = 100
+coincidence_tol_bbox = 1e-6
+coincidence_tol_abs = 0.
+coincidence_tol_subdiv = 1.
+tangency_tol_angle = 1*degree
+tangency_tol_subdiv = 10.
 
 {array parameters}
 i_dim = 0
@@ -420,6 +426,8 @@ start = {
 mesh_init = false
 mesh = {
     println {meshing...}
+    flow_time = 0
+    geom_length = 0.
     init_refinement
     add_geom
     i_refinement = 0
@@ -429,6 +437,20 @@ mesh = {
         print({geometry-based refinement sweep } + i_refinement + {... } + newline)
         keep_refining = keep_refining & refine
         i_refinement = i_refinement + 1
+        flow_time = flow_time + 1
+        bounds_surface_vars = {
+            position0 = pos0
+            position1 = pos1
+            position2 = pos2
+        }
+        bounds_surface
+        geom_bbox00 = min_surface_position0
+        geom_bbox01 = max_surface_position0
+        geom_bbox10 = min_surface_position1
+        geom_bbox11 = max_surface_position1
+        geom_bbox20 = min_surface_position2
+        geom_bbox21 = max_surface_position2
+        geom_length = sqrt((geom_bbox01 - geom_bbox00)^2 + (geom_bbox11 - geom_bbox10)^2 + (geom_bbox21 - geom_bbox20)^2)
         println {done}
     }
     $loop
@@ -437,18 +459,12 @@ mesh = {
     do = {split_layers; i_split = i_split + 1}
     $loop
     mesh_init = true
-    bounds_surface_vars = {
-        position0 = pos0
-        position1 = pos1
-        position2 = pos2
-    }
-    bounds_surface
     print({geometry bounding box:
-    } + min_surface_position0 + { } + max_surface_position0 + {
-    } + min_surface_position1 + { } + max_surface_position1 + {
-    } + min_surface_position2 + { } + max_surface_position2 + {
+    } + geom_bbox00 + { } + geom_bbox01 + {
+    } + geom_bbox10 + { } + geom_bbox11 + {
+    } + geom_bbox20 + { } + geom_bbox21 + {
 })
-    geom_length = sqrt((max_surface_position0 - min_surface_position0)^2 + (max_surface_position1 - min_surface_position1)^2 + (max_surface_position2 - min_surface_position2)^2)
+    flow_time = 0
     println({geometry length: } + geom_length)
     case0 = {}
     case1 = {

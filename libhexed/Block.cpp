@@ -3,7 +3,6 @@
 #include <hexed/vertex_inds.hpp>
 #include <hexed/Mesh_assessment.hpp>
 #include <hexed/Printer.hpp>
-#include <hexed/global_hacks.hpp> //! \todo remove this
 
 namespace hexed::next {
 
@@ -32,7 +31,8 @@ void Block::visualize(std::string format, std::string file_name, double time) co
 void Block::visualize(std::string format, std::string file_name, next::Sequence<const Block&> blocks, double time) {
   // construct the Visualizer
   int block_dim = blocks.empty() ? 1 : blocks[0]._n_dim;
-  auto visualizer = Visualizer::create(format, 3, block_dim, file_name, {}, time, Visualizer::block);
+  std::vector<std::string> vars;
+  auto visualizer = Visualizer::create(format, 3, block_dim, file_name, vars, time, Visualizer::block);
   // write each block via the Visualizer
   for (const Block& block : blocks) {
     visualizer->write_block(block.points(), Array<double>({}));
@@ -67,40 +67,38 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , snapped_point{-1}
 , snapped_edge{-1}
 , snapped_endpoint{-1}
+, incompatible_snap{false}
 , _pos{pos}
-, _update{Mat<3>::Zero()}
-, _step_sz{-1}
+, _orig_pos{Mat<3>::Zero()}
+, _step{Mat<3>::Zero()}
+, _last_obj{0.}
+, _orig_dist{0.}
+, _step_sz{0.}
+, _improve_failed{false}
+, _improve_done{true}
+, _last_step_rejected{false}
+, _last_improve_iters{0}
 , _edges(this)
 , _elems(this)
 , _glued_to(this)
-, _shadowed(this)
-, _shadows(this)
 , _shared_value{0}
+, _last_snap_failed{false}
+, _sz_constraint{huge}
 {}
 
-Vertex::~Vertex() {
-  for (auto v : _shadows.theirs()) v->set_pos(point({}));
-}
+Vertex::~Vertex() {}
 
 double Vertex::nominal_size() const {
-  double nom_sz = huge;
+  double nom_sz = _sz_constraint;
   for (auto elem : _elems.theirs()) {
-    HEXED_ASSERT("elem", "element is null");
+    HEXED_ASSERT(elem, "element is null")
     nom_sz = std::min(nom_sz, elem->nominal_size());
   }
   return nom_sz;
 }
 
-void Vertex::shadow(Vertex& that) {
-  that.set_pos(.5*(that.point({}) + point({})));
-  HEXED_ASSERT(that._shadowed.get() != this, "two `Vertex`s cannot shadow each other");
-  HEXED_ASSERT(!_shadowed || !that._shadowed, "one of the vertices must not already be shadowing");
-  if (_shadowed) that._shadowed.pair(_shadows);
-  else _shadowed.pair(that._shadows);
-}
-
 void Vertex::eat(Vertex& that) {
-  HEXED_ASSERT(alive() && that.alive(), "both vertices must be alive (at least at the start...)");
+  HEXED_ASSERT(alive() && that.alive(), "both vertices must be alive (at least at the start...)")
   if (&that == this) return;
   // compute averaged position
   Int sz [2] {_elems.partners().size(), that._elems.partners().size()};
@@ -109,35 +107,24 @@ void Vertex::eat(Vertex& that) {
   // steal pointers
   for (Int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
   for (Int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
+  if (!glued() && that.glued()) glue(*that._glued_to.get(), that._glued_coords);
   record.insert(record.end(), that.record.begin(), that.record.end());
-  if (that.snapped_endpoint >= 0 && snapped_endpoint < 0) {
+  if ((that.snapped_endpoint >= 0 && snapped_endpoint < 0) || (that.snapped_edge >= 0 && snapped_edge < 0)) {
     snapped_edge = that.snapped_edge;
     snapped_endpoint = that.snapped_endpoint;
   }
+  if (that.snapped_point >= 0 && snapped_point < 0) snapped_point = that.snapped_point;
+  _sz_constraint = std::min(_sz_constraint, that._sz_constraint);
 }
 
 void Vertex::glue(Element_shape& to, std::vector<double> coords) {
   HEXED_ASSERT(std::size_t(to.n_dim()) == coords.size(), "wrong number of glued coordinates");
+  for (auto& elem : elements()) {
+    HEXED_ASSERT(&elem != _glued_to.get(),
+                 "Gluing to an element this vertex is already a part of would create infinite recursion.")
+  }
   _glued_to.pair(to._glued_verts);
   _glued_coords = coords;
-}
-
-void Vertex::calc_relax() {
-  _update = _desired_pos() - _pos;
-}
-
-void Vertex::apply_relax() {
-  if (_shadowed || glued()) return;
-  Mat<3> u = _update;
-  for (auto s : _shadows.theirs()) u += s->_update;
-  _pos += u/(1 + _shadows.theirs().size());
-}
-
-double Vertex::badness(Mat<3> proposed_pos) const {
-  Mat<3> des_pos = _desired_pos();
-  for (auto s : _shadows.theirs()) des_pos += s->_desired_pos();
-  des_pos /= 1 + _shadows.theirs().size();
-  return (proposed_pos - des_pos).norm();
 }
 
 void Vertex::set_pos(Mat<3> p) {
@@ -147,14 +134,23 @@ void Vertex::set_pos(Mat<3> p) {
       _pos(i_dim) = p(i_dim);
     }
   }
-  _step_sz = -1;
+}
+
+void Vertex::add_size_constraint(double sz) {
+  Lock::Set s(_shared_value_lock);
+  _sz_constraint = std::min(_sz_constraint, sz);
+}
+
+void Vertex::remove_size_constraints() {
+  Lock::Set s(_shared_value_lock);
+  _sz_constraint = huge;
 }
 
 Mat<3> Vertex::nominal_position() const {
   Mat<3> p = Mat<3>::Zero();
   int n = 0;
   for (auto elem : _elems.theirs()) if (elem) if (!elem->glued()) {
-    p += elem->nominal_position(_get_index(*elem));
+    p += elem->nominal_position(get_index(*elem));
     ++n;
   }
   if (n) return p/n;
@@ -171,28 +167,28 @@ bool Vertex::mobile() const {
   return has_unglued && !has_cartesian && !glued();
 }
 
-const double ortho_tolerance = 3e-2;
-const double edge_tolerance = 3e-3;
+const double ortho_tolerance = .03;
+const double edge_tolerance = .01;
 
-Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors) const {
+Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors, bool ignore, bool ignore_neighb, double extra_tol) {
   _Optimization_state state;
-  _compute_state_recursive(state, 1., include_neighbors);
+  _compute_state_recursive(state, 1., include_neighbors, this, this, ignore, ignore_neighb, extra_tol);
   return state;
 }
 
 void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                      const Vertex* orig_vertex) const {
+                                      Vertex* orig_vertex, Vertex* ignore, bool ignore_orig, bool ignore_neighb,
+                                      double extra_tol) {
   if (!orig_vertex) orig_vertex = this;
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
-  for (const Element_shape* elem : _elems.theirs()) {
+  for (Element_shape* elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
     if (elem->glued()) continue;
-    int i_this = _get_index(*elem);
-    double ns = elem->nominal_size();
+    int i_this = get_index(*elem);
     Mat<3, dyn> verts(3, nv);
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
-      verts(all, i_vert) = elem->vertex(i_vert).point({});
+      verts(all, i_vert) = elem->vertex(i_vert)._unwarped_point(ignore, ignore_orig, ignore_neighb);
     }
     Sequence<Mat<3>> vert_seq {
       [&](Int i_vert)->Mat<3> {return verts(all, i_vert);},
@@ -207,6 +203,8 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
     }
     i_those.push_back(i_this);
     for (int i_that : i_those) {
+      Vertex& that_vert = elem->vertex(i_that);
+      double ns = that_vert.nominal_size();
       bool skip_obj = false;
       bool skip_grad = false;
       for (auto s : state.skip) if (s.elem == elem) {
@@ -214,36 +212,39 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
         skip_grad = skip_grad || (s.i == i_that && s.j == i_this);
       }
       if (!skip_grad) state.skip.emplace_back(elem, i_that, i_this);
-      Mesh_assessment ma(vert_seq, i_that, i_this);
-      state.feasible = state.feasible && ma.orthogonality > ortho_tolerance;
-      state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality);
+      if (state.computing_depends) {
+        bool contains = false;
+        for (Vertex* v : orig_vertex->_depends_on) contains = contains || &that_vert == v;
+        if (!contains) orig_vertex->_depends_on.push_back(&that_vert);
+      }
+      Mesh_assessment ma(vert_seq, i_that);
+      ma.edge_lengths /= ns;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state.feasible = state.feasible && ma.edge_lengths(i_dim) > edge_tolerance*ns;
-        state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim)/ns);
+        state.feasible = state.feasible && ma.orthogonality(i_dim) > ortho_tolerance + extra_tol;
+        state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality(i_dim));
+        state.feasible = state.feasible && ma.edge_lengths(i_dim) > edge_tolerance + extra_tol;
+        state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim));
       }
       if (state.feasible) {
-        const Vertex& that_vert = elem->vertex(i_that);
-        double orth_diff = ma.orthogonality - ortho_tolerance;
-        state.objective += (!skip_obj)*1./orth_diff;
-        state.gradient += (!skip_grad)*gradient_weight*1.*(-1/orth_diff/orth_diff)*ma.grad_orth;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          double num = ma.edge_lengths(i_dim) - ns;
-          double denom = ma.edge_lengths(i_dim) - edge_tolerance*ns;
+          double orth_diff = ma.orthogonality(i_dim) - ortho_tolerance;
+          state.objective += (!skip_obj)*10./orth_diff;
+          double num = ma.edge_lengths(i_dim)*ma.orthogonality(i_dim) - 1.;
+          double denom = ma.edge_lengths(i_dim) - edge_tolerance;
           state.objective += (!skip_obj)*num*num/denom;
-          state.gradient += (!skip_grad)*gradient_weight*(2*num/denom - num*num/(denom*denom))
-                            *ma.grad_lengths(i_dim, all).transpose();
         }
         // note: the valid values for `gradient_weight` are 1., .5, and .25
         if (gradient_weight > .3 && that_vert.glued() && i_this != i_that) {
           bool coupled = false;
-          for (const Vertex* v : {this, orig_vertex}) {
+          for (Vertex* v : {this, orig_vertex}) {
             for (auto e : v->_elems.theirs()) {
               coupled = coupled || (!e->glued() && e == that_vert._glued_to.get());
             }
           }
           if (coupled) {
             state.has_glued_neighbor = true;
-            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex);
+            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex, ignore, ignore_orig,
+                                               ignore_neighb, extra_tol);
           }
         }
       }
@@ -251,91 +252,128 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
   }
 }
 
-Vertex::Improve_quality_result Vertex::improve_quality() {
-  return _improve_quality([](Mat<3>){return Mat<3>::Zero();}, [](Mat<3> p){return p;}, false, false);
+void Vertex::compute_depends() {
+  _depends_on.clear();
+  _Optimization_state state;
+  state.computing_depends = true;
+  _compute_state_recursive(state, 1., true);
+  // sort to prevent deadlocks
+  std::sort(_depends_on.begin(), _depends_on.end(), std::less<Vertex*>{});
 }
 
-Vertex::Improve_quality_result Vertex::improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                                                       std::function<Mat<3>(Mat<3>)> satisfy_constraints,
-                                                       bool limit_direction) {
-  return _improve_quality(get_target, satisfy_constraints, true, limit_direction);
+bool Vertex::has_problem() const {
+  // note that each vertex is in its own `depends_on`
+  for (const Vertex* d : _depends_on) if (d->_last_snap_failed) return true;
+  return false;
 }
 
-Vertex::Improve_quality_result Vertex::_improve_quality(std::function<Mat<3>(Mat<3>)> get_target,
-                                                        std::function<Mat<3>(Mat<3>)> satisfy_constraints,
-                                                        bool has_target, bool limit_direction) {
-  _pos = _point({});
-  Mat<3> orig_pos = _pos;
-  auto state = _compute_state();
-  double ns = nominal_size();
+void Vertex::init_improve() {
+  HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
+  _pos = _orig_pos = unwarped_point();
+  _last_improve_iters = 0;
+}
+
+void Vertex::compute_gradient(std::function<Mat<3>(Mat<3>)> get_target) {
+  auto state = _compute_state(true, false, true);
   bool gn = false;
   for (Vertex* n : neighbors()) gn = gn || n->glued();
   HEXED_ASSERT(state.feasible, format_str(200,
                "Vertex state violates quality criteria "
                "(ortho = %e; edge = %e; coords = (%e %e %e); glued neighbor = %i).",
-               state.worst_ortho, state.worst_edge, orig_pos(0), orig_pos(1), orig_pos(2),
+               state.worst_ortho, state.worst_edge, _orig_pos(0), _orig_pos(1), _orig_pos(2),
                int(gn)))
-  Mat<3> direction = -state.gradient.normalized();
-  Mat<3> target = get_target(orig_pos);
-  double orig_dist = (target - orig_pos).norm();
-  _Optimization_state new_state = state;
-  const double min_step = 1e-8*ns;
-  if (state.gradient.norm()*ns > 1e-6*state.objective) {
-    _pos = orig_pos + 1e-8*ns*direction;
-    _Optimization_state test_state = _compute_state();
-    #if 0
-    if (std::abs(test_state.objective - state.objective + state.gradient.norm()*1e-8*ns)
-        > 1e-1*std::abs(test_state.objective - state.objective)) {
-      printers::warn("badGradient" + std::to_string(state.has_glued_neighbor), true);
-    }
-    #endif
-    _step_sz = ns;
-    double repeat_factor [] {10., 2., 2.};
-    double end_factor [] {10., .9, 1.};
-    for (int i = 0; i < 3; ++i) if (_step_sz > min_step) {
-      do {
-        if (_step_sz < min_step) {
-          _pos = orig_pos;
-          new_state.objective = state.objective;
-          break;
-        }
-        _step_sz /= repeat_factor[i];
-        _pos = satisfy_constraints(orig_pos + _step_sz*direction);
-        Mat<3> new_target = get_target(_pos);
-        double dist = (new_target - _pos).norm();
-        if (dist > orig_dist) _pos += (dist - orig_dist)/dist*(new_target - _pos);
-        new_state = _compute_state();
-      } while (!(new_state.feasible && new_state.objective < state.objective));
-      _step_sz *= end_factor[i];
+  _orig_obj = state.objective;
+  int nd = _elems.theirs()[0]->n_dim();
+  double ns = nominal_size();
+  math::Objective_finite_diff finite_diff([this](Mat<> point)->math::Objective_finite_diff::Objective_sample {
+    _pos = resize(point, 3);
+    auto fd_state = _compute_state(true, false, true);
+    return {fd_state.objective, fd_state.feasible};
+  }, resize(_orig_pos, nd), 1e-5*ns);
+  _pos = _orig_pos;
+  Mat<3> target = get_target(_orig_pos);
+  _orig_dist = (target - _orig_pos).norm();
+  _step_sz = 1.;
+  _improve_done = false;
+  _improve_failed = true;
+  _last_step_rejected = true;
+  if (finite_diff.feasible) {
+    _last_grad = resize(finite_diff.gradient, 3);
+    _step = resize(finite_diff.hessian.colPivHouseholderQr().solve(-finite_diff.gradient), 3);
+    _grad_step = -ns*_last_grad.normalized();
+    if (!(_step.dot(_last_grad) < 0.)) _step = _grad_step;
+    _last_grad = _step;
+    if (_orig_dist < 1e-4*ns || _step.normalized().dot((target - _orig_pos)/_orig_dist) > -1. + 1e-2) {
+      _improve_failed = false;
+      _last_step_rejected = false;
     }
   }
-  int snap_iters = 0;
-  double target_dist = 0;
-  if (has_target) {
-    orig_pos = _pos;
-    target = get_target(_pos);
-    Mat<3> step = target - _pos;
-    double orig_objective = new_state.objective;
-    do {
-      if (step.norm() < min_step) {
-        _pos = orig_pos;
-        new_state.objective = orig_objective;
-        break;
-      }
-      _pos = satisfy_constraints(orig_pos + step);
-      target_dist = (target - _pos).norm();
-      new_state = _compute_state();
-      step /= 2;
-      ++snap_iters;
-    } while (!new_state.feasible || new_state.objective > 2*state.objective);
+}
+
+void Vertex::compute_improve(std::function<Mat<3>(Mat<3>)> get_target) {
+  HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
+  if (_improve_done || _improve_failed) return;
+  ++_last_improve_iters;
+  _pos = _orig_pos + _step_sz*_step;
+  Mat<3> target = get_target(_pos);
+  Mat<3> diff = target - _pos;
+  double dist = diff.norm();
+  if (dist > _orig_dist + 1e-6*nominal_size()) {
+    diff *= (dist - _orig_dist)/dist;
+    _pos += diff;
   }
-  new_state = _compute_state();
-  HEXED_ASSERT(new_state.feasible, "something changed");
-  return {new_state.objective - state.objective, snap_iters > 1, target_dist};
+  if (_step_sz < 1e-5) {
+    _pos = _orig_pos;
+    _improve_failed = true;
+    _last_step_rejected = true;
+  }
+  _step_sz /= 10;
+  _step = _grad_step;
+}
+
+void Vertex::force_continue_improve() {
+  _improve_done = false;
+}
+
+bool Vertex::check_improve(bool updated_neighbors) {
+  HEXED_ASSERT(mobile(), "Only mobile vertices can be improved.")
+  auto state0 = _compute_state(true, false, true);
+  auto state1 = _compute_state(true, false, !updated_neighbors, 1e-8);
+  _improve_done = state0.feasible && state1.feasible && state0.objective < _orig_obj;
+  _last_obj = state1.objective;
+  return _improve_done || _improve_failed;
+}
+
+void Vertex::init_snap(std::function<Mat<3>(Mat<3>)> get_target) {
+  _orig_pos = unwarped_point();
+  _step = get_target(_orig_pos) - _orig_pos;
+  _step_sz = 1.;
+  _improve_done = false;
+  _improve_failed = false;
+  _last_snap_failed = false;
+}
+
+void Vertex::compute_snap() {
+  if (_improve_done || _improve_failed) return;
+  _pos = _orig_pos + _step_sz*_step;
+  if (_step_sz < 1e-10) {
+    _improve_failed = true;
+    _pos = _orig_pos;
+  }
+}
+
+Vertex::Snap_result Vertex::check_snap(bool updated_neighbors) {
+  auto state = _compute_state(true, false, !updated_neighbors, 1e-8);
+  _improve_done = state.feasible && state.objective < 1.1*_last_obj;
+  if (!_improve_done) {
+    _step_sz /= 3;
+    _last_snap_failed = true;
+  }
+  return {_improve_done || _improve_failed, _last_snap_failed, (1 - _step_sz)*_step.norm()};
 }
 
 bool Vertex::snap_to(Mat<3> target) {
-  Mat<3> orig_pos = point({});
+  Mat<3> orig_pos = unwarped_point();
   set_pos(target);
   _Optimization_state state = _compute_state();
   if (!state.feasible) set_pos(orig_pos);
@@ -344,18 +382,10 @@ bool Vertex::snap_to(Mat<3> target) {
 
 double Vertex::quality_objective() {
   auto state = _compute_state(false);
-  HEXED_ASSERT(state.feasible, "infeasible state");
-  return state.objective;
-}
-
-double Vertex::quality_gradient_norm_sq() {
-  auto state = _compute_state(true);
-  return state.gradient.squaredNorm();
-}
-
-double Vertex::quality() {
-  auto state = _compute_state();
-  HEXED_ASSERT(state.feasible, "Vertex state violates quality criteria.");
+  HEXED_ASSERT(state.feasible, format_str(200,
+               "Vertex state violates quality criteria "
+               "(ortho = %e; edge = %e; coords = %s).",
+               state.worst_ortho, state.worst_edge, to_string(unwarped_point()).c_str()))
   return state.objective;
 }
 
@@ -371,7 +401,7 @@ std::vector<CONST Vertex*> Vertex::neighbors() CONST { \
   for (auto elem : _elems.theirs()) { \
     HEXED_ASSERT(_elems.theirs()[0], "element is null"); \
     int nv = math::pow(2, elem->n_dim()); \
-    int i_this = _get_index(*elem); \
+    int i_this = get_index(*elem); \
     for (int i_vert = 0; i_vert < nv; ++i_vert) { \
       CONST Vertex* vert = &elem->vertex(i_vert); \
       for (int stride = 1; stride < nv; stride *= 2) { \
@@ -388,11 +418,11 @@ NEIGHBORS(const)
 #undef NEIGHBORS
 
 Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
-  if (!_vert.glued()) _acquire.emplace(_vert._shared_value_lock);
+  if (!_vert.glued()) _set.emplace(_vert._shared_value_lock);
 }
 
 double Vertex::Shared_value::get() const {
-  if (_acquire) return _vert._shared_value;
+  if (_set) return _vert._shared_value; // equivalent to checking if vertex is glued
   HEXED_ASSERT(_vert.glued(), "The glued status of the vertex changed since constructing the `Shared_value`.")
   double value = 0;
   for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
@@ -409,77 +439,55 @@ double Vertex::Shared_value::get() const {
 }
 
 void Vertex::Shared_value::set(double value) {
-  if (_acquire) _vert._shared_value = value;
+  if (_set) _vert._shared_value = value;
+}
+
+Mat<3> Vertex::_get_pos() const {
+  Mat<3> p;
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    #pragma omp atomic read
+    p(i_dim) = _pos(i_dim);
+  }
+  return p;
 }
 
 Mat<3> Vertex::_point(const std::vector<int>&, Int recursion_depth) const {
-  // usually, the vertex will not be glued or a shadow and we can just return the `_pos`
-  if (_shadowed) return _shadowed.value().point({}, recursion_depth + 1);
-  if (!_glued_to) {
-    Mat<3> p;
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      #pragma omp atomic read
-      p(i_dim) = _pos(i_dim);
-    }
-    return p;
-  }
+  // usually, the vertex will not be glued and we can just return the `_pos`
+  if (!_glued_to) return _get_pos();
   return _glued_to.value().interpolate(_glued_coords, recursion_depth + 1);
 }
 
-Mat<3> Vertex::_desired_pos() const {
-  Mat<3> des_pos = Mat<3>::Zero();
-  HEXED_ASSERT(alive(), "`Vertex` must be `alive()` to compute optimize postion");
-  HEXED_ASSERT(_elems.theirs()[0], "element is null");
-  #if 1
-  auto n = neighbors();
-  for (const Vertex* vert : n) {
-    des_pos += vert->point({});
-  }
-  des_pos = .1*_pos + .9*des_pos/n.size();
-  #else
-  int nd = _elems.theirs()[0]->n_dim();
-  int nv = math::pow(2, nd);
-  double tot_sz = 0;
-  for (auto elem : _elems.theirs()) {
-    HEXED_ASSERT(elem, "element is null");
-    if (elem->glued()) continue;
-    double nom_sz = elem->nominal_size();
-    int i_this = _get_index(*elem);
-    Mat<3, dyn> verts(3, nv);
-    for (int i_vert = 0; i_vert < nv; ++i_vert) {
-      // we can use `_pos` because `Mesh_blocks` just set that to `point({})`
-      verts(all, i_vert) = elem->vertex(i_vert)._pos;
-    }
-    HEXED_ASSERT(i_this >= 0, "`this` does not appear to be a vertex of `elem`!");
-    if (!elem->deformed) return elem->nominal_position(i_this);
-    std::vector<int> coords(nd);
-    for (int i_dim = 0; i_dim < nd; ++i_dim) coords[i_dim] = i_this/vstride(nd, i_dim)%2*vstride(nd, i_dim);
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      Mat<3, 2> edges;
-      int opposite = i_this + (vstride(nd, i_dim) - 2*coords[i_dim]);
-      bool degenerate = false;
-      for (int i_edge = 0; i_edge < 2; ++i_edge) {
-        if (i_edge < nd - 1) {
-          int j_dim = (i_dim + i_edge + 1)%nd;
-          int start = opposite - coords[j_dim];
-          edges(all, i_edge) = verts(all, start + vstride(nd, j_dim)) - verts(all, start);
-          if (edges(all, i_edge).norm() < 1e-2*nom_sz) degenerate = true;
-        } else edges(all, i_edge) = math::sign(!i_dim)*nom_sz*Mat<3>::Unit(2);
-      }
-      if (!degenerate) {
-        tot_sz += 1/nom_sz;
-        des_pos += (verts(all, opposite) + math::sign(coords[i_dim])/nom_sz*edges(all, 0).cross(edges(all, 1)))
-                   /nom_sz;
-      }
-    }
-  }
-  if (tot_sz == 0) return _pos;
-  des_pos = .9*des_pos/tot_sz + .1*_pos;
-  #endif
-  return des_pos;
+Mat<3> Vertex::unwarped_point(bool orig) const {
+  return _unwarped_point(nullptr, orig, orig);
 }
 
-int Vertex::_get_index(const Element_shape& elem) const {
+Mat<3> Vertex::_unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_others) const {
+  if (!_glued_to) {
+    bool ig = (this == ignore) ? ignore_given : ignore_others;
+    return (ig && mobile()) ? _orig_pos : _get_pos();
+  }
+  int nd = _glued_to->n_dim();
+  int nv = math::pow(2, nd);
+  int nc = _glued_coords.size();
+  Mat<8, 3> vert_pos = Mat<8, 3>::Zero(); // if nd < 3, extra entries will simply have no effect
+  for (int i_vert = 0; i_vert < nv; ++i_vert) {
+    bool skip = false;
+    for (int i_dim = 0; i_dim < nc; ++i_dim) {
+      skip = skip || std::abs(_glued_coords[i_dim] - !math::row_coordinate(nd, 2, i_dim, i_vert)) < 1e-6;
+    }
+    if (!skip) {
+      auto& v = _glued_to->vertex(i_vert);
+      vert_pos(i_vert, all) = v._unwarped_point(ignore, ignore_given, ignore_others).transpose();
+    }
+  }
+  Mat<3> coords = Mat<3>::Zero();
+  for (int i_dim = 0; i_dim < nc; ++i_dim) coords(3 - nc + i_dim) = _glued_coords[i_dim];
+  Mat<3> p;
+  for (int i_dim = 0; i_dim < 3; ++i_dim) p(i_dim) = math::interp(vert_pos(all, i_dim), coords);
+  return p;
+}
+
+int Vertex::get_index(const Element_shape& elem) const {
   int i_this = -1;
   int nv = math::pow(2, elem.n_dim());
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
@@ -497,10 +505,34 @@ std::vector<Int> interior_dims(int n_dim, int row_size) {
 
 Boundary_block::Boundary_block(int n_dim, const Basis& b)
 : Block(n_dim, b.row_size)
+, snapping_problem{false}
 , _interior(interior_dims(n_dim, b.row_size))
 , _basis{&b}
 , _elem(this)
 {}
+
+double Boundary_block::scale_factor() {
+  HEXED_ASSERT(_elem, "`Boundary_block` has no element.")
+  int n_vert = math::pow(2, _elem->n_dim());
+  Mat<3, dyn> verts(3, n_vert);
+  for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
+    verts(all, i_vert) = _elem->vertex(i_vert).point({});
+  }
+  Sequence<Mat<3>> vert_seq {
+    [&](Int i_vert)->Mat<3> {return verts(all, i_vert);},
+    [n_vert]()->Int {return n_vert;},
+  };
+  std::vector<Vertex*> bound_verts = vertices();
+  double worst = huge;
+  for (Vertex* vert : bound_verts) {
+    int i_vert = vert->get_index(*_elem);
+    Mesh_assessment ma(vert_seq, i_vert);
+    for (int i_dim = 0; i_dim < _elem->n_dim(); ++i_dim) {
+      worst = std::min(worst, ma.edge_lengths(i_dim)*ma.orthogonality(i_dim));
+    }
+  }
+  return worst;
+}
 
 Mat<3> Edge::_point(const std::vector<int>& coords, Int recursion_depth) const {
   int coord = coords[0];
@@ -512,17 +544,19 @@ Mat<3> Edge::_point(const std::vector<int>& coords, Int recursion_depth) const {
       return _glued_to.value()._point({coord}, recursion_depth + 1);
     } else {
       Mat<3, dyn> pts(3, row_size());
-      for (int c = 0; c < row_size(); ++c) pts(all, c) = _glued_to.value().point({c}, recursion_depth + 1);
+      for (int c = 0; c < row_size(); ++c) pts(all, c) = _glued_to.value().point(std::vector<int>{c},
+                                                                                 recursion_depth + 1);
       return pts*basis().prolong(_half)(coord, all).transpose();
     }
   }
-  if (coord ==       0) return _verts[0].value().point({}, recursion_depth + 1);
+  if (coord ==              0) return _verts[0].value().point({}, recursion_depth + 1);
   if (coord == row_size() - 1) return _verts[1].value().point({}, recursion_depth + 1);
   return _interior(coord - 1).vector();
 }
 
 Edge::Edge(Vertex& vertex0, Vertex& vertex1, const Basis& b)
 : Boundary_block(1, b)
+, snapped_edge{-1}
 , _verts{this, this}
 , _glued_to(this)
 , _glued(this)
@@ -549,7 +583,7 @@ std::vector<int> Edge::element_coords(std::vector<int> coords) const {
     int i_face = element()->boundary_face();
     coords.insert(coords.begin() + i_face/2, i_face%2*(row_size() - 1));
   } else if (nd == 3) {
-    const Face* face = element()->boundary_face_3d();
+    const Surface_face* face = element()->boundary_face_3d();
     HEXED_ASSERT(face, "element has no face");
     for (int i_edge = 0; i_edge < 4; ++i_edge) {
       if (&face->edge(i_edge) == this) {
@@ -564,6 +598,10 @@ std::vector<int> Edge::element_coords(std::vector<int> coords) const {
   return coords;
 }
 
+std::vector<Vertex*> Edge::vertices() {
+  return {&vertex(0), &vertex(1)};
+}
+
 void Edge::reset() {
   for (int i = 1; i < row_size() - 1; ++i) {
     double n = basis().node(i);
@@ -574,8 +612,12 @@ void Edge::reset() {
 const int Edge::no = -1;
 
 void Edge::glue(Edge& other, int half, bool reverse) {
-  HEXED_ASSERT(&other != this, "cannot glue an edge to itself");
-  HEXED_ASSERT(!other._glued_to, "Cascading edge gluing is forbidden (in order to catch algorithmic bugs).");
+  HEXED_ASSERT(&other != this, "cannot glue an edge to itself")
+  HEXED_ASSERT(!other._glued_to, "Cascading edge gluing is forbidden (in order to catch algorithmic bugs)."
+                                 " pos: " + to_string(vertex(0).unwarped_point())
+                                          + to_string(vertex(1).unwarped_point()) +
+                                 " pos: " + to_string(other.vertex(0).unwarped_point())
+                                          + to_string(other.vertex(1).unwarped_point()))
   _glued_to.pair(other._glued);
   _half = half;
   _glued_reverse = reverse;
@@ -594,17 +636,26 @@ std::vector<Element_shape*> Edge::contacted_elements() {
   return elems;
 }
 
-Mat<3> Face::_point(const std::vector<int>& coords, Int recursion_depth) const {
+int Edge::glued_half() const {
+  HEXED_ASSERT(glued(), "`glued_half` is only relevant if the edge is glued")
+  return _half;
+}
+
+Mat<3> Surface_face::_point(const std::vector<int>& coords, Int recursion_depth) const {
   // if the point is on the boundary of the node array, forward to one of the edges
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
-    if (coords[i_dim] ==              0) return _edges[2*i_dim    ].point({coords[!i_dim]}, recursion_depth + 1);
-    if (coords[i_dim] == row_size() - 1) return _edges[2*i_dim + 1].point({coords[!i_dim]}, recursion_depth + 1);
+    if (coords[i_dim] ==              0) {
+      return _edges[2*i_dim    ].point(std::vector<int>{coords[!i_dim]}, recursion_depth + 1);
+    }
+    if (coords[i_dim] == row_size() - 1) {
+      return _edges[2*i_dim + 1].point(std::vector<int>{coords[!i_dim]}, recursion_depth + 1);
+    }
   }
   // otherwise, return an interior node
   return _interior(coords[0] - 1)(coords[1] - 1).vector();
 }
 
-Face::Face(std::array<Vertex*, 4> verts, const Basis& b) : Boundary_block(2, b) {
+Surface_face::Surface_face(std::array<Vertex*, 4> verts, const Basis& b) : Boundary_block(2, b) {
   for (int i_dim = 0; i_dim < 2; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       _edges.emplace_back(*verts[(2 - i_dim)*sign], *verts[(2 - i_dim)*sign + 1 + i_dim], basis());
@@ -613,13 +664,13 @@ Face::Face(std::array<Vertex*, 4> verts, const Basis& b) : Boundary_block(2, b) 
   reset();
 }
 
-std::vector<Element_shape*> Face::dependent_elements() {
+std::vector<Element_shape*> Surface_face::dependent_elements() {
   std::vector<Element_shape*> depend;
   if (alive()) depend.push_back(element());
   return depend;
 }
 
-std::vector<int> Face::element_coords(std::vector<int> coords) const {
+std::vector<int> Surface_face::element_coords(std::vector<int> coords) const {
   HEXED_ASSERT(element(), "must have an `element()` to call `element_coords`");
   HEXED_ASSERT(coords.size() == 2, "wrong number of edge coordinates");
   int i_face = element()->boundary_face();
@@ -627,7 +678,17 @@ std::vector<int> Face::element_coords(std::vector<int> coords) const {
   return coords;
 }
 
-void Face::reset() {
+std::vector<Vertex*> Surface_face::vertices() {
+  std::vector<Vertex*> verts;
+  for (int i = 0; i < 2; ++i) {
+    for (int j = 0; j < 2; ++j) {
+      verts.push_back(&edge(i).vertex(j));
+    }
+  }
+  return verts;
+}
+
+void Surface_face::reset() {
   int rs = row_size();
   int interior_sz = (rs - 2)*(rs - 2);
   int total_sz = rs*rs;
@@ -651,15 +712,15 @@ void Face::reset() {
       }
       // add influence of edge (not corner) nodes on boundary-normal rows
       for (int col : {0, rs - 1}) {
-        rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(    bool(col)).point({j_row});
-        rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(2 + bool(col)).point({j_row});
+        rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(    bool(col)).point(std::vector<int>{j_row});
+        rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(2 + bool(col)).point(std::vector<int>{j_row});
       }
     }
     // add influence of edges (including corners) nodes on other nodes on the same edge
     for (int j_row : {0, rs - 1}) {
       for (int col = 0; col < rs; ++col) {
-        rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(    bool(j_row)).point({col});
-        rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(2 + bool(j_row)).point({col});
+        rhs(j_row)(i_row).vector() -= dmsq(i_row, col)*edge(    bool(j_row)).point(std::vector<int>{col});
+        rhs(i_row)(j_row).vector() -= dmsq(i_row, col)*edge(2 + bool(j_row)).point(std::vector<int>{col});
       }
     }
   }
@@ -742,6 +803,7 @@ void Element_shape::_glue_edges(std::vector<Element_shape*> those) {
 Element_shape::Element_shape(int nd, const Basis& b)
 : Block(nd, b.row_size)
 , deformed{false}
+, for_matching{false}
 , extruded_direction{Mesh_blocks::no_face}
 , is_new{false}
 , record{0}
@@ -888,6 +950,9 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
       }
     }
   }
+  for (int i_elem = 0; i_elem < nv; ++i_elem) {
+    elems[0][i_elem]->_glue_edges(elems[1]);
+  }
 }
 
 void Element_shape::glue(Element_shape& that, std::array<std::vector<double>, 2> corners) {
@@ -896,6 +961,13 @@ void Element_shape::glue(Element_shape& that, std::array<std::vector<double>, 2>
   }
   _glued_to.set(&that);
   _glued_corners = corners;
+}
+
+void Element_shape::destroy_boundary_face() {
+  _bf.unpair();
+  _boundary_edges.clear();
+  _sf.set();
+  _i_bf = Mesh_blocks::no_face;
 }
 
 const int Mesh_blocks::no_face = -1;
@@ -909,16 +981,44 @@ Sequence<T&> purge_fetch(std::vector<T>& vec) {
   return Sequence<T&>::vector_view(vec);
 }
 
-Sequence<Vertex&> Mesh_blocks::interior_verts() {return purge_fetch(_interior_verts);}
-Sequence<Vertex&> Mesh_blocks::boundary_verts() {return purge_fetch(_boundary_verts);}
+Sequence<Vertex&> Mesh_blocks::verts() {return purge_fetch(_verts);}
+
+void Mesh_blocks::_update_verts() {
+  purge_fetch(_verts);
+  _interior_verts.resize(_verts.size(), -1);
+  _boundary_verts.resize(_verts.size(), -1);
+  _n_interior_verts = 0;
+  _n_boundary_verts = 0;
+  for (Int i_vert = 0; i_vert < (Int)_verts.size(); ++i_vert) {
+    if (_verts[i_vert].edges().empty()) _interior_verts[_n_interior_verts++] = i_vert;
+    else _boundary_verts[_n_boundary_verts++] = i_vert;
+  }
+}
+
+Sequence<Vertex&> Mesh_blocks::interior_verts() {
+  _update_verts();
+  return {
+    [this](Int index)->Vertex& {return _verts[_interior_verts[index]];},
+    [this]() {return _n_interior_verts;},
+  };
+}
+
+Sequence<Vertex&> Mesh_blocks::boundary_verts() {
+  _update_verts();
+  return {
+    [this](Int index)->Vertex& {return _verts[_boundary_verts[index]];},
+    [this]() {return _n_boundary_verts;},
+  };
+}
+
 Sequence<Edge&> Mesh_blocks::edges_2d() {return purge_fetch(_edges_2d);}
-Sequence<Face&> Mesh_blocks::faces_3d() {return purge_fetch(_faces_3d);}
+Sequence<Surface_face&> Mesh_blocks::faces_3d() {return purge_fetch(_faces_3d);}
 
 Sequence<Boundary_block&> Mesh_blocks::boundary_sides() {
   if (n_dim == 2) return edges_2d().cast<Boundary_block&>();
   else if (n_dim == 3) {
     faces_3d(); // calling this performs purge
-    std::vector<Face>& faces = _faces_3d;
+    std::vector<Surface_face>& faces = _faces_3d;
     return {
       [&faces](std::size_t index)->Boundary_block& {
         if (index < 4*faces.size()) return faces[index/4].edge(index%4);
@@ -929,16 +1029,6 @@ Sequence<Boundary_block&> Mesh_blocks::boundary_sides() {
   } else return Sequence<Boundary_block&>();
 }
 
-void Mesh_blocks::relax_vertices() {
-  auto vs = verts();
-  #pragma omp parallel for
-  for (auto& vert : vs) vert.set_pos(vert.point({}));
-  #pragma omp parallel for
-  for (auto& vert : vs) vert.calc_relax();
-  #pragma omp parallel for
-  for (auto& vert : vs) vert.apply_relax();
-}
-
 Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face) {
   // create the element
   Element_shape elem(n_dim, basis);
@@ -947,12 +1037,8 @@ Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_
   // create vertices for the element and connect the element's vertex pointers to it
   int nv = math::pow(2, n_dim);
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
-    auto vec = &_interior_verts;
-    if (boundary_face != no_face) {
-      if ((i_vert/vstride(n_dim, boundary_face/2))%2 == boundary_face%2) vec = &_boundary_verts;
-    }
-    vec->emplace_back(elem.nominal_position(i_vert), basis.row_size);
-    vec->back().pair(elem._verts[i_vert]);
+    _verts.emplace_back(elem.nominal_position(i_vert), basis.row_size);
+    _verts.back().pair(elem._verts[i_vert]);
   }
   // if necessary, create a `Boundary_block` and connect the element's boundary side pointer to it
   elem._i_bf = boundary_face;
@@ -963,9 +1049,11 @@ Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_
       int vert0 = sign*vstride(2, i_dim);
       _edges_2d.emplace_back(elem.vertex(vert0), elem.vertex(vert0 + vstride(2, !i_dim)), basis);
       _edges_2d.back().pair(elem._bf);
-    } else if (n_dim == 3) { // if 3D, the `Boundary_block` is a `Face`
+    } else if (n_dim == 3) { // if 3D, the `Boundary_block` is a `Surface_face`
       std::array<Vertex*, 4> verts;
-      for (int i_vert = 0; i_vert < 4; ++i_vert) verts[i_vert] = &_boundary_verts.end()[i_vert - 4];
+      for (int i_vert = 0, j_vert = 0; i_vert < 8; ++i_vert) {
+        if (math::row_coordinate(3, 2, i_dim, i_vert) == sign) verts[j_vert++] = &_verts.end()[i_vert - 8];
+      }
       _faces_3d.emplace_back(verts, basis);
       _faces_3d.back().pair(elem._bf);
       for (int i_edge = 0; i_edge < 4; ++i_edge) _faces_3d.back().edge(i_edge).pair(elem._boundary_edges);

@@ -30,5 +30,12 @@ class Storage_params {
   std::vector<int> numerical_shape() const;
 };
 
+//! \relates Storage_params
+bool operator==(Storage_params, Storage_params);
+//! \relates Storage_params
+bool operator!=(Storage_params, Storage_params);
+//! \relates Storage_params
+std::string to_string(Storage_params);
+
 }
 #endif

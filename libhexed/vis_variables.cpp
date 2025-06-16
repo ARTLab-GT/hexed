@@ -12,12 +12,17 @@ void element(Namespace& space, Element& elem) {
   space.assign("nom_sz", elem.nominal_size());
   space.assign("uncertainty", elem.uncertainty);
   space.assign("snapping_problem", int(elem.snapping_problem));
+  space.assign("is_deformed", int(elem.deformed()));
   auto params = elem.storage_params();
   Mat<3> center;
   center.setZero();
+  int sharp = 0;
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
     center += elem.shape().vertex(i_vert).point({});
+    next::Vertex& v = elem.active_shape().vertex(i_vert);
+    sharp = sharp || v.snapped_edge >= 0 || v.snapped_point >= 0;
   }
+  space.assign("sharp", sharp);
   center /= params.n_vertices();
   for (int i_dim = 0; i_dim < 3; ++i_dim) {
     space.assign(index("center", i_dim), center(i_dim));
@@ -74,15 +79,17 @@ void field(Namespace& space, Element& elem, const Basis& b) {
 }
 
 void surface(Namespace& space, Boundary_connection& con) {
-  auto params = con.storage_params();
+  auto params = con.ghost().storage_params();
   int nfq = params.n_qpoint()/params.row_size;
   // fetch surface data
-  int nrml_sign = 1 - 2*con.inside_face_sign();
-  Array<double> nrml {Array<double>({params.n_dim, nfq}, con.surface_normal()).copy()};
-  Array<double> pos({params.n_dim, nfq}, con.surface_position());
-  Array<double> state({params.n_var, nfq}, con.inside_face(false));
-  Array<double> flux({params.n_var, nfq});
-  double* ref_flux = con.flux_cache();
+  int nrml_sign = 1 - 2*con.inside().sign();
+  // copying prevents these things from being inadvertently modified
+  Array<double> nrml = con.normal().copy();
+  Array<double> pos = con.position().copy();
+  Array<double> state = con.inside().flow_state()(0).copy();
+  Array<double> flux = con.inside().flow_state()(1).copy();
+  Array<double> ref_flux = con.flux_cache().copy();
+  double area = con.inside().nominal_area();
   // compute normals and fluxes
   for (int i_fqpoint = 0; i_fqpoint < nfq; ++i_fqpoint) {
     double norm = 0;
@@ -90,7 +97,7 @@ void surface(Namespace& space, Boundary_connection& con) {
     norm = std::sqrt(norm);
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) nrml(i_dim)[i_fqpoint] /= nrml_sign*norm;
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      flux(i_var)[i_fqpoint] = norm > 1e-6 ? -ref_flux[i_var*nfq + i_fqpoint]*nrml_sign/norm/con.nominal_area() : 0;
+      flux(i_var)[i_fqpoint] = norm > 1e-6 ? -ref_flux(i_var)[i_fqpoint]*nrml_sign/norm/area : 0;
     }
   }
   // assign variables

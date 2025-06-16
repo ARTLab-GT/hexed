@@ -9,15 +9,11 @@ mesh_extreme01 =  1.
 mesh_extreme11 =  1.
 surface_max_iters = 0
 done = {flow_time >= 6e-3}
-max_safety = 0.01
-print_freq = 1000
-vis_freq = 10000
+print_freq = 10
+vis_freq = 100
 local_time = false
 
-$start
-$mesh
-init_state
-$run
+$simulate
 integrand_field = {errsq = (density - $vortex_mass)^2}
 integrate_field
 print {L^2 density error: }

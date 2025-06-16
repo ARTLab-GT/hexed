@@ -72,41 +72,71 @@ class Spatial {
     static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
     Connection_direction dir;
     double* tgt;
+    typedef Eigen::Matrix<int, 2, 2> Index_mat;
+    typedef Eigen::Matrix<int, 2, 1> Index_vec;
 
-    /*
-     * For 3d connections, the dimensions corresponding to major/minor indices may not match.
-     * To solve this problem, this function transposes the major/minor axes if necessary.
-     */
-    virtual void transpose() {
-      if (dir.transpose()) {
-        if constexpr (n_dim == 3) {
-          for (int i_var = 0; i_var < n_var; ++i_var) {
-            Eigen::Map<Eigen::Matrix<double, row_size, row_size>> rows {tgt + i_var*n_qpoint};
-            rows.transposeInPlace();
-          }
-        }
+    Index_mat _transpose() {
+      Index_mat m;
+      if (n_dim == 3 && dir.transpose()) {
+        m << 0, 1,
+             1, 0;
+      } else {
+        m.setIdentity();
       }
+      return m;
     }
 
-    /* For 2d and 3d connections, the ordering of quadrature points in the plane of the
-     * normal vectors might be opposite.
-     * To solve this problem, this function reverses the order in `i_dim[0]` if necessary.
-     */
-    virtual void flip() {
+    Index_mat _flip() {
+      Index_mat m = Index_mat::Identity();
       if (dir.flip_tangential()) {
         if constexpr (n_dim == 3) {
-          // figure out if the dimension we want to reverse is the major or minor axis of face 1
-          bool colwise = (dir.i_dim[0] > 3 - dir.i_dim[0] - dir.i_dim[1]) != dir.transpose();
-          for (int i_var = 0; i_var < n_var; ++i_var) {
-            Eigen::Map<Eigen::Matrix<double, row_size, row_size>> rows {tgt + i_var*n_qpoint};
-            if (colwise) rows.colwise().reverseInPlace();
-            else         rows.rowwise().reverseInPlace();
-          }
-        } else if constexpr (n_dim == 2) {
-          // for 2d, there is no major/minor axis distinction
-          Eigen::Map<Eigen::Matrix<double, row_size, n_var*n_qpoint/row_size>> rows {tgt};
-          rows.colwise().reverseInPlace();
+          int i = (dir.i_dim[0] > 3 - dir.i_dim[0] - dir.i_dim[1]) != dir.transpose();
+          m(i, i) = -1;
+        } else {
+          m(1, 1) = -1;
         }
+      }
+      return m;
+    }
+
+    Index_mat _rotate(int n) {
+      n *= math::sign(dir.i_dim[0] != 1);
+      Index_mat m = Index_mat::Identity();
+      for (int i = n; i > 0; --i) {
+        Index_mat r;
+        r <<
+          0, -1,
+          1,  0;
+        m = r*m;
+      }
+      for (int i = 0; i > n; --i) {
+        Index_mat r;
+        r <<
+           0, 1,
+          -1, 0;
+        m = r*m;
+      }
+      return m;
+    }
+
+    void _permute(Index_mat mat) {
+      if constexpr (n_dim == 1) return;
+      double temp [n_qpoint];
+      Index_vec offset = Index_vec::Zero();
+      for (int row = 0; row < 2; ++row) {
+        for (int col = 0; col < 2; ++col) {
+          offset(row) += (mat(row, col) < 0)*(row_size - 1);
+        }
+      }
+      for (int i_var = 0; i_var < n_var; ++i_var) {
+        double* var = tgt + i_var*n_qpoint;
+        for (int row = 0; row < n_qpoint/row_size; ++row) {
+          for (int col = 0; col < row_size; ++col) {
+            Index_vec inds = mat*Index_vec{row, col} + offset;
+            temp[inds(0)*row_size + inds(1)] = var[row*row_size + col];
+          }
+        }
+        for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) var[i_qpoint] = temp[i_qpoint];
       }
     }
 
@@ -118,8 +148,8 @@ class Spatial {
     Face_permutation(Connection_direction direction, double* target)
     : dir{direction}, tgt{target} {}
     // reordering can consist of order reversal and/or transpose operations
-    virtual void match_faces() {transpose(); flip();}
-    virtual void restore()     {flip(); transpose();}
+    void match_faces() override {_permute(_rotate(dir.rotate)*_flip()*_transpose());}
+    void restore()     override {_permute(_transpose()*_flip()*_rotate(-dir.rotate));}
     typedef std::unique_ptr<Face_permutation_dynamic> ptr_t;
   };
 
@@ -129,7 +159,7 @@ class Spatial {
    * This interpolation is exact (and therefore conservative).
    */
   template <int n_dim, int row_size>
-  class Prolong_refined : public Kernel<Refined_face&> {
+  class Prolong_refined : public Kernel<std::vector<Kernel_face_refinement>&> {
     static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
     const Eigen::Matrix<double, row_size, row_size> prolong_mat [2];
     bool scl;
@@ -146,21 +176,17 @@ class Spatial {
     , _mask{mask}
     {}
 
-    virtual void operator()(Sequence<Refined_face&>& ref_faces) {
+    virtual void operator()(Sequence<std::vector<Kernel_face_refinement>&>& ref_faces) {
       constexpr int n_face = math::pow(2, n_dim - 1);
       constexpr int nfq = math::pow(row_size, n_dim - 1);
 
       #pragma omp parallel for
       for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face) {
-        auto& ref_face {ref_faces[i_ref_face]};
-        if (ref_face.fine_mask() >= _mask) {
-          double* coarse {ref_face.coarse + off*_n_var*nfq};
-          const auto str = ref_face.stretch;
-          // update number of faces to reflect any face stretching
-          int nf = n_face;
-          for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
-          for (int i_face = 0; i_face < nf; ++i_face) if (ref_face.fine_masks[i_face] >= _mask) {
-            double* fine {ref_face.fine[i_face] + off*_n_var*nfq};
+        for (Kernel_face_refinement ref : ref_faces[i_ref_face]) {
+          if (ref.mask < _mask) continue;
+          double* coarse = ref.coarse[off];
+          for (int i_face = 0; i_face < 2; ++i_face) {
+            double* fine = ref.fine[i_face][off];
             for (int i_var = 0; i_var < n_var; ++i_var) {
               double* var_face {fine + i_var*nfq};
               // initialize fine face to be equal to coarse face
@@ -168,23 +194,17 @@ class Spatial {
                 var_face[i_qpoint] = coarse[i_var*nfq + i_qpoint];
               }
               // interpolate one dimension at a time, in-place
-              for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) {
-                if (!str[i_dim]) {
-                  const int pow {n_dim - 2 - i_dim};
-                  const int face_stride {str[n_dim - 2] ? 1 : math::pow(2, pow)};
-                  const int qpoint_stride {math::pow(row_size, pow)};
-                  const int i_half {(i_face/face_stride)%2}; // is this face covering the upper or lower half of the coarse face with respect to the current dimension?
-                  for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer) {
-                    for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner) {
-                      Eigen::Matrix<double, row_size, 1> row;
-                      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                        row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner]/(1 + scl);
-                      }
-                      row = prolong_mat[i_half]*row;
-                      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                        var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint);
-                      }
-                    }
+              const int pow {n_dim - 2 - ref.split_dim};
+              const int qpoint_stride {math::pow(row_size, pow)};
+              for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer) {
+                for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner) {
+                  Eigen::Matrix<double, row_size, 1> row;
+                  for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                    row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner]/(1 + scl);
+                  }
+                  row = prolong_mat[i_face]*row;
+                  for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                    var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint);
                   }
                 }
               }
@@ -202,7 +222,7 @@ class Spatial {
    * but of course not always exact.
    */
   template <int n_dim, int row_size>
-  class Restrict_refined : public Kernel<Refined_face&> {
+  class Restrict_refined : public Kernel<std::vector<Kernel_face_refinement>&> {
     static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
     const Eigen::Matrix<double, row_size, row_size> restrict_mat [2];
     bool scl;
@@ -219,41 +239,32 @@ class Spatial {
     , _mask{mask}
     {}
 
-    virtual void operator()(Sequence<Refined_face&>& ref_faces) {
+    virtual void operator()(Sequence<std::vector<Kernel_face_refinement>&>& ref_faces) {
       constexpr int n_face = math::pow(2, n_dim - 1);
       constexpr int nfq = math::pow(row_size, n_dim - 1);
 
       #pragma omp parallel for
       for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face) {
-        auto& ref_face {ref_faces[i_ref_face]};
-        if (ref_face.coarse_mask >= _mask) {
-          double* coarse {ref_face.coarse + off*_n_var*nfq};
+        for (int i_ref = ref_faces[i_ref_face].size() - 1; i_ref >= 0; --i_ref) {
+          auto ref = ref_faces[i_ref_face][i_ref];
+          if (ref.mask < _mask) continue;
+          double* coarse = ref.coarse[off];
           for (int i_dof = 0; i_dof < n_var*nfq; ++i_dof) coarse[i_dof] = 0.;
-          auto str = ref_face.stretch;
-          // update number of faces to reflect any face stretching
-          int nf = n_face;
-          for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) nf /= 1 + str[i_dim];
-          for (int i_face = 0; i_face < nf; ++i_face) {
-            double* fine {ref_face.fine[i_face] + off*_n_var*nfq};
+          for (int i_face = 0; i_face < 2; ++i_face) {
+            double* fine = ref.fine[i_face][off];
             for (int i_var = 0; i_var < n_var; ++i_var) {
               double* var_face {fine + i_var*nfq};
-              for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) {
-                if (!str[i_dim]) {
-                  const int pow {n_dim - 2 - i_dim};
-                  const int face_stride {str[n_dim - 2] ? 1 : math::pow(2, pow)};
-                  const int qpoint_stride {math::pow(row_size, pow)};
-                  const int i_half {(i_face/face_stride)%2}; // is this face covering the upper or lower half of the coarse face with respect to the current dimension?
-                  for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer) {
-                    for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner) {
-                      Eigen::Matrix<double, row_size, 1> row;
-                      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                        row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
-                      }
-                      row = restrict_mat[i_half]*row;
-                      for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                        var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint)*(1 + scl);
-                      }
-                    }
+              const int pow {n_dim - 2 - ref.split_dim};
+              const int qpoint_stride {math::pow(row_size, pow)};
+              for (int i_outer = 0; i_outer < nfq/(row_size*qpoint_stride); ++i_outer) {
+                for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner) {
+                  Eigen::Matrix<double, row_size, 1> row;
+                  for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                    row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner];
+                  }
+                  row = restrict_mat[i_face]*row;
+                  for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
+                    var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner] = row(i_qpoint)*(1 + scl);
                   }
                 }
               }
@@ -398,7 +409,7 @@ class Spatial {
         // compute flux
         double flux [n_dim][Pde::n_update][n_qpoint];
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-          typename Pde::Computation<n_dim> comp(_eq);
+          typename Pde::template Computation<n_dim> comp(_eq);
           comp.fetch_state(n_qpoint, state + i_qpoint);
           if constexpr (is_deformed) {
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -629,7 +640,7 @@ class Spatial {
    * and replaces the state of both faces with the computed flux.
    */
   template <int n_dim, int row_size>
-  class Neighbor : public Kernel<Kernel_connection&> {
+  class Neighbor : public Kernel<Hard_kernel_connection> {
     using Pde = Pde_templ<n_dim, row_size>;
     const Pde _eq;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
@@ -640,12 +651,12 @@ class Spatial {
     template <typename... pde_args>
     Neighbor(int i_stage, int mask, pde_args... args) : _eq(args...), _stage{i_stage}, _mask{mask} {}
 
-    virtual void operator()(Sequence<Kernel_connection&>& connections) {
+    virtual void operator()(Sequence<Hard_kernel_connection>& connections) {
       #pragma omp parallel for
       for (int i_con = 0; i_con < connections.size(); ++i_con) {
-        auto& con = connections[i_con];
-        auto dir = con.get_direction();
-        double nominal_area = con.nominal_area();
+        auto con = connections[i_con];
+        auto dir = con.direction;
+        double nominal_area = con.nominal_area;
         double face [2 + 2*Pde::has_diffusion][Pde::n_extrap*n_fqpoint] {}; // copying face data to temporary stack storage improves efficiency
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -654,7 +665,7 @@ class Spatial {
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.state(i_side, false);
+          double* f = con.state[i_side][0];
           for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
             face[i_side][i_dof] = f[i_dof];
           }
@@ -663,7 +674,7 @@ class Spatial {
         if constexpr (is_deformed) {
           perm.match_faces(); // if order of quadrature points on both faces does not match, reorder face 1 to match face 0
           for (int i_side : {0, 1}) sign[i_side] = 1 - 2*dir.flip_normal(i_side);
-          double* n = con.normal();
+          double* n = con.normal;
           for (int i_dof = 0; i_dof < n_dim*n_fqpoint; ++i_dof) {
             face_nrml[i_dof] = n[i_dof];
           }
@@ -681,7 +692,7 @@ class Spatial {
           }
           if constexpr (Pde::has_convection) {
             // fetch data
-            typename Pde::Computation<1> comp [2] {_eq, _eq};
+            typename Pde::template Computation<1> comp [2] {_eq, _eq};
             if constexpr (is_deformed) {
               for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
                 comp[0].normal(i_dim) = sign[0]*face_nrml[i_dim*n_fqpoint + i_qpoint];
@@ -713,17 +724,17 @@ class Spatial {
           if constexpr (Pde::has_diffusion) Face_permutation<n_dim, row_size>(dir, face[3]).restore();
         }
         // write data to actual face storage on heap
-        for (int i_side = 0; i_side < 2; ++i_side) if (con.mask(i_side) >= _mask) {
+        for (int i_side = 0; i_side < 2; ++i_side) if (con.mask[i_side] >= _mask) {
           // write flux
           if constexpr (Pde::has_convection) {
-            double* f = con.state(i_side, false);
+            double* f = con.state[i_side][0];
             for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
               f[i_dof] = face[i_side][i_dof];
             }
           }
           // write average face state
           if constexpr (Pde::has_diffusion) {
-            double* f = con.state(i_side, true);
+            double* f = con.state[i_side][1];
             for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
               f[i_dof] = face[2 + i_side][i_dof];
             }
@@ -736,23 +747,23 @@ class Spatial {
   //! compute the difference between the numerical (average) viscous flux and
   //! the viscous flux on each face in preparation for reconciling the different face fluxes
   template <int n_dim, int row_size>
-  class Neighbor_reconcile : public Kernel<Kernel_connection&> {
+  class Neighbor_reconcile : public Kernel<Hard_kernel_connection> {
     using Pde = Pde_templ<n_dim, row_size>;
     static constexpr int n_fqpoint = math::pow(row_size, n_dim - 1);
     const int _mask;
 
     public:
     Neighbor_reconcile(int mask) : _mask{mask} {}
-    virtual void operator()(Sequence<Kernel_connection&>& connections) {
+    virtual void operator()(Sequence<Hard_kernel_connection>& connections) {
       #pragma omp parallel for
       for (int i_con = 0; i_con < connections.size(); ++i_con) {
-        auto& con = connections[i_con];
-        auto dir = con.get_direction();
+        auto con = connections[i_con];
+        auto dir = con.direction;
         double face [2][Pde::n_update*n_fqpoint]; // copying face data to temporary stack storage improves efficiency
         int sign [2] {1, 1}; // records whether the normal vector on each side needs to be flipped to obey sign convention
         // fetch face data
         for (int i_side = 0; i_side < 2; ++i_side) {
-          double* f = con.state(i_side, true);
+          double* f = con.state[i_side][true];
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) face[i_side][i_dof] = f[i_dof];
         }
         Face_permutation<n_dim, row_size> perm(dir, face[1]); // only used for deformed
@@ -770,8 +781,8 @@ class Spatial {
         }
         if constexpr (is_deformed) perm.restore(); // restore data of face 1 to original order
         // write data to actual face storage on heap
-        for (int i_side = 0; i_side < 2; ++i_side) if (con.mask(i_side) >= _mask) {
-          double* f = con.state(i_side, true);
+        for (int i_side = 0; i_side < 2; ++i_side) if (con.mask[i_side] >= _mask) {
+          double* f = con.state[i_side][true];
           for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) f[i_dof] = face[i_side][i_dof];
         }
       }
@@ -820,7 +831,7 @@ class Spatial {
           }
           double spacing = math::interp(vertex_spacing, coords);
           // fetch state
-          typename Pde::Computation<n_dim> comp(_eq);
+          typename Pde::template Computation<n_dim> comp(_eq);
           comp.fetch_state(n_qpoint, state + i_qpoint);
           // compute time step
           double scale = 0;

@@ -2,28 +2,11 @@
 #define HEXED_MATH_HPP_
 
 #include <cmath>
-#include <Eigen/Dense>
 #include "assert.hpp"
 #include "utils.hpp"
 
-namespace hexed {
-
-const int dyn = Eigen::Dynamic; //!< \brief convenience alias for `Eigen::dynamic`
-//! \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = 1>`
-template <int rows = dyn, int cols = 1> using Mat = Eigen::Matrix<double, rows, cols>;
-//! \brief convenience alias for `Eigen::Matrix<double, rows = dyn, cols = dyn, Eigen::RowMajor>`
-template <int rows = dyn, int cols = dyn> using Mat_rm = Eigen::Matrix<double, rows, cols, Eigen::RowMajor>;
-const auto all = Eigen::all; //!< \brief convenience alias for `Eigen::all`
-const auto last = Eigen::last; //!< \brief convenience alias for `Eigen::last`
-typedef intmax_t Int; //!< \brief basic integer type  to use for potentially-large numbers, such as sizes
-//! \brief convenience alias for largest double value
-constexpr double huge = std::numeric_limits<double>::max();
-
-#pragma omp declare reduction (+ : Mat<dyn, dyn> : omp_out = omp_out + omp_in) \
-  initializer(omp_priv = Mat<dyn, dyn>::Zero(omp_orig.rows(), omp_orig.cols()))
-
 //! \brief Miscellaneous mathematical functions that aren't in `std::math`
-namespace math {
+namespace hexed::math {
 
 /*! \brief Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.
  * \details
@@ -51,13 +34,30 @@ constexpr Int log(Int base, Int arg) {
 }
 
 template <typename T>
-constexpr T max(T arg) {
+constexpr T extreme(bool minmax, T arg) {
   return arg;
 }
 
+//! \brief if `minmax` is true, returns the maximum of remaining arguments, else the minimum
+//! \warning always returns the type of the first argument, regardless of type conversion rules
+template <typename T, typename... arg_ts>
+constexpr T extreme(bool minmax, T arg, arg_ts... args) {
+  T trailing = extreme<T>(minmax, args...);
+  return minmax ? std::max<T>(arg, trailing) : std::min<T>(arg, trailing);
+}
+
+//! \brief returns the maximum of all arguments
+//! \warning always returns the type of the first argument, regardless of type conversion rules
 template <typename T, typename... arg_ts>
 constexpr T max(T arg, arg_ts... args) {
-  return std::max<T>(arg, max(args...));
+  return extreme(true, arg, args...);
+}
+
+//! \brief returns the minimum of all arguments
+//! \warning always returns the type of the first argument, regardless of type conversion rules
+template <typename T, typename... arg_ts>
+constexpr T min(T arg, arg_ts... args) {
+  return extreme(false, arg, args...);
 }
 
 //! \brief returns 1 if `condition` is true, otherwise -1
@@ -69,6 +69,8 @@ constexpr Int stride(int n_dim, Int row_size, int i_dim) {
   return math::pow(row_size, n_dim - 1 - i_dim);
 }
 
+//! \brief Finds the `i_dim`th array index of a point with flat index `index`
+//! in an `n_dim` dimensional array of `row_size` on each side
 constexpr Int row_coordinate(int n_dim, Int row_size, int i_dim, Int index) {
   return index/stride(n_dim, row_size, i_dim)%row_size;
 }
@@ -236,28 +238,6 @@ class Approx_equal {
   inline bool operator()(double x, double y) const {return std::abs(x - y) < a + r*std::abs(x + y)/2;}
 };
 
-//! \brief Constructs an `Eigen::VectorXd` from iterators `begin()` and `end()` to arithmetic types.
-template <typename T>
-Mat<> to_mat(T begin, T end) {
-  Mat<> vec(end - begin);
-  int i = 0;
-  for (auto it = begin; it < end; ++it) vec(i++) = *it;
-  return vec;
-}
-
-//! \brief Constructs an `Eigen::VectorXd` from any object supporting `begin()` and `end()` members.
-template <typename T>
-Mat<> to_mat(const T& range) {
-  return to_mat(range.begin(), range.end());
-}
-
-/*! \brief Returns a copy of `vec` resized to `size`.
- * \details If `size` is less than `vec.size()`, the trailing entries are deleted.
- * If `size` is greater than `vec.size()`, trailing zeros are appended.
- * Otherwise, entries are preserved.
- */
-Mat<> resize(const Mat<>& vec, Int size);
-
 //! \brief minimal representation of an `n_dim`-dimensional ball
 template <int n_dim = dyn>
 struct Ball {
@@ -296,16 +276,40 @@ double chebyshev_step(int n_steps, int i_step, double safety = .9);
 
 /*! \details Suppose that you compute some values, `estimates`, with a method that is very robust but has low accuracy.
  * Suppose you also recompute these values as `exacts`
- * with a method that is very accurate but not robust---It may give you extraneous values and/or fail to produce some of the correct values.
- * The purpose of this function is to filter out the implausible values from `exacts` and give you only the ones that appear to be correct.
+ * with a method that is very accurate but not robust---It may give you extraneous values
+ * and/or fail to produce some of the correct values.
+ * The purpose of this function is to filter out the implausible values from `exacts`
+ * and give you only the ones that appear to be correct.
  * The return value will have the same number of values as `estimates`,
  * but some of them will be replaced with values from `exacts` in a way that obtains the best possible agreement.
- * Replacements will be considered only if the difference between the "exact" value and the "estimate" is less than `tol`.
+ * Replacements will be considered only if the difference between the "exact" value and the "estimate"
+ * is less than `tol`.
  * The order of `exacts` does not matter.
  * Values will be returned in the same order as `estimates`.
  */
 std::vector<double> correct_values(std::vector<double> estimates, std::vector<double> exacts, double tol = huge);
 
-}
+//! \brief Estimates the derivatives of an optimization objective function by finite difference.
+struct Objective_finite_diff {
+  public:
+  struct Objective_sample {double objective; bool feasible;};
+  //! \brief Estimates derivatives of `objective_fun` at the point `at` with a finite difference of `finite_diff`.
+  //! \details `objective_fun` should take vectors of the same size as `at` and return an `Objective_sample`
+  //! indicating the values of the objective function and also whether the argument is a feasible point.
+  //! If `Objective_sample::feasible` is `false`, then `Objective_sample::objective` is irrelevant
+  //! and may be set to any value you choose.
+  //! All sample points `p` will satisfy `std::abs(p(i) - at(i)) <= finite_diff` for all valid indices `i`.
+  //! If any of the sampled points are not feasible,
+  //! the finite difference will be reduced and another attempt will be made.
+  //! If the finite difference is reduced by a factor exceeding `min_diff_ratio`,
+  //! it will give up and declare the point infeasible.
+  Objective_finite_diff(std::function<Objective_sample(Mat<>)> objective_fun, Mat<> at, double finite_diff,
+                        double min_diff_ratio = 1e-8);
+  bool feasible; //!< \brief is `at` a feasible point?
+  double objective; //!< \brief if `feasible`, then the objective at point `at`, otherwise unspecified
+  Mat<> gradient; //!< \brief gradient at point `at`
+  Mat<dyn, dyn> hessian; //!< \brief Hessian matrix at point `at`
+};
+
 }
 #endif

@@ -20,22 +20,6 @@ class Qpoint_func : virtual public Output_data {
   virtual std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const = 0;
 };
 
-/*! \brief Evaluates a \ref struct_expr "structured expression"
- * \details Expression is evaluated in an environment that includes
- * the variables defined in `hil_properties::element`, `hil_properties::position`, and `hil_properties::state`
- * as well as `time`.
- */
-class Qpoint_expr : public Qpoint_func {
-  Struct_expr _expr;
-  const Interpreter& _inter;
-  public:
-  Qpoint_expr(Struct_expr, const Interpreter&);
-  Qpoint_expr(Struct_expr, Interpreter&&) = delete;
-  inline int n_var(int n_dim) const override {return _expr.names.size();}
-  inline std::string variable_name(int n_dim, int i_var) const override {return _expr.names[i_var];}
-  std::vector<double> operator()(Element&, const Basis&, int i_qpoint, double time) const override;
-};
-
 //! \brief Returns a vector with one element: the Jacobian determinant at the quadrature point.
 class Jacobian_det_func : public Qpoint_func {
   public:

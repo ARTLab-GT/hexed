@@ -1,14 +1,13 @@
-#include <Deformed_element.hpp>
-#include <math.hpp>
+#include <hexed/Deformed_element.hpp>
+#include <hexed/math.hpp>
 
 namespace hexed {
 
 Deformed_element::Deformed_element(Storage_params params, std::vector<Int> pos,
-                                   double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level) :
-  Element{params, pos, mesh_size, ref_level, origin_arg, true, aniso_r_level},
-  n_qpoint{params.n_qpoint()},
-  jac_dat{(n_dim*n_dim + 1)*n_qpoint},
-  f_nrml{nullptr, nullptr, nullptr, nullptr, nullptr, nullptr}
+                                   double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level)
+: Element{params, pos, mesh_size, ref_level, origin_arg, true, aniso_r_level, true}
+, n_qpoint{params.n_qpoint()}
+, jac_dat{(n_dim*n_dim + 1)*n_qpoint}
 {}
 
 void Deformed_element::set_jacobian(const Basis& basis) {
@@ -48,8 +47,8 @@ void Deformed_element::set_jacobian(const Basis& basis) {
       Eigen::MatrixXd bound_mat = basis.boundary()(sign, Eigen::all);
       Eigen::MatrixXd face_jac(nfq, n_dim*n_dim);
       for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
-        face_jac(Eigen::all, i_jac) = math::dimension_matvec(bound_mat, jac(Eigen::seqN(i_jac*n_qpoint, n_qpoint)),
-                                                             i_dim);
+        face_jac(Eigen::all, i_jac)
+          = math::dimension_matvec(bound_mat, jac(Eigen::seqN(i_jac*n_qpoint, n_qpoint)), i_dim);
       }
       for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
         Eigen::MatrixXd qpoint_jac(n_dim, n_dim);
@@ -60,8 +59,8 @@ void Deformed_element::set_jacobian(const Basis& basis) {
         }
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           qpoint_jac(Eigen::all, i_dim).setUnit(j_dim);
-          // note: f_nrml might be null if the connection is cartesian
-          if (f_nrml[2*i_dim + sign]) f_nrml[2*i_dim + sign][j_dim*nfq + i_qpoint] = qpoint_jac.determinant();
+          HEXED_ASSERT(face(2*i_dim + sign).normal().shape()[0] == n_dim, "normal has wrong size")
+          face(2*i_dim + sign).normal()(j_dim)[i_qpoint] = qpoint_jac.determinant();
         }
       }
     }
@@ -99,10 +98,6 @@ double* Deformed_element::jacobian_determinant() {
   return jac_dat.data() + n_dim*n_dim*n_qpoint;
 }
 
-double*& Deformed_element::face_normal(int i_face) {
-  return f_nrml[i_face];
-}
-
 double Deformed_element::jacobian(int i_dim, int j_dim, int i_qpoint) {
   Eigen::MatrixXd inv(n_dim, n_dim);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -118,6 +113,5 @@ double Deformed_element::jacobian_determinant(int i_qpoint) {
 }
 
 bool Deformed_element::deformed() const {return true;}
-double* Deformed_element::kernel_face_normal(int i_face) {return face_normal(i_face);}
 
 }

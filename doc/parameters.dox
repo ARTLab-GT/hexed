@@ -139,16 +139,6 @@ If set to a positive number, turns on artificial viscosity with a smoothness-bas
 and sets the smoothness width to `art_visc_width`.
 
 <hr>
-\subsubsection refine_if
-__type:__ string \n
-__default:__ `{false}` \n
-Mesh refinement criterion.
-Should be an expression that can be evaluated for each mesh element
-in an environment that includes the variables assigned by `hexed::hil_properties::element()`.
-If this expression evaluates to \ref true (and \ref unrefine_if evaluates to \ref false), the element will be refined.
-Otherwise it will not.
-
-<hr>
 \subsubsection mesh_extreme mesh_extreme00, mesh_extreme01, mesh_extreme10, mesh_extreme11, mesh_extreme20, mesh_extreme21
 __type:__ float \n
 __default:__ 0, 1, 0, 1, 0, 1 \n
@@ -177,11 +167,10 @@ and significantly more layers are often required for hypersonic simulations with
 <hr>
 \subsubsection max_ref_level
 __type:__ float \n
-__default:__ 10 \n
+__default:__ 1000 \n
 When performing geometry-based refinement with \ref set_geometry_refinement,
 elements will not be refined beyond this refinement level.
-This prevents excessive refinement in certain no-win scenarios such as sharp edges.
-This parameter must often be adjusted based on the scale of the geometry.
+The default value effectively renders this parameter irrelevant.
 
 <hr>
 
@@ -306,14 +295,43 @@ Applicable when altitude is specified.
 Sets the temperature offset passed to `hexed::standard_atmosphere`.
 
 <hr>
-\subsubsection geometry_uncertainty
+\subsubsection geom_rtol
 __type:__ float \n
-__default:__ 3e-3 \n
+__default:__ 1e-5 \n
+Geometry fit tolerance relative to geometry bounding box.
 When performing geometry-based refinement with \ref set_geometry_refinement,
-a non-dimensional uncertainty metric for the surface representation will be compared to this value,
-and any elements with a larger value will be refined.
-Thus reducing this number results in a finer mesh and vice versa,
-although the default value produces reasonable results in a wide range of cases, in my opinion.
+stipulates that elements need not be refined as long as the estimated maximum distance between the element surface
+and the true geometry surface is less than this fraction of the length of the diagonal of the geometry bounding box.
+Note that this tolerance adds to \ref geom_atol, so the least strict condition usually dominates.
+
+<hr>
+\subsubsection geom_atol
+__type:__ float \n
+__default:__ 0 \n
+Geometry fit absolute tolerance.
+This is a dimensional quantity (in meters).
+When performing geometry-based refinement with \ref set_geometry_refinement,
+stipulates that elements need not be refined as long as the estimated maximum distance between the element surface
+and the true geometry surface is less than this value.
+Note that this tolerance adds to \ref geom_rtol, so the least strict condition usually dominates.
+
+<hr>
+\subsubsection refine_if
+__type:__ string \n
+__default:__ `{false}` \n
+Mesh refinement criterion.
+Should be an expression that can be evaluated for each mesh element
+in an environment that includes the variables assigned by `hexed::hil_properties::element()`.
+If this expression evaluates to \ref true (and \ref unrefine_if evaluates to \ref false), the element will be refined.
+Otherwise it will not.
+
+<hr>
+\subsubsection min_elem_size
+__type:__ float \n
+__default__ 0 \n
+When performing geometry-based refinement with \ref set_geometry_refinement,
+elements will not be refined if their nominal edge length is less than this.
+The default value renders this parameter irrelevant.
 
 <hr>
 \subsubsection art_visc_constant
@@ -389,11 +407,6 @@ __default:__ 30 \n
 Number of mesh smoothing iterations to run after every surface-geometry-based refinement sweep.
 
 <hr>
-\subsubsection geom_n_segments
-__type:__ integer \n
-__default:__ 1000 \n
-Number of subdivisions to use when discretizing 2D CAD geometry with `hexed::Occt::segments`.
-
 <hr>
 \subsubsection vis_surface
 __type:__ integer \n
@@ -473,7 +486,7 @@ __default:__ 100 \n
 Number of subdivisions with which to discretize the geometry
 when writing diagnostic visualizations with \ref vis_geom .
 This is completely different from the number of subdivisions to use when actually generating the mesh,
-which is controlled by \ref geom_subdivision_levels .
+which is controlled by \ref min_geom_subdiv_levels and \ref max_geom_subdiv_levels .
 
 <hr>
 \subsubsection vis_tecplot
@@ -685,24 +698,44 @@ __type:__ integer \n
 __default:__ 1 \n
 Number of physical flow iterations to run per nominal iteration
 (i.e. per `hexed::Solver::update` call).
-Increasing this number can help balance the amount of CPU time spent in the physical flow relative to the artificial viscosity iteration.
+Increasing this number can help balance the amount of CPU time spent in the physical flow
+relative to the artificial viscosity iteration.
 The disadvantage is it can cause the \ref iteration count to be misleading.
 \note Not defined until \ref create_solver is evaluated.
 
 <hr>
-\subsubsection geom_subdivision_levels
+\subsubsection min_geom_subdiv_levels
 __type:__ integer \n
-__default:__ 13 \n
+__default:__ 8 \n
 When performing numerical operations on the surface geometry,
-sometimes it is necessary to discretize curves into polygonal segments.
-In such cases, they will be divided into \f$ 2^\verb|geom_subdivision_levels| \f$ segments.
-This requires \f$ O(2^\verb|geom_subdivision_levels|) \f$ memory but, in principle,
-only \f$ O(\verb|geom_subdivision_levels|) \f$ time.
-The default value gives 8192 subdivisions,
+sometimes it is necessary to discretize curves/surfaces into polygonal/polyhedral segments.
+For low-precision applications, they will be divided into \f$ 2^\verb|min_geom_subdiv_levels| \f$
+uniformly-spaced segments along each dimension in parameter space.
+This requires \f$ O(2^{2*\verb|min_geom_subdiv_levels|}) \f$ memory (in 3D) but, in principle,
+only \f$ O(\verb|min_geom_subdiv_levels|) \f$ time thanks to tree-based search algorithms.
+`min_geom_subdiv_levels` should be high enough to capture every feature of the surface,
+but not necessarily to the level of accuracy that you demand in the final results.
+Any applications where error in the geometry calculations directly translates to error in the simulation results
+will use \ref max_geom_subdiv_levels .
+The default value gives 256 subdivisions,
 which is generally enough for any practical purpose while still being pretty fast.
-If you reduce this number, keep in mind that high-order DG requires much more precision in the geometry
-than lower-order methods.
 
+<hr>
+\subsubsection max_geom_subdiv_levels
+__type:__ integer \n
+__default:__ 15 \n
+Like \ref min_geom_subdiv_levels ,
+but used for high-precision applications that directly impact the accuracy of the simulation.
+The default value gives 32 768 subdivisions, which should be precise enough
+not to be a significant source of error in any reasonable simulation.
+Only curves will actually store this many data points,
+so the memory requirement is \f$ O(2^\verb|max_geom_subdiv_levels|) \f$
+(note the absence of the factor of 2 which appears in the memory requirement for \ref min_geom_subdiv_levels
+because of the necessity to store data for surfaces),
+which should not generally be a constraint on your simulations.
+Increasing `max_geom_subdiv_levels` will, however, significantly affect the amount of time required for meshing.
+If you choose to reduce it, keep in mind that high-order DG requires much more precision in the geometry
+than lower-order methods.
 
 \subsection esoteric_inputs Esoteric Input Parameters
 You will probably never need to worry about these parameters.
@@ -1137,8 +1170,9 @@ Evaluates to `{}`.
 \subsubsection set_geometry_refinement
 __type:__ string (macro) \n
 Sets \ref refine_if and \ref unrefine_if to refine elements in order to efficiently resolve the geometry surface.
-\see \ref max_ref_level
-\see \ref geometry_uncertainty
+Specifically, some points on the faces of surface elements are sampled, and if their distance from the true geometry surface (in the \f$ L_2 \f$ Gaussian quadrature norm)
+is greater than the quantity \ref geom_rtol * \ref geom_length + \ref geom_atol , the element is refined.
+However, the elements are *not* refined if their refinement level exceeds \ref max_ref_level or their nominal edge length is less than \ref min_elem_size.
 
 <hr>
 \subsubsection set_shock
@@ -1403,6 +1437,15 @@ Evaluates to `{}`.
 \subsubsection performance_report
 __type:__ Heisenberg string \n
 Human-readable summary of kernel performance metrics for all iterations that have been run in the current simulation.
+
+<hr>
+\subsubsection geom_length
+__type:__ float \n
+Estimated length of the surface geometry.
+The bounding box of all geometry bodies is estimated (from the mesh surface) and `geom_length`
+is set to the length of the diagonal of that bounding box.
+This value is set after the geometry is first incorporated (before the first refinement sweep)
+and updated after each refinement sweep to reflect the latest mesh surface.
 
 <hr>
 

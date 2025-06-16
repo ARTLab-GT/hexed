@@ -53,13 +53,18 @@ class Nearest_point {
   double dist_squared() const {return _dist_sq;} //!< squared distance between `reference()` and `point()`
   bool empty() const {return _e;} //!< if `true`, `point()` won't work
 
-  //! sets `*this` to the nearest of `*this` and `other`
-  void merge(Nearest_point other) {
-    if (other._dist_sq < this->_dist_sq) *this = other;
+  //! \brief sets `*this` to the nearest of `*this` and `other`
+  //! \returns `true` iff the nearest point turned out to be `other`
+  bool merge(Nearest_point other) {
+    if (other._dist_sq < this->_dist_sq) {
+      *this = other;
+      return true;
+    }
+    return false;
   }
   //! updates `*this` to point to `new_pnt` if `new_pnt` is closer
-  void merge(Mat<n_dim> new_pnt) {
-    if (!std::isnan(new_pnt.squaredNorm())) merge(Nearest_point(_r, new_pnt));
+  bool merge(Mat<n_dim> new_pnt) {
+    if (!std::isnan(new_pnt.squaredNorm())) return merge(Nearest_point(_r, new_pnt));
   }
 
   //! \brief Current best estimate for nearest point.

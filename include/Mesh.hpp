@@ -6,9 +6,8 @@
 #include "Boundary_condition.hpp"
 #include "Layer_sequence.hpp"
 #include "Surface_geom.hpp"
-#include "connection.hpp"
-#include "Geom_edge.hpp"
 #include "Stopwatch_tree.hpp"
+#include "Kernel_connection.hpp"
 
 namespace hexed {
 
@@ -24,6 +23,7 @@ namespace hexed {
  */
 class Mesh {
   public:
+  virtual ~Mesh() = default;
   //! \returns Nominal size (\f$\Delta h\f$) of elements with refinement level 0.
   virtual double root_size() = 0;
 
@@ -39,17 +39,17 @@ class Mesh {
    * Specify that two elements are connected via a Cartesian face. Note: although the interface
    * is stipulated to be Cartesian, the elements themselves can be deformed
    */
-  virtual void connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Con_dir<Element> dir,
+  virtual void connect_cartesian(int ref_level, std::array<Int, 2> serial_n, Connection_direction dir,
                                  std::array<bool, 2> is_deformed = {false, false}) = 0;
   //! Specify that two elements are connected via a deformed face. Requires both elements to be deformed.
-  virtual void connect_deformed(int ref_level, std::array<Int, 2> serial_n, Con_dir<Deformed_element> direction) = 0;
+  virtual void connect_deformed(int ref_level, std::array<Int, 2> serial_n, Connection_direction direction) = 0;
   /*!
    * specify that an element of refinement level `coarse_ref_level` is connected to some elements of refinement level
    * `coarse_ref_level + 1`.
-   * Coarse element comes first in `Con_dir`.
+   * Coarse element comes first in `Connection_direction`.
    * `coarse_deformed` and `fine_deformed` specify whether the elements are Cartesian or deformed.
    * If any of the elements are Cartesian, the entire face is assumed to be Cartesian.
-   * In this case, all the vertices must occupy their nominal positions and the `Con_dir` must be appropriate for a Cartesian connection.
+   * In this case, all the vertices must occupy their nominal positions and the `Connection_direction` must be appropriate for a Cartesian connection.
    * If these requirements are not satisfied, the invocation is incorrect.
    * The number of fine elements can be any power of 2 (with a maximum of 2^(`n_dim - 1`)).
    * In order to match the faces when less than the maximum number of elements is used,
@@ -57,7 +57,7 @@ class Mesh {
    * Only the first `n_dim - 1` elements of `stretch` are meaningful.
    * The rest are ignored.
    */
-  virtual void connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial, Con_dir<Deformed_element>,
+  virtual void connect_hanging(int coarse_ref_level, Int coarse_serial, std::vector<Int> fine_serial, Connection_direction,
                                bool coarse_deformed = false, std::vector<bool> fine_deformed = {false, false, false, false},
                                std::array<bool, 2> stretch = {false, false}) = 0;
   /*! \brief Acquires owenership of `*flow_bc` and adds it as a boundary condition.
@@ -194,15 +194,6 @@ class Mesh {
   struct elem_handle {int ref_level; bool is_deformed; int serial_n;};
   //! get handles for all elements currently in the mesh, in no particular order (mostly for testing/debugging)
   virtual std::vector<elem_handle> elem_handles() = 0;
-  //! Temporarily resets the vertices of a mesh to their nominal positions for debugging
-  class Reset_vertices {
-    Mesh& m;
-    public:
-    //! resets to nominal position
-    inline Reset_vertices(Mesh& mesh) : m{mesh} {m.reset_verts();}
-    //! restores vertices to where they were before this object was constructed
-    inline ~Reset_vertices() {m.restore_verts();}
-  };
   //! \brief Obtain performance data.
   virtual const Stopwatch_tree& stopwatch_tree() const = 0;
   //!\}
@@ -217,9 +208,6 @@ class Mesh {
   //! \details For debugging. For actual simulations, use `Solver::visualize_field`.
   virtual void visualize(std::string format, std::string file_name, double time = 0) = 0;
   //!\}
-  protected:
-  virtual void reset_verts() = 0;
-  virtual void restore_verts() = 0;
 };
 
 }

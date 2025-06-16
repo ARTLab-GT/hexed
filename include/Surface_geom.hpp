@@ -9,6 +9,30 @@
 
 namespace hexed {
 
+class Geom_edge {
+  public:
+  virtual Mat<3> point(double) const = 0;
+  virtual double arc_length(double) const = 0;
+  virtual Mat<3> tangent_average(double) const = 0;
+  virtual double tangent_radius(double) const = 0;
+  virtual double arg_nearest_point(Mat<3>) const = 0;
+};
+
+class Compound_edge : public Geom_edge {
+  public:
+  Compound_edge(std::vector<std::shared_ptr<Geom_edge>> _edges, std::vector<bool> reverse);
+  Mat<3> point(double) const override;
+  double arc_length(double) const override;
+  Mat<3> tangent_average(double) const override;
+  double tangent_radius(double) const override;
+  double arg_nearest_point(Mat<3>) const override;
+  private:
+  std::pair<Int, double> _global_index(double) const;
+  std::vector<std::shared_ptr<Geom_edge>> _edges;
+  std::vector<bool> _reverse;
+  std::vector<double> _arc_length_start;
+};
+
 /*! \brief Represents a surface geometry implicitly for meshing.
  * \details Abstract class which represents geometry by supporting
  * the operations `Surface_geom::nearest_point` and `Surface_geom::intersections`.
@@ -38,12 +62,12 @@ class Surface_geom {
    * Returns the (potentially empty) set of \f$ t \f$ values where the line intersects the surface.
    * \deprecated Newer methods should be based purely on nearest point projections.
    */
-  virtual std::vector<double> intersections(Mat<> point0, Mat<> point1) = 0;
+  virtual std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_precision = true) = 0;
   /*! \brief Returns a list of any geometry edges that require mesh edges to be snapped to them.
    * \details Only used in 3D.
    * Default implementation returns an empty sequence, but derived classes may override.
    */
-  inline virtual next::Sequence<const Tree_curve&> edges() {return {};}
+  inline virtual next::Sequence<const Geom_edge&> edges() {return {};}
   inline virtual next::Sequence<Mat<3>> points() {return {};}
 };
 
@@ -57,8 +81,8 @@ class Compound_geom : public Surface_geom {
   public:
   Compound_geom(std::vector<Surface_geom*>); //!< acquires ownership
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-  std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
-  next::Sequence<const Tree_curve&> edges() override;
+  std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_precision = true) override;
+  next::Sequence<const Geom_edge&> edges() override;
   next::Sequence<Mat<3>> points() override;
 };
 
@@ -74,7 +98,7 @@ class Hypersphere : public Surface_geom {
   public:
   Hypersphere(Mat<> center, double radius);
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
-  std::vector<double> intersections(Mat<> point0, Mat<> point1) override;
+  std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_precision = true) override;
 };
 
 }

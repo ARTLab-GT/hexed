@@ -1,31 +1,18 @@
 #ifndef HEXED_ASSERT_HPP_
 #define HEXED_ASSERT_HPP_
 
+#include "config.hpp"
 #include <stdexcept>
 #include <vector>
 #include <string>
+#if HEXED_THREADED
 #include <omp.h>
-#include "config.hpp"
+#endif
+#include "format_str.hpp"
 
 //! \file assert.hpp utilities for custom assertions
 
 namespace hexed {
-
-/*! \brief Standard string formatting.
- * \details Basically a knockoff of `std::format` in C++20 (which at the time of writing we can't use on the lab machines).
- * Invokes `snprintf`, but works in terms of `std::string`s and handles buffer creation for you.
- * Will allocate a buffer of size `max_chars`.
- * Throws an exception if resulting formatted string is larger than `max_chars`.
- * \headerfile utils.hpp
- */
-template <typename... format_args>
-std::string format_str(int max_chars, std::string fstring, format_args... args) {
-  std::vector<char> buffer(max_chars);
-  int overflow = snprintf(buffer.data(), max_chars, fstring.c_str(), args...);
-  if (overflow < 0) throw std::runtime_error("encoding error in `hexed::format_str`");
-  if (overflow >= max_chars) throw std::runtime_error("`max_chars` is too small in `hexed::format_str`");
-  return std::string(buffer.data());
-}
 
 //! \brief utilities for custom assertions
 namespace assert {
@@ -113,7 +100,7 @@ void throw_critical(const char* message) {
  * \note This macro expands to a block enclosed in `{}`, so it does not require a `;` after it.
  */
 #define HEXED_THROW(message, ...) { \
-  hexed::assert::throw_critical<__VA_ARGS__>(hexed::format_str(1000, \
+  hexed::assert::throw_critical<__VA_ARGS__>(hexed::format_str(2000, \
     "%s\n" \
     "  At: line %d of `%s`\n" \
     "  In: %s", \
@@ -127,7 +114,7 @@ void throw_critical(const char* message) {
  */
 #define HEXED_ASSERT(expression, message, ...) { \
   if (!(expression)) { \
-    HEXED_THROW(hexed::format_str(1000, \
+    HEXED_THROW(hexed::format_str(2000, \
       "%s\n" \
       "  Assertion `%s` failed in `%s`.", \
       std::string(message).c_str(), #expression, __FUNCTION__) \

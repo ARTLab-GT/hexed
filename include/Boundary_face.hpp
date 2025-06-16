@@ -4,7 +4,6 @@
 #include <memory>
 #include "math.hpp"
 #include "Storage_params.hpp"
-#include "Basis.hpp"
 #include "Array.hpp"
 
 namespace hexed {

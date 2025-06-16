@@ -31,9 +31,6 @@ TEST_CASE("Block") {
     REQUIRE(vert0.alive());
     REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2},
                  hexed::math::Approx_equal()));
-    vert0.apply_relax(); // before first call to `calc_relax`, `apply_update` should do nothing
-    REQUIRE_THAT(vert0.point({}), Catch::Matchers::RangeEquals(hexed::Mat<3>{.1, -.3, .2},
-                 hexed::math::Approx_equal()));
     hexed::next::Vertex vert1({.3, -.1, .4}, 4);
     hexed::Reciprocal_ptr<hexed::next::Element_shape, hexed::next::Vertex> ptr1(nullptr);
     vert1.pair(ptr1);
@@ -44,9 +41,12 @@ TEST_CASE("Block") {
     REQUIRE(edge0.n_dim() == 1);
     REQUIRE(edge0.row_size() == 4);
     REQUIRE(!edge0.alive());
+    REQUIRE(&edge0.vertex(0) == &vert0);
+    REQUIRE(&edge0.vertex(1) == &vert1);
+    REQUIRE_THAT(edge0.vertices(), Catch::Matchers::RangeEquals(std::vector<hexed::next::Vertex*>{&vert0, &vert1}));
     auto test_interp = [&](hexed::next::Edge& edge){
       for (int i = 0; i < 4; ++i) {
-        REQ_VEC_EQ(edge.point({i}), hexed::Mat<3>{.1, -.3, .2} + i*hexed::Mat<3>::Constant(.2/3.));
+        REQ_VEC_EQ(edge.point(std::vector<int>{i}), hexed::Mat<3>{.1, -.3, .2} + i*hexed::Mat<3>::Constant(.2/3.));
       }
     };
     test_interp(edge0);
@@ -54,14 +54,14 @@ TEST_CASE("Block") {
     // edge modification
     REQUIRE_THAT(edge0.interior().shape(), Catch::Matchers::RangeEquals(std::vector<int>{2, 3}));
     edge0.interior()(0)[2] = 2.3;
-    REQUIRE(edge0.point({1})(2) == Catch::Approx(2.3));
+    REQUIRE(edge0.point(std::vector<int>{1})(2) == Catch::Approx(2.3));
     edge0.reset();
     test_interp(edge0);
     hexed::Array<double> points = edge0.points();
     REQUIRE_THAT(points.shape(), Catch::Matchers::RangeEquals(std::vector<int>{3, 4}));
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
       for (int row = 0; row < 4; ++row) {
-        REQUIRE(points(i_dim)[row] == Catch::Approx(edge0.point({row})(i_dim)));
+        REQUIRE(points(i_dim)[row] == Catch::Approx(edge0.point(std::vector<int>{row})(i_dim)));
       }
     }
 
@@ -77,7 +77,7 @@ TEST_CASE("Block") {
       vert3.pair(ptr3);
       hexed::next::Edge edge1(vert0, vert2, basis);
       hexed::next::Edge edge2(vert0, vert3, basis);
-      REQUIRE_THAT(edge1.point({3}), Catch::Matchers::RangeEquals(hexed::Mat<3>{3., 3., 3.}));
+      REQUIRE_THAT(edge1.point(std::vector<int>{3}), Catch::Matchers::RangeEquals(hexed::Mat<3>{3., 3., 3.}));
       vert2.eat(vert1);
       REQUIRE(!vert1.alive());
       REQUIRE(vert2.alive());
@@ -86,24 +86,8 @@ TEST_CASE("Block") {
       vert3.eat(vert3);
       REQUIRE(vert3.alive());
       for (auto edge : {&edge0, &edge1, &edge2}) {
-        REQUIRE_THAT(edge->point({3}), Catch::Matchers::RangeEquals(hexed::Mat<3>{3.3, 2.9, 3.4}/3.));
+        REQUIRE_THAT(edge->point(std::vector<int>{3}), Catch::Matchers::RangeEquals(hexed::Mat<3>{3.3, 2.9, 3.4}/3.));
       }
-    }
-
-    SECTION("vertex shadowing") {
-      hexed::next::Vertex vert2({2., 2., 2.}, 4);
-      hexed::next::Vertex vert3({0., 0., 0.}, 4);
-      REQUIRE(!vert2.are_shadows(vert3));
-      REQUIRE(!vert3.are_shadows(vert2));
-      vert2.shadow(vert3);
-      REQUIRE(vert2.are_shadows(vert3));
-      REQUIRE(vert3.are_shadows(vert2));
-      REQ_VEC_EQ(vert2.point({}), hexed::Mat<3>{1., 1., 1.});
-      REQ_VEC_EQ(vert3.point({}), hexed::Mat<3>{1., 1., 1.});
-      vert2.set_pos({4., 1., 1.});
-      vert3.set_pos({1., 5., 1.});
-      REQ_VEC_EQ(vert2.point({}), hexed::Mat<3>{1., 5., 1.});
-      REQ_VEC_EQ(vert3.point({}), hexed::Mat<3>{1., 5., 1.});
     }
 
     SECTION("vertex shared value") {
@@ -140,22 +124,22 @@ TEST_CASE("Block") {
       edge4.glue(*edge3, 0);
       REQUIRE(edge4.glued());
       REQUIRE(!edge3->glued());
-      REQUIRE(edge3->point({1})(0) == Catch::Approx(4./3.));
-      REQUIRE(edge0.point({0})(0) == Catch::Approx(1.));
-      REQUIRE(edge0.point({1})(0) == Catch::Approx(4./3.));
-      REQUIRE(edge0.point({2})(1) == Catch::Approx(1.));
+      REQUIRE(edge3->point(std::vector<int>{1})(0) == Catch::Approx(4./3.));
+      REQUIRE(edge0.point(std::vector<int>{0})(0) == Catch::Approx(1.));
+      REQUIRE(edge0.point(std::vector<int>{1})(0) == Catch::Approx(4./3.));
+      REQUIRE(edge0.point(std::vector<int>{2})(1) == Catch::Approx(1.));
       SECTION("unglue") {
         edge0.unglue();
         REQUIRE(!edge0.glued());
         test_interp(edge0);
       }
-      REQUIRE(edge4.point({0})(0) == Catch::Approx(1.));
-      REQUIRE(edge4.point({1})(0) == Catch::Approx(1. + .5/3.));
+      REQUIRE(edge4.point(std::vector<int>{0})(0) == Catch::Approx(1.));
+      REQUIRE(edge4.point(std::vector<int>{1})(0) == Catch::Approx(1. + .5/3.));
       edge4.unglue();
       edge4.glue(*edge3, 1);
-      REQUIRE(edge4.point({0})(0) == Catch::Approx(1.5));
-      REQUIRE(edge4.point({0})(2) == Catch::Approx(1.));
-      REQUIRE(edge4.point({1})(0) == Catch::Approx(1.5 + .5/3.));
+      REQUIRE(edge4.point(std::vector<int>{0})(0) == Catch::Approx(1.5));
+      REQUIRE(edge4.point(std::vector<int>{0})(2) == Catch::Approx(1.));
+      REQUIRE(edge4.point(std::vector<int>{1})(0) == Catch::Approx(1.5 + .5/3.));
       SECTION("delete") {
         edge3.reset();
         REQUIRE(!edge0.glued());
@@ -164,23 +148,24 @@ TEST_CASE("Block") {
     }
   }
 
-  SECTION("Face") {
+  SECTION("Surface_face") {
     std::vector<hexed::next::Vertex> verts;
     verts.emplace_back(hexed::Mat<3>{1., 1.5, 1.}, 5);
     verts.emplace_back(hexed::Mat<3>{2., 1.0, 1.}, 5);
     verts.emplace_back(hexed::Mat<3>{1., 2.0, 3.}, 5);
     verts.emplace_back(hexed::Mat<3>{2., 2.0, 1.}, 5);
-    hexed::next::Face face({&verts[0], &verts[1], &verts[2], &verts[3]}, basis5);
+    hexed::next::Surface_face face({&verts[0], &verts[1], &verts[2], &verts[3]}, basis5);
     REQUIRE(!face.alive());
-    REQUIRE_THAT(face.edge(0).point({0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.500, 1.0}, hexed::math::Approx_equal()));
-    REQUIRE_THAT(face.edge(0).point({2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.250, 1.0}, hexed::math::Approx_equal()));
-    REQUIRE_THAT(face.edge(3).point({2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 1.500, 1.0}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.edge(0).point(std::vector<int>{0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.500, 1.0}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.edge(0).point(std::vector<int>{2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.250, 1.0}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.edge(3).point(std::vector<int>{2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 1.500, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.point({0, 0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.500, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.point({4, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 2.000, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.point({2, 0}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.0, 1.750, 2.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.point({0, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.250, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.point({2, 4}), Catch::Matchers::RangeEquals(hexed::Mat<3>{2.0, 1.500, 1.0}, hexed::math::Approx_equal()));
     REQUIRE_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, 1.625, 1.5}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(face.vertices(), Catch::Matchers::RangeEquals(std::vector<hexed::next::Vertex*>{&verts[0], &verts[1], &verts[2], &verts[3]}));
     REQUIRE(face.point({1, 2})(0) == Catch::Approx(face.point({2, 2})(0)));
     face.interior()(1)(1)[1] = -5.;
     REQUIRE_THAT(face.point({2, 2}), Catch::Matchers::RangeEquals(hexed::Mat<3>{1.5, -5., 1.5}, hexed::math::Approx_equal()));
@@ -266,6 +251,12 @@ TEST_CASE("Block") {
       elems.push_back(blocks2.create_element({-.2, 1., .1}, .7, 3));
       REQUIRE(elems[0].nominal_size() == Catch::Approx(0.7));
       REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.7));
+      elems[0].vertex(0).add_size_constraint(.9);
+      REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.7));
+      elems[0].vertex(0).add_size_constraint(.6);
+      REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.6));
+      elems[0].vertex(0).add_size_constraint(.9);
+      REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.6));
       SECTION("vertex gluing") {
         hexed::next::Vertex vert({10., 20., 30.}, 5);
         vert.glue(elems[1], {.1, .2});
@@ -306,6 +297,9 @@ TEST_CASE("Block") {
         REQUIRE(&elems[0].vertex(1) == &elems[1].vertex(3));
       }
       REQUIRE(elems[0].vertex(0).n_elements() == 2);
+      REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.6));
+      elems[0].vertex(0).remove_size_constraints();
+      REQUIRE(elems[0].vertex(0).nominal_size() == Catch::Approx(0.7));
     }
 
     SECTION("3D conformal") {
@@ -361,14 +355,14 @@ TEST_CASE("Block") {
         &elems[1].vertex(5),
         &elems[3].vertex(0),
       }));
-      REQUIRE_THAT(faces[2].edge(1).point({1}), Catch::Matchers::RangeEquals(faces[0].edge(2).point({1}), hexed::math::Approx_equal()));
+      REQUIRE_THAT(faces[2].edge(1).point(std::vector<int>{1}), Catch::Matchers::RangeEquals(faces[0].edge(2).point(std::vector<int>{1}), hexed::math::Approx_equal()));
       elems[2].connect(elems[1], {{0, 1}, {1, 0}});
       elems[3].connect(elems[2], {{1, 2}, {0, 0}});
-      REQ_VEC_EQ(faces[0].edge(0).point({1}), faces[1].edge(1).point({1}));
-      REQ_VEC_EQ(faces[1].edge(2).point({1}), faces[2].edge(2).point({1}));
+      REQ_VEC_EQ(faces[0].edge(0).point(std::vector<int>{1}), faces[1].edge(1).point(std::vector<int>{1}));
+      REQ_VEC_EQ(faces[1].edge(2).point(std::vector<int>{1}), faces[2].edge(2).point(std::vector<int>{1}));
       elems[3].connect(elems[4], {{1, 1}, {1, 0}});
       faces[2].edge(3).interior()(1)[2] += .002;
-      REQ_VEC_EQ(faces[3].edge(2).point({2}), faces[2].edge(3).point({2}));
+      REQ_VEC_EQ(faces[3].edge(2).point(std::vector<int>{2}), faces[2].edge(3).point(std::vector<int>{2}));
       elems[1].connect(elems[0], {{0, 0}, {0, 1}});
     }
 
@@ -485,8 +479,8 @@ TEST_CASE("Block") {
         elems[0].connect({&elems[1], &elems[2], &elems[3], &elems[4]}, {{0, 0}, {0, 1}});
         reset();
         warp(blocks3.faces_3d()[0].edge(0));
-        REQUIRE(blocks3.faces_3d()[1].edge(1).point({2})(2) == Catch::Approx(.28));
-        REQUIRE(blocks3.faces_3d()[2].edge(1).point({2})(2) == Catch::Approx(.78));
+        REQUIRE(blocks3.faces_3d()[1].edge(1).point(std::vector<int>{2})(2) == Catch::Approx(.28));
+        REQUIRE(blocks3.faces_3d()[2].edge(1).point(std::vector<int>{2})(2) == Catch::Approx(.78));
       }
       SECTION("dim 0") {
         elems.push_back(blocks3.create_element(zero, 1., 4));
@@ -497,10 +491,10 @@ TEST_CASE("Block") {
         elems[0].connect({&elems[1], &elems[2], &elems[3], &elems[4]}, {{1, 2}, {1, 0}});
         reset();
         warp(blocks3.faces_3d()[0].edge(3));
-        REQUIRE(blocks3.faces_3d()[1].edge(2).point({2})(0) == Catch::Approx(.25));
-        REQUIRE(blocks3.faces_3d()[1].edge(2).point({2})(2) == Catch::Approx(.53));
-        REQUIRE(blocks3.faces_3d()[2].edge(2).point({2})(0) == Catch::Approx(.75));
-        REQUIRE(blocks3.faces_3d()[2].edge(2).point({2})(2) == Catch::Approx(.53));
+        REQUIRE(blocks3.faces_3d()[1].edge(2).point(std::vector<int>{2})(0) == Catch::Approx(.25));
+        REQUIRE(blocks3.faces_3d()[1].edge(2).point(std::vector<int>{2})(2) == Catch::Approx(.53));
+        REQUIRE(blocks3.faces_3d()[2].edge(2).point(std::vector<int>{2})(0) == Catch::Approx(.75));
+        REQUIRE(blocks3.faces_3d()[2].edge(2).point(std::vector<int>{2})(2) == Catch::Approx(.53));
         REQUIRE_THAT(blocks3.faces_3d()[0].edge(2).contacted_elements(), Catch::Matchers::UnorderedRangeEquals(std::vector<void*>{&elems[0]}));
         REQUIRE_THAT(blocks3.faces_3d()[0].edge(3).contacted_elements(), Catch::Matchers::UnorderedRangeEquals(std::vector<void*>{&elems[0], &elems[2], &elems[4]}));
         REQUIRE_THAT(blocks3.faces_3d()[1].edge(2).contacted_elements(), Catch::Matchers::UnorderedRangeEquals(std::vector<void*>{&elems[0], &elems[2]}));
@@ -514,10 +508,10 @@ TEST_CASE("Block") {
         elems[0].connect({&elems[1], &elems[2], &elems[3], &elems[4]}, {{0, 2}, {1, 1}});
         reset();
         warp(blocks3.faces_3d()[0].edge(1));
-        REQUIRE(blocks3.faces_3d()[1].edge(3).point({2})(1) == Catch::Approx(.25));
-        REQUIRE(blocks3.faces_3d()[1].edge(3).point({2})(2) == Catch::Approx(.53));
-        REQUIRE(blocks3.faces_3d()[2].edge(3).point({2})(1) == Catch::Approx(.75));
-        REQUIRE(blocks3.faces_3d()[2].edge(3).point({2})(2) == Catch::Approx(.53));
+        REQUIRE(blocks3.faces_3d()[1].edge(3).point(std::vector<int>{2})(1) == Catch::Approx(.25));
+        REQUIRE(blocks3.faces_3d()[1].edge(3).point(std::vector<int>{2})(2) == Catch::Approx(.53));
+        REQUIRE(blocks3.faces_3d()[2].edge(3).point(std::vector<int>{2})(1) == Catch::Approx(.75));
+        REQUIRE(blocks3.faces_3d()[2].edge(3).point(std::vector<int>{2})(2) == Catch::Approx(.53));
       }
       SECTION("stretched in-plane") {
         elems.push_back(blocks3.create_element(zero, 1., 3));
@@ -526,10 +520,10 @@ TEST_CASE("Block") {
         elems[0].connect({&elems[1], &elems[1], &elems[2], &elems[2]}, {{2, 1}, {0, 1}});
         reset();
         warp(blocks3.faces_3d()[0].edge(2));
-        REQUIRE(blocks3.faces_3d()[1].edge(3).point({2})(0) == Catch::Approx(.25));
-        REQUIRE(blocks3.faces_3d()[1].edge(3).point({2})(2) == Catch::Approx(-.22));
-        REQUIRE(blocks3.faces_3d()[2].edge(3).point({2})(0) == Catch::Approx(.75));
-        REQUIRE(blocks3.faces_3d()[2].edge(3).point({2})(2) == Catch::Approx(-.22));
+        REQUIRE(blocks3.faces_3d()[1].edge(3).point(std::vector<int>{2})(0) == Catch::Approx(.25));
+        REQUIRE(blocks3.faces_3d()[1].edge(3).point(std::vector<int>{2})(2) == Catch::Approx(-.22));
+        REQUIRE(blocks3.faces_3d()[2].edge(3).point(std::vector<int>{2})(0) == Catch::Approx(.75));
+        REQUIRE(blocks3.faces_3d()[2].edge(3).point(std::vector<int>{2})(2) == Catch::Approx(-.22));
       }
       SECTION("stretched out-of-plane") {
         elems.push_back(blocks3.create_element(zero, 1., 2));
@@ -538,8 +532,8 @@ TEST_CASE("Block") {
         elems[0].connect({&elems[1], &elems[2], &elems[1], &elems[2]}, {{2, 1}, {1, 0}});
         reset();
         warp(blocks3.faces_3d()[0].edge(3));
-        REQUIRE(blocks3.faces_3d()[1].edge(2).point({2})(0) == Catch::Approx(.375));
-        REQUIRE(blocks3.faces_3d()[1].edge(2).point({2})(2) == Catch::Approx(1.54));
+        REQUIRE(blocks3.faces_3d()[1].edge(2).point(std::vector<int>{2})(0) == Catch::Approx(.375));
+        REQUIRE(blocks3.faces_3d()[1].edge(2).point(std::vector<int>{2})(2) == Catch::Approx(1.54));
       }
     }
   }

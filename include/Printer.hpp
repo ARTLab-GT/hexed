@@ -53,7 +53,8 @@ class Stream_printer : public Printer {
 
   /*! \brief specifies the color to print in
    * \note `unspecified_color` is not the same as `default_color`.
-   * The latter will explicitly send an [ASCII escape code](https://en.wikipedia.org/wiki/ANSI_escape_code#Colors) which sets the color to the default.
+   * The latter will explicitly send an [ASCII escape code](https://en.wikipedia.org/wiki/ANSI_escape_code#Colors)
+   * which sets the color to the default.
    * If the output stream was already printing in some non-default color, this will reset it to the default.
    * It also requires the output stream to support colors.
    * On the other hand, `unspecified_color` indicates that no escape code will be sent to specify the color
@@ -76,7 +77,8 @@ class Stream_printer : public Printer {
     format_type type = unspecified_type;
     format_color color = unspecified_color;
     bool light = false; //!< \brief if `true`, make the colors lighter than they otherwise would be
-    bool background = false; //!< \brief if `true`, any colors specified refer to the text background rather than the text itself
+    //! \brief if `true`, any colors specified refer to the text background rather than the text itself
+    bool background = false;
   };
   static const Format default_format;
 
@@ -113,6 +115,7 @@ class Task_message {
   Printer& _printer;
   std::string _sep1;
   public:
+  //! \details `sep0` inserted after ellipsis, `sep1` inserted before "done".
   Task_message(Printer& p, std::string message, std::string sep0 = " ", std::string sep1 = "");
   ~Task_message();
 };

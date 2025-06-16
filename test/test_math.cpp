@@ -22,6 +22,9 @@ static_assert (hexed::math::log(-1, 27) == -1);
 static_assert (hexed::math::max(-2, 4, 3, 2) == 4);
 static_assert (hexed::math::max(-2, -3) == -2);
 static_assert (hexed::math::max(1, 2, 3, 4, 5) == 5);
+static_assert (hexed::math::min(-2, 4, 3, 2) == -2);
+static_assert (hexed::math::min(-2, -3) == -3);
+static_assert (hexed::math::min(1, 2, 3, 4, 5) == 1);
 
 TEST_CASE("angle_diff") {
   REQUIRE(hexed::math::angle_diff(1.1, 1.) == Catch::Approx(0.1));
@@ -194,20 +197,6 @@ TEST_CASE("proj_to_segment") {
   REQUIRE((proj - Eigen::Vector2d{1.5, 1.5}).norm() == Catch::Approx(0.).scale(1.));
 }
 
-TEST_CASE("to_mat") {
-  std::vector<double> vec {.1, -.3, .2};
-  REQUIRE_THAT(hexed::math::to_mat(vec), Catch::Matchers::RangeEquals(vec, hexed::math::Approx_equal()));
-}
-
-TEST_CASE("resize") {
-  hexed::Mat<4> vec {.2, -.1, .03, 6.};
-  REQUIRE_THAT(hexed::math::resize(vec, 2),
-               Catch::Matchers::RangeEquals(std::vector<double>{.2, -.1}, hexed::math::Approx_equal(0., 1e-10)));
-  REQUIRE_THAT(hexed::math::resize(vec, 6),
-               Catch::Matchers::RangeEquals(std::vector<double>{.2, -.1, .03, 6., 0., 0.},
-                                            hexed::math::Approx_equal(0., 1e-10)));
-}
-
 TEST_CASE("bounding_ball") {
   SECTION("2*2") {
     Eigen::MatrixXd points(2, 2);
@@ -262,19 +251,70 @@ TEST_CASE("chebyshev_step") {
 
 TEST_CASE("correct_values") {
   std::vector<double> estimates {.3, -.55, -.6};
-  SECTION("too few values")
-  {
+  SECTION("too few values") {
     std::vector<double> exacts {-.61, .29};
     REQUIRE_THAT(hexed::math::correct_values(estimates, exacts, .2), Catch::Matchers::RangeEquals(std::vector<double>{.29, -.55, -.61}));
   }
-  SECTION("too many values")
-  {
+  SECTION("too many values") {
     std::vector<double> exacts {-.61, .28, -.58, .29};
     REQUIRE_THAT(hexed::math::correct_values(estimates, exacts, .2), Catch::Matchers::RangeEquals(std::vector<double>{.29, -.58, -.61}));
   }
-  SECTION("implausible values")
-  {
+  SECTION("implausible values") {
     std::vector<double> exacts {-.61, .98, -.54, .99};
     REQUIRE_THAT(hexed::math::correct_values(estimates, exacts, .2), Catch::Matchers::RangeEquals(std::vector<double>{.3, -.54, -.61}));
+  }
+}
+
+TEST_CASE("Objective_finite_diff") {
+  SECTION("1 variable") {
+    auto fun = [](hexed::Mat<> point)->hexed::math::Objective_finite_diff::Objective_sample {
+      return {.1 - hexed::math::pow(point(0) - .3, 2), true};
+    };
+    hexed::math::Objective_finite_diff obj(fun, hexed::Mat<1>{-4.}, 1e-3);
+    REQUIRE(obj.feasible);
+    REQUIRE(obj.gradient.size() == 1);
+    REQUIRE(obj.hessian.rows() == 1);
+    REQUIRE(obj.hessian.cols() == 1);
+    REQUIRE(obj.gradient(0) == Catch::Approx(-2*-4. - 2*-.3));
+    REQUIRE(obj.hessian(0, 0) == Catch::Approx(-2));
+  }
+  SECTION("2 variables") {
+    auto fun = [](hexed::Mat<> point)->hexed::math::Objective_finite_diff::Objective_sample {
+      return {hexed::math::pow(.2*(point(0) - .6) + (point(1) + .7), 2)
+              + hexed::math::pow(-.1*(point(0) - .6) + .9*(point(1) + .7), 2) - 4.3,
+              point(0) > .1 - 1e-4};
+    };
+    hexed::math::Objective_finite_diff obj(fun, hexed::Mat<2>{.1, .3}, 1e-3);
+    REQUIRE(obj.feasible);
+    REQUIRE(obj.gradient.size() == 2);
+    REQUIRE(obj.hessian.rows() == 2);
+    REQUIRE(obj.hessian.cols() == 2);
+    REQUIRE((obj.gradient - hexed::Mat<2>{2*(.2*.2*.1 + .2*(.3 + .7 - .2*.6) + .1*.1*.1 - .1*(.9*(.3 + .7) + .1*.6)),
+                                          2*(.3 + .2*(.1 - .6) + .7 + .9*.9*.3 + .9*(-.1*(.1 - .6) + .9*.7))}).norm()
+             < 1e-6);
+  }
+  SECTION("3 variables") {
+    auto fun = [](hexed::Mat<> point)->hexed::math::Objective_finite_diff::Objective_sample {
+      return {point(0)*point(0) - point(1)*point(1) + point(2)*point(2), true};
+    };
+    hexed::math::Objective_finite_diff obj(fun, hexed::Mat<3>{.4, .5, .2}, 1e-3);
+    REQUIRE(obj.feasible);
+    REQUIRE(obj.gradient.size() == 3);
+    REQUIRE(obj.hessian.rows() == 3);
+    REQUIRE(obj.hessian.cols() == 3);
+    REQUIRE((obj.gradient - hexed::Mat<3>{.8, -1., .4}).norm() < 1e-6);
+    hexed::Mat<hexed::dyn, hexed::dyn> correct_hessian(3, 3);
+    correct_hessian <<
+      2.,  0., 0.,
+      0., -2., 0.,
+      0.,  0., 2.;
+    REQUIRE((obj.hessian - correct_hessian).norm() < 1e-6);
+  }
+  SECTION("infeasible") {
+    auto fun = [](hexed::Mat<> point)->hexed::math::Objective_finite_diff::Objective_sample {
+      return {0., false};
+    };
+    hexed::math::Objective_finite_diff obj(fun, hexed::Mat<1>{-4.}, 1e-3);
+    REQUIRE(!obj.feasible);
   }
 }

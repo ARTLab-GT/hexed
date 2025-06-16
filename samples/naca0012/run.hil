@@ -11,8 +11,8 @@ mesh_extreme00 = -10.
 mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
-max_ref_level = 13
-$set_geometry_refinement
+refine_if = {((center0^2 + center1^2 < 2*nom_sz^2) | ((center0 - 1.)^2 + center1^2 < 2*nom_sz^2)) & nom_sz > .1}
+unrefine_if = {false}
 
 {generate geometry with external script}
 shell {python3 make_geom.py}
