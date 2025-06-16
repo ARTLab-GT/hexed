@@ -11,9 +11,8 @@ mesh_extreme00 = -10.
 mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
-max_ref_level = 13
-$set_geometry_refinement
-max_refinement_iters = 3
+refine_if = {((center0^2 + center1^2 < 2*nom_sz^2) | ((center0 - 1.)^2 + center1^2 < 2*nom_sz^2)) & nom_sz > .1}
+unrefine_if = {false}
 
 {generate geometry with external script}
 shell {python3 make_geom.py}
@@ -31,8 +30,6 @@ done = {iteration > 10000 & lift_coef_max - lift_coef_min < 1e-2*(lift_coef_min 
 iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_test}
-vis_field_vars = vis_field_vars + {tss = tss;}
 
 {run simulation}
 $simulate
