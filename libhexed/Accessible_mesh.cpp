@@ -1031,7 +1031,7 @@ void Accessible_mesh::_fit_surface() {
       }
     }
     Mat<dyn, dyn> diff_mat = b.diff_mat()(Eigen::all, Eigen::seqN(1, b.row_size - 2));
-    double scale = .5 + .1*block.element()->nominal_size()/block.scale_factor();
+    double scale = .5 + 1.*block.element()->nominal_size()/block.scale_factor();
     for (int i_dim = 0; i_dim < block.n_dim(); ++i_dim) {
       Mat<> deriv = math::dimension_matvec(diff_mat, interp_coefs.vector(), i_dim);
       double max_deriv = deriv.maxCoeff()*scale;
