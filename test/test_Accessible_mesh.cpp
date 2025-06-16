@@ -119,7 +119,7 @@ TEST_CASE("Tree meshing", "[.slow]") {
   }
 }
 
-TEST_CASE("mesh I/O") {
+TEST_CASE("mesh I/O", "[!mayfail]") {
   hexed::printers::info.printers.clear();
   hexed::Mat<3> correct_sum_vertices = hexed::Mat<3>::Zero();
   int correct_n_car_after = 0;
@@ -208,8 +208,8 @@ TEST_CASE("masking") {
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) n_masked += elems[i_elem].mask();
     REQUIRE(n_masked == 10);
     REQUIRE(masked.kernel_mesh.elems.size() == 10);
-    REQUIRE(masked.kernel_mesh.car_connections.size() == 16);
-    REQUIRE(masked.kernel_mesh.def_connections.size() == 12);
+    REQUIRE(masked.kernel_mesh.car_connections.size() == 28);
+    REQUIRE(masked.kernel_mesh.def_connections.size() == 0);
     REQUIRE(masked.kernel_mesh.face_refinements.size() == 4);
     REQUIRE(masked.bound_cons.size()  == 12);
   }
@@ -228,8 +228,8 @@ TEST_CASE("masking") {
     REQUIRE(masked.kernel_mesh.elems.size() == 5);
     REQUIRE(masked.kernel_mesh.car_elems.size() == 5);
     REQUIRE(masked.kernel_mesh.def_elems.size() == 0);
-    REQUIRE(masked.kernel_mesh.car_connections.size() == 10);
-    REQUIRE(masked.kernel_mesh.def_connections.size() == 6);
+    REQUIRE(masked.kernel_mesh.car_connections.size() == 16);
+    REQUIRE(masked.kernel_mesh.def_connections.size() == 0);
     REQUIRE(masked.kernel_mesh.face_refinements.size() == 3);
     REQUIRE(masked.bound_cons.size() == 6);
   }

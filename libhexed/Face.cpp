@@ -77,7 +77,7 @@ Array<double> Face::normal() {
   return _normal();
 }
 
-int Face::mask() {
+int Face::mask() const {
   if (_element) {
     return _element->mask();
   } else if (_boundary_connection) {
@@ -88,7 +88,7 @@ int Face::mask() {
   HEXED_THROW("`Face` must be associated to call `mask()`.") throw;
 }
 
-double Face::nominal_area() {
+double Face::nominal_area() const {
   if (_element) {
     return math::pow(_element->nominal_size(), _params.n_dim - 1);
   } else if (_boundary_connection) {

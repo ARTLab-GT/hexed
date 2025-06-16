@@ -11,8 +11,10 @@ class Boundary_connection : public Mortal {
   inline int boundary_condition() const {return _bound_cond;}
   inline Neighbor_connection& neighbor_connection() {return _con;}
   inline Storage_params storage_params() {return _ghost->storage_params();}
+  inline const Face& inside() const {return _con.opposite_face(*_ghost);}
   inline Face& inside() {return _con.opposite_face(*_ghost);}
   inline Face& ghost() {return *_ghost;}
+  inline const Face& ghost() const {return *_ghost;}
   inline Array<double> normal() {return _nrml();}
   Array<double> position();
   Array<double> state_cache();

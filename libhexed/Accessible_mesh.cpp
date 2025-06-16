@@ -2374,7 +2374,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       for (int i_qpoint = 0; i_qpoint < params.n_face_qpoint(); ++i_qpoint) {
         Mat<3> point = Mat<3>::Zero();
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) point(i_dim) = sample_points(i_dim)[i_qpoint];
-        Mat<3> nearest = resize(surf_geom->nearest_point(point).point(), 2);
+        Mat<3> nearest = resize(surf_geom->nearest_point(point).point(), 3);
         uncert_sq += weights(i_qpoint)*(point - nearest).squaredNorm();
       }
       block.element()->uncertainty = std::sqrt(uncert_sq);
@@ -2614,15 +2614,21 @@ Accessible_mesh::Masked_mesh::Masked_mesh(Accessible_mesh& mesh, const Basis& ba
       }
     }
   }
-  for (auto& con : mesh._bound_cons) {
+  for (auto& con : mesh._bound_cons) if (con.inside().mask() >= mesh._mask_levels) {
     bound_cons.push_back(&con);
     vecs[con.inside().is_deformed()]->push_back(con.neighbor_connection().kernel_connection());
   }
   for (auto& vec : mesh._face_refs) {
     kernel_mesh.face_refinements.emplace_back();
     for (auto& ref : vec) {
-      kernel_mesh.face_refinements.back().push_back(ref.kernel_face_refinement());
+      auto ref_elems = ref.elements();
+      int mask = -1;
+      for (int i_side = 0; i_side < 2; ++i_side) {
+        for (Element* elem : ref_elems[i_side]) mask = std::max(mask, elem->mask());
+      }
+      if (mask >= mesh._mask_levels) kernel_mesh.face_refinements.back().push_back(ref.kernel_face_refinement());
     }
+    if (kernel_mesh.face_refinements.back().empty()) kernel_mesh.face_refinements.pop_back();
   }
   ++mesh._mask_levels;
 }
@@ -2775,6 +2781,7 @@ void Accessible_mesh::write(std::string name) {
     elem.record = i_elem;
   }
   // write conformal connections
+  #if 0
   dims[0] = _neighbor_cons[0].size() + _neighbor_cons[1].size();
   dims[1] = 6;
   file.createGroup("/connections");
@@ -2794,7 +2801,6 @@ void Accessible_mesh::write(std::string name) {
   //WRITE_CONS(0, car.cons);
   //WRITE_CONS(car.cons.size(), def.cons);
   #undef WRITE_CONS
-  #if 0
   // write refined connections
   auto& car_cons = car.refined_connections();
   auto& def_cons = def.refined_connections();
@@ -2926,6 +2932,7 @@ void Accessible_mesh::read_file(std::string file_name) {
     read_tree(tree.get(), 0);
   }
   // read conformal connections
+  #if 0
   auto con_dset = file.openDataSet("/connections/conformal");
   con_dset.getSpace().getSimpleExtentDims(dims);
   int n_con = dims[0];
@@ -2935,10 +2942,10 @@ void Accessible_mesh::read_file(std::string file_name) {
     std::array<Element*, 2> el_ar;
     for (int i_side = 0; i_side < 2; ++i_side) el_ar[i_side] = elem_ptrs[data[i_side]];
     if (el_ar[0]->get_is_deformed() && el_ar[1]->get_is_deformed()) {
-      _connect(el_ar, {{data[2], data[3]}, {bool(data[4]), bool(data[5])}});
+      _connect(el_ar, {{data[2], data[3]}, {bool(data[4]), bool(data[5])}}, "read deformed");
       //if (bool(def_el_ar[0]->tree) != bool(def_el_ar[1]->tree)) extrude_cons.push_back(def.cons.back().get());
     } else {
-      _connect(el_ar, {data[2]});
+      _connect(el_ar, {data[2]}, "read hanging");
     }
   }
   // read refined connections
@@ -2952,16 +2959,13 @@ void Accessible_mesh::read_file(std::string file_name) {
     int n_fine = math::pow(2, params.n_dim - 1 - stretch[0] - stretch[1]);
     Element* coarse = elem_ptrs[data[0]];
     std::vector<Element*> fine(n_fine);
-    bool is_def = coarse->get_is_deformed();
     for (int i_fine = 0; i_fine < n_fine; ++i_fine) {
       fine[i_fine] = elem_ptrs[data[1 + i_fine]];
-      is_def = is_def && fine[i_fine]->get_is_deformed();
     }
     Connection_direction dir {{data[7], data[8]}, {bool(data[9]), bool(data[10])}};
-    _connect(coarse, fine, dir, stretch);
+    _connect(coarse, fine, dir, stretch, "read hanging");
   }
   // read boundary connections
-  #if 0
   auto bound_con_dset = file.openDataSet("/connections/boundary");
   bound_con_dset.getSpace().getSimpleExtentDims(dims);
   for (int i_con = 0; i_con < int(dims[0]); ++i_con) {

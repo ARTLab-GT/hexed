@@ -38,8 +38,8 @@ class Face : public Mortal {
   Array<double> advection_state();
   Array<double> full_state();
   Array<double> normal();
-  int mask();
-  double nominal_area();
+  int mask() const;
+  double nominal_area() const;
 
   private:
   Storage_params _params;

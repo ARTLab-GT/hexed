@@ -10,9 +10,11 @@ class Face_refinement : public Mortal {
   public:
   Face_refinement(Face&, int split_dim);
   inline Face& coarse() {return _coarse.value();}
+  inline const Face& coarse() const {return _coarse.value();}
   inline bool is_deformed() {return _fine0.is_deformed();}
   int split_dim() const {return _split_dim;}
   inline std::array<Face*, 2> fine() {return {&_fine0, &_fine1};}
+  inline std::array<const Face*, 2> fine() const {return {&_fine0, &_fine1};}
   inline bool alive() const {return _coarse;}
   std::array<std::vector<Element*>, 2> elements();
   Connection_direction get_direction();
