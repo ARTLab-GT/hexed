@@ -364,7 +364,11 @@ iterate = {
     }
     $$({case} + !residual_init)
     println report
-    case0 = {
+    case0 = {}
+    case1 = {
+        case0 = {}
+        case1 = {next_time_step}
+        $$({case} + (!steady & implicit))
         $write_iter
         $vis_iter
         case0 = {}
@@ -374,18 +378,7 @@ iterate = {
         }
         $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
     }
-    case1 = {
-        case0 = {}
-        case1 = {
-            update_roughness
-            println({updating surface roughness to } + surface_roughness)
-            next_time_step
-            $write_iter
-            $vis_iter
-        }
-        $$({case} + ($time_step_done))
-    }
-    $$({case} + (steady == false & implicit == true))
+    $$({case} + (steady | !implicit | ($time_step_done)))
     hexed_prev_except = except
     except = {println exception}
     $(read(working_dir + {runtime_cmd.hil}))
