@@ -12,6 +12,7 @@ time_step_done = {pseudotime_iteration > 100}
 time_step = 1e-4
 implicit_scheme = {backward euler}
 implicit_scheme = {crank-nicolson}
+implicit_scheme = {dirk2}
 print_freq = 10
 vis_freq = 100
 steady = false

@@ -14,7 +14,6 @@ constexpr bool is_implicit(Time_scheme ts) {return ts != explicit_steady && ts !
 
 constexpr int n_extra_stage(Time_scheme ts) {
   if (!is_implicit(ts)) return 0;
-  else if (ts == dirk2) return 2;
   else return 1;
 }
 
@@ -26,7 +25,6 @@ constexpr int n_total_stage(Time_scheme ts) {
 struct Implicit_options {
   bool is_implicit = false;
   double time_step = 0.;
-  double decay_weight = 1.;
 };
 
 }

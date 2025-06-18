@@ -72,6 +72,7 @@ class Solver {
   double max_dt(double max_safety_conv, double max_safety_diff);
   void _init_face_state();
   Interpreter _interpreter();
+  void _init_stage_storage(int stage);
 
   //! \brief linearizes the steady state equations by finite difference
   class Linearized : public Linear_equation {

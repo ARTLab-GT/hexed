@@ -18,6 +18,8 @@
 
 namespace hexed {
 
+const double dirk2_gamma = 1 - std::sqrt(.5);
+
 Kernel_mesh& Solver::_kernel_mesh() {
   return _preti_masks[0]->kernel_mesh;
 }
@@ -419,17 +421,14 @@ void Solver::initialize(std::string(expr)) {
     for (int i_var = 0; i_var < n_var; ++i_var) {
       sub.variables->assign_array(state(i_var), state_vars[i_var]);
     }
-    if (is_implicit(_time_scheme)) {
-      int n_res_cache = 2 + elem.get_is_deformed();
-      Array<double> res_cache({n_res_cache, n_var, nq}, elem.residual_cache());
-      res_cache(n_res_cache - 1) = (1. + (_time_scheme == crank_nicolson))*state;
-    }
     for (int i_adv = 0; i_adv < params.n_advection(params.row_size); ++i_adv) {
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
         elem.advection_state()[i_adv*nq + i_qpoint] = 1.;
       }
     }
+    Array<double>({n_var, nq}, elem.residual_cache()) = 0;
   }
+  if (is_implicit(_time_scheme)) _init_stage_storage(0);
   _init_face_state();
 }
 
@@ -607,30 +606,43 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   stopwatch.stopwatch.pause();
 }
 
-int Solver::next_time_stage() {
-  HEXED_ASSERT(is_implicit(_time_scheme), "This function is only for implicit time integration.")
-  int stage = _namespace->get<int>("time_stage");
-  if (_time_scheme == crank_nicolson) compute_residual();
+void Solver::_init_stage_storage(int stage) {
   int n_var = params.n_var;
   int nq = params.n_qpoint();
   double time_step = _namespace->get<double>("time_step");
+  printers::info("foo\n");
   auto& elems = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     Array<double> state({n_var, nq}, elem.state());
-    int n_res_cache = 2 + elem.get_is_deformed();
+    int n_res_cache = 1 + elem.get_is_deformed() + n_extra_stage(_time_scheme);
     Array<double> res_cache({n_res_cache, n_var, nq}, elem.residual_cache());
     Array<double> tss({nq}, elem.time_step_scale());
     if (_time_scheme == backward_euler) {
-      res_cache(n_res_cache - 1) = state;
+      res_cache(n_res_cache - 1) = state/time_step;
     } else if (_time_scheme == crank_nicolson) {
       for (int i_var = 0; i_var < n_var; ++i_var) {
-        res_cache(n_res_cache - 1)(i_var) = time_step*res_cache(0)(i_var)/tss + 2.*state(i_var);
+        res_cache(n_res_cache - 1)(i_var) = res_cache(0)(i_var)/tss + state(i_var)/(.5*time_step);
+      }
+    } else if (_time_scheme == dirk2) {
+      if (stage) {
+        for (int i_var = 0; i_var < n_var; ++i_var) {
+          res_cache(n_res_cache - 1)(i_var) += res_cache(0)(i_var)/tss*(1 - dirk2_gamma)/dirk2_gamma;
+          //res_cache(n_res_cache - 1) = state/(dirk2_gamma*time_step);
+        }
+      } else {
+        res_cache(n_res_cache - 1) = state/(dirk2_gamma*time_step);
       }
     }
   }
-  stage = (stage + 1)%n_total_stage(_time_scheme);
+}
+
+int Solver::next_time_stage() {
+  HEXED_ASSERT(is_implicit(_time_scheme), "This function is only for implicit time integration.")
+  int stage = (_namespace->get<int>("time_stage") + 1)%n_total_stage(_time_scheme);
+  if (_time_scheme != backward_euler) compute_residual();
+  _init_stage_storage(stage);
   return stage;
 }
 
@@ -784,9 +796,8 @@ void Solver::update() {
           if (is_implicit(_time_scheme)) {
             implicit_opts.is_implicit = true;
             implicit_opts.time_step = _namespace->get<double>("time_step");
-            if (_time_scheme == backward_euler) implicit_opts.decay_weight = 1.;
-            else if (_time_scheme == crank_nicolson) implicit_opts.decay_weight = 2.;
-            else HEXED_THROW("Decay weight not implemented for this time scheme")
+            if (_time_scheme == crank_nicolson) implicit_opts.time_step *= .5;
+            if (_time_scheme == dirk2) implicit_opts.time_step *= dirk2_gamma;
           }
           for (int i_sub = 0; i_sub < sub_iters; ++i_sub) {
             // compute inviscid update

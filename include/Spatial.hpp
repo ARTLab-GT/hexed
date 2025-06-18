@@ -511,8 +511,8 @@ class Spatial {
               if constexpr (Pde::has_diffusion || Pde::has_source) u += time_rate[1][i_var][i_qpoint];
               if (_implicit_opts.is_implicit) {
                 u += (ref_state[(Pde::n_update*(1 + is_deformed) + i_var)*n_qpoint + i_qpoint]
-                      - _implicit_opts.decay_weight*state[i_var*n_qpoint + i_qpoint])
-                     *nominal_volume*(is_deformed ? elem_det[i_qpoint] : 1.)/_implicit_opts.time_step;
+                      - state[i_var*n_qpoint + i_qpoint]/_implicit_opts.time_step)
+                     *nominal_volume*(is_deformed ? elem_det[i_qpoint] : 1.);
               }
               if constexpr (is_deformed) {
                 if (_conv_substep) {
