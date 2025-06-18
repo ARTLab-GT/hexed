@@ -125,7 +125,7 @@ class History_plot:
     """
     ## \brief names of output columns __not__ to plot
     ## \details You may modify this variable for the class or for instances
-    column_blacklist = ["flow_time", "time_step"]
+    column_blacklist = ["flow_time", "time_step", "time_stage"]
 
     def _infinite_generator(self):
         while not self._stop:

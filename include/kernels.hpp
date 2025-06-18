@@ -18,8 +18,7 @@ struct Kernel_options {
   bool use_filter = false;
   int mask = 0;
   bool conv_substep = false;
-  Time_scheme time_scheme = explicit_steady;
-  double be_dt = 0;
+  Implicit_options implicit_opts;;
 };
 
 void compute_euler(Kernel_mesh, Kernel_options);

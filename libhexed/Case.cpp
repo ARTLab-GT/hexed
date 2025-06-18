@@ -382,6 +382,7 @@ Case::Case(std::string input_script)
     else if (!implicit) ts = explicit_unsteady;
     else if (ts_str == "backward euler") ts = backward_euler;
     else if (ts_str == "crank-nicolson") ts = crank_nicolson;
+    else if (ts_str == "dirk2") ts = dirk2;
     else {
       HEXED_THROW("`" + ts_str + "` is not a supported time integration scheme.") throw;
     }
@@ -615,18 +616,21 @@ Case::Case(std::string input_script)
     return "";
   }));
 
-  _inter.variables->create<std::string>("next_time_step", new Namespace::Heisenberg<std::string>([this]() {
+  _inter.variables->create<std::string>("next_time_stage", new Namespace::Heisenberg<std::string>([this]() {
     HEXED_ASSERT(!_vari("steady") && _vari("implicit"), "`next_time_step` is only for unsteady implicit time marching")
-    _solver().next_time_step();
+    int stage = _solver().next_time_stage();
     _inter.variables->assign("pseudotime_iteration", 0);
-    _inter.variables->assign("iteration", _vari("iteration") + 1);
-    _inter.variables->assign("flow_time", _vard("hexed_next_flow_time"));
-    _inter.variables->assign("hexed_next_flow_time", _vard("hexed_next_flow_time") + _vard("time_step"));
-    auto sub = _inter.make_sub();
-    auto vals = _monitor_expr->eval(sub);
-    for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
-      _monitors[i_monitor].clear();
-      _inter.variables->assign(_monitor_expr->names[i_monitor] + "_prev", vals[i_monitor]);
+    _inter.variables->assign("time_stage", stage);
+    if (!stage) {
+      _inter.variables->assign("iteration", _vari("iteration") + 1);
+      _inter.variables->assign("flow_time", _vard("hexed_next_flow_time"));
+      _inter.variables->assign("hexed_next_flow_time", _vard("hexed_next_flow_time") + _vard("time_step"));
+      auto sub = _inter.make_sub();
+      auto vals = _monitor_expr->eval(sub);
+      for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
+        _monitors[i_monitor].clear();
+        _inter.variables->assign(_monitor_expr->names[i_monitor] + "_prev", vals[i_monitor]);
+      }
     }
     return "";
   }));

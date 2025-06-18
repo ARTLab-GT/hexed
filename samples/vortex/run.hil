@@ -10,6 +10,7 @@ mesh_extreme11 =  1.
 done = {flow_time >= 6e-3}
 time_step_done = {pseudotime_iteration > 100}
 time_step = 1e-4
+implicit_scheme = {backward euler}
 implicit_scheme = {crank-nicolson}
 print_freq = 10
 vis_freq = 100

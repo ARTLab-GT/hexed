@@ -179,7 +179,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
                Turbulence_model turbulence_model,
                std::shared_ptr<Namespace> space)
-: params{2 + backward_euler, n_dim + 2 + 2*(turbulence_model == k_omega), n_dim, row_size}
+: params{2 + n_extra_stage(time_scheme), n_dim + 2 + 2*(turbulence_model == k_omega), n_dim, row_size}
 , acc_mesh{new Accessible_mesh(params, root_mesh_size, turbulence_model)}
 , basis{row_size}
 , stopwatch{"(element*update)"}
@@ -226,6 +226,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
   _namespace->assign_default("pseudotime_iteration", 0);
   _namespace->assign_default("flow_time", 0.);
   if (!is_implicit(_time_scheme)) _namespace->assign_default("time_step", 0.);
+  _namespace->assign("time_stage", 0);
   _namespace->assign_default("art_visc_residual", 0.);
   status.set_time();
   // setup categories for performance reporting
@@ -606,8 +607,9 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   stopwatch.stopwatch.pause();
 }
 
-void Solver::next_time_step() {
+int Solver::next_time_stage() {
   HEXED_ASSERT(is_implicit(_time_scheme), "This function is only for implicit time integration.")
+  int stage = _namespace->get<int>("time_stage");
   if (_time_scheme == crank_nicolson) compute_residual();
   int n_var = params.n_var;
   int nq = params.n_qpoint();
@@ -628,6 +630,8 @@ void Solver::next_time_step() {
       }
     }
   }
+  stage = (stage + 1)%n_total_stage(_time_scheme);
+  return stage;
 }
 
 void Solver::update_art_visc_elwise(double width, bool pde_based) {
@@ -776,6 +780,14 @@ void Solver::update() {
           dt = nominal_dt*cheby_step;
           HEXED_ASSERT(!std::isnan(dt), "time step is NaN", assert::Numerical_exception);
           bool fixed = false;
+          Implicit_options implicit_opts;
+          if (is_implicit(_time_scheme)) {
+            implicit_opts.is_implicit = true;
+            implicit_opts.time_step = _namespace->get<double>("time_step");
+            if (_time_scheme == backward_euler) implicit_opts.decay_weight = 1.;
+            else if (_time_scheme == crank_nicolson) implicit_opts.decay_weight = 2.;
+            else HEXED_THROW("Decay weight not implemented for this time scheme")
+          }
           for (int i_sub = 0; i_sub < sub_iters; ++i_sub) {
             // compute inviscid update
             for (int i = 0; i < 2; ++i) {
@@ -789,8 +801,7 @@ void Solver::update() {
                 .use_filter = bool(_namespace->get<int>("use_filter")),
                 .mask = i_preti,
                 .conv_substep = (sub_iters > 1) && use_ldg(),
-                .time_scheme = _time_scheme,
-                .be_dt = _namespace->get<double>("time_step"),
+                .implicit_opts = implicit_opts,
               };
               apply_state_bcs();
               if (use_ldg() && !i && !i_sub) {
@@ -845,7 +856,6 @@ void Solver::compute_residual() {
     .i_stage = 0,
     .compute_residual = true,
     .use_filter = bool(_namespace->get<int>("use_filter")),
-    .time_scheme = explicit_unsteady,
   };
   if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, false);
   else compute_euler(_kernel_mesh(), opts);

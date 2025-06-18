@@ -25,7 +25,7 @@ art_visc_expr = {bulk_art_visc = bulk_art_visc; laplacian_art_visc = laplacian_a
 visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
-iteration_expr = {iteration = iteration; pseudotime_iteration = pseudotime_iteration;}
+iteration_expr = {iteration = iteration; time_stage = time_stage; pseudotime_iteration = pseudotime_iteration;}
 art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
 normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
 flow_time_expr = {flow_time = flow_time;}
@@ -367,16 +367,20 @@ iterate = {
     case0 = {}
     case1 = {
         case0 = {}
-        case1 = {next_time_step}
+        case1 = {next_time_stage}
         $$({case} + (!steady & implicit))
-        $write_iter
-        $vis_iter
         case0 = {}
         case1 = {
-            update_roughness
-            println({updating surface roughness to } + surface_roughness)
+            $write_iter
+            $vis_iter
+            case0 = {}
+            case1 = {
+                update_roughness
+                println({updating surface roughness to } + surface_roughness)
+            }
+            $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
         }
-        $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
+        $$({case} + (time_stage == 0))
     }
     $$({case} + (steady | !implicit | ($time_step_done)))
     hexed_prev_except = except

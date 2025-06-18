@@ -199,9 +199,10 @@ class Solver {
    * (it is scaled by the max allowable CFL for the chosen DG scheme which is often O(1e-2)).
    */
   void update();
-  //! \brief Switch to the next unsteady time step.
-  //! \details Reinitializes the previous state storage with the current state.
-  void next_time_step();
+  //! \brief Switch to the next implicit unsteady time integration stage.
+  //! \returns An integer index identifying which time integration stage you are now on.
+  //! If it is 0, that means you have advanced to the next time step.
+  int next_time_stage();
   //! \brief (experimental) performs an implicit time step
   //! \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
   void update_implicit();
