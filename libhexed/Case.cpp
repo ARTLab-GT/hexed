@@ -445,7 +445,14 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
     _solver().initialize(_vars("init_cond"));
-    if (!_vari("steady") && _vari("implicit")) {
+    bool implicit = !_vari("steady") && _vari("implicit");
+    if (implicit) {
+      HEXED_ASSERT(_inter.variables->lookup<double>("time_step"),
+                   "unsteady implicit time marching requires you to set `time_step` to a floating-point value.",
+                   assert::User_error)
+      HEXED_ASSERT(_vard("time_step") >= 0, "`time_step` must be nonnegative.", assert::User_error)
+      _inter.variables->assign("flow_time", _vard("flow_time") + _vard("time_step"));
+      _inter.variables->assign("hexed_next_flow_time", _vard("flow_time") + _vard("time_step"));
       for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
         _inter.variables->assign(_monitor_expr->names[i_monitor] + "_prev", 0.);
       }
@@ -582,12 +589,6 @@ Case::Case(std::string input_script)
     int iter = _vari(be ? "pseudotime_iteration" : "iteration");
     int print_freq = _vari("print_freq");
     int n = iter ? print_freq - iter%print_freq : 1;
-    if (be) {
-      HEXED_ASSERT(_inter.variables->lookup<double>("time_step"),
-                   "unsteady implicit time marching requires you to set `time_step` to a floating-point value.",
-                   assert::User_error)
-      HEXED_ASSERT(_vard("time_step") >= 0, "`time_step` must be nonnegative.", assert::User_error)
-    }
     for (int i = 0; i < n; ++i) {
       ++iter;
       if (_inter.variables->get<int>("diffusive_admissibility")) _solver().set_art_visc_admis();
@@ -617,7 +618,6 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create<std::string>("next_time_stage", new Namespace::Heisenberg<std::string>([this]() {
-    HEXED_ASSERT(!_vari("steady") && _vari("implicit"), "`next_time_step` is only for unsteady implicit time marching")
     int stage = _solver().next_time_stage();
     _inter.variables->assign("pseudotime_iteration", 0);
     _inter.variables->assign("time_stage", stage);

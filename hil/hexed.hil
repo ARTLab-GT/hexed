@@ -364,6 +364,18 @@ iterate = {
     }
     $$({case} + !residual_init)
     println report
+    hexed_prev_except = except
+    except = {println exception}
+    $(read(working_dir + {runtime_cmd.hil}))
+    except = hexed_prev_except
+    shell({echo > } + working_dir + {runtime_cmd.hil})
+    hexed_done = (($done) != 0) | hexed_failed
+    case0 = {}
+    case1 = {
+        hexed_time_step_done = ($time_step_done) != 0
+        hexed_done = hexed_done & hexed_time_step_done & time_stage == n_time_stages - 1
+    }
+    $$({case} + (!steady & implicit))
     case0 = {}
     case1 = {
         case0 = {}
@@ -380,14 +392,9 @@ iterate = {
             }
             $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
         }
-        $$({case} + (time_stage == 0))
+        $$({case} + (time_stage == n_time_stages - 1))
     }
-    $$({case} + (steady | !implicit | ($time_step_done)))
-    hexed_prev_except = except
-    except = {println exception}
-    $(read(working_dir + {runtime_cmd.hil}))
-    except = hexed_prev_except
-    shell({echo > } + working_dir + {runtime_cmd.hil})
+    $$({case} + (hexed_time_step_done & !hexed_done))
 }
 
 start = {
@@ -477,7 +484,9 @@ run = {
     $vis_init
     $print_init
     shell({echo > } + working_dir + {runtime_cmd.hil})
-    while = {!($done | hexed_failed)}
+    hexed_time_step_done = true
+    hexed_done = false
+    while = {!hexed_done}
     do = {$iterate}
     $loop
     $print_final

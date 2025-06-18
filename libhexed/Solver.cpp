@@ -229,6 +229,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
   _namespace->assign_default("flow_time", 0.);
   if (!is_implicit(_time_scheme)) _namespace->assign_default("time_step", 0.);
   _namespace->assign("time_stage", 0);
+  _namespace->assign("n_time_stages", n_total_stage(_time_scheme));
   _namespace->assign_default("art_visc_residual", 0.);
   status.set_time();
   // setup categories for performance reporting
@@ -610,7 +611,6 @@ void Solver::_init_stage_storage(int stage) {
   int n_var = params.n_var;
   int nq = params.n_qpoint();
   double time_step = _namespace->get<double>("time_step");
-  printers::info("foo\n");
   auto& elems = acc_mesh->elements();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -629,7 +629,6 @@ void Solver::_init_stage_storage(int stage) {
       if (stage) {
         for (int i_var = 0; i_var < n_var; ++i_var) {
           res_cache(n_res_cache - 1)(i_var) += res_cache(0)(i_var)/tss*(1 - dirk2_gamma)/dirk2_gamma;
-          //res_cache(n_res_cache - 1) = state/(dirk2_gamma*time_step);
         }
       } else {
         res_cache(n_res_cache - 1) = state/(dirk2_gamma*time_step);
