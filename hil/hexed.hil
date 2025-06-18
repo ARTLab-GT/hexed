@@ -379,9 +379,6 @@ iterate = {
     case0 = {}
     case1 = {
         case0 = {}
-        case1 = {next_time_stage}
-        $$({case} + (!steady & implicit))
-        case0 = {}
         case1 = {
             $write_iter
             $vis_iter
@@ -393,6 +390,9 @@ iterate = {
             $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
         }
         $$({case} + (time_stage == n_time_stages - 1))
+        case0 = {}
+        case1 = {next_time_stage}
+        $$({case} + (!steady & implicit))
     }
     $$({case} + (hexed_time_step_done & !hexed_done))
 }
