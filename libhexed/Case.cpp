@@ -341,7 +341,8 @@ Case::Case(std::string input_script)
         mesh_extremes(i_dim, sign) = _vard(format_str(50, "mesh_extreme%i%i", i_dim, sign));
       }
     }
-    HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0, "all mesh dimensions must be positive!", assert::User_error);
+    HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0,
+                 "all mesh dimensions must be positive!", assert::User_error)
     double root_size = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
     // construct molecular transport models
     std::vector<std::string> transport_phenomena {"viscosity", "conductivity"};
@@ -373,7 +374,20 @@ Case::Case(std::string input_script)
       _inter.variables->assign_default(name + "_max",  huge);
     }
     // setup actual solver
-    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, true, transport_models[0], transport_models[1], turb_model, _inter.variables));
+    bool steady = _vari("steady");
+    bool implicit = _vari("implicit");
+    std::string ts_str = to_lower(_vars("implicit_scheme"));
+    Time_scheme ts;
+    if (steady) ts = explicit_steady;
+    else if (!implicit) ts = explicit_unsteady;
+    else if (ts_str == "backward euler") ts = backward_euler;
+    else if (ts_str == "crank-nicolson") ts = crank_nicolson;
+    else if (ts_str == "dirk2") ts = dirk2;
+    else {
+      HEXED_THROW("`" + ts_str + "` is not a supported time integration scheme.") throw;
+    }
+    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, ts, transport_models[0],
+                                 transport_models[1], turb_model, _inter.variables));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_admissibility(_vari("fix_therm_admis"));
     return "";
@@ -431,6 +445,18 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
     _solver().initialize(_vars("init_cond"));
+    bool implicit = !_vari("steady") && _vari("implicit");
+    if (implicit) {
+      HEXED_ASSERT(_inter.variables->lookup<double>("time_step"),
+                   "unsteady implicit time marching requires you to set `time_step` to a floating-point value.",
+                   assert::User_error)
+      HEXED_ASSERT(_vard("time_step") >= 0, "`time_step` must be nonnegative.", assert::User_error)
+      _inter.variables->assign("flow_time", _vard("flow_time") + _vard("time_step"));
+      _inter.variables->assign("hexed_next_flow_time", _vard("flow_time") + _vard("time_step"));
+      for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
+        _inter.variables->assign(_monitor_expr->names[i_monitor] + "_prev", 0.);
+      }
+    }
     return "";
   }));
 
@@ -559,7 +585,8 @@ Case::Case(std::string input_script)
     bool avw = _vard("art_visc_width") > 0;
     bool avc = _vard("art_visc_constant") > 0;
     for (double* r : _roughness) *r = _vard("surface_roughness");
-    int iter = _vari("iteration");
+    bool be = !_vari("steady") && _vari("implicit");
+    int iter = _vari(be ? "pseudotime_iteration" : "iteration");
     int print_freq = _vari("print_freq");
     int n = iter ? print_freq - iter%print_freq : 1;
     for (int i = 0; i < n; ++i) {
@@ -577,16 +604,37 @@ Case::Case(std::string input_script)
       }
       _solver().update();
     }
-    _inter.variables->assign("iteration", iter);
+    _inter.variables->assign(be ? "pseudotime_iteration" : "iteration", iter);
     auto sub = _inter.make_sub();
     auto vals = _monitor_expr->eval(sub);
     for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
-      _monitors[i_monitor].add_sample(iter, vals[i_monitor]);
-      _inter.variables->assign(_monitor_expr->names[i_monitor] + "_min", _monitors[i_monitor].min());
-      _inter.variables->assign(_monitor_expr->names[i_monitor] + "_max", _monitors[i_monitor].max());
+      double val = vals[i_monitor];
+      if (be) val -= _vard(_monitor_expr->names[i_monitor] + "_prev");
+      _monitors[i_monitor].add_sample(iter, val);
+      _inter.variables->assign(_monitor_expr->names[i_monitor] + (be ? "_diff" : "") + "_min", _monitors[i_monitor].min());
+      _inter.variables->assign(_monitor_expr->names[i_monitor] + (be ? "_diff" : "") + "_max", _monitors[i_monitor].max());
     }
     return "";
   }));
+
+  _inter.variables->create<std::string>("next_time_stage", new Namespace::Heisenberg<std::string>([this]() {
+    int stage = _solver().next_time_stage();
+    _inter.variables->assign("pseudotime_iteration", 0);
+    _inter.variables->assign("time_stage", stage);
+    if (!stage) {
+      _inter.variables->assign("iteration", _vari("iteration") + 1);
+      _inter.variables->assign("flow_time", _vard("hexed_next_flow_time"));
+      _inter.variables->assign("hexed_next_flow_time", _vard("hexed_next_flow_time") + _vard("time_step"));
+      auto sub = _inter.make_sub();
+      auto vals = _monitor_expr->eval(sub);
+      for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
+        _monitors[i_monitor].clear();
+        _inter.variables->assign(_monitor_expr->names[i_monitor] + "_prev", vals[i_monitor]);
+      }
+    }
+    return "";
+  }));
+
   _inter.variables->create<int>("n_elements", new Namespace::Heisenberg<int>([this]() {
     return _solver().mesh().n_elements();
   }));

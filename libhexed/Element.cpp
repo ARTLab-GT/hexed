@@ -184,7 +184,6 @@ double* Element::state() {return data.data();}
 double* Element::residual_cache() {
   return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();
 }
-
 double* Element::face(int i_face, bool is_ldg) {
   return data.data() + data_size + i_face*face_size + is_ldg*n_dof/params.row_size;
 }

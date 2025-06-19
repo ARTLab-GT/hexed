@@ -25,7 +25,7 @@ art_visc_expr = {bulk_art_visc = bulk_art_visc; laplacian_art_visc = laplacian_a
 visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
-iteration_expr = {iteration = iteration;}
+iteration_expr = {iteration = iteration; time_stage = time_stage; pseudotime_iteration = pseudotime_iteration;}
 art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
 normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
 flow_time_expr = {flow_time = flow_time;}
@@ -75,17 +75,17 @@ freestream_spec_int_ener = {(freestream3/freestream2 - 0.5*(freestream0^2 + free
 freestream_sound_speed_expr = {((heat_rat*(heat_rat - 1)*$freestream_spec_int_ener)^0.5)}
 vortex_nondim_veloc = 0.3
 vortex_argmax_radius = 0.1
-vortex_gaussian = {(vortex_nondim_veloc*exp((1. - ((pos0 - freestream0/freestream2*time)^2 + (pos1 - freestream1/freestream2*time)^2)/vortex_argmax_radius^2)/2.))}
+vortex_gaussian = {(vortex_nondim_veloc*exp((1. - ((pos0 - freestream0/freestream2*flow_time)^2 + (pos1 - freestream1/freestream2*flow_time)^2)/vortex_argmax_radius^2)/2.))}
 vortex_scalar = {(1 - (heat_rat - 1.)/2*$vortex_gaussian^2)}
 vortex_momentum0 = {((freestream0/freestream2 - pos1/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed_expr)*$vortex_mass)}
 vortex_momentum1 = {((freestream1/freestream2 + pos0/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed_expr)*$vortex_mass)}
 vortex_mass = {(freestream2*$vortex_scalar^(1./(heat_rat - 1.)))}
 vortex_energy = {($freestream_spec_int_ener*$vortex_scalar*$vortex_mass + 0.5*($vortex_momentum0^2 + $vortex_momentum1^2)/$vortex_mass)}
 vortex = {
-    state0 = $vortex_momentum0
-    state1 = $vortex_momentum1
-    state2 = $vortex_mass
-    state3 = $vortex_energy
+    momentum0 = $vortex_momentum0
+    momentum1 = $vortex_momentum1
+    density = $vortex_mass
+    energy = $vortex_energy
 }
 air_visc_ref = 1.716e-5
 air_visc_ref_temp = 273.
@@ -162,7 +162,7 @@ set_aerothermo = {
 
 set_geometry_refinement = {
     refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level < max_ref_level & nom_sz > min_elem_size)}
-    unrefine_if = {ref_level > init_ref_level & !is_extruded}
+    unrefine_if = {(ref_level > init_ref_level & !is_extruded)}
     hexed_min_sz = (mesh_extreme01 - mesh_extreme00)*2.^-max_ref_level
     case0 = {}
     case1 = {hexed_min_sz = min_elem_size}
@@ -177,6 +177,9 @@ plot_history = {shell({python3 -c "from hexedpy.utils import History_plot;Histor
 {scalar parameters}
 row_size = 6
 init_ref_level = 3
+steady = true
+implicit = true
+implicit_scheme = {backward Euler}
 max_ref_level = 1000
 geom_rtol = 1e-5
 geom_atol = 0.
@@ -297,7 +300,8 @@ print_final = {
     println {performance summary:}
     println performance_report
 }
-done = {print_emph = true; print_type = {error}; println {Error: you forgot to a set stop condition} & throw}
+done = {print_emph = true; print_type = {error}; println {Error: you forgot to set `done`} & throw}
+time_step_done = {print_emph = true; print_type = {error}; println {Error: you forgot to set `time_step_done`} & throw}
 hexed_failed = false
 terminate = {
     print_emph = true
@@ -360,19 +364,37 @@ iterate = {
     }
     $$({case} + !residual_init)
     println report
-    case0 = {}
-    case1 = {
-        update_roughness
-        println({updating surface roughness to } + surface_roughness)
-    }
-    $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
-    $write_iter
-    $vis_iter
     hexed_prev_except = except
     except = {println exception}
     $(read(working_dir + {runtime_cmd.hil}))
     except = hexed_prev_except
     shell({echo > } + working_dir + {runtime_cmd.hil})
+    hexed_done = (($done) != 0) | hexed_failed
+    case0 = {}
+    case1 = {
+        hexed_time_step_done = ($time_step_done) != 0
+        hexed_done = hexed_done & hexed_time_step_done & time_stage == n_time_stages - 1
+    }
+    $$({case} + (!steady & implicit))
+    case0 = {}
+    case1 = {
+        case0 = {}
+        case1 = {
+            $write_iter
+            $vis_iter
+            case0 = {}
+            case1 = {
+                update_roughness
+                println({updating surface roughness to } + surface_roughness)
+            }
+            $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
+        }
+        $$({case} + (time_stage == n_time_stages - 1))
+        case0 = {}
+        case1 = {next_time_stage}
+        $$({case} + (!steady & implicit))
+    }
+    $$({case} + (hexed_time_step_done & !hexed_done))
 }
 
 start = {
@@ -402,6 +424,7 @@ start = {
     init_residual_energy = 0.
     normalized_residual = 1.
     prev_residual = 0.
+    hexed_next_flow_time = 0.
 }
 
 mesh_init = false
@@ -444,8 +467,8 @@ mesh = {
     } + geom_bbox00 + { } + geom_bbox01 + {
     } + geom_bbox10 + { } + geom_bbox11 + {
     } + geom_bbox20 + { } + geom_bbox21 + {
-    flow_time = 0
 })
+    flow_time = 0
     println({geometry length: } + geom_length)
     case0 = {}
     case1 = {
@@ -461,7 +484,9 @@ run = {
     $vis_init
     $print_init
     shell({echo > } + working_dir + {runtime_cmd.hil})
-    while = {!($done | hexed_failed)}
+    hexed_time_step_done = true
+    hexed_done = false
+    while = {!hexed_done}
     do = {$iterate}
     $loop
     $print_final

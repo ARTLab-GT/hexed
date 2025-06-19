@@ -18,6 +18,8 @@
 
 namespace hexed {
 
+const double dirk2_gamma = 1 - std::sqrt(.5);
+
 Kernel_mesh& Solver::_kernel_mesh() {
   return _preti_masks[0]->kernel_mesh;
 }
@@ -151,7 +153,7 @@ double Solver::max_dt(double msc, double msd) {
     stopwatch["prolong/restrict"],
     0, 0, bool(_namespace->get<int>("use_filter")),
   };
-  bool local_time = _namespace->get<int>("local_time");
+  bool local_time = _time_scheme != explicit_unsteady;
   if (use_ldg()) return max_dt_navier_stokes(_kernel_mesh(), opts, msc, msd, local_time, visc, therm_cond);
   else return max_dt_euler(_kernel_mesh(), opts, msc, msd, local_time);
 }
@@ -175,13 +177,11 @@ Interpreter Solver::_interpreter() {
   return inter;
 }
 
-Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping,
+Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_scheme,
                Transport_model viscosity_model, Transport_model thermal_conductivity_model,
                Turbulence_model turbulence_model,
-               std::shared_ptr<Namespace> space, bool implicit)
-: params{implicit ? Linearized::storage_start + Linearized::n_storage
-                  : 2, n_dim + 2 + 2*(turbulence_model == k_omega),
-         n_dim, row_size}
+               std::shared_ptr<Namespace> space)
+: params{2 + n_extra_stage(time_scheme), n_dim + 2 + 2*(turbulence_model == k_omega), n_dim, row_size}
 , acc_mesh{new Accessible_mesh(params, root_mesh_size, turbulence_model)}
 , basis{row_size}
 , stopwatch{"(element*update)"}
@@ -192,8 +192,9 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
 , therm_cond{thermal_conductivity_model}
 , turb{turbulence_model}
 , _namespace{space}
-, _implicit{implicit}
+, _implicit{false}
 , _preti_level{0}
+, _time_scheme{time_scheme}
 {
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
@@ -220,13 +221,15 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_s
   _namespace->assign_default("bl_iters", 1);
   _namespace->assign_default("fix_iters", 0);
   _namespace->assign_default("use_filter", 0); // whether to use modal filter acceleration
-  _namespace->assign_default<int>("local_time", local_time_stepping);
   _namespace->assign_default("elementwise_art_visc", 0);
   _namespace->assign_default("elementwise_art_visc_diff_ratio", 5.);
   _namespace->assign_default<std::string>("working_dir", ".");
   _namespace->assign_default("iteration", 0);
+  _namespace->assign_default("pseudotime_iteration", 0);
   _namespace->assign_default("flow_time", 0.);
-  _namespace->assign_default("time_step", 0.);
+  if (!is_implicit(_time_scheme)) _namespace->assign_default("time_step", 0.);
+  _namespace->assign("time_stage", 0);
+  _namespace->assign("n_time_stages", n_total_stage(_time_scheme));
   _namespace->assign_default("art_visc_residual", 0.);
   status.set_time();
   // setup categories for performance reporting
@@ -424,7 +427,9 @@ void Solver::initialize(std::string(expr)) {
         elem.advection_state()[i_adv*nq + i_qpoint] = 1.;
       }
     }
+    Array<double>({n_var, nq}, elem.residual_cache()) = 0;
   }
+  if (is_implicit(_time_scheme)) _init_stage_storage(0);
   _init_face_state();
 }
 
@@ -602,6 +607,44 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   stopwatch.stopwatch.pause();
 }
 
+void Solver::_init_stage_storage(int stage) {
+  int n_var = params.n_var;
+  int nq = params.n_qpoint();
+  double time_step = _namespace->get<double>("time_step");
+  auto& elems = acc_mesh->elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    Array<double> state({n_var, nq}, elem.state());
+    int n_res_cache = 1 + elem.get_is_deformed() + n_extra_stage(_time_scheme);
+    Array<double> res_cache({n_res_cache, n_var, nq}, elem.residual_cache());
+    Array<double> tss({nq}, elem.time_step_scale());
+    if (_time_scheme == backward_euler) {
+      res_cache(n_res_cache - 1) = state/time_step;
+    } else if (_time_scheme == crank_nicolson) {
+      for (int i_var = 0; i_var < n_var; ++i_var) {
+        res_cache(n_res_cache - 1)(i_var) = res_cache(0)(i_var)/tss + state(i_var)/(.5*time_step);
+      }
+    } else if (_time_scheme == dirk2) {
+      if (stage) {
+        for (int i_var = 0; i_var < n_var; ++i_var) {
+          res_cache(n_res_cache - 1)(i_var) += res_cache(0)(i_var)/tss*(1 - dirk2_gamma)/dirk2_gamma;
+        }
+      } else {
+        res_cache(n_res_cache - 1) = state/(dirk2_gamma*time_step);
+      }
+    }
+  }
+}
+
+int Solver::next_time_stage() {
+  HEXED_ASSERT(is_implicit(_time_scheme), "This function is only for implicit time integration.")
+  int stage = (_namespace->get<int>("time_stage") + 1)%n_total_stage(_time_scheme);
+  if (_time_scheme != backward_euler) compute_residual();
+  _init_stage_storage(stage);
+  return stage;
+}
+
 void Solver::update_art_visc_elwise(double width, bool pde_based) {
   use_art_visc = true;
   Mass mass;
@@ -743,10 +786,18 @@ void Solver::update() {
           Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
           double cheby_step = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
           int sub_iters = std::ceil(max_sub_iters*cheby_step/max_cheby - 1e-6);
-          double nominal_dt = std::min(max_dt(safety/max_cheby*sub_iters, safety), _namespace->get<double>("max_time_step"));
+          double nominal_dt = std::min(max_dt(safety/max_cheby*sub_iters, safety),
+                                       _namespace->get<double>("max_time_step"));
           dt = nominal_dt*cheby_step;
           HEXED_ASSERT(!std::isnan(dt), "time step is NaN", assert::Numerical_exception);
           bool fixed = false;
+          Implicit_options implicit_opts;
+          if (is_implicit(_time_scheme)) {
+            implicit_opts.is_implicit = true;
+            implicit_opts.time_step = _namespace->get<double>("time_step");
+            if (_time_scheme == crank_nicolson) implicit_opts.time_step *= .5;
+            if (_time_scheme == dirk2) implicit_opts.time_step *= dirk2_gamma;
+          }
           for (int i_sub = 0; i_sub < sub_iters; ++i_sub) {
             // compute inviscid update
             for (int i = 0; i < 2; ++i) {
@@ -760,11 +811,11 @@ void Solver::update() {
                 .use_filter = bool(_namespace->get<int>("use_filter")),
                 .mask = i_preti,
                 .conv_substep = (sub_iters > 1) && use_ldg(),
+                .implicit_opts = implicit_opts,
               };
               apply_state_bcs();
               if (use_ldg() && !i && !i_sub) {
-                compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond,
-                                      _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
+                compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, true);
               } else {
                 compute_euler(km, opts);
               }
@@ -779,10 +830,12 @@ void Solver::update() {
           if (fixed) break;
 
           // update status for reporting
-          _namespace->assign<double>("time_step", dt);
-          _namespace->assign<double>("flow_time", _namespace->get<double>("flow_time") + dt);
-          status.time_step = dt;
-          status.flow_time += dt;
+          if (!is_implicit(_time_scheme)) {
+            _namespace->assign<double>("time_step", dt);
+            _namespace->assign<double>("flow_time", _namespace->get<double>("flow_time") + dt);
+            status.time_step = dt;
+            status.flow_time += dt;
+          }
         }
       }
     }
@@ -806,13 +859,13 @@ void Solver::update_implicit() {
 void Solver::compute_residual() {
   apply_state_bcs();
   Kernel_options opts {
-    stopwatch["cartesian"],
-    stopwatch["deformed"],
-    stopwatch["prolong/restrict"],
-    1.,
-    0,
-    true,
-    bool(_namespace->get<int>("use_filter")),
+    .sw_car =stopwatch["cartesian"],
+    .sw_def = stopwatch["deformed"],
+    .sw_pr = stopwatch["prolong/restrict"],
+    .dt = 1.,
+    .i_stage = 0,
+    .compute_residual = true,
+    .use_filter = bool(_namespace->get<int>("use_filter")),
   };
   if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, false);
   else compute_euler(_kernel_mesh(), opts);

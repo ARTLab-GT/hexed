@@ -18,7 +18,7 @@ Must be at least 1 and at most 3.
 <hr>
 \subsubsection done
 __type:__ string \n
-__default:__ `{println {Error: you forgot to a set stop condition} & throw}` \n
+__default:__ `{print_emph = true; print_type = {error}; println {Error: you forgot to set done} & throw}` \n
 Termination condition.
 This should be a macro that evaluates to an integer.
 It will be evaluated at each iteration, and the simulation will continue iff it evaluates to \ref false.
@@ -27,11 +27,27 @@ You can consider setting it based on the \ref iteration "iteration count", \ref 
 and/or \ref monitor_vars "output variable history".
 
 <hr>
-\subsubsection local_time
+\subsubsection steady
 __type:__ integer \n
 __default:__ \ref true \n
-If \ref true, use local time stepping, otherwise use global.
-\note Not defined until \ref create_solver is evaluated.
+If \ref true, only solves for steady state---the transient evolutions of the flowfield is not time accurate.
+This will utilize local time marching and other non-time-accurate tricks to accelerate convergence to steady state.
+If \ref false, the simulation will accurately capture unsteady behavior,
+but will probably take longer to reach steady state (potentially by orders of magnitude).
+For further control over the unsteady time marching scheme, see \ref implicit and \ref implicit_scheme,
+which can also significantly affect performance and accuracy.
+
+<hr>
+\subsubsection time_step_done
+__type:__ string \n
+__default:__ `time_step_done = {print_emph = true; print_type = {error}; println {Error: you forgot to set time_step_done} & throw}` \n
+Termination condition for the pseudotime iteration.
+This should be a macro that evaluates to an integer.
+It will be evaluated at each pseudotime iteration and iff it evaluates to \ref true,
+the simulation it will move on to the next real-time step.
+As should be clear from the default value,
+you __must__ set this variable yourself if \ref steady = \ref false and \ref implicit = \ref true.
+\todo Document options based on history monitors and determine a reasonable default value.
 
 <hr>
 \subsubsection max_safety
@@ -44,6 +60,9 @@ This parameter is applicable to both local and global time stepping.
 If the actual safety factor (accounting for \ref max_time_step constraints) is greater than 1 the scheme will almost certainly be unstable.
 Thus even if you intend for your time integration not to be CFL-driven, it is strongly recommended that you keep this parameter less than 1
 and simply make your \ref max_time_step small enough to be the active constraint.
+\note For unsteady implicit simulations (\ref steady = \ref false, \ref implicit = \ref true),
+this parameter controls the _pseudotime_ step, not the real-time step.
+To control the real-time step, use \ref time_step_input.
 \note Not defined until \ref create_solver is evaluated.
 
 <hr>
@@ -54,7 +73,17 @@ Maximum allowable time step.
 The time step will be either this number or \ref max_safety times the estimated maximum stable time step, whichever is smaller.
 This parameter is only meaningful for global time stepping.
 If you intend for your time stepping to be CFL driven, simply keep this number large enough not to be the active constraint.
+\note For unsteady implicit simulations (\ref steady = \ref false, \ref implicit = \ref true),
+this parameter controls the _pseudotime_ step, not the real-time step.
+To control the real-time step, use \ref time_step_input.
 \note Not defined until \ref create_solver is evaluated.
+
+<hr>
+\subsubsection time_step_input time_step (input)
+__type:__ float \n
+Time step to use for implicit unsteady simulations (\ref steady = \ref false, \ref implicit = \ref true).
+There is no default value; for such simulations you must define it.
+Any value \f$ \ge \f$ 0 is acceptable, and you may modify it as the simulation runs if you choose.
 
 <hr>
 \subsubsection thermal_bc
@@ -164,6 +193,45 @@ It should be the name of a supported \ref boundary_conditions "Boundary conditio
 If `{auto}`, surface boundary condition will be determined automatically depending on whether you define \ref viscosity_model .
 If you do (and set it to something other than `{}`), `surface_bc` will default to `{no_slip}`.
 If you do not, it will default to `{nonpenetration}`.
+
+<hr>
+\subsubsection implicit
+__type:__ integer \n
+__default:__ \ref true \n
+Only relevant if \ref steady = \ref false.
+If `implicit` = \ref true, time marching will be performed using dual time stepping:
+an implicit temporal discretization is used and the implicit equations are solved by pseudotime iteration.
+Otherwise, explicit global time stepping will be used.
+For ill-conditioned meshes
+(in particular, meshes with very small or high-aspect-ration cells to resolve a high-Reynolds-number boundary layer),
+implicit will likely be more efficient due to the extremely small time steps
+required for stability by explicit global time stepping.
+For implicit time stepping, you must set \ref time_step_input yourself.
+According to linear stability analysis,
+all implicit schemes currently supported are unconditionally stable
+and you should be able to set the time step purely based on accuracy considerations.
+However, in practice, nonlinear stability problems may impose constraints on the time step.
+You must also set \ref time_step_done to determine the conditions on which to terminate the pseudotime iteration
+and advance to the next real-time step.
+You may also need to adjust \ref print_freq and \ref vis_freq.
+You can control what implicit temporal discretization is used with \ref implicit_scheme.
+
+<hr>
+\subsubsection implicit_scheme
+__type:__ string \n
+__default:__ `{backward euler}` \n
+Determines the temporal discretization for unsteady implicit simulations (\ref steady = \ref false, \ref implicit = \ref true).
+Otherwise, does nothing.
+The supported options are (case-insensitive):
+- `{backward euler}` The ubiquitous [Backward Euler](https://en.wikipedia.org/wiki/Backward_Euler_method) method:
+  robust and dissipative, first-order-accurate in time.
+- `{crank-nicolson}` The [Crank-Nicolson](https://en.wikipedia.org/wiki/Crank%E2%80%93Nicolson_method) method:
+  less dissipative, second-order-accurate in time, can induce spurious oscillations in the initial transient behavior.
+- `{dirk2}` Implements the second-order-accurate, two-stage Diagonally-Implicit Runge-Kutta scheme
+  described in Ref. \cite kennedy_dirk, Section 4.1.2 (page 72).
+  Unlike Crank-Nicolson, this method is L-stable, and should exhibit somewhat less oscillation.
+  However, each time step requires solving two implicit stages (whereas backward Euler and C-N require only one)
+  which may increase the wall clock time for each step.
 
 <hr>
 \subsubsection viscosity_model
@@ -1301,10 +1369,10 @@ if you have a shock propagating at 100 m/s and run your simulation with global t
 until the flow time reaches 0.01 s, then the shock will have propagated a distance of 1 m.
 
 <hr>
-\subsubsection time_step
+\subsubsection time_step_output time_step (output)
 __type:__ float \n
 Time step taken in the most recent iteration.
-Only meaningful for global time stepping.
+Only meaningful for \ref steady = \ref false.
 
 <hr>
 \subsubsection header

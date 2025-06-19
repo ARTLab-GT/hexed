@@ -10,6 +10,7 @@
 #include "Row_rw.hpp"
 #include "Face_permutation.hpp"
 #include "Refined_face.hpp"
+#include "Time_scheme.hpp"
 
 namespace hexed {
 
@@ -298,11 +299,12 @@ class Spatial {
     const bool _use_filter;
     int _mask;
     bool _conv_substep;
-    // weights for different parameters when assembling the updated state
+    Implicit_options _implicit_opts;
 
     public:
     template <typename... pde_args>
-    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, bool update_production, pde_args... args)
+    Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask,
+          bool conv_substep, Implicit_options implicit_opts, pde_args... args)
     : _eq(args...)
     , derivative{basis}
     , boundary{basis.boundary()}
@@ -315,6 +317,7 @@ class Spatial {
     , _use_filter{use_filter}
     , _mask{mask}
     , _conv_substep{conv_substep}
+    , _implicit_opts{implicit_opts}
     {
       HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
       HEXED_ASSERT(!(_stage && _compute_residual), "residual calculation is a single-stage operation");
@@ -495,6 +498,9 @@ class Spatial {
           Mat<Pde::n_update> update;
           update.setZero();
           double mult = _update*tss[i_qpoint]/nominal_volume*(!fringe);
+          if (_implicit_opts.is_implicit) {
+            mult *= _implicit_opts.time_step/(_implicit_opts.time_step + _update*tss[i_qpoint]);
+          }
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             double u = time_rate[0][i_var][i_qpoint];
@@ -503,6 +509,11 @@ class Spatial {
             } else {
               if constexpr (Pde::has_convection) ref_state[i_var*n_qpoint + i_qpoint] = u;
               if constexpr (Pde::has_diffusion || Pde::has_source) u += time_rate[1][i_var][i_qpoint];
+              if (_implicit_opts.is_implicit) {
+                u += (ref_state[(Pde::n_update*(1 + is_deformed) + i_var)*n_qpoint + i_qpoint]
+                      - state[i_var*n_qpoint + i_qpoint]/_implicit_opts.time_step)
+                     *nominal_volume*(is_deformed ? elem_det[i_qpoint] : 1.);
+              }
               if constexpr (is_deformed) {
                 if (_conv_substep) {
                   double& diff_cache = ref_state[(Pde::n_update + i_var)*n_qpoint + i_qpoint];
@@ -544,7 +555,8 @@ class Spatial {
 
     public:
     template <typename... pde_args>
-    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter, int mask, bool conv_substep, pde_args... args)
+    Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter,
+                       int mask, bool conv_substep, pde_args... args)
     : _eq(args...)
     , _nodes{basis.nodes()}
     , derivative{basis}

@@ -24,8 +24,10 @@ class Storage_params {
   int n_vertices() const; //!< \brief number of vertices of each element
   int n_var_numeric() const; //!< \brief number of _numerical_ variables (as opposed to physical state variables)
   int n_dof_numeric() const; //!< \brief number of numerical degrees of freedom
-  std::vector<int> physical_shape() const; //!< \brief Shape of the `Array` required to hold the physical state variables
-  std::vector<int> numerical_shape() const; //!< \brief Shape of the `Array` required to hold the full numerical state variables
+  //! \brief Shape of the `Array` required to hold the physical state variables
+  std::vector<int> physical_shape() const;
+  //! \brief Shape of the `Array` required to hold the full numerical state variables
+  std::vector<int> numerical_shape() const;
 };
 
 //! \relates Storage_params

@@ -98,7 +98,8 @@ chars
 
 \warning
 If you have never programmed in a low-level language before,
-beware of [integer overflow](https://en.wikipedia.org/wiki/Integer_overflow).
+beware of [integer overflow](https://en.wikipedia.org/wiki/Integer_overflow),
+especially when converting floating point values to integers.
 
 \section Operators
 HIL supports a variety of _operators_, which in this context means

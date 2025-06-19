@@ -7,6 +7,12 @@ TEST_CASE("file_extension") {
   REQUIRE(hexed::file_extension("model.STL") == "stl");
 }
 
+TEST_CASE("to_lower") {
+  REQUIRE(hexed::to_lower("SOmE cHarac-teRs.") == "some charac-ters.");
+  REQUIRE(hexed::to_lower("") == "");
+  REQUIRE(hexed::to_lower("\n") == "\n");
+}
+
 TEST_CASE("to_mat") {
   std::vector<double> vec {.1, -.3, .2};
   REQUIRE_THAT(hexed::to_mat(vec), Catch::Matchers::RangeEquals(vec, hexed::math::Approx_equal()));
@@ -20,4 +26,3 @@ TEST_CASE("resize") {
                Catch::Matchers::RangeEquals(std::vector<double>{.2, -.1, .03, 6., 0., 0.},
                                             hexed::math::Approx_equal(0., 1e-10)));
 }
-

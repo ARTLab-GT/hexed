@@ -50,6 +50,7 @@ class Solver {
   bool _implicit;
   std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> _preti_masks;
   int _preti_level;
+  Time_scheme _time_scheme;
 
   Kernel_mesh& _kernel_mesh();
   void _put_cache(); // copies the flow state to the residual cache
@@ -71,6 +72,7 @@ class Solver {
   double max_dt(double max_safety_conv, double max_safety_diff);
   void _init_face_state();
   Interpreter _interpreter();
+  void _init_stage_storage(int stage);
 
   //! \brief linearizes the steady state equations by finite difference
   class Linearized : public Linear_equation {
@@ -98,11 +100,12 @@ class Solver {
   };
 
   public:
+
   /*!
    * \param n_dim number of dimensions
    * \param row_size row size of the basis (see \ref Terminology)
    * \param root_mesh_size sets the value of `Mesh::root_mesh_size()`
-   * \param local_time_stepping whether to use local or global time stepping
+   * \param time_scheme what numerical scheme to use for time integration
    * \param viscosity_model determines whether the flow has viscosity (natural, not artificial) and if so,
    * how it depends on temperature
    * \param thermal_conductivity_model determines whether the flow has thermal conductivity and if so,
@@ -111,8 +114,6 @@ class Solver {
    * \param space `Namespace` containing any user-defined parameters affecting the behavior of the solver.
    *        If no namespace is provided, a new blank namespace is creqated.
    *        Any optional parameters which are not found in the namespace shall be created with their default values.
-   * \param implicit if `true`, allocate storage for solving with an implicit method
-   *        (experimental feature---not ready for production use)
    * \details If `viscosity_model` and `thermal_conductivity_model` are both `inviscid`
    * _and_ you don't turn on artificial viscosity,
    * you will be solving the pure inviscid flow equations.
@@ -120,11 +121,10 @@ class Solver {
    * potentially with some of the diffusion coefficients
    * (artificial viscosity, natural viscosity, thermal conductivity) set to zero.
    */
-  Solver(int n_dim, int row_size, double root_mesh_size, bool local_time_stepping = false,
+  Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_scheme,
          Transport_model viscosity_model = inviscid, Transport_model thermal_conductivity_model = inviscid,
          Turbulence_model turbulence_model = laminar,
-         std::shared_ptr<Namespace> space = std::make_shared<Namespace>(),
-         bool implicit = false);
+         std::shared_ptr<Namespace> space = std::make_shared<Namespace>());
 
   //! \name setup
   //!\{
@@ -200,6 +200,10 @@ class Solver {
    * (it is scaled by the max allowable CFL for the chosen DG scheme which is often O(1e-2)).
    */
   void update();
+  //! \brief Switch to the next implicit unsteady time integration stage.
+  //! \returns An integer index identifying which time integration stage you are now on.
+  //! If it is 0, that means you have advanced to the next time step.
+  int next_time_stage();
   //! \brief (experimental) performs an implicit time step
   //! \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
   void update_implicit();

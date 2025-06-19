@@ -18,6 +18,11 @@ std::string file_extension(std::string file_name) {
   return ext;
 }
 
+std::string to_lower(std::string s) {
+  for (char& c : s) c = std::tolower(c);
+  return s;
+}
+
 std::string to_string(int i) {return std::to_string(i);}
 std::string to_string(Int i) {return std::to_string(i);}
 std::string to_string(double d) {return format_str(100, "%+.6e", d);}

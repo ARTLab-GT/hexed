@@ -125,7 +125,7 @@ class History_plot:
     """
     ## \brief names of output columns __not__ to plot
     ## \details You may modify this variable for the class or for instances
-    column_blacklist = ["flow_time", "time_step"]
+    column_blacklist = ["flow_time", "time_step", "time_stage"]
 
     def _infinite_generator(self):
         while not self._stop:
@@ -170,6 +170,9 @@ class History_plot:
         self._curves = []
         for i_col in range(len(self._plot_columns)):
             col = self._plot_columns[i_col]
+            col = col.replace("_", " ")
+            if col == "pseudotime iteration":
+                col = col + "s"
             ax = self._axs[i_col]
             self._curves.append(ax.plot([], [])[0])
             ax.set_xlim(0., 1.)
@@ -189,7 +192,10 @@ class History_plot:
                 self._stop = True
             if re.match(" *[0-9]+,", line):
                 entries = line.split(",")
-                self._data.loc[self._data.shape[0]] = [int(entries[0])] + [float(e) for e in entries[1:]]
+                add_line = self._data.shape[0]
+                if add_line > 0 and int(entries[0]) == self._data["iteration"][add_line - 1]:
+                    add_line -= 1
+                self._data.loc[add_line] = [int(entries[0])] + [float(e) for e in entries[1:]]
                 last_iter = self._data["iteration"][self._data.shape[0] - 1]
                 if last_iter > self._axs[0].get_xlim()[1]:
                     for ax in self._axs:

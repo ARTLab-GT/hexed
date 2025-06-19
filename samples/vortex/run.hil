@@ -7,17 +7,18 @@ mesh_extreme00 = -1.
 mesh_extreme10 = -1.
 mesh_extreme01 =  1.
 mesh_extreme11 =  1.
-surface_max_iters = 0
-done = {flow_time >= 6e-3}
-max_safety = 0.01
-print_freq = 1000
-vis_freq = 10000
-local_time = false
+done = {flow_time >= 5.999e-3}
+time_step_done = {pseudotime_iteration > 400}
+time_step = 1e-3/4
+implicit_scheme = {backward euler}
+implicit_scheme = {crank-nicolson}
+implicit_scheme = {dirk2}
+print_freq = 10
+vis_freq = 100
+steady = false
+implicit = true
 
-$start
-$mesh
-init_state
-$run
+$simulate
 integrand_field = {errsq = (density - $vortex_mass)^2}
 integrate_field
 print {L^2 density error: }
