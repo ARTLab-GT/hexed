@@ -227,6 +227,11 @@ The supported options are (case-insensitive):
   robust and dissipative, first-order-accurate in time.
 - `{crank-nicolson}` The [Crank-Nicolson](https://en.wikipedia.org/wiki/Crank%E2%80%93Nicolson_method) method:
   less dissipative, second-order-accurate in time, can induce spurious oscillations in the initial transient behavior.
+- `{dirk2}` Implements the second-order-accurate, two-stage Diagonally-Implicit Runge-Kutta scheme
+  described in Ref. \cite kennedy_dirk, Section 4.1.2 (page 72).
+  Unlike Crank-Nicolson, this method is L-stable, and should exhibit somewhat less oscillation.
+  However, each time step requires solving two implicit stages (whereas backward Euler and C-N require only one)
+  which may increase the wall clock time for each step.
 
 <hr>
 \subsubsection viscosity_model
