@@ -29,16 +29,30 @@ Mat<> Tree::origin() const {return _orig;}
 int Tree::refinement_level() const {return _ref_level.extreme(0);}
 Array<int> Tree::anisotropic_refinement_level() const {return _ref_level.copy();}
 Eigen::VectorXi Tree::coordinates() const {return _coords;}
-double Tree::nominal_size() const {return _root_sz/math::pow(2, refinement_level());}
-Mat<> Tree::nominal_shape() const {return Mat<>::Constant(n_dim, nominal_size());}
-Mat<> Tree::nominal_position() const {return nominal_size()*_coords.cast<double>() + _orig;}
-Mat<> Tree::center() const {return nominal_position() + Mat<>::Constant(n_dim, .5*nominal_size());}
+double Tree::nominal_size() const {return nominal_shape().maxCoeff();}
+
+Mat<> Tree::nominal_shape() const {
+  Mat<> nom_shape(n_dim);
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) nom_shape(i_dim) = _root_sz/math::pow(2, _ref_level[i_dim]);
+  return nom_shape;
+}
+
+Mat<> Tree::nominal_position() const {return nominal_shape().cwiseProduct(_coords.cast<double>()) + _orig;}
+Mat<> Tree::center() const {return nominal_position() + .5*nominal_shape();}
 
 Tree* Tree::parent() {return _par;}
 
 std::vector<Tree*> Tree::children() {
   std::vector<Tree*> c;
   for (auto& t : _children_storage) c.push_back(t.get());
+  return c;
+}
+
+std::vector<Tree*> Tree::unique_children() {
+  std::vector<Tree*> c;
+  for (auto& t : _children_storage) {
+    if (std::none_of(c.begin(), c.end(), [&t](Tree* ptr){return ptr == t.get();})) c.push_back(t.get());
+  }
   return c;
 }
 
@@ -54,7 +68,7 @@ bool Tree::is_leaf() const {return _children_storage.empty();}
 void Tree::refine() {
   HEXED_ASSERT(is_leaf(), "can only refine leaf")
   for (int i_child = 0; i_child < math::pow(2, n_dim); ++i_child) {
-    _children_storage.emplace_back(new Tree(n_dim, _root_sz, _orig));
+    _children_storage.push_back(std::make_shared<Tree>(n_dim, _root_sz, _orig));
     Tree& child = *_children_storage.back();
     child._par = this;
     child._ref_level = _ref_level + 1;
@@ -66,6 +80,24 @@ void Tree::refine() {
 }
 
 void Tree::refine(int i_dim) {
+  HEXED_ASSERT(is_leaf(), "can only refine leaf")
+  int n_child = math::pow(2, n_dim);
+  _children_storage.resize(n_child);
+  for (int i = 0; i < 2; ++i) {
+    auto child = std::make_shared<Tree>(n_dim, _root_sz, _orig);
+    child->_par = this;
+    child->_ref_level = _ref_level;
+    child->_ref_level[i_dim] += 1;
+    child->_coords = _coords;
+    child->_coords[i_dim] *= 2;
+    child->_coords[i_dim] += i;
+    int stride = math::pow(2, n_dim - 1 - i_dim);
+    for (int j = 0; j < n_child/stride/2; ++j) {
+      for (int k = 0; k < stride; ++k) {
+        _children_storage[j*stride*2 + i*stride + k] = child;
+      }
+    }
+  }
 }
 
 void Tree::unrefine() {_children_storage.clear();}

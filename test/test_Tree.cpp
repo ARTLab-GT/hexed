@@ -110,25 +110,30 @@ TEST_CASE("Tree") {
   REQUIRE(children[3]->children()[1]->get_status() == 0);
 
   SECTION("anisotropic refinement 2D") {
-    hexed::Tree tree(2, .7, hexed::Mat<3>{.1, .2, .3});
+    hexed::Tree tree(2, .7, hexed::Mat<2>{.1, .2});
     tree.refine();
     auto child = tree.children()[2];
     child->refine(1);
-    REQUIRE(child->children().size() == 2);
+    auto uc = child->unique_children();
+    REQUIRE(uc.size() == 2);
+    REQUIRE_THAT(child->children(),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{uc[0], uc[1], uc[0], uc[1]}));
     for (int i_child = 0; i_child < 2; ++i_child) {
-      REQUIRE(child->children()[i_child]->refinement_level() == 1);
-      REQUIRE_THAT(child->children()[i_child]->anisotropic_refinement_level(),
+      REQUIRE(uc[i_child]->parent() == child);
+      REQUIRE(uc[i_child]->refinement_level() == 1);
+      REQUIRE_THAT(uc[i_child]->anisotropic_refinement_level(),
                    Catch::Matchers::RangeEquals(std::vector<int>{1, 2}));
-      REQUIRE(child->children()[i_child]->nominal_size() == Catch::Approx(.35));
-      REQUIRE_THAT(child->children()[i_child]->nominal_shape(),
+      REQUIRE(uc[i_child]->nominal_size() == Catch::Approx(.35));
+      REQUIRE_THAT(child->unique_children()[i_child]->nominal_shape(),
                    Catch::Matchers::RangeEquals(std::vector<double>{.35, .175}, hexed::math::Approx_equal()));
     }
-    REQUIRE_THAT(child->children()[0]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 1}));
-    REQUIRE_THAT(child->children()[1]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 2}));
-    REQUIRE_THAT(child->children()[1]->nominal_position(),
-                 Catch::Matchers::RangeEquals(std::vector<double>{.7*.5, .7*.375}, hexed::math::Approx_equal()));
-    REQUIRE_THAT(child->children()[1]->center(),
-                 Catch::Matchers::RangeEquals(std::vector<double>{.7*.75, .7*(.5 - .0625)},
+    REQUIRE_THAT(uc[0]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 0}));
+    REQUIRE_THAT(uc[1]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 1}));
+    REQUIRE_THAT(uc[1]->nominal_position(),
+                 Catch::Matchers::RangeEquals(std::vector<double>{.7*.5 + .1, .7*.25 + .2},
+                                              hexed::math::Approx_equal()));
+    REQUIRE_THAT(uc[1]->center(),
+                 Catch::Matchers::RangeEquals(std::vector<double>{.7*.75 + .1, .7*.375 + .2},
                                               hexed::math::Approx_equal()));
   }
 }

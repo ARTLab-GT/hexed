@@ -41,7 +41,7 @@ class Tree {
   Array<int> _ref_level;
   Eigen::VectorXi _coords;
   Tree* _par;
-  std::vector<std::unique_ptr<Tree>> _children_storage;
+  std::vector<std::shared_ptr<Tree>> _children_storage;
   int _status;
   // finds leaves of this element and adds them to `add_to`.
   // for each dimension, if the corresponding element of `bias` is 0,
@@ -108,6 +108,7 @@ class Tree {
   //! \details If this cell has been refined, then this vector contains pointers to its children.
   //! If it has not, the vector is empty.
   std::vector<Tree*> children();
+  std::vector<Tree*> unique_children();
   Tree* root(); //!< \brief fetch the root element of this tree
   bool is_root() const; //!< \brief gives the same result as `!parent()`
   bool is_leaf() const; //!< \brief gives the same result as `children().empty()`
