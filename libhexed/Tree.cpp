@@ -1,11 +1,9 @@
 #include <Tree.hpp>
 #include <queue>
 
-namespace hexed
-{
+namespace hexed {
 
-void Tree::add_extremal_leves(std::vector<Tree*>& add_to, Eigen::VectorXi bias)
-{
+void Tree::add_extremal_leves(std::vector<Tree*>& add_to, Eigen::VectorXi bias) {
   if (is_leaf()) add_to.push_back(this);
   else for (auto& child : children_storage) {
     bool add = true;
@@ -17,11 +15,11 @@ void Tree::add_extremal_leves(std::vector<Tree*>& add_to, Eigen::VectorXi bias)
 }
 
 Tree::Tree(int nd, double root_size, Mat<> origin)
-: root_sz{root_size}, ref_level{0}, coords{Eigen::VectorXi::Zero(nd)},
-  par{nullptr}, children_storage(),
-  status{unprocessed},
-  n_dim{nd},
-  elem(this)
+: root_sz{root_size}, ref_level{0}, coords{Eigen::VectorXi::Zero(nd)}
+, par{nullptr}, children_storage()
+, status{unprocessed}
+, n_dim{nd}
+, elem(this)
 {
   HEXED_ASSERT(origin.size() >= n_dim, "`origin` is too small");
   orig = origin(Eigen::seqN(0, n_dim));
@@ -36,15 +34,13 @@ Mat<> Tree::center() const {return nominal_position() + Mat<>::Constant(n_dim, .
 
 Tree* Tree::parent() {return par;}
 
-std::vector<Tree*> Tree::children()
-{
+std::vector<Tree*> Tree::children() {
   std::vector<Tree*> c;
   for (auto& t : children_storage) c.push_back(t.get());
   return c;
 }
 
-Tree* Tree::root()
-{
+Tree* Tree::root() {
   Tree* r = this;
   while (!r->is_root()) r = r->parent();
   return r;
@@ -53,8 +49,7 @@ Tree* Tree::root()
 bool Tree::is_root() const {return !par;}
 bool Tree::is_leaf() const {return children_storage.empty();}
 
-void Tree::refine()
-{
+void Tree::refine() {
   HEXED_ASSERT(is_leaf(), "can only refine leaf")
   for (int i_child = 0; i_child < math::pow(2, n_dim); ++i_child) {
     children_storage.emplace_back(new Tree(n_dim, root_sz, orig));
@@ -70,8 +65,7 @@ void Tree::refine()
 
 void Tree::unrefine() {children_storage.clear();}
 
-Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias)
-{
+Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias) {
   HEXED_ASSERT(c.size() >= n_dim, "`coords` has too few elements");
   HEXED_ASSERT(bias.size() >= n_dim, "`bias` has too few elements");
   // find the relative coordinates in this element's ref level or the specified ref level, whichever is higher
@@ -92,8 +86,7 @@ Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias)
   return this;
 }
 
-Tree* Tree::find_leaf(Mat<> nom_pos)
-{
+Tree* Tree::find_leaf(Mat<> nom_pos) {
   HEXED_ASSERT(nom_pos.size() >= n_dim, "`nominal_position` has too few elements");
   Mat<> np = nominal_position();
   double ns = nominal_size();
@@ -107,8 +100,7 @@ Tree* Tree::find_leaf(Mat<> nom_pos)
   return this;
 }
 
-Tree* Tree::find_neighbor(Eigen::VectorXi direction)
-{
+Tree* Tree::find_neighbor(Eigen::VectorXi direction) {
   HEXED_ASSERT(direction.size() >= n_dim, "`direction` has too few elements");
   // compute the coordinates and bias which will identify the neighbor
   Eigen::VectorXi bias(n_dim);
@@ -121,8 +113,7 @@ Tree* Tree::find_neighbor(Eigen::VectorXi direction)
   return root()->find_leaf(ref_level, c, bias);
 }
 
-std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction)
-{
+std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction) {
   HEXED_ASSERT(direction.size() >= n_dim, "`direction` has too few elements");
   std::vector<Tree*> neighbs;
   // start by finding some leaf neighbor
@@ -138,25 +129,21 @@ std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction)
   return neighbs;
 }
 
-int Tree::count()
-{
+int Tree::count() {
   int total = 1;
   for (auto& child : children_storage) total += child->count();
   return total;
 }
 
-int Tree::get_status()
-{
+int Tree::get_status() {
   return status;
 }
 
-void Tree::set_status(int new_status)
-{
+void Tree::set_status(int new_status) {
   status = new_status;
 }
 
-void Tree::flood_fill(int new_status)
-{
+void Tree::flood_fill(int new_status) {
   HEXED_ASSERT(new_status != unprocessed, "`flood_fill` may not be used to set status to `unprocessed`");
   if (!is_leaf()) children_storage[0]->flood_fill(new_status); // find a leaf element to start
   std::queue<Tree*> to_process;
@@ -184,8 +171,7 @@ void Tree::flood_fill(int new_status)
   }
 }
 
-void Tree::clear_status()
-{
+void Tree::clear_status() {
   status = unprocessed;
   for (auto& child : children_storage) child->clear_status();
 }

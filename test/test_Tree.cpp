@@ -2,8 +2,7 @@
 #include <hexed/Tree.hpp>
 #include "testing_utils.hpp"
 
-TEST_CASE("Tree")
-{
+TEST_CASE("Tree") {
   // root properties
   hexed::Tree tree2(2, 7., Eigen::Vector4d{.1, .3, -.2, .5});
   REQUIRE(tree2.n_dim == 2);
