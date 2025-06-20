@@ -5,6 +5,7 @@
 #include "math.hpp"
 #include "Element.hpp"
 #include "Deformed_element.hpp"
+#include "Array.hpp"
 
 namespace hexed {
 
@@ -37,7 +38,7 @@ namespace hexed {
 class Tree {
   Mat<> _orig;
   double _root_sz;
-  int _ref_level;
+  Array<int> _ref_level;
   Eigen::VectorXi _coords;
   Tree* _par;
   std::vector<std::unique_ptr<Tree>> _children_storage;
@@ -73,6 +74,7 @@ class Tree {
   //! \brief how many calls of `refine` were required to generate this element.
   //! \details E.g. the root element has refinement level 0.
   int refinement_level() const;
+  Array<int> anisotropic_refinement_level() const;
   /*! \brief coordinates of vertex 0 of this element relative to `origin` in multiples of the cell size
    * \details Combined with the `refinement_level`,
    * this is the minimal amount of information required to locate a tree element.

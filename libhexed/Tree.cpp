@@ -15,7 +15,7 @@ void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias
 }
 
 Tree::Tree(int nd, double root_size, Mat<> origin)
-: _root_sz{root_size}, _ref_level{0}, _coords{Eigen::VectorXi::Zero(nd)}
+: _root_sz{root_size}, _ref_level{Array<int>::make_uniform({nd}, 0)}, _coords{Eigen::VectorXi::Zero(nd)}
 , _par{nullptr}, _children_storage()
 , _status{unprocessed}
 , n_dim{nd}
@@ -26,9 +26,10 @@ Tree::Tree(int nd, double root_size, Mat<> origin)
 }
 
 Mat<> Tree::origin() const {return _orig;}
-int Tree::refinement_level() const {return _ref_level;}
+int Tree::refinement_level() const {return _ref_level.extreme(0);}
+Array<int> Tree::anisotropic_refinement_level() const {return _ref_level.copy();}
 Eigen::VectorXi Tree::coordinates() const {return _coords;}
-double Tree::nominal_size() const {return _root_sz/math::pow(2, _ref_level);}
+double Tree::nominal_size() const {return _root_sz/math::pow(2, refinement_level());}
 Mat<> Tree::nominal_position() const {return nominal_size()*_coords.cast<double>() + _orig;}
 Mat<> Tree::center() const {return nominal_position() + Mat<>::Constant(n_dim, .5*nominal_size());}
 
@@ -70,8 +71,8 @@ Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias) {
   HEXED_ASSERT(bias.size() >= n_dim, "`bias` has too few elements");
   // find the relative coordinates in this element's ref level or the specified ref level, whichever is higher
   c = c(Eigen::seqN(0, n_dim));
-  int max_level = std::max(_ref_level, rl);
-  int cell_size = math::pow(2, max_level - _ref_level);
+  int max_level = std::max(refinement_level(), rl);
+  int cell_size = math::pow(2, max_level - refinement_level());
   Eigen::MatrixXi relative_coords = c*math::pow(2, max_level - rl) - bias(Eigen::seqN(0, n_dim)) - _coords*cell_size;
   // first base case: if the coordinates are outside this element, return null
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -110,7 +111,7 @@ Tree* Tree::find_neighbor(Eigen::VectorXi direction) {
     bias(i_dim) = (direction(i_dim) < 0);
   }
   // use `find_leaf` on the root element to find the neighbor
-  return root()->find_leaf(_ref_level, c, bias);
+  return root()->find_leaf(refinement_level(), c, bias);
 }
 
 std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction) {

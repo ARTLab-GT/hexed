@@ -12,6 +12,7 @@ TEST_CASE("Tree") {
   REQUIRE(tree3.n_dim == 3);
   REQUIRE_THAT(tree3.origin(), Catch::Matchers::RangeEquals(Eigen::Vector3d::Zero(), hexed::math::Approx_equal(0., 1e-16)));
   REQUIRE(tree3.refinement_level() == 0);
+  REQUIRE_THAT(tree3.anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{0, 0, 0}));
   REQUIRE_THAT(tree3.coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector3i::Zero()));
   REQUIRE(tree3.nominal_size() == Catch::Approx(.8));
   REQUIRE_THAT(tree3.nominal_position(), Catch::Matchers::RangeEquals(Eigen::Vector3d::Zero(), hexed::math::Approx_equal(0., 1e-16)));
@@ -29,6 +30,7 @@ TEST_CASE("Tree") {
   REQUIRE(children[0]->is_leaf());
   REQUIRE(children[0]->parent() == &tree2);
   REQUIRE(children[0]->refinement_level() == 1);
+  REQUIRE_THAT(children[0]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{1, 1}));
   REQUIRE(children[0]->nominal_size() == 3.5);
   REQUIRE_THAT(children[0]->coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector2i::Zero()));
   REQUIRE_THAT(children[1]->coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector2i{0, 1}));
@@ -37,6 +39,8 @@ TEST_CASE("Tree") {
   children[1]->refine();
   REQUIRE(!children[1]->is_leaf());
   REQUIRE(children[1]->children()[3]->refinement_level() == 2);
+  REQUIRE_THAT(children[1]->children()[3]->anisotropic_refinement_level(),
+               Catch::Matchers::RangeEquals(std::vector<int>{2, 2}));
   REQUIRE_THAT(children[1]->children()[3]->coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector2i{1, 3}));
   children[1]->unrefine();
   REQUIRE(children[1]->is_leaf());
