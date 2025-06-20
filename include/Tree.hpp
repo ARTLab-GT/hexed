@@ -88,6 +88,7 @@ class Tree {
    * \details Equal to \f$2^{-\verb|n_dim|}\verb|root_size|\f$.
    */
   double nominal_size() const;
+  Mat<> nominal_shape() const;
   /*! \brief the position of vertex 0 of the element in physical coordinates
    * \details Note that this expressed in floating point format whereas `coordinates` is in integer format.
    * As an example, in 2D the root element has nominal position origin + {0, 0} and its children have coordinates
@@ -120,6 +121,10 @@ class Tree {
   //! and cover the same volume.
   //! Must be leaf.
   void refine();
+  //! \brief Refines anisotropically.
+  //! \details Splits `this` along dimension `i_dim` to create 2 child elements
+  //! with `anisotropic_refinement_level()(i_dim)` 1 greater than `this` and all other components the same.
+  void refine(int i_dim);
   void unrefine(); //!< \brief Deletes all child elements (and descendents thereof). This element is now a leaf.
   //!\}
 

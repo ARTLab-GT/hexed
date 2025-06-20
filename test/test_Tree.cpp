@@ -15,6 +15,7 @@ TEST_CASE("Tree") {
   REQUIRE_THAT(tree3.anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{0, 0, 0}));
   REQUIRE_THAT(tree3.coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector3i::Zero()));
   REQUIRE(tree3.nominal_size() == Catch::Approx(.8));
+  REQUIRE_THAT(tree3.nominal_shape(), Catch::Matchers::RangeEquals(std::vector<double>{.8, .8, .8}, hexed::math::Approx_equal()));
   REQUIRE_THAT(tree3.nominal_position(), Catch::Matchers::RangeEquals(Eigen::Vector3d::Zero(), hexed::math::Approx_equal(0., 1e-16)));
 
   // (un)refinement
@@ -32,6 +33,7 @@ TEST_CASE("Tree") {
   REQUIRE(children[0]->refinement_level() == 1);
   REQUIRE_THAT(children[0]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{1, 1}));
   REQUIRE(children[0]->nominal_size() == 3.5);
+  REQUIRE_THAT(children[0]->nominal_shape(), Catch::Matchers::RangeEquals(std::vector<double>{3.5, 3.5}, hexed::math::Approx_equal()));
   REQUIRE_THAT(children[0]->coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector2i::Zero()));
   REQUIRE_THAT(children[1]->coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector2i{0, 1}));
   REQUIRE_THAT(children[2]->coordinates(), Catch::Matchers::RangeEquals(Eigen::Vector2i{1, 0}));
@@ -106,4 +108,27 @@ TEST_CASE("Tree") {
   REQUIRE(children[3]->children()[2]->get_status() == 3);
   REQUIRE(children[3]->children()[0]->children()[2]->get_status() == 3);
   REQUIRE(children[3]->children()[1]->get_status() == 0);
+
+  SECTION("anisotropic refinement 2D") {
+    hexed::Tree tree(2, .7, hexed::Mat<3>{.1, .2, .3});
+    tree.refine();
+    auto child = tree.children()[2];
+    child->refine(1);
+    REQUIRE(child->children().size() == 2);
+    for (int i_child = 0; i_child < 2; ++i_child) {
+      REQUIRE(child->children()[i_child]->refinement_level() == 1);
+      REQUIRE_THAT(child->children()[i_child]->anisotropic_refinement_level(),
+                   Catch::Matchers::RangeEquals(std::vector<int>{1, 2}));
+      REQUIRE(child->children()[i_child]->nominal_size() == Catch::Approx(.35));
+      REQUIRE_THAT(child->children()[i_child]->nominal_shape(),
+                   Catch::Matchers::RangeEquals(std::vector<double>{.35, .175}, hexed::math::Approx_equal()));
+    }
+    REQUIRE_THAT(child->children()[0]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 1}));
+    REQUIRE_THAT(child->children()[1]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 2}));
+    REQUIRE_THAT(child->children()[1]->nominal_position(),
+                 Catch::Matchers::RangeEquals(std::vector<double>{.7*.5, .7*.375}, hexed::math::Approx_equal()));
+    REQUIRE_THAT(child->children()[1]->center(),
+                 Catch::Matchers::RangeEquals(std::vector<double>{.7*.75, .7*(.5 - .0625)},
+                                              hexed::math::Approx_equal()));
+  }
 }

@@ -30,6 +30,7 @@ int Tree::refinement_level() const {return _ref_level.extreme(0);}
 Array<int> Tree::anisotropic_refinement_level() const {return _ref_level.copy();}
 Eigen::VectorXi Tree::coordinates() const {return _coords;}
 double Tree::nominal_size() const {return _root_sz/math::pow(2, refinement_level());}
+Mat<> Tree::nominal_shape() const {return Mat<>::Constant(n_dim, nominal_size());}
 Mat<> Tree::nominal_position() const {return nominal_size()*_coords.cast<double>() + _orig;}
 Mat<> Tree::center() const {return nominal_position() + Mat<>::Constant(n_dim, .5*nominal_size());}
 
@@ -62,6 +63,9 @@ void Tree::refine() {
       child._coords(i_dim) = 2*_coords[i_dim] + (i_child/stride)%2;
     }
   }
+}
+
+void Tree::refine(int i_dim) {
 }
 
 void Tree::unrefine() {_children_storage.clear();}
