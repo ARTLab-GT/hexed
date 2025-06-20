@@ -33,18 +33,18 @@ namespace hexed {
  * or modifying elements and calling a traversing function concurrently may result in data races.
  */
 class Tree {
-  Mat<> orig;
-  double root_sz;
-  int ref_level;
-  Eigen::VectorXi coords;
-  Tree* par;
-  std::vector<std::unique_ptr<Tree>> children_storage;
-  int status;
+  Mat<> _orig;
+  double _root_sz;
+  int _ref_level;
+  Eigen::VectorXi _coords;
+  Tree* _par;
+  std::vector<std::unique_ptr<Tree>> _children_storage;
+  int _status;
   // finds leaves of this element and adds them to `add_to`.
   // for each dimension, if the corresponding element of `bias` is 0, adds only the elements at the lower extreme of that dimension.
   // if 1, adds only those at the upper extreme.
   // if -1, adds all.
-  void add_extremal_leves(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
+  void _add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
 
   public:
   /*! \brief Constructs the root element of a tree.
@@ -86,7 +86,7 @@ class Tree {
   Mat<> center() const; //!< return the center of this tree element
   //!\}
 
-  //! \name parent/child status
+  //! \name parent/child _status
   //!\{
   Tree* parent(); //!< If this element is not the root, then this is a pointer to the element which was refined to obtain this element. If it is the root, then this is `nullptr`.
   //! If this cell has been refined, then this vector contains pointers to its children. If it has not, the vector is empty.
@@ -107,21 +107,21 @@ class Tree {
   /*! \brief Finds a leaf which contains a specified set of integer coordinates.
    * \note Only considers this element and its descendents, not neighbors that share the same root.
    * \details Recursively searches this tree and its descendents for a leaf element which contains the point
-   * determined by `coords` and `ref_level`.
+   * determined by `_coords` and `_ref_level`.
    * If no element is found (i.e. if the specified coordinates are outside this cell) then `nullptr` is returned.
    * For each dimension, if the corresponding element of `bias` is 0, then the point is permitted to lie on the lower face
    * of that dimension but not the upper face.
    * If the corresponding element of `bias` is 1, then it may lie on the upper face but not the lower.
    * Example: The element with refinement level 2 and coordinates {1, 2}:
-   * - contains `{ref_level = 2, coords = {1, 2}, bias = {0, 0}}`
-   * - does not contain `{ref_level = 2, coords = {2, 2}, bias = {0, 0}}`
-   * - contains `{ref_level = 2, coords = {2, 2}, bias = {1, 0}}`
-   * - does not contain `{ref_level = 2, coords = {2, 2}, bias = {1, 1}}`
-   * - contains `{ref_level = 3, coords = {3, 5}}` regardless of `bias`.
+   * - contains `{_ref_level = 2, _coords = {1, 2}, bias = {0, 0}}`
+   * - does not contain `{_ref_level = 2, _coords = {2, 2}, bias = {0, 0}}`
+   * - contains `{_ref_level = 2, _coords = {2, 2}, bias = {1, 0}}`
+   * - does not contain `{_ref_level = 2, _coords = {2, 2}, bias = {1, 1}}`
+   * - contains `{_ref_level = 3, _coords = {3, 5}}` regardless of `bias`.
    *
-   * The arguments `coords` and `bias` must have at least `n_dim` elements and only the first `n_dim` are read.
+   * The arguments `_coords` and `bias` must have at least `n_dim` elements and only the first `n_dim` are read.
    * All elements of `bias` must be either 0 or 1, or the behavior is unspecified.
-   * `ref_level` must be nonnegative, but there are no restrictions on how it relates to the refinement levels of the cells to be searched.
+   * `_ref_level` must be nonnegative, but there are no restrictions on how it relates to the refinement levels of the cells to be searched.
    */
   Tree* find_leaf(int ref_level, Eigen::VectorXi coords, Eigen::VectorXi bias = Eigen::VectorXi::Zero(3));
   /*! \brief Finds a leaf which contains a specified point in physical space.
@@ -163,29 +163,29 @@ class Tree {
   //!\}
 
   /*! \name flood fill algorithm
-   * The flood fill algorithm sets an integer "status" attribute of a connected group of leaf elements.
+   * The flood fill algorithm sets an integer "_status" attribute of a connected group of leaf elements.
    * This is useful to distinguish inside, outside, and boundary elements in the mesh.
-   * A status value of `unprocessed` indicates an element that has not been processed by the flood fill.
-   * Identify the boundary elements by manually setting their status to any other value.
+   * A _status value of `unprocessed` indicates an element that has not been processed by the flood fill.
+   * Identify the boundary elements by manually setting their _status to any other value.
    * Then, to identify a connected region bounded by the elements you have set,
    * invoke `flood_fill()` on one of the elements in the region you want.
    */
   //!\{
   static constexpr int unprocessed = -1;
-  int get_status(); //!< gets the flood fill status value (initialized to `unprocessed`).
-  void set_status(int); //!< sets the flood fill status value
+  int get_status(); //!< gets the flood fill _status value (initialized to `unprocessed`).
+  void set_status(int); //!< sets the flood fill _status value
   /*! \brief Executes flood fill algorithm starting with this element.
-   * \details Sets this element's status to the specified value.
-   * It will then check the status of all face neighbors.
-   * For any neighbors with status `unprocessed`, it will continue the flood fill algorithm from those elements
-   * including setting their status and evaluating their neighbors.
+   * \details Sets this element's _status to the specified value.
+   * It will then check the _status of all face neighbors.
+   * For any neighbors with _status `unprocessed`, it will continue the flood fill algorithm from those elements
+   * including setting their _status and evaluating their neighbors.
    * If the element you call this function on is not a leaf, it will instead start the flood fill
    * on the leaf descendent of this cell with the smallest coordinates (e.g. for the root in 2D, it will start with the lower-left element).
-   * The parameter `status` must not be equal to `unprocessed`.
-   * If the start element has a status value which is not `unprocessed`, the algorithm does nothing.
+   * The parameter `_status` must not be equal to `unprocessed`.
+   * If the start element has a _status value which is not `unprocessed`, the algorithm does nothing.
    */
   void flood_fill(int status);
-  void clear_status(); //!< sets the flood fill status of this and all child elements to `unprocessed`
+  void clear_status(); //!< sets the flood fill _status of this and all child elements to `unprocessed`
   //!\}
 };
 
