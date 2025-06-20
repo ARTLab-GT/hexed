@@ -26,6 +26,7 @@ TEST_CASE("Tree") {
   tree2.refine();
   REQUIRE(!tree2.is_leaf());
   auto children = tree2.children();
+  REQUIRE_THAT(tree2.unique_children(), Catch::Matchers::RangeEquals(children));
   REQUIRE(children.size() == 4);
   REQUIRE(!children[0]->is_root());
   REQUIRE(children[0]->is_leaf());
@@ -113,6 +114,7 @@ TEST_CASE("Tree") {
     hexed::Tree tree(2, .7, hexed::Mat<2>{.1, .2});
     tree.refine();
     auto child = tree.children()[2];
+    REQUIRE(child->unique_children().empty());
     child->refine(1);
     auto uc = child->unique_children();
     REQUIRE(uc.size() == 2);
@@ -135,5 +137,11 @@ TEST_CASE("Tree") {
     REQUIRE_THAT(uc[1]->center(),
                  Catch::Matchers::RangeEquals(std::vector<double>{.7*.75 + .1, .7*.375 + .2},
                                               hexed::math::Approx_equal()));
+    uc[1]->refine(1);
+    REQUIRE(child->unique_children().size() == 2);
+    REQUIRE(uc[1]->unique_children().size() == 2);
+    hexed::Tree* child1 = uc[1]->unique_children()[0];
+    REQUIRE_THAT(child1->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{1, 3}));
+    REQUIRE_THAT(child1->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 2}));
   }
 }
