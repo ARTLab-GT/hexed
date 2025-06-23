@@ -78,11 +78,18 @@ Flow_bc* Case::_make_bc(std::string name) {
     _roughness.push_back(&bc->roughness);
     return bc;
   } else if (name == "expression") {
-    HEXED_ASSERT(   _inter.variables->lookup<std::string>("bc_state")
-                 && _inter.variables->lookup<std::string>("bc_flux"),
-                 "To use the `expression` BC type, you must define `bc_state` and `bc_flux` as strings.",
+    HEXED_ASSERT(_inter.variables->lookup<std::string>("bc_state"),
+                 "To use the `expression` BC type, you must define `bc_state` as a string.",
                  assert::User_error)
-    return new Expression_bc(_inter, _vars("bc_state"), _vars("bc_flux"));
+    std::string flux;
+    if (_inter.variables->lookup<std::string>("bc_flux")) {
+      flux = _vars("bc_flux");
+    } else {
+      for (int i_var = 0; i_var < _vari("n_var"); ++i_var) {
+        flux += format_str("ghost_flux%i = flux%i\n", i_var, i_var);
+      }
+    }
+    return new Expression_bc(_inter, _vars("bc_state"), flux);
   } else HEXED_THROW(format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()), assert::User_error);
   return nullptr; // will never happen. just to shut up GCC warning
 }

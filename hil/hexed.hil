@@ -284,16 +284,6 @@ wall_velocity = {
     velocity1 = 0.
     velocity2 = 0.
 }
-bc_flux = {
-   ghost_flux0 = flux0
-   ghost_flux1 = flux1
-   ghost_flux2 = flux2
-   ghost_flux3 = flux3
-   ghost_flux4 = flux4
-   ghost_flux5 = flux5
-   ghost_flux6 = flux6
-   ghost_flux7 = flux7
-}
 
 {overrideable macros}
 write_init = {write_mesh}
