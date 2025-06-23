@@ -137,7 +137,7 @@ TEST_CASE("Tree") {
     REQUIRE_THAT(uc[1]->center(),
                  Catch::Matchers::RangeEquals(std::vector<double>{.7*.75 + .1, .7*.375 + .2},
                                               hexed::math::Approx_equal()));
-    SECTION("aniso-iso collapsing") {
+    SECTION("aniso collapsing") {
       uc[1]->refine(1);
       REQUIRE(child->unique_children().size() == 2);
       REQUIRE(uc[1]->unique_children().size() == 2);
@@ -156,6 +156,32 @@ TEST_CASE("Tree") {
       REQUIRE_THAT(new_children[3]->anisotropic_refinement_level(),
                    Catch::Matchers::RangeEquals(std::vector<int>{2, 3}));
       for (auto& child : new_children) REQUIRE(child->parent() == uc[1]);
+    }
+    SECTION("aniso-iso interchange") {
+      uc[1]->refine();
+      for (int i_child = 0; i_child < 4; ++i_child) {
+       hexed:: Tree* child0 = uc[1]->children()[i_child];
+        child0->refine();
+        for (hexed::Tree* child1 : child0->children()) child1->refine(1);
+        if (i_child < 3) {
+          REQUIRE(child0->is_refined(1));
+          REQUIRE(!child0->is_refined(0));
+          REQUIRE_THAT(child0->unique_children()[0]->anisotropic_refinement_level(),
+                       Catch::Matchers::RangeEquals(std::vector<int>{2, 4}));
+          REQUIRE(child0->unique_children()[1]->unique_children().size() == 4);
+          REQUIRE(child0->unique_children()[1]->unique_children()[3]->parent()->parent() == child0);
+        } else {
+          REQUIRE(uc[1]->is_refined(1));
+          REQUIRE(!uc[1]->is_refined(0));
+          REQUIRE(uc[1]->unique_children()[0]->unique_children().size() == 4);
+          REQUIRE(uc[1]->unique_children()[0]->unique_children()[1]->unique_children()[2]->
+                  parent()->parent()->parent() == uc[1]);
+          REQUIRE(uc[1]->unique_children()[1]->unique_children()[3]->unique_children()[3]->parent()->parent()->parent() == uc[1]);
+          REQUIRE_THAT(uc[1]->unique_children()[0]->unique_children()[1]->unique_children()[2]->
+                       anisotropic_refinement_level(),
+                       Catch::Matchers::RangeEquals(std::vector<int>{2, 4}));
+        }
+      }
     }
   }
 }

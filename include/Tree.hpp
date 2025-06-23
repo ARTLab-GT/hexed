@@ -50,7 +50,6 @@ class Tree {
   // if -1, adds all.
   void _add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
   void _collapse_aniso_ref();
-  bool _is_refined(int i_dim) const;
 
   public:
   /*! \brief Constructs the root element of a tree.
@@ -114,6 +113,7 @@ class Tree {
   Tree* root(); //!< \brief fetch the root element of this tree
   bool is_root() const; //!< \brief gives the same result as `!parent()`
   bool is_leaf() const; //!< \brief gives the same result as `children().empty()`
+  bool is_refined(int i_dim) const;
   //!\}
 
   //! \name modifiers

@@ -79,7 +79,7 @@ void Tree::refine() {
   }
 }
 
-bool Tree::_is_refined(int i_dim) const {
+bool Tree::is_refined(int i_dim) const {
   if (is_leaf()) return false;
   return _children_storage[0] != _children_storage[math::stride(n_dim, 2, i_dim)];
 }
@@ -91,7 +91,7 @@ void Tree::_collapse_aniso_ref() {
     for (auto& child : _children_storage) {
       collapse = collapse && !child->is_leaf();
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        collapse = collapse && (child->_is_refined(i_dim) != _is_refined(i_dim));
+        collapse = collapse && (child->is_refined(i_dim) != is_refined(i_dim));
       }
     }
     if (collapse) {
