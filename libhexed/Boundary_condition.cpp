@@ -432,19 +432,21 @@ Expression_bc::Expression_bc(Interpreter& inter, std::string state_expr, std::st
 void Expression_bc::_apply(Boundary_connection& con, bool is_flux) {
   auto sub = _inter.make_sub();
   auto params = con.ghost().storage_params();
-  sub.variables->assign("pos", con.position());
-  sub.variables->assign("normal", con.normal());
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    sub.variables->assign("pos" + to_string(i_dim), con.position()(i_dim));
+    sub.variables->assign("normal" + to_string(i_dim), con.normal()(i_dim));
+  }
   Array<double> inside = con.inside().flow_state();
   std::array<std::string, 2> names {"state", "flux"};
   for (int i = 0; i < 2; ++i) {
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      sub.variables->assign(names[i] + std::to_string(i_var), inside(i)(i_var));
+      sub.variables->assign(names[i] + to_string(i_var), inside(i)(i_var));
     }
   }
   sub.exec(_exprs[is_flux]);
   Array<double> ghost = con.ghost().flow_state()(is_flux);
   for (int i_var = 0; i_var < params.n_var; ++i_var) {
-    sub.variables->assign_array(ghost(i_var), "ghost_" + names[is_flux] + std::to_string(i_var));
+    sub.variables->assign_array(ghost(i_var), "ghost_" + names[is_flux] + to_string(i_var));
   }
 }
 

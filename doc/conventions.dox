@@ -22,8 +22,7 @@ Also, please try to maintain these conventions when contributing to the code.
   intensive quantity like temperature or pressure) is specified without a reference quantity, it
   means per unit volume. For example, "energy" specified without other context will be
   in units of \f$ J/m^3 \f$.
-  - As a result, "mass" and "density" are synonymous. In fact, prefer "mass" so that
-    all the conserved variables (momentum, mass, energy) are consistently extensive.
+  - As a result, "mass" and "density" are synonymous.
 - Stagnation quantities shall be referred to as such.
   The word "total" shall not be used to indicate stagnation quantities.
   To clarify, for any thermodynamic variable, the _stagnation_ value of that variable
@@ -35,14 +34,27 @@ Also, please try to maintain these conventions when contributing to the code.
   - The total energy \f$ e_t = \rho e + \frac12 \rho v^2 \f$ is __not__ equal to the stagnation energy,
     which for a CPG is given by \f$ e_0 = c_v T \left(1 + \frac{\gamma - 1}{2} M^2\right) \f$.
   - The total enthalpy \f$ h_t = \rho h + \frac12 \rho v^2 \f$ __is__ equal to the stagnation enthalpy \f$ h_0 \f$.
+- To improve stability, Hexed formulates the k-\f$\omega\f$ turbulence model in terms of \f$ \rho \tilde{\omega} = \rho \ln \omega \f$
+  instead of \f$ \rho \omega \f$, as in the work of Bassi et al. \cite bassi_k_omega.
+  In Hexed, the quantity \f$ \rho \tilde{\omega} \f$ shall be defined as the "Bassi dissipation",
+  whereas \f$ \omega \f$ shall be referred to as the "specific turbulent dissipation".
+  The physics-minded reader may object that \f$ \omega \f$ is a dimensional quantity (with units of \f$ s^{-1} \f$)
+  and therefore taking its logarithm is forbidden.
+  However, the Bassi dissipation only appears in the model equations inside a derivative or an exponential,
+  so including a nondimensionalization factor inside the logarithm would have no effect on the solution to the equations.
 
 \subsection state_vector State vector
 The flow state vector (often simply referred to as `state`) consists of the
 conserved variables.
-It has components \[momentum, mass, total energy\]
-(a.k.a. [\f$ \rho \vec{v} \f$, \f$ \rho \f$, \f$ \rho e + \frac12 \rho v^2 \f$]). E.g., in 3D that is
-[`momentum0` (\f$x\f$-direction), `momentum1` (\f$y\f$-direction), `momentum2` (\f$z\f$-direction), mass, total energy].
-
+It has components __[momentum, density, total energy, [turbulent kinetic energy, Bassi dissipation]]__
+(a.k.a. [\f$ \rho \vec{v} \f$, \f$ \rho \f$, \f$ \rho e + \frac12 \rho v^2 \f$, \f$ \rho k \f$, \f$ \rho \ln \omega \f$]).
+The components of the momentum take up the first \f$ n_\text{dim} \f$ components of the state vector (where \f$ n_\text{dim} \f$ is the number of dimensions)
+and the turbulence variables are only included for RANS simulations.
+For example,
+for 2D turbulent flow, the state vector is
+[momentum\f$_0\f$ (\f$x\f$-direction), momentum\f$_1\f$ (\f$y\f$-direction), density, energy, TKE, Bassi dissipation]
+whereas for for 3D laminar flow, it is
+[momentum\f$_0\f$, momentum\f$_1\f$, momentum\f$_2\f$, density, energy].
 This order is different from most codes, which use the order (mass, momentum, energy).
 The order for Hexed was chosen because it groups the vector and scalar quantities together
 and because the \f$i\f$th component of the state vector
