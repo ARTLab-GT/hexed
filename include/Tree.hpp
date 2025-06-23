@@ -50,6 +50,8 @@ class Tree {
   // if -1, adds all.
   void _add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
   void _collapse_aniso_ref();
+  void _interchange_aniso_ref();
+  void _simplify_aniso_ref();
 
   public:
   /*! \brief Constructs the root element of a tree.
@@ -119,14 +121,17 @@ class Tree {
   //! \name modifiers
   //!\{
   //
-  //! \brief Refines isotropically.
-  //! \details Creates \f$2^{\verb|n_dim|}\f$ child elements with refinement level one greater than this element
-  //! and cover the same volume.
-  //! Must be leaf.
+  //! \brief Refines anisotropically along an arbitrary number of dimensions.
+  //! \details Will refine along dimension `i` iff `refine_dims[i]` is `true`.
+  //! `refine_dims` must have size `n_dim`.
+  //! If all entries of `refine_dims` are `true`, the refenement is isotropic.
+  //! If none are `true`, no refinement is performed.
+  //! Must be leaf in order to refine.
+  void refine(std::vector<bool> refine_dims);
+  //! \brief Isotropic refinement.
+  //! \details Equivalent to `refine(std::vector<bool>)` on a vector of all `true`.
   void refine();
-  //! \brief Refines anisotropically.
-  //! \details Splits `this` along dimension `i_dim` to create 2 child elements
-  //! with `anisotropic_refinement_level()(i_dim)` 1 greater than `this` and all other components the same.
+  //! \brief Equivalent to `refine(std::vector<bool>)` on a vector with exactly one `true` element.
   void refine(int i_dim);
   void unrefine(); //!< \brief Deletes all child elements (and descendents thereof). This element is now a leaf.
   //!\}
