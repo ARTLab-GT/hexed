@@ -72,16 +72,24 @@ Flow_bc* Case::_make_bc(std::string name) {
       double energy = sub.variables->get<double>("temperature")*constants::specific_gas_air/(heat_rat - 1.);
       thermal = std::make_shared<Prescribed_energy>(energy);
     }
-    HEXED_ASSERT(thermal, "thermal BC specification not understood", assert::User_error);
+    HEXED_ASSERT(thermal, "thermal BC specification not understood", assert::User_error)
     auto bc = new No_slip(thermal, _vard("surface_roughness"), heat_rat,
                           _solver().viscosity_model(), _solver().turbulence_model(), _vard("heat_flux_coercion"));
     _roughness.push_back(&bc->roughness);
     return bc;
   } else if (name == "expression") {
-    HEXED_ASSERT(   _inter.variables->lookup<std::string>("surface_bc_state")
-                 && _inter.variables->lookup<std::string>("surface_bc_flux"),
-                 "To use the `expression` BC type, you must define `surface_bc_state` and `surface_bc_flux` as strings.");
-    return new Expression_bc(_inter, _vars("surface_bc_state"), _vars("surface_bc_flux"));
+    HEXED_ASSERT(_inter.variables->lookup<std::string>("bc_state"),
+                 "To use the `expression` BC type, you must define `bc_state` as a string.",
+                 assert::User_error)
+    std::string flux;
+    if (_inter.variables->lookup<std::string>("bc_flux")) {
+      flux = _vars("bc_flux");
+    } else {
+      for (int i_var = 0; i_var < _vari("n_var"); ++i_var) {
+        flux += format_str("ghost_flux%i = flux%i\n", i_var, i_var);
+      }
+    }
+    return new Expression_bc(_inter, _vars("bc_state"), flux);
   } else HEXED_THROW(format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()), assert::User_error);
   return nullptr; // will never happen. just to shut up GCC warning
 }

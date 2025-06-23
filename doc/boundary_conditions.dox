@@ -18,10 +18,10 @@ you may introduce spurious noise as the boundary layer or wake is artificially a
 The most generally applicable farfield boundary condition.
 Sometimes referred to as "Riemann Invariants" boundary condition.
 In a nutshell, it sets the state as close to the freestream state as possible without overdefining the boundary condition.
-It decomposes both the flow state and the freestream into the characteristics of the locally linearized Euler equations,
+It decomposes both the flow state and the freestream into the characteristics of the locally linearised Euler equations,
 and then recombines into a single state vector using the outgoing characteristics from the flow state
 and the incoming characteristics from the freestream.
-For viscous flows, the transport fluxes of the outgoing characterstics are set to zero and those of the incoming characteristics are unmodified.
+For viscous flows, the transport fluxes of the outgoing characteristics are set to zero and those of the incoming characteristics are unmodified.
 This BC is well-posed regardless of the flow direction and Mach number.
 Thus it can be used for farfield boundaries that aren't actually very far away and outflow boundaries that ingest a wake or boundary layer.
 The drawback is that it is not very robust and will sometimes cause a crash in hypersonic flows.
@@ -35,7 +35,7 @@ For subsonic outflow, the pressure is set equal to the freestream pressure.
 For inflow, this boundary condition is invalid (it is not numerically stable, let alone well-posed).
 For viscous flows, all of the transport fluxes are set to zero.
 This technically makes it ill-posed (specifically, overdefined) for subsonic outflow,
-and is an artifiact of pure laziness, since you can usually get away with it.
+and is an artifact of pure laziness, since you can usually get away with it.
 In the future, I intend to set the appropriate number of transport fluxes to make this boundary condition well-posed.
 
 \section outflow Outflow
@@ -64,5 +64,34 @@ This boundary condition is only valid for wall boundaries in viscous flows.
 Some users may be tempted to use this for walls in inviscid flows because they can get away with it in a finite volume solver, but this is not acceptable.
 Due to the Local Lax-Friedrichs interface flux and the dispersive nature of numerical errors in high-order DG schemes,
 attempting to use this in an inviscid flow will result in severe spurious oscillations.
+
+\section expression Expression
+`{expression}` \n
+Sets the state variables explicitly via a user-defined expression.
+This is a highly advanced boundary condition that allows very precise control but requires detailed knowledge of the solver.
+My intention is that most users should never need it.
+If you set this condition for any of the boundaries, you must also define the following variable:
+- `bc_state`: A macro that sets variables `ghost_state0`, `ghost_state1`, `ghost_state2`, ...
+  These are the \ref state_vector "conserved state variables".
+  Your expressions may reference the following predefined variables:
+  - `pos0`, `pos1`, ...: The position vector.
+  - `normal0`, `normal1`, ...: The boundary normal vector such that taking the dot product of a flux in physical space gives you the flux in reference space.
+    You will most likely want to ignore this.
+  - `state0`, `state1`, ...: The conserved state vector before enforcing the boundary conditions.
+
+You may also define the following:
+- `bc_flux`: A macro that sets variables `ghost_flux0`, `ghost_flux1`, `ghost_flux2`, ...
+  These are the _viscous_ fluxes of the conserved variables in reference space (due to molecular, turbulent, and artificial viscosity).
+  You can reference the same predefined variables as `bc_state` in addition to `flux0`, `flux`, ..., which define the viscous fluxes before applying the boundary condition.
+  If you wish not to constrain the flux for a given variable, you can set the ghost flux equal to the flux.
+  If you wish to constrain the viscous flux to 0, you can set the ghost flux equal to the negative of the inside flux.
+  Attempting to set any other flux boundary condition should be undertaken with extreme caution, as the definition of the reference flux can be counter-intuitive.
+  `bc_flux` defaults to setting no constraints on the flux, so if you fully constrain the state vector then you need not modify `bc_flux`.
+
+For convenience, your expressions may assign additional variables (in addition to `ghost_state` and `ghost_flux`) and reference global variables defined in your input script.
+You must judiciously choose the number of state and flux constraints to enforce to ensure your problem is well-posed,
+although in practice I have found that over-constrained boundary conditions are usually numerically stable as long as the constraints can all be approximately satisfied.
+This BC may also be slower than others.
+Good luck.
 
 */
