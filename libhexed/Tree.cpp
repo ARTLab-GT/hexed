@@ -79,6 +79,30 @@ void Tree::refine() {
   }
 }
 
+bool Tree::_is_refined(int i_dim) const {
+  if (is_leaf()) return false;
+  return _children_storage[0] != _children_storage[math::stride(n_dim, 2, i_dim)];
+}
+
+void Tree::_collapse_aniso_ref() {
+  if (is_leaf()) return;
+  bool collapse = true;
+  while (collapse) {
+    for (auto& child : _children_storage) {
+      collapse = collapse && !child->is_leaf();
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        collapse = collapse && (child->_is_refined(i_dim) != _is_refined(i_dim));
+      }
+    }
+    if (collapse) {
+      for (int i_child = 0; i_child < (int)_children_storage.size(); ++i_child) {
+        _children_storage[i_child] = _children_storage[i_child]->_children_storage[i_child];
+        _children_storage[i_child]->_par = this;
+      }
+    }
+  }
+}
+
 void Tree::refine(int i_dim) {
   HEXED_ASSERT(is_leaf(), "can only refine leaf")
   int n_child = math::pow(2, n_dim);
@@ -98,6 +122,7 @@ void Tree::refine(int i_dim) {
       }
     }
   }
+  if (_par) _par->_collapse_aniso_ref();
 }
 
 void Tree::unrefine() {_children_storage.clear();}
@@ -119,7 +144,8 @@ Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias) {
     Tree* leaf = child->find_leaf(rl, c, bias);
     if (leaf) return leaf;
   }
-  // second base case: if the coordinates are in this element, but there are no children, then this is the element we want
+  // second base case: if the coordinates are in this element, but there are no children,
+  // then this is the element we want
   return this;
 }
 

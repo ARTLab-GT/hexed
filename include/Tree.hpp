@@ -49,6 +49,8 @@ class Tree {
   // if 1, adds only those at the upper extreme.
   // if -1, adds all.
   void _add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
+  void _collapse_aniso_ref();
+  bool _is_refined(int i_dim) const;
 
   public:
   /*! \brief Constructs the root element of a tree.
@@ -98,7 +100,7 @@ class Tree {
   Mat<> center() const; //!< return the center of this tree element
   //!\}
 
-  //! \name parent/child _status
+  //! \name parent/child status
   //!\{
   //
   //! \details If this element is not the root,
@@ -192,30 +194,30 @@ class Tree {
   //!\}
 
   /*! \name flood fill algorithm
-   * The flood fill algorithm sets an integer "_status" attribute of a connected group of leaf elements.
+   * The flood fill algorithm sets an integer "status" attribute of a connected group of leaf elements.
    * This is useful to distinguish inside, outside, and boundary elements in the mesh.
-   * A _status value of `unprocessed` indicates an element that has not been processed by the flood fill.
-   * Identify the boundary elements by manually setting their _status to any other value.
+   * A status value of `unprocessed` indicates an element that has not been processed by the flood fill.
+   * Identify the boundary elements by manually setting their status to any other value.
    * Then, to identify a connected region bounded by the elements you have set,
    * invoke `flood_fill()` on one of the elements in the region you want.
    */
   //!\{
   static constexpr int unprocessed = -1;
-  int get_status(); //!< gets the flood fill _status value (initialized to `unprocessed`).
-  void set_status(int); //!< sets the flood fill _status value
+  int get_status(); //!< gets the flood fill status value (initialized to `unprocessed`).
+  void set_status(int); //!< sets the flood fill status value
   /*! \brief Executes flood fill algorithm starting with this element.
-   * \details Sets this element's _status to the specified value.
-   * It will then check the _status of all face neighbors.
-   * For any neighbors with _status `unprocessed`, it will continue the flood fill algorithm from those elements
-   * including setting their _status and evaluating their neighbors.
+   * \details Sets this element's status to the specified value.
+   * It will then check the status of all face neighbors.
+   * For any neighbors with status `unprocessed`, it will continue the flood fill algorithm from those elements
+   * including setting their status and evaluating their neighbors.
    * If the element you call this function on is not a leaf, it will instead start the flood fill
    * on the leaf descendent of this cell with the smallest coordinates
    * (e.g. for the root in 2D, it will start with the lower-left element).
-   * The parameter `_status` must not be equal to `unprocessed`.
-   * If the start element has a _status value which is not `unprocessed`, the algorithm does nothing.
+   * The parameter `status` must not be equal to `unprocessed`.
+   * If the start element has a status value which is not `unprocessed`, the algorithm does nothing.
    */
   void flood_fill(int status);
-  void clear_status(); //!< \brief sets the flood fill _status of this and all child elements to `unprocessed`
+  void clear_status(); //!< \brief sets the flood fill status of this and all child elements to `unprocessed`
   //!\}
 };
 

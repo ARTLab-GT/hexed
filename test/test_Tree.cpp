@@ -137,11 +137,25 @@ TEST_CASE("Tree") {
     REQUIRE_THAT(uc[1]->center(),
                  Catch::Matchers::RangeEquals(std::vector<double>{.7*.75 + .1, .7*.375 + .2},
                                               hexed::math::Approx_equal()));
-    uc[1]->refine(1);
-    REQUIRE(child->unique_children().size() == 2);
-    REQUIRE(uc[1]->unique_children().size() == 2);
-    hexed::Tree* child1 = uc[1]->unique_children()[0];
-    REQUIRE_THAT(child1->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{1, 3}));
-    REQUIRE_THAT(child1->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 2}));
+    SECTION("aniso-iso collapsing") {
+      uc[1]->refine(1);
+      REQUIRE(child->unique_children().size() == 2);
+      REQUIRE(uc[1]->unique_children().size() == 2);
+      hexed::Tree* child1 = uc[1]->unique_children()[0];
+      REQUIRE_THAT(child1->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{1, 3}));
+      REQUIRE_THAT(child1->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 2}));
+      child1->refine(0);
+      auto old_children = child1->unique_children();
+      uc[1]->unique_children()[1]->refine(0);
+      // note: uc[1]->unique_children() no longer valid
+      REQUIRE(uc[1]->unique_children().size() == 4);
+      auto new_children = uc[1]->unique_children();
+      REQUIRE(new_children[0] == old_children[0]);
+      REQUIRE(new_children[2] == old_children[1]);
+      REQUIRE_THAT(new_children[1]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{2, 3}));
+      REQUIRE_THAT(new_children[3]->anisotropic_refinement_level(),
+                   Catch::Matchers::RangeEquals(std::vector<int>{2, 3}));
+      for (auto& child : new_children) REQUIRE(child->parent() == uc[1]);
+    }
   }
 }
