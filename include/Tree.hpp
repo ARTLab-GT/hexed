@@ -158,18 +158,13 @@ class Tree {
    * then the point is permitted to lie on the lower face
    * of that dimension but not the upper face.
    * If the corresponding element of `bias` is 1, then it may lie on the upper face but not the lower.
-   * Example: The element with refinement level 2 and coordinates {1, 2}:
-   * - contains `{_ref_level = 2, _coords = {1, 2}, bias = {0, 0}}`
-   * - does not contain `{_ref_level = 2, _coords = {2, 2}, bias = {0, 0}}`
-   * - contains `{_ref_level = 2, _coords = {2, 2}, bias = {1, 0}}`
-   * - does not contain `{_ref_level = 2, _coords = {2, 2}, bias = {1, 1}}`
-   * - contains `{_ref_level = 3, _coords = {3, 5}}` regardless of `bias`.
-   *
    * The arguments `_coords` and `bias` must have at least `n_dim` elements and only the first `n_dim` are read.
    * All elements of `bias` must be either 0 or 1, or the behavior is unspecified.
    * `_ref_level` must be nonnegative,
    * but there are no restrictions on how it relates to the refinement levels of the cells to be searched.
    */
+  Tree* find_leaf(Array<int> ref_level, Eigen::VectorXi coords, Eigen::VectorXi bias = Eigen::VectorXi::Zero(3));
+  //! \brief Overload for isotropic refinement level.
   Tree* find_leaf(int ref_level, Eigen::VectorXi coords, Eigen::VectorXi bias = Eigen::VectorXi::Zero(3));
   /*! \brief Finds a leaf which contains a specified point in physical space.
    * \note Only considers this element and its descendents, not neighbors that share the same root.

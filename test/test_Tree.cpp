@@ -211,6 +211,12 @@ TEST_CASE("Tree") {
     REQUIRE(tree.find_leaf(hexed::Mat<3>{.1, .6, .1}) == uc[0]->unique_children()[1]);
     REQUIRE(tree.find_leaf(hexed::Mat<3>{.1, .1, .6}) == uc[1]);
     REQUIRE(tree.find_leaf(hexed::Mat<3>{.6, .1, .1}) == uc[2]);
+    REQUIRE(tree.find_leaf(1, Eigen::Vector3i{1, 1, 1}, Eigen::Vector3i{1, 1, 1}) == uc[0]->unique_children()[0]);
+    REQUIRE(tree.find_leaf(1, Eigen::Vector3i{1, 1, 1}, Eigen::Vector3i{1, 0, 1}) == uc[0]->unique_children()[1]);
+    REQUIRE(tree.find_leaf(1, Eigen::Vector3i{1, 1, 1}, Eigen::Vector3i{0, 0, 1}) == uc[2]);
+    REQUIRE(tree.find_leaf(1, Eigen::Vector3i{2, 2, 2}, Eigen::Vector3i{1, 1, 1}) == uc[3]);
+    REQUIRE(tree.find_leaf(hexed::Array<int>::make(3, 2, 4), Eigen::Vector3i{3, 1, 9}) == uc[1]);
+    REQUIRE(tree.find_leaf(hexed::Array<int>::make(3, 2, 4), Eigen::Vector3i{9, 1, 9}) == nullptr);
     for (int i = 1; i < 4; ++i) uc[i]->refine(1);
     uc = tree.unique_children();
     REQUIRE(uc.size() == 8);

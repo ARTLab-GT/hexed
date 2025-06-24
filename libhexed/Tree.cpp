@@ -210,26 +210,32 @@ void Tree::unrefine(int i_dim) {
 
 void Tree::force_unrefine() {_children_storage.clear();}
 
-Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias) {
-  HEXED_ASSERT(c.size() >= n_dim, "`_coords` has too few elements");
-  HEXED_ASSERT(bias.size() >= n_dim, "`bias` has too few elements");
+Tree* Tree::find_leaf(Array<int> ref_level, Eigen::VectorXi c, Eigen::VectorXi b) {
+  HEXED_ASSERT(ref_level.size() == n_dim, "`rev_level` has wrong size")
+  HEXED_ASSERT(c.size() == n_dim, "`coords` has wrong size")
+  HEXED_ASSERT(b.size() >= n_dim, "`bias` has too few entries")
+  Eigen::VectorXi bias = b(Eigen::seqN(0, n_dim));
   // find the relative coordinates in this element's ref level or the specified ref level, whichever is higher
-  c = c(Eigen::seqN(0, n_dim));
-  int max_level = std::max(refinement_level(), rl);
-  int cell_size = math::pow(2, max_level - refinement_level());
-  Eigen::MatrixXi relative_coords = c*math::pow(2, max_level - rl) - bias(Eigen::seqN(0, n_dim)) - _coords*cell_size;
-  // first base case: if the coordinates are outside this element, return null
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    if ((relative_coords(i_dim) < 0) || (relative_coords(i_dim) >= cell_size)) return nullptr;
+    int max_level = std::max(_ref_level[i_dim], ref_level[i_dim]);
+    int cell_size = math::pow(2, max_level - _ref_level[i_dim]);
+    int relative_coord = c(i_dim)*math::pow(2, max_level - ref_level[i_dim]) - bias(i_dim) - _coords(i_dim)*cell_size;
+    if (relative_coord < 0 || relative_coord >= cell_size) return nullptr;
   }
   // recursive case: if this element contains the point and has children, one of them should have the element we want
-  for (auto& child : _children_storage) {
-    Tree* leaf = child->find_leaf(rl, c, bias);
+  for (Tree* child : unique_children()) {
+    Tree* leaf = child->find_leaf(ref_level, c, bias);
     if (leaf) return leaf;
   }
   // second base case: if the coordinates are in this element, but there are no children,
   // then this is the element we want
   return this;
+}
+
+Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias) {
+  HEXED_ASSERT(c.size() >= n_dim, "`_coords` has too few elements");
+  HEXED_ASSERT(bias.size() >= n_dim, "`bias` has too few elements");
+  return find_leaf(Array<int>::make_uniform({n_dim}, rl), c, bias);
 }
 
 Tree* Tree::find_leaf(Mat<> nom_pos) {
