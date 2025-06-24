@@ -180,8 +180,7 @@ TEST_CASE("Tree") {
                      Catch::Matchers::RangeEquals(std::vector<int>{2, 4}));
         REQUIRE(child0->unique_children()[1]->unique_children().size() == 4);
         REQUIRE(child0->unique_children()[1]->unique_children()[3]->parent()->parent() == child0);
-        std::cout << "foo\n";
-        for (int j_child = 0; j_child < 2; ++j_child) child0->unique_children()[j_child]->unrefine(0);
+        for (int j_child = 0; j_child < 2; ++j_child) child0->unique_children()[j_child]->unrefine(1);
         REQUIRE(child0->unique_children().size() == 4);
         for (int j_child = 0; j_child < 4; ++j_child) REQUIRE(child0->unique_children()[j_child]->is_leaf());
       }

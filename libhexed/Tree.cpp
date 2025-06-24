@@ -91,17 +91,16 @@ void Tree::_interchange_aniso_ref() {
 
 void Tree::_collapse_aniso_ref() {
   if (is_leaf()) return;
-  std::cout << "bar" << std::endl;;
+  HEXED_ASSERT(_children_storage.size() > 1, "one child")
   bool collapse = true;
   while (collapse) {
     for (auto& child : _children_storage) {
       collapse = collapse && !child->is_leaf();
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        collapse = collapse && (child->is_refined(i_dim) != is_refined(i_dim));
+        collapse = collapse && !(child->is_refined(i_dim) && is_refined(i_dim));
       }
     }
     if (collapse) {
-      std::cout << "baz" << std::endl;
       for (int i_child = 0; i_child < (int)_children_storage.size(); ++i_child) {
         _children_storage[i_child] = _children_storage[i_child]->_children_storage[i_child];
         _children_storage[i_child]->_par = this;
