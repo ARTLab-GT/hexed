@@ -115,8 +115,10 @@ void Tree::_simplify_aniso_ref() {
 }
 
 Tree::Tree(int nd, double root_size, Mat<> origin)
-: _root_sz{root_size}, _ref_level{Array<int>::make_uniform({nd}, 0)}, _coords{Eigen::VectorXi::Zero(nd)}
-, _par{nullptr}, _children_storage()
+: _root_sz{root_size}
+, _ref_level{Array<int>::make_uniform({nd}, 0)}, _coords{Eigen::VectorXi::Zero(nd)}
+, _par{nullptr}
+, _children_storage()
 , _status{unprocessed}
 , n_dim{nd}
 , elem(this)

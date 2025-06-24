@@ -186,4 +186,52 @@ TEST_CASE("Tree") {
       }
     }
   }
+  SECTION("anisotropic refinement 3D") {
+    hexed::Tree tree(3, 1.);
+    tree.refine({1, 0, 1});
+    auto uc = tree.unique_children();
+    REQUIRE(uc.size() == 4);
+    REQUIRE_THAT(uc[0]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{1, 0, 1}));
+    REQUIRE(uc[1]->refinement_level() == 0);
+    REQUIRE_THAT(uc[2]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 0, 0}));
+    REQUIRE(tree.is_refined(0));
+    REQUIRE(!tree.is_refined(1));
+    REQUIRE(tree.is_refined(2));
+    uc[0]->refine(1);
+    REQUIRE(tree.unique_children().size() == 4);
+    REQUIRE(uc[0]->unique_children().size() == 2);
+    hexed::Tree* t = uc[0]->unique_children()[1];
+    REQUIRE(t->refinement_level() == 1);
+    for (int i = 1; i < 4; ++i) uc[i]->refine(1);
+    uc = tree.unique_children();
+    REQUIRE(uc.size() == 8);
+    REQUIRE_THAT(uc[0]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{1, 1, 1}));
+    REQUIRE(uc[2] == t);
+    REQUIRE(tree.is_refined(1));
+    tree.unrefine({1, 1, 0});
+    REQUIRE(!tree.is_refined(0));
+    REQUIRE(!tree.is_refined(1));
+    uc = tree.unique_children();
+    REQUIRE(uc.size() == 2);
+    REQUIRE_THAT(uc[1]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{0, 0, 1}));
+    for (int i = 0; i < 2; ++i) uc[i]->refine(0);
+    uc = tree.unique_children();
+    REQUIRE(uc.size() == 4);
+    REQUIRE_THAT(uc[2]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{1, 0, 1}));
+    REQUIRE_THAT(uc[3]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 0, 1}));
+    REQUIRE_THAT(uc[1]->nominal_position(), Catch::Matchers::RangeEquals(std::vector<double>{0., 0., .5},
+                                                                         hexed::math::Approx_equal(0., 1e-8)));
+    uc[3]->refine();
+    for (int i = 0; i < 3; ++i) uc[i]->refine({1, 1, 0});
+    REQUIRE(tree.unique_children().size() == 4);
+    uc[3]->unrefine(2);
+    uc = tree.unique_children();
+    REQUIRE(uc.size() == 2);
+    REQUIRE_THAT(uc[0]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{1, 0, 0}));
+    REQUIRE_THAT(uc[1]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 0, 0}));
+    REQUIRE(uc[0]->unique_children().size() == 8);
+    auto uc1 = uc[1]->unique_children();
+    REQUIRE_THAT(uc1[7]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{2, 1, 1}));
+    REQUIRE_THAT(uc1[5]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{3, 0, 1}));
+  }
 }
