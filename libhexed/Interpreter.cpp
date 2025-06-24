@@ -83,7 +83,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence) {
         if (is_int) val = std::stoi(value.c_str());
         else        val = std::stod(value.c_str());
       } catch (...) {
-        HEXED_ASSERT(false, format_str(1000, "failed to parse numeric literal `%s`", value.c_str()), Hil_exception);
+        HEXED_THROW(format_str("failed to parse numeric literal `%s`", value.c_str()), Hil_exception)
       }
     } else if (_text.front() == '{') {
       // string literals
@@ -91,7 +91,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence) {
       std::string value;
       bool backslash = false;
       for (int depth = 1; depth;) {
-        HEXED_ASSERT(_more(), "command input ended while parsing string literal", Hil_exception);
+        HEXED_ASSERT(_more(), "command input ended while parsing string literal", Hil_exception)
         char c = _pop();
         if (c == '{' && !backslash) ++depth;
         if (c == '}' && !backslash) --depth;
@@ -117,7 +117,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence) {
           if (val.a) variables->assign(n, *val.a);
         } else {
           // variable lookup
-          HEXED_ASSERT(variables->exists_recursive(n), format_str(1000, "undefined variable `%s`", n.c_str()), Hil_exception);
+          HEXED_ASSERT(variables->exists_recursive(n), format_str("undefined variable `%s`", n.c_str()), Hil_exception)
           val = _Dynamic_value();
           val.i = variables->lookup<int>(n);
           if (!val.i) val.d = variables->lookup<double>(n);
@@ -128,7 +128,7 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence) {
     } else if (_un_ops.count(std::string(1, _text.front()))) {
       // non-alphabetic unary operators
       val.assign(_un_ops.at(std::string(1, _pop()))(_eval(0)));
-    } else HEXED_ASSERT(false, format_str(100, "failed to parse value starting with `%c`", _text.front()), Hil_exception);
+    } else HEXED_THROW(format_str("failed to parse value starting with `%c`", _text.front()), Hil_exception)
     _skip_spaces();
     // process binary operators of which this token was the first argument
     while (true) {
@@ -155,54 +155,68 @@ Interpreter::_Dynamic_value Interpreter::_eval(int precedence) {
 
 template<> int Interpreter::_pow<int>(int op0, int op1) {return math::pow(op0, op1);}
 
-Interpreter::_Dynamic_value Interpreter::_mod(const Interpreter::_Dynamic_value& o0, const Interpreter::_Dynamic_value& o1) {
+Interpreter::_Dynamic_value Interpreter::_mod(const Interpreter::_Dynamic_value& o0,
+                                              const Interpreter::_Dynamic_value& o1) {
   HEXED_ASSERT(o0.i && o1.i, "binary operator `%` only accepts integers", Hil_exception);
   _Dynamic_value v;
   v.i = *o0.i%*o1.i;
   return v;
 }
 
+double Interpreter::_get_double(const Interpreter::_Dynamic_value& val) {
+  if (val.d) return *val.d;
+  if (val.i) return *val.i;
+  HEXED_THROW("Only floating-point and integer values can be converted to floating-point.") throw;
+}
+
+Array<double> Interpreter::_get_array(const Interpreter::_Dynamic_value& val,
+                                      const Interpreter::_Dynamic_value& backup) {
+  if (val.a) return val.a.value()();
+  return Array<double>::make_uniform(backup.a.value().shape(), _get_double(val));
+}
+
 template<double (*dop)(double, double), int (*iop)(int, int)>
-Interpreter::_Dynamic_value Interpreter::_arithmetic_op(const Interpreter::_Dynamic_value& o0, const Interpreter::_Dynamic_value& o1) {
+Interpreter::_Dynamic_value Interpreter::_arithmetic_op(const Interpreter::_Dynamic_value& o0,
+                                                        const Interpreter::_Dynamic_value& o1) {
   HEXED_ASSERT(!o0.s && !o1.s, "numeric binary operator does not accept strings", Hil_exception);
   _Dynamic_value v;
   if (o0.a || o1.a) {
-    const _Dynamic_value* o [2] {&o0, &o1};
-    double scalar [2];
-    const double* start [2];
-    int stride [2];
-    for (int i = 0; i < 2; ++i) {
-      scalar[i] = o[i]->i.value_or(0) + o[i]->d.value_or(0.);
-      start[i] = o[i]->a ? o[i]->a->data() : scalar + i;
-      stride[i] = bool(o[i]->a);
+    Array<double> arr0 = _get_array(o0, o1);
+    Array<double> arr1 = _get_array(o1, o0);
+    v.a.emplace(arr0.shape());
+    for (Int ind = 0; ind < v.a->size(); ++ind) {
+      (*v.a)[ind] = dop(arr0[ind], arr1[ind]);
     }
-    v.a.emplace(o[stride[1]]->a->shape());
-    for (Int ind = 0; ind < o[stride[1]]->a->size(); ++ind) {
-      (*v.a)[ind] = dop(start[0][ind*stride[0]], start[1][ind*stride[1]]);
-    }
-  } else if (o0.i && o1.i) v.i = iop(*o0.i, *o1.i);
-  else {
-    double op0 = o0.i ? *o0.i : *o0.d;
-    double op1 = o1.i ? *o1.i : *o1.d;
-    v.d = dop(op0, op1);
+  } else if (o0.i && o1.i) {
+    v.i = iop(*o0.i, *o1.i);
+  } else {
+    v.d = dop(_get_double(o0), _get_double(o1));
   }
   return v;
 }
 
 template<bool (*dop)(double, double), bool (*iop)(int, int)>
-Interpreter::_Dynamic_value Interpreter::_comparison_op(const Interpreter::_Dynamic_value& o0, const Interpreter::_Dynamic_value& o1) {
+Interpreter::_Dynamic_value Interpreter::_comparison_op(const Interpreter::_Dynamic_value& o0,
+                                                        const Interpreter::_Dynamic_value& o1) {
   HEXED_ASSERT(!o0.s && !o1.s, "numeric binary operator does not accept strings", Hil_exception);
   Interpreter::_Dynamic_value v;
-  if (o0.i && o1.i) v.i = iop(*o0.i, *o1.i);
-  else {
-    double op0 = o0.i ? *o0.i : *o0.d;
-    double op1 = o1.i ? *o1.i : *o1.d;
-    v.i = dop(op0, op1);
+  if (o0.a || o1.a) {
+    Array<double> arr0 = _get_array(o0, o1);
+    Array<double> arr1 = _get_array(o1, o0);
+    v.a.emplace(arr0.shape());
+    for (Int ind = 0; ind < v.a->size(); ++ind) {
+      (*v.a)[ind] = dop(arr0[ind], arr1[ind]);
+    }
+  } else if (o0.i && o1.i) {
+    v.i = iop(*o0.i, *o1.i);
+  } else {
+    v.i = dop(_get_double(o0), _get_double(o1));
   }
   return v;
 }
 
-Interpreter::_Dynamic_value Interpreter::_general_eq(const Interpreter::_Dynamic_value& o0, const Interpreter::_Dynamic_value& o1) {
+Interpreter::_Dynamic_value Interpreter::_general_eq(const Interpreter::_Dynamic_value& o0,
+                                                     const Interpreter::_Dynamic_value& o1) {
   if (o0.s && o1.s) {
     _Dynamic_value val;
     val.i.emplace(*o0.s == *o1.s);
@@ -217,23 +231,19 @@ std::string Interpreter::_Dynamic_value::to_string(std::string fd) const {
   if (s) return *s;
   if (i) return std::to_string(*i);
   if (d) return format_str(100, fd, *d);
-  if (a) {
-    std::string result;
-    for (Int i = 0; i < a->size(); ++i) {
-      result += format_str(100, fd, (*a)[i]);
-    }
-    return result;
-  }
+  if (a) return hexed::to_string((*a)());
   HEXED_THROW("empty_variable") throw;
 }
 
-Interpreter::_Dynamic_value Interpreter::_general_add(const Interpreter::_Dynamic_value& o0, const Interpreter::_Dynamic_value& o1) {
+Interpreter::_Dynamic_value Interpreter::_general_add(const Interpreter::_Dynamic_value& o0,
+                                                      const Interpreter::_Dynamic_value& o1) {
   if (!o0.s && !o1.s) return _arithmetic_op<_add<double>, _add<int>>(o0, o1);
   std::string fd = variables->get<std::string>("format_double");
   return _Dynamic_value(o0.to_string(fd) + o1.to_string(fd));
 }
 
-std::function<Interpreter::_Dynamic_value(const Interpreter::_Dynamic_value&)> Interpreter::_numeric_unary(double (*f)(double), std::string name) {
+std::function<Interpreter::_Dynamic_value(const Interpreter::_Dynamic_value&)>
+Interpreter::_numeric_unary(double (*f)(double), std::string name) {
   return [f, name](const _Dynamic_value& val) {
     if (val.i) return _Dynamic_value(f(*val.i));
     if (val.d) return _Dynamic_value(f(*val.d));
