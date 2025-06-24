@@ -262,7 +262,13 @@ Tree* Tree::find_neighbor(Eigen::VectorXi direction) {
     bias(i_dim) = (direction(i_dim) < 0);
   }
   // use `find_leaf` on the root element to find the neighbor
-  return root()->find_leaf(refinement_level(), c, bias);
+  return root()->find_leaf(_ref_level, c, bias);
+}
+
+Tree* Tree::find_neighbor(int i_face) {
+  Eigen::VectorXi dir = Eigen::VectorXi::Zero(n_dim);
+  dir(i_face/2) = math::sign(i_face%2);
+  return find_neighbor(dir);
 }
 
 std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction) {

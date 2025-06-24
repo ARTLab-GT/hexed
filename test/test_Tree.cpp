@@ -138,6 +138,13 @@ TEST_CASE("Tree") {
                  Catch::Matchers::RangeEquals(std::vector<double>{.7*.75 + .1, .7*.375 + .2},
                                               hexed::math::Approx_equal()));
     // center = .45, .55
+    REQUIRE(tree.children()[0]->find_neighbor(3) == tree.children()[1]);
+    REQUIRE(tree.children()[0]->find_neighbor(1) == uc[0]);
+    REQUIRE(uc[1]->find_neighbor(0) == tree.children()[0]);
+    REQUIRE(uc[1]->find_neighbor(3) == tree.children()[3]);
+    REQUIRE(uc[1]->find_neighbor(2) == uc[0]);
+    REQUIRE(tree.children()[3]->find_neighbor(2) == uc[1]);
+    REQUIRE(uc[1]->find_neighbor(1) == nullptr);
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.2, .7}) == tree.unique_children()[1]);
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.5, .21}) == child->unique_children()[0]);
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.5, .54}) == child->unique_children()[1]);
@@ -189,6 +196,16 @@ TEST_CASE("Tree") {
         for (int j_child = 0; j_child < 4; ++j_child) REQUIRE(child0->unique_children()[j_child]->is_leaf());
       }
     }
+    SECTION("anisotropic neighbors") {
+      uc[1]->refine();
+      for (int i_child = 0; i_child < 4; ++i_child) {
+        hexed:: Tree* child0 = uc[1]->children()[i_child];
+        child0->refine();
+        for (int j_child = 0; j_child < 4; ++j_child) child0->children()[j_child]->refine(1);
+      }
+      REQUIRE(uc[1]->unique_children()[0]->unique_children()[1]->unique_children()[3]->find_neighbor(1) ==
+              uc[1]->unique_children()[2]->unique_children()[1]->unique_children()[1]);
+    }
   }
 
   SECTION("anisotropic refinement 3D") {
@@ -217,6 +234,8 @@ TEST_CASE("Tree") {
     REQUIRE(tree.find_leaf(1, Eigen::Vector3i{2, 2, 2}, Eigen::Vector3i{1, 1, 1}) == uc[3]);
     REQUIRE(tree.find_leaf(hexed::Array<int>::make(3, 2, 4), Eigen::Vector3i{3, 1, 9}) == uc[1]);
     REQUIRE(tree.find_leaf(hexed::Array<int>::make(3, 2, 4), Eigen::Vector3i{9, 1, 9}) == nullptr);
+    REQUIRE(uc[3]->find_neighbor(Eigen::Vector3i{-1, 0, -1}) == uc[0]->unique_children()[0]);
+    REQUIRE(uc[0]->unique_children()[0]->find_neighbor(Eigen::Vector3i{1, 0, 1}) == uc[3]);
     for (int i = 1; i < 4; ++i) uc[i]->refine(1);
     uc = tree.unique_children();
     REQUIRE(uc.size() == 8);
@@ -248,5 +267,11 @@ TEST_CASE("Tree") {
     auto uc1 = uc[1]->unique_children();
     REQUIRE_THAT(uc1[7]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{2, 1, 1}));
     REQUIRE_THAT(uc1[5]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{3, 0, 1}));
+    REQUIRE(uc[0]->find_neighbor(1) == uc1[0]);
+    REQUIRE(uc1[1]->find_neighbor(3) == uc1[3]);
+    REQUIRE(uc1[1]->find_neighbor(1) == uc1[5]);
+    REQUIRE(uc1[3]->find_neighbor(4) == uc1[2]);
+    REQUIRE(uc[0]->unique_children()[4]->find_neighbor(1) == uc1[0]);
+    REQUIRE(uc1[1]->find_neighbor(0) == uc[0]->unique_children()[5]);
   }
 }

@@ -188,6 +188,8 @@ class Tree {
    * If more than one element of `direction` is nonzero, then edge or vertex neighbors are returned.
    */
   Tree* find_neighbor(Eigen::VectorXi direction);
+  //! \brief Equivalent to `find_neighbor(Eigen::VectorXi)` with `direction(i_face/2) == math::sign(i_face%2)`.
+  Tree* find_neighbor(int i_face);
   /*! \brief Finds all leaf neighbors of this element in a specified direction.
    * \details Finds all elements in the entire tree which border on this one in a given direction.
    * If the neighbors have the same or lower refinement level, this vector will contain one element
