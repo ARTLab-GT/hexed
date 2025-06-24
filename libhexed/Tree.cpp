@@ -16,9 +16,6 @@ void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias
 
 void Tree::_refine(std::vector<bool> dims) {
   HEXED_ASSERT(is_leaf(), "can only refine leaf")
-  std::cout << "refining";
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) std::cout << dims[i_dim];
-  std::cout << ": " << std::flush;
   int n_child = math::pow(2, n_dim);
   _children_storage.resize(n_child);
   for (int i_child = 0; i_child < n_child; ++i_child) {
@@ -43,10 +40,8 @@ void Tree::_refine(std::vector<bool> dims) {
         assign = assign && !(dims[i_dim] && diff);
       }
       if (assign) _children_storage[j_child] = child;
-      if (assign) std::cout << format_str("(%i %i)", i_child, j_child);
     }
   }
-  std::cout << std::endl;
 }
 
 void Tree::_interchange_aniso_ref() {
@@ -69,14 +64,12 @@ void Tree::_interchange_aniso_ref() {
   }
   auto b = [](bool arg){return arg;};
   if (std::none_of(pass_down.begin(), pass_down.end(), b) || std::none_of(retain.begin(), retain.end(), b)) return;
-  std::cout << "[interchange]" << std::flush;
   std::vector<std::vector<std::shared_ptr<Tree>>> grandchildren;
   for (auto& child : _children_storage) {
     grandchildren.push_back(child->_children_storage);
   }
   unrefine();
   _refine(retain);
-  HEXED_ASSERT(unique_children().size() == 2, "foo")
   for (int i_child = 0; i_child < n_child; ++i_child) {
     auto child = _children_storage[i_child];
     child->_children_storage.resize(n_child); // does nothing if `child` has already been visited
@@ -87,13 +80,11 @@ void Tree::_interchange_aniso_ref() {
         assign = assign && (is_refined(i_dim) || coord == math::row_coordinate(n_dim, 2, i_dim, j_child));
       }
       if (assign) {
-        std::cout << "{" << i_child << j_child << "}";
         child->_children_storage[j_child] = grandchildren[i_child][j_child];
         grandchildren[i_child][j_child]->_par = child.get();
       }
     }
   }
-  std::cout << "[done]" << std::flush;
 }
 
 void Tree::_collapse_aniso_ref() {

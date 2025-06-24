@@ -158,26 +158,17 @@ TEST_CASE("Tree") {
       for (auto& child : new_children) REQUIRE(child->parent() == uc[1]);
     }
     SECTION("aniso-iso interchange") {
-      std::cout << "aniso-iso" << std::endl;
       uc[1]->refine();
       for (int i_child = 0; i_child < 4; ++i_child) {
-        std::cout << "starting" << i_child << std::endl;
         hexed:: Tree* child0 = uc[1]->children()[i_child];
         child0->refine();
         for (int j_child = 0; j_child < 4; ++j_child) child0->children()[j_child]->refine(1);
-        std::cout << "0" << std::endl;
         REQUIRE(child0->is_refined(1));
-        std::cout << "1" << std::endl;
         REQUIRE(!child0->is_refined(0));
-        std::cout << "2" << std::endl;
         REQUIRE_THAT(child0->unique_children()[0]->anisotropic_refinement_level(),
                      Catch::Matchers::RangeEquals(std::vector<int>{2, 4}));
-        std::cout << "3" << std::endl;
         REQUIRE(child0->unique_children()[1]->unique_children().size() == 4);
-        std::cout << "4" << std::endl;
         REQUIRE(child0->unique_children()[1]->unique_children()[3]->parent()->parent() == child0);
-        std::cout << "5" << std::endl;
-        std::cout << "completed" << i_child << std::endl;
       }
     }
   }
