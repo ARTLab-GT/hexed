@@ -138,7 +138,7 @@ TEST_CASE("Tree") {
                  Catch::Matchers::RangeEquals(std::vector<double>{.7*.75 + .1, .7*.375 + .2},
                                               hexed::math::Approx_equal()));
     // center = .45, .55
-    REQUIRE(tree.find_leaf(hexed::Mat<2>{.2, .7}) == uc[1]);
+    REQUIRE(tree.find_leaf(hexed::Mat<2>{.2, .7}) == tree.unique_children()[1]);
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.5, .21}) == child->unique_children()[0]);
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.5, .54}) == child->unique_children()[1]);
     SECTION("unrefinement") {
@@ -208,7 +208,7 @@ TEST_CASE("Tree") {
     hexed::Tree* t = uc[0]->unique_children()[1];
     REQUIRE(t->refinement_level() == 1);
     REQUIRE(tree.find_leaf(hexed::Mat<3>{.1, .1, .1}) == uc[0]->unique_children()[0]);
-    REQUIRE(tree.find_leaf(hexed::Mat<3>{.1, .4, .1}) == uc[0]->unique_children()[1]);
+    REQUIRE(tree.find_leaf(hexed::Mat<3>{.1, .6, .1}) == uc[0]->unique_children()[1]);
     REQUIRE(tree.find_leaf(hexed::Mat<3>{.1, .1, .6}) == uc[1]);
     REQUIRE(tree.find_leaf(hexed::Mat<3>{.6, .1, .1}) == uc[2]);
     for (int i = 1; i < 4; ++i) uc[i]->refine(1);

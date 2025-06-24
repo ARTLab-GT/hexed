@@ -235,11 +235,11 @@ Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias) {
 Tree* Tree::find_leaf(Mat<> nom_pos) {
   HEXED_ASSERT(nom_pos.size() >= n_dim, "`nominal_position` has too few elements");
   Mat<> np = nominal_position();
-  double ns = nominal_size();
+  Mat<> ns = nominal_shape();
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    if ((nom_pos(i_dim) < np(i_dim)) || (nom_pos(i_dim) > np(i_dim) + ns)) return nullptr;
+    if ((nom_pos(i_dim) < np(i_dim)) || (nom_pos(i_dim) > np(i_dim) + ns(i_dim))) return nullptr;
   }
-  for (auto& child : _children_storage) {
+  for (auto& child : unique_children()) {
     Tree* leaf = child->find_leaf(nom_pos);
     if (leaf) return leaf;
   }
