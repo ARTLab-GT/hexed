@@ -14,8 +14,44 @@ void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias
   }
 }
 
+void Tree::_refine(std::vector<bool> dims) {
+  HEXED_ASSERT(is_leaf(), "can only refine leaf")
+  std::cout << "refining";
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) std::cout << dims[i_dim];
+  std::cout << ": " << std::flush;
+  int n_child = math::pow(2, n_dim);
+  _children_storage.resize(n_child);
+  for (int i_child = 0; i_child < n_child; ++i_child) {
+    bool redundant = false;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      redundant = redundant || (!dims[i_dim] && math::row_coordinate(n_dim, 2, i_dim, i_child));
+    }
+    if (redundant) continue;
+    auto child = std::make_shared<Tree>(n_dim, _root_sz, _orig);
+    child->_par = this;
+    child->_ref_level = _ref_level;
+    child->_coords = _coords;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) if (dims[i_dim]) {
+      child->_ref_level[i_dim] += 1;
+      child->_coords[i_dim] *= 2;
+      child->_coords[i_dim] += math::row_coordinate(n_dim, 2, i_dim, i_child);
+    }
+    for (int j_child = 0; j_child < n_child; ++j_child) {
+      bool assign = true;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        int diff = math::row_coordinate(n_dim, 2, i_dim, j_child) - math::row_coordinate(n_dim, 2, i_dim, i_child);
+        assign = assign && !(dims[i_dim] && diff);
+      }
+      if (assign) _children_storage[j_child] = child;
+      if (assign) std::cout << format_str("(%i %i)", i_child, j_child);
+    }
+  }
+  std::cout << std::endl;
+}
+
 void Tree::_interchange_aniso_ref() {
   if (is_leaf()) return;
+  int n_child = math::pow(2, n_dim);
   std::vector<bool> any_refined(n_dim, false);
   std::vector<bool> all_refined(n_dim, true);
   for (auto& child : _children_storage) {
@@ -33,23 +69,31 @@ void Tree::_interchange_aniso_ref() {
   }
   auto b = [](bool arg){return arg;};
   if (std::none_of(pass_down.begin(), pass_down.end(), b) || std::none_of(retain.begin(), retain.end(), b)) return;
+  std::cout << "[interchange]" << std::flush;
   std::vector<std::vector<std::shared_ptr<Tree>>> grandchildren;
   for (auto& child : _children_storage) {
     grandchildren.push_back(child->_children_storage);
   }
   unrefine();
-  refine(retain);
-  int n_child = grandchildren.size();
+  _refine(retain);
+  HEXED_ASSERT(unique_children().size() == 2, "foo")
   for (int i_child = 0; i_child < n_child; ++i_child) {
     auto child = _children_storage[i_child];
-    child->_children_storage.resize(n_child);
+    child->_children_storage.resize(n_child); // does nothing if `child` has already been visited
     for (int j_child = 0; j_child < n_child; ++j_child) {
-      if (i_child == j_child || _children_storage[i_child] != _children_storage[j_child]) {
-        child->_children_storage[i_child] = grandchildren[i_child][j_child];
+      bool assign = true;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        int coord = math::row_coordinate(n_dim, 2, i_dim, i_child);
+        assign = assign && (is_refined(i_dim) || coord == math::row_coordinate(n_dim, 2, i_dim, j_child));
+      }
+      if (assign) {
+        std::cout << "{" << i_child << j_child << "}";
+        child->_children_storage[j_child] = grandchildren[i_child][j_child];
         grandchildren[i_child][j_child]->_par = child.get();
       }
     }
   }
+  std::cout << "[done]" << std::flush;
 }
 
 void Tree::_collapse_aniso_ref() {
@@ -133,36 +177,7 @@ bool Tree::is_refined(int i_dim) const {
 }
 
 void Tree::refine(std::vector<bool> dims) {
-  HEXED_ASSERT(is_leaf(), "can only refine leaf")
-  std::cout << "refining: ";
-  int n_child = math::pow(2, n_dim);
-  _children_storage.resize(n_child);
-  for (int i_child = 0; i_child < n_child; ++i_child) {
-    bool redundant = false;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      redundant = redundant || (!dims[i_dim] && math::row_coordinate(n_dim, 2, i_dim, i_child));
-    }
-    if (redundant) continue;
-    auto child = std::make_shared<Tree>(n_dim, _root_sz, _orig);
-    child->_par = this;
-    child->_ref_level = _ref_level;
-    child->_coords = _coords;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) if (dims[i_dim]) {
-      child->_ref_level[i_dim] += 1;
-      child->_coords[i_dim] *= 2;
-      child->_coords[i_dim] += math::row_coordinate(n_dim, 2, i_dim, i_child);
-    }
-    for (int j_child = 0; j_child < n_child; ++j_child) {
-      bool assign = true;
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        int diff = math::row_coordinate(n_dim, 2, i_dim, j_child) - math::row_coordinate(n_dim, 2, i_dim, i_child);
-        assign = assign && !(dims[i_dim] && diff);
-      }
-      if (assign) _children_storage[j_child] = child;
-      if (assign) std::cout << format_str("(%i %i)", i_child, j_child);
-    }
-  }
-  std::cout << std::endl;
+  _refine(dims);
   if (_par) _par->_simplify_aniso_ref();
 }
 
