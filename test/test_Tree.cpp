@@ -137,6 +137,17 @@ TEST_CASE("Tree") {
     REQUIRE_THAT(uc[1]->center(),
                  Catch::Matchers::RangeEquals(std::vector<double>{.7*.75 + .1, .7*.375 + .2},
                                               hexed::math::Approx_equal()));
+    SECTION("unrefinement") {
+      REQUIRE_THROWS(tree.unrefine(0));
+      REQUIRE_THROWS(child->unrefine(0));
+      child->unrefine(1);
+      REQUIRE(child->is_leaf());
+      tree.unrefine(0);
+      auto children = tree.unique_children();
+      REQUIRE(children.size() == 2);
+      REQUIRE_THAT(children[0]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{0, 1}));
+      REQUIRE_THAT(children[1]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{0, 1}));
+    }
     SECTION("aniso collapsing") {
       uc[1]->refine(1);
       REQUIRE(child->unique_children().size() == 2);
@@ -169,6 +180,10 @@ TEST_CASE("Tree") {
                      Catch::Matchers::RangeEquals(std::vector<int>{2, 4}));
         REQUIRE(child0->unique_children()[1]->unique_children().size() == 4);
         REQUIRE(child0->unique_children()[1]->unique_children()[3]->parent()->parent() == child0);
+        std::cout << "foo\n";
+        for (int j_child = 0; j_child < 2; ++j_child) child0->unique_children()[j_child]->unrefine(0);
+        REQUIRE(child0->unique_children().size() == 4);
+        for (int j_child = 0; j_child < 4; ++j_child) REQUIRE(child0->unique_children()[j_child]->is_leaf());
       }
     }
   }

@@ -134,7 +134,17 @@ class Tree {
   void refine();
   //! \brief Equivalent to `refine(std::vector<bool>)` on a vector with exactly one `true` element.
   void refine(int i_dim);
-  void unrefine(); //!< \brief Deletes all child elements (and descendents thereof). This element is now a leaf.
+  //! \brief Unrefines anisotropically along an arbitrary number of dimensions.
+  //! \details Will refine along dimension `i` iff `refine_dims[i]` is `true`.
+  //! For each `i` where `unrefine_dims[i]` is `true`, `is_refined[i]` must also be true, or else it throws.
+  //! Each child must also be a leaf, or else it also throws.
+  void unrefine(std::vector<bool> unrefine_dims);
+  //! \brief Isotropic unrefinement.
+  //! \details Equivalent to `unrefine(std::vector<bool>)` on a vector of all `true`.
+  void unrefine();
+  //! \brief Equivalent to `unrefine(std::vector<bool>)` on a vector with exactly one `true` element.
+  void unrefine(int i_dim);
+  void force_unrefine(); //!< \brief Deletes all child elements and descendents thereof. This element is now a leaf.
   //!\}
 
   //! \name traversing functions

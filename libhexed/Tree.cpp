@@ -16,6 +16,8 @@ void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias
 
 void Tree::_refine(std::vector<bool> dims) {
   HEXED_ASSERT(is_leaf(), "can only refine leaf")
+  HEXED_ASSERT((int)dims.size() == n_dim, "`refine_dims` has wrong number of entries")
+  if (std::none_of(dims.begin(), dims.end(), [](bool b){return b;})) return;
   int n_child = math::pow(2, n_dim);
   _children_storage.resize(n_child);
   for (int i_child = 0; i_child < n_child; ++i_child) {
@@ -68,7 +70,7 @@ void Tree::_interchange_aniso_ref() {
   for (auto& child : _children_storage) {
     grandchildren.push_back(child->_children_storage);
   }
-  unrefine();
+  force_unrefine();
   _refine(retain);
   for (int i_child = 0; i_child < n_child; ++i_child) {
     auto child = _children_storage[i_child];
@@ -89,6 +91,7 @@ void Tree::_interchange_aniso_ref() {
 
 void Tree::_collapse_aniso_ref() {
   if (is_leaf()) return;
+  std::cout << "bar" << std::endl;;
   bool collapse = true;
   while (collapse) {
     for (auto& child : _children_storage) {
@@ -98,6 +101,7 @@ void Tree::_collapse_aniso_ref() {
       }
     }
     if (collapse) {
+      std::cout << "baz" << std::endl;
       for (int i_child = 0; i_child < (int)_children_storage.size(); ++i_child) {
         _children_storage[i_child] = _children_storage[i_child]->_children_storage[i_child];
         _children_storage[i_child]->_par = this;
@@ -107,8 +111,8 @@ void Tree::_collapse_aniso_ref() {
 }
 
 void Tree::_simplify_aniso_ref() {
-  _interchange_aniso_ref();
   _collapse_aniso_ref();
+  _interchange_aniso_ref();
 }
 
 Tree::Tree(int nd, double root_size, Mat<> origin)
@@ -182,7 +186,28 @@ void Tree::refine(int i_dim) {
   refine(dims);
 }
 
-void Tree::unrefine() {_children_storage.clear();}
+void Tree::unrefine(std::vector<bool> dims) {
+  HEXED_ASSERT((int)dims.size() == n_dim, "`refine_dims` has wrong number of entries")
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    HEXED_ASSERT(is_refined(i_dim) || !dims[i_dim], "Cannot unrefine dimension that is not refined.")
+    dims[i_dim] = is_refined(i_dim) && !dims[i_dim];
+  }
+  for (auto& c : _children_storage) HEXED_ASSERT(c->is_leaf(), "At least one child is not a leaf.")
+  _children_storage.clear();
+  refine(dims);
+}
+
+void Tree::unrefine() {
+  unrefine(std::vector<bool>(n_dim, true));
+}
+
+void Tree::unrefine(int i_dim) {
+  std::vector<bool> dims(n_dim, false);
+  dims[i_dim] = true;
+  unrefine(dims);
+}
+
+void Tree::force_unrefine() {_children_storage.clear();}
 
 Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias) {
   HEXED_ASSERT(c.size() >= n_dim, "`_coords` has too few elements");
