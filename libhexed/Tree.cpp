@@ -6,12 +6,18 @@ namespace hexed {
 void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias) {
   if (is_leaf()) add_to.push_back(this);
   else {
+    std::vector<Tree*> added;
     for (int i_child = 0; i_child < math::pow(2, n_dim); ++i_child) {
       bool add = true;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         add = add && (bias(i_dim) == -1 || bias(i_dim) == math::row_coordinate(n_dim, 2, i_dim, i_child));
       }
-      if (add) _children_storage[i_child]->_add_extremal_levels(add_to, bias);
+      Tree* child = _children_storage[i_child].get();
+      add = add && std::none_of(added.begin(), added.end(), [child](Tree* t){return t == child;});
+      if (add) {
+        added.push_back(child);
+        child->_add_extremal_levels(add_to, bias);
+      }
     }
   }
 }

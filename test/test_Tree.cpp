@@ -256,7 +256,7 @@ TEST_CASE("Tree") {
     REQUIRE_THAT(uc[3]->find_neighbors(Eigen::Vector3i{-1, 0, -1}),
                  Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
                    uc[0]->unique_children()[0],
-                   uc[0]->unique_children()[0],
+                   uc[0]->unique_children()[1],
                  }));
     REQUIRE(uc[0]->unique_children()[0]->find_neighbor(Eigen::Vector3i{1, 0, 1}) == uc[3]);
     REQUIRE_THAT(uc[0]->unique_children()[0]->find_neighbors(Eigen::Vector3i{1, 0, 1}),
