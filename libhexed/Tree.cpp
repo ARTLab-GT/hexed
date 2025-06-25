@@ -128,6 +128,7 @@ Tree::Tree(int nd, double root_size, Mat<> origin)
 , _par{nullptr}
 , _children_storage()
 , _status{unprocessed}
+, _is_graft{false}
 , n_dim{nd}
 , elem(this)
 {
@@ -173,6 +174,7 @@ Tree* Tree::root() {
 }
 
 bool Tree::is_root() const {return !_par;}
+bool Tree::is_graft() const {return _is_graft;}
 bool Tree::is_leaf() const {return _children_storage.empty();}
 
 bool Tree::is_refined(int i_dim) const {
@@ -217,6 +219,21 @@ void Tree::unrefine(int i_dim) {
 }
 
 void Tree::force_unrefine() {_children_storage.clear();}
+
+Tree* Tree::graft(Array<int> ref_level, Eigen::VectorXi coords) {
+  _grafts.emplace_back(std::make_unique<Tree>(n_dim, _root_sz, _orig));
+  Tree* g = _grafts.back().get();
+  g->_coords = coords;
+  g->_par = this;
+  g->_is_graft = true;
+  return g;
+}
+
+void Tree::connect(Tree::Connection) {
+}
+
+void delete_grafts() {
+}
 
 Tree* Tree::find_leaf(Array<int> ref_level, Eigen::VectorXi c, Eigen::VectorXi b) {
   HEXED_ASSERT(ref_level.size() == n_dim, "`rev_level` has wrong size")

@@ -260,9 +260,7 @@ TEST_CASE("Tree") {
                  }));
     REQUIRE(uc[0]->unique_children()[0]->find_neighbor(Eigen::Vector3i{1, 0, 1}) == uc[3]);
     REQUIRE_THAT(uc[0]->unique_children()[0]->find_neighbors(Eigen::Vector3i{1, 0, 1}),
-                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
-                   uc[3],
-                 }));
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{uc[3]}));
     for (int i = 1; i < 4; ++i) uc[i]->refine(1);
     uc = tree.unique_children();
     REQUIRE(uc.size() == 8);
@@ -306,5 +304,18 @@ TEST_CASE("Tree") {
     REQUIRE(uc1[3]->find_neighbor(4) == uc1[2]);
     REQUIRE(uc[0]->unique_children()[4]->find_neighbor(1) == uc1[0]);
     REQUIRE(uc1[1]->find_neighbor(0) == uc[0]->unique_children()[5]);
+  }
+
+  SECTION("2D grafting") {
+    hexed::Tree tree(2, .9, hexed::Mat<2>{.2, .1});
+    REQUIRE(!tree.is_graft());
+    auto graft0 = tree.graft(hexed::Array<int>::make(0, 0), Eigen::Vector2i{-1, -1});
+    REQUIRE(!graft0->is_root());
+    REQUIRE(graft0->is_graft());
+    REQUIRE(graft0->parent() == &tree);
+    REQUIRE(graft0->n_dim == 2);
+    REQUIRE(graft0->nominal_size() == Catch::Approx(.9));
+    REQUIRE(graft0->origin()(1) == Catch::Approx(.1));
+    REQUIRE(graft0->coordinates()(1) == -1);
   }
 }

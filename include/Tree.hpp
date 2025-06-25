@@ -42,7 +42,9 @@ class Tree {
   Eigen::VectorXi _coords;
   Tree* _par;
   std::vector<std::shared_ptr<Tree>> _children_storage;
+  std::vector<std::unique_ptr<Tree>> _grafts;
   int _status;
+  bool _is_graft;
   // finds leaves of this element and adds them to `add_to`.
   // for each dimension, if the corresponding element of `bias` is 0,
   // adds only the elements at the lower extreme of that dimension.
@@ -55,6 +57,11 @@ class Tree {
   void _simplify_aniso_ref();
 
   public:
+  struct Connection {
+    std::array<std::vector<Tree>*, 2> trees;
+    Connection_direction direction;
+  };
+
   /*! \brief Constructs the root element of a tree.
    * \details All other elements will be descendents of this one.
    * \param n_dim number of spatial dimensions of the tree. `n_dim = 1` => bintree, `n_dim = 2` => quadtree, etc.
@@ -115,6 +122,7 @@ class Tree {
   std::vector<Tree*> unique_children();
   Tree* root(); //!< \brief fetch the root element of this tree
   bool is_root() const; //!< \brief gives the same result as `!parent()`
+  bool is_graft() const; //!< \brief `true` iff `this` was created by grafting.
   bool is_leaf() const; //!< \brief gives the same result as `children().empty()`
   bool is_refined(int i_dim) const;
   //!\}
@@ -145,6 +153,9 @@ class Tree {
   //! \brief Equivalent to `unrefine(std::vector<bool>)` on a vector with exactly one `true` element.
   void unrefine(int i_dim);
   void force_unrefine(); //!< \brief Deletes all child elements and descendents thereof. This element is now a leaf.
+  Tree* graft(Array<int> ref_level, Eigen::VectorXi coords);
+  void connect(Connection);
+  void delete_grafts();
   //!\}
 
   //! \name traversing functions
