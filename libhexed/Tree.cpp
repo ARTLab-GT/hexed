@@ -5,12 +5,14 @@ namespace hexed {
 
 void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias) {
   if (is_leaf()) add_to.push_back(this);
-  else for (auto& child : _children_storage) {
-    bool add = true;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      add = add && (bias(i_dim) == -1 || bias(i_dim) == child->_coords(i_dim)%2);
+  else {
+    for (int i_child = 0; i_child < math::pow(2, n_dim); ++i_child) {
+      bool add = true;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        add = add && (bias(i_dim) == -1 || bias(i_dim) == math::row_coordinate(n_dim, 2, i_dim, i_child));
+      }
+      if (add) _children_storage[i_child]->_add_extremal_levels(add_to, bias);
     }
-    if (add) child->_add_extremal_levels(add_to, bias);
   }
 }
 
@@ -277,8 +279,9 @@ std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction) {
   // start by finding some leaf neighbor
   Tree* main_neighbor = find_neighbor(direction);
   if (main_neighbor) {
-    // find a neighbor, not necessarily a leaf, with the same refinement level as this
-    while (main_neighbor->refinement_level() > refinement_level()) main_neighbor = main_neighbor->parent();
+    // find a neighbor, not necessarily a leaf, with refinement level not exceeding that of this
+    while ((main_neighbor->_ref_level - _ref_level).extreme(1) > 0) main_neighbor = main_neighbor->parent();
+    HEXED_ASSERT(main_neighbor, "Root appears not to satisfy ref level bounds")
     // find all the leaf descendents of that neighbor which are neighbors of this
     Eigen::VectorXi bias(n_dim);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) bias(i_dim) = direction(i_dim) == 0 ? -1 : direction(i_dim) < 0;
