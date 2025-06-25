@@ -139,12 +139,26 @@ TEST_CASE("Tree") {
                                               hexed::math::Approx_equal()));
     // center = .45, .55
     REQUIRE(tree.children()[0]->find_neighbor(3) == tree.children()[1]);
+    REQUIRE_THAT(tree.children()[0]->find_neighbors(3),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.children()[1]}));
     REQUIRE(tree.children()[0]->find_neighbor(1) == uc[0]);
+    REQUIRE_THAT(tree.children()[0]->find_neighbors(1),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{uc[0], uc[1]}));
     REQUIRE(uc[1]->find_neighbor(0) == tree.children()[0]);
+    REQUIRE_THAT(uc[1]->find_neighbors(0),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.children()[0]}));
     REQUIRE(uc[1]->find_neighbor(3) == tree.children()[3]);
+    REQUIRE_THAT(uc[1]->find_neighbors(3),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.children()[3]}));
     REQUIRE(uc[1]->find_neighbor(2) == uc[0]);
+    REQUIRE_THAT(uc[1]->find_neighbors(2),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{uc[0]}));
     REQUIRE(tree.children()[3]->find_neighbor(2) == uc[1]);
+    REQUIRE_THAT(tree.children()[3]->find_neighbors(2),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{uc[1]}));
     REQUIRE(uc[1]->find_neighbor(1) == nullptr);
+    REQUIRE_THAT(uc[1]->find_neighbors(1),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{}));
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.2, .7}) == tree.unique_children()[1]);
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.5, .21}) == child->unique_children()[0]);
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.5, .54}) == child->unique_children()[1]);
@@ -205,6 +219,10 @@ TEST_CASE("Tree") {
       }
       REQUIRE(uc[1]->unique_children()[0]->unique_children()[1]->unique_children()[3]->find_neighbor(1) ==
               uc[1]->unique_children()[2]->unique_children()[1]->unique_children()[1]);
+      REQUIRE_THAT(uc[1]->unique_children()[0]->unique_children()[1]->unique_children()[3]->find_neighbors(1),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+                     uc[1]->unique_children()[2]->unique_children()[1]->unique_children()[1]
+                   }));
     }
   }
 
@@ -235,7 +253,16 @@ TEST_CASE("Tree") {
     REQUIRE(tree.find_leaf(hexed::Array<int>::make(3, 2, 4), Eigen::Vector3i{3, 1, 9}) == uc[1]);
     REQUIRE(tree.find_leaf(hexed::Array<int>::make(3, 2, 4), Eigen::Vector3i{9, 1, 9}) == nullptr);
     REQUIRE(uc[3]->find_neighbor(Eigen::Vector3i{-1, 0, -1}) == uc[0]->unique_children()[0]);
+    REQUIRE_THAT(uc[3]->find_neighbors(Eigen::Vector3i{-1, 0, -1}),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+                   uc[0]->unique_children()[0],
+                   uc[0]->unique_children()[0],
+                 }));
     REQUIRE(uc[0]->unique_children()[0]->find_neighbor(Eigen::Vector3i{1, 0, 1}) == uc[3]);
+    REQUIRE_THAT(uc[0]->unique_children()[0]->find_neighbors(Eigen::Vector3i{1, 0, 1}),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+                   uc[3],
+                 }));
     for (int i = 1; i < 4; ++i) uc[i]->refine(1);
     uc = tree.unique_children();
     REQUIRE(uc.size() == 8);
@@ -268,7 +295,13 @@ TEST_CASE("Tree") {
     REQUIRE_THAT(uc1[7]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{2, 1, 1}));
     REQUIRE_THAT(uc1[5]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{3, 0, 1}));
     REQUIRE(uc[0]->find_neighbor(1) == uc1[0]);
+    REQUIRE_THAT(uc[0]->find_neighbors(1),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+                   uc1[0], uc1[1], uc1[2], uc1[3],
+                 }));
     REQUIRE(uc1[1]->find_neighbor(3) == uc1[3]);
+    REQUIRE_THAT(uc1[1]->find_neighbors(3),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{uc1[3]}));
     REQUIRE(uc1[1]->find_neighbor(1) == uc1[5]);
     REQUIRE(uc1[3]->find_neighbor(4) == uc1[2]);
     REQUIRE(uc[0]->unique_children()[4]->find_neighbor(1) == uc1[0]);

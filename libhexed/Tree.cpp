@@ -287,6 +287,12 @@ std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction) {
   return neighbs;
 }
 
+std::vector<Tree*> Tree::find_neighbors(int i_face) {
+  Eigen::VectorXi dir = Eigen::VectorXi::Zero(n_dim);
+  dir(i_face/2) = math::sign(i_face%2);
+  return find_neighbors(dir);
+}
+
 int Tree::count() {
   int total = 1;
   for (auto& child : _children_storage) total += child->count();

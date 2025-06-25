@@ -202,6 +202,8 @@ class Tree {
    * Neighbors are returned in a depth-first, row-major order.
    */
   std::vector<Tree*> find_neighbors(Eigen::VectorXi direction);
+  //! \brief Equivalent to `find_neighbors(Eigen::VectorXi)` with `direction(i_face/2) == math::sign(i_face%2)`.
+  std::vector<Tree*> find_neighbors(int i_face);
   //! \brief total number of tree elements descended from this tree (including itself)
   int count();
   //!\}
