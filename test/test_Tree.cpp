@@ -317,5 +317,15 @@ TEST_CASE("Tree") {
     REQUIRE(graft0->nominal_size() == Catch::Approx(.9));
     REQUIRE(graft0->origin()(1) == Catch::Approx(.1));
     REQUIRE(graft0->coordinates()(1) == -1);
+    tree.connect({std::vector<hexed::Tree*>{graft0, graft0},
+                  std::vector<hexed::Tree*>{&tree, &tree}}, {{0, 1}, {1, 0}});
+    SECTION("can't connect already-connected trees") {
+      REQUIRE_THROWS(tree.connect({std::vector<hexed::Tree*>{graft0, graft0},
+                                   std::vector<hexed::Tree*>{&tree, &tree}}, {{0, 1}, {1, 0}}));
+    }
+    REQUIRE(graft0->find_neighbor(0) == nullptr);
+    REQUIRE(graft0->find_neighbor(1) == &tree);
+    REQUIRE(tree.find_neighbor(2) == &tree);
+    REQUIRE(tree.find_neighbor(3) == nullptr);
   }
 }

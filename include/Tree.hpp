@@ -36,32 +36,7 @@ namespace hexed {
  * or modifying elements and calling a traversing function concurrently may result in data races.
  */
 class Tree {
-  Mat<> _orig;
-  double _root_sz;
-  Array<int> _ref_level;
-  Eigen::VectorXi _coords;
-  Tree* _par;
-  std::vector<std::shared_ptr<Tree>> _children_storage;
-  std::vector<std::unique_ptr<Tree>> _grafts;
-  int _status;
-  bool _is_graft;
-  // finds leaves of this element and adds them to `add_to`.
-  // for each dimension, if the corresponding element of `bias` is 0,
-  // adds only the elements at the lower extreme of that dimension.
-  // if 1, adds only those at the upper extreme.
-  // if -1, adds all.
-  void _add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
-  void _refine(std::vector<bool>); // performs refinement but not collapsing/interchange
-  void _collapse_aniso_ref();
-  void _interchange_aniso_ref();
-  void _simplify_aniso_ref();
-
   public:
-  struct Connection {
-    std::array<std::vector<Tree>*, 2> trees;
-    Connection_direction direction;
-  };
-
   /*! \brief Constructs the root element of a tree.
    * \details All other elements will be descendents of this one.
    * \param n_dim number of spatial dimensions of the tree. `n_dim = 1` => bintree, `n_dim = 2` => quadtree, etc.
@@ -154,7 +129,7 @@ class Tree {
   void unrefine(int i_dim);
   void force_unrefine(); //!< \brief Deletes all child elements and descendents thereof. This element is now a leaf.
   Tree* graft(Array<int> ref_level, Eigen::VectorXi coords);
-  void connect(Connection);
+  void connect(std::array<std::vector<Tree*>, 2>, Connection_direction);
   void delete_grafts();
   //!\}
 
@@ -245,6 +220,39 @@ class Tree {
   void flood_fill(int status);
   void clear_status(); //!< \brief sets the flood fill status of this and all child elements to `unprocessed`
   //!\}
+
+  private:
+  struct _Connection {
+    std::array<Tree*, 2> trees;
+    Connection_direction direction;
+  };
+  struct _Neighbor_result {
+    Tree* neighbor;
+    Eigen::VectorXi direction;
+  };
+  // finds leaves of this element and adds them to `add_to`.
+  // for each dimension, if the corresponding element of `bias` is 0,
+  // adds only the elements at the lower extreme of that dimension.
+  // if 1, adds only those at the upper extreme.
+  // if -1, adds all.
+  void _add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
+  void _refine(std::vector<bool>); // performs refinement but not collapsing/interchange
+  void _collapse_aniso_ref();
+  void _interchange_aniso_ref();
+  void _simplify_aniso_ref();
+  _Neighbor_result _neighbor(Eigen::VectorXi direction);
+
+  Mat<> _orig;
+  double _root_sz;
+  Array<int> _ref_level;
+  Eigen::VectorXi _coords;
+  Tree* _par;
+  std::vector<std::shared_ptr<Tree>> _children_storage;
+  std::vector<std::unique_ptr<Tree>> _grafts;
+  std::vector<std::unique_ptr<_Connection>> _connections;
+  std::vector<_Connection*> _face_connections;
+  int _status;
+  bool _is_graft;
 };
 
 }

@@ -3,6 +3,260 @@
 
 namespace hexed {
 
+Tree::Tree(int nd, double root_size, Mat<> origin)
+: n_dim{nd}
+, elem(this)
+, _root_sz{root_size}
+, _ref_level{Array<int>::make_uniform({nd}, 0)}, _coords{Eigen::VectorXi::Zero(nd)}
+, _par{nullptr}
+, _children_storage()
+, _face_connections(2*n_dim, nullptr)
+, _status{unprocessed}
+, _is_graft{false}
+{
+  HEXED_ASSERT(origin.size() >= n_dim, "`origin` is too small");
+  _orig = origin(Eigen::seqN(0, n_dim));
+}
+
+Mat<> Tree::origin() const {return _orig;}
+int Tree::refinement_level() const {return _ref_level.extreme(0);}
+Array<int> Tree::anisotropic_refinement_level() const {return _ref_level.copy();}
+Eigen::VectorXi Tree::coordinates() const {return _coords;}
+double Tree::nominal_size() const {return nominal_shape().maxCoeff();}
+
+Mat<> Tree::nominal_shape() const {
+  Mat<> nom_shape(n_dim);
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) nom_shape(i_dim) = _root_sz/math::pow(2, _ref_level[i_dim]);
+  return nom_shape;
+}
+
+Mat<> Tree::nominal_position() const {return nominal_shape().cwiseProduct(_coords.cast<double>()) + _orig;}
+Mat<> Tree::center() const {return nominal_position() + .5*nominal_shape();}
+
+Tree* Tree::parent() {return _par;}
+
+std::vector<Tree*> Tree::children() {
+  std::vector<Tree*> c;
+  for (auto& t : _children_storage) c.push_back(t.get());
+  return c;
+}
+
+std::vector<Tree*> Tree::unique_children() {
+  std::vector<Tree*> c;
+  for (auto& t : _children_storage) {
+    if (std::none_of(c.begin(), c.end(), [&t](Tree* ptr){return ptr == t.get();})) c.push_back(t.get());
+  }
+  return c;
+}
+
+Tree* Tree::root() {
+  Tree* r = this;
+  while (!r->is_root()) r = r->parent();
+  return r;
+}
+
+bool Tree::is_root() const {return !_par;}
+bool Tree::is_graft() const {return _is_graft;}
+bool Tree::is_leaf() const {return _children_storage.empty();}
+
+bool Tree::is_refined(int i_dim) const {
+  if (is_leaf()) return false;
+  return _children_storage[0] != _children_storage[math::stride(n_dim, 2, i_dim)];
+}
+
+void Tree::refine(std::vector<bool> dims) {
+  _refine(dims);
+  if (_par) _par->_simplify_aniso_ref();
+}
+
+void Tree::refine() {
+  refine(std::vector<bool>(n_dim, true));
+}
+
+void Tree::refine(int i_dim) {
+  std::vector<bool> dims(n_dim, false);
+  dims[i_dim] = true;
+  refine(dims);
+}
+
+void Tree::unrefine(std::vector<bool> dims) {
+  HEXED_ASSERT((int)dims.size() == n_dim, "`refine_dims` has wrong number of entries")
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    HEXED_ASSERT(is_refined(i_dim) || !dims[i_dim], "Cannot unrefine dimension that is not refined.")
+    dims[i_dim] = is_refined(i_dim) && !dims[i_dim];
+  }
+  for (auto& c : _children_storage) HEXED_ASSERT(c->is_leaf(), "At least one child is not a leaf.")
+  _children_storage.clear();
+  refine(dims);
+}
+
+void Tree::unrefine() {
+  unrefine(std::vector<bool>(n_dim, true));
+}
+
+void Tree::unrefine(int i_dim) {
+  std::vector<bool> dims(n_dim, false);
+  dims[i_dim] = true;
+  unrefine(dims);
+}
+
+void Tree::force_unrefine() {_children_storage.clear();}
+
+Tree* Tree::graft(Array<int> ref_level, Eigen::VectorXi coords) {
+  HEXED_ASSERT(is_root(), "Can only graft to the root.")
+  _grafts.emplace_back(std::make_unique<Tree>(n_dim, _root_sz, _orig));
+  Tree* g = _grafts.back().get();
+  g->_coords = coords;
+  g->_par = this;
+  g->_is_graft = true;
+  return g;
+}
+
+void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction dir) {
+  HEXED_ASSERT(is_root(), "Can only add graft connections to the root.")
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    HEXED_ASSERT((Int)trees[i_side].size() == math::pow(2, n_dim - 1), "Wrong number of trees provided for connection.")
+  }
+  _connections.emplace_back(std::make_unique<_Connection>(std::array<Tree*, 2>{trees[0][0], trees[1][0]}, dir));
+  auto con = _connections.back().get();
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    auto predicate = [&con, i_side](Tree* t){return t == con->trees[i_side];};
+    if (std::all_of(trees[i_side].begin(), trees[i_side].end(), predicate)) {
+    } else {
+      HEXED_THROW("Trees must all be the same.")
+    }
+    HEXED_ASSERT(!con->trees[i_side]->_face_connections[con->direction.i_face(i_side)],
+                 "Tree face is already connected")
+    con->trees[i_side]->_face_connections[con->direction.i_face(i_side)] = con;
+  }
+}
+
+void delete_grafts() {
+}
+
+Tree* Tree::find_leaf(Array<int> ref_level, Eigen::VectorXi c, Eigen::VectorXi b) {
+  HEXED_ASSERT(ref_level.size() == n_dim, "`rev_level` has wrong size")
+  HEXED_ASSERT(c.size() == n_dim, "`coords` has wrong size")
+  HEXED_ASSERT(b.size() >= n_dim, "`bias` has too few entries")
+  Eigen::VectorXi bias = b(Eigen::seqN(0, n_dim));
+  // find the relative coordinates in this element's ref level or the specified ref level, whichever is higher
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    int max_level = std::max(_ref_level[i_dim], ref_level[i_dim]);
+    int cell_size = math::pow(2, max_level - _ref_level[i_dim]);
+    int relative_coord = c(i_dim)*math::pow(2, max_level - ref_level[i_dim]) - bias(i_dim) - _coords(i_dim)*cell_size;
+    if (relative_coord < 0 || relative_coord >= cell_size) return nullptr;
+  }
+  // recursive case: if this element contains the point and has children, one of them should have the element we want
+  for (Tree* child : unique_children()) {
+    Tree* leaf = child->find_leaf(ref_level, c, bias);
+    if (leaf) return leaf;
+  }
+  // second base case: if the coordinates are in this element, but there are no children,
+  // then this is the element we want
+  return this;
+}
+
+Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias) {
+  HEXED_ASSERT(c.size() >= n_dim, "`_coords` has too few elements");
+  HEXED_ASSERT(bias.size() >= n_dim, "`bias` has too few elements");
+  return find_leaf(Array<int>::make_uniform({n_dim}, rl), c, bias);
+}
+
+Tree* Tree::find_leaf(Mat<> nom_pos) {
+  HEXED_ASSERT(nom_pos.size() >= n_dim, "`nominal_position` has too few elements");
+  Mat<> np = nominal_position();
+  Mat<> ns = nominal_shape();
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    if ((nom_pos(i_dim) < np(i_dim)) || (nom_pos(i_dim) > np(i_dim) + ns(i_dim))) return nullptr;
+  }
+  for (auto& child : unique_children()) {
+    Tree* leaf = child->find_leaf(nom_pos);
+    if (leaf) return leaf;
+  }
+  return this;
+}
+
+Tree* Tree::find_neighbor(Eigen::VectorXi direction) {
+  HEXED_ASSERT(direction.size() >= n_dim, "`direction` has too few elements");
+  return _neighbor(direction).neighbor;
+}
+
+Tree* Tree::find_neighbor(int i_face) {
+  Eigen::VectorXi dir = Eigen::VectorXi::Zero(n_dim);
+  dir(i_face/2) = math::sign(i_face%2);
+  return find_neighbor(dir);
+}
+
+std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction) {
+  HEXED_ASSERT(direction.size() >= n_dim, "`direction` has too few elements");
+  std::vector<Tree*> neighbs;
+  // start by finding some leaf neighbor
+  Tree* main_neighbor = find_neighbor(direction);
+  if (main_neighbor) {
+    // find a neighbor, not necessarily a leaf, with refinement level not exceeding that of this
+    while ((main_neighbor->_ref_level - _ref_level).extreme(1) > 0) main_neighbor = main_neighbor->parent();
+    HEXED_ASSERT(main_neighbor, "Root appears not to satisfy ref level bounds")
+    // find all the leaf descendents of that neighbor which are neighbors of this
+    Eigen::VectorXi bias(n_dim);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) bias(i_dim) = direction(i_dim) == 0 ? -1 : direction(i_dim) < 0;
+    main_neighbor->_add_extremal_levels(neighbs, bias);
+  }
+  return neighbs;
+}
+
+std::vector<Tree*> Tree::find_neighbors(int i_face) {
+  Eigen::VectorXi dir = Eigen::VectorXi::Zero(n_dim);
+  dir(i_face/2) = math::sign(i_face%2);
+  return find_neighbors(dir);
+}
+
+int Tree::count() {
+  int total = 1;
+  for (auto& child : _children_storage) total += child->count();
+  return total;
+}
+
+int Tree::get_status() {
+  return _status;
+}
+
+void Tree::set_status(int new_status) {
+  _status = new_status;
+}
+
+void Tree::flood_fill(int new_status) {
+  HEXED_ASSERT(new_status != unprocessed, "`flood_fill` may not be used to set _status to `unprocessed`");
+  if (!is_leaf()) _children_storage[0]->flood_fill(new_status); // find a leaf element to start
+  std::queue<Tree*> to_process;
+  to_process.push(this);
+  while (!to_process.empty()) {
+    Tree* t = to_process.front();
+    to_process.pop();
+    // if the next element in the queue is already processed, do nothing.
+    // if it isn't, set its _status and add all it's neighbors to the queue.
+    // this could result in some cells being in the queue multiple times,
+    // but that's not a problem.
+    if (t->_status == unprocessed) {
+      t->_status = new_status;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        for (int sign : {-1, 1}) {
+          Eigen::VectorXi direct(n_dim);
+          direct.setZero();
+          direct(i_dim) = sign;
+          for (Tree* neighb : t->find_neighbors(direct)) {
+            to_process.push(neighb);
+          }
+        }
+      }
+    }
+  }
+}
+
+void Tree::clear_status() {
+  _status = unprocessed;
+  for (auto& child : _children_storage) child->clear_status();
+}
+
 void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias) {
   if (is_leaf()) add_to.push_back(this);
   else {
@@ -122,163 +376,7 @@ void Tree::_simplify_aniso_ref() {
   _interchange_aniso_ref();
 }
 
-Tree::Tree(int nd, double root_size, Mat<> origin)
-: _root_sz{root_size}
-, _ref_level{Array<int>::make_uniform({nd}, 0)}, _coords{Eigen::VectorXi::Zero(nd)}
-, _par{nullptr}
-, _children_storage()
-, _status{unprocessed}
-, _is_graft{false}
-, n_dim{nd}
-, elem(this)
-{
-  HEXED_ASSERT(origin.size() >= n_dim, "`origin` is too small");
-  _orig = origin(Eigen::seqN(0, n_dim));
-}
-
-Mat<> Tree::origin() const {return _orig;}
-int Tree::refinement_level() const {return _ref_level.extreme(0);}
-Array<int> Tree::anisotropic_refinement_level() const {return _ref_level.copy();}
-Eigen::VectorXi Tree::coordinates() const {return _coords;}
-double Tree::nominal_size() const {return nominal_shape().maxCoeff();}
-
-Mat<> Tree::nominal_shape() const {
-  Mat<> nom_shape(n_dim);
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) nom_shape(i_dim) = _root_sz/math::pow(2, _ref_level[i_dim]);
-  return nom_shape;
-}
-
-Mat<> Tree::nominal_position() const {return nominal_shape().cwiseProduct(_coords.cast<double>()) + _orig;}
-Mat<> Tree::center() const {return nominal_position() + .5*nominal_shape();}
-
-Tree* Tree::parent() {return _par;}
-
-std::vector<Tree*> Tree::children() {
-  std::vector<Tree*> c;
-  for (auto& t : _children_storage) c.push_back(t.get());
-  return c;
-}
-
-std::vector<Tree*> Tree::unique_children() {
-  std::vector<Tree*> c;
-  for (auto& t : _children_storage) {
-    if (std::none_of(c.begin(), c.end(), [&t](Tree* ptr){return ptr == t.get();})) c.push_back(t.get());
-  }
-  return c;
-}
-
-Tree* Tree::root() {
-  Tree* r = this;
-  while (!r->is_root()) r = r->parent();
-  return r;
-}
-
-bool Tree::is_root() const {return !_par;}
-bool Tree::is_graft() const {return _is_graft;}
-bool Tree::is_leaf() const {return _children_storage.empty();}
-
-bool Tree::is_refined(int i_dim) const {
-  if (is_leaf()) return false;
-  return _children_storage[0] != _children_storage[math::stride(n_dim, 2, i_dim)];
-}
-
-void Tree::refine(std::vector<bool> dims) {
-  _refine(dims);
-  if (_par) _par->_simplify_aniso_ref();
-}
-
-void Tree::refine() {
-  refine(std::vector<bool>(n_dim, true));
-}
-
-void Tree::refine(int i_dim) {
-  std::vector<bool> dims(n_dim, false);
-  dims[i_dim] = true;
-  refine(dims);
-}
-
-void Tree::unrefine(std::vector<bool> dims) {
-  HEXED_ASSERT((int)dims.size() == n_dim, "`refine_dims` has wrong number of entries")
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    HEXED_ASSERT(is_refined(i_dim) || !dims[i_dim], "Cannot unrefine dimension that is not refined.")
-    dims[i_dim] = is_refined(i_dim) && !dims[i_dim];
-  }
-  for (auto& c : _children_storage) HEXED_ASSERT(c->is_leaf(), "At least one child is not a leaf.")
-  _children_storage.clear();
-  refine(dims);
-}
-
-void Tree::unrefine() {
-  unrefine(std::vector<bool>(n_dim, true));
-}
-
-void Tree::unrefine(int i_dim) {
-  std::vector<bool> dims(n_dim, false);
-  dims[i_dim] = true;
-  unrefine(dims);
-}
-
-void Tree::force_unrefine() {_children_storage.clear();}
-
-Tree* Tree::graft(Array<int> ref_level, Eigen::VectorXi coords) {
-  _grafts.emplace_back(std::make_unique<Tree>(n_dim, _root_sz, _orig));
-  Tree* g = _grafts.back().get();
-  g->_coords = coords;
-  g->_par = this;
-  g->_is_graft = true;
-  return g;
-}
-
-void Tree::connect(Tree::Connection) {
-}
-
-void delete_grafts() {
-}
-
-Tree* Tree::find_leaf(Array<int> ref_level, Eigen::VectorXi c, Eigen::VectorXi b) {
-  HEXED_ASSERT(ref_level.size() == n_dim, "`rev_level` has wrong size")
-  HEXED_ASSERT(c.size() == n_dim, "`coords` has wrong size")
-  HEXED_ASSERT(b.size() >= n_dim, "`bias` has too few entries")
-  Eigen::VectorXi bias = b(Eigen::seqN(0, n_dim));
-  // find the relative coordinates in this element's ref level or the specified ref level, whichever is higher
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    int max_level = std::max(_ref_level[i_dim], ref_level[i_dim]);
-    int cell_size = math::pow(2, max_level - _ref_level[i_dim]);
-    int relative_coord = c(i_dim)*math::pow(2, max_level - ref_level[i_dim]) - bias(i_dim) - _coords(i_dim)*cell_size;
-    if (relative_coord < 0 || relative_coord >= cell_size) return nullptr;
-  }
-  // recursive case: if this element contains the point and has children, one of them should have the element we want
-  for (Tree* child : unique_children()) {
-    Tree* leaf = child->find_leaf(ref_level, c, bias);
-    if (leaf) return leaf;
-  }
-  // second base case: if the coordinates are in this element, but there are no children,
-  // then this is the element we want
-  return this;
-}
-
-Tree* Tree::find_leaf(int rl, Eigen::VectorXi c, Eigen::VectorXi bias) {
-  HEXED_ASSERT(c.size() >= n_dim, "`_coords` has too few elements");
-  HEXED_ASSERT(bias.size() >= n_dim, "`bias` has too few elements");
-  return find_leaf(Array<int>::make_uniform({n_dim}, rl), c, bias);
-}
-
-Tree* Tree::find_leaf(Mat<> nom_pos) {
-  HEXED_ASSERT(nom_pos.size() >= n_dim, "`nominal_position` has too few elements");
-  Mat<> np = nominal_position();
-  Mat<> ns = nominal_shape();
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    if ((nom_pos(i_dim) < np(i_dim)) || (nom_pos(i_dim) > np(i_dim) + ns(i_dim))) return nullptr;
-  }
-  for (auto& child : unique_children()) {
-    Tree* leaf = child->find_leaf(nom_pos);
-    if (leaf) return leaf;
-  }
-  return this;
-}
-
-Tree* Tree::find_neighbor(Eigen::VectorXi direction) {
-  HEXED_ASSERT(direction.size() >= n_dim, "`direction` has too few elements");
+Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
   // compute the coordinates and bias which will identify the neighbor
   Eigen::VectorXi bias(n_dim);
   Eigen::VectorXi c(n_dim);
@@ -287,83 +385,23 @@ Tree* Tree::find_neighbor(Eigen::VectorXi direction) {
     bias(i_dim) = (direction(i_dim) < 0);
   }
   // use `find_leaf` on the root element to find the neighbor
-  return root()->find_leaf(_ref_level, c, bias);
-}
-
-Tree* Tree::find_neighbor(int i_face) {
-  Eigen::VectorXi dir = Eigen::VectorXi::Zero(n_dim);
-  dir(i_face/2) = math::sign(i_face%2);
-  return find_neighbor(dir);
-}
-
-std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction) {
-  HEXED_ASSERT(direction.size() >= n_dim, "`direction` has too few elements");
-  std::vector<Tree*> neighbs;
-  // start by finding some leaf neighbor
-  Tree* main_neighbor = find_neighbor(direction);
-  if (main_neighbor) {
-    // find a neighbor, not necessarily a leaf, with refinement level not exceeding that of this
-    while ((main_neighbor->_ref_level - _ref_level).extreme(1) > 0) main_neighbor = main_neighbor->parent();
-    HEXED_ASSERT(main_neighbor, "Root appears not to satisfy ref level bounds")
-    // find all the leaf descendents of that neighbor which are neighbors of this
-    Eigen::VectorXi bias(n_dim);
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) bias(i_dim) = direction(i_dim) == 0 ? -1 : direction(i_dim) < 0;
-    main_neighbor->_add_extremal_levels(neighbs, bias);
-  }
-  return neighbs;
-}
-
-std::vector<Tree*> Tree::find_neighbors(int i_face) {
-  Eigen::VectorXi dir = Eigen::VectorXi::Zero(n_dim);
-  dir(i_face/2) = math::sign(i_face%2);
-  return find_neighbors(dir);
-}
-
-int Tree::count() {
-  int total = 1;
-  for (auto& child : _children_storage) total += child->count();
-  return total;
-}
-
-int Tree::get_status() {
-  return _status;
-}
-
-void Tree::set_status(int new_status) {
-  _status = new_status;
-}
-
-void Tree::flood_fill(int new_status) {
-  HEXED_ASSERT(new_status != unprocessed, "`flood_fill` may not be used to set _status to `unprocessed`");
-  if (!is_leaf()) _children_storage[0]->flood_fill(new_status); // find a leaf element to start
-  std::queue<Tree*> to_process;
-  to_process.push(this);
-  while (!to_process.empty()) {
-    Tree* t = to_process.front();
-    to_process.pop();
-    // if the next element in the queue is already processed, do nothing.
-    // if it isn't, set its _status and add all it's neighbors to the queue.
-    // this could result in some cells being in the queue multiple times,
-    // but that's not a problem.
-    if (t->_status == unprocessed) {
-      t->_status = new_status;
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        for (int sign : {-1, 1}) {
-          Eigen::VectorXi direct(n_dim);
-          direct.setZero();
-          direct(i_dim) = sign;
-          for (Tree* neighb : t->find_neighbors(direct)) {
-            to_process.push(neighb);
-          }
-        }
+  Tree* n = root()->find_leaf(_ref_level, c, bias);
+  if (!n) {
+    int i_face = -1;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      if (direction(i_dim)) {
+        if (i_face == -1) i_face = 2*i_dim + (direction(i_dim) > 0);
+        else i_face = -2;
+      }
+    }
+    if (i_face >= 0) {
+      if (_face_connections[i_face]) {
+        auto trees = _face_connections[i_face]->trees;
+        n = trees[0] = this ? trees[1] : trees[0];
       }
     }
   }
-}
-
-void Tree::clear_status() {
-  _status = unprocessed;
-  for (auto& child : _children_storage) child->clear_status();
+  return {n, direction};
 }
 
 }
