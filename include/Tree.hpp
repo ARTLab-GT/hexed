@@ -37,6 +37,11 @@ namespace hexed {
  */
 class Tree {
   public:
+  struct Connection_neighbors {
+    std::array<std::vector<Tree*>, 2> trees;
+    Connection_direction direction;
+    std::array<std::vector<Element*>, 2> elements();
+  };
   /*! \brief Constructs the root element of a tree.
    * \details All other elements will be descendents of this one.
    * \param n_dim number of spatial dimensions of the tree. `n_dim = 1` => bintree, `n_dim = 2` => quadtree, etc.
@@ -191,6 +196,7 @@ class Tree {
   std::vector<Tree*> find_neighbors(Eigen::VectorXi direction);
   //! \brief Equivalent to `find_neighbors(Eigen::VectorXi)` with `direction(i_face/2) == math::sign(i_face%2)`.
   std::vector<Tree*> find_neighbors(int i_face);
+  Connection_neighbors find_connection_neighbors(int i_face);
   //! \brief total number of tree elements descended from this tree (including itself)
   int count();
   //!\}

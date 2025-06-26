@@ -213,6 +213,11 @@ std::vector<Tree*> Tree::find_neighbors(int i_face) {
   return find_neighbors(dir);
 }
 
+Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
+  Connection_neighbors neighbors;
+  return neighbors;
+}
+
 int Tree::count() {
   int total = 1;
   for (auto& child : _children_storage) total += child->count();
