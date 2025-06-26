@@ -327,14 +327,23 @@ TEST_CASE("Tree") {
     REQUIRE(graft0->find_neighbor(0) == nullptr);
     REQUIRE(graft0->find_neighbor(1) == &tree);
     REQUIRE(tree.find_neighbor(2) == graft0);
+    REQUIRE_THAT(tree.find_neighbors(2), Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0}));
     REQUIRE(tree.find_neighbor(3) == nullptr);
     graft0->refine();
     REQUIRE(graft0->children()[1]->find_neighbor(1) == graft0->children()[3]);
+    REQUIRE_THAT(graft0->children()[1]->find_neighbors(1),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[3]}));
     REQUIRE(graft0->children()[2]->find_neighbor(1) == &tree);
+    REQUIRE_THAT(graft0->children()[2]->find_neighbors(1),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{&tree}));
     REQUIRE(graft0->children()[3]->find_neighbor(1) == &tree);
     REQUIRE(tree.find_neighbor(2) == graft0->children()[3]);
+    REQUIRE_THAT(tree.find_neighbors(2),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[2], graft0->children()[3]}));
     tree.refine();
     REQUIRE(graft0->children()[2]->find_neighbor(1) == tree.children()[2]);
+    REQUIRE_THAT(graft0->children()[2]->find_neighbors(1),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.children()[2]}));
     REQUIRE(graft0->children()[3]->find_neighbor(1) == tree.children()[0]);
     REQUIRE(tree.children()[2]->find_neighbor(2) == graft0->children()[2]);
     REQUIRE(tree.children()[0]->find_neighbor(2) == graft0->children()[3]);
@@ -344,10 +353,18 @@ TEST_CASE("Tree") {
             graft0->children()[2]->unique_children()[1]);
     REQUIRE(graft0->children()[2]->unique_children()[1]->find_neighbor(1) ==
             tree.children()[2]->unique_children()[1]);
+    REQUIRE_THAT(graft0->children()[2]->unique_children()[1]->find_neighbors(1),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+                   tree.children()[2]->unique_children()[0], tree.children()[2]->unique_children()[1],
+                 }));
     REQUIRE(graft0->children()[3]->unique_children()[1]->find_neighbor(1) ==
             tree.children()[0]->unique_children()[1]);
     REQUIRE(tree.children()[0]->unique_children()[1]->find_neighbor(2) ==
             graft0->children()[3]->unique_children()[1]);
+    REQUIRE_THAT(tree.children()[0]->unique_children()[0]->find_neighbors(2),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[3]->unique_children()[1]}));
+    REQUIRE_THAT(tree.children()[0]->unique_children()[1]->find_neighbors(2),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[3]->unique_children()[1]}));
     REQUIRE(tree.children()[2]->unique_children()[1]->find_neighbor(2) ==
             graft0->children()[2]->unique_children()[1]);
     REQUIRE(tree.children()[2]->unique_children()[0]->find_neighbor(2) ==
@@ -362,11 +379,20 @@ TEST_CASE("Tree") {
             tree.children()[0]->unique_children()[0]);
     REQUIRE(graft1->children()[3]->unique_children()[0]->find_neighbor(1) ==
             tree.children()[1]->unique_children()[0]);
+    REQUIRE_THAT(graft1->children()[3]->unique_children()[0]->find_neighbors(1),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+                   tree.children()[1]->unique_children()[0],
+                 }));
     REQUIRE(graft1->children()[3]->unique_children()[1]->find_neighbor(1) ==
             tree.children()[1]->unique_children()[0]);
     REQUIRE(tree.children()[0]->unique_children()[0]->find_neighbor(0) ==
             graft1->children()[2]->unique_children()[0]);
     REQUIRE(tree.children()[1]->unique_children()[0]->find_neighbor(0) ==
             graft1->children()[3]->unique_children()[0]);
+    REQUIRE_THAT(tree.children()[1]->unique_children()[0]->find_neighbors(0),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+                   graft1->children()[3]->unique_children()[0],
+                   graft1->children()[3]->unique_children()[1],
+                 }));
   }
 }

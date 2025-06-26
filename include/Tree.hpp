@@ -185,7 +185,8 @@ class Tree {
    * In particular, if exactly one element of `direction` is nonzero,
    * you will get a vector of all the neighbors on a specific face.
    * If no neighbors are found, the vector will be empty.
-   * Neighbors are returned in a depth-first, row-major order.
+   * Neighbors are returned in a depth-first, row-major order
+   * (in the coordinates of their own root, in the case of grafted neighbors).
    */
   std::vector<Tree*> find_neighbors(Eigen::VectorXi direction);
   //! \brief Equivalent to `find_neighbors(Eigen::VectorXi)` with `direction(i_face/2) == math::sign(i_face%2)`.
@@ -229,6 +230,8 @@ class Tree {
   struct _Neighbor_result {
     Tree* neighbor;
     Eigen::VectorXi direction;
+    Connection_direction con_dir;
+    int i_side;
   };
   // finds leaves of this element and adds them to `add_to`.
   // for each dimension, if the corresponding element of `bias` is 0,

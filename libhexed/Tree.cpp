@@ -190,15 +190,19 @@ std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction) {
   HEXED_ASSERT(direction.size() >= n_dim, "`direction` has too few elements");
   std::vector<Tree*> neighbs;
   // start by finding some leaf neighbor
-  Tree* main_neighbor = find_neighbor(direction);
-  if (main_neighbor) {
+  auto result = _neighbor(direction);
+  if (result.neighbor) {
     // find a neighbor, not necessarily a leaf, with refinement level not exceeding that of this
-    while ((main_neighbor->_ref_level - _ref_level).extreme(1) > 0) main_neighbor = main_neighbor->parent();
-    HEXED_ASSERT(main_neighbor, "Root appears not to satisfy ref level bounds")
+    Array<int> rl = _ref_level.copy();
+    std::swap(rl[result.con_dir.i_dim[0]], rl[result.con_dir.i_dim[1]]);
+    while ((result.neighbor->_ref_level - rl).extreme(1) > 0) result.neighbor = result.neighbor->parent();
+    HEXED_ASSERT(result.neighbor, "Root appears not to satisfy ref level bounds")
     // find all the leaf descendents of that neighbor which are neighbors of this
     Eigen::VectorXi bias(n_dim);
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) bias(i_dim) = direction(i_dim) == 0 ? -1 : direction(i_dim) < 0;
-    main_neighbor->_add_extremal_levels(neighbs, bias);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      bias(i_dim) = result.direction(i_dim) == 0 ? -1 : result.direction(i_dim) < 0;
+    }
+    result.neighbor->_add_extremal_levels(neighbs, bias);
   }
   return neighbs;
 }
@@ -385,6 +389,8 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
   }
   // use `find_leaf` on the root element to find the neighbor
   Tree* n = root()->find_leaf(_ref_level, coords, bias);
+  int i_side = 0;
+  Connection_direction dir {{0, 0}, {0, 0}};
   if (!n) {
     int i_face = -1;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -400,7 +406,7 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
         if (search_root->_face_connections[i_face]) {
           Tree* this_root = search_root;
           auto trees = this_root->_face_connections[i_face]->trees;
-          int i_side = trees[1] == this_root;
+          i_side = trees[1] == this_root;
           search_root = trees[!i_side];
           Eigen::VectorXi old_coords = coords;
           for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
@@ -408,7 +414,7 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
             old_coords(j_dim) -= this_root->_coords(j_dim)*math::pow(2, rl_diff);
           }
           std::cout << "old coords\n" << coords << "\n" << this_root->coordinates() << "\n" << old_coords << std::endl;
-          auto dir = this_root->_face_connections[i_face]->direction;
+          dir = this_root->_face_connections[i_face]->direction;
           int i_dim = dir.i_dim[!i_side];
           coords(dir.i_dim[i_side]) = old_coords(i_dim);
           coords(i_dim) = dir.face_sign[!i_side];
@@ -416,6 +422,8 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
           ref_level[i_dim] = search_root->_ref_level[i_dim];
           bias.setZero();
           bias(i_dim) = dir.face_sign[!i_side];
+          direction(dir.i_dim[i_side]) = 0;
+          direction(i_dim) = math::sign(!dir.face_sign[!i_side]);
           if (dir.flip_tangential()) { // implies different dims
             int rl_diff = ref_level[dir.i_dim[i_side]] - search_root->_ref_level[dir.i_dim[i_side]];
             coords(dir.i_dim[i_side]) = math::pow(2, rl_diff) - coords(dir.i_dim[i_side]);
@@ -431,13 +439,14 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
         }
       }
       if (search_root) {
-        std::cout << search_root << std::endl;
-        std::cout << coords << std::endl;
+        std::cout << search_root << "\n";
+        std::cout << coords << "\n";
+        std::cout << "direction\n" << direction << std::endl;;
         n = search_root->find_leaf(ref_level, coords, bias);
       }
     }
   }
-  return {n, direction};
+  return {n, direction, dir, i_side};
 }
 
 }
