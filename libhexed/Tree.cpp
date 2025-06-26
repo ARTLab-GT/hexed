@@ -107,7 +107,6 @@ Tree* Tree::graft(Array<int> ref_level, Eigen::VectorXi coords) {
   _grafts.emplace_back(std::make_unique<Tree>(n_dim, _root_sz, _orig));
   Tree* g = _grafts.back().get();
   g->_coords = coords;
-  g->_par = this;
   g->_is_graft = true;
   return g;
 }
@@ -379,13 +378,13 @@ void Tree::_simplify_aniso_ref() {
 Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
   // compute the coordinates and bias which will identify the neighbor
   Eigen::VectorXi bias(n_dim);
-  Eigen::VectorXi c(n_dim);
+  Eigen::VectorXi coords(n_dim);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    c(i_dim) = _coords[i_dim] + (direction(i_dim) > 0);
+    coords(i_dim) = _coords[i_dim] + (direction(i_dim) > 0);
     bias(i_dim) = (direction(i_dim) < 0);
   }
   // use `find_leaf` on the root element to find the neighbor
-  Tree* n = root()->find_leaf(_ref_level, c, bias);
+  Tree* n = root()->find_leaf(_ref_level, coords, bias);
   if (!n) {
     int i_face = -1;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -395,9 +394,46 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
       }
     }
     if (i_face >= 0) {
-      if (_face_connections[i_face]) {
-        auto trees = _face_connections[i_face]->trees;
-        n = trees[0] = this ? trees[1] : trees[0];
+      Tree* search_root = this;
+      Array<int> ref_level = _ref_level.copy();
+      while (search_root) {
+        if (search_root->_face_connections[i_face]) {
+          Tree* this_root = search_root;
+          auto trees = this_root->_face_connections[i_face]->trees;
+          int i_side = trees[1] == this_root;
+          search_root = trees[!i_side];
+          Eigen::VectorXi old_coords = coords;
+          for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+            int rl_diff = _ref_level[j_dim] - this_root->_ref_level[j_dim];
+            old_coords(j_dim) -= this_root->_coords(j_dim)*math::pow(2, rl_diff);
+          }
+          std::cout << "old coords\n" << coords << "\n" << this_root->coordinates() << "\n" << old_coords << std::endl;
+          auto dir = this_root->_face_connections[i_face]->direction;
+          int i_dim = dir.i_dim[!i_side];
+          coords(dir.i_dim[i_side]) = old_coords(i_dim);
+          coords(i_dim) = dir.face_sign[!i_side];
+          ref_level[dir.i_dim[i_side]] = ref_level[i_dim];
+          ref_level[i_dim] = search_root->_ref_level[i_dim];
+          bias.setZero();
+          bias(i_dim) = dir.face_sign[!i_side];
+          if (dir.flip_tangential()) { // implies different dims
+            int rl_diff = ref_level[dir.i_dim[i_side]] - search_root->_ref_level[dir.i_dim[i_side]];
+            coords(dir.i_dim[i_side]) = math::pow(2, rl_diff) - coords(dir.i_dim[i_side]);
+            bias(dir.i_dim[i_side]) = !bias(dir.i_dim[i_side]);
+          }
+          for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+            int rl_diff = ref_level[j_dim] - search_root->_ref_level[j_dim];
+            coords(j_dim) += search_root->_coords(j_dim)*math::pow(2, rl_diff);
+          }
+          break;
+        } else {
+          search_root = search_root->_par;
+        }
+      }
+      if (search_root) {
+        std::cout << search_root << std::endl;
+        std::cout << coords << std::endl;
+        n = search_root->find_leaf(ref_level, coords, bias);
       }
     }
   }
