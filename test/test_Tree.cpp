@@ -323,7 +323,6 @@ TEST_CASE("Tree") {
       REQUIRE_THROWS(tree.connect({std::vector<hexed::Tree*>{graft0, graft0},
                                    std::vector<hexed::Tree*>{&tree, &tree}}, {{0, 1}, {1, 0}}));
     }
-    std::cout << &tree << std::endl;
     REQUIRE(graft0->find_neighbor(0) == nullptr);
     REQUIRE(graft0->find_neighbor(1) == &tree);
     REQUIRE(tree.find_neighbor(2) == graft0);

@@ -242,13 +242,11 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
     search_roots[!compare] = search_roots[!compare]->_par;
   }
   for (int i_side = 0; i_side < 2; ++i_side) {
-    std::cout << "i_side" << i_side << " search_root" << search_roots[i_side] << std::endl;
     neighbors.trees[i_side].resize(math::pow(2, n_dim - 1), nullptr);
     search_roots[i_side]->_assign_leaves(neighbors.trees[i_side], search_roots[i_side],
                                          result.con_dir.i_dim[i_side], result.con_dir.face_sign[i_side]);
   }
   neighbors.direction = result.con_dir;
-  std::cout << "final: " << neighbors.trees[0][0] << "," << neighbors.trees[0][1] << "; " << neighbors.trees[1][0] << "," << neighbors.trees[1][1] << std::endl;
   return neighbors;
 }
 
@@ -319,7 +317,6 @@ void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias
 }
 
 void Tree::_assign_leaves(std::vector<Tree*>& assign_to, Tree* search_root, int i_dim, int sign) {
-  std::cout << search_root << " " << this << " " << is_leaf() << " " << i_dim << " " << sign << std::endl;
   for (Row_index index(n_dim, 2, i_dim); index; ++index) {
     int i_child = index.i_qpoint(sign);
     if (is_leaf()) {
@@ -474,7 +471,6 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
             int rl_diff = _ref_level[j_dim] - this_root->_ref_level[j_dim];
             old_coords(j_dim) -= this_root->_coords(j_dim)*math::pow(2, rl_diff);
           }
-          std::cout << "old coords\n" << coords << "\n" << this_root->coordinates() << "\n" << old_coords << std::endl;
           dir = this_root->_face_connections[i_face]->direction;
           int i_dim = dir.i_dim[!i_side];
           coords(dir.i_dim[i_side]) = old_coords(i_dim);
@@ -500,9 +496,6 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
         }
       }
       if (search_root) {
-        std::cout << search_root << "\n";
-        std::cout << coords << "\n";
-        std::cout << "direction\n" << direction << std::endl;;
         n = search_root->find_leaf(ref_level, coords, bias);
       }
     }
