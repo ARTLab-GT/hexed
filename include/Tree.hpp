@@ -245,6 +245,7 @@ class Tree {
   // if 1, adds only those at the upper extreme.
   // if -1, adds all.
   void _add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
+  void _assign_leaves(std::vector<Tree*>& assign_to, Tree* search_root, int i_dim, int sign);
   void _refine(std::vector<bool>); // performs refinement but not collapsing/interchange
   void _collapse_aniso_ref();
   void _interchange_aniso_ref();

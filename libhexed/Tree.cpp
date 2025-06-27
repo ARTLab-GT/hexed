@@ -1,5 +1,6 @@
-#include <Tree.hpp>
 #include <queue>
+#include <hexed/Tree.hpp>
+#include <hexed/Row_index.hpp>
 
 namespace hexed {
 
@@ -180,10 +181,30 @@ Tree* Tree::find_neighbor(Eigen::VectorXi direction) {
   return _neighbor(direction).neighbor;
 }
 
-Tree* Tree::find_neighbor(int i_face) {
+Eigen::VectorXi get_direction(int i_face, int n_dim) {
   Eigen::VectorXi dir = Eigen::VectorXi::Zero(n_dim);
   dir(i_face/2) = math::sign(i_face%2);
-  return find_neighbor(dir);
+  return dir;
+}
+
+Tree* Tree::find_neighbor(int i_face) {
+  return find_neighbor(get_direction(i_face, n_dim));
+}
+
+// the return value can be 0, 1, or 2, indicating the following:
+// 0: there is at least one dimension in which `tree0` has smaller refinement level than `tree1`
+// 1: previous condition is false
+//    and there is at least one dimension in which `tree1` has smaller refinement level than `tree0`
+// 2: the refinement levels are equal
+int compare_ref_level(Tree* tree0, Tree* tree1, Connection_direction dir) {
+  HEXED_ASSERT(tree0 && tree1, "Tree is null.")
+  Array<int> rl0 = tree0->anisotropic_refinement_level();
+  Array<int> rl1 = tree1->anisotropic_refinement_level();
+  std::swap(rl1[dir.i_dim[0]], rl1[dir.i_dim[1]]);
+  Array<int> diff = rl0 - rl1;
+  if (diff.extreme(0) < 0) return 0;
+  if (diff.extreme(1) > 0) return 1;
+  return 2;
 }
 
 std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction) {
@@ -193,9 +214,7 @@ std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction) {
   auto result = _neighbor(direction);
   if (result.neighbor) {
     // find a neighbor, not necessarily a leaf, with refinement level not exceeding that of this
-    Array<int> rl = _ref_level.copy();
-    std::swap(rl[result.con_dir.i_dim[0]], rl[result.con_dir.i_dim[1]]);
-    while ((result.neighbor->_ref_level - rl).extreme(1) > 0) result.neighbor = result.neighbor->parent();
+    while (compare_ref_level(this, result.neighbor, result.con_dir) == 0) result.neighbor = result.neighbor->parent();
     HEXED_ASSERT(result.neighbor, "Root appears not to satisfy ref level bounds")
     // find all the leaf descendents of that neighbor which are neighbors of this
     Eigen::VectorXi bias(n_dim);
@@ -208,13 +227,28 @@ std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction) {
 }
 
 std::vector<Tree*> Tree::find_neighbors(int i_face) {
-  Eigen::VectorXi dir = Eigen::VectorXi::Zero(n_dim);
-  dir(i_face/2) = math::sign(i_face%2);
-  return find_neighbors(dir);
+  return find_neighbors(get_direction(i_face, n_dim));
 }
 
 Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
   Connection_neighbors neighbors;
+  auto result = _neighbor(get_direction(i_face, n_dim));
+  HEXED_ASSERT(result.neighbor, "No neighbors on requested face.")
+  Tree* search_roots [2];
+  search_roots[result.i_side] = this;
+  search_roots[!result.i_side] = result.neighbor;
+  int compare;
+  while ((compare = compare_ref_level(search_roots[0], search_roots[1], result.con_dir)) != 2) {
+    search_roots[!compare] = search_roots[!compare]->_par;
+  }
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    std::cout << "i_side" << i_side << " search_root" << search_roots[i_side] << std::endl;
+    neighbors.trees[i_side].resize(math::pow(2, n_dim - 1), nullptr);
+    search_roots[i_side]->_assign_leaves(neighbors.trees[i_side], search_roots[i_side],
+                                         result.con_dir.i_dim[i_side], result.con_dir.face_sign[i_side]);
+  }
+  neighbors.direction = result.con_dir;
+  std::cout << "final: " << neighbors.trees[0][0] << "," << neighbors.trees[0][1] << "; " << neighbors.trees[1][0] << "," << neighbors.trees[1][1] << std::endl;
   return neighbors;
 }
 
@@ -280,6 +314,24 @@ void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias
         added.push_back(child);
         child->_add_extremal_levels(add_to, bias);
       }
+    }
+  }
+}
+
+void Tree::_assign_leaves(std::vector<Tree*>& assign_to, Tree* search_root, int i_dim, int sign) {
+  std::cout << search_root << " " << this << " " << is_leaf() << " " << i_dim << " " << sign << std::endl;
+  for (Row_index index(n_dim, 2, i_dim); index; ++index) {
+    int i_child = index.i_qpoint(sign);
+    if (is_leaf()) {
+      bool assign = true;
+      for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+        int row = math::row_coordinate(n_dim, 2, j_dim, i_child);
+        int scale = math::pow(2, _ref_level[j_dim] - search_root->_ref_level[j_dim]);
+        assign = assign && (_coords(j_dim) + row == (search_root->_coords(j_dim) + row)*scale);
+      }
+      if (assign) assign_to[index.i_face_qpoint()] = this;
+    } else {
+      _children_storage[i_child]->_assign_leaves(assign_to, search_root, i_dim, sign);
     }
   }
 }
@@ -396,15 +448,19 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
   Tree* n = root()->find_leaf(_ref_level, coords, bias);
   int i_side = 0;
   Connection_direction dir {{0, 0}, {0, 0}};
-  if (!n) {
-    int i_face = -1;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      if (direction(i_dim)) {
-        if (i_face == -1) i_face = 2*i_dim + (direction(i_dim) > 0);
-        else i_face = -2;
-      }
+  int i_face = -1;
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    if (direction(i_dim)) {
+      if (i_face == -1) i_face = 2*i_dim + (direction(i_dim) > 0);
+      else i_face = -2;
     }
-    if (i_face >= 0) {
+  }
+  if (i_face >= 0) {
+    if (n) {
+      dir.i_dim = {i_face/2, i_face/2};
+      dir.face_sign = {1, 0};
+      i_side = !(i_face%2);
+    } else {
       Tree* search_root = this;
       Array<int> ref_level = _ref_level.copy();
       while (search_root) {
