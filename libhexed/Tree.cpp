@@ -105,6 +105,7 @@ void Tree::force_unrefine() {_children_storage.clear();}
 
 Tree* Tree::graft(Array<int> ref_level, Eigen::VectorXi coords) {
   HEXED_ASSERT(is_root(), "Can only graft to the root.")
+  HEXED_ASSERT(coords.size() == n_dim, "`coords` has wrong number of entries.")
   _grafts.emplace_back(std::make_unique<Tree>(n_dim, _root_sz, _orig));
   Tree* g = _grafts.back().get();
   g->_coords = coords;
@@ -131,10 +132,17 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
     } else {
       HEXED_THROW("Trees must all be the same.")
     }
-    HEXED_ASSERT(!con->trees[i_side]->_face_connections[con->direction.i_face(i_side)],
-                 "Tree face is already connected")
+    HEXED_ASSERT(!con->trees[i_side]->find_neighbor(con->direction.i_face(i_side)), "Face already has neighbor.")
     con->trees[i_side]->_face_connections[con->direction.i_face(i_side)] = con;
   }
+}
+
+void Tree::connect(std::array<Tree*, 2> trees, Connection_direction dir) {
+  std::array<std::vector<Tree*>, 2> vecs;
+  int n_tree = math::pow(2, n_dim - 1);
+  vecs[0].resize(n_tree, trees[0]);
+  vecs[1].resize(n_tree, trees[1]);
+  connect(vecs, dir);
 }
 
 void delete_grafts() {
@@ -465,7 +473,7 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
       i_side = !(i_face%2);
     } else {
       Tree* search_root = this;
-      Array<int> ref_level = _ref_level.copy();
+      Array<int> ref_level({n_dim});
       while (search_root) {
         if (search_root->_face_connections[i_face]) {
           Tree* this_root = search_root;
@@ -481,7 +489,9 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
           int i_dim = dir.i_dim[!i_side];
           coords(dir.i_dim[i_side]) = old_coords(i_dim);
           coords(i_dim) = dir.face_sign[!i_side];
-          ref_level[dir.i_dim[i_side]] = ref_level[i_dim];
+          ref_level = _ref_level + search_root->_ref_level - this_root->_ref_level;
+          ref_level[dir.i_dim[i_side]] = _ref_level[i_dim] + search_root->_ref_level[dir.i_dim[i_side]]
+                                                           - this_root->_ref_level[i_dim];
           ref_level[i_dim] = search_root->_ref_level[i_dim];
           bias.setZero();
           bias(i_dim) = dir.face_sign[!i_side];

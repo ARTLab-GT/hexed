@@ -437,6 +437,13 @@ TEST_CASE("Tree") {
                    graft1->children()[3]->unique_children()[1],
                  }));
     tree.delete_grafts(); // `graft0` and `graft1` now invalid
+    tree.children()[1]->unrefine(0);
     REQUIRE(tree.children()[0]->find_neighbor(2) == nullptr);
+    graft0 = tree.graft(hexed::Array<int>::make(0, 1), Eigen::Vector2i{-1, 1});
+    tree.connect({tree.children()[1], graft0}, {{0, 1}, {0, 0}});
+    graft0->refine();
+    REQUIRE(tree.children()[1]->find_neighbor(0) == graft0->children()[0]);
+    REQUIRE(graft0->children()[0]->find_neighbor(2) == tree.children()[1]);
+    REQUIRE(graft0->children()[2]->find_neighbor(2) == tree.children()[1]);
   }
 }

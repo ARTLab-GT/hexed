@@ -135,6 +135,7 @@ class Tree {
   void force_unrefine(); //!< \brief Deletes all child elements and descendents thereof. This element is now a leaf.
   Tree* graft(Array<int> ref_level, Eigen::VectorXi coords);
   void connect(std::array<std::vector<Tree*>, 2>, Connection_direction);
+  void connect(std::array<Tree*, 2>, Connection_direction);
   void delete_grafts();
   //!\}
 
