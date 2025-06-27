@@ -112,6 +112,12 @@ Tree* Tree::graft(Array<int> ref_level, Eigen::VectorXi coords) {
   return g;
 }
 
+void Tree::delete_grafts() {
+  _grafts.clear();
+  _connections.clear();
+  _clear_connections();
+}
+
 void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction dir) {
   HEXED_ASSERT(is_root(), "Can only add graft connections to the root.")
   for (int i_side = 0; i_side < 2; ++i_side) {
@@ -501,6 +507,11 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
     }
   }
   return {n, direction, dir, i_side};
+}
+
+void Tree::_clear_connections() {
+  for (_Connection*& c : _face_connections) c = nullptr;
+  for (Tree* t : unique_children()) t->_clear_connections();
 }
 
 }

@@ -436,5 +436,7 @@ TEST_CASE("Tree") {
                    graft1->children()[3]->unique_children()[0],
                    graft1->children()[3]->unique_children()[1],
                  }));
+    tree.delete_grafts(); // `graft0` and `graft1` now invalid
+    REQUIRE(tree.children()[0]->find_neighbor(2) == nullptr);
   }
 }

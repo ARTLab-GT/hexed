@@ -251,6 +251,7 @@ class Tree {
   void _interchange_aniso_ref();
   void _simplify_aniso_ref();
   _Neighbor_result _neighbor(Eigen::VectorXi direction);
+  void _clear_connections();
 
   Mat<> _orig;
   double _root_sz;
