@@ -210,12 +210,14 @@ Tree* Tree::find_neighbor(int i_face) {
 // 1: previous condition is false
 //    and there is at least one dimension in which `tree1` has smaller refinement level than `tree0`
 // 2: the refinement levels are equal
-int compare_ref_level(Tree* tree0, Tree* tree1, Connection_direction dir) {
+int Tree::_compare_ref_level(Tree* tree0, Tree* tree1, Tree::_Transformation trans) {
   HEXED_ASSERT(tree0 && tree1, "Tree is null.")
-  Array<int> rl0 = tree0->anisotropic_refinement_level();
-  Array<int> rl1 = tree1->anisotropic_refinement_level();
-  std::swap(rl1[dir.i_dim[0]], rl1[dir.i_dim[1]]);
-  Array<int> diff = rl0 - rl1;
+  Array<int> rl({2, tree0->n_dim});
+  rl(0) = tree0->anisotropic_refinement_level();
+  rl(1) = tree1->anisotropic_refinement_level();
+  rl(0) = trans.transform(rl(0));
+  Array<int> diff = rl(0) - rl(1);
+  diff[trans.dir.i_dim[!trans.i_side]] = 0;
   if (diff.extreme(0) < 0) return 0;
   if (diff.extreme(1) > 0) return 1;
   return 2;
@@ -228,7 +230,7 @@ std::vector<Tree*> Tree::find_neighbors(Eigen::VectorXi direction) {
   auto result = _neighbor(direction);
   if (result.neighbor) {
     // find a neighbor, not necessarily a leaf, with refinement level not exceeding that of this
-    while (compare_ref_level(this, result.neighbor, result.con_dir) == 0) result.neighbor = result.neighbor->parent();
+    while (_compare_ref_level(this, result.neighbor, result.trans) == 0) result.neighbor = result.neighbor->parent();
     HEXED_ASSERT(result.neighbor, "Root appears not to satisfy ref level bounds")
     // find all the leaf descendents of that neighbor which are neighbors of this
     Eigen::VectorXi bias(n_dim);
@@ -249,18 +251,19 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
   auto result = _neighbor(get_direction(i_face, n_dim));
   HEXED_ASSERT(result.neighbor, "No neighbors on requested face.")
   Tree* search_roots [2];
-  search_roots[result.i_side] = this;
-  search_roots[!result.i_side] = result.neighbor;
+  search_roots[0] = this;
+  search_roots[1] = result.neighbor;
   int compare;
-  while ((compare = compare_ref_level(search_roots[0], search_roots[1], result.con_dir)) != 2) {
+  while ((compare = _compare_ref_level(search_roots[0], search_roots[1], result.trans)) != 2) {
     search_roots[!compare] = search_roots[!compare]->_par;
   }
   for (int i_side = 0; i_side < 2; ++i_side) {
     neighbors.trees[i_side].resize(math::pow(2, n_dim - 1), nullptr);
-    search_roots[i_side]->_assign_leaves(neighbors.trees[i_side], search_roots[i_side],
-                                         result.con_dir.i_dim[i_side], result.con_dir.face_sign[i_side]);
+    int j_side = i_side != result.trans.i_side;
+    search_roots[j_side]->_assign_leaves(neighbors.trees[i_side], search_roots[j_side],
+                                         result.trans.dir.i_dim[i_side], result.trans.dir.face_sign[i_side]);
   }
-  neighbors.direction = result.con_dir;
+  neighbors.direction = result.trans.dir;
   return neighbors;
 }
 
@@ -447,6 +450,17 @@ void Tree::_simplify_aniso_ref() {
   _interchange_aniso_ref();
 }
 
+Array<int> Tree::_Transformation::transform(Array<int> ref_level) {
+  int i_dim = dir.i_dim[!i_side];
+  int j_dim = dir.i_dim[i_side];
+  Array<int> transformed = ref_level + that_root->_ref_level - this_root->_ref_level;
+  transformed[j_dim] = ref_level[i_dim] + that_root->_ref_level[j_dim]
+                                        - this_root->_ref_level[i_dim];
+  transformed[i_dim] = ref_level[j_dim] + that_root->_ref_level[i_dim]
+                                        - this_root->_ref_level[j_dim];
+  return transformed;
+}
+
 Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
   // compute the coordinates and bias which will identify the neighbor
   Eigen::VectorXi bias(n_dim);
@@ -457,8 +471,8 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
   }
   // use `find_leaf` on the root element to find the neighbor
   Tree* n = root()->find_leaf(_ref_level, coords, bias);
-  int i_side = 0;
-  Connection_direction dir {{0, 0}, {0, 0}};
+  _Transformation trans;
+  trans.this_root = trans.that_root = root();
   int i_face = -1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     if (direction(i_dim)) {
@@ -468,9 +482,9 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
   }
   if (i_face >= 0) {
     if (n) {
-      dir.i_dim = {i_face/2, i_face/2};
-      dir.face_sign = {1, 0};
-      i_side = !(i_face%2);
+      trans.dir.i_dim = {i_face/2, i_face/2};
+      trans.dir.face_sign = {1, 0};
+      trans.i_side = !(i_face%2);
     } else {
       Tree* search_root = this;
       Array<int> ref_level({n_dim});
@@ -478,33 +492,34 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
         if (search_root->_face_connections[i_face]) {
           Tree* this_root = search_root;
           auto trees = this_root->_face_connections[i_face]->trees;
-          i_side = trees[1] == this_root;
-          search_root = trees[!i_side];
+          trans.i_side = trees[1] == this_root;
+          search_root = trees[!trans.i_side];
+          trans.this_root = this_root;
+          trans.that_root = search_root;
           Eigen::VectorXi old_coords = coords;
-          for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-            int rl_diff = _ref_level[j_dim] - this_root->_ref_level[j_dim];
-            old_coords(j_dim) -= this_root->_coords(j_dim)*math::pow(2, rl_diff);
+          for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
+            int rl_diff = _ref_level[k_dim] - this_root->_ref_level[k_dim];
+            old_coords(k_dim) -= this_root->_coords(k_dim)*math::pow(2, rl_diff);
           }
-          dir = this_root->_face_connections[i_face]->direction;
-          int i_dim = dir.i_dim[!i_side];
-          coords(dir.i_dim[i_side]) = old_coords(i_dim);
-          coords(i_dim) = dir.face_sign[!i_side];
-          ref_level = _ref_level + search_root->_ref_level - this_root->_ref_level;
-          ref_level[dir.i_dim[i_side]] = _ref_level[i_dim] + search_root->_ref_level[dir.i_dim[i_side]]
-                                                           - this_root->_ref_level[i_dim];
+          trans.dir = this_root->_face_connections[i_face]->direction;
+          int i_dim = trans.dir.i_dim[!trans.i_side];
+          int j_dim = trans.dir.i_dim[trans.i_side];
+          coords(j_dim) = old_coords(i_dim);
+          coords(i_dim) = trans.dir.face_sign[!trans.i_side];
+          ref_level = trans.transform(_ref_level);
           ref_level[i_dim] = search_root->_ref_level[i_dim];
           bias.setZero();
-          bias(i_dim) = dir.face_sign[!i_side];
-          direction(dir.i_dim[i_side]) = 0;
-          direction(i_dim) = math::sign(!dir.face_sign[!i_side]);
-          if (dir.flip_tangential()) { // implies different dims
-            int rl_diff = ref_level[dir.i_dim[i_side]] - search_root->_ref_level[dir.i_dim[i_side]];
-            coords(dir.i_dim[i_side]) = math::pow(2, rl_diff) - coords(dir.i_dim[i_side]);
-            bias(dir.i_dim[i_side]) = !bias(dir.i_dim[i_side]);
-          }
-          for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          bias(i_dim) = trans.dir.face_sign[!trans.i_side];
+          direction(j_dim) = 0;
+          direction(i_dim) = math::sign(!trans.dir.face_sign[!trans.i_side]);
+          if (trans.dir.flip_tangential()) { // implies different dims
             int rl_diff = ref_level[j_dim] - search_root->_ref_level[j_dim];
-            coords(j_dim) += search_root->_coords(j_dim)*math::pow(2, rl_diff);
+            coords(j_dim) = math::pow(2, rl_diff) - coords(j_dim);
+            bias(j_dim) = !bias(j_dim);
+          }
+          for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
+            int rl_diff = ref_level[k_dim] - search_root->_ref_level[k_dim];
+            coords(k_dim) += search_root->_coords(k_dim)*math::pow(2, rl_diff);
           }
           break;
         } else {
@@ -516,7 +531,7 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
       }
     }
   }
-  return {n, direction, dir, i_side};
+  return {n, direction, trans};
 }
 
 void Tree::_clear_connections() {

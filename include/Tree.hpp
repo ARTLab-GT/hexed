@@ -234,11 +234,17 @@ class Tree {
     std::array<Tree*, 2> trees;
     Connection_direction direction;
   };
+  struct _Transformation {
+    Tree* this_root = nullptr;
+    Tree* that_root = nullptr;
+    Connection_direction dir {{0, 0}, {0, 0}};
+    int i_side = 0;
+    Array<int> transform(Array<int> ref_level);
+  };
   struct _Neighbor_result {
     Tree* neighbor;
     Eigen::VectorXi direction;
-    Connection_direction con_dir;
-    int i_side;
+    _Transformation trans;
   };
   // finds leaves of this element and adds them to `add_to`.
   // for each dimension, if the corresponding element of `bias` is 0,
@@ -253,6 +259,7 @@ class Tree {
   void _simplify_aniso_ref();
   _Neighbor_result _neighbor(Eigen::VectorXi direction);
   void _clear_connections();
+  static int _compare_ref_level(Tree*, Tree*, _Transformation);
 
   Mat<> _orig;
   double _root_sz;

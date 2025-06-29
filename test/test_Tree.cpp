@@ -445,5 +445,9 @@ TEST_CASE("Tree") {
     REQUIRE(tree.children()[1]->find_neighbor(0) == graft0->children()[0]);
     REQUIRE(graft0->children()[0]->find_neighbor(2) == tree.children()[1]);
     REQUIRE(graft0->children()[2]->find_neighbor(2) == tree.children()[1]);
+    REQUIRE_THAT(graft0->children()[0]->find_neighbors(2),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.children()[1]}));
+    REQUIRE_THAT(tree.children()[1]->find_neighbors(0),
+                 Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[0], graft0->children()[2]}));
   }
 }
