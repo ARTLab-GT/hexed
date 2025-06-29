@@ -10,7 +10,7 @@
 #include "Storage_params.hpp"
 #include "Basis.hpp"
 #include "Lock.hpp"
-#include "Mutual_ptr.hpp"
+#include "reciprocal.hpp"
 #include "Block.hpp"
 #include "Face.hpp"
 
@@ -58,7 +58,7 @@ class Element : public Kernel_element, public Mortal {
   //! \brief Pointer to state data at faces. Must be populated by user
   double uncertainty = 0; //!< \brief refinement algorithms should set this value to some uncertainty metric
   static constexpr bool is_deformed = false; //!< \brief is this `Element` subclass deformed?
-  Mutual_ptr<Element, Tree> tree; //!< \brief `Tree` this element was created from
+  Reciprocal_ptr<Element, Tree> tree; //!< \brief `Tree` this element was created from
   bool unrefinement_locked = false; //!< \brief if this is set to `true`, `Mesh_interface::update()` won't unrefine it
   //! \brief if `true`, this element has a face on the surface which was not properly snapped
   bool snapping_problem = false;

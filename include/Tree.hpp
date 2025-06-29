@@ -35,7 +35,7 @@ namespace hexed {
  * However, concurrent attempts to modify the same element (directly or indirectly)
  * or modifying elements and calling a traversing function concurrently may result in data races.
  */
-class Tree {
+class Tree : public Mortal {
   public:
   struct Connection_neighbors {
     std::array<std::vector<Tree*>, 2> trees;
@@ -53,7 +53,7 @@ class Tree {
   Tree(int n_dim, double root_size, Mat<> origin = Mat<>::Zero(3));
   const int n_dim;
   //! \brief `Element` generated from this tree (to be managed by the user of this class)
-  Mutual_ptr<Tree, Element> elem;
+  Reciprocal_ptr<Tree, Element> elem;
   //! \brief if `elem` points to a deformed element, this can also be set to allow it to be accessed as deformed
   Deformed_element* def_elem = nullptr;
   //! \brief As the name implies, used to store whatever random information you want
