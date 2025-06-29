@@ -449,5 +449,14 @@ TEST_CASE("Tree") {
                  Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.children()[1]}));
     REQUIRE_THAT(tree.children()[1]->find_neighbors(0),
                  Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[0], graft0->children()[2]}));
+    for (hexed::Tree::Connection_neighbors con : {
+      graft0->children()[0]->find_connection_neighbors(2),
+      graft0->children()[2]->find_connection_neighbors(2),
+      tree.children()[1]->find_connection_neighbors(0),
+    }) {
+      REQUIRE_THAT(con.trees[0], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.children()[1], tree.children()[1]}));
+      REQUIRE_THAT(con.trees[1], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[0], graft0->children()[2]}));
+      REQUIRE(con.direction == hexed::Connection_direction{{0, 1}, {0, 0}});
+    }
   }
 }
