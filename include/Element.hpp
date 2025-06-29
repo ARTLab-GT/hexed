@@ -76,13 +76,14 @@ class Element : public Kernel_element, public Mortal {
    */
   Element(Storage_params, std::vector<Int> pos = {}, double mesh_size = 1., int ref_level = 0,
           Mat<> origin_arg = Mat<>::Zero(3), int aniso_ref_level = 0);
-  virtual inline bool get_is_deformed() {return is_deformed;} //!< for determining whether a pointer is deformed
   //! \details Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
   //! both of which seem error prone.
   Element(const Element&) = delete;
   Element& operator=(const Element&) = delete;
   ~Element() = default;
 
+  virtual inline bool get_is_deformed() {return is_deformed;} //!< for determining whether a pointer is deformed
+  bool is_extruded();
   Storage_params storage_params();
   Array<double> position(const Basis&) const;
   Array<double> face_position(const Basis&) const;

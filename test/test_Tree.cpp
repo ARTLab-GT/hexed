@@ -339,6 +339,9 @@ TEST_CASE("Tree") {
     REQUIRE(cn.direction == hexed::Connection_direction{{0, 1}, {1, 0}});
     REQUIRE(tree.find_neighbor(3) == nullptr);
     graft0->refine();
+    REQUIRE(graft0->children()[0]->root() == graft0);
+    REQUIRE(!graft0->children()[0]->is_root());
+    REQUIRE(graft0->children()[0]->is_graft());
     REQUIRE(graft0->children()[1]->find_neighbor(1) == graft0->children()[3]);
     REQUIRE_THAT(graft0->children()[1]->find_neighbors(1),
                  Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[3]}));

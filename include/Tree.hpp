@@ -101,10 +101,10 @@ class Tree : public Mortal {
   std::vector<Tree*> children();
   std::vector<Tree*> unique_children();
   Tree* root(); //!< \brief fetch the root element of this tree
-  bool is_root() const; //!< \brief gives the same result as `!parent()`
-  bool is_graft() const; //!< \brief `true` iff `this` was created by grafting.
-  bool is_leaf() const; //!< \brief gives the same result as `children().empty()`
-  bool is_refined(int i_dim) const;
+  bool is_root(); //!< \brief gives the same result as `!parent()`
+  bool is_graft(); //!< \brief `true` iff `this` was created by grafting.
+  bool is_leaf(); //!< \brief gives the same result as `children().empty()`
+  bool is_refined(int i_dim);
   //!\}
 
   //! \name modifiers

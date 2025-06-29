@@ -56,11 +56,11 @@ Tree* Tree::root() {
   return r;
 }
 
-bool Tree::is_root() const {return !_par;}
-bool Tree::is_graft() const {return _is_graft;}
-bool Tree::is_leaf() const {return _children_storage.empty();}
+bool Tree::is_root() {return !_par;}
+bool Tree::is_graft() {return root()->_is_graft;}
+bool Tree::is_leaf() {return _children_storage.empty();}
 
-bool Tree::is_refined(int i_dim) const {
+bool Tree::is_refined(int i_dim) {
   if (is_leaf()) return false;
   return _children_storage[0] != _children_storage[math::stride(n_dim, 2, i_dim)];
 }

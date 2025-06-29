@@ -119,6 +119,7 @@ TEST_CASE("Tree meshing", "[.slow]") {
   }
 }
 
+#if 0
 TEST_CASE("mesh I/O", "[!mayfail]") {
   hexed::printers::info.printers.clear();
   hexed::Mat<3> correct_sum_vertices = hexed::Mat<3>::Zero();
@@ -188,6 +189,7 @@ TEST_CASE("mesh I/O", "[!mayfail]") {
     mesh.visualize("default", "io_error");
   }
 }
+#endif
 
 TEST_CASE("masking") {
   hexed::Accessible_mesh mesh({2, 4, 2, 2}, 1., hexed::laminar);

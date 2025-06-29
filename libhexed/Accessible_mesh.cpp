@@ -298,7 +298,7 @@ void Accessible_mesh::_fit_surface() {
   auto& elems = def.elements();
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    elems[i_elem].active_shape().is_new = !elems[i_elem].tree;
+    elems[i_elem].active_shape().is_new = elems[i_elem].is_extruded();
   }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
@@ -503,7 +503,7 @@ void Accessible_mesh::_fit_surface() {
 
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    if (!elems[i_elem].tree) elems[i_elem].active_shape().is_new = true;
+    if (elems[i_elem].is_extruded()) elems[i_elem].active_shape().is_new = true;
   }
   #pragma omp parallel for
   for (auto& vert : all_verts) {
@@ -1354,10 +1354,22 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
   _stopwatch.work_units_completed = 1;
 }
 
-int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<Int> position, Mat<> origin, int aniso_ref_level, int surface_face) {
+int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<Int> position, Mat<> origin,
+                                 int aniso_ref_level, int surface_face, Tree* t) {
   int sn = container(is_deformed).emplace(ref_level, position, origin, aniso_ref_level);
   Element& elem = element(ref_level, is_deformed, sn);
   elem.create_shape(_blocks, surface_face);
+  HEXED_ASSERT(tree, "All meshes need a tree now.");
+  if (!t) {
+    Array<int> nom_pos({params.n_dim});
+    nom_pos = 0;
+    for (int i_dim = 0; i_dim < std::min<Int>(params.n_dim, position.size()); ++i_dim) {
+      nom_pos[i_dim] = position[i_dim];
+    }
+    t = tree->graft(Array<int>::make_uniform({params.n_dim}, ref_level), nom_pos.vector());
+  }
+  elem.tree.pair(t->elem);
+  if (is_deformed) t->def_elem = &def.elems.at(ref_level, sn);
   return sn;
 }
 
@@ -1612,7 +1624,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
   std::vector<Empty_face> empty_faces;
   auto& elems = def.elements();
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    if (elems[i_elem].tree || (!tree || force)) {
+    if (!elems[i_elem].is_extruded() || (!tree || force)) {
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         for (int face_sign = 0; face_sign < 2; ++face_sign) {
           const int i_face = 2*i_dim + face_sign;
@@ -1814,13 +1826,10 @@ std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles() {
 
 Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t) {
   auto np = t.coordinates();
-  int sn = add_element(t.refinement_level(), is_deformed, std::vector<Int>(np.begin(), np.end()), t.origin());
+  int sn = add_element(t.refinement_level(), is_deformed, std::vector<Int>(np.begin(), np.end()), t.origin(),
+                       0, next::Mesh_blocks::no_face, &t);
   auto& elem = element(t.refinement_level(), is_deformed, sn);
   elem.record = sn; // put the serial number in the record so it can be used for connections
-  elem.tree.pair(t.elem);
-  if (is_deformed) {
-    t.def_elem = &def.elems.at(t.refinement_level(), sn);
-  }
   return elem;
 }
 
@@ -2004,7 +2013,7 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end) {
 }
 
 bool exists(Tree* tree) {
-  if (tree) if (tree->elem) {
+  if (tree) if (tree->elem && !tree->is_graft()) {
     int record;
     #pragma omp atomic read
     record = tree->elem->record;
@@ -2068,7 +2077,7 @@ void Accessible_mesh::delete_bad_extrusions() {
       int record;
       #pragma omp atomic read
       record = elem.record;
-      if (elem.tree && record != 2) {
+      if (!elem.is_extruded() && record != 2) {
         bool exposed [6];
         for (int i_face = 0; i_face < 2*nd; ++i_face) {
           // if any hanging-node face is partially covered by fine elements, delete the fine elements
@@ -2177,7 +2186,7 @@ void Accessible_mesh::delete_bad_extrusions() {
     for (auto& vert : verts) vert.record.clear();
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
-      if (!elem.tree || !elem.has_shape() || elem.record == 2) continue;
+      if (elem.is_extruded() || !elem.has_shape() || elem.record == 2) continue;
       for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
         for (bool sign : {0, 1}) {
           if (!exists(elem.tree->find_neighbor(math::sign(sign)*Eigen::VectorXi::Unit(params.n_dim, i_dim)))) {
@@ -2191,7 +2200,7 @@ void Accessible_mesh::delete_bad_extrusions() {
     }
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
-      if (!elem.tree || !elem.has_shape() || elem.record == 2) continue;
+      if (elem.is_extruded() || !elem.has_shape() || elem.record == 2) continue;
       for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
         auto& vert = elem.active_shape().vertex(i_vert);
         for (Int i = 0; i < Int(vert.record.size()); ++i) {
@@ -2223,13 +2232,13 @@ void Accessible_mesh::deform() {
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    if (elem.record != 2 && elem.get_is_deformed() && elem.tree) elem.record = 3;
+    if (elem.record != 2 && elem.get_is_deformed() && !elem.is_extruded()) elem.record = 3;
   }
   // deform all elements that have a vertex on the boundary
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    if (elem.record != 2 && elem.tree) {
+    if (elem.record != 2 && !elem.is_extruded()) {
       bool def = false;
       for (int i_direction = 1; i_direction < math::pow(3, params.n_dim); ++i_direction) {
         Eigen::VectorXi direction(params.n_dim);
@@ -2252,7 +2261,7 @@ void Accessible_mesh::deform() {
     #pragma omp parallel for reduction(||:changed)
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
-      if (elem.tree && is_def(elem)) {
+      if (!elem.is_extruded() && is_def(elem)) {
         auto check_direction = [&](Eigen::VectorXi dir) {
           auto neighbors = elem.tree->find_neighbors(dir);
           bool any_deformed = false;
@@ -2422,7 +2431,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
         auto& cont_elems = container(is_deformed).element_view();
         for (int i_elem = 0; i_elem < n_orig[is_deformed]; ++i_elem) {
           auto& elem = cont_elems[i_elem];
-          if (elem.record == -1 && elem.tree) {
+          if (elem.record == -1 && !elem.is_extruded()) {
             bool unref = false;
             bool is_def = false; // whether the putative unrefined element will be deformed
             Tree* parent;
@@ -2466,7 +2475,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       #pragma omp parallel for
       for (int i_elem = n_orig[is_deformed]; i_elem < cont_elems.size(); ++i_elem) {
         auto& elem = cont_elems[i_elem];
-        if (elem.tree && elem.record != 2) if (is_surface(elem.tree.get())) elem.record = 2;
+        if (!elem.is_extruded() && elem.record != 2) if (is_surface(elem.tree.get())) elem.record = 2;
       }
     }
     // incremental flood fill
@@ -2551,8 +2560,9 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
     // set extruded elements to be deleted
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      if (!elems[i_elem].tree) elems[i_elem].record = 2;
+      if (elems[i_elem].is_extruded()) elems[i_elem].record = 2;
     }
+    tree->delete_grafts();
     purge();
     // connect new elements
     connect_new<         Element>(0);

@@ -1,6 +1,7 @@
 #include <hexed/Element.hpp>
 #include <hexed/math.hpp>
 #include <hexed/Face.hpp>
+#include <hexed/Tree.hpp>
 
 namespace hexed {
 
@@ -44,9 +45,8 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
 : Element(params_arg, pos, mesh_size, ref_level, origin_arg, false, aniso_r_level, false)
 {}
 
-Storage_params Element::storage_params() {
-  return params;
-}
+bool Element::is_extruded() {return tree.value().is_graft();}
+Storage_params Element::storage_params() {return params;}
 
 Array<double> Element::position(const Basis& basis) const {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
