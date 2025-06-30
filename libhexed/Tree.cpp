@@ -119,8 +119,10 @@ void Tree::force_unrefine() {_children_storage.clear();}
 Tree* Tree::graft(Array<int> ref_level, Eigen::VectorXi coords) {
   HEXED_ASSERT(is_root(), "Can only graft to the root.")
   HEXED_ASSERT(coords.size() == n_dim, "`coords` has wrong number of entries.")
+  HEXED_ASSERT(ref_level.size() == n_dim, "`ref_level` has wrong number of entries.")
   _grafts.emplace_back(std::make_unique<Tree>(n_dim, _root_sz, _orig));
   Tree* g = _grafts.back().get();
+  g->_ref_level = ref_level;
   g->_coords = coords;
   g->_is_graft = true;
   return g;
@@ -482,7 +484,6 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
     coords(i_dim) = _coords[i_dim] + (direction(i_dim) > 0);
     bias(i_dim) = (direction(i_dim) < 0);
   }
-  // use `find_leaf` on the root element to find the neighbor
   Tree* r = root();
   Tree* n = nullptr;
   int i_face = -1;
@@ -550,6 +551,11 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
       }
     }
     if (search_root) {
+      if (!search_root->is_graft()) {
+        std::cout << "\n" << search_root->refinement_level() << " " << trans.this_root->refinement_level() << ";"
+                  << search_root->_coords.transpose() << " " << trans.this_root->_coords.transpose()
+                  << std::endl;
+      }
       n = search_root->find_leaf(ref_level, search_coords, search_bias);
       if (n) {
         direction = search_direction;

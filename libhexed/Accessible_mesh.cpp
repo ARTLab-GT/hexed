@@ -1415,7 +1415,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       faces.emplace_back(&elems[i_side][i_elem]->face(dir.i_face(i_side)));
       shapes[i_side].push_back(&elems[i_side][i_elem]->shape());
       active_shapes[i_side].push_back(&elems[i_side][i_elem]->active_shape());
-      if (i_side) if (active_shapes[i_side][i_elem] == active_shapes[0][i_elem]) same_active = true;
+      same_active = same_active || elems[i_side][i_elem]->shared_fake();
       auto search_dir = Tree::get_direction(dir.i_face(i_side), params.n_dim);
       Tree* neighbor = elems[i_side][i_elem]->tree.value().find_neighbor(search_dir);
       bool connected = exists(neighbor);
@@ -1427,6 +1427,11 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
   }
   printers::info("\n");
   HEXED_ASSERT(!null_elem, "an element is null" + context)
+  for (int i = 0; i < nv/2; ++i) {
+    HEXED_ASSERT((elems[0][i]->tree->center() - elems[1][i]->tree->center()).norm()
+                 < elems[0][i]->tree->nominal_size() + elems[1][i]->tree->nominal_size(),
+                 "Connecting trees that are far apart.")
+  }
   //HEXED_ASSERT(any_trees_connected == all_trees_connected, "Tree connecteness mismatch.")
   _face_refs.emplace_back();
   std::vector<int> fvi {face_vertex_inds(nd, dir)};
@@ -1948,6 +1953,7 @@ template<typename element_t>
 void Accessible_mesh::connect_new(int start_at) {
   auto& m = mbt<element_t>();
   auto elems = m.elems.elements();
+  bool foo = false;
   // helper function for connecting refined elements
   for (int i_elem = start_at; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
@@ -1957,6 +1963,14 @@ void Accessible_mesh::connect_new(int start_at) {
         Tree* n = elem.tree->find_neighbor(i_face);
         if (exists(n)) {
           auto neighbs = elem.tree->find_connection_neighbors(i_face);
+          bool any_grafted = false;
+          bool all_grafted = true;
+          for (int i_side = 0; i_side < 2; ++i_side) {
+            for (Tree* neighb : neighbs.trees[i_side]) {
+              any_grafted = any_grafted || neighb->is_graft();
+              all_grafted = all_grafted && neighb->is_graft();
+            }
+          }
           _connect(neighbs.elements(), neighbs.direction, "connect_new");
         } else if (!n && elem.active_shape().boundary_face() == next::Mesh_blocks::no_face) {
           auto& bound_face = elem.face(i_face);

@@ -124,6 +124,7 @@ class Element : public Kernel_element, public Mortal {
 
   void create_shape(next::Mesh_blocks&, int boundary_face = next::Mesh_blocks::no_face);
   void create_fake(next::Mesh_blocks&);
+  bool shared_fake() const;
   void split_shape(Element& split_from, double at, int from_face);
   void glue_shape(Element& glue_to, std::array<std::vector<double>, 2> corners);
   void destroy_shape();

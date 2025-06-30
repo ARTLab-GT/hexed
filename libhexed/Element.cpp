@@ -148,6 +148,10 @@ void Element::create_fake(next::Mesh_blocks& blocks) {
   _shape->deformed = deformed();
 }
 
+bool Element::shared_fake() const {
+  return _fake_shape.use_count() > 1;
+}
+
 void Element::split_shape(Element& split_from, double at, int from_face) {
   HEXED_ASSERT(split_from._fake_shape, "Can only create a split shape from an element that already has a fake shape.");
   HEXED_ASSERT(_shape, "Must `create_shape` before `split_shape`.");
