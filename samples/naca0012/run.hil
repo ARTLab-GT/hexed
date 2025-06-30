@@ -13,6 +13,7 @@ mesh_extreme01 =  10.
 mesh_extreme11 =  10.
 refine_if = {((center0^2 + center1^2 < 2*nom_sz^2) | ((center0 - 1.)^2 + center1^2 < 2*nom_sz^2)) & nom_sz > .1}
 unrefine_if = {false}
+max_refinement_iters = 1
 
 {generate geometry with external script}
 shell {python3 make_geom.py}

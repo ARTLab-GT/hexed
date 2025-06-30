@@ -124,11 +124,13 @@ class Element : public Kernel_element, public Mortal {
 
   void create_shape(next::Mesh_blocks&, int boundary_face = next::Mesh_blocks::no_face);
   void create_fake(next::Mesh_blocks&);
-  void split_shape(next::Mesh_blocks&, Element& split_from, double at, int from_face);
+  void split_shape(Element& split_from, double at, int from_face);
+  void glue_shape(Element& glue_to, std::array<std::vector<double>, 2> corners);
   void destroy_shape();
   void destroy_fake();
   next::Element_shape& shape();
   inline next::Element_shape* fake_shape() {return _fake_shape.get();}
+  std::shared_ptr<next::Element_shape> shared_fake_shape();
   inline bool has_shape() const {return bool(_shape);}
   next::Element_shape& active_shape();
 

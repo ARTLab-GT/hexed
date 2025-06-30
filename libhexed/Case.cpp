@@ -437,6 +437,12 @@ Case::Case(std::string input_script)
     return changed;
   }));
 
+  _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
+    _solver().mesh().adapt([](Element&){return true;}, [](Element&){return false;});
+    _solver().calc_jacobian();
+    return "";
+  }));
+
   _inter.variables->create("split_layers", new Namespace::Heisenberg<std::string>([this]() {
     _solver().mesh().disconnect_boundary(_solver().mesh().surface_bc_sn());
     auto sub = _inter.make_sub();

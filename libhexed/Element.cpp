@@ -148,7 +148,7 @@ void Element::create_fake(next::Mesh_blocks& blocks) {
   _shape->deformed = deformed();
 }
 
-void Element::split_shape(next::Mesh_blocks& blocks, Element& split_from, double at, int from_face) {
+void Element::split_shape(Element& split_from, double at, int from_face) {
   HEXED_ASSERT(split_from._fake_shape, "Can only create a split shape from an element that already has a fake shape.");
   HEXED_ASSERT(_shape, "Must `create_shape` before `split_shape`.");
   _fake_shape = split_from._fake_shape;
@@ -159,6 +159,28 @@ void Element::split_shape(next::Mesh_blocks& blocks, Element& split_from, double
   split_corners[1 - from_face%2][from_face/2] = corners[from_face%2][from_face/2];
   split_from.shape().set_glued_corners(corners);
   _shape->glue(*_fake_shape, split_corners);
+}
+
+void Element::glue_shape(Element& glue_to, std::array<std::vector<double>, 2> glue_corners) {
+  HEXED_ASSERT(_shape, "Must `create_shape` before `glue_shape`.")
+  if (glue_to.fake_shape()) {
+    _fake_shape = glue_to._fake_shape;
+    auto corners = glue_to.shape().glued_corners();
+    for (int i = 0; i < 2; ++i) {
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        double gc = glue_corners[i][i_dim];
+        glue_corners[i][i_dim] = (1. - gc)*corners[0][i_dim] + gc*corners[1][i_dim];
+      }
+    }
+  }
+  _shape->glue(glue_to.active_shape(), glue_corners);
+  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+    std::vector<double> coords(params.n_dim);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      coords[i_dim] = math::row_coordinate(params.n_dim, 2, i_dim, i_vert);
+    }
+    _shape->vertex(i_vert).set_pos(_shape->interpolate(coords));
+  }
 }
 
 void Element::destroy_shape() {

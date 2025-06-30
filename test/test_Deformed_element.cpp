@@ -65,7 +65,7 @@ TEST_CASE("Deformed_element") {
     elem0.create_shape(blocks2d, hexed::next::Mesh_blocks::no_face);
     elem1.create_shape(blocks2d, hexed::next::Mesh_blocks::no_face);
     elem0.create_fake(blocks2d);
-    elem1.split_shape(blocks2d, elem0, .1, 3);
+    elem1.split_shape(elem0, .1, 3);
     auto pos0 {elem0.position(basis)};
     auto pos1 {elem1.position(basis)};
     REQUIRE(pos0(0)[0] == Catch::Approx(0.01));

@@ -1344,6 +1344,7 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 , _turb{turb}
 , buffer_dist{std::sqrt(params.n_dim)/2} // if you're getting snapping problems, try multiplying this by 2
 {
+  _stopwatch.emplace("adapt", "adaptation");
   _stopwatch.emplace("update", "update");
   _stopwatch["update"].emplace("refinement", "refinement");
   _stopwatch["update"].emplace("extrusion", "extrusion");
@@ -1659,7 +1660,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     int sn = add_element(ref_level, true, nom_pos, face.elem.origin, face.elem.aniso_ref_level() + 1, 2*face.i_dim + face.face_sign);
     Connection_direction dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
-    if (face.elem.fake_shape()) elem.split_shape(_blocks, face.elem, offset, 2*face.i_dim + face.face_sign);
+    if (face.elem.fake_shape()) elem.split_shape(face.elem, offset, 2*face.i_dim + face.face_sign);
     else elem.create_fake(_blocks);
     elem.record = sn;
     elem.needs_snapping = !force;
@@ -2362,6 +2363,52 @@ void Accessible_mesh::purge() {
     _blocks.interior_verts();
     _blocks.boundary_sides();
   }
+}
+
+void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
+                            std::function<bool(Element&)> unrefine_criterion) {
+  Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
+  Task_message tm(printers::info, "Adapting mesh");
+  // decide which elements to (un)refine
+  #pragma omp parallel for // parallelize this part since `predicate` could be expensive
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    elem.record = 0;
+    bool ref = refine_criterion(elem);
+    bool unref = unrefine_criterion(elem);
+    if (ref && !unref) elem.record = 1;
+    else if (unref && !ref) elem.record = -1;
+  }
+  for (bool is_deformed : {0, 1}) {
+    auto& elems = container(is_deformed).element_view();
+    Int n_elem = elems.size();
+    for (Int i_elem = 0; i_elem < n_elem; ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (elem.tree) {
+        if (elem.record == 1) {
+          elem.record = 2;
+          elem.tree->refine();
+          for (Tree* child : elem.tree->unique_children()) {
+            Element& new_elem = add_elem(is_deformed, *child);
+            new_elem.record = 0;
+            if (is_deformed) {
+              std::array<std::vector<double>, 2> coords;
+              auto rl_diff = child->anisotropic_refinement_level() - elem.tree->anisotropic_refinement_level();
+              for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+                int sz_diff = math::pow(2, rl_diff[i_dim]);
+                coords[0].push_back(child->coordinates()(i_dim) - sz_diff*elem.tree->coordinates()(i_dim));
+                coords[1].push_back(coords[0][i_dim] + 1);
+                for (int i : {0, 1}) coords[i][i_dim] /= sz_diff;
+              }
+              new_elem.glue_shape(elem, coords);
+            }
+          }
+        }
+      }
+    }
+  }
+  purge();
+  connect_rest(surface_bc_sn());
 }
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,

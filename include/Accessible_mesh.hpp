@@ -153,6 +153,8 @@ class Accessible_mesh : public Mesh {
   void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always,
               std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
+  void adapt(std::function<bool(Element&)> refine_criterion = criteria::always,
+             std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
   inline int surface_bc_sn() override {return surf_bc_sn;}
   inline Surface_geom& surface_geometry() {return *surf_geom;}
 
