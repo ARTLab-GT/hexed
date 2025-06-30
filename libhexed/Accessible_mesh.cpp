@@ -1438,7 +1438,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
         }
         if (faces[nv/2* i_side + inds[ i_side][0][1]].get() == faces[nv/2* i_side + inds[ i_side][0][0]].get() &&
             faces[nv/2*!i_side + inds[!i_side][0][1]].get() != faces[nv/2*!i_side + inds[!i_side][0][0]].get()) {
-          _face_refs.back().emplace_back(faces[4*i_side + inds[i_side][0][0]].value(), i_dim);
+          _face_refs.back().emplace_back(faces[nv/2*i_side + inds[i_side][0][0]].value(), i_dim);
           for (int i_face = 0; i_face < 2; ++i_face) {
             auto& f0 = faces[nv/2*i_side + inds[i_side][0][i_face]];
             auto& f1 = faces[nv/2*i_side + inds[i_side][1][i_face]];
@@ -1931,74 +1931,35 @@ void Accessible_mesh::set_unref_locks(std::function<bool(Element&)> lock_if) {
   }
 }
 
+bool exists(Tree* tree) {
+  if (tree) if (tree->elem && !tree->is_graft()) {
+    int record;
+    #pragma omp atomic read
+    record = tree->elem->record;
+    if (record != 2) return true;
+  }
+  return false;
+}
+
 // forms connections for new tree elements of type `element_t` starting with the `starting_at`th one
 template<typename element_t>
 void Accessible_mesh::connect_new(int start_at) {
   auto& m = mbt<element_t>();
   auto elems = m.elems.elements();
-  int nd = params.n_dim;
   // helper function for connecting refined elements
-  auto connect_refined = [&](Element& elem, int i_dim, int sign, std::vector<Tree*> neighbors) {
-    VIS_ASSERT(int(neighbors.size()) == math::pow(2, nd - 1),
-               format_str(100, "bad number of neighbors %lu (thanks for nothing, ref level smoother)",
-                          neighbors.size()))
-    bool is_def = elem.get_is_deformed();
-    for (Tree* neighbor : neighbors) {
-      if (!neighbor->elem) return;
-      is_def = is_def && neighbor->elem->get_is_deformed();
-    }
-    Connection_direction dir {{i_dim, i_dim}, {!sign, bool(sign)}};
-    std::vector<Element*> fine;
-    for (Tree* neighbor : neighbors) fine.push_back(neighbor->elem.get());
-    _connect(&elem, fine, dir);
-  };
   for (int i_elem = start_at; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     if (elem.tree) {
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        for (int sign = 0; sign < 2; ++sign) {
-          if (!elem.is_connected(2*i_dim + sign)) { // if this face hasn't been connected already
-            Eigen::VectorXi direction = Eigen::VectorXi::Zero(nd);
-            direction(i_dim) = math::sign(sign);
-            auto neighbors = elem.tree->find_neighbors(direction);
-            // if this element is at the boundary of the tree (as opposed to a surface geometry boundary),
-            // set an extremal boundary condition
-            if (neighbors.empty()) {
-              int bc_sn = tree_bcs[2*i_dim + sign];
-              auto& bound_face = elem.face(2*i_dim + sign);
-              _bound_cons.emplace_back(bound_face, bc_sn, bound_conds[bc_sn]->n_prescribed(nd));
-            }
-            // otherwise, if the element has not only a tree neighbor but also an element neighbor...
-            else if (neighbors[0]->elem) {
-              if (neighbors.size() == 1) {
-                auto& other = *neighbors[0]->elem;
-                // if ref levels are the same, make a conformal connection
-                if (other.refinement_level() == elem.refinement_level()) {
-                  if (elem.deformed() && other.deformed()) {
-                    std::array<Element*, 2> el_ar {elem.tree->def_elem, neighbors[0]->def_elem};
-                    _connect(el_ar, Connection_direction{{i_dim, i_dim}, {bool(sign), !sign}});
-                  } else {
-                    std::array<Element*, 2> el_ar;
-                    el_ar[!sign] = &elem;
-                    el_ar[sign] = &other;
-                    _connect(el_ar, Connection_direction{{i_dim, i_dim}, {1, 0}});
-                  }
-                } else {
-                  // if neighbor is coarser, form a hanging node connection
-                  // but only if this is the fine element with the lowest coordinates,
-                  // to prevent redundant connections from all the fine elements
-                  bool is_min_corner = true;
-                  for (int j_dim = 0; j_dim < nd; ++j_dim) if (j_dim != i_dim) {
-                    is_min_corner = is_min_corner && elem.tree->coordinates()[j_dim]%2 == 0;
-                  }
-                  if (is_min_corner) connect_refined(other, i_dim, sign, other.tree->find_neighbors(-direction));
-                }
-              } else {
-                // if neighbors are finer, form a hanging node connection
-                connect_refined(elem, i_dim, !sign, neighbors);
-              }
-            }
-          }
+      for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+        if (elem.is_connected(i_face)) continue;
+        Tree* n = elem.tree->find_neighbor(i_face);
+        if (exists(n)) {
+          auto neighbs = elem.tree->find_connection_neighbors(i_face);
+          _connect(neighbs.elements(), neighbs.direction, "connect_new");
+        } else if (!n) {
+          int bc_sn = tree_bcs[i_face];
+          auto& bound_face = elem.face(i_face);
+          _bound_cons.emplace_back(bound_face, bc_sn, bound_conds[bc_sn]->n_prescribed(params.n_dim));
         }
       }
     }
@@ -2027,16 +1988,6 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end) {
       }
     }
   }
-}
-
-bool exists(Tree* tree) {
-  if (tree) if (tree->elem && !tree->is_graft()) {
-    int record;
-    #pragma omp atomic read
-    record = tree->elem->record;
-    if (record != 2) return true;
-  }
-  return false;
 }
 
 // does this tree element need to be refined to satisfy ref level smoothness

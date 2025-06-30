@@ -209,11 +209,11 @@ TEST_CASE("masking") {
     int n_masked = 0;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) n_masked += elems[i_elem].mask();
     REQUIRE(n_masked == 10);
-    REQUIRE(masked.kernel_mesh.elems.size() == 10);
-    REQUIRE(masked.kernel_mesh.car_connections.size() == 28);
-    REQUIRE(masked.kernel_mesh.def_connections.size() == 0);
-    REQUIRE(masked.kernel_mesh.face_refinements.size() == 4);
-    REQUIRE(masked.bound_cons.size()  == 12);
+    CHECK(masked.kernel_mesh.elems.size() == 10);
+    CHECK(masked.kernel_mesh.car_connections.size() == 28);
+    CHECK(masked.kernel_mesh.def_connections.size() == 0);
+    CHECK(masked.kernel_mesh.face_refinements.size() == 4);
+    CHECK(masked.bound_cons.size()  == 12);
   }
   SECTION("custom mask") {
     mesh.reset_masks();

@@ -4,6 +4,14 @@
 
 namespace hexed {
 
+std::array<std::vector<Element*>, 2> Tree::Connection_neighbors::elements() {
+  std::array<std::vector<Element*>, 2> elems;
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    for (Tree* t : trees[i_side]) elems[i_side].push_back(t->elem.get());
+  }
+  return elems;
+}
+
 Tree::Tree(int nd, double root_size, Mat<> origin)
 : n_dim{nd}
 , elem(this)
