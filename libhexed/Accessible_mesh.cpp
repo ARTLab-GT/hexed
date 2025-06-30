@@ -1932,7 +1932,7 @@ void Accessible_mesh::set_unref_locks(std::function<bool(Element&)> lock_if) {
 }
 
 bool exists(Tree* tree) {
-  if (tree) if (tree->elem && !tree->is_graft()) {
+  if (tree) if (tree->elem) {
     int record;
     #pragma omp atomic read
     record = tree->elem->record;
@@ -2359,6 +2359,9 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
     }
   }
   purge();
+  for (int i = 0; i < 3; ++i) _extrude_cons[i].clear();
+  connect_new<Element>(0);
+  connect_new<Deformed_element>(0);
   connect_rest(surface_bc_sn());
 }
 
