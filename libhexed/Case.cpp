@@ -438,7 +438,8 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
-    _solver().mesh().adapt([](Element&){return true;}, [](Element&){return false;});
+    srand(57);
+    _solver().mesh().adapt([](Element&){return rand()%2 == 0;}, [](Element&){return false;});
     _solver().calc_jacobian();
     return "";
   }));
