@@ -1391,6 +1391,8 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
   std::array<std::vector<next::Element_shape*>, 2> active_shapes;
   bool null_elem = false;
   bool same_active = false;
+  bool any_trees_connected = false;
+  bool all_trees_connected = true;
   for (int i_side = 0; i_side < 2; ++i_side) {
     HEXED_ASSERT(Int(elems[i_side].size()) == nv/2, "wrong number of element pointers" + context)
     for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
@@ -1403,9 +1405,16 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       shapes[i_side].push_back(&elems[i_side][i_elem]->shape());
       active_shapes[i_side].push_back(&elems[i_side][i_elem]->active_shape());
       if (i_side) if (active_shapes[i_side][i_elem] == active_shapes[0][i_elem]) same_active = true;
+      auto search_dir = Tree::get_direction(dir.i_face(i_side), params.n_dim);
+      Tree* neighbor = elems[i_side][i_elem]->tree.value().find_neighbor(search_dir);
+      bool connected = false;
+      if (neighbor) if (neighbor->elem) connected = true;
+      any_trees_connected = any_trees_connected || connected;
+      all_trees_connected = all_trees_connected && connected;
     }
   }
   HEXED_ASSERT(!null_elem, "an element is null" + context)
+  HEXED_ASSERT(any_trees_connected == all_trees_connected, "Tree connecteness mismatch.")
   _face_refs.emplace_back();
   std::vector<int> fvi {face_vertex_inds(nd, dir)};
   Array<int> permute_inds({2, nv/2});
@@ -1458,6 +1467,13 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
   }
   next::Element_shape::connect(shapes, dir);
   if (!same_active) next::Element_shape::connect(active_shapes, dir);
+  if (!all_trees_connected) {
+    std::array<std::vector<Tree*>, 2> trees;
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      for (Element* elem : elems[i_side]) trees[i_side].push_back(elem->tree.get());
+    }
+    tree->connect(trees, dir);
+  }
 }
 
 void Accessible_mesh::_connect(std::array<Element*, 2> el_ar, Connection_direction direction, std::string context) {

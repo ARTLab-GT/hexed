@@ -132,7 +132,6 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
     } else {
       HEXED_THROW("Trees must all be the same.")
     }
-    HEXED_ASSERT(!con->trees[i_side]->find_neighbor(con->direction.i_face(i_side)), "Face already has neighbor.")
     con->trees[i_side]->_face_connections[con->direction.i_face(i_side)] = con;
   }
 }
@@ -195,7 +194,7 @@ Tree* Tree::find_neighbor(Eigen::VectorXi direction) {
   return _neighbor(direction).neighbor;
 }
 
-Eigen::VectorXi get_direction(int i_face, int n_dim) {
+Eigen::VectorXi Tree::get_direction(int i_face, int n_dim) {
   Eigen::VectorXi dir = Eigen::VectorXi::Zero(n_dim);
   dir(i_face/2) = math::sign(i_face%2);
   return dir;

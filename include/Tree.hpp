@@ -229,6 +229,9 @@ class Tree : public Mortal {
   void clear_status(); //!< \brief sets the flood fill status of this and all child elements to `unprocessed`
   //!\}
 
+  //! \brief Converts between face indices and neighbor search directions.
+  static Eigen::VectorXi get_direction(int i_face, int n_dim);
+
   private:
   struct _Connection {
     std::array<Tree*, 2> trees;
