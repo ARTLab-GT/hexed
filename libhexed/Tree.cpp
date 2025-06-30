@@ -551,11 +551,6 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
       }
     }
     if (search_root) {
-      if (!search_root->is_graft()) {
-        std::cout << "\n" << search_root->refinement_level() << " " << trans.this_root->refinement_level() << ";"
-                  << search_root->_coords.transpose() << " " << trans.this_root->_coords.transpose()
-                  << std::endl;
-      }
       n = search_root->find_leaf(ref_level, search_coords, search_bias);
       if (n) {
         direction = search_direction;
