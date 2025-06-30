@@ -27,6 +27,11 @@ Tree::Tree(int nd, double root_size, Mat<> origin)
   _orig = origin(Eigen::seqN(0, n_dim));
 }
 
+Tree::~Tree() {
+  delete_grafts();
+  for (auto c : _face_connections) HEXED_ASSERT(!c, "Attempting to destroy a tree that is still connected.")
+}
+
 Mat<> Tree::origin() const {return _orig;}
 int Tree::refinement_level() const {return _ref_level.extreme(0);}
 Array<int> Tree::anisotropic_refinement_level() const {return _ref_level.copy();}
@@ -122,6 +127,7 @@ Tree* Tree::graft(Array<int> ref_level, Eigen::VectorXi coords) {
 }
 
 void Tree::delete_grafts() {
+  for (auto& ptr : _grafts) ptr->_clear_connections();
   _grafts.clear();
   _connections.clear();
   _clear_connections();
@@ -222,9 +228,9 @@ int Tree::_compare_ref_level(Tree* tree0, Tree* tree1, Tree::_Transformation tra
   Array<int> rl({2, tree0->n_dim});
   rl(0) = tree0->anisotropic_refinement_level();
   rl(1) = tree1->anisotropic_refinement_level();
-  rl(0) = trans.transform(rl(0));
+  if (trans.used) rl(0) = trans.transform(rl(0));
   Array<int> diff = rl(0) - rl(1);
-  diff[trans.dir.i_dim[!trans.i_side]] = 0;
+  if (trans.used) diff[trans.dir.i_dim[!trans.i_side]] = 0; //! \todo make this work for diagonal anisotropic
   if (diff.extreme(0) < 0) return 0;
   if (diff.extreme(1) > 0) return 1;
   return 2;
@@ -477,9 +483,8 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
     bias(i_dim) = (direction(i_dim) < 0);
   }
   // use `find_leaf` on the root element to find the neighbor
-  Tree* n = root()->find_leaf(_ref_level, coords, bias);
-  _Transformation trans;
-  trans.this_root = trans.that_root = root();
+  Tree* r = root();
+  Tree* n = nullptr;
   int i_face = -1;
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     if (direction(i_dim)) {
@@ -487,57 +492,72 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
       else i_face = -2;
     }
   }
-  if (i_face >= 0) {
-    if (n) {
-      trans.dir.i_dim = {i_face/2, i_face/2};
-      trans.dir.face_sign = {1, 0};
-      trans.i_side = !(i_face%2);
-    } else {
-      Tree* search_root = this;
-      Array<int> ref_level({n_dim});
-      while (search_root) {
-        if (search_root->_face_connections[i_face]) {
-          Tree* this_root = search_root;
-          auto trees = this_root->_face_connections[i_face]->trees;
-          trans.i_side = trees[1] == this_root;
-          search_root = trees[!trans.i_side];
-          trans.this_root = this_root;
-          trans.that_root = search_root;
-          Eigen::VectorXi old_coords = coords;
-          for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
-            int rl_diff = _ref_level[k_dim] - this_root->_ref_level[k_dim];
-            old_coords(k_dim) -= this_root->_coords(k_dim)*math::pow(2, rl_diff);
-          }
-          trans.dir = this_root->_face_connections[i_face]->direction;
-          int i_dim = trans.dir.i_dim[!trans.i_side];
-          int j_dim = trans.dir.i_dim[trans.i_side];
-          coords(j_dim) = old_coords(i_dim);
-          coords(i_dim) = trans.dir.face_sign[!trans.i_side];
-          ref_level = trans.transform(_ref_level);
-          ref_level[i_dim] = search_root->_ref_level[i_dim];
-          bias.setZero();
-          bias(i_dim) = trans.dir.face_sign[!trans.i_side];
-          direction(j_dim) = 0;
-          direction(i_dim) = math::sign(!trans.dir.face_sign[!trans.i_side]);
-          if (trans.dir.flip_tangential()) { // implies different dims
-            int rl_diff = ref_level[j_dim] - search_root->_ref_level[j_dim];
-            coords(j_dim) = math::pow(2, rl_diff) - coords(j_dim);
-            bias(j_dim) = !bias(j_dim);
-          }
-          for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
-            int rl_diff = ref_level[k_dim] - search_root->_ref_level[k_dim];
-            coords(k_dim) += search_root->_coords(k_dim)*math::pow(2, rl_diff);
-          }
+  _Transformation trans {
+    .used = false,
+    .this_root = r,
+    .that_root = r,
+    .dir{{i_face/2, i_face/2}, {1, 0}},
+    .i_side = !(i_face%2),
+  };
+  if (i_face >= 0) if (!n) {
+    Tree* search_root = this;
+    Array<int> ref_level({n_dim});
+    Eigen::VectorXi search_coords(n_dim);
+    Eigen::VectorXi search_bias(n_dim);
+    Eigen::VectorXi search_direction(n_dim);
+    while (search_root) {
+      if (search_root->_face_connections[i_face]) {
+        int scale = math::pow(2, _ref_level[i_face/2] - search_root->_ref_level[i_face/2]);
+        if (_coords(i_face/2) + i_face%2 != (search_root->_coords(i_face/2) + i_face%2)*scale) {
+          search_root = nullptr;
           break;
-        } else {
-          search_root = search_root->_par;
         }
+        Tree* this_root = search_root;
+        auto trees = this_root->_face_connections[i_face]->trees;
+        trans.i_side = trees[1] == this_root;
+        search_root = trees[!trans.i_side];
+        trans.this_root = this_root;
+        trans.that_root = search_root;
+        search_coords = coords;
+        for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
+          int rl_diff = _ref_level[k_dim] - this_root->_ref_level[k_dim];
+          search_coords(k_dim) -= this_root->_coords(k_dim)*math::pow(2, rl_diff);
+        }
+        trans.dir = this_root->_face_connections[i_face]->direction;
+        int i_dim = trans.dir.i_dim[!trans.i_side];
+        int j_dim = trans.dir.i_dim[trans.i_side];
+        search_coords(j_dim) = search_coords(i_dim);
+        search_coords(i_dim) = trans.dir.face_sign[!trans.i_side];
+        ref_level = trans.transform(_ref_level);
+        ref_level[i_dim] = search_root->_ref_level[i_dim];
+        search_bias.setZero();
+        search_bias(i_dim) = trans.dir.face_sign[!trans.i_side];
+        search_direction = direction;
+        search_direction(j_dim) = 0;
+        search_direction(i_dim) = math::sign(!trans.dir.face_sign[!trans.i_side]);
+        if (trans.dir.flip_tangential()) { // implies different dims
+          int rl_diff = ref_level[j_dim] - search_root->_ref_level[j_dim];
+          search_coords(j_dim) = math::pow(2, rl_diff) - search_coords(j_dim);
+          search_bias(j_dim) = 1;
+        }
+        for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
+          int rl_diff = ref_level[k_dim] - search_root->_ref_level[k_dim];
+          search_coords(k_dim) += search_root->_coords(k_dim)*math::pow(2, rl_diff);
+        }
+        break;
+      } else {
+        search_root = search_root->_par;
       }
-      if (search_root) {
-        n = search_root->find_leaf(ref_level, coords, bias);
+    }
+    if (search_root) {
+      n = search_root->find_leaf(ref_level, search_coords, search_bias);
+      if (n) {
+        direction = search_direction;
+        trans.used = true;
       }
     }
   }
+  if (!n) n = r->find_leaf(_ref_level, coords, bias);
   return {n, direction, trans};
 }
 

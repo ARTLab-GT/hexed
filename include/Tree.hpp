@@ -51,6 +51,7 @@ class Tree : public Mortal {
    *   `origin` must have at least `n_dim` elements, and only the first `n_dim` will be read.
    */
   Tree(int n_dim, double root_size, Mat<> origin = Mat<>::Zero(3));
+  virtual ~Tree();
   const int n_dim;
   //! \brief `Element` generated from this tree (to be managed by the user of this class)
   Reciprocal_ptr<Tree, Element> elem;
@@ -238,6 +239,7 @@ class Tree : public Mortal {
     Connection_direction direction;
   };
   struct _Transformation {
+    bool used = false;
     Tree* this_root = nullptr;
     Tree* that_root = nullptr;
     Connection_direction dir {{0, 0}, {0, 0}};

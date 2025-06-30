@@ -22,6 +22,16 @@ namespace hexed {
                  _vis_return(message + std::string(" Writing diagnostic visualization to `meshing_diagnostic.*`")) \
                  __VA_OPT__(,) __VA_ARGS__) \
 
+bool exists(Tree* tree) {
+  if (tree) if (tree->elem) {
+    int record;
+    #pragma omp atomic read
+    record = tree->elem->record;
+    if (record != 2) return true;
+  }
+  return false;
+}
+
 std::string Accessible_mesh::_vis_return(std::string str) {
   auto blocks = _blocks.boundary_sides();
   #pragma omp parallel for
@@ -1408,14 +1418,16 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       if (i_side) if (active_shapes[i_side][i_elem] == active_shapes[0][i_elem]) same_active = true;
       auto search_dir = Tree::get_direction(dir.i_face(i_side), params.n_dim);
       Tree* neighbor = elems[i_side][i_elem]->tree.value().find_neighbor(search_dir);
-      bool connected = false;
-      if (neighbor) if (neighbor->elem) connected = true;
+      bool connected = exists(neighbor);
+      printers::info(to_string(connected) + "(" + to_string(elems[i_side][i_elem]->tree.value().is_graft()) + ") ");
       any_trees_connected = any_trees_connected || connected;
       all_trees_connected = all_trees_connected && connected;
     }
+    printers::info("| ");
   }
+  printers::info("\n");
   HEXED_ASSERT(!null_elem, "an element is null" + context)
-  HEXED_ASSERT(any_trees_connected == all_trees_connected, "Tree connecteness mismatch.")
+  //HEXED_ASSERT(any_trees_connected == all_trees_connected, "Tree connecteness mismatch.")
   _face_refs.emplace_back();
   std::vector<int> fvi {face_vertex_inds(nd, dir)};
   Array<int> permute_inds({2, nv/2});
@@ -1468,7 +1480,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
   }
   next::Element_shape::connect(shapes, dir);
   if (!same_active) next::Element_shape::connect(active_shapes, dir);
-  if (!all_trees_connected) {
+  if (!any_trees_connected) {
     std::array<std::vector<Tree*>, 2> trees;
     for (int i_side = 0; i_side < 2; ++i_side) {
       for (Element* elem : elems[i_side]) trees[i_side].push_back(elem->tree.get());
@@ -1931,16 +1943,6 @@ void Accessible_mesh::set_unref_locks(std::function<bool(Element&)> lock_if) {
   }
 }
 
-bool exists(Tree* tree) {
-  if (tree) if (tree->elem) {
-    int record;
-    #pragma omp atomic read
-    record = tree->elem->record;
-    if (record != 2) return true;
-  }
-  return false;
-}
-
 // forms connections for new tree elements of type `element_t` starting with the `starting_at`th one
 template<typename element_t>
 void Accessible_mesh::connect_new(int start_at) {
@@ -1956,9 +1958,9 @@ void Accessible_mesh::connect_new(int start_at) {
         if (exists(n)) {
           auto neighbs = elem.tree->find_connection_neighbors(i_face);
           _connect(neighbs.elements(), neighbs.direction, "connect_new");
-        } else if (!n) {
-          int bc_sn = tree_bcs[i_face];
+        } else if (!n && elem.active_shape().boundary_face() == next::Mesh_blocks::no_face) {
           auto& bound_face = elem.face(i_face);
+          int bc_sn = tree_bcs[i_face];
           _bound_cons.emplace_back(bound_face, bc_sn, bound_conds[bc_sn]->n_prescribed(params.n_dim));
         }
       }

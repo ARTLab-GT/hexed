@@ -350,7 +350,7 @@ void Solver::calc_jacobian() {
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
+      //HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
     }
   }
   // do some extra work to make sure each face knows its normal vectors

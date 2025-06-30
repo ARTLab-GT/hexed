@@ -457,5 +457,9 @@ TEST_CASE("Tree") {
       REQUIRE_THAT(con.trees[1], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[0], graft0->children()[2]}));
       REQUIRE(con.direction == hexed::Connection_direction{{0, 1}, {0, 0}});
     }
+    hexed::Tree* graft2 = tree.graft(hexed::Array<int>::make(1, 1), Eigen::Vector2i{1, 1});
+    tree.connect({graft2, tree.children()[1]}, {{0, 0}, {0, 1}});
+    REQUIRE(tree.children()[1]->find_neighbor(1) == graft2);
+    REQUIRE(graft2 == tree.children()[1]->find_neighbor(1));
   }
 }
