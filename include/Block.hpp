@@ -412,7 +412,7 @@ class Element_shape : public Block {
 
   public:
   //! \brief Obtains the edge length of this element before any vertex adjustment.
-  inline double nominal_size() const {return _nom_sz;}
+  inline double nominal_size() const {return _nom_shape.maxCoeff();}
   //! \brief What the position of vertex `i_vert` _would_ be supposed to be if this were a Cartesian element.
   Mat<3> nominal_position(int i_vert = 0) const;
   Mat<3> nominal_center() const;
@@ -465,7 +465,7 @@ class Element_shape : public Block {
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   void _glue_edges(std::vector<Element_shape*> those);
   const Basis* _basis;
-  double _nom_sz;
+  Mat<3> _nom_shape;
   Mat<3> _nom_pos;
   std::vector<Reciprocal_ptr<Element_shape, Vertex>> _verts;
   int _i_bf;
@@ -512,6 +512,7 @@ class Mesh_blocks {
    * in the lower-dimensional entity sequence access functions.
    */
   Element_shape create_element(Mat<3> pos, double size, int boundary_face = no_face);
+  Element_shape create_element(Mat<3> pos, Mat<3> shape, int boundary_face = no_face);
 
   //! \brief Passed to `create_element` to indicate that no faces are on the surface boundary.
   static const int no_face;

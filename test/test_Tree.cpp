@@ -115,11 +115,12 @@ TEST_CASE("Tree") {
     tree.refine();
     auto child = tree.children()[2];
     REQUIRE(child->unique_children().empty());
-    child->refine(1);
+    auto ref_children = child->refine(1);
     auto uc = child->unique_children();
     REQUIRE(uc.size() == 2);
     REQUIRE_THAT(child->children(),
                  Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{uc[0], uc[1], uc[0], uc[1]}));
+    REQUIRE_THAT(ref_children, Catch::Matchers::RangeEquals(uc));
     for (int i_child = 0; i_child < 2; ++i_child) {
       REQUIRE(uc[i_child]->parent() == child);
       REQUIRE(uc[i_child]->refinement_level() == 1);
@@ -182,12 +183,14 @@ TEST_CASE("Tree") {
       REQUIRE_THAT(child1->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{1, 2}));
       child1->refine(0);
       auto old_children = child1->unique_children();
-      uc[1]->unique_children()[1]->refine(0);
+      ref_children = uc[1]->unique_children()[1]->refine(0);
       // note: uc[1]->unique_children() no longer valid
       REQUIRE(uc[1]->unique_children().size() == 4);
       auto new_children = uc[1]->unique_children();
       REQUIRE(new_children[0] == old_children[0]);
       REQUIRE(new_children[2] == old_children[1]);
+      REQUIRE(new_children[1] == ref_children[0]);
+      REQUIRE(new_children[3] == ref_children[1]);
       REQUIRE_THAT(new_children[1]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{2, 3}));
       REQUIRE_THAT(new_children[3]->anisotropic_refinement_level(),
                    Catch::Matchers::RangeEquals(std::vector<int>{2, 3}));

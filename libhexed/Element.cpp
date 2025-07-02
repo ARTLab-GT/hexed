@@ -128,22 +128,19 @@ void Element::set_face(int i_face, double* data) {
 }
 bool Element::is_connected(int i_face) {return faces[i_face] || _faces[i_face].connected();}
 
-Mat<3> Element::_compute_pos() const {
-  Mat<3> pos = Mat<3>::Zero();
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) pos(i_dim) = _origin(i_dim) + _nom_sz*_nom_pos[i_dim];
-  return pos;
-}
-
 void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
   HEXED_ASSERT(blocks.n_dim == params.n_dim, "Dimensionality of `this` and `blocks` does not match.");
   _fake_shape.reset();
-  _shape = std::make_unique<next::Element_shape>(blocks.create_element(_compute_pos(), nominal_size(), boundary_face));
+  _shape = std::make_unique<next::Element_shape>(blocks.create_element(resize(tree.value().nominal_position(), 3),
+                                                                       resize(tree.value().nominal_shape(), 3),
+                                                                       boundary_face));
   _shape->deformed = deformed();
 }
 
 void Element::create_fake(next::Mesh_blocks& blocks) {
   _fake_shape.reset(_shape.release());
-  _shape = std::make_unique<next::Element_shape>(blocks.create_element(_compute_pos(), nominal_size()));
+  _shape = std::make_unique<next::Element_shape>(blocks.create_element(resize(tree.value().nominal_position(), 3),
+                                                                       resize(tree.value().nominal_shape(), 3)));
   _shape->glue(*_fake_shape, {std::vector<double>(params.n_dim, 0.), std::vector<double>(params.n_dim, 1.)});
   _shape->deformed = deformed();
 }

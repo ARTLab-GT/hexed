@@ -1369,7 +1369,6 @@ int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<In
                                  int aniso_ref_level, int surface_face, Tree* t) {
   int sn = container(is_deformed).emplace(ref_level, position, origin, aniso_ref_level);
   Element& elem = element(ref_level, is_deformed, sn);
-  elem.create_shape(_blocks, surface_face);
   HEXED_ASSERT(tree, "All meshes need a tree now.");
   if (!t) {
     Array<int> nom_pos({params.n_dim});
@@ -1380,6 +1379,7 @@ int Accessible_mesh::add_element(int ref_level, bool is_deformed, std::vector<In
     t = tree->graft(Array<int>::make_uniform({params.n_dim}, ref_level), nom_pos.vector());
   }
   elem.tree.pair(t->elem);
+  elem.create_shape(_blocks, surface_face);
   if (is_deformed) t->def_elem = &def.elems.at(ref_level, sn);
   return sn;
 }
@@ -2338,23 +2338,31 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
       for (Int i_elem = 0; i_elem < n_elem; ++i_elem) {
         auto& elem = elems[i_elem];
         if (elem.tree && elem.record != 2) {
-          if (elem.record == 1 || needs_refine(elem.tree.get())) {
+          Array<int> need_ref = elem.tree->needs_refine([](Tree* t){return t->elem.get();});
+          //if (elem.record == 1 || need_ref.extreme(1)) {
+          if (true) {
             elem.record = 2;
-            elem.tree->refine();
-            for (Tree* child : elem.tree->unique_children()) {
+            std::vector<bool> ref_dims(params.n_dim);
+            //for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = elem.record == 1 || need_ref[i_dim];
+            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = (i_dim == 1);
+            // have to pre-fetch some data because `*elem.tree` could be destroyed by refinement simplification
+            Array<int> orig_ref_level = elem.tree->anisotropic_refinement_level();
+            Eigen::VectorXi orig_coords = elem.tree->coordinates();
+            auto new_leaves = elem.tree->refine(ref_dims);
+            for (Tree* child : new_leaves) {
               Element& new_elem = add_elem(is_deformed, *child);
               new_elem.record = 0;
               if (is_deformed) {
                 std::array<std::vector<double>, 2> coords;
-                auto rl_diff = child->anisotropic_refinement_level() - elem.tree->anisotropic_refinement_level();
+                auto rl_diff = child->anisotropic_refinement_level() - orig_ref_level;
                 for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
                   int sz_diff = math::pow(2, rl_diff[i_dim]);
-                  coords[0].push_back(child->coordinates()(i_dim) - sz_diff*elem.tree->coordinates()(i_dim));
+                  coords[0].push_back(child->coordinates()(i_dim) - sz_diff*orig_coords(i_dim));
                   coords[1].push_back(coords[0][i_dim] + 1);
                   for (int i : {0, 1}) coords[i][i_dim] /= sz_diff;
                 }
                 new_elem.glue_shape(elem, coords);
-                changed = true;
+                //changed = true;
               }
             }
           }
@@ -2364,8 +2372,8 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
   } while (changed);
   purge();
   for (int i = 0; i < 3; ++i) _extrude_cons[i].clear();
-  connect_new<Element>(0);
-  connect_new<Deformed_element>(0);
+  //connect_new<Element>(0);
+  //connect_new<Deformed_element>(0);
   connect_rest(surface_bc_sn());
 }
 
@@ -2467,7 +2475,8 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
                   is_def = is_def || child->elem->get_is_deformed();
                 }
               }
-              if (unref) unref = unref && !needs_refine(parent); // don't unrefine if it would violate ref level smoothness
+              // don't unrefine if it would violate ref level smoothness
+              if (unref) unref = unref && !needs_refine(parent);
               else elem.record = 0; // if we didn't unrefine because of one of the siblings, set the record to 0 to avoid redundant checks in future sweeps
             }
             // perform unrefinement

@@ -855,18 +855,18 @@ Mat<3> Element_shape::nominal_position(int i_vert) const {
   Mat<3> pos = _nom_pos;
   for (int i_dim = 0; i_dim < n_dim(); ++i_dim) {
     int sign = i_vert/vstride(n_dim(), i_dim)%2;
-    pos(i_dim) += sign*_nom_sz;
+    pos(i_dim) += sign*_nom_shape(i_dim);
     if (extruded_direction != Mesh_blocks::no_face && extruded_direction/2 == i_dim && extruded_direction%2 == sign) {
-      pos(i_dim) -= math::sign(sign)*_nom_sz;
+      pos(i_dim) -= math::sign(sign)*_nom_shape(i_dim);
     }
   }
   return pos;
 }
 
 Mat<3> Element_shape::nominal_center() const {
-  Mat<3> c = _nom_pos + Mat<3>::Constant(.5*_nom_sz);
+  Mat<3> c = _nom_pos + .5*_nom_shape;
   if (extruded_direction != Mesh_blocks::no_face) {
-    c(extruded_direction/2) -= math::sign(extruded_direction%2)*.5*_nom_sz;
+    c(extruded_direction/2) -= math::sign(extruded_direction%2)*.5*_nom_shape(extruded_direction);
   }
   return c;
 };
@@ -1030,9 +1030,13 @@ Sequence<Boundary_block&> Mesh_blocks::boundary_sides() {
 }
 
 Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face) {
+  return create_element(pos, Mat<3>::Constant(size), boundary_face);
+}
+
+Element_shape Mesh_blocks::create_element(Mat<3> pos, Mat<3> shape, int boundary_face) {
   // create the element
   Element_shape elem(n_dim, basis);
-  elem._nom_sz = size;
+  elem._nom_shape = shape;
   elem._nom_pos = pos;
   // create vertices for the element and connect the element's vertex pointers to it
   int nv = math::pow(2, n_dim);

@@ -117,12 +117,19 @@ class Tree : public Mortal {
   //! If all entries of `refine_dims` are `true`, the refenement is isotropic.
   //! If none are `true`, no refinement is performed.
   //! Must be leaf in order to refine.
-  void refine(std::vector<bool> refine_dims);
+  //! Will also attempt to simplify the structure of the tree to reduce the number of branches
+  //! and make the refinement level just before the leaves as isotropic as possible
+  //! (to allow the leaves maximal freedom to unrefine along any dimension).
+  //! This will not change any of the leaves, but may invalidate pointers to branches that are neither roots or leaves,
+  //! _including `this`_.
+  //! \returns Pointers to the new leaves created by refining.
+  //! \warning If refinement simplification occurs, `this` may be destroyed!
+  std::vector<Tree*> refine(std::vector<bool> refine_dims);
   //! \brief Isotropic refinement.
   //! \details Equivalent to `refine(std::vector<bool>)` on a vector of all `true`.
-  void refine();
+  std::vector<Tree*> refine();
   //! \brief Equivalent to `refine(std::vector<bool>)` on a vector with exactly one `true` element.
-  void refine(int i_dim);
+  std::vector<Tree*> refine(int i_dim);
   //! \brief Unrefines anisotropically along an arbitrary number of dimensions.
   //! \details Will refine along dimension `i` iff `refine_dims[i]` is `true`.
   //! For each `i` where `unrefine_dims[i]` is `true`, `is_refined[i]` must also be true, or else it throws.
@@ -201,6 +208,7 @@ class Tree : public Mortal {
   Connection_neighbors find_connection_neighbors(int i_face);
   //! \brief total number of tree elements descended from this tree (including itself)
   int count();
+  Array<int> needs_refine(std::function<bool(Tree*)> include);
   //!\}
 
   /*! \name flood fill algorithm
@@ -258,7 +266,7 @@ class Tree : public Mortal {
   // if -1, adds all.
   void _add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
   void _assign_leaves(std::vector<Tree*>& assign_to, Tree* search_root, int i_dim, int sign);
-  void _refine(std::vector<bool>); // performs refinement but not collapsing/interchange
+  std::vector<Tree*> _refine(std::vector<bool>); // performs refinement but not collapsing/interchange
   void _collapse_aniso_ref();
   void _interchange_aniso_ref();
   void _simplify_aniso_ref();

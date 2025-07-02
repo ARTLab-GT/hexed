@@ -78,19 +78,20 @@ bool Tree::is_refined(int i_dim) {
   return _children_storage[0] != _children_storage[math::stride(n_dim, 2, i_dim)];
 }
 
-void Tree::refine(std::vector<bool> dims) {
-  _refine(dims);
+std::vector<Tree*> Tree::refine(std::vector<bool> dims) {
+  auto ptrs = _refine(dims);
   if (_par) _par->_simplify_aniso_ref();
+  return ptrs;
 }
 
-void Tree::refine() {
-  refine(std::vector<bool>(n_dim, true));
+std::vector<Tree*> Tree::refine() {
+  return refine(std::vector<bool>(n_dim, true));
 }
 
-void Tree::refine(int i_dim) {
+std::vector<Tree*> Tree::refine(int i_dim) {
   std::vector<bool> dims(n_dim, false);
   dims[i_dim] = true;
-  refine(dims);
+  return refine(dims);
 }
 
 void Tree::unrefine(std::vector<bool> dims) {
@@ -277,6 +278,7 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
     int j_side = i_side != result.trans.i_side;
     search_roots[j_side]->_assign_leaves(neighbors.trees[i_side], search_roots[j_side],
                                          result.trans.dir.i_dim[i_side], result.trans.dir.face_sign[i_side]);
+    for (Tree* n : neighbors.trees[i_side]) HEXED_ASSERT(n, "null element returned")
   }
   neighbors.direction = result.trans.dir;
   return neighbors;
@@ -284,8 +286,24 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
 
 int Tree::count() {
   int total = 1;
-  for (auto& child : _children_storage) total += child->count();
+  for (auto& child : _children_storage) total += child->count(); //! \todo make this work for aniso
   return total;
+}
+
+Array<int> Tree::needs_refine(std::function<bool(Tree*)> include) {
+  Array<int> needs({n_dim});
+  needs = 0;
+  for (int i_face = 0; i_face < 2*n_dim; ++i_face) {
+    auto result = _neighbor(get_direction(i_face, n_dim));
+    auto neighbors = find_neighbors(i_face);
+    for (Tree* n : neighbors) if (include(n)) {
+      Array<int> rl_diff = n->_ref_level - result.trans.transform(_ref_level);
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        needs[i_dim] = std::max<int>(needs[i_dim], rl_diff[i_dim] > 1);
+      }
+    }
+  }
+  return needs;
 }
 
 int Tree::get_status() {
@@ -365,10 +383,10 @@ void Tree::_assign_leaves(std::vector<Tree*>& assign_to, Tree* search_root, int 
   }
 }
 
-void Tree::_refine(std::vector<bool> dims) {
+std::vector<Tree*> Tree::_refine(std::vector<bool> dims) {
   HEXED_ASSERT(is_leaf(), "can only refine leaf")
   HEXED_ASSERT((int)dims.size() == n_dim, "`refine_dims` has wrong number of entries")
-  if (std::none_of(dims.begin(), dims.end(), [](bool b){return b;})) return;
+  if (std::none_of(dims.begin(), dims.end(), [](bool b){return b;})) return {};
   int n_child = math::pow(2, n_dim);
   _children_storage.resize(n_child);
   for (int i_child = 0; i_child < n_child; ++i_child) {
@@ -395,6 +413,7 @@ void Tree::_refine(std::vector<bool> dims) {
       if (assign) _children_storage[j_child] = child;
     }
   }
+  return unique_children();
 }
 
 void Tree::_interchange_aniso_ref() {
@@ -402,13 +421,16 @@ void Tree::_interchange_aniso_ref() {
   int n_child = math::pow(2, n_dim);
   std::vector<bool> any_refined(n_dim, false);
   std::vector<bool> all_refined(n_dim, true);
+  bool allowed = true;
   for (auto& child : _children_storage) {
+    for (_Connection* c : child->_face_connections) allowed = allowed && !c;
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       bool ref = child->is_refined(i_dim);
       any_refined[i_dim] = any_refined[i_dim] || ref;
       all_refined[i_dim] = all_refined[i_dim] && ref;
     }
   }
+  if (!allowed) return;
   std::vector<bool> pass_down(n_dim);
   std::vector<bool> retain(n_dim);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -447,6 +469,7 @@ void Tree::_collapse_aniso_ref() {
   while (collapse) {
     for (auto& child : _children_storage) {
       collapse = collapse && !child->is_leaf();
+      for (_Connection* c : child->_face_connections) collapse = collapse && !c;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         collapse = collapse && !(child->is_refined(i_dim) && is_refined(i_dim));
       }
