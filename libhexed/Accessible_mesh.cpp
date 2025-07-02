@@ -2339,17 +2339,18 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
         auto& elem = elems[i_elem];
         if (elem.tree && elem.record != 2) {
           Array<int> need_ref = elem.tree->needs_refine([](Tree* t){return t->elem.get();});
-          //if (elem.record == 1 || need_ref.extreme(1)) {
-          if (true) {
-            elem.record = 2;
+          if (elem.record == 1 || need_ref.extreme(1)) {
             std::vector<bool> ref_dims(params.n_dim);
-            //for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = elem.record == 1 || need_ref[i_dim];
-            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = (i_dim == 1);
+            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = elem.record == 1 || need_ref[i_dim];
+            //for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = true;
+            //for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = (i_dim == 1);
             // have to pre-fetch some data because `*elem.tree` could be destroyed by refinement simplification
             Array<int> orig_ref_level = elem.tree->anisotropic_refinement_level();
             Eigen::VectorXi orig_coords = elem.tree->coordinates();
             auto new_leaves = elem.tree->refine(ref_dims);
             for (Tree* child : new_leaves) {
+              changed = true;
+              elem.record = 2;
               Element& new_elem = add_elem(is_deformed, *child);
               new_elem.record = 0;
               if (is_deformed) {
@@ -2362,7 +2363,6 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
                   for (int i : {0, 1}) coords[i][i_dim] /= sz_diff;
                 }
                 new_elem.glue_shape(elem, coords);
-                //changed = true;
               }
             }
           }
@@ -2372,8 +2372,8 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
   } while (changed);
   purge();
   for (int i = 0; i < 3; ++i) _extrude_cons[i].clear();
-  //connect_new<Element>(0);
-  //connect_new<Deformed_element>(0);
+  connect_new<Element>(0);
+  connect_new<Deformed_element>(0);
   connect_rest(surface_bc_sn());
 }
 
@@ -2686,7 +2686,8 @@ std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::pret
   std::vector<std::unique_ptr<Masked_mesh>> masks;
   masks.emplace_back(new Masked_mesh(*this, basis));
   while (masks.back()->kernel_mesh.elems.size()) {
-    masks.emplace_back(new Masked_mesh(*this, basis, [this](Element& elem){return elem.aniso_ref_level() >= _mask_levels;}));
+    auto predicate = [this](Element& elem){return elem.aniso_ref_level() >= _mask_levels;};
+    masks.emplace_back(new Masked_mesh(*this, basis, predicate));
   }
   masks.pop_back();
   return masks;
