@@ -11,8 +11,7 @@ mesh_extreme00 = -10.
 mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
-refine_if = {((center0^2 + center1^2 < 2*nom_sz^2) | ((center0 - 1.)^2 + center1^2 < 2*nom_sz^2)) & nom_sz > .1}
-unrefine_if = {false}
+$set_geometry_refinement
 
 {generate geometry with external script}
 shell {python3 make_geom.py}
@@ -26,9 +25,6 @@ attack = 4*degree
 {iteration parameters}
 print_freq = 1000
 vis_freq = 20000
-print_freq = 1
-vis_freq = 1
-max_safety = 1e-12
 done = {iteration > 10000 & lift_coef_max - lift_coef_min < 1e-2*(lift_coef_min + lift_coef_max)/2}
 iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}

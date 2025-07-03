@@ -123,7 +123,7 @@ Tree* Tree::graft(Array<int> ref_level, Eigen::VectorXi coords) {
   HEXED_ASSERT(ref_level.size() == n_dim, "`ref_level` has wrong number of entries.")
   _grafts.emplace_back(std::make_unique<Tree>(n_dim, _root_sz, _orig));
   Tree* g = _grafts.back().get();
-  g->_ref_level = ref_level;
+  g->_ref_level = ref_level.copy();
   g->_coords = coords;
   g->_is_graft = true;
   return g;

@@ -2419,6 +2419,13 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   }
   {
     Stopwatch_tree::Starter sw_refine(_stopwatch["update"]["refinement"]);
+    // set extruded elements to be deleted
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      if (elems[i_elem].is_extruded()) elems[i_elem].record = 2;
+    }
+    purge();
+    tree->delete_grafts();
     // decide which elements to (un)refine
     #pragma omp parallel for // parallelize this part since `predicate` could be expensive
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -2582,12 +2589,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       }
       for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
     } while (changed);
-    // set extruded elements to be deleted
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      if (elems[i_elem].is_extruded()) elems[i_elem].record = 2;
-    }
-    tree->delete_grafts();
     purge();
     // connect new elements
     connect_new<         Element>(0);
