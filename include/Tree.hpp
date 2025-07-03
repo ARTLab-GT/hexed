@@ -41,6 +41,7 @@ class Tree : public Mortal {
     std::array<std::vector<Tree*>, 2> trees;
     Connection_direction direction;
     std::array<std::vector<Element*>, 2> elements();
+    bool valid();
   };
   /*! \brief Constructs the root element of a tree.
    * \details All other elements will be descendents of this one.

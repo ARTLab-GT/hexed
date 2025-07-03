@@ -12,6 +12,16 @@ std::array<std::vector<Element*>, 2> Tree::Connection_neighbors::elements() {
   return elems;
 }
 
+bool Tree::Connection_neighbors::valid() {
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    for (Tree* t : trees[i_side]) {
+      if (!t) return false;
+      if (!t->elem) return false;
+    }
+  }
+  return true;
+}
+
 Tree::Tree(int nd, double root_size, Mat<> origin)
 : n_dim{nd}
 , elem(this)

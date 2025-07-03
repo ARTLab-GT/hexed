@@ -1948,7 +1948,7 @@ void Accessible_mesh::connect_new(int start_at) {
         Tree* n = elem.tree->find_neighbor(i_face);
         if (exists(n)) {
           auto neighbs = elem.tree->find_connection_neighbors(i_face);
-          _connect(neighbs.elements(), neighbs.direction, "connect_new");
+          if (neighbs.valid()) _connect(neighbs.elements(), neighbs.direction, "connect_new");
         } else if (!n && elem.active_shape().boundary_face() == next::Mesh_blocks::no_face) {
           auto& bound_face = elem.face(i_face);
           int bc_sn = tree_bcs[i_face];
@@ -2419,13 +2419,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   }
   {
     Stopwatch_tree::Starter sw_refine(_stopwatch["update"]["refinement"]);
-    // set extruded elements to be deleted
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      if (elems[i_elem].is_extruded()) elems[i_elem].record = 2;
-    }
-    purge();
-    tree->delete_grafts();
     // decide which elements to (un)refine
     #pragma omp parallel for // parallelize this part since `predicate` could be expensive
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -2450,6 +2443,13 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
         inside.unrefinement_locked = inside.unrefinement_locked || extruded.unrefinement_locked;
       }
     }
+    // delete extruded elements
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      if (elems[i_elem].is_extruded()) elems[i_elem].record = 2;
+    }
+    purge();
+    tree->delete_grafts();
     int n_orig [2];
     // refine elements
     for (bool is_deformed : {0, 1}) n_orig[is_deformed] = container(is_deformed).element_view().size(); // count how many elements there are before adding, so we know where the new ones start
@@ -2590,7 +2590,6 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
       for (bool is_deformed : {0, 1}) refine_by_record(is_deformed, 0, container(is_deformed).element_view().size());
     } while (changed);
     purge();
-    // connect new elements
     connect_new<         Element>(0);
     connect_new<Deformed_element>(0);
     delete_bad_extrusions();

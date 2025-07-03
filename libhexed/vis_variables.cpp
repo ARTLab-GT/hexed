@@ -5,7 +5,7 @@ namespace hexed::vis_variables {
 std::string index(std::string name, int i) {return name + std::to_string(i);}
 
 void element(Namespace& space, Element& elem) {
-  space.assign("is_extruded", int(!elem.tree));
+  space.assign("is_extruded", int(elem.is_extruded()));
   space.assign("ref_level", elem.refinement_level());
   space.assign("aniso_ref_level", elem.aniso_ref_level());
   space.assign("mask", elem.mask());
