@@ -19,7 +19,7 @@ void Deformed_element::set_jacobian(const Basis& basis) {
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       auto jac_entry {jac.segment((i_dim*n_dim + j_dim)*n_qpoint, n_qpoint)};
-      jac_entry = math::dimension_matvec(diff_mat, shape_pos(i_dim).vector(), j_dim)/tree->nominal_shape().prod();
+      jac_entry = math::dimension_matvec(diff_mat, shape_pos(i_dim).vector(), j_dim)/tree->nominal_shape()(j_dim);
     }
   }
   // compute interior normals

@@ -1372,7 +1372,8 @@ int Accessible_mesh::_add_element(int ref_level, bool is_deformed, Eigen::Vector
   if (!t) {
     t = tree->graft(Array<int>::make_uniform({params.n_dim}, ref_level), position);
   }
-  int sn = container(is_deformed).emplace(ref_level, *t, aniso_ref_level);
+  HEXED_ASSERT(ref_level == t->refinement_level(), "Refinement levels do not match.")
+  int sn = container(is_deformed).emplace(*t, aniso_ref_level);
   Element& elem = element(ref_level, is_deformed, sn);
   elem.create_shape(_blocks, surface_face);
   if (is_deformed) t->def_elem = &def.elems.at(ref_level, sn);

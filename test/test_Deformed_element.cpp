@@ -65,8 +65,9 @@ TEST_CASE("Deformed_element") {
 
   SECTION("splitting") {
     hexed::Tree tree0(2, 1., hexed::Mat<2>{.01, .02});
+    hexed::Tree tree1(2, 1., hexed::Mat<2>{.01, .02});
     hexed::Deformed_element elem0(params2, tree0);
-    hexed::Deformed_element elem1(params2, tree0);
+    hexed::Deformed_element elem1(params2, tree1);
     elem0.create_shape(blocks2d, hexed::next::Mesh_blocks::no_face);
     elem1.create_shape(blocks2d, hexed::next::Mesh_blocks::no_face);
     elem0.create_fake(blocks2d);
