@@ -4,8 +4,7 @@
 #include "kernel_factory.hpp"
 #include "Kernel_mesh.hpp"
 
-namespace hexed
-{
+namespace hexed {
 
 //! \brief helper function for `Solver::set_art_visc_admis`
 //! \details Sets the `Element::uncertainty` in the elements based on the smoothness of specific volume

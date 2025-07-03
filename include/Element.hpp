@@ -75,7 +75,9 @@ class Element : public Kernel_element, public Mortal {
   Array<double> position(const Basis&) const;
   Array<double> face_position(const Basis&) const;
   virtual void set_jacobian(const Basis& basis);
-  double nominal_size() const override;
+  double nominal_size() const;
+  double nominal_shape(int i_dim) const override;
+  double nominal_volume() const;
   int refinement_level();
   int aniso_ref_level();
   Eigen::VectorXi nominal_position();

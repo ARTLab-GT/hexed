@@ -90,7 +90,11 @@ int Face::mask() const {
 
 double Face::nominal_area() const {
   if (_element) {
-    return math::pow(_element->nominal_size(), _params.n_dim - 1);
+    double area = 1;
+    for (int i_dim = 0; i_dim < _params.n_dim; ++i_dim) if (i_dim != _i_dim) {
+      area *= _element->nominal_shape(i_dim);
+    }
+    return area;
   } else if (_boundary_connection) {
     return _boundary_connection->inside().nominal_area();
   } else if (_face_ref_coarse) {

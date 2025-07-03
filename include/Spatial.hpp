@@ -346,9 +346,17 @@ class Spatial {
         std::array<double*, 6> visc_faces;
         for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face, true);
         double* tss = elem.time_step_scale();
-        double nominal_size = elem.nominal_size();
-        double nominal_area = math::pow(nominal_size, n_dim - 1);
-        double nominal_volume = math::pow(nominal_size, n_dim);
+        double nominal_shape [n_dim];
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) nominal_shape[i_dim] = elem.nominal_shape(i_dim);
+        double nominal_area [n_dim];
+        double nominal_volume = 1;
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          nominal_volume *= nominal_shape[i_dim];
+          nominal_area[i_dim] = 1;
+          for (int j_dim = (i_dim + 1)%n_dim; j_dim != i_dim; j_dim = (j_dim + 1)%n_dim) {
+            nominal_area[i_dim] *= nominal_shape[j_dim];
+          }
+        }
         double time_rate [2][std::max(Pde::n_update, Pde::n_extrap - Pde::n_extrap/2)][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
         // only need the next 2 for deformed elements
         double* nrml = nullptr; // reference level normals
@@ -390,13 +398,13 @@ class Spatial {
                   for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
                     Mat<row_size, 1> row = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
                     Mat<2, 1> bound = face_n(Eigen::all, j_dim).cwiseProduct(face_state(Eigen::all, i_var));
-                    Row_rw<1, row_size>::write_row(derivative(row, bound)/nominal_size,
+                    Row_rw<1, row_size>::write_row(derivative(row, bound)/nominal_shape[i_dim],
                                                    visc_storage[j_dim][i_var], ind, 1.);
                   }
                 }
               } else {
                 // differentiate and write to temporary storage
-                Row_rw<Pde::n_extrap, row_size>::write_row(derivative(row_r, face_state)/nominal_size,
+                Row_rw<Pde::n_extrap, row_size>::write_row(derivative(row_r, face_state)/nominal_shape[i_dim],
                                                            visc_storage[i_dim][0], ind, 0);
               }
             }
@@ -409,18 +417,23 @@ class Spatial {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           typename Pde::template Computation<n_dim> comp(_eq);
           comp.fetch_state(n_qpoint, state + i_qpoint);
+          HEXED_ASSERT(std::isfinite(comp.state.norm()), "state")
           if constexpr (is_deformed) {
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                comp.normal(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+                comp.normal(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint]*nominal_area[i_dim];
               }
             }
+          } else {
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) comp.normal(i_dim, i_dim) = nominal_area[i_dim];
           }
-          comp.normal *= nominal_area;
           if constexpr (Pde::has_convection) {
             comp.compute_flux_conv();
+            HEXED_ASSERT(std::isfinite(comp.flux_conv.norm()), "flux")
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_var, i_dim);
+              for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+                flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_var, i_dim);
+              }
             }
           }
           if constexpr (Pde::has_diffusion) {
@@ -523,6 +536,7 @@ class Spatial {
               }
             }
             u *= mult;
+            HEXED_ASSERT(std::isfinite(u), "update")
             if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
             else update(i_var) = u;
           }
@@ -582,7 +596,8 @@ class Spatial {
         std::array<double*, 6> visc_faces;
         for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face, true);
         double* tss = elem.time_step_scale();
-        double nominal_volume = math::pow(elem.nominal_size(), n_dim);
+        double nominal_volume = 1;
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) nominal_volume *= elem.nominal_shape(i_dim);
         double time_rate [Pde::n_update][n_qpoint] {};
         double* elem_det = nullptr;
         if constexpr (is_deformed) {

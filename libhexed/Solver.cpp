@@ -350,8 +350,12 @@ void Solver::calc_jacobian() {
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      //HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
+      HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
     }
+    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      printers::info(to_string(elements[i_elem].vertex_time_step_scale(i_vert)) + " ");
+    }
+    printers::info("\n");
   }
   // do some extra work to make sure each face knows its normal vectors
   auto face_refs = acc_mesh->face_refinements();
@@ -801,6 +805,7 @@ void Solver::update() {
           for (int i_sub = 0; i_sub < sub_iters; ++i_sub) {
             // compute inviscid update
             for (int i = 0; i < 2; ++i) {
+              printers::info("starting_update\n");
               Kernel_options opts {
                 .sw_car = stopwatch["cartesian"],
                 .sw_def = stopwatch["deformed"],
@@ -821,6 +826,14 @@ void Solver::update() {
               }
               // note that function call must come first to ensure it is evaluated despite short-circuiting
               fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
+              for (auto elems : {&km.car_elems, &km.def_elems}) {
+                for (int i_elem = 0; i_elem < elems->size(); ++i_elem) {
+                  for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) {
+                    HEXED_ASSERT(std::isfinite((*elems)[i_elem].state()[i_dof]), "post-update state")
+                  }
+                }
+              }
+              printers::info("finished update\n");
             }
             stopwatch.work_units_completed += km.elems.size();
             stopwatch["cartesian"].work_units_completed += km.car_elems.size();
@@ -1094,7 +1107,7 @@ std::vector<double> Solver::integral_field(const Qpoint_func& integrand) {
   #pragma omp parallel for reduction(+:integral)
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     Element& element {elements[i_elem]};
-    double volume = math::pow(element.nominal_size(), params.n_dim);
+    double volume = element.nominal_volume();
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
       auto qpoint_integrand {integrand(element, basis, i_qpoint, _namespace->get<double>("flow_time"))};
       for (unsigned i_var = 0; i_var < qpoint_integrand.size(); ++i_var) {

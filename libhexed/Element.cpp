@@ -29,8 +29,9 @@ Element::Element(Storage_params params_arg, Tree& t, bool mobile_vertices, int a
   faces.fill(nullptr);
   // initialize local time step scaling to 1.
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) time_step_scale()[i_qpoint] = 1.;
-  _vertex_data(0) = tree->nominal_shape().minCoeff()/n_dim;
-  _vertex_data(1, 3) = 0.;
+  _vertex_data(0) = 0;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) _vertex_data(0) += 1./nominal_shape(i_dim);
+  _vertex_data(0) = 1./_vertex_data(0);
 }
 
 Element::Element(Storage_params params_arg, Tree& t, int aniso_r_level)
@@ -75,6 +76,8 @@ Array<double> Element::face_position(const Basis& basis) const {
 void Element::set_jacobian(const Basis& basis) {}
 
 double Element::nominal_size() const {return tree.value().nominal_size();}
+double Element::nominal_shape(int i_dim) const {return tree.value().nominal_shape()[i_dim];}
+double Element::nominal_volume() const {return tree.value().nominal_shape().prod();}
 int Element::refinement_level() {return tree.value().refinement_level();}
 int Element::aniso_ref_level() {return _aniso_r_level;}
 Eigen::VectorXi Element::nominal_position() {return tree.value().coordinates();}
