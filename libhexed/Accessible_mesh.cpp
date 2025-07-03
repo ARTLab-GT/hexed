@@ -2341,7 +2341,7 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
           Array<int> need_ref = elem.tree->needs_refine([](Tree* t){return t->elem.get();});
           if (elem.record == 1 || need_ref.extreme(1)) {
             std::vector<bool> ref_dims(params.n_dim);
-            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = elem.record == 1 || need_ref[i_dim];
+            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = rand()%2 || need_ref[i_dim];
             //for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = true;
             //for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = (i_dim == 1);
             // have to pre-fetch some data because `*elem.tree` could be destroyed by refinement simplification
@@ -2352,7 +2352,7 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
               changed = true;
               elem.record = 2;
               Element& new_elem = add_elem(is_deformed, *child);
-              new_elem.record = 0;
+              new_elem.record = 3;
               if (is_deformed) {
                 std::array<std::vector<double>, 2> coords;
                 auto rl_diff = child->anisotropic_refinement_level() - orig_ref_level;

@@ -517,7 +517,7 @@ Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {
     }
   }
   _Transformation trans {
-    .used = false,
+    .used = i_face >= 0,
     .this_root = r,
     .that_root = r,
     .dir{{i_face/2, i_face/2}, {1, 0}},
