@@ -27,15 +27,10 @@ class Accessible_mesh;
 class Element : public Kernel_element, public Mortal {
   protected:
   // constructor that allows the vertices to be created as mobile, for the  benefit of `Deformed_element`
-  Element(Storage_params, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
-          bool mobile_vertices, int aniso_r_level, bool is_def);
+  Element(Storage_params, Tree&, bool mobile_vertices, int aniso_r_level, bool is_def);
   Mat<3> _compute_pos() const;
   Storage_params params;
   int n_dim;
-  std::vector<Int> _nom_pos;
-  Mat<> _origin;
-  double _nom_sz;
-  int _r_level;
   int _aniso_r_level;
   std::unique_ptr<next::Element_shape> _shape;
 
@@ -67,15 +62,7 @@ class Element : public Kernel_element, public Mortal {
   const Mat<> origin; //!< \brief origin which integer coordinates are relative to
   Lock lock; //!< \brief for any tasks where multiple threads might access an element simultaneously
 
-  /*!
-   * \details The `Storage_params` defines the amount of storage that must be allocated.
-   * `pos` specifies the position of vertex 0 relative to `origin_arg` in intervals of the nominal size.
-   * The nominal size is defined to be `mesh_size`/(2^`ref_level`).
-   * The vertices will be spaced at intervals of the nominal size.
-   * Only the first `n_dim` elements of `origin_arg` are considered.
-   */
-  Element(Storage_params, std::vector<Int> pos = {}, double mesh_size = 1., int ref_level = 0,
-          Mat<> origin_arg = Mat<>::Zero(3), int aniso_ref_level = 0);
+  Element(Storage_params, Tree& tree, int aniso_ref_level = 0);
   //! \details Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
   //! both of which seem error prone.
   Element(const Element&) = delete;
@@ -88,10 +75,10 @@ class Element : public Kernel_element, public Mortal {
   Array<double> position(const Basis&) const;
   Array<double> face_position(const Basis&) const;
   virtual void set_jacobian(const Basis& basis);
-  inline double nominal_size() const override {return _nom_sz;}
-  inline int refinement_level() {return _r_level;} //!< \brief indicates how many times this element has been isotropically refined
-  int aniso_ref_level() {return _aniso_r_level;} //!< \brief indicates how many times this element has been anisotropically refined
-  inline std::vector<Int> nominal_position() {return _nom_pos;}
+  double nominal_size() const override;
+  int refinement_level();
+  int aniso_ref_level();
+  Eigen::VectorXi nominal_position();
   //! pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); //!< layout: [i_var][i_qpoint]
   double* advection_state(); //!< layout: [i_node][i_qpoint] \note `0 <= i_node < row_size`

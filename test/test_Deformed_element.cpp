@@ -6,11 +6,13 @@
 #include <hexed/Equidistant.hpp>
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/Gauss_lobatto.hpp>
+#include <hexed/Tree.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Deformed_element") {
   hexed::Storage_params params {2, 2, 2, 4};
-  hexed::Deformed_element element {params};
+  hexed::Tree tree(2, 1.);
+  hexed::Deformed_element element(params, tree);
 
   // test that accessing the data doesn't segfault
   element.reference_level_normals()[0] = 0.;
@@ -28,7 +30,8 @@ TEST_CASE("Deformed_element") {
   hexed::Storage_params params3 {2, 5, 3, row_size};
 
   SECTION("position calculation") {
-    hexed::Deformed_element elem {params2, {0, 0}, 1., 0, hexed::Mat<2>{.03, .02}};
+    hexed::Tree tree0(2, 1., hexed::Mat<2>{.03, .02});
+    hexed::Deformed_element elem(params2, tree0);
     elem.create_shape(blocks2d);
     auto p = elem.shape().vertex(3).point({});
     p[0] = 0.63;
@@ -47,7 +50,8 @@ TEST_CASE("Deformed_element") {
     REQUIRE(face_pos(1)(1)(1)[1] == pos(1)[5]);
 
     hexed::Gauss_legendre leg_basis {row_size};
-    hexed::Deformed_element elem1 {params3, {}, 0.2};
+    hexed::Tree tree1(3, .2);
+    hexed::Deformed_element elem1(params3, tree1);
     SECTION("dimensionality must match") {
       REQUIRE_THROWS(elem1.create_shape(blocks2d));
     }
@@ -60,8 +64,9 @@ TEST_CASE("Deformed_element") {
   }
 
   SECTION("splitting") {
-    hexed::Deformed_element elem0(params2, {0, 0}, 1., 0, hexed::Mat<2>{.01, .02});
-    hexed::Deformed_element elem1(params2, {0, 0}, 1., 0, hexed::Mat<2>{.01, .02});
+    hexed::Tree tree0(2, 1., hexed::Mat<2>{.01, .02});
+    hexed::Deformed_element elem0(params2, tree0);
+    hexed::Deformed_element elem1(params2, tree0);
     elem0.create_shape(blocks2d, hexed::next::Mesh_blocks::no_face);
     elem1.create_shape(blocks2d, hexed::next::Mesh_blocks::no_face);
     elem0.create_fake(blocks2d);
@@ -79,8 +84,10 @@ TEST_CASE("Deformed_element") {
   }
 
   SECTION("jacobian calculation") {
-    hexed::Deformed_element elem0 {params2, {0, 0}, 0.2};
-    hexed::Deformed_element elem1 {params2, {1, 1}, 0.2};
+    hexed::Tree tree0(2, .2);
+    hexed::Tree& tree1 = *tree0.graft(hexed::Array<int>::make_uniform({2}, 0), Eigen::Vector2i{1, 1});
+    hexed::Deformed_element elem0(params2, tree0);
+    hexed::Deformed_element elem1(params2, tree1);
     elem0.create_shape(blocks2d);
     elem0.shape().vertex(3).set_pos(hexed::Mat<3>{0.8*0.2, 0.8*0.2, 0.});
     elem1.create_shape(blocks2d, 2);
@@ -115,7 +122,8 @@ TEST_CASE("Deformed_element") {
     REQUIRE(elem0.vertex_time_step_scale(0) == .2/2);
     REQUIRE(elem0.vertex_time_step_scale(3) == Catch::Approx(.2/2*(.8*.8 - .2*.2)/std::sqrt(.8*.8 + .2*.2)));
 
-    hexed::Deformed_element elem2 {params3, {0, 0, 0}, 0.2};
+    hexed::Tree tree2(3, .2);
+    hexed::Deformed_element elem2(params3, tree2);
     elem2.create_shape(blocks3d);
     elem2.shape().vertex(7).set_pos(hexed::Mat<3>{0.8*0.2, 0.8*0.2, 0.8*0.2});
     elem2.set_jacobian(basis);

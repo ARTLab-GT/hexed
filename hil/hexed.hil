@@ -459,10 +459,9 @@ mesh = {
     }
     $loop
     adapt
-    {
     adapt
     adapt
-    }
+    adapt
     mesh_init = true
     print({geometry bounding box:
     } + geom_bbox00 + { } + geom_bbox01 + {

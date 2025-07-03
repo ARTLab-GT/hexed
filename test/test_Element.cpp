@@ -1,12 +1,14 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Element.hpp>
 #include <hexed/Equidistant.hpp>
+#include <hexed/Tree.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Element") {
   hexed::Storage_params params {4, 5, 3, 6};
   int n_dof = params.n_dof();
-  hexed::Element element {params};
+  hexed::Tree tree(3, 1.);
+  hexed::Element element {params, tree};
   // test that Storage_params are the same
   REQUIRE(element.storage_params().n_stage == params.n_stage);
   REQUIRE(element.storage_params().n_var == params.n_var);

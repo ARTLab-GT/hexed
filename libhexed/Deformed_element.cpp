@@ -1,11 +1,11 @@
 #include <hexed/Deformed_element.hpp>
 #include <hexed/math.hpp>
+#include <hexed/Tree.hpp>
 
 namespace hexed {
 
-Deformed_element::Deformed_element(Storage_params params, std::vector<Int> pos,
-                                   double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level)
-: Element{params, pos, mesh_size, ref_level, origin_arg, true, aniso_r_level, true}
+Deformed_element::Deformed_element(Storage_params params, Tree& t, int aniso_r_level)
+: Element(params, t, true, aniso_r_level, true)
 , n_qpoint{params.n_qpoint()}
 , jac_dat{(n_dim*n_dim + 1)*n_qpoint}
 {}
@@ -19,7 +19,7 @@ void Deformed_element::set_jacobian(const Basis& basis) {
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       auto jac_entry {jac.segment((i_dim*n_dim + j_dim)*n_qpoint, n_qpoint)};
-      jac_entry = math::dimension_matvec(diff_mat, shape_pos(i_dim).vector(), j_dim)/_nom_sz;
+      jac_entry = math::dimension_matvec(diff_mat, shape_pos(i_dim).vector(), j_dim)/tree->nominal_shape().prod();
     }
   }
   // compute interior normals

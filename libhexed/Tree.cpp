@@ -295,11 +295,12 @@ Array<int> Tree::needs_refine(std::function<bool(Tree*)> include) {
   needs = 0;
   for (int i_face = 0; i_face < 2*n_dim; ++i_face) {
     auto result = _neighbor(get_direction(i_face, n_dim));
+    result.trans.reverse();
     auto neighbors = find_neighbors(i_face);
     for (Tree* n : neighbors) if (include(n)) {
-      Array<int> rl_diff = n->_ref_level - result.trans.transform(_ref_level);
+      Array<int> rl_diff = result.trans.transform(n->_ref_level) - _ref_level;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        needs[i_dim] = std::max<int>(needs[i_dim], rl_diff[i_dim] > 1);
+        needs[i_dim] = needs[i_dim] || (rl_diff[i_dim] > 1);
       }
     }
   }
@@ -497,6 +498,11 @@ Array<int> Tree::_Transformation::transform(Array<int> ref_level) {
   transformed[i_dim] = ref_level[j_dim] + that_root->_ref_level[i_dim]
                                         - this_root->_ref_level[j_dim];
   return transformed;
+}
+
+void Tree::_Transformation::reverse() {
+  i_side = !i_side;
+  std::swap(this_root, that_root);
 }
 
 Tree::_Neighbor_result Tree::_neighbor(Eigen::VectorXi direction) {

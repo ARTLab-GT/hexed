@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Face.hpp>
+#include <hexed/Tree.hpp>
 
 TEST_CASE("Face") {
   hexed::Storage_params params {2, 5, 3, 2};
@@ -11,8 +12,9 @@ TEST_CASE("Face") {
   REQUIRE(!f.connected());
   REQUIRE(!f.associated());
   REQUIRE(f.element() == nullptr);
-  hexed::Element elem0(params);
-  hexed::Element elem1(params);
+  hexed::Tree tree(3, 1.);
+  hexed::Element elem0(params, tree);
+  hexed::Element elem1(params, tree);
   f.associate(elem0);
   REQUIRE(f.element() == &elem0);
   REQUIRE(f.associated());

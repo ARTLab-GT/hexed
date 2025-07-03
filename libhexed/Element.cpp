@@ -5,14 +5,9 @@
 
 namespace hexed {
 
-Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level,
-                 Mat<> origin_arg, bool mobile_vertices, int aniso_r_level, bool is_def)
+Element::Element(Storage_params params_arg, Tree& t, bool mobile_vertices, int aniso_r_level, bool is_def)
 : params(params_arg)
 , n_dim(params.n_dim)
-, _nom_pos(pos)
-, _origin{origin_arg}
-, _nom_sz{mesh_size/math::pow(2, ref_level)}
-, _r_level{ref_level}
 , _aniso_r_level{aniso_r_level}
 , n_dof(params.n_dof())
 , n_vert(params.n_vertices())
@@ -22,8 +17,8 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
 , _vertex_data({3, params.n_vertices()})
 , _mask{0}
 , tree(this)
-, origin{origin_arg(Eigen::seqN(0, params.n_dim))}
 {
+  tree.pair(t.elem);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       _faces.emplace_back(params, i_dim, sign, is_def, data.data() + data_size + (2*i_dim + sign)*face_size);
@@ -34,15 +29,12 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
   faces.fill(nullptr);
   // initialize local time step scaling to 1.
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) time_step_scale()[i_qpoint] = 1.;
-  _nom_pos.resize(params.n_dim, 0);
-  HEXED_ASSERT(_origin.size() >= params.n_dim, "`origin` has too few components");
-  _vertex_data(0) = _nom_sz/n_dim;
+  _vertex_data(0) = tree->nominal_shape().minCoeff()/n_dim;
   _vertex_data(1, 3) = 0.;
 }
 
-Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
-                 int aniso_r_level)
-: Element(params_arg, pos, mesh_size, ref_level, origin_arg, false, aniso_r_level, false)
+Element::Element(Storage_params params_arg, Tree& t, int aniso_r_level)
+: Element(params_arg, t, false, aniso_r_level, false)
 {}
 
 bool Element::is_extruded() {return tree.value().is_graft();}
@@ -81,6 +73,11 @@ Array<double> Element::face_position(const Basis& basis) const {
 }
 
 void Element::set_jacobian(const Basis& basis) {}
+
+double Element::nominal_size() const {return tree.value().nominal_size();}
+int Element::refinement_level() {return tree.value().refinement_level();}
+int Element::aniso_ref_level() {return _aniso_r_level;}
+Eigen::VectorXi Element::nominal_position() {return tree.value().coordinates();}
 
 double* Element::stage(int i_stage) {
   return (i_stage > 0) ? residual_cache() + (i_stage - 1)*n_dof : state();

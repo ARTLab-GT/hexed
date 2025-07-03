@@ -253,6 +253,7 @@ class Tree : public Mortal {
     Connection_direction dir {{0, 0}, {0, 0}};
     int i_side = 0;
     Array<int> transform(Array<int> ref_level);
+    void reverse();
   };
   struct _Neighbor_result {
     Tree* neighbor;
