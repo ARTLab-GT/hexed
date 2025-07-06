@@ -353,9 +353,9 @@ void Solver::calc_jacobian() {
       HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
     }
     for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-      printers::info(to_string(elements[i_elem].vertex_time_step_scale(i_vert)) + " ");
+      double vtss = elements[i_elem].vertex_time_step_scale(i_vert);
+      HEXED_ASSERT(1e10 > std::abs(vtss), "solver spacing" + to_string(elements[i_elem].get_is_deformed()))
     }
-    printers::info("\n");
   }
   // do some extra work to make sure each face knows its normal vectors
   auto face_refs = acc_mesh->face_refinements();
@@ -385,6 +385,13 @@ void Solver::calc_jacobian() {
     if (con.inside().is_deformed()) con.ghost().normal() = con.inside().normal();
   }
   share_vertex_data(&Element::vertex_time_step_scale, { huge, &min_fun});
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      double vtss = elements[i_elem].vertex_time_step_scale(i_vert);
+      HEXED_ASSERT(1e10 > std::abs(vtss), "solver spacing" + to_string(elements[i_elem].shape().vertex(i_vert).glued()))
+    }
+  }
   // check that all the normals agree on both faces of every connection
   for (Neighbor_connection& con : acc_mesh->neighbor_connections(1)) {
     auto dir = con.get_direction();
@@ -829,7 +836,43 @@ void Solver::update() {
               for (auto elems : {&km.car_elems, &km.def_elems}) {
                 for (int i_elem = 0; i_elem < elems->size(); ++i_elem) {
                   for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) {
-                    HEXED_ASSERT(std::isfinite((*elems)[i_elem].state()[i_dof]), "post-update state")
+                    HEXED_ASSERT(1e10 > std::abs((*elems)[i_elem].state()[i_dof]), "post-update state")
+                  }
+                }
+              }
+              for (auto vec : km.face_refinements) {
+                for (int i_ref = 0; i_ref < (int)vec.size(); ++i_ref) {
+                  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) {
+                    HEXED_ASSERT(1e10 > std::abs(vec[i_ref].coarse[0][i_dof]), "coarse face" + to_string(i_ref))
+                  }
+                  for (int i_fine = 0; i_fine < 2; ++i_fine) {
+                    for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) {
+                      HEXED_ASSERT(1e10 > std::abs(vec[i_ref].fine[i_fine][0][i_dof]),
+                                   "fine face" + to_string(i_fine) + to_string(i_ref))
+                    }
+                  }
+                }
+              }
+              for (auto& bound_con : acc_mesh->boundary_connections()) {
+                auto& con = bound_con.neighbor_connection();
+                for (int i_side = 0; i_side < 2; ++i_side) {
+                  auto& face = con.face(i_side);
+                  for (int i_var = 0; i_var < params.n_var; ++i_var) {
+                    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+                      HEXED_ASSERT(1e10 > std::abs(face.flow_state()(0)(i_var)[i_qpoint]), "boundary con state")
+                    }
+                  }
+                }
+              }
+              for (int is_def = 0; is_def < 2; ++is_def) {
+                for (auto& con : acc_mesh->neighbor_connections(is_def)) {
+                  for (int i_side = 0; i_side < 2; ++i_side) {
+                    auto& face = con.face(i_side);
+                    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+                      for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+                        HEXED_ASSERT(1e10 > std::abs(face.flow_state()(0)(i_var)[i_qpoint]), "neighbor con state")
+                      }
+                    }
                   }
                 }
               }
@@ -931,7 +974,7 @@ bool Solver::is_admissible() {
       adm = adm && (data[nd*n_qpoint + i_qpoint] > 0.)
                 && (data[(nd + 1)*n_qpoint + i_qpoint] > 0.);
       for (int i_var = 0; i_var < n_var; ++i_var) {
-        HEXED_ASSERT(std::isfinite(data[i_var*n_qpoint + i_qpoint]),
+        HEXED_ASSERT(1e10 > std::abs(data[i_var*n_qpoint + i_qpoint]),
                      format_str(200, "variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]),
                      assert::Numerical_exception);
       }

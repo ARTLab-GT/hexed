@@ -1471,8 +1471,9 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       _neighbor_cons[is_deformed].emplace_back(faces[0]->storage_params(), face_arr, dir.rotate);
     }
   }
-  next::Element_shape::connect(shapes, dir);
+  // the order of the following two line is important to make sure that true vertices are glued to true shapes
   if (!shared_fake) next::Element_shape::connect(active_shapes, dir);
+  next::Element_shape::connect(shapes, dir);
   if (!any_trees_connected) {
     std::array<std::vector<Tree*>, 2> trees;
     for (int i_side = 0; i_side < 2; ++i_side) {
