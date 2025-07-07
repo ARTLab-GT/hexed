@@ -825,14 +825,18 @@ void Solver::update() {
                 .conv_substep = (sub_iters > 1) && use_ldg(),
                 .implicit_opts = implicit_opts,
               };
+              printers::info("1\n");
               apply_state_bcs();
+              printers::info("2\n");
               if (use_ldg() && !i && !i_sub) {
                 compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, true);
               } else {
                 compute_euler(km, opts);
               }
+              printers::info("3\n");
               // note that function call must come first to ensure it is evaluated despite short-circuiting
               fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
+              printers::info("4\n");
               for (auto elems : {&km.car_elems, &km.def_elems}) {
                 for (int i_elem = 0; i_elem < elems->size(); ++i_elem) {
                   for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) {
@@ -840,6 +844,7 @@ void Solver::update() {
                   }
                 }
               }
+              printers::info("4\n");
               for (auto vec : km.face_refinements) {
                 for (int i_ref = 0; i_ref < (int)vec.size(); ++i_ref) {
                   for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) {
@@ -853,27 +858,27 @@ void Solver::update() {
                   }
                 }
               }
+              printers::info("5\n");
+              #define CHECK_NEIGHBOR_CON(name) \
+                for (int i_side = 0; i_side < 2; ++i_side) { \
+                  auto& face = con.face(i_side); \
+                  for (int i_var = 0; i_var < params.n_var; ++i_var) { \
+                    for (int i_qpoint = 0; i_qpoint < params.n_face_qpoint(); ++i_qpoint) { \
+                      HEXED_ASSERT(1e10 > std::abs(face.flow_state()(0)(i_var)[i_qpoint]), \
+                                   name " con state" + to_string(face.element()) + to_string(face.boundary_connection()) + to_string(face.face_ref_coarse()) + to_string(face.element()->nominal_size())) \
+                    } \
+                  } \
+                } \
+
+              printers::info("6\n");
               for (auto& bound_con : acc_mesh->boundary_connections()) {
                 auto& con = bound_con.neighbor_connection();
-                for (int i_side = 0; i_side < 2; ++i_side) {
-                  auto& face = con.face(i_side);
-                  for (int i_var = 0; i_var < params.n_var; ++i_var) {
-                    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-                      HEXED_ASSERT(1e10 > std::abs(face.flow_state()(0)(i_var)[i_qpoint]), "boundary con state")
-                    }
-                  }
-                }
+                CHECK_NEIGHBOR_CON("boundary")
               }
+              printers::info("7\n");
               for (int is_def = 0; is_def < 2; ++is_def) {
                 for (auto& con : acc_mesh->neighbor_connections(is_def)) {
-                  for (int i_side = 0; i_side < 2; ++i_side) {
-                    auto& face = con.face(i_side);
-                    for (int i_var = 0; i_var < params.n_var; ++i_var) {
-                      for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-                        HEXED_ASSERT(1e10 > std::abs(face.flow_state()(0)(i_var)[i_qpoint]), "neighbor con state")
-                      }
-                    }
-                  }
+                  CHECK_NEIGHBOR_CON("neighbor")
                 }
               }
               printers::info("finished update\n");
