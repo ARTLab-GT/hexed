@@ -454,7 +454,7 @@ mesh = {
         geom_bbox20 = min_surface_position2
         geom_bbox21 = max_surface_position2
         geom_length = sqrt((geom_bbox01 - geom_bbox00)^2 + (geom_bbox11 - geom_bbox10)^2 + (geom_bbox21 - geom_bbox20)^2)
-        println {done}
+        println({done. Mesh now has } + n_elements + { elements.} + newline)
     }
     $loop
     mesh_init = true

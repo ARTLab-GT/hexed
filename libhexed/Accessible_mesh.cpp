@@ -2381,7 +2381,7 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
   connect_new<Element>(0);
   connect_new<Deformed_element>(0);
   connect_rest(surface_bc_sn());
-  printers::info("done\n");
+  printers::info("done. Mesh now has " + to_string(elements().size()) + " elements.\n");
 }
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
