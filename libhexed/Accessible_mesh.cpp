@@ -2313,7 +2313,7 @@ void Accessible_mesh::purge() {
 void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
                             std::function<bool(Element&)> unrefine_criterion) {
   Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
-  Task_message tm(printers::info, "Adapting mesh");
+  printers::info("adapting mesh... ");
   Gauss_legendre solver_basis(params.row_size);
   // decide which elements to (un)refine
   #pragma omp parallel for // parallelize this part since `predicate` could be expensive
@@ -2326,7 +2326,6 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
     else if (unref && !ref) elem.record = -1;
   }
   for (int i_cycle = 0, changed = true; changed; ++i_cycle) {
-    printers::info("[cycle");
     changed = false;
     for (bool is_deformed : {0, 1}) {
       auto& elems = container(is_deformed).element_view();
@@ -2376,13 +2375,13 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
         }
       }
     }
-    printers::info(to_string(elems.size()) + "]");
   }
   purge();
   for (int i = 0; i < 3; ++i) _extrude_cons[i].clear();
   connect_new<Element>(0);
   connect_new<Deformed_element>(0);
   connect_rest(surface_bc_sn());
+  printers::info("done\n");
 }
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,

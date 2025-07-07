@@ -352,10 +352,6 @@ void Solver::calc_jacobian() {
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
       HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
     }
-    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-      double vtss = elements[i_elem].vertex_time_step_scale(i_vert);
-      HEXED_ASSERT(1e10 > std::abs(vtss), "solver spacing" + to_string(elements[i_elem].get_is_deformed()))
-    }
   }
   // do some extra work to make sure each face knows its normal vectors
   auto face_refs = acc_mesh->face_refinements();
@@ -385,13 +381,6 @@ void Solver::calc_jacobian() {
     if (con.inside().is_deformed()) con.ghost().normal() = con.inside().normal();
   }
   share_vertex_data(&Element::vertex_time_step_scale, { huge, &min_fun});
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-      double vtss = elements[i_elem].vertex_time_step_scale(i_vert);
-      HEXED_ASSERT(1e10 > std::abs(vtss), "solver spacing" + to_string(elements[i_elem].shape().vertex(i_vert).glued()))
-    }
-  }
   // check that all the normals agree on both faces of every connection
   for (Neighbor_connection& con : acc_mesh->neighbor_connections(1)) {
     auto dir = con.get_direction();
@@ -406,6 +395,7 @@ void Solver::calc_jacobian() {
       printers::warn("normal mismatch: " + to_string(dir) + "\n" + to_string(nrml0) + to_string(nrml1));
     }
   }
+  _init_face_state();
 }
 
 void Solver::initialize(std::string(expr)) {

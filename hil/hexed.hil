@@ -193,6 +193,7 @@ working_dir = {hexed_out/}
 input_data = {auto}
 vis_freq = 10^4
 write_freq = 10^4
+adapt_freq = 10^4
 iter_width = 10
 print_freq = 100
 update_roughness_freq = 10^3
@@ -313,8 +314,14 @@ write_iter = {
 
 vis_iter = {
     case0 = {}
-    case1 = {adapt; visualize}
+    case1 = {visualize}
     $$({case} + (iteration%vis_freq == 0))
+}
+
+adapt_iter = {
+    case0 = {}
+    case1 = {adapt}
+    $$({case} + (iteration%adapt_freq == 0))
 }
 
 setup_io = {
@@ -371,6 +378,7 @@ iterate = {
     case1 = {
         case0 = {}
         case1 = {
+            $adapt_iter
             $write_iter
             $vis_iter
             case0 = {}

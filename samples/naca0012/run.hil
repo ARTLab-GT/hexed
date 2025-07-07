@@ -26,8 +26,13 @@ attack = 4*degree
 print_freq = 100
 vis_freq = 20000
 vis_freq = 2000
+adapt_freq = 2000
 done = {iteration > 10000 & lift_coef_max - lift_coef_min < 1e-2*(lift_coef_min + lift_coef_max)/2}
-iterate = compute_force + iterate
+iterate = compute_force + iterate + {
+    case0 = {}
+    case1 = {adapt_freq = 10^10}
+    $$({case} + (iteration == 6000))
+}
 monitor_vars = {lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
 
