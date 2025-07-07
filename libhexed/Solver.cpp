@@ -1274,8 +1274,7 @@ void Solver::integrate_surface(std::string expr, int bc_sn) {
   for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
     auto& con {bc_cons[i_con]};
     if (con.boundary_condition() != bc_sn) continue;
-    auto& elem = *con.inside().element();
-    double area = math::pow(elem.nominal_size(), nd - 1);
+    double area = con.inside().nominal_area();
     Array<double> qpoints{evaluator.evaluate(con)};
     Array<double> nrml = con.normal().copy();
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
