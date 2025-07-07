@@ -23,6 +23,7 @@ $set_subsonic_bl_multirate
 done = {normalized_residual < 1e-4}
 
 vis_freq = adapt_freq = 1000
+adapt_iter = {}
 iterate = iterate + {
     case0 = {}
     case1 = {adapt_freq = 10^10}

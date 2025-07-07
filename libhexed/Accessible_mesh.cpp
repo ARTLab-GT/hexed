@@ -2325,6 +2325,35 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
     if (ref && !unref) elem.record = 1;
     else if (unref && !ref) elem.record = -1;
   }
+  auto populate_elements = [this, &solver_basis](bool is_def, std::vector<bool> is_refined,
+                                                 std::vector<Element*> orig_elems, std::vector<Tree*> new_leaves) {
+    for (int i_leaf = 0; i_leaf < params.n_vertices(); ++i_leaf) {
+      HEXED_ASSERT(new_leaves[i_leaf], "null leaf")
+      HEXED_ASSERT(orig_elems[i_leaf], "null element")
+      if (new_leaves[i_leaf]->elem) continue;
+      auto& elem = *orig_elems[i_leaf];
+      elem.record = 2;
+      Element& new_elem = add_elem(is_def, *new_leaves[i_leaf]);
+      new_elem.record = 3;
+      std::array<std::vector<double>, 2> coords;
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        int row_coord = math::row_coordinate(params.n_dim, 2, i_dim, i_leaf);
+        for (int i : {0, 1}) coords[i].push_back(.5*(row_coord + i*(1 + !is_refined[i_dim])));
+      }
+      if (is_def) new_elem.glue_shape(elem, coords);
+      Array<double> state = new_elem.numeric_state();
+      state = elem.numeric_state();
+      for (int i_var = 0; i_var < params.n_var_numeric(); ++i_var) {
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          if (is_refined[i_dim]) {
+            int rel_pos = math::row_coordinate(params.n_dim, 2, i_dim, i_leaf);
+            Mat<dyn, dyn> prolong = solver_basis.prolong(rel_pos);
+            state(i_var).vector() = math::dimension_matvec(prolong, state(i_var).vector(), i_dim);
+          }
+        }
+      }
+    }
+  };
   for (int i_cycle = 0, changed = true; changed; ++i_cycle) {
     changed = false;
     for (bool is_deformed : {0, 1}) {
@@ -2336,46 +2365,55 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
           Array<int> need_ref = elem.tree->needs_refine([](Tree* t){return t->elem.get();});
           if (elem.record == 1 || need_ref.extreme(1)) {
             std::vector<bool> ref_dims(params.n_dim);
-            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = (rand()%2 && !i_cycle) || need_ref[i_dim];
-            //for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = true;
-            //for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) ref_dims[i_dim] = (i_dim == 1);
-            // have to pre-fetch some data because `*elem.tree` could be destroyed by refinement simplification
-            Array<int> orig_ref_level = elem.tree->anisotropic_refinement_level();
-            Eigen::VectorXi orig_coords = elem.tree->coordinates();
-            auto new_leaves = elem.tree->refine(ref_dims);
-            for (Tree* child : new_leaves) {
-              changed = true;
-              elem.record = 2;
-              Element& new_elem = add_elem(is_deformed, *child);
-              new_elem.record = 3;
-              auto rl_diff = child->anisotropic_refinement_level() - orig_ref_level;
-              if (is_deformed) {
-                std::array<std::vector<double>, 2> coords;
-                for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-                  int sz_diff = math::pow(2, rl_diff[i_dim]);
-                  coords[0].push_back(child->coordinates()(i_dim) - sz_diff*orig_coords(i_dim));
-                  coords[1].push_back(coords[0][i_dim] + 1);
-                  for (int i : {0, 1}) coords[i][i_dim] /= sz_diff;
-                }
-                new_elem.glue_shape(elem, coords);
-              }
-              Array<double> state = new_elem.numeric_state();
-              state = elem.numeric_state();
-              for (int i_var = 0; i_var < params.n_var_numeric(); ++i_var) {
-                for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-                  if (ref_dims[i_dim]) {
-                    int rel_pos = child->coordinates()(i_dim) - math::pow(2, rl_diff[i_dim])*orig_coords(i_dim);
-                    Mat<dyn, dyn> prolong = solver_basis.prolong(rel_pos);
-                    state(i_var).vector() = math::dimension_matvec(prolong, state(i_var).vector(), i_dim);
-                  }
-                }
-              }
+            bool refine = false;
+            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+              ref_dims[i_dim] = (rand()%2 && !i_cycle) || need_ref[i_dim];
+              refine = refine || ref_dims[i_dim];
             }
+            if (!refine) continue;
+            auto new_leaves = elem.tree->refine(ref_dims);
+            changed = true;
+            populate_elements(is_deformed, ref_dims, std::vector<Element*>(params.n_vertices(), &elem), new_leaves);
           }
         }
       }
     }
   }
+  #if 0
+  for (bool is_deformed : {0, 1}) {
+    auto& elems = container(is_deformed).element_view();
+    Int n_elem = elems.size();
+    for (Int i_elem = 0; i_elem < n_elem; ++i_elem) {
+      auto& elem = elems[i_elem];
+      if (elem.tree && elem.record != 2) {
+        Tree* parent = elem.tree->parent();
+        if (!parent) continue;
+        auto uc = parent->unique_children();
+        if (elem.tree.get() != uc[0]) continue;
+        Array<int> need_ref = parent->needs_refine([](Tree* t){return t->elem.get();});
+        std::vector<bool> unref(params.n_dim);
+        bool needs_unref = false;
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          auto predicate = [is_deformed](Tree* t)->bool {
+            if (!t->is_leaf() || !exists(t)) return false;
+            if (t->elem->get_is_deformed() != is_deformed || t->has_graft_connection()) return false;
+            return rand()%2;
+          };
+          unref[i_dim] = std::all_of(uc.begin(), uc.end(), predicate);
+          unref[i_dim] = unref[i_dim] && parent->is_refined(i_dim) && !need_ref[i_dim];
+          needs_unref = needs_unref || unref[i_dim];
+        }
+        if (!needs_unref) continue;
+        for (int i_child = 0; i_child < (int)uc.size(); ++i_child) {
+          uc[i_child]->elem->record = 2;
+        }
+        Array<int> orig_ref_level = parent->anisotropic_refinement_level();
+        Eigen::VectorXi orig_coords = parent->coordinates();
+        parent->unrefine(unref);
+      }
+    }
+  }
+  #endif
   purge();
   for (int i = 0; i < 3; ++i) _extrude_cons[i].clear();
   connect_new<Element>(0);

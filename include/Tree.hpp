@@ -107,6 +107,7 @@ class Tree : public Mortal {
   bool is_graft(); //!< \brief `true` iff `this` was created by grafting.
   bool is_leaf(); //!< \brief gives the same result as `children().empty()`
   bool is_refined(int i_dim);
+  bool has_graft_connection();
   //!\}
 
   //! \name modifiers

@@ -88,6 +88,10 @@ bool Tree::is_refined(int i_dim) {
   return _children_storage[0] != _children_storage[math::stride(n_dim, 2, i_dim)];
 }
 
+bool Tree::has_graft_connection() {
+  return std::any_of(_face_connections.begin(), _face_connections.end(), [](_Connection* c)->bool{return c;});
+}
+
 std::vector<Tree*> Tree::refine(std::vector<bool> dims) {
   auto ptrs = _refine(dims);
   if (_par) _par->_simplify_aniso_ref();
@@ -424,7 +428,7 @@ std::vector<Tree*> Tree::_refine(std::vector<bool> dims) {
       if (assign) _children_storage[j_child] = child;
     }
   }
-  return unique_children();
+  return children();
 }
 
 void Tree::_interchange_aniso_ref() {

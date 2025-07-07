@@ -57,7 +57,7 @@ TEST_CASE("Tree meshing", "[.slow]") {
     for (int i = 0; i < 3; ++i) mesh.update();
     REQUIRE(mesh.elements().size() == 512);
     mesh.valid().assert_valid();
-    auto predicate = [](hexed::Element& elem){
+    auto predicate = [](hexed::Element& elem) {
       auto np = elem.nominal_position();
       int thresh = hexed::math::pow(2, elem.refinement_level())/2;
       return    (np[0] <  thresh && np[1] <  thresh && np[2] <  thresh)
