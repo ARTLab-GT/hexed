@@ -457,6 +457,10 @@ mesh = {
         println({done. Mesh now has } + n_elements + { elements.} + newline)
     }
     $loop
+    i_split = 0
+    while = {i_split < init_layer_splits}
+    do = {split_layers; i_split = i_split + 1}
+    $loop
     mesh_init = true
     print({geometry bounding box:
     } + geom_bbox00 + { } + geom_bbox01 + {
