@@ -812,7 +812,6 @@ void Solver::update() {
           for (int i_sub = 0; i_sub < sub_iters; ++i_sub) {
             // compute inviscid update
             for (int i = 0; i < 2; ++i) {
-              printers::info("starting_update\n");
               Kernel_options opts {
                 .sw_car = stopwatch["cartesian"],
                 .sw_def = stopwatch["deformed"],
@@ -825,63 +824,14 @@ void Solver::update() {
                 .conv_substep = (sub_iters > 1) && use_ldg(),
                 .implicit_opts = implicit_opts,
               };
-              printers::info("1\n");
               apply_state_bcs();
-              printers::info("2\n");
               if (use_ldg() && !i && !i_sub) {
                 compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, true);
               } else {
                 compute_euler(km, opts);
               }
-              printers::info("3\n");
               // note that function call must come first to ensure it is evaluated despite short-circuiting
               fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
-              printers::info("4\n");
-              for (auto elems : {&km.car_elems, &km.def_elems}) {
-                for (int i_elem = 0; i_elem < elems->size(); ++i_elem) {
-                  for (int i_dof = 0; i_dof < params.n_dof(); ++i_dof) {
-                    HEXED_ASSERT(1e10 > std::abs((*elems)[i_elem].state()[i_dof]), "post-update state")
-                  }
-                }
-              }
-              printers::info("4\n");
-              for (auto vec : km.face_refinements) {
-                for (int i_ref = 0; i_ref < (int)vec.size(); ++i_ref) {
-                  for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) {
-                    HEXED_ASSERT(1e10 > std::abs(vec[i_ref].coarse[0][i_dof]), "coarse face" + to_string(i_ref))
-                  }
-                  for (int i_fine = 0; i_fine < 2; ++i_fine) {
-                    for (int i_dof = 0; i_dof < params.n_dof()/params.row_size; ++i_dof) {
-                      HEXED_ASSERT(1e10 > std::abs(vec[i_ref].fine[i_fine][0][i_dof]),
-                                   "fine face" + to_string(i_fine) + to_string(i_ref))
-                    }
-                  }
-                }
-              }
-              printers::info("5\n");
-              #define CHECK_NEIGHBOR_CON(name) \
-                for (int i_side = 0; i_side < 2; ++i_side) { \
-                  auto& face = con.face(i_side); \
-                  for (int i_var = 0; i_var < params.n_var; ++i_var) { \
-                    for (int i_qpoint = 0; i_qpoint < params.n_face_qpoint(); ++i_qpoint) { \
-                      HEXED_ASSERT(1e10 > std::abs(face.flow_state()(0)(i_var)[i_qpoint]), \
-                                   name " con state" + to_string(face.element()) + to_string(face.boundary_connection()) + to_string(face.face_ref_coarse()) + to_string(face.element()->nominal_size())) \
-                    } \
-                  } \
-                } \
-
-              printers::info("6\n");
-              for (auto& bound_con : acc_mesh->boundary_connections()) {
-                auto& con = bound_con.neighbor_connection();
-                CHECK_NEIGHBOR_CON("boundary")
-              }
-              printers::info("7\n");
-              for (int is_def = 0; is_def < 2; ++is_def) {
-                for (auto& con : acc_mesh->neighbor_connections(is_def)) {
-                  CHECK_NEIGHBOR_CON("neighbor")
-                }
-              }
-              printers::info("finished update\n");
             }
             stopwatch.work_units_completed += km.elems.size();
             stopwatch["cartesian"].work_units_completed += km.car_elems.size();

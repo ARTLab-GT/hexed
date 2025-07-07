@@ -11,7 +11,6 @@
 #include "Face_permutation.hpp"
 #include "Refined_face.hpp"
 #include "Time_scheme.hpp"
-#include "Array.hpp" //! \todo delete this
 
 namespace hexed {
 
@@ -49,7 +48,6 @@ class Spatial {
         for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
           auto row_r = Row_rw<Pde::n_extrap, row_size>::read_row(extrap[0], ind);
           Mat<2, Pde::n_extrap> bound = boundary*row_r;
-          HEXED_ASSERT(1e10 > std::abs(bound.norm()), "write face\n" + to_string(Array<double>({Pde::n_extrap, n_qpoint}, extrap[0])))
           Row_rw<Pde::n_extrap, row_size>::write_bound(bound, faces, ind);
         }
       }
@@ -419,7 +417,6 @@ class Spatial {
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           typename Pde::template Computation<n_dim> comp(_eq);
           comp.fetch_state(n_qpoint, state + i_qpoint);
-          HEXED_ASSERT(1e10 > std::abs(comp.state.norm()), "state")
           if constexpr (is_deformed) {
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
@@ -431,7 +428,6 @@ class Spatial {
           }
           if constexpr (Pde::has_convection) {
             comp.compute_flux_conv();
-            HEXED_ASSERT(1e10 > std::abs(comp.flux_conv.norm()), "flux")
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
                 flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_var, i_dim);
@@ -477,10 +473,8 @@ class Spatial {
             if constexpr (Pde::has_convection) {
               // fetch row data
               row_f = Row_rw<Pde::n_update, row_size>::read_row(flux[i_dim][0], ind);
-              HEXED_ASSERT(1e10 > std::abs(row_f.norm()), "row flux")
               // fetch face data
               face_f = Row_rw<Pde::n_update, row_size>::read_bound(faces, ind);
-              HEXED_ASSERT(1e10 > std::abs(face_f.norm()), "face flux")
               // differentiate and write to temporary storage
               Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f, face_f), time_rate[0][0], ind, 1.);
             }
@@ -522,13 +516,10 @@ class Spatial {
             mult *= _implicit_opts.time_step/(_implicit_opts.time_step + _update*tss[i_qpoint]);
           }
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
-          HEXED_ASSERT(1e10 > std::abs(mult), "mult" + format_str("%e %e %e", _update, tss[i_qpoint], nominal_volume))
           for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
             double u = time_rate[0][i_var][i_qpoint];
-            HEXED_ASSERT(1e10 > std::abs(u), "time_rate")
             if (_stage) {
               u -= ref_state[i_var*n_qpoint + i_qpoint];
-              HEXED_ASSERT(1e10 > std::abs(u), "ref_state")
             } else {
               if constexpr (Pde::has_convection) ref_state[i_var*n_qpoint + i_qpoint] = u;
               if constexpr (Pde::has_diffusion || Pde::has_source) u += time_rate[1][i_var][i_qpoint];
@@ -546,7 +537,6 @@ class Spatial {
               }
             }
             u *= mult;
-            HEXED_ASSERT(1e10 > std::abs(u), "update")
             if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
             else update(i_var) = u;
           }
@@ -720,21 +710,14 @@ class Spatial {
               }
             } else comp[0].normal.setUnit(dir.i_dim[0]);
             comp[0].normal *= nominal_area;
-            HEXED_ASSERT(1e10 > std::abs(comp[0].normal.norm()), "neighbor norm")
             comp[1].normal = comp[0].normal;
             for (int i_side = 0; i_side < 2; ++i_side) {
               comp[i_side].fetch_extrap_state(n_fqpoint, face[i_side] + i_qpoint);
-            }
-            for (int i_side = 0; i_side < 2; ++i_side) {
-              HEXED_ASSERT(1e10 > std::abs(comp[i_side].state.norm()), "neighbor state")
-              HEXED_ASSERT(comp[i_side].state(n_dim) > .01, "neighbor density " + to_string(comp[i_side].state(n_dim)))
-              HEXED_ASSERT(comp[i_side].state(n_dim + 1) > .100, "neighbor energy " + to_string(comp[i_side].state(n_dim + 1)))
             }
             // compute flux
             for (int i_side = 0; i_side < 2; ++i_side) {
               comp[i_side].compute_flux_conv();
               comp[i_side].compute_char_speed();
-              HEXED_ASSERT(1e10 > std::abs(comp[i_side].char_speed), "neighbor char speed")
             }
             Mat<Pde::n_update> flux = .5*(
               comp[0].flux_conv + comp[1].flux_conv
@@ -759,7 +742,6 @@ class Spatial {
             double* f = con.state[i_side][0];
             for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
               f[i_dof] = face[i_side][i_dof];
-              HEXED_ASSERT(1e10 > std::abs(f[i_dof]), "Neighbor flux")
             }
           }
           // write average face state
@@ -852,7 +834,6 @@ class Spatial {
         Mat<math::pow(2, n_dim)> vertex_spacing;
         for (unsigned i_vert = 0; i_vert < vertex_spacing.size(); ++i_vert) {
           vertex_spacing(i_vert) = elem.vertex_time_step_scale(i_vert);
-          HEXED_ASSERT(1e10 > std::abs(vertex_spacing(i_vert)), "kernel spacing")
         }
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           // get mesh spacing
@@ -884,11 +865,6 @@ class Spatial {
             tss[i_qpoint] = 1.;
             dt = std::min(dt, 1./scale);
           }
-          std::string message = to_string(spacing) + " " + to_string(scale) + " " + to_string(tss[i_qpoint]);
-          if constexpr (Pde::has_convection) message += "char_speed " + to_string(comp.char_speed);
-          if constexpr (Pde::has_diffusion) message += "diffusivity " + to_string(comp.diffusivity);
-          if constexpr (Pde::has_source) message += "decay " + to_string(comp.decay);
-          HEXED_ASSERT(1e10 > std::abs(tss[i_qpoint]), message)
         }
       }
       return _is_local ? 1. : dt;
