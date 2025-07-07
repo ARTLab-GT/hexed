@@ -83,6 +83,8 @@ class Element : public Kernel_element, public Mortal {
   Eigen::VectorXi nominal_position();
   //! pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); //!< layout: [i_var][i_qpoint]
+  Array<double> flow_state(); //!< layout: [i_var][i_qpoint]
+  Array<double> numeric_state(); //!< layout: [i_var][i_qpoint]
   double* advection_state(); //!< layout: [i_node][i_qpoint] \note `0 <= i_node < row_size`
   //! pointer to scaling factor for local time step.
   double* time_step_scale() override; //!< layout: [i_qpoint]

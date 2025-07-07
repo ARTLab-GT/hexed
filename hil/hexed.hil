@@ -313,7 +313,7 @@ write_iter = {
 
 vis_iter = {
     case0 = {}
-    case1 = {visualize}
+    case1 = {adapt; visualize}
     $$({case} + (iteration%vis_freq == 0))
 }
 
@@ -449,9 +449,6 @@ mesh = {
         println {done}
     }
     $loop
-    adapt
-    adapt
-    adapt
     mesh_init = true
     print({geometry bounding box:
     } + geom_bbox00 + { } + geom_bbox01 + {

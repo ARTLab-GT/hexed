@@ -2314,6 +2314,7 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
                             std::function<bool(Element&)> unrefine_criterion) {
   Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
   Task_message tm(printers::info, "Adapting mesh");
+  Gauss_legendre solver_basis(params.row_size);
   // decide which elements to (un)refine
   #pragma omp parallel for // parallelize this part since `predicate` could be expensive
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -2348,9 +2349,9 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
               elem.record = 2;
               Element& new_elem = add_elem(is_deformed, *child);
               new_elem.record = 3;
+              auto rl_diff = child->anisotropic_refinement_level() - orig_ref_level;
               if (is_deformed) {
                 std::array<std::vector<double>, 2> coords;
-                auto rl_diff = child->anisotropic_refinement_level() - orig_ref_level;
                 for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
                   int sz_diff = math::pow(2, rl_diff[i_dim]);
                   coords[0].push_back(child->coordinates()(i_dim) - sz_diff*orig_coords(i_dim));
@@ -2358,6 +2359,17 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
                   for (int i : {0, 1}) coords[i][i_dim] /= sz_diff;
                 }
                 new_elem.glue_shape(elem, coords);
+              }
+              Array<double> state = new_elem.numeric_state();
+              state = elem.numeric_state();
+              for (int i_var = 0; i_var < params.n_var_numeric(); ++i_var) {
+                for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+                  if (ref_dims[i_dim]) {
+                    int rel_pos = child->coordinates()(i_dim) - math::pow(2, rl_diff[i_dim])*orig_coords(i_dim);
+                    Mat<dyn, dyn> prolong = solver_basis.prolong(rel_pos);
+                    state(i_var).vector() = math::dimension_matvec(prolong, state(i_var).vector(), i_dim);
+                  }
+                }
               }
             }
           }

@@ -86,6 +86,14 @@ double* Element::stage(int i_stage) {
   return (i_stage > 0) ? residual_cache() + (i_stage - 1)*n_dof : state();
 }
 
+Array<double> Element::flow_state() {
+  return {{params.n_var, params.n_qpoint()}, stage(0)};
+}
+
+Array<double> Element::numeric_state() {
+  return {{params.n_var_numeric(), params.n_qpoint()}, state()};
+}
+
 double* Element::time_step_scale() {
   return data.data() + params.n_dof();
 }
