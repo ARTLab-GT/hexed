@@ -108,7 +108,7 @@ std::vector<Tree*> Tree::refine(int i_dim) {
   return refine(dims);
 }
 
-void Tree::unrefine(std::vector<bool> dims) {
+std::vector<Tree*> Tree::unrefine(std::vector<bool> dims) {
   HEXED_ASSERT((int)dims.size() == n_dim, "`refine_dims` has wrong number of entries")
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     HEXED_ASSERT(is_refined(i_dim) || !dims[i_dim], "Cannot unrefine dimension that is not refined.")
@@ -116,17 +116,17 @@ void Tree::unrefine(std::vector<bool> dims) {
   }
   for (auto& c : _children_storage) HEXED_ASSERT(c->is_leaf(), "At least one child is not a leaf.")
   _children_storage.clear();
-  refine(dims);
+  return refine(dims);
 }
 
-void Tree::unrefine() {
-  unrefine(std::vector<bool>(n_dim, true));
+std::vector<Tree*> Tree::unrefine() {
+  return unrefine(std::vector<bool>(n_dim, true));
 }
 
-void Tree::unrefine(int i_dim) {
+std::vector<Tree*> Tree::unrefine(int i_dim) {
   std::vector<bool> dims(n_dim, false);
   dims[i_dim] = true;
-  unrefine(dims);
+  return unrefine(dims);
 }
 
 void Tree::force_unrefine() {_children_storage.clear();}
@@ -401,8 +401,8 @@ void Tree::_assign_leaves(std::vector<Tree*>& assign_to, Tree* search_root, int 
 std::vector<Tree*> Tree::_refine(std::vector<bool> dims) {
   HEXED_ASSERT(is_leaf(), "can only refine leaf")
   HEXED_ASSERT((int)dims.size() == n_dim, "`refine_dims` has wrong number of entries")
-  if (std::none_of(dims.begin(), dims.end(), [](bool b){return b;})) return {};
   int n_child = math::pow(2, n_dim);
+  if (std::none_of(dims.begin(), dims.end(), [](bool b){return b;})) return std::vector<Tree*>(n_child, this);
   _children_storage.resize(n_child);
   for (int i_child = 0; i_child < n_child; ++i_child) {
     bool redundant = false;

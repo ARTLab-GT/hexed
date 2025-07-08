@@ -136,12 +136,12 @@ class Tree : public Mortal {
   //! \details Will refine along dimension `i` iff `refine_dims[i]` is `true`.
   //! For each `i` where `unrefine_dims[i]` is `true`, `is_refined[i]` must also be true, or else it throws.
   //! Each child must also be a leaf, or else it also throws.
-  void unrefine(std::vector<bool> unrefine_dims);
+  std::vector<Tree*> unrefine(std::vector<bool> unrefine_dims);
   //! \brief Isotropic unrefinement.
   //! \details Equivalent to `unrefine(std::vector<bool>)` on a vector of all `true`.
-  void unrefine();
+  std::vector<Tree*> unrefine();
   //! \brief Equivalent to `unrefine(std::vector<bool>)` on a vector with exactly one `true` element.
-  void unrefine(int i_dim);
+  std::vector<Tree*> unrefine(int i_dim);
   void force_unrefine(); //!< \brief Deletes all child elements and descendents thereof. This element is now a leaf.
   Tree* graft(Array<int> ref_level, Eigen::VectorXi coords);
   void connect(std::array<std::vector<Tree*>, 2>, Connection_direction);
