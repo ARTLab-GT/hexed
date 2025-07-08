@@ -2414,7 +2414,6 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
           needs_unref = needs_unref || unref[i_dim];
         }
         if (!needs_unref) continue;
-        printers::info("(unrefining)");
         std::vector<Element*> orig_elems;
         for (int i_child = 0; i_child < params.n_vertices(); ++i_child) {
           auto child = parent->children()[i_child]->elem.get();
