@@ -1134,7 +1134,10 @@ void Accessible_mesh::_fit_surface() {
   {
     auto new_all_verts = _blocks.verts();
     #pragma omp parallel for
-    for (auto& vert : new_all_verts) vert.remove_size_constraints();
+    for (auto& vert : new_all_verts) {
+      vert.remove_size_constraints();
+      vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
+    }
   }
 }
 
@@ -2432,6 +2435,11 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
   auto& elem__ents = elements();
   for (int i_elem = 0; i_elem < elem__ents.size(); ++i_elem) {
     HEXED_ASSERT(elem__ents[i_elem].tree, "no tree")
+  }
+  auto verts = _blocks.verts();
+  #pragma omp parallel for
+  for (auto& vert : verts) {
+    vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
   }
   printers::info("done. Mesh now has " + to_string(elements().size()) + " elements.\n");
 }

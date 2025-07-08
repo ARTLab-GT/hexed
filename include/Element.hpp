@@ -81,6 +81,7 @@ class Element : public Kernel_element, public Mortal {
   int refinement_level();
   int aniso_ref_level();
   Eigen::VectorXi nominal_position();
+  double wall_distance() const; //!< \brief The distance from the farthest vertex to the wall.
   //! pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); //!< layout: [i_var][i_qpoint]
   Array<double> flow_state(); //!< layout: [i_var][i_qpoint]
@@ -121,6 +122,7 @@ class Element : public Kernel_element, public Mortal {
   void destroy_shape();
   void destroy_fake();
   next::Element_shape& shape();
+  const next::Element_shape& shape() const;
   inline next::Element_shape* fake_shape() {return _fake_shape.get();}
   std::shared_ptr<next::Element_shape> shared_fake_shape();
   inline bool has_shape() const {return bool(_shape);}

@@ -82,6 +82,14 @@ int Element::refinement_level() {return tree.value().refinement_level();}
 int Element::aniso_ref_level() {return _aniso_r_level;}
 Eigen::VectorXi Element::nominal_position() {return tree.value().coordinates();}
 
+double Element::wall_distance() const {
+  double dist = 0;
+  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+    dist = std::max(dist, shape().vertex(i_vert).wall_distance);
+  }
+  return dist;
+}
+
 double* Element::stage(int i_stage) {
   return (i_stage > 0) ? residual_cache() + (i_stage - 1)*n_dof : state();
 }
@@ -202,6 +210,11 @@ void Element::destroy_fake() {
 }
 
 next::Element_shape& Element::shape() {
+  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.")
+  return *_shape;
+}
+
+const next::Element_shape& Element::shape() const {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.")
   return *_shape;
 }

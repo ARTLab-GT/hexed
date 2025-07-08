@@ -204,6 +204,7 @@ class Vertex : public Block {
   double dijkstra_curve_dist_sq; //!< \brief squared distance from the curve
   double dijkstra_arc_len; //!< \brief arc length of the nearest point on the curve
   bool incompatible_snap;
+  double wall_distance;
 
   private:
   struct _Gradient_entry {

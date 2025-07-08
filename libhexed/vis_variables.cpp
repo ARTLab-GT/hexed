@@ -10,6 +10,7 @@ void element(Namespace& space, Element& elem) {
   space.assign("aniso_ref_level", elem.aniso_ref_level());
   space.assign("mask", elem.mask());
   space.assign("nom_sz", elem.nominal_size());
+  space.assign("wall_distance", elem.wall_distance());
   space.assign("uncertainty", elem.uncertainty);
   space.assign("snapping_problem", int(elem.snapping_problem));
   space.assign("is_deformed", int(elem.deformed()));

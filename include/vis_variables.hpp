@@ -15,7 +15,8 @@ namespace hexed::vis_variables {
  * - `ref_level = elem.refinement_level()`
  * - `aniso_ref_level = elem.aniso_ref_level()`
  * - `mask = elem.mask()`
- * - `nom_sz` = elem.nominal_size()`
+ * - `nom_sz = elem.nominal_size()`
+ * - `wall_distance = elem.wall_distance()`
  * - `uncertainty` = elem.uncertainty`
  * - `snapping_problem`: Whether there was any problem snapping this element to geometry features.
  * - `is_deformed`: True if this element is deformed, false if it is Cartesian.

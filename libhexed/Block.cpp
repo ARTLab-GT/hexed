@@ -68,6 +68,7 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , snapped_edge{-1}
 , snapped_endpoint{-1}
 , incompatible_snap{false}
+, wall_distance{0.}
 , _pos{pos}
 , _orig_pos{Mat<3>::Zero()}
 , _step{Mat<3>::Zero()}
