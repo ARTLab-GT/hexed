@@ -41,6 +41,15 @@ namespace hexed::vis_variables {
  */
 void element(Namespace&, Element& elem);
 
+/*! \brief Assigns variables used for making adaptive refinement decisions.
+ * \details Includes all the variables in `vis_variables::element` inaddition to the following:
+ * - `i_dim`: The index of the reference dimension we are considering refining along
+ *   (supplied by the caller through the argument `i_dim`).
+ *   E.g., if we are deciding whether to split the element along its \f$ \xi_1 \f$ axis
+ *   (as opposed to \f$ \xi_0 \f$ or \f$ \xi_2 \f$), then `i_dim` will be set to 1.
+ */
+void adapt(Namespace&, Element& elem, int i_dim);
+
 /*! \brief Assigns the variables `pos0`, `pos1`, `pos2` and `jacobian_det`.
  * \details to the position of the `i_qpoint`th quadrature point and the Jacobian determinant.
  * Trailing dimensions are set to 0.

@@ -36,6 +36,11 @@ void element(Namespace& space, Element& elem) {
   }
 }
 
+void adapt(Namespace& space, Element& elem, int i_dim) {
+  element(space, elem);
+  space.assign("i_dim", i_dim);
+}
+
 void position(Namespace& space, Element& elem, const Basis& basis) {
   Array<double> pos {elem.position(basis)};
   for (int i_dim = 0; i_dim < pos.shape()[0]; ++i_dim) {

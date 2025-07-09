@@ -161,8 +161,10 @@ class Mesh {
    * The flood fill and extrusion are also updated.
    * \returns `true` if the mesh was changed, else `false`
    */
-  virtual bool update(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) = 0;
-  virtual void adapt(std::function<bool(Element&)> refine_criterion = criteria::always, std::function<bool(Element&)> unrefine_criterion = criteria::never) = 0;
+  virtual bool update(std::function<bool(Element&)> refine_criterion = criteria::always,
+                      std::function<bool(Element&)> unrefine_criterion = criteria::never) = 0;
+  virtual void adapt(std::function<bool(Element&, int)> refine_criterion,
+                     std::function<bool(Element&, int)> unrefine_criterion) = 0;
   virtual int surface_bc_sn() = 0; //!< what is the serial number of the geometry surface BC?
   //! \}
 

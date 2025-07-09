@@ -16,6 +16,7 @@ Element::Element(Storage_params params_arg, Tree& t, bool mobile_vertices, int a
 , data{Eigen::VectorXd::Zero(data_size + 2*n_dim*face_size)}
 , _vertex_data({3, params.n_vertices()})
 , _mask{0}
+, _desired_refinement(params.n_dim, 0)
 , tree(this)
 {
   tree.pair(t.elem);
@@ -80,6 +81,7 @@ double Element::nominal_shape(int i_dim) const {return tree.value().nominal_shap
 double Element::nominal_volume() const {return tree.value().nominal_shape().prod();}
 int Element::refinement_level() {return tree.value().refinement_level();}
 int Element::aniso_ref_level() {return _aniso_r_level;}
+int& Element::desired_refinement(int i_dim) {return _desired_refinement[i_dim];}
 Eigen::VectorXi Element::nominal_position() {return tree.value().coordinates();}
 
 double Element::wall_distance() const {

@@ -55,4 +55,5 @@ TEST_CASE("Element") {
     REQUIRE(element.jacobian(2, 2, i_qpoint) == 1.);
     REQUIRE(element.jacobian_determinant(i_qpoint) == 1.);
   }
+  for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(element.desired_refinement(i_dim) == 0);
 }

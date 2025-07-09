@@ -332,8 +332,9 @@ void Accessible_mesh::_fit_surface() {
     visualize("default", "mesh_diagnostic2", 0.);
   }
   {
-    Task_message message(printers::info, "  Pre-edge-matching mesh optimization", "\n", "  ");
+    printers::info("    Pre-edge-matching mesh optimization...\n");
     _optimize(1, 10, true);
+    printers::info("    done\n");
   }
   {
     auto faces = _blocks.faces_3d();
@@ -970,8 +971,9 @@ void Accessible_mesh::_fit_surface() {
     visualize("default", "mesh_diagnostic", 0.);
   }
   {
-    Task_message message(printers::info, "  Post-edge-matching mesh optimization", "\n", "  ");
+    printers::info("    Post-edge-matching mesh optimization...\n");
     _optimize(1, 10, true);
+    printers::info("    done\n");
   }
   Int n_failed = 0;
   for (auto& vert : all_verts) {
@@ -987,8 +989,9 @@ void Accessible_mesh::_fit_surface() {
     n_failed += failed;
   }
   if (n_failed) {
-    Task_message message(printers::info, "  Snap failure mitigation optimization", "\n", "  ");
+    printers::info("    Snap-failure mitigation optimization...\n");
     _optimize(1, 10, true);
+    printers::info("    done\n");
   }
   Int n_total_failure = 0;
   for (auto& vert : all_verts) {
@@ -1315,7 +1318,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     dist_monitor.add_sample(i_relax, total_dist);
     message = format_str(
       800,
-      "   "
+      "     "
       " Iteration = %4li;"
       " Objective = %.18e (%+.5e);"
       " Number of vertex snaps failed = %li;"
@@ -1892,7 +1895,7 @@ bool Accessible_mesh::is_surface(Tree* t) {
 }
 
 void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start) {
-  Task_message tm0(printers::info, "  incorporating surface geometry", "\n");
+  printers::info("  Incorporating surface geometry...\n");
   // take ownership of the surface geometries (do this first to avoid memory leak)
   surf_bc_sn = add_boundary_condition(surface_bc);
   surf_geom.reset(geometry);
@@ -1900,7 +1903,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   // identify surface elements
   auto& elems = elements();
   {
-    Task_message tm1(printers::info, "    determining inside/outside", "\n");
+    printers::info("    Determining inside/outside... ");
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
@@ -1917,6 +1920,7 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
       elem.record = 0;
       if (elem.tree) if (elem.tree->get_status() != 1) elem.record = 2;
     }
+    printers::info("    done.\n");
   }
   delete_bad_extrusions();
   deform();
@@ -1926,8 +1930,10 @@ void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, E
   extrude(true);
   connect_rest(surf_bc_sn);
   _fit_surface();
+  purge();
   connect_rest(surf_bc_sn);
   _n_verts = _blocks.verts().size();
+  printers::info("  done.\n");
 }
 
 void Accessible_mesh::set_unref_locks(std::function<bool(Element&)> lock_if) {
@@ -2313,8 +2319,8 @@ void Accessible_mesh::purge() {
   }
 }
 
-void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
-                            std::function<bool(Element&)> unrefine_criterion) {
+void Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
+                            std::function<bool(Element&, int)> unrefine_criterion) {
   Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
   printers::info("adapting mesh... ");
   Gauss_legendre solver_basis(params.row_size);
@@ -2323,10 +2329,13 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     elem.record = 0;
-    bool ref = refine_criterion(elem);
-    bool unref = unrefine_criterion(elem);
-    if (ref && !unref) elem.record = 1;
-    else if (unref && !ref) elem.record = -1;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      bool ref = refine_criterion(elem, i_dim);
+      bool unref = unrefine_criterion(elem, i_dim);
+      if (ref && !unref) elem.desired_refinement(i_dim) = 1;
+      else if (unref && !ref) elem.desired_refinement(i_dim) = -1;
+      else elem.desired_refinement(i_dim) = 0;
+    }
   }
   auto populate_elements = [this, &solver_basis](bool is_def, bool ref_unref, std::vector<bool> is_modified,
                                                  std::vector<Element*> orig_elems, std::vector<Tree*> new_leaves) {
@@ -2375,19 +2384,17 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
         auto& elem = elems[i_elem];
         if (elem.tree && elem.record != 2) {
           Array<int> need_ref = elem.tree->needs_refine([](Tree* t){return t->elem.get();});
-          if (elem.record == 1 || need_ref.extreme(1)) {
-            std::vector<bool> ref_dims(params.n_dim);
-            bool refine = false;
-            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-              ref_dims[i_dim] = (rand()%2 && !i_cycle) || need_ref[i_dim];
-              refine = refine || ref_dims[i_dim];
-            }
-            if (!refine) continue;
-            auto new_leaves = elem.tree->refine(ref_dims);
-            changed = true;
-            std::vector<Element*> orig_elems(params.n_vertices(), &elem);
-            populate_elements(is_deformed, false, ref_dims, orig_elems, new_leaves);
+          std::vector<bool> ref_dims(params.n_dim);
+          bool refine = false;
+          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+            ref_dims[i_dim] = elem.desired_refinement(i_dim) == 1 || need_ref[i_dim];
+            refine = refine || ref_dims[i_dim];
           }
+          if (!refine) continue;
+          auto new_leaves = elem.tree->refine(ref_dims);
+          changed = true;
+          std::vector<Element*> orig_elems(params.n_vertices(), &elem);
+          populate_elements(is_deformed, false, ref_dims, orig_elems, new_leaves);
         }
       }
     }
@@ -2407,10 +2414,10 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
         std::vector<bool> unref(params.n_dim);
         bool needs_unref = false;
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          auto predicate = [is_deformed](Tree* t)->bool {
+          auto predicate = [is_deformed, &elem, i_dim](Tree* t)->bool {
             if (!t->is_leaf() || !exists(t)) return false;
             if (t->elem->get_is_deformed() != is_deformed || t->has_graft_connection()) return false;
-            return rand()%2 && t->elem->record != 3;
+            return elem.desired_refinement(i_dim) == -1 && t->elem->record != 3;
           };
           unref[i_dim] = std::all_of(uc.begin(), uc.end(), predicate);
           unref[i_dim] = unref[i_dim] && parent->is_refined(i_dim) && !need_ref[i_dim];
@@ -2432,9 +2439,11 @@ void Accessible_mesh::adapt(std::function<bool(Element&)> refine_criterion,
   connect_new<Element>(0);
   connect_new<Deformed_element>(0);
   connect_rest(surface_bc_sn());
-  auto& elem__ents = elements();
-  for (int i_elem = 0; i_elem < elem__ents.size(); ++i_elem) {
-    HEXED_ASSERT(elem__ents[i_elem].tree, "no tree")
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    elem.record = 0;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) elem.desired_refinement(i_dim) = 0;
   }
   auto verts = _blocks.verts();
   #pragma omp parallel for

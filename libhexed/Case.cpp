@@ -401,20 +401,71 @@ Case::Case(std::string input_script)
     return "";
   }));
 
-  _inter.variables->create("init_refinement", new Namespace::Heisenberg<std::string>([this]() {
-    for (int i = 0; i < _vari("init_ref_level"); ++i) _solver().mesh().update();
-    _solver().calc_jacobian();
-    return "";
-  }));
-
-  _inter.variables->create("add_geom", new Namespace::Heisenberg<std::string>([this]() {
+  _inter.variables->create("mesh", new Namespace::Heisenberg<std::string>([this]() {
+    printers::info("Meshing...\n");
+    auto compute_bbox = [&]() {
+      _solver().bounds_surface("position0 = pos0; position1 = pos1; position2 = pos2;", 2*_vari("n_dim"), 20);
+      double geom_len = 0;
+      for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
+        std::vector<std::string> minmax {"min", "max"};
+        for (int sign : {0, 1}) {
+          _inter.variables->assign("geom_bbox" + to_string(i_dim) + to_string(sign),
+                                   _vard(minmax[sign] + "_surface_position" + to_string(i_dim)));
+        }
+        double dim_len =   _vard("max_surface_position" + to_string(i_dim))
+                         - _vard("min_surface_position" + to_string(i_dim));
+        geom_len = std::max(geom_len, dim_len);
+      }
+      _inter.variables->assign("geom_length", geom_len);
+    };
+    auto refine_isotropic = [&](std::string short_name, std::string long_name, bool bbox, bool newline) {
+      std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
+      std::vector<std::function<bool(Element&)>> crits;
+      for (std::string crit : crit_names) {
+        crits.emplace_back([this, crit, short_name](Element& elem) {
+          auto sub = _inter.make_sub();
+          vis_variables::element(*sub.variables, elem);
+          sub.exec("return = $" + short_name + crit);
+          return sub.variables->get<int>("return");
+        });
+      }
+      for (int i_ref = 0, changed = true; i_ref < _vari("max_" + short_name + "_refine_iters") && changed; ++i_ref) {
+        printers::info("  " + long_name + " refinement sweep " + to_string(i_ref) + "..." + (newline ? "\n" : " "));
+        changed = _solver().mesh().update(crits[0], crits[1]);
+        _solver().calc_jacobian();
+        if (bbox) compute_bbox();
+        printers::info((newline ? "  " : "") + std::string("done. Mesh has ")
+                       + to_string(_solver().mesh().n_elements()) + " elements." + (newline ? "\n  " : " "));
+        _inter.variables->assign("flow_time", double(i_ref));
+        _visualize("_" + short_name + "_ref_sweep" + to_string(i_ref));
+      }
+    };
+    refine_isotropic("init", "Initial", false, false);
     Surface_geom* geom = _make_geom();
     if (geom) {
+      printers::info("  Fitting geometry...\n");
       _has_geom = true;
-      _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc")), _get_vector("flood_fill_start", _vari("n_dim")));
+      _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc")),
+                                   _get_vector("flood_fill_start", _vari("n_dim")));
       _solver().calc_jacobian();
+      compute_bbox();
+        printers::info("  done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements.\n  ");
+      _inter.variables->assign("flow_time", 0.);
+      _visualize("_init_geometry_fit");
     }
-    _visualize("_ref_sweep0");
+    refine_isotropic("geom", "Geometry", true, true);
+    _inter.variables->assign("flow_time", 0.);
+    for (int i_split = 0; i_split < _vari("init_layer_splits"); ++i_split) _inter.make_sub().exec("split_layers");
+    _inter.variables->assign("mesh_init", 1);
+    printers::info("  geometry bounding box: \n");
+    for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
+      printers::info("   ");
+      for (int sign : {0, 1}) {
+        printers::info(" " + to_string(_vard("geom_bbox" + to_string(i_dim) + to_string(sign))));
+      }
+      printers::info("\n");
+    }
+    printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.", true);
     return "";
   }));
 
@@ -438,9 +489,6 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
-    srand(57);
-    _solver().mesh().adapt([](Element&){return rand()%2 == 0;}, [](Element&){return false;});
-    _solver().calc_jacobian();
     return "";
   }));
 

@@ -46,6 +46,7 @@ class Element : public Kernel_element, public Mortal {
   // may contain a fake element that `this` is a subset of
   std::shared_ptr<next::Element_shape> _fake_shape;
   std::vector<Face> _faces;
+  std::vector<int> _desired_refinement;
   friend Accessible_mesh; // necessary for `Accessible_mesh::set_mask`... need a better way to do this
 
   public:
@@ -80,6 +81,7 @@ class Element : public Kernel_element, public Mortal {
   double nominal_volume() const;
   int refinement_level();
   int aniso_ref_level();
+  int& desired_refinement(int i_dim);
   Eigen::VectorXi nominal_position();
   double wall_distance() const; //!< \brief The distance from the farthest vertex to the wall.
   int wall_dimension();
