@@ -171,6 +171,7 @@ implicit_scheme = {backward Euler}
 max_ref_level = 1000
 geom_rtol = 1e-5
 geom_atol = 0.
+wall_spacing = huge
 viscosity_model = {}
 conductivity_model = {}
 turbulence_model = {}
@@ -198,7 +199,7 @@ init_refine_if = {ref_level < init_ref_level;}
 init_unrefine_if = {false}
 geom_refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level < max_ref_level & nom_sz > min_elem_size)}
 geom_unrefine_if = {false}
-final_refine_if = {false}
+final_refine_if = {(has_wall & i_dim == wall_dimension & $({nominal_shape} + has_wall*wall_dimension) > wall_spacing)}
 final_unrefine_if = {false}
 max_init_refine_iters = 100
 max_geom_refine_iters = 100

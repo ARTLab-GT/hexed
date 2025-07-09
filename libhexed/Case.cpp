@@ -456,6 +456,24 @@ Case::Case(std::string input_script)
     refine_isotropic("geom", "Geometry", true, true);
     _inter.variables->assign("flow_time", 0.);
     for (int i_split = 0; i_split < _vari("init_layer_splits"); ++i_split) _inter.make_sub().exec("split_layers");
+    for (int i_ref = 0, changed = true; i_ref < _vari("max_final_refine_iters") && changed; ++i_ref) {
+      printers::info("  Final refinement sweep " + to_string(i_ref) + "... ");
+      std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
+      std::vector<std::function<bool(Element&, int)>> crits;
+      for (std::string crit : crit_names) {
+        crits.emplace_back([this, crit](Element& elem, int i_dim) {
+          auto sub = _inter.make_sub();
+          vis_variables::adapt(*sub.variables, elem, i_dim);
+          sub.exec("return = $final" + crit);
+          return sub.variables->get<int>("return");
+        });
+      }
+      changed = _solver().mesh().adapt(crits[0], crits[1]);
+      _solver().calc_jacobian();
+      printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ");
+      _inter.variables->assign("flow_time", double(i_ref));
+      _visualize("_final_ref_sweep" + to_string(i_ref));
+    }
     _inter.variables->assign("mesh_init", 1);
     printers::info("  geometry bounding box: \n");
     for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
@@ -465,7 +483,7 @@ Case::Case(std::string input_script)
       }
       printers::info("\n");
     }
-    printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.", true);
+    printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.\n", true);
     return "";
   }));
 
@@ -489,6 +507,8 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
+    printers::info("adapting mesh... ");
+    printers::info("done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
     return "";
   }));
 
