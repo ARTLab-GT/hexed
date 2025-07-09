@@ -168,6 +168,7 @@ init_ref_level = 3
 steady = true
 implicit = true
 implicit_scheme = {backward Euler}
+amr = false
 max_ref_level = 1000
 geom_rtol = 1e-5
 geom_atol = 0.
@@ -323,7 +324,7 @@ vis_iter = {
 adapt_iter = {
     case0 = {}
     case1 = {adapt}
-    $$({case} + (iteration%adapt_freq == 0))
+    $$({case} + (amr & iteration%adapt_freq == 0))
 }
 
 setup_io = {

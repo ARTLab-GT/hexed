@@ -11,7 +11,7 @@ mesh_extreme00 = -10.
 mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
-wall_spacing = 0.1
+geom_refine_if = {((center0^2 + center1^2 < 2*nom_sz^2) | ((center0 - 1.)^2 + center1^2 < 2*nom_sz^2)) & nom_sz > .1}
 
 {generate geometry with external script}
 shell {python3 make_geom.py}
@@ -23,19 +23,12 @@ freestream_mach = 0.3
 attack = 4*degree
 
 {iteration parameters}
-print_freq = 100
+print_freq = 1000
 vis_freq = 20000
-vis_freq = 2000
-adapt_freq = 2000
 done = {iteration > 10000 & lift_coef_max - lift_coef_min < 1e-2*(lift_coef_min + lift_coef_max)/2}
-iterate = compute_force + iterate + {
-    case0 = {}
-    case1 = {adapt_freq = 10^10}
-    $$({case} + (iteration == 6000))
-}
+iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-vis_field_vars = vis_field_vars + {nominal_shape0 = nominal_shape0; nominal_shape1 = nominal_shape1; nominal_shape2 = nominal_shape2; aniso_ref_level0 = aniso_ref_level0; aniso_ref_level1 = aniso_ref_level1; aniso_ref_level2 = aniso_ref_level2;}
 
 {run simulation}
 $simulate
