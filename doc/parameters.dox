@@ -1163,6 +1163,10 @@ Returns an empty string.
 <hr>
 \subsubsection split_layers
 __type:__ Heisenberg string \n
+\deprecated
+\ref split_layers is deprecated and will be disabled in a future version.
+Instead, use \ref final_refine_if and \ref final_unrefine_if to achieve anisotropic wall refinement (or simply rely on AMR).
+
 Creates anisotropic wall layers by splitting the last wall layer (the layer of extruded elements closest to the geometry surface) into thinner layers.
 The layer will be split at user-specified set of points controlled by \ref layer_split_points.
 For each split point, the layer will be cut by the level surface where the wall-normal reference coordinate equals that value.

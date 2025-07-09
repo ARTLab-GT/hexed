@@ -35,7 +35,7 @@ iterate = compute_force + iterate + {
 }
 monitor_vars = {lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-vis_field_vars = vis_field_vars + {wall_distance = wall_distance;}
+vis_field_vars = vis_field_vars + {nominal_shape0 = nominal_shape0; nominal_shape1 = nominal_shape1; nominal_shape2 = nominal_shape2; aniso_ref_level0 = aniso_ref_level0; aniso_ref_level1 = aniso_ref_level1; aniso_ref_level2 = aniso_ref_level2;}
 
 {run simulation}
 $simulate

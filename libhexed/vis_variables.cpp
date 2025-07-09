@@ -1,4 +1,5 @@
 #include <hexed/vis_variables.hpp>
+#include <hexed/Tree.hpp>
 
 namespace hexed::vis_variables {
 
@@ -11,6 +12,8 @@ void element(Namespace& space, Element& elem) {
   space.assign("mask", elem.mask());
   space.assign("nom_sz", elem.nominal_size());
   space.assign("wall_distance", elem.wall_distance());
+  space.assign("wall_dimension", elem.wall_dimension());
+  space.assign("has_wall", int(elem.has_wall()));
   space.assign("uncertainty", elem.uncertainty);
   space.assign("snapping_problem", int(elem.snapping_problem));
   space.assign("is_deformed", int(elem.deformed()));
@@ -27,6 +30,9 @@ void element(Namespace& space, Element& elem) {
   center /= params.n_vertices();
   for (int i_dim = 0; i_dim < 3; ++i_dim) {
     space.assign(index("center", i_dim), center(i_dim));
+    space.assign(index("aniso_ref_level", i_dim),
+                 i_dim < params.n_dim ? elem.tree.value().anisotropic_refinement_level()[i_dim] : 0);
+    space.assign(index("nominal_shape", i_dim), i_dim < params.n_dim ? elem.nominal_shape(i_dim) : 0.);
   }
 }
 

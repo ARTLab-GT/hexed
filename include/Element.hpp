@@ -71,7 +71,7 @@ class Element : public Kernel_element, public Mortal {
 
   virtual inline bool get_is_deformed() {return is_deformed;} //!< for determining whether a pointer is deformed
   bool is_extruded();
-  Storage_params storage_params();
+  Storage_params storage_params() const;
   Array<double> position(const Basis&) const;
   Array<double> face_position(const Basis&) const;
   virtual void set_jacobian(const Basis& basis);
@@ -82,6 +82,8 @@ class Element : public Kernel_element, public Mortal {
   int aniso_ref_level();
   Eigen::VectorXi nominal_position();
   double wall_distance() const; //!< \brief The distance from the farthest vertex to the wall.
+  int wall_dimension();
+  bool has_wall();
   //! pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); //!< layout: [i_var][i_qpoint]
   Array<double> flow_state(); //!< layout: [i_var][i_qpoint]

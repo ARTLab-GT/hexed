@@ -39,7 +39,7 @@ Element::Element(Storage_params params_arg, Tree& t, int aniso_r_level)
 {}
 
 bool Element::is_extruded() {return tree.value().is_graft();}
-Storage_params Element::storage_params() {return params;}
+Storage_params Element::storage_params() const {return params;}
 
 Array<double> Element::position(const Basis& basis) const {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
@@ -88,6 +88,24 @@ double Element::wall_distance() const {
     dist = std::max(dist, shape().vertex(i_vert).wall_distance);
   }
   return dist;
+}
+
+int Element::wall_dimension() {
+  if (!is_extruded()) return -1;
+  HEXED_ASSERT(_fake_shape, "no fake shape")
+  int i_bf = _fake_shape->boundary_face();
+  if (i_bf == next::Mesh_blocks::no_face) return -1;
+  return i_bf/2;
+}
+
+bool Element::has_wall() {
+  if (!is_extruded()) return false;
+  HEXED_ASSERT(_fake_shape, "no fake shape")
+  int i_bf = _fake_shape->boundary_face();
+  if (i_bf < 0) return false;
+  auto& face = _faces[i_bf];
+  if (!face.neighbor_connection()) return false;
+  return face.neighbor_connection()->opposite_face(face).boundary_connection();
 }
 
 double* Element::stage(int i_stage) {
