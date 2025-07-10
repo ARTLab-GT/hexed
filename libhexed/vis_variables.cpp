@@ -39,6 +39,9 @@ void element(Namespace& space, Element& elem) {
 void adapt(Namespace& space, Element& elem, int i_dim) {
   element(space, elem);
   space.assign("i_dim", i_dim);
+  double discon = 0;
+  for (int sign : {0, 1}) discon += elem.face(2*i_dim + sign).discontinuity()(0)[elem.storage_params().n_dim];
+  space.assign("discontinuity", discon);
 }
 
 void position(Namespace& space, Element& elem, const Basis& basis) {

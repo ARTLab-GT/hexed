@@ -204,8 +204,8 @@ geom_refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level <
 geom_unrefine_if = {false}
 final_refine_if = {(has_wall & i_dim == wall_dimension & $({nominal_shape} + has_wall*wall_dimension) > wall_spacing)}
 final_unrefine_if = {false}
-adapt_refine_if = {(uncertainty > adapt_threshold)}
-adapt_unrefine_if = {(uncertainty < adapt_threshold/2^row_size)}
+adapt_refine_if = {(discontinuity > adapt_threshold)}
+adapt_unrefine_if = {(discontinuity < adapt_threshold/2^row_size & $({aniso_ref_level} + i_dim) > init_ref_level)}
 adapt_if = {(normalized_residual < adapt_residual_factor*adapt_last_residual)}
 max_init_refine_iters = 100
 max_geom_refine_iters = 100

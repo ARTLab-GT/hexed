@@ -902,16 +902,6 @@ void Solver::compute_residual() {
       ref.coarse().discontinuity() = .5*(ref.fine()[0]->discontinuity() + ref.fine()[1]->discontinuity());
     }
   }
-  auto& elems = acc_mesh->elements();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    elem.uncertainty = 0;
-    for (int i_face = 0; i_face < 2*nd; ++i_face) {
-      elem.uncertainty += elem.face(i_face).discontinuity()(0)[nd]
-                          /_namespace->get<double>("freestream_density");
-    }
-  }
 }
 
 void Solver::compute_lts_constraints() {
