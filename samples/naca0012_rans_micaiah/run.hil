@@ -13,11 +13,7 @@ mesh_extreme10 = -80.
 mesh_extreme01 =  80.
 mesh_extreme11 =  80.
 
-init_ref_level = 4
-refine_if = {(is_extruded & ref_level < 10) | ((center0^2 + center1^2)^.5 < .3 & ref_level < 11) | ((center0^2 + center1^2)^.5 < .1 & ref_level < 12)}
-unrefine_if = {false}
-{$set_geometry_refinement}
-init_layer_splits = 9
+wall_spacing = 2e-5
 bl_multirate = true
 flow_iters = 10
 bl_iters = 6
@@ -47,21 +43,15 @@ println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_ene
 surface_bc = {no_slip}
 diffusive_admissibility = false
 fix_therm_admis = true
-max_safety = .7
+max_safety = .3
 
 {iteration parameters}
 print_freq = 10
-vis_freq = 1
-write_freq = 1
-time_step_done = {pseudotime_iteration > 30 & lift_coef_diff_max - lift_coef_diff_min < 1e-2*abs(lift_coef_diff_min + lift_coef_diff_max)/2 & drag_coef_diff_max - drag_coef_diff_min < 1e-2*abs(drag_coef_diff_min + drag_coef_diff_max)/2}
-done = {flow_time >= 0.1}
-steady = false
-implicit_scheme = {dirk2}
-time_step = 1e-4
+vis_freq = 100
+done = {iteration > 10^4 & lift_coef_max - lift_coef_min < 1e-2*abs(lift_coef_min + lift_coef_max)/2 & drag_coef_max - drag_coef_min < 1e-2*abs(drag_coef_min + drag_coef_max)/2}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_dirk2}
 
 vis_field_vars = vis_field_vars + {
     specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
@@ -71,12 +61,7 @@ vis_field_vars = vis_field_vars + {
     residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)/tss
 }
 
-{run simulation}
-$start
-$mesh
-init_state
-$run
-$print_force
+$simulate
 
 integrand_surface = visc_stress_expr
 integrate_surface

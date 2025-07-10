@@ -2762,7 +2762,9 @@ std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::pret
   std::vector<std::unique_ptr<Masked_mesh>> masks;
   masks.emplace_back(new Masked_mesh(*this, basis));
   while (masks.back()->kernel_mesh.elems.size()) {
-    auto predicate = [this](Element& elem){return elem.aniso_ref_level() >= _mask_levels;};
+    auto predicate = [this](Element& elem){
+      return elem.tree->anisotropic_refinement_level().extreme(1) + elem.aniso_ref_level() >= _mask_levels;
+    };
     masks.emplace_back(new Masked_mesh(*this, basis, predicate));
   }
   masks.pop_back();
