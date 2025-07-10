@@ -12,7 +12,7 @@ mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
 amr = true
-adapt_freq = 3*10^4
+adapt_freq = 1*10^4
 adapt_refine_if = {uncertainty > 1e-4}
 
 {generate geometry with external script}
@@ -28,6 +28,7 @@ attack = 4*degree
 print_freq = 1000
 vis_freq = 20000
 done = {iteration > 10000 & lift_coef_max - lift_coef_min < 1e-2*(lift_coef_min + lift_coef_max)/2}
+done = {iteration > 10^5}
 iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr

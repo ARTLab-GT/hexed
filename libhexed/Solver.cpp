@@ -873,13 +873,13 @@ void Solver::compute_residual() {
   for (bool is_def : {0, 1}) {
     #pragma omp parallel for
     for (auto& con : acc_mesh->neighbor_connections(is_def)) {
+      Array<double> diff = con.face(1).flow_state()(0).copy();
+      auto perm = face_permutation(nd, params.row_size, con.get_direction(), diff.data(), turb);
+      perm->match_faces();
+      diff -= con.face(0).flow_state()(0);
       if (check_farfield(con)) continue;
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
-        Mat<> diff = con.face(1).flow_state()(0)(i_var).vector();
-        auto perm = face_permutation(nd, params.row_size, con.get_direction(), diff.data(), turb);
-        perm->match_faces();
-        diff -= con.face(0).flow_state()(0)(i_var).vector();
-        double norm = std::sqrt(diff.dot(face_weights.cwiseProduct(diff)));
+        double norm = std::sqrt(diff(i_var).vector().dot(face_weights.cwiseProduct(diff(i_var).vector())));
         for (int i_side = 0; i_side < 2; ++i_side) con.face(i_side).discontinuity()(0)[i_var] = norm;
       }
     }
