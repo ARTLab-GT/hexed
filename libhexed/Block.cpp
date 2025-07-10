@@ -137,6 +137,14 @@ void Vertex::set_pos(Mat<3> p) {
   }
 }
 
+void Vertex::remember_pos() {
+  Mat<3> p = point({});
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    #pragma omp atomic write
+    _pos(i_dim) = p(i_dim);
+  }
+}
+
 void Vertex::add_size_constraint(double sz) {
   Lock::Set s(_shared_value_lock);
   _sz_constraint = std::min(_sz_constraint, sz);

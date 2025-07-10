@@ -2323,6 +2323,11 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
                             std::function<bool(Element&, int)> unrefine_criterion) {
   Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
   Gauss_legendre solver_basis(params.row_size);
+  {
+    auto verts = _blocks.verts();
+    #pragma omp parallel for
+    for (auto& vert : verts) vert.remember_pos();
+  }
   Int n_orig_elems = elems.size();
   // decide which elements to (un)refine
   #pragma omp parallel for // parallelize this part since `predicate` could be expensive
@@ -2445,10 +2450,12 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
     elem.record = 0;
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) elem.desired_refinement(i_dim) = 0;
   }
-  auto verts = _blocks.verts();
-  #pragma omp parallel for
-  for (auto& vert : verts) {
-    vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
+  {
+    auto verts = _blocks.verts();
+    #pragma omp parallel for
+    for (auto& vert : verts) {
+      vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
+    }
   }
   return elems.size() != n_orig_elems;
 }

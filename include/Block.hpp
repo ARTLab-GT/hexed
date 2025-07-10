@@ -120,6 +120,9 @@ class Vertex : public Block {
 
   //! \brief set the `point({})` of `this` to `p`, if possible
   void set_pos(Mat<3> p);
+  //! \brief if `this` is `glued()`,
+  //! sets it to remember its current `point({})` after the element it's glued to is destroyed.
+  void remember_pos();
   //! \brief add a constraint that the `nominal_size()` of `this` must be smaller than the supplied value
   //! \details inherited by vertices that `eat()` `this`.
   void add_size_constraint(double);
