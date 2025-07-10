@@ -12,12 +12,14 @@ Face::Face(Storage_params params, int i_d, int s, bool is_def, double* data)
 , _n_face_qpoint{params.n_qpoint()/params.row_size}
 , _n_state{std::max(2*params.n_var, params.n_dim + params.n_advection(params.row_size))}
 , _n_normal{is_def*params.n_dim}
+, _discontinuity({2, params.n_var})
 , _data({(_n_state + _n_normal), _n_face_qpoint}, data)
 , _flow_state{_data(0, 2*_params.n_var).reshaped({2, _params.n_var, _n_face_qpoint})}
 , _advection_state{_data(0, _params.n_dim + _params.n_advection(_params.row_size))}
 , _full_state{_data(0, _n_state)}
 , _normal{_data(_n_state, end)}
 {
+  _discontinuity = 0;
   _data = 0;
 }
 
@@ -60,6 +62,8 @@ void Face::disconnect() {
   _neighbor_connection.unpair();
   _face_ref_fine.unpair();
 }
+
+Array<double> Face::discontinuity() {return _discontinuity();}
 
 Array<double> Face::flow_state() {
   return _flow_state();

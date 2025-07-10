@@ -858,8 +858,34 @@ void Solver::update_implicit() {
 
 void Solver::compute_residual() {
   apply_state_bcs();
+  Mat<> face_weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
+  int nd = params.n_dim;
+  auto check_farfield = [nd](Neighbor_connection& con) {
+    bool farfield = false;
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      if (con.face(i_side).boundary_connection()) {
+        farfield = farfield || con.face(i_side).boundary_connection()->boundary_condition() < 2*nd;
+      }
+    }
+    if (farfield) for (int i_side = 0; i_side < 2; ++i_side) con.face(i_side).discontinuity() = 0;
+    return farfield;
+  };
+  for (bool is_def : {0, 1}) {
+    #pragma omp parallel for
+    for (auto& con : acc_mesh->neighbor_connections(is_def)) {
+      if (check_farfield(con)) continue;
+      for (int i_var = 0; i_var < params.n_var; ++i_var) {
+        Mat<> diff = con.face(1).flow_state()(0)(i_var).vector();
+        auto perm = face_permutation(nd, params.row_size, con.get_direction(), diff.data(), turb);
+        perm->match_faces();
+        diff -= con.face(0).flow_state()(0)(i_var).vector();
+        double norm = std::sqrt(diff.dot(face_weights.cwiseProduct(diff)));
+        for (int i_side = 0; i_side < 2; ++i_side) con.face(i_side).discontinuity()(0)[i_var] = norm;
+      }
+    }
+  }
   Kernel_options opts {
-    .sw_car =stopwatch["cartesian"],
+    .sw_car = stopwatch["cartesian"],
     .sw_def = stopwatch["deformed"],
     .sw_pr = stopwatch["prolong/restrict"],
     .dt = 1.,
@@ -869,6 +895,23 @@ void Solver::compute_residual() {
   };
   if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, false);
   else compute_euler(_kernel_mesh(), opts);
+  #pragma omp parallel for
+  for (auto& vec : acc_mesh->face_refinements()) {
+    for (int i_ref = vec.size() - 1; i_ref >= 0; --i_ref) {
+      auto& ref = vec[i_ref];
+      ref.coarse().discontinuity() = .5*(ref.fine()[0]->discontinuity() + ref.fine()[1]->discontinuity());
+    }
+  }
+  auto& elems = acc_mesh->elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    elem.uncertainty = 0;
+    for (int i_face = 0; i_face < 2*nd; ++i_face) {
+      elem.uncertainty += elem.face(i_face).discontinuity()(0)[nd]
+                          /_namespace->get<double>("freestream_density");
+    }
+  }
 }
 
 void Solver::compute_lts_constraints() {

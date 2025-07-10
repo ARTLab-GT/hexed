@@ -508,6 +508,18 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
     printers::info("adapting mesh... ");
+    std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
+    std::vector<std::function<bool(Element&, int)>> crits;
+    for (std::string crit : crit_names) {
+      crits.emplace_back([this, crit](Element& elem, int i_dim) {
+        auto sub = _inter.make_sub();
+        vis_variables::adapt(*sub.variables, elem, i_dim);
+        sub.exec("return = $adapt" + crit);
+        return sub.variables->get<int>("return");
+      });
+    }
+    _solver().mesh().adapt(crits[0], crits[1]);
+    _solver().calc_jacobian();
     printers::info("done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
     return "";
   }));
