@@ -2356,9 +2356,16 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
         std::array<std::vector<double>, 2> coords;
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
           int row_coord = math::row_coordinate(params.n_dim, 2, i_dim, i_leaf);
+          int row0 = i_leaf - row_coord*math::stride(params.n_dim, 2, i_dim);
+          int row1 = row0 + math::stride(params.n_dim, 2, i_dim);
           for (int i : {0, 1}) {
-            if (ref_unref) coords[i].push_back(row_coord + i*(1 + is_modified[i_dim]));
-            else coords[i].push_back(.5*(row_coord + i*(1 + !is_modified[i_dim])));
+            if (new_leaves[row0] == new_leaves[row1] && orig_elems[row0] != orig_elems[row1]) {
+              coords[i].push_back(2*i);
+            } else if (new_leaves[row0] != new_leaves[row1] && orig_elems[row0] == orig_elems[row1]) {
+              coords[i].push_back(.5*(row_coord + i));
+            } else {
+              coords[i].push_back(i);
+            }
           }
         }
         if (is_def) new_elem->glue_shape(elem, coords);
