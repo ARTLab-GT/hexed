@@ -890,7 +890,9 @@ void Solver::compute_residual() {
           for (int i_side = 0; i_side < 2; ++i_side) con.face(i_side).discontinuity()(is_flux) = 0;
         } else {
           Array<double> diff = con.face(1).flow_state()(is_flux).copy();
-          auto perm = face_permutation(nd, params.row_size, con.get_direction(), diff.data(), turb);
+          auto dir = con.get_direction();
+          if (is_flux) diff *= math::sign(dir.flip_normal(0) == dir.flip_normal(1));
+          auto perm = face_permutation(nd, params.row_size, dir, diff.data(), turb);
           perm->match_faces();
           diff -= con.face(0).flow_state()(is_flux);
           for (int i_var = 0; i_var < params.n_var; ++i_var) if (i_var != params.n_dim || !is_flux) {

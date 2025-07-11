@@ -6,12 +6,12 @@ mesh_extreme00 = -4.*.02
 mesh_extreme01 =  0.*.02
 mesh_extreme10 =  0.*.02
 mesh_extreme11 =  4.*.02
-init_ref_level = 2
-refine_if = {center0 > -2.0*0.02 & center1 < 2.8*0.02 & ref_level < 5}
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {outflow}
 geom0 = {auto.csv}
-init_layer_splits = 3
+amr = false;
+init_refine_if = init_refine_if + {| (center0 > -2.0*0.02 & center1 < 2.8*0.02 & ref_level < 5)}
+wall_spacing = .02*1e-3
 
 {freestream/wall definition}
 freestream_mach = 8.1
@@ -30,7 +30,7 @@ done = {iteration > 10^4 & heating_rate_max - heating_rate_min < 10.}
 vis_freq = 5000
 diffusive_admissibility = true
 vis_lts_constraints = true
-vis_field_vars = vis_field_vars + field_residual_expr
+vis_field_vars = vis_field_vars + field_residual_expr + {discontinuity0 = discontinuity0; discontinuity1 = discontinuity1; discontinuity2 = discontinuity2;}
 
 $plot_history
 $simulate

@@ -8,6 +8,7 @@ geom_refine_if = {(nom_sz > 0.05 & (center0^2 + center1^2)^.5 < nom_sz) | (nom_s
 geom_unrefine_if = {(ref_level > init_ref_level) & !is_extruded}
 init_layer_splits = 3
 }
+wall_spacing = 1e-2
 amr = true
 geom0 = {geom.csv}
 viscosity_model = air_viscosity
