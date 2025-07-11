@@ -1959,7 +1959,7 @@ void Accessible_mesh::connect_new(int start_at) {
         if (exists(n)) {
           auto neighbs = elem.tree->find_connection_neighbors(i_face);
           if (neighbs.valid()) _connect(neighbs.elements(), neighbs.direction, "connect_new");
-        } else if (!n && elem.active_shape().boundary_face() == next::Mesh_blocks::no_face) {
+        } else if (!n && elem.active_shape().boundary_face() != i_face) {
           auto& bound_face = elem.face(i_face);
           int bc_sn = tree_bcs[i_face];
           _bound_cons.emplace_back(bound_face, bc_sn, bound_conds[bc_sn]->n_prescribed(params.n_dim));
