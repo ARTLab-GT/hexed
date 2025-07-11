@@ -463,7 +463,8 @@ Case::Case(std::string input_script)
       for (std::string crit : crit_names) {
         crits.emplace_back([this, crit](Element& elem, int i_dim) {
           auto sub = _inter.make_sub();
-          vis_variables::adapt(*sub.variables, elem, i_dim);
+          vis_variables::element(*sub.variables, elem);
+          sub.variables->assign("i_dim", i_dim);
           sub.exec("return = $final" + crit);
           return sub.variables->get<int>("return");
         });
@@ -513,7 +514,8 @@ Case::Case(std::string input_script)
     for (std::string crit : crit_names) {
       crits.emplace_back([this, crit](Element& elem, int i_dim) {
         auto sub = _inter.make_sub();
-        vis_variables::adapt(*sub.variables, elem, i_dim);
+        vis_variables::element(*sub.variables, elem);
+        sub.variables->assign("i_dim", i_dim);
         sub.exec("return = $adapt" + crit);
         return sub.variables->get<int>("return");
       });

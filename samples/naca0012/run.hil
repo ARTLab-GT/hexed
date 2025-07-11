@@ -12,7 +12,6 @@ mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
 amr = true
-adapt_freq = 1*10^4
 
 {generate geometry with external script}
 shell {python3 make_geom.py}
@@ -26,12 +25,12 @@ attack = 4*degree
 {iteration parameters}
 print_freq = 1000
 vis_freq = 20000
-done = {iteration > 10000 & lift_coef_max - lift_coef_min < 1e-2*(lift_coef_min + lift_coef_max)/2}
 done = {iteration > 10^6}
+done = {iteration > 10000 & lift_coef_max - lift_coef_min < 1e-3*(lift_coef_min + lift_coef_max)/2}
 iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-vis_field_vars = vis_field_vars + {uncertainty = uncertainty;}
+vis_field_vars = vis_field_vars + {discontinuity0 = discontinuity0; discontinuity1 = discontinuity1; discontinuity2 = discontinuity2;}
 
 {run simulation}
 $simulate

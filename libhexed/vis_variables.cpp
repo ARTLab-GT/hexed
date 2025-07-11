@@ -33,15 +33,16 @@ void element(Namespace& space, Element& elem) {
     space.assign(index("aniso_ref_level", i_dim),
                  i_dim < params.n_dim ? elem.tree.value().anisotropic_refinement_level()[i_dim] : 0);
     space.assign(index("nominal_shape", i_dim), i_dim < params.n_dim ? elem.nominal_shape(i_dim) : 0.);
+    double discon = 0;
+    if (i_dim < params.n_dim) {
+      for (int sign : {0, 1}) {
+        for (int i_var = 0; i_var < params.n_var; ++i_var) {
+          discon += elem.face(2*i_dim + sign).discontinuity()(0)[i_var];
+        }
+      }
+    }
+    space.assign(index("discontinuity", i_dim), discon);
   }
-}
-
-void adapt(Namespace& space, Element& elem, int i_dim) {
-  element(space, elem);
-  space.assign("i_dim", i_dim);
-  double discon = 0;
-  for (int sign : {0, 1}) discon += elem.face(2*i_dim + sign).discontinuity()(0)[elem.storage_params().n_dim];
-  space.assign("discontinuity", discon);
 }
 
 void position(Namespace& space, Element& elem, const Basis& basis) {

@@ -870,16 +870,33 @@ void Solver::compute_residual() {
     if (farfield) for (int i_side = 0; i_side < 2; ++i_side) con.face(i_side).discontinuity() = 0;
     return farfield;
   };
+  Array<double> face_min = Array<double>::make_uniform({params.n_var}, huge);
+  Array<double> face_max = Array<double>::make_uniform({params.n_var}, -huge);
+  for (bool is_def : {0, 1}) {
+    #pragma omp parallel for reduction(min:face_min) reduction(max:face_max)
+    for (auto& con : acc_mesh->neighbor_connections(is_def)) {
+      for (int i_side = 0; i_side < 2; ++i_side) {
+        Array<double> state = con.face(i_side).flow_state()(0);
+        for (int i_var = 0; i_var < params.n_var; ++i_var) {
+          for (int i_qpoint = 0; i_qpoint < params.n_face_qpoint(); ++i_qpoint) {
+            face_min[i_var] = std::min(face_min[i_var], state(i_var)[i_qpoint]);
+            face_max[i_var] = std::max(face_max[i_var], state(i_var)[i_qpoint]);
+          }
+        }
+      }
+    }
+  }
   for (bool is_def : {0, 1}) {
     #pragma omp parallel for
     for (auto& con : acc_mesh->neighbor_connections(is_def)) {
+      if (check_farfield(con)) continue;
       Array<double> diff = con.face(1).flow_state()(0).copy();
       auto perm = face_permutation(nd, params.row_size, con.get_direction(), diff.data(), turb);
       perm->match_faces();
       diff -= con.face(0).flow_state()(0);
-      if (check_farfield(con)) continue;
       for (int i_var = 0; i_var < params.n_var; ++i_var) {
         double norm = std::sqrt(diff(i_var).vector().dot(face_weights.cwiseProduct(diff(i_var).vector())));
+        norm /= face_max[i_var] - face_min[i_var] + 1e-15*(std::abs(face_max[i_var]) + std::abs(face_min[i_var]));
         for (int i_side = 0; i_side < 2; ++i_side) con.face(i_side).discontinuity()(0)[i_var] = norm;
       }
     }
