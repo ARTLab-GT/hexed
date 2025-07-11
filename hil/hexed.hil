@@ -172,7 +172,7 @@ amr = false
 max_ref_level = 1000
 geom_rtol = 1e-5
 geom_atol = 0.
-adapt_threshold = 1e-2
+adapt_threshold = 1e-3
 wall_spacing = huge
 viscosity_model = {}
 conductivity_model = {}
@@ -205,7 +205,7 @@ geom_unrefine_if = {false}
 final_refine_if = {(has_wall & i_dim == wall_dimension & $({nominal_shape} + has_wall*wall_dimension) > wall_spacing)}
 final_unrefine_if = {false}
 adapt_refine_if = {($({spectral_uncertainty} + i_dim) > adapt_threshold)}
-adapt_unrefine_if = {($({spectral_uncertainty} + i_dim) < adapt_threshold/2^row_size & $({aniso_ref_level} + i_dim) > init_ref_level)}
+adapt_unrefine_if = {($({spectral_uncertainty} + i_dim) < adapt_threshold/2^(row_size - 1) & $({aniso_ref_level} + i_dim) > init_ref_level)}
 adapt_if = {(normalized_residual < adapt_residual_factor*adapt_last_residual)}
 max_init_refine_iters = 100
 max_geom_refine_iters = 100
@@ -389,7 +389,6 @@ iterate = {
     case1 = {
         case0 = {}
         case1 = {
-            $adapt_iter
             $write_iter
             $vis_iter
             case0 = {}
@@ -398,6 +397,7 @@ iterate = {
                 println({updating surface roughness to } + surface_roughness)
             }
             $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
+            $adapt_iter
         }
         $$({case} + (time_stage == n_time_stages - 1))
         case0 = {}

@@ -13,6 +13,10 @@ mesh_extreme10 = -80.
 mesh_extreme01 =  80.
 mesh_extreme11 =  80.
 
+amr = true
+adapt_if = {iteration%10^2 == 0}
+adapt_refine_if = adapt_refine_if + { & iteration%10^3 == 0}
+
 wall_spacing = 2e-5
 bl_multirate = true
 flow_iters = 10

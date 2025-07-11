@@ -8,12 +8,13 @@ geom_refine_if = {(nom_sz > 0.05 & (center0^2 + center1^2)^.5 < nom_sz) | (nom_s
 geom_unrefine_if = {(ref_level > init_ref_level) & !is_extruded}
 init_layer_splits = 3
 }
-wall_spacing = 1e-2
 amr = true
-adapt_if = {iteration%10^4 == 0}
+adapt_if = {iteration%10^2 == 0}
+adapt_refine_if = adapt_refine_if + { & iteration%10^3 == 0}
 geom0 = {geom.csv}
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
+wall_spacing = 1e-4
 
 {freestream definition. Note that not all of the variables below are parameters considered by the solver. Some are simply user-defined variables.}
 freestream_temperature = zero_celsius
@@ -24,9 +25,9 @@ target_thickness = .01
 target_reynolds = (5/target_thickness)^2
 freestream_density = target_reynolds*1.8e-5/freestream_speed
 
-{
 $set_subsonic_bl_multirate
-}
+print_freq = 10
+vis_freq = 1000
 done = {normalized_residual < 1e-4}
 vis_field_vars = vis_field_vars + {discontinuity0 = discontinuity0; discontinuity1 = discontinuity1; discontinuity2 = discontinuity2;}
 
