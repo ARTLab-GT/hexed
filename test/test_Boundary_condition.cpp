@@ -166,7 +166,7 @@ TEST_CASE("No_slip") {
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) con.inside().flow_state()(0)(i_var)[i_qpoint] = state[i_var];
     }
-    hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_energy>(1e6), 1., 1.4, hexed::inviscid, hexed::laminar);
+    hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_energy>(1e6), 1.4, hexed::inviscid, hexed::laminar);
     no_slip.apply_state(con);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_dim = 0; i_dim < 2; ++i_dim) {
@@ -192,7 +192,7 @@ TEST_CASE("No_slip") {
       for (int i_var = 0; i_var < 4; ++i_var) con.inside().flow_state()(0)(i_var)[i_qpoint] = state[i_var];
     }
     hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_heat_flux>(3.),
-                           1., 1.4, hexed::inviscid, hexed::laminar);
+                           1.4, hexed::inviscid, hexed::laminar);
     no_slip.apply_state(con);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_dim = 0; i_dim < 2; ++i_dim) REQUIRE(con.ghost().flow_state()(0)(i_dim)[i_qpoint] == Catch::Approx(-1.));
@@ -221,7 +221,7 @@ TEST_CASE("No_slip") {
     }
     auto thermal = std::make_shared<hexed::Thermal_equilibrium>();
     thermal->emissivity = .8;
-    hexed::No_slip no_slip(thermal, 1., 1.4, hexed::inviscid, hexed::laminar);
+    hexed::No_slip no_slip(thermal, 1.4, hexed::inviscid, hexed::laminar);
     double temp = 1e5/1.2/hexed::constants::specific_gas_air;
     no_slip.apply_state(con);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {

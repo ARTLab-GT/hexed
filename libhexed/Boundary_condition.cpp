@@ -290,18 +290,17 @@ void Nonpenetration::apply_advection(Boundary_connection& con) {
   ghost_state(nd, end) = inside_state(nd, end);
 }
 
-No_slip::No_slip(std::shared_ptr<Thermal_bc> thermal, double r, double heat_rat, Transport_model visc,
+No_slip::No_slip(std::shared_ptr<Thermal_bc> thermal, double heat_rat, Transport_model visc,
                  Turbulence_model turb, double coercion)
 : _coercion{coercion}
 , _thermal{thermal}
 , _viscosity{visc}
 , _turb{turb}
 , _heat_rat{heat_rat}
-, roughness{r}
 {}
 
 double Thermal_equilibrium::ghost_heat_flux(Mat<> state, double) {
-  double temp = state(last)*.4/state(state.size() - 2)/constants::specific_gas_air;
+  double temp = state(last)*(heat_rat - 1)/state(state.size() - 2)/constants::specific_gas_air;
   double radiative_flux = emissivity*constants::stefan_boltzmann*math::pow(temp, 4);
   double conductive_flux = heat_transfer_coef*(temp - temperature);
   return radiative_flux + conductive_flux;
@@ -339,6 +338,7 @@ void No_slip::apply_state(Boundary_connection& con) {
       }
       double dyn_visc = _viscosity.coefficient(std::sqrt(std::abs(energy*(_heat_rat - 1.)
                                                          /constants::specific_gas_air)));
+      double roughness = presc(nd)[i_qpoint];
       double omega_wall = 4e4*dyn_visc/(mass*roughness*roughness);
       ghost_state(nd + 3)[i_qpoint] = 2*std::log(omega_wall)*mass - inside_state(params.n_dim + 3)[i_qpoint];
     }
@@ -397,10 +397,30 @@ void No_slip::set_prescribed(Interpreter& inter, Boundary_connection& con) {
   HEXED_ASSERT(expr, "`wall_velocity` must be specified for `No_slip`");
   sub.exec(expr.value());
   Array<double> data = con.prescribed_data();
-  HEXED_ASSERT(data.shape()[0] == nd && data.size() == nd*nq,
-               "`prescribed_data` is not the right shape to hold the velocity");
   for (int i_dim = 0; i_dim < nd; ++i_dim) {
     sub.variables->assign_array(data(i_dim), "velocity" + std::to_string(i_dim));
+  }
+  if (_turb == k_omega) {
+    Array<double> flux = con.inside().flow_state()(1);
+    Array<double> state_cache = con.state_cache();
+    bool local = inter.variables->get<int>("local_roughness");
+    if (local) {
+      double max_rough = inter.variables->get<double>("hexed_max_roughness");
+      double max_plus = inter.variables->get<double>("max_roughness_plus");
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        double stress = 0;
+        for (int i_dim = 0; i_dim < nd; ++i_dim) stress += math::pow(flux(i_dim)[i_qpoint], 2);
+        stress = std::sqrt(stress);
+        double density = state_cache(nd)[i_qpoint];
+        double temperature = state_cache(nd + 1)[i_qpoint]*(_heat_rat - 1)/density/constants::specific_gas_air;
+        double dyn_visc = _viscosity.coefficient(std::sqrt(temperature));
+        double friction_veloc = std::sqrt(stress/density);
+        double length = dyn_visc/(friction_veloc*density);
+        data(nd)[i_qpoint] = 1./std::pow(1./math::pow(max_rough, 4) + math::pow(length/max_plus, 4), .25);
+      }
+    } else {
+      data(nd) = inter.variables->get<double>("hexed_surface_roughness");
+    }
   }
 }
 

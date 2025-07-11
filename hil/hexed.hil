@@ -194,10 +194,13 @@ write_freq = 10^4
 iter_width = 10
 print_freq = 100
 update_roughness_freq = 10^3
+surface_roughness = -1.
+max_roughness_absolute = huge
+max_roughness_relative = 1e-6
+max_roughness_plus = 4.
 adapt_start_residual = 1e-2
 adapt_residual_factor = .5
-surface_roughness = -1.
-max_roughness_plus = 4.
+local_roughness = true
 init_refine_if = {(ref_level < init_ref_level)}
 init_unrefine_if = {false}
 geom_refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level < max_ref_level & nom_sz > min_elem_size)}
@@ -393,8 +396,9 @@ iterate = {
             $vis_iter
             case0 = {}
             case1 = {
+                println {Updating surface roughness... }
                 update_roughness
-                println({updating surface roughness to } + surface_roughness)
+                println {done}
             }
             $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
             $adapt_iter

@@ -29,7 +29,6 @@ class Case {
   std::unique_ptr<Struct_expr> _monitor_expr;
   std::vector<History_monitor> _monitors;
   std::string _assignment(std::string var_name);
-  std::vector<double*> _roughness;
   public:
   Case(std::string input_script = "interactive.hil");
   Case(const Case&) = delete;

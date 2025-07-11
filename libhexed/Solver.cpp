@@ -160,14 +160,13 @@ double Solver::max_dt(double msc, double msd) {
 void Solver::_init_face_state() {
   compute_write_face(_kernel_mesh());
   compute_prolong(_kernel_mesh());
-  auto inter {_interpreter()};
   auto bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con].boundary_condition();
     acc_mesh->boundary_condition(bc_sn).init_cache(bc_cons[i_con]);
-    acc_mesh->boundary_condition(bc_sn).set_prescribed(inter, bc_cons[i_con]);
   }
+  update_bound_conds();
 }
 
 Interpreter Solver::_interpreter() {
@@ -226,6 +225,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
   _namespace->assign_default("iteration", 0);
   _namespace->assign_default("pseudotime_iteration", 0);
   _namespace->assign_default("flow_time", 0.);
+  _namespace->assign_default("geom_length", 0.);
   if (!is_implicit(_time_scheme)) _namespace->assign_default("time_step", 0.);
   _namespace->assign("time_stage", 0);
   _namespace->assign("n_time_stages", n_total_stage(_time_scheme));
@@ -958,6 +958,27 @@ void Solver::compute_spectral_uncertainty() {
         elem.spectral_uncert()[i_dim] += std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize;
       }
     }
+  }
+}
+
+void Solver::update_bound_conds() {
+  double relative = _namespace->get<double>("max_roughness_relative")*_namespace->get<double>("geom_length");
+  double max_rough = std::min(_namespace->get<double>("max_roughness_absolute"), relative);
+  if (_namespace->get<int>("local_roughness")) {
+    _namespace->assign("hexed_max_roughness", max_rough);
+  } else {
+    std::string expr = "inv_roughness = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)*density"
+                       "/(dyn_visc*max_roughness_plus);";
+    bounds_surface(expr, 2*params.n_dim, 20);
+    double rough = std::min(1./_namespace->get<double>("max_surface_inv_roughness"), max_rough);
+    _namespace->assign("hexed_surface_roughness", rough);
+  }
+  auto inter {_interpreter()};
+  auto bc_cons {acc_mesh->boundary_connections()};
+  #pragma omp parallel for
+  for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
+    int bc_sn = bc_cons[i_con].boundary_condition();
+    acc_mesh->boundary_condition(bc_sn).set_prescribed(inter, bc_cons[i_con]);
   }
 }
 

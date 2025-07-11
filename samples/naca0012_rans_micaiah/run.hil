@@ -14,6 +14,7 @@ mesh_extreme01 =  80.
 mesh_extreme11 =  80.
 
 amr = true
+local_roughness = true
 adapt_if = {iteration%10^2 == 0}
 adapt_refine_if = adapt_refine_if + { & iteration%10^3 == 0}
 
@@ -52,6 +53,7 @@ max_safety = .3
 {iteration parameters}
 print_freq = 10
 vis_freq = 100
+print_freq = vis_freq = 1
 done = {iteration > 10^4 & lift_coef_max - lift_coef_min < 1e-2*abs(lift_coef_min + lift_coef_max)/2 & drag_coef_max - drag_coef_min < 1e-2*abs(drag_coef_min + drag_coef_max)/2}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}

@@ -64,6 +64,7 @@ Flow_bc* Case::_make_bc(std::string name) {
       if (sub.variables->exists("heat_transfer_coef")) {
         equilibrium->heat_transfer_coef = sub.variables->get<double>("heat_transfer_coef");
         equilibrium->temperature = sub.variables->get<double>("temperature");
+        equilibrium->heat_rat = heat_rat;
       }
       thermal = equilibrium;
     } else if (sub.variables->exists("internal_energy")) { // note not recursive
@@ -73,9 +74,8 @@ Flow_bc* Case::_make_bc(std::string name) {
       thermal = std::make_shared<Prescribed_energy>(energy);
     }
     HEXED_ASSERT(thermal, "thermal BC specification not understood", assert::User_error)
-    auto bc = new No_slip(thermal, _vard("surface_roughness"), heat_rat,
+    auto bc = new No_slip(thermal, heat_rat,
                           _solver().viscosity_model(), _solver().turbulence_model(), _vard("heat_flux_coercion"));
-    _roughness.push_back(&bc->roughness);
     return bc;
   } else if (name == "expression") {
     HEXED_ASSERT(_inter.variables->lookup<std::string>("bc_state"),
@@ -683,7 +683,6 @@ Case::Case(std::string input_script)
     HEXED_ASSERT(_vari("mesh_init"), "attempt to update flow when mesh has not been created", assert::User_error);
     bool avw = _vard("art_visc_width") > 0;
     bool avc = _vard("art_visc_constant") > 0;
-    for (double* r : _roughness) *r = _vard("surface_roughness");
     bool be = !_vari("steady") && _vari("implicit");
     int iter = _vari(be ? "pseudotime_iteration" : "iteration");
     int print_freq = _vari("print_freq");
@@ -742,12 +741,7 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create<std::string>("update_roughness", new Namespace::Heisenberg<std::string>([this]() {
-    _solver().bounds_surface(
-      "inv_roughness = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)*density/(dyn_visc*max_roughness_plus);",
-      2*_vari("n_dim"),
-      20
-    );
-    _inter.variables->assign("surface_roughness", 1./_vard("max_surface_inv_roughness"));
+    _solver().update_bound_conds();
     return "";
   }));
 
