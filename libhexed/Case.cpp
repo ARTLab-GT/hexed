@@ -509,6 +509,7 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
     printers::info("adapting mesh... ");
+    _solver().compute_spectral_uncertainty();
     std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
     std::vector<std::function<bool(Element&, int)>> crits;
     for (std::string crit : crit_names) {
@@ -607,6 +608,7 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("visualize", new Namespace::Heisenberg<std::string>([this]() {
+    _solver().compute_spectral_uncertainty();
     _visualize("_" + _iteration_suffix());
     return "";
   }));

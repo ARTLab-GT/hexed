@@ -99,6 +99,7 @@ class Element : public Kernel_element, public Mortal {
   //! \brief returns whether the element is included in the masked mesh.
   //! \details value can be set with `Accessible_mesh::set_mask`
   int mask() const override {return _mask;}
+  Array<double> spectral_uncert(); //!< layout: [i_dim]
 
   /*! \brief Compute the Jacobian matrix.
    * \details I.e., derivative of `i_dim`th

@@ -11,7 +11,7 @@ Element::Element(Storage_params params_arg, Tree& t, bool mobile_vertices, int a
 , _aniso_r_level{aniso_r_level}
 , n_dof(params.n_dof())
 , n_vert(params.n_vertices())
-, data_size{params.n_dof_numeric() + config::debug_variables*params.n_qpoint()}
+, data_size{params.n_dof_numeric() + config::debug_variables*params.n_qpoint() + n_dim}
 , face_size{(is_def*params.n_dim + std::max(2*params.n_var, params.n_dim + params.n_advection(params.row_size)))*params.n_face_qpoint()}
 , data{Eigen::VectorXd::Zero(data_size + 2*n_dim*face_size)}
 , _vertex_data({3, params.n_vertices()})
@@ -156,6 +156,11 @@ double& Element::vertex_elwise_av(int i_vertex) {
 
 double& Element::vertex_fix_admis_coef(int i_vertex) {
   return _vertex_data(2)[i_vertex];
+}
+
+Array<double> Element::spectral_uncert() {
+  int offset = params.n_dof_numeric() + config::debug_variables*params.n_qpoint();
+  return Array<double>({params.n_dim}, data.data() + offset);
 }
 
 void Element::set_face(int i_face, double* data) {

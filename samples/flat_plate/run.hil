@@ -10,6 +10,7 @@ init_layer_splits = 3
 }
 wall_spacing = 1e-2
 amr = true
+adapt_if = {iteration%10^4 == 0}
 geom0 = {geom.csv}
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity

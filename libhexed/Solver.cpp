@@ -932,6 +932,35 @@ void Solver::compute_residual() {
   }
 }
 
+void Solver::compute_spectral_uncertainty() {
+  Array<double> state_min = Array<double>::make_uniform({params.n_var}, huge);
+  Array<double> state_max = Array<double>::make_uniform({params.n_var}, -huge);
+  auto& elems = acc_mesh->elements();
+  #pragma omp parallel for reduction(min:state_min) reduction(max:state_max)
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    Array<double> state = elems[i_elem].flow_state();
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      state_min[i_var] = std::min(state_min[i_var], state(i_var).extreme(0));
+      state_max[i_var] = std::max(state_min[i_var], state(i_var).extreme(1));
+    }
+  }
+  Mat<dyn, dyn> orth = basis.orthogonal(params.row_size - 1).transpose()*basis.node_weights().asDiagonal();
+  Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    Array<double> state = elem.flow_state();
+    elem.spectral_uncert() = 0;
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        Mat<> proj = math::dimension_matvec(orth, state(i_var).vector(), i_dim);
+        double normalize = state_max[i_var] - state_min[i_var];
+        elem.spectral_uncert()[i_dim] += std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize;
+      }
+    }
+  }
+}
+
 void Solver::compute_lts_constraints() {
   auto& elems = acc_mesh->deformed().elements();
   int nd = params.n_dim;

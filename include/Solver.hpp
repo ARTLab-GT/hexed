@@ -203,6 +203,7 @@ class Solver {
   //! \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
   void update_implicit();
   void compute_residual();
+  void compute_spectral_uncertainty();
   /*! \brief Computes the minimum ratio between the local diffusive and convective time steps.
    * \details Assumes no Chebyshev acceleration.
    * Result is written to `min_lts_dc_ratio` in the HIL namespace.

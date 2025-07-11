@@ -34,6 +34,7 @@ void element(Namespace& space, Element& elem) {
                  i_dim < params.n_dim ? elem.tree.value().anisotropic_refinement_level()[i_dim] : 0);
     space.assign(index("nominal_shape", i_dim), i_dim < params.n_dim ? elem.nominal_shape(i_dim) : 0.);
     double discon = 0;
+    double spectral = 0;
     if (i_dim < params.n_dim) {
       for (int sign : {0, 1}) {
         for (bool is_flux : {0, 1}) {
@@ -42,8 +43,10 @@ void element(Namespace& space, Element& elem) {
           }
         }
       }
+      spectral = elem.spectral_uncert()[i_dim];
     }
     space.assign(index("discontinuity", i_dim), discon);
+    space.assign(index("spectral_uncertainty", i_dim), spectral);
   }
 }
 
