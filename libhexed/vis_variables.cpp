@@ -36,8 +36,10 @@ void element(Namespace& space, Element& elem) {
     double discon = 0;
     if (i_dim < params.n_dim) {
       for (int sign : {0, 1}) {
-        for (int i_var = 0; i_var < params.n_var; ++i_var) {
-          discon += elem.face(2*i_dim + sign).discontinuity()(0)[i_var];
+        for (bool is_flux : {0, 1}) {
+          for (int i_var = 0; i_var < params.n_var; ++i_var) {
+            discon += elem.face(2*i_dim + sign).discontinuity()(is_flux)[i_var];
+          }
         }
       }
     }
