@@ -138,6 +138,10 @@ void surface(Namespace& space, Boundary_connection& con) {
   space.assign("energy", state(params.n_dim + 1).copy());
   space.assign("mass_flux", flux(params.n_dim).copy());
   space.assign("heat_flux", flux(params.n_dim + 1).copy());
+  if (params.n_var >= params.n_dim + 4) {
+    space.assign("turbulent_kinetic_energy", state(params.n_dim + 2).copy());
+    space.assign("turbulent_dissipation_bassi", state(params.n_dim + 3).copy());
+  }
 }
 
 }

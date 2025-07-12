@@ -396,7 +396,7 @@ iterate = {
             $vis_iter
             case0 = {}
             case1 = {
-                println {Updating surface roughness... }
+                print {Updating surface roughness... }
                 update_roughness
                 println {done}
             }

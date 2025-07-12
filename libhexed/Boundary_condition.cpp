@@ -4,6 +4,7 @@
 #include <hexed/constants.hpp>
 #include <hexed/pde.hpp>
 #include <hexed/Gauss_lobatto.hpp>
+#include <hexed/Printer.hpp>
 
 namespace hexed {
 
@@ -328,7 +329,7 @@ void No_slip::apply_state(Boundary_connection& con) {
     ghost_state(nd + 1)[i_qpoint] = math::pow(_thermal->ghost_energy(state), 2)/state(last);
   }
   if (_turb == k_omega) {
-    ghost_state(nd + 2) = inside_state(nd + 2); // set turbulent kinetic energy to 0
+    ghost_state(nd + 2) = -inside_state(nd + 2); // set turbulent kinetic energy to 0
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
       // set dissipation based on wall roughness
       double mass = inside_state(nd)[i_qpoint];
@@ -401,22 +402,28 @@ void No_slip::set_prescribed(Interpreter& inter, Boundary_connection& con) {
     sub.variables->assign_array(data(i_dim), "velocity" + std::to_string(i_dim));
   }
   if (_turb == k_omega) {
-    Array<double> flux = con.inside().flow_state()(1);
-    Array<double> state_cache = con.state_cache();
+    Array<double> state = con.state_cache();
+    Array<double> flux = con.flux_cache();
+    Array<double> normal = con.normal();
+    double area = con.inside().nominal_area();
     bool local = inter.variables->get<int>("local_roughness");
     if (local) {
       double max_rough = inter.variables->get<double>("hexed_max_roughness");
       double max_plus = inter.variables->get<double>("max_roughness_plus");
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        double nrml = 0;
         double stress = 0;
-        for (int i_dim = 0; i_dim < nd; ++i_dim) stress += math::pow(flux(i_dim)[i_qpoint], 2);
-        stress = std::sqrt(stress);
-        double density = state_cache(nd)[i_qpoint];
-        double temperature = state_cache(nd + 1)[i_qpoint]*(_heat_rat - 1)/density/constants::specific_gas_air;
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          stress += math::pow(flux(i_dim)[i_qpoint], 2);
+          nrml += math::pow(normal(i_dim)[i_qpoint], 2);
+        }
+        stress = std::sqrt(stress/nrml)/area;
+        double density = state(nd)[i_qpoint];
+        double temperature = state(nd + 1)[i_qpoint]*(_heat_rat - 1)/density/constants::specific_gas_air;
         double dyn_visc = _viscosity.coefficient(std::sqrt(temperature));
         double friction_veloc = std::sqrt(stress/density);
-        double length = dyn_visc/(friction_veloc*density);
-        data(nd)[i_qpoint] = 1./std::pow(1./math::pow(max_rough, 4) + math::pow(length/max_plus, 4), .25);
+        double inv_length = (friction_veloc*density)/dyn_visc;
+        data(nd)[i_qpoint] = 1./std::pow(1./math::pow(max_rough, 4) + math::pow(inv_length/max_plus, 4), .25);
       }
     } else {
       data(nd) = inter.variables->get<double>("hexed_surface_roughness");

@@ -962,6 +962,7 @@ void Solver::compute_spectral_uncertainty() {
 }
 
 void Solver::update_bound_conds() {
+  compute_residual();
   double relative = _namespace->get<double>("max_roughness_relative")*_namespace->get<double>("geom_length");
   double max_rough = std::min(_namespace->get<double>("max_roughness_absolute"), relative);
   if (_namespace->get<int>("local_roughness")) {
