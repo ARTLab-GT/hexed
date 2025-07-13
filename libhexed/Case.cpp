@@ -193,7 +193,6 @@ void Case::_visualize(std::string suffix) {
   for (std::string v : vis_objects) if (_vari("vis_" + strip_trailing_digits(v))) {
     for (std::string format : {"xdmf", "tecplot", "csv"}) if (_vari("vis_" + format)) {
       std::string vis_expr = _vars("vis_" + strip_trailing_digits(v) + "_vars");
-      Struct_expr vis_vars(vis_expr);
       for (bool edges : {false, true}) {
         std::string name = v;
         if (edges) name = name + "_edges";

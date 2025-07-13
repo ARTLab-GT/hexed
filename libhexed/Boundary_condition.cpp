@@ -330,7 +330,7 @@ void No_slip::apply_state(Boundary_connection& con) {
   }
   if (_turb == k_omega) {
     ghost_state(nd + 2) = -inside_state(nd + 2); // set turbulent kinetic energy to 0
-    #if 0
+    #if 1
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
       // set dissipation based on wall roughness
       double mass = inside_state(nd)[i_qpoint];

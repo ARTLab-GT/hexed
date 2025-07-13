@@ -15,7 +15,6 @@ mesh_extreme11 =  80.
 
 amr = true
 local_roughness = true
-adapt_threshold = 1e-4
 adapt_if = {iteration%10^2 == 0}
 adapt_refine_if = adapt_refine_if + { & iteration%10^4 == 0}
 
@@ -27,7 +26,7 @@ bl_iters = 6
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
 turbulence_model = {k-omega}
-max_roughness_plus = 100
+max_roughness_relative = 1e-2
 
 {generate geometry with external script}
 shell {python3 make_geom.py}
@@ -59,19 +58,11 @@ done = {iteration > 10^4 & lift_coef_max - lift_coef_min < 1e-2*abs(lift_coef_mi
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_no_bc}
+working_dir = {hexed_out_higher_limit}
 
 vis_field_vars = vis_field_vars + {
-    specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
-    turbulent_dissipation_bassi = turbulent_dissipation_bassi
-    specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density)
     debug_var0 = debug_var0
     residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)/tss
-}
-vis_surface_vars = vis_surface_vars + {
-    specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
-    turbulent_dissipation_bassi = turbulent_dissipation_bassi
-    specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density)
 }
 
 $simulate

@@ -1234,6 +1234,9 @@ class Vis_evaluator {
     sub.subspace();
     sub.exec(_expr);
     _var_names = sub.variables->names();
+    std::erase_if(_var_names, [&sub](std::string name) {
+      return !sub.variables->lookup<double>(name) && !sub.variables->lookup<Array<double>>(name);
+    });
     _n_var = _var_names.size();
     _shape = hypercubes(_n_dim + _n_var, _n_dim_topo, params.row_size);
   }
