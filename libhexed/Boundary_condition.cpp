@@ -330,6 +330,7 @@ void No_slip::apply_state(Boundary_connection& con) {
   }
   if (_turb == k_omega) {
     ghost_state(nd + 2) = -inside_state(nd + 2); // set turbulent kinetic energy to 0
+    #if 0
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
       // set dissipation based on wall roughness
       double mass = inside_state(nd)[i_qpoint];
@@ -343,6 +344,9 @@ void No_slip::apply_state(Boundary_connection& con) {
       double omega_wall = 4e4*dyn_visc/(mass*roughness*roughness);
       ghost_state(nd + 3)[i_qpoint] = 2*std::log(omega_wall)*mass - inside_state(params.n_dim + 3)[i_qpoint];
     }
+    #else
+    ghost_state(nd + 3) = inside_state(nd + 3); // do not constrain turbulent dissipation
+    #endif
   }
   // prime `state_cache` with average state for use in emissivity BC
   state_cache = (ghost_state + inside_state)/2.;
@@ -374,7 +378,14 @@ void No_slip::apply_flux(Boundary_connection& con) {
     ghost_state(params.n_dim + 1)[i_qpoint] = _coercion*(nrml*flux_sign*ghost_heat - inside_ener) + inside_ener;
   }
   // set turbulence variables
+  #if 1
   ghost_state(params.n_dim + 2, end) = inside_state(params.n_dim + 2, end);
+  #else
+  if (_turb == k_omega) {
+    ghost_state(params.n_dim + 2) = inside_state(params.n_dim + 2);
+    ghost_state(params.n_dim + 3) = -inside_state(params.n_dim + 3);
+  }
+  #endif
 }
 
 void No_slip::apply_advection(Boundary_connection& con) {

@@ -15,8 +15,9 @@ mesh_extreme11 =  80.
 
 amr = true
 local_roughness = true
+adapt_threshold = 1e-4
 adapt_if = {iteration%10^2 == 0}
-adapt_refine_if = adapt_refine_if + { & iteration%10^3 == 0}
+adapt_refine_if = adapt_refine_if + { & iteration%10^4 == 0}
 
 wall_spacing = 2e-5
 bl_multirate = true
@@ -26,6 +27,7 @@ bl_iters = 6
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
 turbulence_model = {k-omega}
+max_roughness_plus = 100
 
 {generate geometry with external script}
 shell {python3 make_geom.py}
@@ -33,11 +35,11 @@ geom0 = {auto.csv}
 
 {freestream conditions}
 freestream_temperature = zero_celsius
-freestream_mach = 0.3
-attack = 12*degree
+freestream_mach = .15
+attack = 10*degree
 target_reynolds = 6e6
 dyn_visc = 1.716e-5
-freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air * 1.4 * freestream_temperature)/freestream_mach
+freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air*1.4*freestream_temperature)/freestream_mach
 
 domain_length = mesh_extreme01 - mesh_extreme00
 freestream_specific_turbulent_kinetic_energy = 1e-3*(freestream_mach*340.)^2/(target_reynolds*domain_length/1.)
@@ -57,6 +59,7 @@ done = {iteration > 10^4 & lift_coef_max - lift_coef_min < 1e-2*abs(lift_coef_mi
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
+working_dir = {hexed_out_no_bc}
 
 vis_field_vars = vis_field_vars + {
     specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density

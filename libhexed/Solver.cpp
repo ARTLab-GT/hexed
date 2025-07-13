@@ -951,7 +951,7 @@ void Solver::compute_spectral_uncertainty() {
     auto& elem = elems[i_elem];
     Array<double> state = elem.flow_state();
     elem.spectral_uncert() = 0;
-    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+    for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) {
       for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
         Mat<> proj = math::dimension_matvec(orth, state(i_var).vector(), i_dim);
         double normalize = state_max[i_var] - state_min[i_var];
