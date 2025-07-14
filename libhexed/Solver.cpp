@@ -946,7 +946,8 @@ void Solver::compute_spectral_uncertainty() {
   }
   Mat<dyn, dyn> orth = basis.orthogonal(params.row_size - 1).transpose()*basis.node_weights().asDiagonal();
   Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
-  #pragma omp parallel for
+  double total = 0;
+  #pragma omp parallel for reduction(+:total)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     Array<double> state = elem.flow_state();
@@ -958,7 +959,9 @@ void Solver::compute_spectral_uncertainty() {
         elem.spectral_uncert()[i_dim] += std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize;
       }
     }
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) total += elem.spectral_uncert()[i_dim];
   }
+  _namespace->assign("total_spectral_uncertainty", total);
 }
 
 void Solver::update_bound_conds() {

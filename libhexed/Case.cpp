@@ -374,9 +374,10 @@ Case::Case(std::string input_script)
     else if (turb == "k-omega") turb_model = k_omega;
     else HEXED_THROW("unrecognized turbulence model `{" + turb + "}`", assert::User_error);
     // create history monitors
-    _monitor_expr.reset(new Struct_expr(_vars("monitor_vars")));
+    std::string monitor_vars = "total_spectral_uncertainty = total_spectral_uncertainty;" + _vars("monitor_vars");
+    _monitor_expr.reset(new Struct_expr(monitor_vars));
     for (std::string name : _monitor_expr->names) {
-      _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"));
+      _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"), _vari("monitor_min_samples"));
       _inter.variables->assign_default(name + "_min", -huge);
       _inter.variables->assign_default(name + "_max",  huge);
     }
@@ -507,7 +508,8 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
-    printers::info("adapting mesh... ");
+    bool allow_ref = _inter.sub_eval<int>(_vars("allow_refinement_if"));
+    printers::info("adapting mesh (" + std::string(allow_ref ? "refinement" : "only coarsening") + " allowed)...");
     _solver().compute_spectral_uncertainty();
     std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
     std::vector<std::function<bool(Element&, int)>> crits;
@@ -519,6 +521,11 @@ Case::Case(std::string input_script)
         sub.exec("return = $adapt" + crit);
         return sub.variables->get<int>("return");
       });
+    }
+    if (allow_ref) {
+      _monitors[0].clear(); // forget total spectral uncertainty history
+    } else {
+      crits[0] = [](Element&, int){return false;};
     }
     _solver().mesh().adapt(crits[0], crits[1]);
     _solver().calc_jacobian();
@@ -607,7 +614,6 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("visualize", new Namespace::Heisenberg<std::string>([this]() {
-    _solver().compute_spectral_uncertainty();
     _visualize("_" + _iteration_suffix());
     return "";
   }));
@@ -644,6 +650,7 @@ Case::Case(std::string input_script)
     _inter.variables->assign("residual_momentum", res[0]);
     _inter.variables->assign("residual_density", res[nd]);
     _inter.variables->assign("residual_energy", res[nd + 1]);
+    if (_vari("iteration") > 0) _solver().compute_spectral_uncertainty();
     return "";
   }));
 

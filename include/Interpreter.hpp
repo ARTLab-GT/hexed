@@ -101,6 +101,13 @@ class Interpreter {
   Interpreter make_sub() const;
   void subspace();
 
+  template <typename T>
+  T sub_eval(std::string expression) const {
+    auto sub = make_sub();
+    sub.exec("hexed_sub_eval = (" + expression + ")");
+    return sub.variables->get<T>("hexed_sub_eval");
+  }
+
   class Hil_unhandled_exception : public assert::Exception {
     public:
     inline std::string name() const override {return "Unhandled HIL exception";}

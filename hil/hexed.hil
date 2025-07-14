@@ -41,6 +41,7 @@ heat_flux_expr = {heat_flux = heat_flux;}
 iteration_expr = {iteration = iteration; time_stage = time_stage; pseudotime_iteration = pseudotime_iteration;}
 art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
 normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
+total_spectral_uncert_expr = {total_spectral_uncertainty = total_spectral_uncertainty;}
 flow_time_expr = {flow_time = flow_time;}
 time_step_expr = {time_step = time_step;}
 fix_iters_expr = {fix_iters = fix_iters;}
@@ -210,13 +211,12 @@ vis_freq = 10^4
 write_freq = 10^4
 iter_width = 10
 print_freq = 100
+adapt_freq = 1000
 update_roughness_freq = 10^3
 surface_roughness = -1.
 max_roughness_absolute = huge
 max_roughness_relative = 1e-6
 max_roughness_plus = 4.
-adapt_start_residual = 1e-2
-adapt_residual_factor = .5
 local_roughness = true
 init_refine_if = {(ref_level < init_ref_level)}
 init_unrefine_if = {false}
@@ -226,7 +226,8 @@ final_refine_if = {(has_wall & i_dim == wall_dimension & $({nominal_shape} + has
 final_unrefine_if = {false}
 adapt_refine_if = {($({spectral_uncertainty} + i_dim) > adapt_threshold)}
 adapt_unrefine_if = {($({spectral_uncertainty} + i_dim) < adapt_threshold/2^(row_size - 1) & $({aniso_ref_level} + i_dim) > init_ref_level)}
-adapt_if = {(normalized_residual < adapt_residual_factor*adapt_last_residual)}
+allow_refinement_if = {(total_spectral_uncertainty_max - total_spectral_uncertainty_min) < .1*total_spectral_uncertainty_max}
+adapt_if = {(iteration%adapt_freq == 0)}
 max_init_refine_iters = 100
 max_geom_refine_iters = 100
 max_final_refine_iters = 100
@@ -247,9 +248,10 @@ vis_field_vars = state_vars + art_visc_expr + transport_expr
 vis_contour_vars = vis_field_vars
 vis_surface_vars = state_vars + transport_expr + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr + bl_nondim_expr
 vis_n_sample = 10
-print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr
+print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr + total_spectral_uncert_expr
 monitor_window = 0.25
-monitor_samples = 100
+monitor_samples = 1000
+monitor_min_samples = 50
 monitor_vars = {}
 integrand_field = {}
 integrand_surface = {}
@@ -454,7 +456,7 @@ start = {
     init_residual_density = 0.
     init_residual_energy = 0.
     normalized_residual = 1.
-    adapt_last_residual = adapt_start_residual
+    total_spectral_uncertainty = 0.
     prev_residual = 0.
     hexed_next_flow_time = 0.
 }
