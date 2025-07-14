@@ -20,6 +20,7 @@ class History_monitor {
   Int _min_samples; // minimum number of samples required for conclusive min/max
   Int _start; // index of the oldest sample
   Int _sz; // current number of samples stored
+  Int _start_iter; // iteration window is relative to this iteration
   // Samples will be stored in the following vectors.
   // Since the max number of samples is known, to allow efficient addition/removal of items at the ends of the vectors,
   // the vectors are allocated with `_samples` elements.

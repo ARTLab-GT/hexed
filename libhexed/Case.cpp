@@ -509,7 +509,13 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
     bool allow_ref = _inter.sub_eval<int>(_vars("allow_refinement_if"));
-    printers::info("adapting mesh (" + std::string(allow_ref ? "refinement" : "only coarsening") + " allowed)...");
+    printers::info("adapting mesh (");
+    if (allow_ref) {
+      printers::info("refinement allowed", true);
+    } else {
+      printers::info("only coarsening allowed");
+    }
+    printers::info(")...");
     _solver().compute_spectral_uncertainty();
     std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
     std::vector<std::function<bool(Element&, int)>> crits;
@@ -529,7 +535,7 @@ Case::Case(std::string input_script)
     }
     _solver().mesh().adapt(crits[0], crits[1]);
     _solver().calc_jacobian();
-    printers::info("done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
+    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
     return "";
   }));
 
