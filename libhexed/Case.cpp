@@ -528,11 +528,7 @@ Case::Case(std::string input_script)
         return sub.variables->get<int>("return");
       });
     }
-    if (allow_ref) {
-      _monitors[0].clear(); // forget total spectral uncertainty history
-    } else {
-      crits[0] = [](Element&, int){return false;};
-    }
+    if (!allow_ref) crits[0] = [](Element&, int){return false;};
     _solver().mesh().adapt(crits[0], crits[1]);
     _solver().calc_jacobian();
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
