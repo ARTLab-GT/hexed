@@ -20,7 +20,7 @@ adapt_freq = 100
 wall_spacing = 2e-5
 bl_multirate = true
 flow_iters = 10
-bl_iters = 10
+bl_iters = 15
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -33,7 +33,7 @@ geom0 = {auto.csv}
 {freestream conditions}
 freestream_temperature = zero_celsius
 freestream_mach = .15
-attack = 10*degree
+attack = 0*degree
 target_reynolds = 6e6
 dyn_visc = 1.716e-5
 freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air*1.4*freestream_temperature)/freestream_mach
@@ -55,7 +55,7 @@ done = {iteration > 10^4 & lift_coef_max - lift_coef_min < 1e-2*abs(lift_coef_mi
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_other_tweaks}
+working_dir = {hexed_out_alpha0}
 
 vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
