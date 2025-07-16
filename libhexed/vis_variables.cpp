@@ -17,6 +17,7 @@ void element(Namespace& space, Element& elem) {
   space.assign("uncertainty", elem.uncertainty);
   space.assign("snapping_problem", int(elem.snapping_problem));
   space.assign("is_deformed", int(elem.deformed()));
+  space.assign("rms_residual", elem.residual);
   auto params = elem.storage_params();
   Mat<3> center;
   center.setZero();

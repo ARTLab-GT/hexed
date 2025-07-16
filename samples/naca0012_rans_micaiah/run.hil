@@ -15,12 +15,7 @@ mesh_extreme11 =  160.
 
 amr = true
 local_roughness = true
-adapt_freq = 100
-
 wall_spacing = 2e-5
-bl_multirate = true
-flow_iters = 10
-bl_iters = 15
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -33,7 +28,7 @@ geom0 = {auto.csv}
 {freestream conditions}
 freestream_temperature = zero_celsius
 freestream_mach = .15
-attack = 0*degree
+attack = 10*degree
 target_reynolds = 6e6
 dyn_visc = 1.716e-5
 freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air*1.4*freestream_temperature)/freestream_mach
@@ -51,18 +46,21 @@ fix_therm_admis = true
 {iteration parameters}
 print_freq = 10
 vis_freq = 100
+adapt_freq = 100
 done = {iteration > 10^4 & lift_coef_max - lift_coef_min < 1e-2*abs(lift_coef_min + lift_coef_max)/2 & drag_coef_max - drag_coef_min < 1e-2*abs(drag_coef_min + drag_coef_max)/2}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_alpha0}
+working_dir = {hexed_out_alpha10}
 
 vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
-    residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)/tss
+    residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)
     spectral_uncertainty0 = spectral_uncertainty0
     spectral_uncertainty1 = spectral_uncertainty1
     spectral_uncertainty2 = spectral_uncertainty2
+    rms_residual = rms_residual
+    mask = mask
 }
 
 $simulate

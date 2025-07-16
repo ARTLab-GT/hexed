@@ -62,6 +62,7 @@ class Element : public Kernel_element, public Mortal {
   bool needs_snapping = true;
   const Mat<> origin; //!< \brief origin which integer coordinates are relative to
   Lock lock; //!< \brief for any tasks where multiple threads might access an element simultaneously
+  double residual;
 
   Element(Storage_params, Tree& tree, int aniso_ref_level = 0);
   //! \details Can't copy an Element. Doing so would have to either duplicate or break vertex connections,

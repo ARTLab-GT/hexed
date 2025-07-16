@@ -68,6 +68,8 @@ class Solver {
   void _init_face_state();
   Interpreter _interpreter();
   void _init_stage_storage(int stage);
+  void _update_recursive(int level, double safety);
+  Int _effective_preti_iters(int level);
 
   //! \brief linearizes the steady state equations by finite difference
   class Linearized : public Linear_equation {
@@ -203,6 +205,7 @@ class Solver {
   //! \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
   void update_implicit();
   void compute_residual();
+  void print_preti_iters();
   void compute_spectral_uncertainty();
   void update_bound_conds();
   /*! \brief Computes the minimum ratio between the local diffusive and convective time steps.

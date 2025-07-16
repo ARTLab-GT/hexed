@@ -485,6 +485,7 @@ Case::Case(std::string input_script)
       printers::info("\n");
     }
     printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.\n", true);
+    _solver().print_preti_iters();
     return "";
   }));
 
@@ -532,6 +533,7 @@ Case::Case(std::string input_script)
     _solver().mesh().adapt(crits[0], crits[1]);
     _solver().calc_jacobian();
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
+    _solver().print_preti_iters();
     return "";
   }));
 

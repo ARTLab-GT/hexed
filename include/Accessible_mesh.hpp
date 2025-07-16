@@ -182,6 +182,9 @@ class Accessible_mesh : public Mesh {
     Masked<Kernel_element, Element> _masked_car_elems;
     Masked<Kernel_element, Element> _masked_def_elems;
     public:
+    Int desired_iters = 0;
+    bool repeat = false;
+    double max_residual = 0;
     Masked_mesh(Accessible_mesh&, const Basis&, std::function<bool(Element&)> = [](Element&){return true;});
     Kernel_mesh kernel_mesh;
     std::vector<Boundary_connection*> bound_cons;

@@ -349,7 +349,7 @@ void Solver::calc_jacobian() {
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      //HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
+      HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
     }
   }
   // do some extra work to make sure each face knows its normal vectors
@@ -394,6 +394,8 @@ void Solver::calc_jacobian() {
       printers::warn("normal mismatch: " + to_string(dir) + "\n" + to_string(nrml0) + to_string(nrml1));
     }
   }
+  _preti_masks[0]->desired_iters = 1;
+  _preti_masks[0]->repeat = true;
   _init_face_state();
 }
 
@@ -765,9 +767,49 @@ void Solver::set_uncert_surface_rep(int bc_sn) {
   }
 }
 
+void Solver::_update_recursive(int preti_level, double safety) {
+  if (preti_level + 1 < (int)_preti_masks.size()) _update_recursive(preti_level + 1, safety);
+  if (_preti_masks[preti_level]->repeat) {
+    Kernel_mesh& km = _preti_masks[preti_level]->kernel_mesh;
+    double dt = std::min(max_dt(safety, safety),
+                         _namespace->get<double>("max_time_step"));
+    HEXED_ASSERT(!std::isnan(dt), "time step is NaN", assert::Numerical_exception);
+    bool fixed = false;
+    // compute inviscid update
+    for (int i = 0; i < 2; ++i) {
+      Kernel_options opts {
+        .sw_car = stopwatch["cartesian"],
+        .sw_def = stopwatch["deformed"],
+        .sw_pr = stopwatch["prolong/restrict"],
+        .dt = dt,
+        .i_stage = i,
+        .compute_residual = false,
+        .use_filter = bool(_namespace->get<int>("use_filter")),
+        .mask = preti_level,
+        .conv_substep = false,
+      };
+      apply_state_bcs();
+      if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
+      else compute_euler(km, opts);
+      // note that function call must come first to ensure it is evaluated despite short-circuiting
+      fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
+      stopwatch.work_units_completed += km.elems.size();
+      stopwatch["cartesian"].work_units_completed += km.car_elems.size();
+      stopwatch["deformed" ].work_units_completed += km.def_elems.size();
+    }
+    // update status for reporting
+    _namespace->assign<double>("time_step", dt);
+    _namespace->assign<double>("flow_time", _namespace->get<double>("flow_time") + dt);
+    status.time_step = dt;
+    status.flow_time += dt;
+    if (preti_level + 1 < (int)_preti_masks.size()) _update_recursive(preti_level + 1, safety);
+  }
+}
+
 void Solver::update() {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   double safety = _namespace->get<double>("max_safety");
+  #if 0
   double cheby_safety = _namespace->get<double>("cheby_safety");
   for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
     // compute time step
@@ -841,6 +883,9 @@ void Solver::update() {
     }
   }
   _preti_level = 0;
+  #else
+  _update_recursive(0, safety);
+  #endif
 
   ++status.iteration;
   stopwatch.stopwatch.pause();
@@ -930,7 +975,67 @@ void Solver::compute_residual() {
       ref.coarse().discontinuity() = .5*(ref.fine()[0]->discontinuity() + ref.fine()[1]->discontinuity());
     }
   }
+  auto& elems = acc_mesh->elements();
+  Mat<> weights_1d = basis.node_weights();
+  Mat<> weights = math::pow_outer(weights_1d, params.n_dim);
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* res = elems[i_elem].residual_cache();
+    elems[i_elem].residual = 0;
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      double mean_sq = 0;
+      for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+        double r = res[i_var*params.n_qpoint() + i_qpoint];
+        mean_sq += r*r*weights(i_qpoint);
+      }
+      elems[i_elem].residual += std::sqrt(mean_sq);
+    }
+  }
+  double cumulative_max = 0;
+  int min_level = 5;
+  for (int level = 0; level < (int)_preti_masks.size(); ++level) {
+    double max_res = 0;
+    auto km = _preti_masks[level]->kernel_mesh;
+    #pragma omp parallel for reduction(max:max_res)
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      if (elems[i_elem].mask() == level) max_res = std::max(max_res, elems[i_elem].residual);
+    }
+    _preti_masks[level]->max_residual = max_res;
+    cumulative_max = std::max(cumulative_max, max_res);
+    _preti_masks[level]->repeat = !level;
+  }
+  for (int level = min_level; level < (int)_preti_masks.size(); ++level) {
+    int desired = 100*_preti_masks[level]->max_residual/cumulative_max;
+    _preti_masks[level]->desired_iters = desired;
+    for (int add_at = level; add_at >= min_level && _effective_preti_iters(level) < desired; --add_at) {
+      _preti_masks[add_at]->repeat = true;
+    }
+  }
 }
+
+Int Solver::_effective_preti_iters(int level) {
+  Int iters = 1;
+  for (int l = 1; l <= level; ++l) {
+    if (_preti_masks[l]->repeat) iters *= 2;
+  }
+  return iters;
+}
+
+void Solver::print_preti_iters() {
+  printers::info("PRETI sub-iterations (" + to_string((Int)_preti_masks.size()) + " levels total):\n");
+  std::string line0 = "repeat?:                   ";
+  std::string line1 = "total effective iterations:";
+  std::string line2 = "desired iterations:        ";
+  std::string line3 = "level max residual:        ";
+  for (Int i_preti = 0; i_preti < (Int)_preti_masks.size(); ++i_preti) {
+    line0 += format_str(" %8li", (Int)_preti_masks[i_preti]->repeat);
+    line1 += format_str(" %8li", _effective_preti_iters(i_preti));
+    line2 += format_str(" %8li", _preti_masks[i_preti]->desired_iters);
+    line3 += format_str(" %8.1e", _preti_masks[i_preti]->max_residual);
+  }
+  printers::info(line0 + "\n" + line1 + "\n" + line2 + "\n" + line3 + "\n");
+}
+
 
 void Solver::compute_spectral_uncertainty() {
   Array<double> state_min = Array<double>::make_uniform({params.n_var}, huge);
