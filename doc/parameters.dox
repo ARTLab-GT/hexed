@@ -163,14 +163,9 @@ The default value of 0 is appropriate for inviscid simulations, but for high Rey
 There currently is not a well-established best practice for how large it needs to be,
 but having the boundary layer be one or two wall layers thick often works well for subsonic simulations,
 and significantly more layers are often required for hypersonic simulations with a cold wall.
-
-<hr>
-\subsubsection max_ref_level
-__type:__ float \n
-__default:__ 1000 \n
-When performing geometry-based refinement with \ref set_geometry_refinement,
-elements will not be refined beyond this refinement level.
-The default value effectively renders this parameter irrelevant.
+\deprecated
+\ref init_layer_splits is deprecated and will be disabled in a future version.
+Instead, use \ref final_refine_if and \ref final_unrefine_if to achieve anisotropic wall refinement (or simply rely on AMR).
 
 <hr>
 
@@ -304,7 +299,7 @@ Sets the temperature offset passed to `hexed::standard_atmosphere`.
 __type:__ float \n
 __default:__ 1e-5 \n
 Geometry fit tolerance relative to geometry bounding box.
-When performing geometry-based refinement with \ref set_geometry_refinement,
+When performing geometry-based refinement with \ref geom_refine_if,
 stipulates that elements need not be refined as long as the estimated maximum distance between the element surface
 and the true geometry surface is less than this fraction of the length of the diagonal of the geometry bounding box.
 Note that this tolerance adds to \ref geom_atol, so the least strict condition usually dominates.
@@ -315,28 +310,119 @@ __type:__ float \n
 __default:__ 0 \n
 Geometry fit absolute tolerance.
 This is a dimensional quantity (in meters).
-When performing geometry-based refinement with \ref set_geometry_refinement,
+When performing geometry-based refinement with \ref geom_refine_if,
 stipulates that elements need not be refined as long as the estimated maximum distance between the element surface
 and the true geometry surface is less than this value.
 Note that this tolerance adds to \ref geom_rtol, so the least strict condition usually dominates.
 
 <hr>
-\subsubsection refine_if
-__type:__ string \n
-__default:__ `{false}` \n
-Mesh refinement criterion.
-Should be an expression that can be evaluated for each mesh element
-in an environment that includes the variables assigned by `hexed::hil_properties::element()`.
-If this expression evaluates to \ref true (and \ref unrefine_if evaluates to \ref false), the element will be refined.
-Otherwise it will not.
-
-<hr>
 \subsubsection min_elem_size
 __type:__ float \n
 __default__ 0 \n
-When performing geometry-based refinement with \ref set_geometry_refinement,
+When performing geometry-based refinement with \ref geom_refine_if,
 elements will not be refined if their nominal edge length is less than this.
 The default value renders this parameter irrelevant.
+
+<hr>
+\subsubsection max_ref_level
+__type:__ float \n
+__default:__ 1000 \n
+When performing geometry-based refinement with \ref geom_refine_if,
+elements will not be refined beyond this refinement level.
+The default value effectively renders this parameter irrelevant.
+
+<hr>
+\subsubsection max_wall_spacing
+__type:__ float \n
+__default:__ \ref huge \n
+Maximum allowed wall spacing.
+If you have not modified \ref final_refine_if, then the final refinement phase will anisotropically refine the wall elements
+to ensure that their wall-normal size does not exceed `max_wall_spacing`.
+
+<hr>
+\subsubsection init_refine_if
+__type:__ string (macro) \n
+__default:__ `{(ref_level < init_ref_level)}` \n
+Mesh refinement criterion for initial refinement, before any geometry is added.
+Should be an expression that can be evaluated for each mesh element
+in an environment that includes the variables assigned by `hexed::hil_properties::element()`.
+In this case, `uncertainty`, `wall_distance`, and `wall_dimension` have not been initialized and should be ignored.
+If this expression evaluates to \ref true (and \ref init_unrefine_if evaluates to \ref false), the element will be refined.
+Otherwise it will not.
+The default value will uniformly refine all elements to refinement level \ref init_ref_level.
+Refinement sweeps will be repeated iteratively until there is a refinement sweep that produces no change,
+or \ref max_init_refine_iters iterations have been executed, whichever comes first.
+
+<hr>
+\subsubsection init_unrefine_if
+__type:__ string \n
+__default:__ `{false}` \n
+Mesh unrefinement criterion.
+Behaves the same as \ref init_refine_if except that if this expression evaluates to \ref true (and \ref init_refine_if evaluates to \ref false),
+the element will be unrefined (subject to refinement level constraints).
+
+<hr>
+\subsubsection max_init_refine_iters
+__type:__ integer \n
+__default:__ 100 \n
+Maximum number of initial refinement iterations to perform.
+
+<hr>
+\subsubsection geom_refine_if
+__type:__ string (macro) \n
+__default:__ `{(uncertainty > geom_rtol*geom_length + geom_atol & ref_level < max_ref_level & nom_sz > min_elem_size)}` \n
+Mesh refinement criterion for geometry-based refinement, after the geometry is added.
+Each of these refinement sweeps will result in the extruded elements being regenerated and the vertex smoothing being performed again,
+so this is the most computationally expensive refinement phase.
+Works like \ref init_refine_if, except that `wall_distance`, `wall_dimension`, and `uncertainty` have now been defined.
+`uncertainty` is set to an estimate in the error of the polynomial fit to the geometry.
+Specifically, some points on the faces of surface elements are sampled,
+and `uncertainty` is set to their average distance from the true geometry surface (in the \f$ L_2 \f$ Gaussian quadrature norm).
+The default value of `geom_refine_if` will refine elements if their uncertainty is greater than the quantity
+\ref geom_rtol * \ref geom_length + \ref geom_atol ,
+unless their refinement level exceeds \ref max_ref_level or their nominal edge length is less than \ref min_elem_size.
+
+<hr>
+\subsubsection geom_unrefine_if
+__type:__ string (macro) \n
+__default:__ `{false}` \n
+Unrefinement criterion for geometry-based refinement.
+
+<hr>
+\subsubsection max_geom_refine_iters
+__type:__ integer \n
+__default:__ 100 \n
+Maximum number of geometry-based refinement iterations to perform.
+
+<hr>
+\subsubsection final_refine_if
+__type:__ string (macro) \n
+__default:__ `{(has_wall & i_dim == wall_dimension & wall_distance > max_wall_spacing)}` \n
+Mesh refinement criterion for final refinement, after the geometry-based refinement (\ref geom_refine_if ) has already been performed.
+This will subdivide extruded elements, so no extrusion or vertex smoothing is performed.
+If \ref split_layers / \ref init_layer_splits (which are deprecated) are used that will happen before this final refinement phase.
+Unlike the initial refinement and geometry-based refinement, the final refinement phase is anisotropic.
+In addition to the variables provided by `hexed::hil_properties::element()`, you will also have a variable `i_dim` which tells you which
+dimension you are refining along.
+For non-extruded elements, `i_dim == 0` is the \f$x\f$ direction, `i_dim == 1` is \f$y\f$, etc. but for extruded elements, the axis alignment is arbitrary.
+`final_refine_if` will be evaluated once for each dimension, and if it evaluates to `true`, the element will be split in half along that dimension (in reference space).
+Thus if you set a value of `final_refine_if` that does not depend on `i_dim`, refinement will be isotropic.
+If you want to refine specifically in the wall-normal dimension, you can achieve this by comparing `i_dim` to `wall_dimension`.
+The default value of `final_refine_if` will refine the wall elements such that the wall spacing will be less than \ref max_wall_spacing everywhere.
+Note that \ref max_wall_spacing defaults to \ref huge, so final refinement will do nothing unless you override \ref max_wall_spacing.
+
+<hr>
+\subsubsection final_unrefine_if
+__type:__ string (macro) \n
+__default:__ `{false}` \n
+Unrefinement criterion for final refinement.
+Like \ref final_refine_if, this is also anisotropic.
+
+<hr>
+\subsubsection max_final_refine_iters
+__type:__ integer \n
+__default:__ 100 \n
+Maximum number of geometry-based refinement iterations to perform.
 
 <hr>
 \subsubsection art_visc_constant
@@ -380,24 +466,54 @@ __default:__ 100 \n
 Solver status will be printed to `stdout` every `print_freq` iterations.
 
 <hr>
+\subsubsection local_roughness
+__type:__ integer \n
+__default:__ \ref false \n
+If `local_roughness` == \ref true and \ref update_roughness_freq >= 0,
+then instead of setting one roughness value \f$ k_s \f$ for the entire surface to satisfy the roughness constraints everywhere,
+a unique value will be set at each surface quadrature point to satisfy the constraints locally.
+For smooth-wall simulations with widely varying skin friction (e.g., a flat plate),
+this may allow a significantly coarser mesh to be used in downstream regions without sacrificing accuracy.
+
+<hr>
 \subsubsection update_roughness_freq
 __type:__ integer \n
 __default:__ 1000 \n
+Frequency with which to update wall roughness for RANS simulations.
 If set to a positive integer,
-during the simulation, \ref surface_roughness (aka \f$ k_s \f$) will be adaptively updated
-to be the largest possible value that satisfies the criterion
-\f$ k_s^+ = k_s u_\tau/\nu \le \f$ \ref max_roughness_plus .
-This criterion is derived from Wilcox \cite wilcox_k_omega ,
+during the simulation, the surface roughness (aka \f$ k_s \f$) will be adaptively updated
+to be the (approximately) largest possible value that satisfies the criteria
+\f$ k_s^+ = k_s u_\tau/\nu \le \f$ \ref max_roughness_plus
+and \f$ k_s \le \f$ min(\ref max_roughness_absolute, \ref max_roughness_relative * \ref geom_length).
+The former criterion is derived from Wilcox \cite wilcox_k_omega ,
 who recommends that \f$ k_s^+ \f$ be less than 5 for hydraulically smooth surfaces.
-`update_roughness_freq` is then the frequency with which to perform updates.
+In general, specifying small values for the various roughness constraints will require a finer mesh to resolve the resulting \f$\omega\f$ profile,
+but specifying too large a value may introduce error relative to the smooth wall solution.
+If you actually want to simulate a rough wall, you should set `update_roughness_freq` to `-1` and set \ref surface_roughness to the desired roughness height.
 
 <hr>
-\subsubsection unrefine_if
-__type:__ string \n
-__default:__ `{false}` \n
-Mesh unrefinement criterion.
-Behaves the same as \ref refine_if except that if this expression evaluates to \ref true (and \ref refine_if evaluates to \ref false),
-the element will be unrefined (subject to refinement level constraints).
+\subsubsection max_roughness_absolute
+__type:__ float \n
+__default:__ \ref huge \n
+Maximum allowable absolute (dimensional) surface roughness height when adaptive roughness is used (\ref update_roughness_feq > 0).
+The default value effectively does not constrain the surface roughness.
+
+<hr>
+\subsubsection max_roughness_relative
+__type:__ float \n
+__default:__ 1e-3 \n
+Maximum allowable surface roughness height as a fraction of the \ref geom_length "geometry length"
+when adaptive roughness is used (\ref update_roughness_feq > 0).
+The default value stipulates a very rough surface, but this is unlikely to be a problem, as the roughness is usually constrained by \ref max_roughness_plus.
+As long as \ref max_roughness_plus is set to a reasonable value, `max_roughness_relative` will generally only be an active constraint when the skin friction vanishes
+(which is important to avoid singularities at stagnation/separation points when \ref local_roughness = \ref true).
+
+<hr>
+\subsubsection max_roughness_plus
+__type:__ float \n
+__default:__ 4 \n
+The maximum allowable value of \f$ k_s^+ \f$ in adaptive determination of \ref surface_roughness .
+\see \ref update_roughness_freq
 
 <hr>
 \subsubsection max_refinement_iters
@@ -405,13 +521,6 @@ __type:__ integer \n
 __default:__ 100 \n
 Maximum number of refinement sweeps to run if refinement convergence is not achieved.
 
-<hr>
-\subsubsection n_smooth
-__type:__ integer \n
-__default:__ 30 \n
-Number of mesh smoothing iterations to run after every surface-geometry-based refinement sweep.
-
-<hr>
 <hr>
 \subsubsection vis_surface
 __type:__ integer \n
@@ -480,11 +589,13 @@ in the block bounded by \ref geom_vis_bound .
 This will be substantially more expensive than the other visualization files (which are curves and surfaces)
 but is the most reliable way to diagnose whether the geometry was loaded correctly.
 
+<hr>
 \subsubsection geom_vis_bound geom_vis_bound00, geom_vis_bound01, geom_vis_bound10, geom_vis_bound11, geom_vis_bound20, geom_vis_bound21
 __type:__ float \n
 __default:__ 0., 1., 0., 1., 0., 1.
 Bounding box within which to visualize distance from the surface.
 
+<hr>
 \subsubsection geom_vis_subdivisions
 __type:__ integer \n
 __default:__ 100 \n
@@ -887,20 +998,13 @@ This is only relevant when \ref turbulence_model is set to \f$ k\text{-}\omega \
 in which case it controls the boundary condition for \f$ \omega \f$:
 \f$ \omega_w = \frac{4 \times 10^4 \nu_w}{k_s} \f$ .
 If negative, `surface_roughness` will be automatically initialized
-to 1e-6 times the diagonal length of the geometry bounding box.
+to min(\ref max_roughness_absolute, \ref max_roughness_relative * \ref geom_length).
 If \ref update_roughness_freq is set (which it is by default),
 \ref surface_roughness will be automatically adjusted to keep the surface hydraulically smooth.
 
 \note Setting `surface_roughness` too small will require a smaller wall spacing to achieve mesh convergence,
 whereas setting it too large may produce unrealistic results.
-For that reason, allowing automatic adaption is recommended.
-
-<hr>
-\subsubsection max_roughness_plus
-__type:__ float \n
-__default:__ 4 \n
-The maximum allowable value of \f$ k_s^+ \f$ in adaptive determination of \ref surface_roughness .
-\see \ref update_roughness_freq
+For that reason, allowing automatic adaptation is recommended.
 
 <hr>
 
@@ -1003,11 +1107,7 @@ Behavior is roughly the following:
 At this point, the mesh technically exists but contains only one element and no geometry.
 
 \subsubsection mesh
-Generates the initial mesh (although you can continue to modify it).
--# calls \ref init_refinement
--# calls \ref add_geom
--# calls \ref refine as many times as appropriate
--# calls \ref split_layers as many times as appropriate
+Generates the mesh.
 
 <hr>
 \subsubsection run
@@ -1080,13 +1180,6 @@ The following extension/format combinations are supported:
 - `.stl`: [STL](https://en.wikipedia.org/wiki/STL_(file_format)) 3D geometry format (3D only).
   ASCII or binary formats accepted.
   Units are assumed to be \ref units "standard".
-Evaluates to `{}`.
-
-<hr>
-\subsubsection refine
-__type:__ Heisenberg string \n
-Performs one refinement sweep.
-Elements are refined or unrefined based on \ref refine_if and \ref unrefine_if.
 Evaluates to `{}`.
 
 <hr>
@@ -1174,14 +1267,6 @@ Thus split points should be strictly increasing and in the interval (0, 1).
 For example, to split the last wall layer into 4 approximately equal parts, you could set `layer_split_points = {split0 = 0.25; split1 = 0.5; split2 = 0.75}` and then evaluate `split_layers`.
 The state of the original layer will be interpolated into the new layers, so layer splitting can be performed dynamically as a simulation is running.
 Evaluates to `{}`.
-
-<hr>
-\subsubsection set_geometry_refinement
-__type:__ string (macro) \n
-Sets \ref refine_if and \ref unrefine_if to refine elements in order to efficiently resolve the geometry surface.
-Specifically, some points on the faces of surface elements are sampled, and if their distance from the true geometry surface (in the \f$ L_2 \f$ Gaussian quadrature norm)
-is greater than the quantity \ref geom_rtol * \ref geom_length + \ref geom_atol , the element is refined.
-However, the elements are *not* refined if their refinement level exceeds \ref max_ref_level or their nominal edge length is less than \ref min_elem_size.
 
 <hr>
 \subsubsection set_shock

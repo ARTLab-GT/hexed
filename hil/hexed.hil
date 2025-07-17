@@ -241,7 +241,6 @@ adapt_if = {(iteration%adapt_freq == 0)}
 max_init_refine_iters = 100
 max_geom_refine_iters = 100
 max_final_refine_iters = 100
-n_smooth = 30
 vis_surface = true
 vis_field = true
 vis_contour = true
