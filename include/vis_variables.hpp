@@ -30,6 +30,10 @@ namespace hexed::vis_variables {
  * - `center0`, `center1`, `center2`: center of mass of vertices (not necessarily of the element itself)
  * - `nominal_shape0`, `nominal_shape1`, `nominal_shape2`: `Element::nominal_shape(i_dim)` for `i_dim` in [0, 3).
  *   Trailing dimensions set to 0.
+ * - `rms_residual`: RMS (within the element, in reference space) of the residual of all flow variables in the element.
+ *   Residuals of all variables are summed.
+ *   \todo Residual contributions from each variable need to be normalized.
+ *   Right now it might as well be the energy residual.
  *
  * \deprecated The following subset of the assigned variables are deprecated and will be removed in a future version:
  * \deprecated
@@ -80,6 +84,8 @@ void field(Namespace&, Element&, const Basis&);
  * - `visc_stress0`, `visc_stress1`, `visc_stress2` : viscous stress at surface
  * - `mass_flux`: diffusive mass flux through surface
  * - `heat_flux`: surface heat flux
+ * - `roughness_height`: equivalent sand roughness height (dimensional) used for \f$ \omega \f$ boundary condition
+ * - `wall_spacing`: wall distance of first element's farthest vertex from the wall
  */
 void surface(Namespace&, Boundary_connection&);
 

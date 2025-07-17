@@ -56,6 +56,7 @@ bl_nondim_expr = {
     wall_spacing = wall_spacing
     friction_velocity = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)
     y_plus = wall_spacing*friction_velocity*density/dynamic_viscosity
+    roughness_plus = roughness_height*friction_velocity*density/dynamic_viscosity
 }
 state_vars = momentum_expr + density_expr + energy_expr + velocity_expr + speed_expr + pressure_expr + temperature_expr + mach_expr
 compute_force = {
@@ -224,7 +225,7 @@ surface_roughness = -1.
 max_roughness_absolute = huge
 max_roughness_relative = 1e-3
 max_roughness_plus = 4.
-local_roughness = true
+local_roughness = false
 init_refine_if = {(ref_level < init_ref_level)}
 init_unrefine_if = {false}
 geom_refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level < max_ref_level & nom_sz > min_elem_size)}

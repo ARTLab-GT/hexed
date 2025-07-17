@@ -14,8 +14,8 @@ mesh_extreme01 =  160.
 mesh_extreme11 =  160.
 
 amr = true
+max_wall_spacing = 2e-5
 local_roughness = true
-wall_spacing = 2e-5
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -61,6 +61,10 @@ vis_field_vars = vis_field_vars + {
     spectral_uncertainty2 = spectral_uncertainty2
     rms_residual = rms_residual
     mask = mask
+}
+vis_surface_vars = vis_surface_vars + {
+    roughness_height = roughness_height
+    roughness_plus = roughness_plus
 }
 
 $simulate

@@ -143,6 +143,7 @@ void surface(Namespace& space, Boundary_connection& con) {
     space.assign("turbulent_kinetic_energy", state(params.n_dim + 2).copy());
     space.assign("turbulent_dissipation_bassi", state(params.n_dim + 3).copy());
   }
+  space.assign("roughness_height", con.prescribed_data()(params.n_dim).copy());
   Element* elem = con.inside().element();
   HEXED_ASSERT(elem, "Boundary face has no element.")
   space.assign("wall_spacing", elem->wall_distance());
