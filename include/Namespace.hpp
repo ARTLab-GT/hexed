@@ -79,10 +79,10 @@ std::map<std::string, std::unique_ptr<Namespace::Variable<T>>>& Namespace::_get_
   static_assert(always_false<T>(), "`Namespace` does not deal with this type.");
 }
 
-template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>&           Namespace::_get_map() {return _ints;}
-template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<double>>>&        Namespace::_get_map() {return _doubles;}
-template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<std::string>>>&   Namespace::_get_map() {return _strings;}
-template<> inline std::map<std::string, std::unique_ptr<Namespace::Variable<Array<double>>>>& Namespace::_get_map() {return _arrays;}
+template<> std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>&           Namespace::_get_map();
+template<> std::map<std::string, std::unique_ptr<Namespace::Variable<double>>>&        Namespace::_get_map();
+template<> std::map<std::string, std::unique_ptr<Namespace::Variable<std::string>>>&   Namespace::_get_map();
+template<> std::map<std::string, std::unique_ptr<Namespace::Variable<Array<double>>>>& Namespace::_get_map();
 
 template<> std::string inline Namespace::type_name<int>() {return "int";}
 template<> std::string inline Namespace::type_name<double>() {return "double";}
@@ -93,7 +93,9 @@ template<typename T>
 void Namespace::create(std::string name, Namespace::Variable<T>* value) {
   std::unique_ptr<Variable<T>> ptr(value);
   HEXED_ASSERT(!exists(name),
-    format_str(100, "attempt to re-create existing variable `%s` as type `%s`", name.c_str(), type_name<T>().c_str()), Hil_exception)
+               format_str("attempt to re-create existing variable `%s` as type `%s`", name.c_str(),
+                          type_name<T>().c_str()),
+               Hil_exception)
   _get_map<T>().emplace(name, ptr.release());
 }
 
