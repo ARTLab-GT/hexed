@@ -5,6 +5,7 @@
 #include "math.hpp"
 #include "Element.hpp"
 #include "Deformed_element.hpp"
+#include "Array.hpp"
 
 namespace hexed {
 
@@ -19,8 +20,10 @@ namespace hexed {
  *   It's `parent()`, their `parent()`s, etc. are referred to as its "ancestors".
  * - Most of the recursive traversal functions look only down, not up.
  *   That is, they search the element you invoke them on and all its descendents, but not its ancestors.
- *   Thus if you want to search the whole tree, you should call the function on the root (which hopefully you would have done anyway).
- *   The notable exception is `find_neighbor()`, which _does_ go all the way up to the root before starting the recursive search.
+ *   Thus if you want to search the whole tree,
+ *   you should call the function on the root (which hopefully you would have done anyway).
+ *   The notable exception is `find_neighbor()`,
+ *   which _does_ go all the way up to the root before starting the recursive search.
  * - Tree elements are never reallocated, so any pointer to a tree element remains valid when the tree is modified
  *   as long as that element is not deleted with `unrefine()`.
  *   Of course, `unrefine()` deletes tree elements so it can create dangling pointers.
@@ -32,21 +35,14 @@ namespace hexed {
  * However, concurrent attempts to modify the same element (directly or indirectly)
  * or modifying elements and calling a traversing function concurrently may result in data races.
  */
-class Tree {
-  Mat<> orig;
-  double root_sz;
-  int ref_level;
-  Eigen::VectorXi coords;
-  Tree* par;
-  std::vector<std::unique_ptr<Tree>> children_storage;
-  int status;
-  // finds leaves of this element and adds them to `add_to`.
-  // for each dimension, if the corresponding element of `bias` is 0, adds only the elements at the lower extreme of that dimension.
-  // if 1, adds only those at the upper extreme.
-  // if -1, adds all.
-  void add_extremal_leves(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
-
+class Tree : public Mortal {
   public:
+  struct Connection_neighbors {
+    std::array<std::vector<Tree*>, 2> trees;
+    Connection_direction direction;
+    std::array<std::vector<Element*>, 2> elements();
+    bool valid();
+  };
   /*! \brief Constructs the root element of a tree.
    * \details All other elements will be descendents of this one.
    * \param n_dim number of spatial dimensions of the tree. `n_dim = 1` => bintree, `n_dim = 2` => quadtree, etc.
@@ -56,17 +52,25 @@ class Tree {
    *   `origin` must have at least `n_dim` elements, and only the first `n_dim` will be read.
    */
   Tree(int n_dim, double root_size, Mat<> origin = Mat<>::Zero(3));
+  virtual ~Tree();
   const int n_dim;
-  Mutual_ptr<Tree, Element> elem; //!< \brief `Element` generated from this tree (to be managed by the user of this class)
-  Deformed_element* def_elem = nullptr; //!< \brief if `elem` points to a deformed element, this can also be set to allow it to be accessed as deformed
-  std::vector<int> misc_data; //!< \brief As the name implies, used to store whatever random information you want
+  //! \brief `Element` generated from this tree (to be managed by the user of this class)
+  Reciprocal_ptr<Tree, Element> elem;
+  //! \brief if `elem` points to a deformed element, this can also be set to allow it to be accessed as deformed
+  Deformed_element* def_elem = nullptr;
+  //! \brief As the name implies, used to store whatever random information you want
+  std::vector<int> misc_data;
 
   //! \name basic instance information
   //!\{
   Mat<> origin() const;
-  int refinement_level() const; //!< how many calls of `refine` were required to generate this element. E.g. the root element has refinement level 0.
+  //! \brief how many calls of `refine` were required to generate this element.
+  //! \details E.g. the root element has refinement level 0.
+  int refinement_level() const;
+  Array<int> anisotropic_refinement_level() const;
   /*! \brief coordinates of vertex 0 of this element relative to `origin` in multiples of the cell size
-   * \details Combined with the `refinement_level`, this is the minimal amount of information required to locate a tree element.
+   * \details Combined with the `refinement_level`,
+   * this is the minimal amount of information required to locate a tree element.
    * By vertex 0 we mean the vertex with the smallest coordinates in every dimension, e.g. the lower left corner in 2D.
    * For example, in 2D, the root element has coordinates {0, 0}.
    * The root element's children will have coordinates {0, 0}, {0, 1}, {1, 0}, {1, 1}.
@@ -77,6 +81,7 @@ class Tree {
    * \details Equal to \f$2^{-\verb|n_dim|}\verb|root_size|\f$.
    */
   double nominal_size() const;
+  Mat<> nominal_shape() const;
   /*! \brief the position of vertex 0 of the element in physical coordinates
    * \details Note that this expressed in floating point format whereas `coordinates` is in integer format.
    * As an example, in 2D the root element has nominal position origin + {0, 0} and its children have coordinates
@@ -88,18 +93,60 @@ class Tree {
 
   //! \name parent/child status
   //!\{
-  Tree* parent(); //!< If this element is not the root, then this is a pointer to the element which was refined to obtain this element. If it is the root, then this is `nullptr`.
-  //! If this cell has been refined, then this vector contains pointers to its children. If it has not, the vector is empty.
+  //
+  //! \details If this element is not the root,
+  //! then this is a pointer to the element which was refined to obtain this element.
+  //! If it is the root, then this is `nullptr`.
+  Tree* parent();
+  //! \details If this cell has been refined, then this vector contains pointers to its children.
+  //! If it has not, the vector is empty.
   std::vector<Tree*> children();
-  Tree* root(); //!< fetch the root element of this tree
-  bool is_root() const; //!< gives the same result as `!parent()`
-  bool is_leaf() const; //!< gives the same result as `children().empty()`
+  std::vector<Tree*> unique_children();
+  Tree* root(); //!< \brief fetch the root element of this tree
+  bool is_root(); //!< \brief gives the same result as `!parent()`
+  bool is_graft(); //!< \brief `true` iff `this` was created by grafting.
+  bool is_leaf(); //!< \brief gives the same result as `children().empty()`
+  bool is_refined(int i_dim);
+  bool has_graft_connection();
   //!\}
 
   //! \name modifiers
   //!\{
-  void refine(); //!< Creates \f$2^{\verb|n_dim|}\f$ child elements with refinement level one greater than this element and cover the same volume. Must be leaf.
-  void unrefine(); //!< Deletes all child elements (and descendents thereof). This element is now a leaf.
+  //
+  //! \brief Refines anisotropically along an arbitrary number of dimensions.
+  //! \details Will refine along dimension `i` iff `refine_dims[i]` is `true`.
+  //! `refine_dims` must have size `n_dim`.
+  //! If all entries of `refine_dims` are `true`, the refenement is isotropic.
+  //! If none are `true`, no refinement is performed.
+  //! Must be leaf in order to refine.
+  //! Will also attempt to simplify the structure of the tree to reduce the number of branches
+  //! and make the refinement level just before the leaves as isotropic as possible
+  //! (to allow the leaves maximal freedom to unrefine along any dimension).
+  //! This will not change any of the leaves, but may invalidate pointers to branches that are neither roots or leaves,
+  //! _including `this`_.
+  //! \returns Pointers to the new leaves created by refining.
+  //! \warning If refinement simplification occurs, `this` may be destroyed!
+  std::vector<Tree*> refine(std::vector<bool> refine_dims);
+  //! \brief Isotropic refinement.
+  //! \details Equivalent to `refine(std::vector<bool>)` on a vector of all `true`.
+  std::vector<Tree*> refine();
+  //! \brief Equivalent to `refine(std::vector<bool>)` on a vector with exactly one `true` element.
+  std::vector<Tree*> refine(int i_dim);
+  //! \brief Unrefines anisotropically along an arbitrary number of dimensions.
+  //! \details Will refine along dimension `i` iff `refine_dims[i]` is `true`.
+  //! For each `i` where `unrefine_dims[i]` is `true`, `is_refined[i]` must also be true, or else it throws.
+  //! Each child must also be a leaf, or else it also throws.
+  std::vector<Tree*> unrefine(std::vector<bool> unrefine_dims);
+  //! \brief Isotropic unrefinement.
+  //! \details Equivalent to `unrefine(std::vector<bool>)` on a vector of all `true`.
+  std::vector<Tree*> unrefine();
+  //! \brief Equivalent to `unrefine(std::vector<bool>)` on a vector with exactly one `true` element.
+  std::vector<Tree*> unrefine(int i_dim);
+  void force_unrefine(); //!< \brief Deletes all child elements and descendents thereof. This element is now a leaf.
+  Tree* graft(Array<int> ref_level, Eigen::VectorXi coords);
+  void connect(std::array<std::vector<Tree*>, 2>, Connection_direction);
+  void connect(std::array<Tree*, 2>, Connection_direction);
+  void delete_grafts();
   //!\}
 
   //! \name traversing functions
@@ -107,22 +154,19 @@ class Tree {
   /*! \brief Finds a leaf which contains a specified set of integer coordinates.
    * \note Only considers this element and its descendents, not neighbors that share the same root.
    * \details Recursively searches this tree and its descendents for a leaf element which contains the point
-   * determined by `coords` and `ref_level`.
+   * determined by `_coords` and `_ref_level`.
    * If no element is found (i.e. if the specified coordinates are outside this cell) then `nullptr` is returned.
-   * For each dimension, if the corresponding element of `bias` is 0, then the point is permitted to lie on the lower face
+   * For each dimension, if the corresponding element of `bias` is 0,
+   * then the point is permitted to lie on the lower face
    * of that dimension but not the upper face.
    * If the corresponding element of `bias` is 1, then it may lie on the upper face but not the lower.
-   * Example: The element with refinement level 2 and coordinates {1, 2}:
-   * - contains `{ref_level = 2, coords = {1, 2}, bias = {0, 0}}`
-   * - does not contain `{ref_level = 2, coords = {2, 2}, bias = {0, 0}}`
-   * - contains `{ref_level = 2, coords = {2, 2}, bias = {1, 0}}`
-   * - does not contain `{ref_level = 2, coords = {2, 2}, bias = {1, 1}}`
-   * - contains `{ref_level = 3, coords = {3, 5}}` regardless of `bias`.
-   *
-   * The arguments `coords` and `bias` must have at least `n_dim` elements and only the first `n_dim` are read.
+   * The arguments `_coords` and `bias` must have at least `n_dim` elements and only the first `n_dim` are read.
    * All elements of `bias` must be either 0 or 1, or the behavior is unspecified.
-   * `ref_level` must be nonnegative, but there are no restrictions on how it relates to the refinement levels of the cells to be searched.
+   * `_ref_level` must be nonnegative,
+   * but there are no restrictions on how it relates to the refinement levels of the cells to be searched.
    */
+  Tree* find_leaf(Array<int> ref_level, Eigen::VectorXi coords, Eigen::VectorXi bias = Eigen::VectorXi::Zero(3));
+  //! \brief Overload for isotropic refinement level.
   Tree* find_leaf(int ref_level, Eigen::VectorXi coords, Eigen::VectorXi bias = Eigen::VectorXi::Zero(3));
   /*! \brief Finds a leaf which contains a specified point in physical space.
    * \note Only considers this element and its descendents, not neighbors that share the same root.
@@ -146,6 +190,8 @@ class Tree {
    * If more than one element of `direction` is nonzero, then edge or vertex neighbors are returned.
    */
   Tree* find_neighbor(Eigen::VectorXi direction);
+  //! \brief Equivalent to `find_neighbor(Eigen::VectorXi)` with `direction(i_face/2) == math::sign(i_face%2)`.
+  Tree* find_neighbor(int i_face);
   /*! \brief Finds all leaf neighbors of this element in a specified direction.
    * \details Finds all elements in the entire tree which border on this one in a given direction.
    * If the neighbors have the same or lower refinement level, this vector will contain one element
@@ -155,11 +201,16 @@ class Tree {
    * In particular, if exactly one element of `direction` is nonzero,
    * you will get a vector of all the neighbors on a specific face.
    * If no neighbors are found, the vector will be empty.
-   * Neighbors are returned in a depth-first, row-major order.
+   * Neighbors are returned in a depth-first, row-major order
+   * (in the coordinates of their own root, in the case of grafted neighbors).
    */
   std::vector<Tree*> find_neighbors(Eigen::VectorXi direction);
+  //! \brief Equivalent to `find_neighbors(Eigen::VectorXi)` with `direction(i_face/2) == math::sign(i_face%2)`.
+  std::vector<Tree*> find_neighbors(int i_face);
+  Connection_neighbors find_connection_neighbors(int i_face);
   //! \brief total number of tree elements descended from this tree (including itself)
   int count();
+  Array<int> needs_refine(std::function<bool(Tree*)> include);
   //!\}
 
   /*! \name flood fill algorithm
@@ -180,13 +231,63 @@ class Tree {
    * For any neighbors with status `unprocessed`, it will continue the flood fill algorithm from those elements
    * including setting their status and evaluating their neighbors.
    * If the element you call this function on is not a leaf, it will instead start the flood fill
-   * on the leaf descendent of this cell with the smallest coordinates (e.g. for the root in 2D, it will start with the lower-left element).
+   * on the leaf descendent of this cell with the smallest coordinates
+   * (e.g. for the root in 2D, it will start with the lower-left element).
    * The parameter `status` must not be equal to `unprocessed`.
    * If the start element has a status value which is not `unprocessed`, the algorithm does nothing.
    */
   void flood_fill(int status);
-  void clear_status(); //!< sets the flood fill status of this and all child elements to `unprocessed`
+  void clear_status(); //!< \brief sets the flood fill status of this and all child elements to `unprocessed`
   //!\}
+
+  //! \brief Converts between face indices and neighbor search directions.
+  static Eigen::VectorXi get_direction(int i_face, int n_dim);
+
+  private:
+  struct _Connection {
+    std::array<Tree*, 2> trees;
+    Connection_direction direction;
+  };
+  struct _Transformation {
+    bool used = false;
+    Tree* this_root = nullptr;
+    Tree* that_root = nullptr;
+    Connection_direction dir {{0, 0}, {0, 0}};
+    int i_side = 0;
+    Array<int> transform(Array<int> ref_level);
+    void reverse();
+  };
+  struct _Neighbor_result {
+    Tree* neighbor;
+    Eigen::VectorXi direction;
+    _Transformation trans;
+  };
+  // finds leaves of this element and adds them to `add_to`.
+  // for each dimension, if the corresponding element of `bias` is 0,
+  // adds only the elements at the lower extreme of that dimension.
+  // if 1, adds only those at the upper extreme.
+  // if -1, adds all.
+  void _add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
+  void _assign_leaves(std::vector<Tree*>& assign_to, Tree* search_root, int i_dim, int sign);
+  std::vector<Tree*> _refine(std::vector<bool>); // performs refinement but not collapsing/interchange
+  void _collapse_aniso_ref();
+  void _interchange_aniso_ref();
+  void _simplify_aniso_ref();
+  _Neighbor_result _neighbor(Eigen::VectorXi direction);
+  void _clear_connections();
+  static int _compare_ref_level(Tree*, Tree*, _Transformation);
+
+  Mat<> _orig;
+  double _root_sz;
+  Array<int> _ref_level;
+  Eigen::VectorXi _coords;
+  Tree* _par;
+  std::vector<std::shared_ptr<Tree>> _children_storage;
+  std::vector<std::unique_ptr<Tree>> _grafts;
+  std::vector<std::unique_ptr<_Connection>> _connections;
+  std::vector<_Connection*> _face_connections;
+  int _status;
+  bool _is_graft;
 };
 
 }

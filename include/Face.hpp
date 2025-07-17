@@ -38,6 +38,7 @@ class Face : public Mortal {
   Array<double> advection_state();
   Array<double> full_state();
   Array<double> normal();
+  Array<double> discontinuity(); //!< \details layout: [state, flux][n_var]
   int mask() const;
   double nominal_area() const;
 
@@ -54,6 +55,7 @@ class Face : public Mortal {
   int _n_face_qpoint;
   int _n_state;
   int _n_normal;
+  Array<double> _discontinuity; // separate from the other arrays because this one doesn't have rows of n_qpoint
   Array<double> _data;
   //! \todo change `Array` logic so that these aren't necessary
   Array<double> _flow_state;

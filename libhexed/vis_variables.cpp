@@ -1,18 +1,23 @@
 #include <hexed/vis_variables.hpp>
+#include <hexed/Tree.hpp>
 
 namespace hexed::vis_variables {
 
 std::string index(std::string name, int i) {return name + std::to_string(i);}
 
 void element(Namespace& space, Element& elem) {
-  space.assign("is_extruded", int(!elem.tree));
+  space.assign("is_extruded", int(elem.is_extruded()));
   space.assign("ref_level", elem.refinement_level());
   space.assign("aniso_ref_level", elem.aniso_ref_level());
   space.assign("mask", elem.mask());
   space.assign("nom_sz", elem.nominal_size());
+  space.assign("wall_distance", elem.wall_distance());
+  space.assign("wall_dimension", elem.wall_dimension());
+  space.assign("has_wall", int(elem.has_wall()));
   space.assign("uncertainty", elem.uncertainty);
   space.assign("snapping_problem", int(elem.snapping_problem));
   space.assign("is_deformed", int(elem.deformed()));
+  space.assign("rms_residual", elem.residual);
   auto params = elem.storage_params();
   Mat<3> center;
   center.setZero();
@@ -26,6 +31,23 @@ void element(Namespace& space, Element& elem) {
   center /= params.n_vertices();
   for (int i_dim = 0; i_dim < 3; ++i_dim) {
     space.assign(index("center", i_dim), center(i_dim));
+    space.assign(index("aniso_ref_level", i_dim),
+                 i_dim < params.n_dim ? elem.tree.value().anisotropic_refinement_level()[i_dim] : 0);
+    space.assign(index("nominal_shape", i_dim), i_dim < params.n_dim ? elem.nominal_shape(i_dim) : 0.);
+    double discon = 0;
+    double spectral = 0;
+    if (i_dim < params.n_dim) {
+      for (int sign : {0, 1}) {
+        for (bool is_flux : {0, 1}) {
+          for (int i_var = 0; i_var < params.n_var; ++i_var) {
+            discon += elem.face(2*i_dim + sign).discontinuity()(is_flux)[i_var];
+          }
+        }
+      }
+      spectral = elem.spectral_uncert()[i_dim];
+    }
+    space.assign(index("discontinuity", i_dim), discon);
+    space.assign(index("spectral_uncertainty", i_dim), spectral);
   }
 }
 
@@ -117,6 +139,14 @@ void surface(Namespace& space, Boundary_connection& con) {
   space.assign("energy", state(params.n_dim + 1).copy());
   space.assign("mass_flux", flux(params.n_dim).copy());
   space.assign("heat_flux", flux(params.n_dim + 1).copy());
+  if (params.n_var >= params.n_dim + 4) {
+    space.assign("turbulent_kinetic_energy", state(params.n_dim + 2).copy());
+    space.assign("turbulent_dissipation_bassi", state(params.n_dim + 3).copy());
+  }
+  space.assign("roughness_height", con.prescribed_data()(params.n_dim).copy());
+  Element* elem = con.inside().element();
+  HEXED_ASSERT(elem, "Boundary face has no element.")
+  space.assign("wall_spacing", elem->wall_distance());
 }
 
 }

@@ -2,6 +2,26 @@
 
 namespace hexed {
 
+template<>
+std::map<std::string, std::unique_ptr<Namespace::Variable<int>>>& Namespace::_get_map() {
+  return _ints;
+}
+
+template<>
+std::map<std::string, std::unique_ptr<Namespace::Variable<double>>>& Namespace::_get_map() {
+  return _doubles;
+}
+
+template<>
+std::map<std::string, std::unique_ptr<Namespace::Variable<std::string>>>& Namespace::_get_map() {
+  return _strings;
+}
+
+template<>
+std::map<std::string, std::unique_ptr<Namespace::Variable<Array<double>>>>& Namespace::_get_map() {
+  return _arrays;
+}
+
 bool Namespace::exists(std::string name) {
   return _ints.count(name) || _doubles.count(name) || _strings.count(name) || _arrays.count(name);
 }

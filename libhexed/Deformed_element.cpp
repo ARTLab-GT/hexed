@@ -1,11 +1,11 @@
 #include <hexed/Deformed_element.hpp>
 #include <hexed/math.hpp>
+#include <hexed/Tree.hpp>
 
 namespace hexed {
 
-Deformed_element::Deformed_element(Storage_params params, std::vector<Int> pos,
-                                   double mesh_size, int ref_level, Mat<> origin_arg, int aniso_r_level)
-: Element{params, pos, mesh_size, ref_level, origin_arg, true, aniso_r_level, true}
+Deformed_element::Deformed_element(Storage_params params, Tree& t, int aniso_r_level)
+: Element(params, t, true, aniso_r_level, true)
 , n_qpoint{params.n_qpoint()}
 , jac_dat{(n_dim*n_dim + 1)*n_qpoint}
 {}
@@ -19,7 +19,7 @@ void Deformed_element::set_jacobian(const Basis& basis) {
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
       auto jac_entry {jac.segment((i_dim*n_dim + j_dim)*n_qpoint, n_qpoint)};
-      jac_entry = math::dimension_matvec(diff_mat, shape_pos(i_dim).vector(), j_dim)/_nom_sz;
+      jac_entry = math::dimension_matvec(diff_mat, shape_pos(i_dim).vector(), j_dim)/tree->nominal_shape()(j_dim);
     }
   }
   // compute interior normals
@@ -83,10 +83,10 @@ void Deformed_element::set_jacobian(const Basis& basis) {
         double coef = vertex_nrml(i_vert, i_dim*n_dim + j_dim);
         norm_sq += coef*coef;
       }
-      norm_sum += std::sqrt(norm_sq);
+      norm_sum += std::sqrt(norm_sq)/nominal_shape(i_dim);
     }
     // for deformed elements this is a essentially a measure of the amount of stretching in each dimension
-    vertex_time_step_scale(i_vert) = nominal_size()*vertex_det(i_vert)/norm_sum;
+    vertex_time_step_scale(i_vert) = vertex_det(i_vert)/norm_sum;
   }
 }
 

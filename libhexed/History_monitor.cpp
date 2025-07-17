@@ -3,7 +3,7 @@
 namespace hexed {
 
 History_monitor::History_monitor(double window_size, Int max_samples, Int min_samples)
-: _samples{max_samples}, _min_samples{min_samples}, _start{0}, _sz{0},
+: _samples{max_samples}, _min_samples{min_samples}, _start{0}, _sz{0}, _start_iter{0},
   _iterations(_samples, 0), _values(_samples, 0.),
   _win_sz{window_size}, _add_threshold{1.}, _min{-std::sqrt(huge)}, _max{std::sqrt(huge)}
 {}
@@ -18,7 +18,7 @@ void History_monitor::add_sample(Int iteration, double value) {
   ++_sz;
   // if the number of samples has exceeded the desired window size, forget the oldest one
   // (by simply adjusting the storage window not to include it)
-  while (_sz > _samples || _iterations[_start] < iteration*(1 - _win_sz)) {
+  while ((_sz > 0) && (_sz > _samples || _iterations[_start] - _start_iter < (iteration - _start_iter)*(1 - _win_sz))) {
     _start = (_start + 1)%_samples;
     --_sz;
   }
@@ -32,7 +32,9 @@ void History_monitor::add_sample(Int iteration, double value) {
   }
   // adjust the threshold for adding the next sample in a way that will keep it representing
   // roughly the last `_win_sz` fraction of the iteraions
-  while (_add_threshold <= iteration) _add_threshold *= std::pow(1/(1 - _win_sz), 1./_samples);
+  while (_add_threshold <= iteration) {
+    _add_threshold = _start_iter + (_add_threshold - _start_iter)*std::pow(1/(1 - _win_sz), 1./_samples);
+  }
 }
 
 double History_monitor::min() const {
@@ -44,9 +46,10 @@ double History_monitor::max() const {
 }
 
 void History_monitor::clear() {
+  if (_sz) _start_iter = _iterations[(_start + _sz - 1)%_samples];
   _start = 0;
   _sz = 0;
-  _add_threshold = 1.;
+  _add_threshold = _start_iter + 1.;
   _min = -huge;
   _max = huge;
 }

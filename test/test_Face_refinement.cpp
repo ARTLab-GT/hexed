@@ -1,6 +1,7 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Face_refinement.hpp>
 #include <hexed/vertex_inds.hpp>
+#include <hexed/Tree.hpp>
 
 TEST_CASE("Face_refinement") {
   SECTION("general") {
@@ -37,11 +38,12 @@ TEST_CASE("Face_refinement") {
 
   SECTION("elements") {
     hexed::Storage_params params {2, 5, 3, 2};
+    hexed::Tree tree(2, 1.);
     std::vector<std::unique_ptr<hexed::Element>> elems;
     std::vector<hexed::Face_refinement> face_refs;
     std::vector<hexed::Neighbor_connection> neighb_cons;
     SECTION("2 on 2") {
-      for (int i = 0; i < 4; ++i) elems.push_back(std::make_unique<hexed::Element>(params));
+      for (int i = 0; i < 4; ++i) elems.push_back(std::make_unique<hexed::Element>(params, tree));
       face_refs.emplace_back(elems[0]->face(1), 0);
       face_refs.emplace_back(elems[1]->face(1), 0);
       face_refs.emplace_back(elems[2]->face(0), 1);
@@ -67,7 +69,7 @@ TEST_CASE("Face_refinement") {
       }
     }
     SECTION("1 on 4") {
-      for (int i = 0; i < 5; ++i) elems.push_back(std::make_unique<hexed::Element>(params));
+      for (int i = 0; i < 5; ++i) elems.push_back(std::make_unique<hexed::Element>(params, tree));
       face_refs.emplace_back(elems[4]->face(4), 0);
       face_refs.emplace_back(*face_refs[0].fine()[0], 1);
       face_refs.emplace_back(*face_refs[0].fine()[1], 1);
@@ -89,7 +91,7 @@ TEST_CASE("Face_refinement") {
       }
     }
     SECTION("4 on 1") {
-      for (int i = 0; i < 5; ++i) elems.push_back(std::make_unique<hexed::Element>(params));
+      for (int i = 0; i < 5; ++i) elems.push_back(std::make_unique<hexed::Element>(params, tree));
       face_refs.emplace_back(elems[4]->face(5), 0);
       face_refs.emplace_back(*face_refs[0].fine()[0], 1);
       face_refs.emplace_back(*face_refs[0].fine()[1], 1);

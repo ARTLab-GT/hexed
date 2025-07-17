@@ -9,7 +9,8 @@
 TEST_CASE("Freestream") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 5, 3, row_size};
-  hexed::Element element {params};
+  hexed::Tree tree(3, 1.);
+  hexed::Element element {params, tree};
   const int n_qpoint = row_size*row_size;
   hexed::Freestream freestream {hexed::Mat<5>{10., 30., -20., 1.3, 1.2e5}};
   hexed::Boundary_connection con(element.face(2), 0, 0);
@@ -35,7 +36,8 @@ TEST_CASE("Freestream") {
 TEST_CASE("Riemann_invariants") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 5, 3, row_size};
-  hexed::Element element {params};
+  hexed::Tree tree(3, 1.);
+  hexed::Element element {params, tree};
   const int n_qpoint = row_size*row_size;
   hexed::Mat<5> fs {10., 30., -20., 1.3, 4e5};
   hexed::Riemann_invariants ri {fs};
@@ -78,7 +80,8 @@ TEST_CASE("Riemann_invariants") {
 TEST_CASE("Function_bc") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {2, 4, 2, row_size};
-  hexed::Element element {params};
+  hexed::Tree tree(2, 1.);
+  hexed::Element element {params, tree};
   const int n_qpoint = row_size;
   hexed::Annular_diffusion_test func(1.7, 2., 1e5);
   hexed::Function_bc bc(func);
@@ -109,7 +112,8 @@ TEST_CASE("Function_bc") {
 TEST_CASE("Nonpenetration") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 4, 2, row_size};
-  hexed::Deformed_element element {params};
+  hexed::Tree tree(3, 1.);
+  hexed::Deformed_element element {params, tree};
   hexed::Nonpenetration nonpen;
   hexed::Boundary_connection con(element.face(2), 0, 0);
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
@@ -150,7 +154,8 @@ TEST_CASE("Nonpenetration") {
 TEST_CASE("No_slip") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 4, 2, row_size};
-  hexed::Deformed_element element {params};
+  hexed::Tree tree(3, 1.);
+  hexed::Deformed_element element {params, tree};
   hexed::Boundary_connection con(element.face(0), 0, 3);
   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
     for (int i_dim = 0; i_dim < 2; ++i_dim) con.normal()(i_dim)[i_qpoint] = .7/std::sqrt(2.);
@@ -161,7 +166,7 @@ TEST_CASE("No_slip") {
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_var = 0; i_var < 4; ++i_var) con.inside().flow_state()(0)(i_var)[i_qpoint] = state[i_var];
     }
-    hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_energy>(1e6), 1., 1.4, hexed::inviscid, hexed::laminar);
+    hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_energy>(1e6), 1.4, hexed::inviscid, hexed::laminar);
     no_slip.apply_state(con);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_dim = 0; i_dim < 2; ++i_dim) {
@@ -187,7 +192,7 @@ TEST_CASE("No_slip") {
       for (int i_var = 0; i_var < 4; ++i_var) con.inside().flow_state()(0)(i_var)[i_qpoint] = state[i_var];
     }
     hexed::No_slip no_slip(std::make_shared<hexed::Prescribed_heat_flux>(3.),
-                           1., 1.4, hexed::inviscid, hexed::laminar);
+                           1.4, hexed::inviscid, hexed::laminar);
     no_slip.apply_state(con);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
       for (int i_dim = 0; i_dim < 2; ++i_dim) REQUIRE(con.ghost().flow_state()(0)(i_dim)[i_qpoint] == Catch::Approx(-1.));
@@ -216,7 +221,7 @@ TEST_CASE("No_slip") {
     }
     auto thermal = std::make_shared<hexed::Thermal_equilibrium>();
     thermal->emissivity = .8;
-    hexed::No_slip no_slip(thermal, 1., 1.4, hexed::inviscid, hexed::laminar);
+    hexed::No_slip no_slip(thermal, 1.4, hexed::inviscid, hexed::laminar);
     double temp = 1e5/1.2/hexed::constants::specific_gas_air;
     no_slip.apply_state(con);
     for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
@@ -234,7 +239,8 @@ TEST_CASE("No_slip") {
 TEST_CASE("Copy") {
   const int row_size = hexed::config::max_row_size;
   hexed::Storage_params params {3, 5, 3, row_size};
-  hexed::Element element {params};
+  hexed::Tree tree(3, 1.);
+  hexed::Element element {params, tree};
   const int n_qpoint = row_size*row_size;
   hexed::Copy copy;
   hexed::Boundary_connection con(element.face(2), 0, 0);

@@ -79,6 +79,7 @@ std::string to_string(double); //!< \overload
 std::string to_string(std::string); //!< \overload
 std::string to_string(bool); //!< \overload
 std::string to_string(Mat<dyn, dyn> mat); //!< \overload
+std::string to_string(void*); //!< \overload
 
 //! \brief Represents an array of objects which themselves are representable with `to_string()`
 template <typename T>

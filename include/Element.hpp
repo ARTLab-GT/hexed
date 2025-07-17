@@ -10,7 +10,7 @@
 #include "Storage_params.hpp"
 #include "Basis.hpp"
 #include "Lock.hpp"
-#include "Mutual_ptr.hpp"
+#include "reciprocal.hpp"
 #include "Block.hpp"
 #include "Face.hpp"
 
@@ -27,15 +27,10 @@ class Accessible_mesh;
 class Element : public Kernel_element, public Mortal {
   protected:
   // constructor that allows the vertices to be created as mobile, for the  benefit of `Deformed_element`
-  Element(Storage_params, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
-          bool mobile_vertices, int aniso_r_level, bool is_def);
+  Element(Storage_params, Tree&, bool mobile_vertices, int aniso_r_level, bool is_def);
   Mat<3> _compute_pos() const;
   Storage_params params;
   int n_dim;
-  std::vector<Int> _nom_pos;
-  Mat<> _origin;
-  double _nom_sz;
-  int _r_level;
   int _aniso_r_level;
   std::unique_ptr<next::Element_shape> _shape;
 
@@ -51,6 +46,7 @@ class Element : public Kernel_element, public Mortal {
   // may contain a fake element that `this` is a subset of
   std::shared_ptr<next::Element_shape> _fake_shape;
   std::vector<Face> _faces;
+  std::vector<int> _desired_refinement;
   friend Accessible_mesh; // necessary for `Accessible_mesh::set_mask`... need a better way to do this
 
   public:
@@ -58,7 +54,7 @@ class Element : public Kernel_element, public Mortal {
   //! \brief Pointer to state data at faces. Must be populated by user
   double uncertainty = 0; //!< \brief refinement algorithms should set this value to some uncertainty metric
   static constexpr bool is_deformed = false; //!< \brief is this `Element` subclass deformed?
-  Mutual_ptr<Element, Tree> tree; //!< \brief `Tree` this element was created from
+  Reciprocal_ptr<Element, Tree> tree; //!< \brief `Tree` this element was created from
   bool unrefinement_locked = false; //!< \brief if this is set to `true`, `Mesh_interface::update()` won't unrefine it
   //! \brief if `true`, this element has a face on the surface which was not properly snapped
   bool snapping_problem = false;
@@ -66,33 +62,35 @@ class Element : public Kernel_element, public Mortal {
   bool needs_snapping = true;
   const Mat<> origin; //!< \brief origin which integer coordinates are relative to
   Lock lock; //!< \brief for any tasks where multiple threads might access an element simultaneously
+  double residual;
 
-  /*!
-   * \details The `Storage_params` defines the amount of storage that must be allocated.
-   * `pos` specifies the position of vertex 0 relative to `origin_arg` in intervals of the nominal size.
-   * The nominal size is defined to be `mesh_size`/(2^`ref_level`).
-   * The vertices will be spaced at intervals of the nominal size.
-   * Only the first `n_dim` elements of `origin_arg` are considered.
-   */
-  Element(Storage_params, std::vector<Int> pos = {}, double mesh_size = 1., int ref_level = 0,
-          Mat<> origin_arg = Mat<>::Zero(3), int aniso_ref_level = 0);
-  virtual inline bool get_is_deformed() {return is_deformed;} //!< for determining whether a pointer is deformed
+  Element(Storage_params, Tree& tree, int aniso_ref_level = 0);
   //! \details Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
   //! both of which seem error prone.
   Element(const Element&) = delete;
   Element& operator=(const Element&) = delete;
   ~Element() = default;
 
-  Storage_params storage_params();
+  virtual inline bool get_is_deformed() {return is_deformed;} //!< for determining whether a pointer is deformed
+  bool is_extruded();
+  Storage_params storage_params() const;
   Array<double> position(const Basis&) const;
   Array<double> face_position(const Basis&) const;
   virtual void set_jacobian(const Basis& basis);
-  inline double nominal_size() const override {return _nom_sz;}
-  inline int refinement_level() {return _r_level;} //!< \brief indicates how many times this element has been isotropically refined
-  int aniso_ref_level() {return _aniso_r_level;} //!< \brief indicates how many times this element has been anisotropically refined
-  inline std::vector<Int> nominal_position() {return _nom_pos;}
+  double nominal_size() const;
+  double nominal_shape(int i_dim) const override;
+  double nominal_volume() const;
+  int refinement_level();
+  int aniso_ref_level();
+  int& desired_refinement(int i_dim);
+  Eigen::VectorXi nominal_position();
+  double wall_distance() const; //!< \brief The distance from the farthest vertex to the wall.
+  int wall_dimension();
+  bool has_wall();
   //! pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); //!< layout: [i_var][i_qpoint]
+  Array<double> flow_state(); //!< layout: [i_var][i_qpoint]
+  Array<double> numeric_state(); //!< layout: [i_var][i_qpoint]
   double* advection_state(); //!< layout: [i_node][i_qpoint] \note `0 <= i_node < row_size`
   //! pointer to scaling factor for local time step.
   double* time_step_scale() override; //!< layout: [i_qpoint]
@@ -102,6 +100,7 @@ class Element : public Kernel_element, public Mortal {
   //! \brief returns whether the element is included in the masked mesh.
   //! \details value can be set with `Accessible_mesh::set_mask`
   int mask() const override {return _mask;}
+  Array<double> spectral_uncert(); //!< layout: [i_dim]
 
   /*! \brief Compute the Jacobian matrix.
    * \details I.e., derivative of `i_dim`th
@@ -123,11 +122,15 @@ class Element : public Kernel_element, public Mortal {
 
   void create_shape(next::Mesh_blocks&, int boundary_face = next::Mesh_blocks::no_face);
   void create_fake(next::Mesh_blocks&);
-  void split_shape(next::Mesh_blocks&, Element& split_from, double at, int from_face);
+  bool shared_fake() const;
+  void split_shape(Element& split_from, double at, int from_face);
+  void glue_shape(Element& glue_to, std::array<std::vector<double>, 2> corners);
   void destroy_shape();
   void destroy_fake();
   next::Element_shape& shape();
+  const next::Element_shape& shape() const;
   inline next::Element_shape* fake_shape() {return _fake_shape.get();}
+  std::shared_ptr<next::Element_shape> shared_fake_shape();
   inline bool has_shape() const {return bool(_shape);}
   next::Element_shape& active_shape();
 

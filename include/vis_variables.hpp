@@ -11,16 +11,37 @@ namespace hexed::vis_variables {
 /*! \details Assigns the follwing variables:
  * - `is_extruded`: 1 if element is extruded, else 0
  * - `n_dim`: number of dimensions
- * - `is_def = elem.get_is_deformed()`
- * - `ref_level = elem.refinement_level()`
- * - `aniso_ref_level = elem.aniso_ref_level()`
- * - `mask = elem.mask()`
- * - `nom_sz` = elem.nominal_size()`
- * - `uncertainty` = elem.uncertainty`
+ * - `is_def = Element::get_is_deformed()`
+ * - `ref_level = Element::refinement_level()`
+ * - `aniso_ref_level = Element::aniso_ref_level()` __deprecated__
+ * - `aniso_ref_level0`, `aniso_ref_level1`, `aniso_ref_level2`: The `Tree::anisotropic_refinement_level`
+ *   of this element's `Tree`.
+ * \warning For now, `aniso_ref_level` and `aniso_ref_level0`, ... do completely different things.
+ * - `mask = Element::mask()`
+ * - `nom_sz = Element::nominal_size()` __deprecated__
+ * - `nominal_size = Element::nominal_size()`
+ * - `wall_distance = Element::wall_distance()`
+ * - `wall_dimension = Element::wall_dimension()`
+ * - `has_wall = Element::has_wall()`
+ * - `uncertainty = Element::uncertainty`
  * - `snapping_problem`: Whether there was any problem snapping this element to geometry features.
  * - `is_deformed`: True if this element is deformed, false if it is Cartesian.
  * - `sharp`: `true` iff at least one of the element's vertices has been snapped to a sharp edge or point.
  * - `center0`, `center1`, `center2`: center of mass of vertices (not necessarily of the element itself)
+ * - `nominal_shape0`, `nominal_shape1`, `nominal_shape2`: `Element::nominal_shape(i_dim)` for `i_dim` in [0, 3).
+ *   Trailing dimensions set to 0.
+ * - `rms_residual`: RMS (within the element, in reference space) of the residual of all flow variables in the element.
+ *   Residuals of all variables are summed.
+ *   \todo Residual contributions from each variable need to be normalized.
+ *   Right now it might as well be the energy residual.
+ *
+ * \deprecated The following subset of the assigned variables are deprecated and will be removed in a future version:
+ * \deprecated
+ * `nom_sz`: Use the synonymous `nominal_size` variable instead.
+ * \deprecated
+ * `aniso_ref_level`: This referred to anisotropy produced by \ref split_layers, which itself is deprecated.
+ * To inspect the anisotropy produced by anisotropic refinement, use `aniso_ref_level0`, `aniso_ref_level1`,
+ * `aniso_ref_level2`.
  */
 void element(Namespace&, Element& elem);
 
@@ -63,6 +84,8 @@ void field(Namespace&, Element&, const Basis&);
  * - `visc_stress0`, `visc_stress1`, `visc_stress2` : viscous stress at surface
  * - `mass_flux`: diffusive mass flux through surface
  * - `heat_flux`: surface heat flux
+ * - `roughness_height`: equivalent sand roughness height (dimensional) used for \f$ \omega \f$ boundary condition
+ * - `wall_spacing`: wall distance of first element's farthest vertex from the wall
  */
 void surface(Namespace&, Boundary_connection&);
 

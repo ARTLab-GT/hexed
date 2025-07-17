@@ -1,28 +1,26 @@
 #include <hexed/Element.hpp>
 #include <hexed/math.hpp>
 #include <hexed/Face.hpp>
+#include <hexed/Tree.hpp>
 
 namespace hexed {
 
-Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level,
-                 Mat<> origin_arg, bool mobile_vertices, int aniso_r_level, bool is_def)
+Element::Element(Storage_params params_arg, Tree& t, bool mobile_vertices, int aniso_r_level, bool is_def)
 : params(params_arg)
 , n_dim(params.n_dim)
-, _nom_pos(pos)
-, _origin{origin_arg}
-, _nom_sz{mesh_size/math::pow(2, ref_level)}
-, _r_level{ref_level}
 , _aniso_r_level{aniso_r_level}
 , n_dof(params.n_dof())
 , n_vert(params.n_vertices())
-, data_size{params.n_dof_numeric() + config::debug_variables*params.n_qpoint()}
+, data_size{params.n_dof_numeric() + config::debug_variables*params.n_qpoint() + n_dim}
 , face_size{(is_def*params.n_dim + std::max(2*params.n_var, params.n_dim + params.n_advection(params.row_size)))*params.n_face_qpoint()}
 , data{Eigen::VectorXd::Zero(data_size + 2*n_dim*face_size)}
 , _vertex_data({3, params.n_vertices()})
 , _mask{0}
+, _desired_refinement(params.n_dim, 0)
 , tree(this)
-, origin{origin_arg(Eigen::seqN(0, params.n_dim))}
+, residual{0.}
 {
+  tree.pair(t.elem);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       _faces.emplace_back(params, i_dim, sign, is_def, data.data() + data_size + (2*i_dim + sign)*face_size);
@@ -33,20 +31,17 @@ Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_si
   faces.fill(nullptr);
   // initialize local time step scaling to 1.
   for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) time_step_scale()[i_qpoint] = 1.;
-  _nom_pos.resize(params.n_dim, 0);
-  HEXED_ASSERT(_origin.size() >= params.n_dim, "`origin` has too few components");
-  _vertex_data(0) = _nom_sz/n_dim;
-  _vertex_data(1, 3) = 0.;
+  _vertex_data(0) = 0;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) _vertex_data(0) += 1./nominal_shape(i_dim);
+  _vertex_data(0) = 1./_vertex_data(0);
 }
 
-Element::Element(Storage_params params_arg, std::vector<Int> pos, double mesh_size, int ref_level, Mat<> origin_arg,
-                 int aniso_r_level)
-: Element(params_arg, pos, mesh_size, ref_level, origin_arg, false, aniso_r_level, false)
+Element::Element(Storage_params params_arg, Tree& t, int aniso_r_level)
+: Element(params_arg, t, false, aniso_r_level, false)
 {}
 
-Storage_params Element::storage_params() {
-  return params;
-}
+bool Element::is_extruded() {return tree.value().is_graft();}
+Storage_params Element::storage_params() const {return params;}
 
 Array<double> Element::position(const Basis& basis) const {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
@@ -82,8 +77,50 @@ Array<double> Element::face_position(const Basis& basis) const {
 
 void Element::set_jacobian(const Basis& basis) {}
 
+double Element::nominal_size() const {return tree.value().nominal_size();}
+double Element::nominal_shape(int i_dim) const {return tree.value().nominal_shape()[i_dim];}
+double Element::nominal_volume() const {return tree.value().nominal_shape().prod();}
+int Element::refinement_level() {return tree.value().refinement_level();}
+int Element::aniso_ref_level() {return _aniso_r_level;}
+int& Element::desired_refinement(int i_dim) {return _desired_refinement[i_dim];}
+Eigen::VectorXi Element::nominal_position() {return tree.value().coordinates();}
+
+double Element::wall_distance() const {
+  double dist = 0;
+  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+    dist = std::max(dist, shape().vertex(i_vert).wall_distance);
+  }
+  return dist;
+}
+
+int Element::wall_dimension() {
+  if (!is_extruded()) return -1;
+  HEXED_ASSERT(_fake_shape, "no fake shape")
+  int i_bf = _fake_shape->boundary_face();
+  if (i_bf == next::Mesh_blocks::no_face) return -1;
+  return i_bf/2;
+}
+
+bool Element::has_wall() {
+  if (!is_extruded()) return false;
+  HEXED_ASSERT(_fake_shape, "no fake shape")
+  int i_bf = _fake_shape->boundary_face();
+  if (i_bf < 0) return false;
+  auto& face = _faces[i_bf];
+  if (!face.neighbor_connection()) return false;
+  return face.neighbor_connection()->opposite_face(face).boundary_connection();
+}
+
 double* Element::stage(int i_stage) {
   return (i_stage > 0) ? residual_cache() + (i_stage - 1)*n_dof : state();
+}
+
+Array<double> Element::flow_state() {
+  return {{params.n_var, params.n_qpoint()}, stage(0)};
+}
+
+Array<double> Element::numeric_state() {
+  return {{params.n_var_numeric(), params.n_qpoint()}, state()};
 }
 
 double* Element::time_step_scale() {
@@ -122,33 +159,39 @@ double& Element::vertex_fix_admis_coef(int i_vertex) {
   return _vertex_data(2)[i_vertex];
 }
 
+Array<double> Element::spectral_uncert() {
+  int offset = params.n_dof_numeric() + config::debug_variables*params.n_qpoint();
+  return Array<double>({params.n_dim}, data.data() + offset);
+}
+
 void Element::set_face(int i_face, double* data) {
   HEXED_ASSERT(!faces[i_face] || !data, "connecting an already-connected face");
   faces[i_face] = data;
 }
 bool Element::is_connected(int i_face) {return faces[i_face] || _faces[i_face].connected();}
 
-Mat<3> Element::_compute_pos() const {
-  Mat<3> pos = Mat<3>::Zero();
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) pos(i_dim) = _origin(i_dim) + _nom_sz*_nom_pos[i_dim];
-  return pos;
-}
-
 void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
   HEXED_ASSERT(blocks.n_dim == params.n_dim, "Dimensionality of `this` and `blocks` does not match.");
   _fake_shape.reset();
-  _shape = std::make_unique<next::Element_shape>(blocks.create_element(_compute_pos(), nominal_size(), boundary_face));
+  _shape = std::make_unique<next::Element_shape>(blocks.create_element(resize(tree.value().nominal_position(), 3),
+                                                                       resize(tree.value().nominal_shape(), 3),
+                                                                       boundary_face));
   _shape->deformed = deformed();
 }
 
 void Element::create_fake(next::Mesh_blocks& blocks) {
   _fake_shape.reset(_shape.release());
-  _shape = std::make_unique<next::Element_shape>(blocks.create_element(_compute_pos(), nominal_size()));
+  _shape = std::make_unique<next::Element_shape>(blocks.create_element(resize(tree.value().nominal_position(), 3),
+                                                                       resize(tree.value().nominal_shape(), 3)));
   _shape->glue(*_fake_shape, {std::vector<double>(params.n_dim, 0.), std::vector<double>(params.n_dim, 1.)});
   _shape->deformed = deformed();
 }
 
-void Element::split_shape(next::Mesh_blocks& blocks, Element& split_from, double at, int from_face) {
+bool Element::shared_fake() const {
+  return _fake_shape.use_count() > 1;
+}
+
+void Element::split_shape(Element& split_from, double at, int from_face) {
   HEXED_ASSERT(split_from._fake_shape, "Can only create a split shape from an element that already has a fake shape.");
   HEXED_ASSERT(_shape, "Must `create_shape` before `split_shape`.");
   _fake_shape = split_from._fake_shape;
@@ -161,6 +204,28 @@ void Element::split_shape(next::Mesh_blocks& blocks, Element& split_from, double
   _shape->glue(*_fake_shape, split_corners);
 }
 
+void Element::glue_shape(Element& glue_to, std::array<std::vector<double>, 2> glue_corners) {
+  HEXED_ASSERT(_shape, "Must `create_shape` before `glue_shape`.")
+  if (glue_to.fake_shape()) {
+    _fake_shape = glue_to._fake_shape;
+    auto corners = glue_to.shape().glued_corners();
+    for (int i = 0; i < 2; ++i) {
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        double gc = glue_corners[i][i_dim];
+        glue_corners[i][i_dim] = (1. - gc)*corners[0][i_dim] + gc*corners[1][i_dim];
+      }
+    }
+  }
+  _shape->glue(glue_to.active_shape(), glue_corners);
+  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+    std::vector<double> coords(params.n_dim);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      coords[i_dim] = math::row_coordinate(params.n_dim, 2, i_dim, i_vert);
+    }
+    _shape->vertex(i_vert).set_pos(_shape->interpolate(coords));
+  }
+}
+
 void Element::destroy_shape() {
   _shape.reset();
   _fake_shape.reset();
@@ -171,6 +236,11 @@ void Element::destroy_fake() {
 }
 
 next::Element_shape& Element::shape() {
+  HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.")
+  return *_shape;
+}
+
+const next::Element_shape& Element::shape() const {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.")
   return *_shape;
 }

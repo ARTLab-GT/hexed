@@ -346,9 +346,17 @@ class Spatial {
         std::array<double*, 6> visc_faces;
         for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face, true);
         double* tss = elem.time_step_scale();
-        double nominal_size = elem.nominal_size();
-        double nominal_area = math::pow(nominal_size, n_dim - 1);
-        double nominal_volume = math::pow(nominal_size, n_dim);
+        double nominal_shape [n_dim];
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) nominal_shape[i_dim] = elem.nominal_shape(i_dim);
+        double nominal_area [n_dim];
+        double nominal_volume = 1;
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          nominal_volume *= nominal_shape[i_dim];
+          nominal_area[i_dim] = 1;
+          for (int j_dim = (i_dim + 1)%n_dim; j_dim != i_dim; j_dim = (j_dim + 1)%n_dim) {
+            nominal_area[i_dim] *= nominal_shape[j_dim];
+          }
+        }
         double time_rate [2][std::max(Pde::n_update, Pde::n_extrap - Pde::n_extrap/2)][n_qpoint] {}; // first part contains convective time derivative, second part diffusive
         // only need the next 2 for deformed elements
         double* nrml = nullptr; // reference level normals
@@ -390,13 +398,13 @@ class Spatial {
                   for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) {
                     Mat<row_size, 1> row = row_n(Eigen::all, j_dim).cwiseProduct(row_r(Eigen::all, i_var));
                     Mat<2, 1> bound = face_n(Eigen::all, j_dim).cwiseProduct(face_state(Eigen::all, i_var));
-                    Row_rw<1, row_size>::write_row(derivative(row, bound)/nominal_size,
+                    Row_rw<1, row_size>::write_row(derivative(row, bound)/nominal_shape[i_dim],
                                                    visc_storage[j_dim][i_var], ind, 1.);
                   }
                 }
               } else {
                 // differentiate and write to temporary storage
-                Row_rw<Pde::n_extrap, row_size>::write_row(derivative(row_r, face_state)/nominal_size,
+                Row_rw<Pde::n_extrap, row_size>::write_row(derivative(row_r, face_state)/nominal_shape[i_dim],
                                                            visc_storage[i_dim][0], ind, 0);
               }
             }
@@ -412,15 +420,18 @@ class Spatial {
           if constexpr (is_deformed) {
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
               for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-                comp.normal(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint];
+                comp.normal(j_dim, i_dim) = nrml[(i_dim*n_dim + j_dim)*n_qpoint + i_qpoint]*nominal_area[i_dim];
               }
             }
+          } else {
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) comp.normal(i_dim, i_dim) = nominal_area[i_dim];
           }
-          comp.normal *= nominal_area;
           if constexpr (Pde::has_convection) {
             comp.compute_flux_conv();
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-              for (int i_var = 0; i_var < Pde::n_update; ++i_var) flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_var, i_dim);
+              for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+                flux[i_dim][i_var][i_qpoint] = comp.flux_conv(i_var, i_dim);
+              }
             }
           }
           if constexpr (Pde::has_diffusion) {
@@ -443,7 +454,9 @@ class Spatial {
             comp.compute_source();
             double mult = nominal_volume;
             if constexpr (is_deformed) mult *= elem_det[i_qpoint];
-            for (int i_var = 0; i_var < Pde::n_update; ++i_var) time_rate[1][i_var][i_qpoint] = mult*comp.source(i_var);
+            for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+              time_rate[1][i_var][i_qpoint] = mult*comp.source(i_var);
+            }
           }
           if constexpr (config::debug_variables) if (comp.debug_vars_set) {
             for (int i_var = 0; i_var < config::debug_variables; ++i_var) {
@@ -472,7 +485,8 @@ class Spatial {
               // write viscous row_f to faces to enable calculation of the numerical row_f
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
                 for (int is_positive : {0, 1}) {
-                  visc_faces[ind.i_dim*2 + is_positive][i_var*ind.n_fqpoint + ind.i_face_qpoint()] = face_f(is_positive, i_var);
+                  visc_faces[ind.i_dim*2 + is_positive][i_var*ind.n_fqpoint + ind.i_face_qpoint()]
+                    = face_f(is_positive, i_var);
                 }
               }
               Row_rw<Pde::n_update, row_size>::write_row(-derivative(row_f), time_rate[1][0], ind, 1.);
@@ -582,7 +596,8 @@ class Spatial {
         std::array<double*, 6> visc_faces;
         for (int i_face = 0; i_face < 2*n_dim; ++i_face) visc_faces[i_face] = elem.face(i_face, true);
         double* tss = elem.time_step_scale();
-        double nominal_volume = math::pow(elem.nominal_size(), n_dim);
+        double nominal_volume = 1;
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) nominal_volume *= elem.nominal_shape(i_dim);
         double time_rate [Pde::n_update][n_qpoint] {};
         double* elem_det = nullptr;
         if constexpr (is_deformed) {
@@ -706,7 +721,8 @@ class Spatial {
             }
             Mat<Pde::n_update> flux = .5*(
               comp[0].flux_conv + comp[1].flux_conv
-              + std::max(comp[0].char_speed, comp[1].char_speed)*comp[0].normal.norm()*(comp[0].update_state - comp[1].update_state)
+              + std::max(comp[0].char_speed, comp[1].char_speed)*comp[0].normal.norm()
+                *(comp[0].update_state - comp[1].update_state)
             );
             for (int i_side = 0; i_side < 2; ++i_side) {
               for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
@@ -843,8 +859,9 @@ class Spatial {
             comp.compute_decay();
             scale += comp.decay; // should be comp.decay/2, but i'm nervous
           }
-          if (_is_local) tss[i_qpoint] = 1./scale;
-          else {
+          if (_is_local) {
+            tss[i_qpoint] = 1./scale;
+          } else {
             tss[i_qpoint] = 1.;
             dt = std::min(dt, 1./scale);
           }

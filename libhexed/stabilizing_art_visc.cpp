@@ -55,13 +55,17 @@ class Stab_art_visc : public Kernel<Kernel_element&> {
         ns /= norm_sq[i_var]*n_dim;
         nonsmooth = math::max(nonsmooth, ns);
       }
+      double nom_size = huge;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        nom_size = std::min(nom_size, elements[i_elem].nominal_shape(i_dim));
+      }
       // transform the indicator to [0, 1] by comparing it to a threshold
       double indicator = std::log(nonsmooth)/std::log(10);
       if (indicator <= _ramp_center - _half_width) indicator = 0;
       else if (indicator < _ramp_center + _half_width) indicator = .5*(1 + std::sin(constants::pi*(indicator - _ramp_center)/2/_half_width));
       else indicator = 1;
       // add dimensional scaling and write to the element
-      elements[i_elem].uncert() = (row_size - 1)*_char_speed*elements[i_elem].nominal_size()*indicator;
+      elements[i_elem].uncert() = (row_size - 1)*_char_speed*nom_size*indicator;
     }
   }
 };

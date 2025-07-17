@@ -68,6 +68,7 @@ Vertex::Vertex(Mat<3> pos, int row_size)
 , snapped_edge{-1}
 , snapped_endpoint{-1}
 , incompatible_snap{false}
+, wall_distance{0.}
 , _pos{pos}
 , _orig_pos{Mat<3>::Zero()}
 , _step{Mat<3>::Zero()}
@@ -133,6 +134,14 @@ void Vertex::set_pos(Mat<3> p) {
       #pragma omp atomic write
       _pos(i_dim) = p(i_dim);
     }
+  }
+}
+
+void Vertex::remember_pos() {
+  Mat<3> p = point({});
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    #pragma omp atomic write
+    _pos(i_dim) = p(i_dim);
   }
 }
 
@@ -396,41 +405,40 @@ int Vertex::n_elements() const {
 }
 
 #define NEIGHBORS(CONST) \
-std::vector<CONST Vertex*> Vertex::neighbors() CONST { \
-  std::vector<CONST Vertex*> n; \
-  for (auto elem : _elems.theirs()) { \
-    HEXED_ASSERT(_elems.theirs()[0], "element is null"); \
-    int nv = math::pow(2, elem->n_dim()); \
-    int i_this = get_index(*elem); \
-    for (int i_vert = 0; i_vert < nv; ++i_vert) { \
-      CONST Vertex* vert = &elem->vertex(i_vert); \
-      for (int stride = 1; stride < nv; stride *= 2) { \
-        if (i_this - i_vert == stride*(2*(i_this/stride%2) - 1) && std::find(n.begin(), n.end(), vert) == n.end()) { \
-          n.push_back(vert); \
+  std::vector<CONST Vertex*> Vertex::neighbors() CONST { \
+    std::vector<CONST Vertex*> n; \
+    for (auto elem : _elems.theirs()) { \
+      HEXED_ASSERT(_elems.theirs()[0], "element is null"); \
+      int nv = math::pow(2, elem->n_dim()); \
+      int i_this = get_index(*elem); \
+      for (int i_vert = 0; i_vert < nv; ++i_vert) { \
+        CONST Vertex* vert = &elem->vertex(i_vert); \
+        for (int stride = 1; stride < nv; stride *= 2) { \
+          if (i_this - i_vert == stride*(2*(i_this/stride%2) - 1) && std::find(n.begin(), n.end(), vert) == n.end()) { \
+            n.push_back(vert); \
+          } \
         } \
       } \
     } \
-  } \
-  return n; \
-}
+    return n; \
+  }
 NEIGHBORS()
 NEIGHBORS(const)
 #undef NEIGHBORS
 
 Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
-  if (!_vert.glued()) _set.emplace(_vert._shared_value_lock);
+  _set.emplace(_vert._shared_value_lock);
 }
 
 double Vertex::Shared_value::get() const {
-  if (_set) return _vert._shared_value; // equivalent to checking if vertex is glued
-  HEXED_ASSERT(_vert.glued(), "The glued status of the vertex changed since constructing the `Shared_value`.")
+  if (!_vert.glued()) return _vert._shared_value; // equivalent to checking if vertex is glued
   double value = 0;
   for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
     double interp = 1.;
     bool skip = false;
     for (int i_dim = 0; i_dim < _vert._glued_to->n_dim(); ++i_dim) {
       int sign = i_vert/vstride(_vert._glued_to->n_dim(), i_dim)%2;
-      skip = skip || (_vert._glued_coords[i_dim] == !sign);
+      skip = skip || (std::abs(_vert._glued_coords[i_dim] - !sign) < 1e-12);
       interp *= !sign + math::sign(sign)*_vert._glued_coords[i_dim];
     }
     if (!skip) value += interp*Shared_value(_vert._glued_to->vertex(i_vert)).get();
@@ -439,7 +447,21 @@ double Vertex::Shared_value::get() const {
 }
 
 void Vertex::Shared_value::set(double value) {
-  if (_set) _vert._shared_value = value;
+  _vert._shared_value = value;
+}
+
+void Vertex::Shared_value::set(double value, bool minmax) {
+  _vert._shared_value = math::extreme(minmax, _vert._shared_value, value);
+  if (_vert.glued()) {
+    for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
+      bool skip = false;
+      for (int i_dim = 0; i_dim < _vert._glued_to->n_dim(); ++i_dim) {
+        int sign = i_vert/vstride(_vert._glued_to->n_dim(), i_dim)%2;
+        skip = skip || (std::abs(_vert._glued_coords[i_dim] - !sign) < 1e-12);
+      }
+      if (!skip) Shared_value(_vert._glued_to->vertex(i_vert)).set(value, minmax);
+    }
+  }
 }
 
 Mat<3> Vertex::_get_pos() const {
@@ -855,18 +877,18 @@ Mat<3> Element_shape::nominal_position(int i_vert) const {
   Mat<3> pos = _nom_pos;
   for (int i_dim = 0; i_dim < n_dim(); ++i_dim) {
     int sign = i_vert/vstride(n_dim(), i_dim)%2;
-    pos(i_dim) += sign*_nom_sz;
+    pos(i_dim) += sign*_nom_shape(i_dim);
     if (extruded_direction != Mesh_blocks::no_face && extruded_direction/2 == i_dim && extruded_direction%2 == sign) {
-      pos(i_dim) -= math::sign(sign)*_nom_sz;
+      pos(i_dim) -= math::sign(sign)*_nom_shape(i_dim);
     }
   }
   return pos;
 }
 
 Mat<3> Element_shape::nominal_center() const {
-  Mat<3> c = _nom_pos + Mat<3>::Constant(.5*_nom_sz);
+  Mat<3> c = _nom_pos + .5*_nom_shape;
   if (extruded_direction != Mesh_blocks::no_face) {
-    c(extruded_direction/2) -= math::sign(extruded_direction%2)*.5*_nom_sz;
+    c(extruded_direction/2) -= math::sign(extruded_direction%2)*.5*_nom_shape(extruded_direction);
   }
   return c;
 };
@@ -1030,9 +1052,13 @@ Sequence<Boundary_block&> Mesh_blocks::boundary_sides() {
 }
 
 Element_shape Mesh_blocks::create_element(Mat<3> pos, double size, int boundary_face) {
+  return create_element(pos, Mat<3>::Constant(size), boundary_face);
+}
+
+Element_shape Mesh_blocks::create_element(Mat<3> pos, Mat<3> shape, int boundary_face) {
   // create the element
   Element_shape elem(n_dim, basis);
-  elem._nom_sz = size;
+  elem._nom_shape = shape;
   elem._nom_pos = pos;
   // create vertices for the element and connect the element's vertex pointers to it
   int nv = math::pow(2, n_dim);

@@ -62,8 +62,8 @@ class Accessible_mesh : public Mesh {
   // visualizes the mesh and returns the same string (used to manipulate `HEXED_ASSERT`)
   std::string _vis_return(std::string);
   Element_container& container(bool is_deformed);
-  int add_element(int ref_level, bool is_deformed, std::vector<Int> position, Mat<> origin,
-                  int aniso_ref_level = 0, int surface_face = next::Mesh_blocks::no_face);
+  int _add_element(int ref_level, bool is_deformed, Eigen::VectorXi position,
+                   int aniso_ref_level = 0, int surface_face = next::Mesh_blocks::no_face, Tree* = nullptr);
   Element& add_elem(bool is_deformed, Tree&);
   bool intersects_surface(Tree*);
   bool is_surface(Tree*);
@@ -125,7 +125,7 @@ class Accessible_mesh : public Mesh {
   inline View_by_type<         Element>& cartesian() {return car;}
   //! \returns a View_by_type containing only the deformed elements in the mesh
   inline View_by_type<Deformed_element>&  deformed() {return def;}
-  int add_element(int ref_level, bool is_deformed, std::vector<Int> position) override;
+  int add_element(int ref_level, bool is_deformed, Eigen::VectorXi position) override;
   //! Access an element. If the parameters to not describe an existing element, throw an exception.
   Element& element(int ref_level, bool is_deformed, int serial_n);
   //! access all elements, both Cartesian and deformed
@@ -153,6 +153,8 @@ class Accessible_mesh : public Mesh {
   void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always,
               std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
+  bool adapt(std::function<bool(Element&, int)> refine_criterion,
+             std::function<bool(Element&, int)> unrefine_criterion) override;
   inline int surface_bc_sn() override {return surf_bc_sn;}
   inline Surface_geom& surface_geometry() {return *surf_geom;}
 
@@ -180,6 +182,9 @@ class Accessible_mesh : public Mesh {
     Masked<Kernel_element, Element> _masked_car_elems;
     Masked<Kernel_element, Element> _masked_def_elems;
     public:
+    Int desired_iters = 0;
+    bool repeat = false;
+    double max_residual = 0;
     Masked_mesh(Accessible_mesh&, const Basis&, std::function<bool(Element&)> = [](Element&){return true;});
     Kernel_mesh kernel_mesh;
     std::vector<Boundary_connection*> bound_cons;

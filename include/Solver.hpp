@@ -29,11 +29,6 @@ namespace hexed {
  */
 class Solver {
   private:
-  struct Reduction {
-    double initial_value;
-    std::function<double(double, double)> binary_reduction;
-  };
-
   Storage_params params;
   std::unique_ptr<Accessible_mesh> acc_mesh;
   Gauss_legendre basis;
@@ -56,9 +51,9 @@ class Solver {
   void _put_cache(); // copies the flow state to the residual cache
   void _get_cache(); // copies the residual cache to the flow state
 
-  void share_vertex_data(std::function<double&(Element&, int i_vertex)>, Reduction);
+  void share_vertex_data(std::function<double&(Element&, int i_vertex)>, bool minmax);
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get,
-                         std::function<double&(Element&, int i_vertex)> set, Reduction);
+                         std::function<double&(Element&, int i_vertex)> set, bool minmax);
 
   bool fix_admissibility(double stability_ratio);
   void apply_state_bcs();
@@ -73,6 +68,8 @@ class Solver {
   void _init_face_state();
   Interpreter _interpreter();
   void _init_stage_storage(int stage);
+  void _update_recursive(int level, double safety);
+  Int _effective_preti_iters(int level);
 
   //! \brief linearizes the steady state equations by finite difference
   class Linearized : public Linear_equation {
@@ -208,6 +205,9 @@ class Solver {
   //! \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
   void update_implicit();
   void compute_residual();
+  void print_preti_iters();
+  void compute_spectral_uncertainty();
+  void update_bound_conds();
   /*! \brief Computes the minimum ratio between the local diffusive and convective time steps.
    * \details Assumes no Chebyshev acceleration.
    * Result is written to `min_lts_dc_ratio` in the HIL namespace.

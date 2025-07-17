@@ -120,6 +120,9 @@ class Vertex : public Block {
 
   //! \brief set the `point({})` of `this` to `p`, if possible
   void set_pos(Mat<3> p);
+  //! \brief if `this` is `glued()`,
+  //! sets it to remember its current `point({})` after the element it's glued to is destroyed.
+  void remember_pos();
   //! \brief add a constraint that the `nominal_size()` of `this` must be smaller than the supplied value
   //! \details inherited by vertices that `eat()` `this`.
   void add_size_constraint(double);
@@ -176,7 +179,11 @@ class Vertex : public Block {
     public:
     Shared_value(Vertex&); //!< \brief Sets the `Lock`
     double get() const; //!< \brief Fetches the shared value.
-    void set(double); //!< \brief Writes to the shared value.
+    //! \brief Writes to the shared value.
+    //! \details Will not directly affect the `get()` if the vertex is glued.
+    void set(double);
+    //! \brief Constrains the value of `get()` to be at most (least) `value` if `minamx` is `false` (`true`).
+    void set(double value, bool minmax);
     private:
     Vertex& _vert;
     std::optional<Lock::Set> _set;
@@ -200,6 +207,7 @@ class Vertex : public Block {
   double dijkstra_curve_dist_sq; //!< \brief squared distance from the curve
   double dijkstra_arc_len; //!< \brief arc length of the nearest point on the curve
   bool incompatible_snap;
+  double wall_distance;
 
   private:
   struct _Gradient_entry {
@@ -412,7 +420,7 @@ class Element_shape : public Block {
 
   public:
   //! \brief Obtains the edge length of this element before any vertex adjustment.
-  inline double nominal_size() const {return _nom_sz;}
+  inline double nominal_size() const {return _nom_shape.maxCoeff();}
   //! \brief What the position of vertex `i_vert` _would_ be supposed to be if this were a Cartesian element.
   Mat<3> nominal_position(int i_vert = 0) const;
   Mat<3> nominal_center() const;
@@ -465,7 +473,7 @@ class Element_shape : public Block {
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   void _glue_edges(std::vector<Element_shape*> those);
   const Basis* _basis;
-  double _nom_sz;
+  Mat<3> _nom_shape;
   Mat<3> _nom_pos;
   std::vector<Reciprocal_ptr<Element_shape, Vertex>> _verts;
   int _i_bf;
@@ -512,6 +520,7 @@ class Mesh_blocks {
    * in the lower-dimensional entity sequence access functions.
    */
   Element_shape create_element(Mat<3> pos, double size, int boundary_face = no_face);
+  Element_shape create_element(Mat<3> pos, Mat<3> shape, int boundary_face = no_face);
 
   //! \brief Passed to `create_element` to indicate that no faces are on the surface boundary.
   static const int no_face;

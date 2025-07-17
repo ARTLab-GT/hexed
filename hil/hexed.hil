@@ -22,17 +22,42 @@ pressure_expr = {pressure = (heat_rat - 1)*(energy - 0.5*density*speed^2);}
 temperature_expr = {temperature = pressure/(density*specific_gas_air);}
 mach_expr = {mach = speed/sqrt(heat_rat*pressure/density);}
 art_visc_expr = {bulk_art_visc = bulk_art_visc; laplacian_art_visc = laplacian_art_visc;}
+{define arbitrary default transport parameters so that `transport_expr` doesn't break in inviscid flows}
+offset = 0.
+ref_temperature = 1.
+ref_value = 1.
+const_value = 0.
+transport_expr = {
+    $viscosity_model
+    dynamic_viscosity = const_value + ref_value*(temperature/ref_temperature)^1.5*(ref_temperature + offset)/(temperature + offset)
+    $conductivity_model
+    thermal_conductivity = const_value + ref_value*(temperature/ref_temperature)^1.5*(ref_temperature + offset)/(temperature + offset)
+    case0 = {}
+    case1 = {
+        specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
+        turbulent_dissipation_bassi = turbulent_dissipation_bassi
+        specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density)
+    }
+    $$({case} + (turbulence_model == {k-omega}))
+}
 visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
 iteration_expr = {iteration = iteration; time_stage = time_stage; pseudotime_iteration = pseudotime_iteration;}
 art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
 normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
+total_spectral_uncert_expr = {total_spectral_uncertainty = total_spectral_uncertainty;}
 flow_time_expr = {flow_time = flow_time;}
 time_step_expr = {time_step = time_step;}
 fix_iters_expr = {fix_iters = fix_iters;}
-skin_friction_coef_expr = {skin_friction_coef = (visc_stress0^2 + visc_stress1^2 + visc_stress2^2)^.5/(.5*freestream_density*freestream_speed^2);}
+skin_friction_coef_expr = {skin_friction_coef = sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/(.5*freestream_density*freestream_speed^2);}
 pressure_coef_expr = {pressure_coef = (pressure - freestream_pressure)/(.5*freestream_density*freestream_speed^2);}
+bl_nondim_expr = {
+    wall_spacing = wall_spacing
+    friction_velocity = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)
+    y_plus = wall_spacing*friction_velocity*density/dynamic_viscosity
+    roughness_plus = roughness_height*friction_velocity*density/dynamic_viscosity
+}
 state_vars = momentum_expr + density_expr + energy_expr + velocity_expr + speed_expr + pressure_expr + temperature_expr + mach_expr
 compute_force = {
     integrand_surface = velocity_expr + speed_expr + pressure_expr + stress_expr
@@ -93,8 +118,8 @@ air_visc_offset = 111.
 air_cond_ref = .0241
 air_cond_ref_temp = 273.
 air_cond_offset = 194.
-air_viscosity = {ref_value = air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
-air_conductivity = {ref_value = air_cond_ref; ref_temperature = air_cond_ref_temp; offset = air_cond_offset}
+air_viscosity = {ref_value = air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset;}
+air_conductivity = {ref_value = air_cond_ref; ref_temperature = air_cond_ref_temp; offset = air_cond_offset;}
 
 shock_sub_iters = 12; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
 set_shock = {
@@ -160,18 +185,6 @@ set_aerothermo = {
     $$({case} + aerothermo_bl_multirate)
 }
 
-set_geometry_refinement = {
-    refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level < max_ref_level & nom_sz > min_elem_size)}
-    unrefine_if = {(ref_level > init_ref_level & !is_extruded)}
-    hexed_min_sz = (mesh_extreme01 - mesh_extreme00)*2.^-max_ref_level
-    case0 = {}
-    case1 = {hexed_min_sz = min_elem_size}
-    $$({case} + (min_elem_size > hexed_min_sz))
-    case1 = {max_deflection = 0.1*hexed_min_sz}
-    $$({case} + (0.1*hexed_min_sz < max_deflection))
-    println({max deflection } + max_deflection)
-}
-
 plot_history = {shell({python3 -c "from hexedpy.utils import History_plot;History_plot('} + working_dir + {')" &})}
 
 {scalar parameters}
@@ -180,9 +193,14 @@ init_ref_level = 3
 steady = true
 implicit = true
 implicit_scheme = {backward Euler}
+preti = false
+amr = false
 max_ref_level = 1000
 geom_rtol = 1e-5
 geom_atol = 0.
+adapt_tol_far = 1e-2
+adapt_tol_near = 1e-4
+max_wall_spacing = huge
 viscosity_model = {}
 conductivity_model = {}
 turbulence_model = {}
@@ -202,13 +220,27 @@ vis_freq = 10^4
 write_freq = 10^4
 iter_width = 10
 print_freq = 100
+adapt_freq = 1000
 update_roughness_freq = 10^3
 surface_roughness = -1.
+max_roughness_absolute = huge
+max_roughness_relative = 1e-3
 max_roughness_plus = 4.
-refine_if = {false}
-unrefine_if = {false}
-max_refinement_iters = 100
-n_smooth = 30
+local_roughness = false
+init_refine_if = {(ref_level < init_ref_level)}
+init_unrefine_if = {false}
+geom_refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level < max_ref_level & nom_sz > min_elem_size)}
+geom_unrefine_if = {false}
+final_refine_if = {(has_wall & i_dim == wall_dimension & wall_distance > max_wall_spacing)}
+final_unrefine_if = {false}
+adapt_tol = {(adapt_tol_near + (adapt_tol_far - adapt_tol_near)*!(i_dim == wall_dimension & (has_wall | wall_distance < .01*geom_length)))}
+adapt_refine_if = {($({spectral_uncertainty} + i_dim) > ($adapt_tol))}
+adapt_unrefine_if = {($({spectral_uncertainty} + i_dim) < ($adapt_tol)/2^(row_size - 1) & $({aniso_ref_level} + i_dim) > init_ref_level)}
+allow_refinement_if = {(total_spectral_uncertainty_max - total_spectral_uncertainty_min) < .1*total_spectral_uncertainty_max}
+adapt_if = {(iteration%adapt_freq == 0)}
+max_init_refine_iters = 100
+max_geom_refine_iters = 100
+max_final_refine_iters = 100
 vis_surface = true
 vis_field = true
 vis_contour = true
@@ -221,18 +253,17 @@ vis_lts_constraints = false
 vis_edges = true
 vis_geom = true
 vis_geom_distance = false
-vis_field_vars = state_vars + art_visc_expr
+vis_field_vars = state_vars + art_visc_expr + transport_expr
 vis_contour_vars = vis_field_vars
-vis_surface_vars = state_vars + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr
+vis_surface_vars = state_vars + transport_expr + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr + bl_nondim_expr
 vis_n_sample = 10
-print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr
+print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr + total_spectral_uncert_expr
 monitor_window = 0.25
-monitor_samples = 100
+monitor_samples = 1000
+monitor_min_samples = 10
 monitor_vars = {}
 integrand_field = {}
 integrand_surface = {}
-max_angle = 20*degree
-max_deflection = huge
 mesh_extreme_eps = 1e-6
 layer_split_points = {split0 = 1./3.;}
 init_layer_splits = 0
@@ -326,6 +357,15 @@ vis_iter = {
     $$({case} + (iteration%vis_freq == 0))
 }
 
+adapt_iter = {
+    case0 = {}
+    case1 = {
+        adapt
+        adapt_last_residual = normalized_residual
+    }
+    $$({case} + (amr & ($adapt_if)))
+}
+
 setup_io = {
     case0 = {}
     case1 = {working_dir = working_dir + {/}}
@@ -384,10 +424,12 @@ iterate = {
             $vis_iter
             case0 = {}
             case1 = {
+                print {Updating surface roughness... }
                 update_roughness
-                println({updating surface roughness to } + surface_roughness)
+                println {done}
             }
             $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
+            $adapt_iter
         }
         $$({case} + (time_stage == n_time_stages - 1))
         case0 = {}
@@ -423,61 +465,12 @@ start = {
     init_residual_density = 0.
     init_residual_energy = 0.
     normalized_residual = 1.
+    total_spectral_uncertainty = 0.
     prev_residual = 0.
     hexed_next_flow_time = 0.
 }
 
 mesh_init = false
-mesh = {
-    println {meshing...}
-    flow_time = 0
-    geom_length = 0.
-    init_refinement
-    add_geom
-    i_refinement = 0
-    keep_refining = true
-    while = {keep_refining & i_refinement < max_refinement_iters}
-    do = {
-        print({geometry-based refinement sweep } + i_refinement + {... } + newline)
-        keep_refining = keep_refining & refine
-        i_refinement = i_refinement + 1
-        flow_time = flow_time + 1
-        bounds_surface_vars = {
-            position0 = pos0
-            position1 = pos1
-            position2 = pos2
-        }
-        bounds_surface
-        geom_bbox00 = min_surface_position0
-        geom_bbox01 = max_surface_position0
-        geom_bbox10 = min_surface_position1
-        geom_bbox11 = max_surface_position1
-        geom_bbox20 = min_surface_position2
-        geom_bbox21 = max_surface_position2
-        geom_length = sqrt((geom_bbox01 - geom_bbox00)^2 + (geom_bbox11 - geom_bbox10)^2 + (geom_bbox21 - geom_bbox20)^2)
-        println {done}
-    }
-    $loop
-    i_split = 0
-    while = {i_split < init_layer_splits}
-    do = {split_layers; i_split = i_split + 1}
-    $loop
-    mesh_init = true
-    print({geometry bounding box:
-    } + geom_bbox00 + { } + geom_bbox01 + {
-    } + geom_bbox10 + { } + geom_bbox11 + {
-    } + geom_bbox20 + { } + geom_bbox21 + {
-})
-    flow_time = 0
-    println({geometry length: } + geom_length)
-    case0 = {}
-    case1 = {
-        surface_roughness = 1e-6*geom_length
-        println({initializing surface roughness height to } + surface_roughness)
-    }
-    $$({case} + (surface_roughness < 0 & viscosity_model != {}))
-    print_emph = true; println({meshing complete with } + n_elements + { elements} + newline)
-}
 
 run = {
     $write_init
@@ -496,7 +489,7 @@ run = {
 
 simulate = {
     $start
-    $mesh
+    mesh
     init_state
     $run
 }

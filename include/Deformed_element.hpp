@@ -18,8 +18,7 @@ class Deformed_element : public Element {
   bool degenerate = 0;
   static constexpr bool is_deformed = true;
 
-  Deformed_element(Storage_params, std::vector<Int> pos = {}, double mesh_size = 1., int ref_level = 0,
-                   Mat<> origin_arg = Mat<>::Zero(3), int aniso_ref_level = 0);
+  Deformed_element(Storage_params, Tree&, int aniso_ref_level = 0);
   virtual inline bool get_is_deformed() {return is_deformed;} //!< \brief for determining whether a pointer is deformed
   //! \brief sets the Jacobian based on the current vertex and face node locations
   virtual void set_jacobian(const Basis& basis);

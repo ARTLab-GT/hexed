@@ -12,12 +12,14 @@ Face::Face(Storage_params params, int i_d, int s, bool is_def, double* data)
 , _n_face_qpoint{params.n_qpoint()/params.row_size}
 , _n_state{std::max(2*params.n_var, params.n_dim + params.n_advection(params.row_size))}
 , _n_normal{is_def*params.n_dim}
+, _discontinuity({2, params.n_var})
 , _data({(_n_state + _n_normal), _n_face_qpoint}, data)
 , _flow_state{_data(0, 2*_params.n_var).reshaped({2, _params.n_var, _n_face_qpoint})}
 , _advection_state{_data(0, _params.n_dim + _params.n_advection(_params.row_size))}
 , _full_state{_data(0, _n_state)}
 , _normal{_data(_n_state, end)}
 {
+  _discontinuity = 0;
   _data = 0;
 }
 
@@ -61,6 +63,8 @@ void Face::disconnect() {
   _face_ref_fine.unpair();
 }
 
+Array<double> Face::discontinuity() {return _discontinuity();}
+
 Array<double> Face::flow_state() {
   return _flow_state();
 }
@@ -90,7 +94,11 @@ int Face::mask() const {
 
 double Face::nominal_area() const {
   if (_element) {
-    return math::pow(_element->nominal_size(), _params.n_dim - 1);
+    double area = 1;
+    for (int i_dim = 0; i_dim < _params.n_dim; ++i_dim) if (i_dim != _i_dim) {
+      area *= _element->nominal_shape(i_dim);
+    }
+    return area;
   } else if (_boundary_connection) {
     return _boundary_connection->inside().nominal_area();
   } else if (_face_ref_coarse) {

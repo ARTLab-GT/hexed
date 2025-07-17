@@ -11,8 +11,7 @@ mesh_extreme00 = -10.
 mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
-refine_if = {((center0^2 + center1^2 < 2*nom_sz^2) | ((center0 - 1.)^2 + center1^2 < 2*nom_sz^2)) & nom_sz > .1}
-unrefine_if = {false}
+amr = true
 
 {generate geometry with external script}
 shell {python3 make_geom.py}
@@ -24,12 +23,15 @@ freestream_mach = 0.3
 attack = 4*degree
 
 {iteration parameters}
-print_freq = 1000
-vis_freq = 20000
-done = {iteration > 10000 & lift_coef_max - lift_coef_min < 1e-2*(lift_coef_min + lift_coef_max)/2}
+print_freq = 100
+vis_freq = 10000
+adapt_freq = 1000
+done = {iteration > 1000 & lift_coef_max - lift_coef_min < 1e-3*(lift_coef_min + lift_coef_max)/2}
 iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
+vis_field_vars = vis_field_vars + {discontinuity0 = discontinuity0; discontinuity1 = discontinuity1; discontinuity2 = discontinuity2;}
+vis_field_vars = vis_field_vars + {spectral_uncertainty0 = spectral_uncertainty0; spectral_uncertainty1 = spectral_uncertainty1; spectral_uncertainty2 = spectral_uncertainty2;}
 
 {run simulation}
 $simulate

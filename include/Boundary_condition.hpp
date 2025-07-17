@@ -25,8 +25,7 @@ class Flow_bc {
   virtual void apply_advection(Boundary_connection&);
   virtual void apply_diffusion(Boundary_connection&);
   virtual void flux_diffusion(Boundary_connection&);
-  //! initialize `Boundary_connection::state_cache` at beginning of simulation (used by `Cache_bc`)
-  virtual inline void init_cache(Boundary_connection&) {}
+  virtual void init_cache(Boundary_connection&);
   virtual inline int n_prescribed(int n_dim) const {return 0;}
   virtual inline void set_prescribed(Interpreter&, Boundary_connection&) {}
   virtual ~Flow_bc() = default;
@@ -150,6 +149,7 @@ class Thermal_equilibrium : public Thermal_bc {
   double emissivity = 0.;
   double heat_transfer_coef = 0.;
   double temperature = 0.;
+  double heat_rat = std::nan("");
   inline double ghost_energy(Mat<> state) override {return state(last);}
   double ghost_heat_flux(Mat<> state, double) override;
 };
@@ -166,14 +166,13 @@ class No_slip : public Flow_bc {
   Turbulence_model _turb;
   double _heat_rat;
   public:
-  double roughness; //! \brief set and update this as desired
-  No_slip(std::shared_ptr<Thermal_bc>, double roughness, double heat_rat,
+  No_slip(std::shared_ptr<Thermal_bc>, double heat_rat,
           Transport_model viscosity, Turbulence_model, double heat_flux_coercion = 2.);
   void apply_advection(Boundary_connection&) override;
   //! \note `apply_state` must be called before `apply_flux` to prime `state_cache`
   void apply_state(Boundary_connection&) override;
   void apply_flux(Boundary_connection&) override;
-  inline int n_prescribed(int n_dim) const override {return n_dim;}
+  inline int n_prescribed(int n_dim) const override {return n_dim + 1;}
   void set_prescribed(Interpreter&, Boundary_connection&) override;
 };
 

@@ -21,7 +21,7 @@ class Kernel_element {
   virtual double* residual_cache() = 0; //! \brief where the convective residual is stored for 2-stage time integration
   virtual double* time_step_scale() = 0; //!< \brief storage for local time step \details layout: [i_qpoint]
   virtual double& vertex_time_step_scale(int i_vertex) = 0; //!< \todo the kernel should not need this
-  virtual double nominal_size() const = 0; //!< \brief nominal edge length of the element before any vertex motion
+  virtual double nominal_shape(int i_dim) const = 0; //!< \brief nominal edge length of the element along the `i_dim`th dimension before any vertex motion
   virtual double* face(int i_face, bool is_ldg) = 0; //!< \brief where the extrapolated face data is stored
   virtual bool deformed() const = 0; //!< \brief whether this element is deformed
   /*!

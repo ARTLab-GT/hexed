@@ -8,19 +8,15 @@ Note: strings are enclosed in `{}`, and strings which are not assigned to anythi
 {domain and mesh parameters}
 n_dim = 2
 row_size = 6
-mesh_extreme00 = -80.
-mesh_extreme10 = -80.
-mesh_extreme01 =  80.
-mesh_extreme11 =  80.
+mesh_extreme00 = -160.
+mesh_extreme10 = -160.
+mesh_extreme01 =  160.
+mesh_extreme11 =  160.
 
-init_ref_level = 4
-refine_if = {(is_extruded & ref_level < 10) | ((center0^2 + center1^2)^.5 < .3 & ref_level < 11) | ((center0^2 + center1^2)^.5 < .1 & ref_level < 12)}
-unrefine_if = {false}
-{$set_geometry_refinement}
-init_layer_splits = 9
-bl_multirate = true
-flow_iters = 10
-bl_iters = 6
+amr = true
+max_wall_spacing = 2e-5
+local_roughness = true
+preti = true
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -32,11 +28,11 @@ geom0 = {auto.csv}
 
 {freestream conditions}
 freestream_temperature = zero_celsius
-freestream_mach = 0.3
-attack = 12*degree
+freestream_mach = .15
+attack = 10*degree
 target_reynolds = 6e6
 dyn_visc = 1.716e-5
-freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air * 1.4 * freestream_temperature)/freestream_mach
+freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air*1.4*freestream_temperature)/freestream_mach
 
 domain_length = mesh_extreme01 - mesh_extreme00
 freestream_specific_turbulent_kinetic_energy = 1e-3*(freestream_mach*340.)^2/(target_reynolds*domain_length/1.)
@@ -47,36 +43,32 @@ println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_ene
 surface_bc = {no_slip}
 diffusive_admissibility = false
 fix_therm_admis = true
-max_safety = .7
 
 {iteration parameters}
 print_freq = 10
-vis_freq = 1
-write_freq = 1
-time_step_done = {pseudotime_iteration > 30 & lift_coef_diff_max - lift_coef_diff_min < 1e-2*abs(lift_coef_diff_min + lift_coef_diff_max)/2 & drag_coef_diff_max - drag_coef_diff_min < 1e-2*abs(drag_coef_diff_min + drag_coef_diff_max)/2}
-done = {flow_time >= 0.1}
-steady = false
-implicit_scheme = {dirk2}
-time_step = 1e-4
+vis_freq = 100
+adapt_freq = 100
+done = {iteration > 10^3 & drag_coef_max - drag_coef_min < 1e-2*abs(drag_coef_min + drag_coef_max)/2}
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_dirk2}
+working_dir = {hexed_out_alpha10}
 
 vis_field_vars = vis_field_vars + {
-    specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
-    turbulent_dissipation_bassi = turbulent_dissipation_bassi
-    specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density)
     debug_var0 = debug_var0
-    residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)/tss
+    residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)
+    spectral_uncertainty0 = spectral_uncertainty0
+    spectral_uncertainty1 = spectral_uncertainty1
+    spectral_uncertainty2 = spectral_uncertainty2
+    rms_residual = rms_residual
+    mask = mask
+}
+vis_surface_vars = vis_surface_vars + {
+    roughness_height = roughness_height
+    roughness_plus = roughness_plus
 }
 
-{run simulation}
-$start
-$mesh
-init_state
-$run
-$print_force
+$simulate
 
 integrand_surface = visc_stress_expr
 integrate_surface

@@ -346,9 +346,20 @@ class Geom_2d : public Surface_geom {
 //! \brief a `Surface_geom` consisting of a set of 3D `Trimmed_surface`s
 class Geom_3d : public Surface_geom {
   public:
-  //! \param file_name Name of file containing geometry. Must be in IGES format.
-  //! \param n_div_min See `Trimmed_surface::Trimmed_surface`
-  //! \param n_div_max See `Trimmed_surface::Trimmed_surface`
+  /*! \param file_name Name of file containing geometry. Must be in IGES format.
+   * \param n_div_min See `Trimmed_surface::Trimmed_surface`
+   * \param n_div_max See `Trimmed_surface::Trimmed_surface`
+   * \param coincidence_bbox_tol Tolerance for determining whether features are coincident,
+   * relative to the size of the overall bounding box.
+   * \param coincidence_abs_tol Absolute (dimensional) tolerance for determining coincidence.
+   * relative to the size of the overall bounding box.
+   * \param coincidence_precision_tol Coincidence_tolerance relative to the length of descretized edge segments.
+   * \param tangency_angle_tol Absolute tolerance on the angle (in radians) at which features join
+   * for determining whether they are tangent.
+   * \param tangency_precision_tol Tangency angle tolerance as a fraction of \f$2\pi/\f$`n_div_max`.
+   * \note All tolerances in the same category (coincidence or tangency) are additive,
+   * so the least-strict tolerance dominates.
+   */
   Geom_3d(std::string file_name, Int n_div_min, Int n_div_max, double coincidence_bbox_tol, double coincidence_abs_tol,
           double coincidence_precision_tol, double tangency_angle_tol, double tangency_precision_tol);
   /*! \brief Writes visualization files of the geometry to help diagnose import/translation bugs.
