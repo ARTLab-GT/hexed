@@ -145,7 +145,7 @@ void surface(Namespace& space, Boundary_connection& con) {
   }
   Element* elem = con.inside().element();
   HEXED_ASSERT(elem, "Boundary face has no element.")
-  space.assign("wall_spacing", elem->nominal_shape(elem->wall_dimension()));
+  space.assign("wall_spacing", elem->wall_distance());
 }
 
 }

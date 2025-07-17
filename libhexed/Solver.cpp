@@ -815,7 +815,7 @@ void Solver::_update_recursive(int preti_level, double safety) {
 void Solver::update() {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   double safety = _namespace->get<double>("max_safety");
-  #if 1
+  #if 0
   double cheby_safety = _namespace->get<double>("cheby_safety");
   for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
     // compute time step
