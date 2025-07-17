@@ -532,8 +532,10 @@ Case::Case(std::string input_script)
     if (!allow_ref) crits[0] = [](Element&, int){return false;};
     _solver().mesh().adapt(crits[0], crits[1]);
     _solver().calc_jacobian();
+    _solver().compute_residual();
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
     _solver().print_preti_iters();
+    _visualize("_post_adapt_" + _iteration_suffix());
     return "";
   }));
 

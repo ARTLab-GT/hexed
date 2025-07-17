@@ -28,6 +28,11 @@ void Flow_bc::flux_diffusion(Boundary_connection& con) {
   con.ghost().flow_state()(1) = -con.inside().flow_state()(1);
 }
 
+void Flow_bc::init_cache(Boundary_connection& con) {
+  con.state_cache() = con.inside().flow_state()(0);
+  con.flux_cache() = con.inside().flow_state()(1);
+}
+
 Freestream::Freestream(Mat<> freestream_state)
 : fs{freestream_state}
 {}

@@ -25,8 +25,7 @@ class Flow_bc {
   virtual void apply_advection(Boundary_connection&);
   virtual void apply_diffusion(Boundary_connection&);
   virtual void flux_diffusion(Boundary_connection&);
-  //! initialize `Boundary_connection::state_cache` at beginning of simulation (used by `Cache_bc`)
-  virtual inline void init_cache(Boundary_connection&) {}
+  virtual void init_cache(Boundary_connection&);
   virtual inline int n_prescribed(int n_dim) const {return 0;}
   virtual inline void set_prescribed(Interpreter&, Boundary_connection&) {}
   virtual ~Flow_bc() = default;

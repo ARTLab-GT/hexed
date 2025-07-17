@@ -2374,16 +2374,35 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
         new_elem->record = 3;
         elem.record = 2;
         Array<double> state = elem.numeric_state().copy();
-        for (int i_var = 0; i_var < params.n_var_numeric(); ++i_var) {
-          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-            if (is_modified[i_dim]) {
-              int rel_pos = math::row_coordinate(params.n_dim, 2, i_dim, i_leaf);
-              Mat<dyn, dyn> matrix = ref_unref ? solver_basis.restrict(rel_pos) : solver_basis.prolong(rel_pos);
+        Array<double> faces({params.n_dim, params.n_var, params.n_face_qpoint()});
+        int row_coords [3] {};
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          row_coords[i_dim] = math::row_coordinate(params.n_dim, 2, i_dim, i_leaf);
+          faces(i_dim) = elem.face(2*i_dim + row_coords[i_dim]).flow_state()(1);
+        }
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          if (is_modified[i_dim]) {
+            int rel_pos = row_coords[i_dim];
+            Mat<dyn, dyn> matrix = ref_unref ? solver_basis.restrict(rel_pos) : solver_basis.prolong(rel_pos);
+            for (int i_var = 0; i_var < params.n_var_numeric(); ++i_var) {
               state(i_var).vector() = math::dimension_matvec(matrix, state(i_var).vector(), i_dim);
+            }
+            for (int i_var = 0; i_var < params.n_var; ++i_var) {
+              for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != i_dim) {
+                Array<double> face = faces(j_dim)(i_var);
+                if (params.n_dim == 3) {
+                  face.vector() = math::dimension_matvec(matrix, face.vector(), i_dim > 3 - i_dim - j_dim);
+                } else if (params.n_dim == 2) {
+                  face.vector() = matrix*face.vector();
+                }
+              }
             }
           }
         }
         new_elem->numeric_state() += state;
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          new_elem->face(2*i_dim + row_coords[i_dim]).flow_state()(1) += faces(i_dim);
+        }
       }
     }
   };

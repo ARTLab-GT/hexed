@@ -99,7 +99,6 @@ void Solver::apply_flux_bcs() {
   #pragma omp parallel for
   for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
     Boundary_connection* con = bc_cons[i_con];
-    // write inside flux to flux cache for surface visualization/integrals
     con->flux_cache() = con->inside().flow_state()(1);
     // apply boundary conditions
     int bc_sn = con->boundary_condition();
@@ -432,6 +431,13 @@ void Solver::initialize(std::string(expr)) {
     Array<double>({n_var, nq}, elem.residual_cache()) = 0;
   }
   if (is_implicit(_time_scheme)) _init_stage_storage(0);
+  auto& elems = acc_mesh->elements();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+      elems[i_elem].face(i_face).flow_state()(1) = 0; // initialize face flux to 0
+    }
+  }
   _init_face_state();
 }
 
@@ -1070,7 +1076,6 @@ void Solver::compute_spectral_uncertainty() {
 }
 
 void Solver::update_bound_conds() {
-  compute_residual();
   double relative = _namespace->get<double>("max_roughness_relative")*_namespace->get<double>("geom_length");
   double max_rough = std::min(_namespace->get<double>("max_roughness_absolute"), relative);
   if (_namespace->get<int>("local_roughness")) {
@@ -1086,8 +1091,9 @@ void Solver::update_bound_conds() {
   auto bc_cons {acc_mesh->boundary_connections()};
   #pragma omp parallel for
   for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
-    int bc_sn = bc_cons[i_con].boundary_condition();
-    acc_mesh->boundary_condition(bc_sn).set_prescribed(inter, bc_cons[i_con]);
+    auto& con = bc_cons[i_con];
+    int bc_sn = con.boundary_condition();
+    acc_mesh->boundary_condition(bc_sn).set_prescribed(inter, con);
   }
 }
 
