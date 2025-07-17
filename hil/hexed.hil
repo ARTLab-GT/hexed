@@ -193,6 +193,7 @@ init_ref_level = 3
 steady = true
 implicit = true
 implicit_scheme = {backward Euler}
+preti = false
 amr = false
 max_ref_level = 1000
 geom_rtol = 1e-5

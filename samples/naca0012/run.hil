@@ -24,8 +24,8 @@ attack = 4*degree
 
 {iteration parameters}
 print_freq = 100
-vis_freq = 2000
-done = {iteration > 10^6}
+vis_freq = 10000
+adapt_freq = 1000
 done = {iteration > 1000 & lift_coef_max - lift_coef_min < 1e-3*(lift_coef_min + lift_coef_max)/2}
 iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}

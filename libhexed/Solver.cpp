@@ -815,84 +815,81 @@ void Solver::_update_recursive(int preti_level, double safety) {
 void Solver::update() {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   double safety = _namespace->get<double>("max_safety");
-  #if 0
-  double cheby_safety = _namespace->get<double>("cheby_safety");
-  for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
-    // compute time step
-    double dt = 0;
-    HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
-    int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
-    for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti != 1) {
-      int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
-      for (int i_bl = 0; i_bl < n_bl; ++i_bl) {
-        int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : _namespace->get<int>("n_cheby_flow");
-        int max_sub_iters = i_preti ? _namespace->get<int>("max_conv_sub_iters") : 1;
-        double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
-        // run chebyshev iterations
-        for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
-          _preti_level = i_preti - bool(i_preti);
-          Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
-          double cheby_step = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
-          int sub_iters = std::ceil(max_sub_iters*cheby_step/max_cheby - 1e-6);
-          double nominal_dt = std::min(max_dt(safety/max_cheby*sub_iters, safety),
-                                       _namespace->get<double>("max_time_step"));
-          dt = nominal_dt*cheby_step;
-          HEXED_ASSERT(!std::isnan(dt), "time step is NaN", assert::Numerical_exception);
-          bool fixed = false;
-          Implicit_options implicit_opts;
-          if (is_implicit(_time_scheme)) {
-            implicit_opts.is_implicit = true;
-            implicit_opts.time_step = _namespace->get<double>("time_step");
-            if (_time_scheme == crank_nicolson) implicit_opts.time_step *= .5;
-            if (_time_scheme == dirk2) implicit_opts.time_step *= dirk2_gamma;
-          }
-          for (int i_sub = 0; i_sub < sub_iters; ++i_sub) {
-            // compute inviscid update
-            for (int i = 0; i < 2; ++i) {
-              Kernel_options opts {
-                .sw_car = stopwatch["cartesian"],
-                .sw_def = stopwatch["deformed"],
-                .sw_pr = stopwatch["prolong/restrict"],
-                .dt = dt/sub_iters,
-                .i_stage = i,
-                .compute_residual = false,
-                .use_filter = bool(_namespace->get<int>("use_filter")),
-                .mask = i_preti,
-                .conv_substep = (sub_iters > 1) && use_ldg(),
-                .implicit_opts = implicit_opts,
-              };
-              apply_state_bcs();
-              if (use_ldg() && !i && !i_sub) {
-                compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, true);
-              } else {
-                compute_euler(km, opts);
-              }
-              // note that function call must come first to ensure it is evaluated despite short-circuiting
-              fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
+  if (_namespace->get<int>("preti")) {
+    _update_recursive(0, safety);
+  } else {
+    double cheby_safety = _namespace->get<double>("cheby_safety");
+    for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
+      // compute time step
+      double dt = 0;
+      HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
+      int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
+      for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti != 1) {
+        int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
+        for (int i_bl = 0; i_bl < n_bl; ++i_bl) {
+          int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : _namespace->get<int>("n_cheby_flow");
+          int max_sub_iters = i_preti ? _namespace->get<int>("max_conv_sub_iters") : 1;
+          double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
+          // run chebyshev iterations
+          for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
+            _preti_level = i_preti - bool(i_preti);
+            Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
+            double cheby_step = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
+            int sub_iters = std::ceil(max_sub_iters*cheby_step/max_cheby - 1e-6);
+            double nominal_dt = std::min(max_dt(safety/max_cheby*sub_iters, safety),
+                                         _namespace->get<double>("max_time_step"));
+            dt = nominal_dt*cheby_step;
+            HEXED_ASSERT(!std::isnan(dt), "time step is NaN", assert::Numerical_exception);
+            bool fixed = false;
+            Implicit_options implicit_opts;
+            if (is_implicit(_time_scheme)) {
+              implicit_opts.is_implicit = true;
+              implicit_opts.time_step = _namespace->get<double>("time_step");
+              if (_time_scheme == crank_nicolson) implicit_opts.time_step *= .5;
+              if (_time_scheme == dirk2) implicit_opts.time_step *= dirk2_gamma;
             }
-            stopwatch.work_units_completed += km.elems.size();
-            stopwatch["cartesian"].work_units_completed += km.car_elems.size();
-            stopwatch["deformed" ].work_units_completed += km.def_elems.size();
+            for (int i_sub = 0; i_sub < sub_iters; ++i_sub) {
+              // compute inviscid update
+              for (int i = 0; i < 2; ++i) {
+                Kernel_options opts {
+                  .sw_car = stopwatch["cartesian"],
+                  .sw_def = stopwatch["deformed"],
+                  .sw_pr = stopwatch["prolong/restrict"],
+                  .dt = dt/sub_iters,
+                  .i_stage = i,
+                  .compute_residual = false,
+                  .use_filter = bool(_namespace->get<int>("use_filter")),
+                  .mask = i_preti,
+                  .conv_substep = (sub_iters > 1) && use_ldg(),
+                  .implicit_opts = implicit_opts,
+                };
+                apply_state_bcs();
+                if (use_ldg() && !i && !i_sub) {
+                  compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, true);
+                } else {
+                  compute_euler(km, opts);
+                }
+                // note that function call must come first to ensure it is evaluated despite short-circuiting
+                fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
+              }
+              stopwatch.work_units_completed += km.elems.size();
+              stopwatch["cartesian"].work_units_completed += km.car_elems.size();
+              stopwatch["deformed" ].work_units_completed += km.def_elems.size();
+              if (fixed) break;
+            }
             if (fixed) break;
-          }
-          if (fixed) break;
-
-          // update status for reporting
-          if (!is_implicit(_time_scheme)) {
-            _namespace->assign<double>("time_step", dt);
-            _namespace->assign<double>("flow_time", _namespace->get<double>("flow_time") + dt);
-            status.time_step = dt;
-            status.flow_time += dt;
+            // update status for reporting
+            if (!is_implicit(_time_scheme)) {
+              _namespace->assign<double>("time_step", dt);
+              _namespace->assign<double>("flow_time", _namespace->get<double>("flow_time") + dt);
+              status.time_step = dt;
+              status.flow_time += dt;
+            }
           }
         }
       }
     }
   }
-  _preti_level = 0;
-  #else
-  _update_recursive(0, safety);
-  #endif
-
   ++status.iteration;
   stopwatch.stopwatch.pause();
 }
@@ -1028,6 +1025,7 @@ Int Solver::_effective_preti_iters(int level) {
 }
 
 void Solver::print_preti_iters() {
+  if (!_namespace->get<int>("preti")) return;
   printers::info("PRETI sub-iterations (" + to_string((Int)_preti_masks.size()) + " levels total):\n");
   std::string line0 = "repeat?:                   ";
   std::string line1 = "total effective iterations:";
@@ -1081,8 +1079,9 @@ void Solver::update_bound_conds() {
   if (_namespace->get<int>("local_roughness")) {
     _namespace->assign("hexed_max_roughness", max_rough);
   } else {
-    std::string expr = "inv_roughness = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)*density"
-                       "/(dyn_visc*max_roughness_plus);";
+    std::string expr = "temperature = energy*(heat_rat - 1)/specific_gas_air; $transport_expr;"
+                       "inv_roughness = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)*density"
+                       "/(dynamic_viscosity*max_roughness_plus);";
     bounds_surface(expr, 2*params.n_dim, 20);
     double rough = std::min(1./_namespace->get<double>("max_surface_inv_roughness"), max_rough);
     _namespace->assign("hexed_surface_roughness", rough);

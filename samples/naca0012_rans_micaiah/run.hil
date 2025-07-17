@@ -16,6 +16,7 @@ mesh_extreme11 =  160.
 amr = true
 max_wall_spacing = 2e-5
 local_roughness = true
+preti = true
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
