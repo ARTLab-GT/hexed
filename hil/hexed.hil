@@ -35,6 +35,7 @@ transport_expr = {
     }
     $$({case} + (turbulence_model == {k-omega}))
 }
+transport_expr = {}
 visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
@@ -51,6 +52,7 @@ bl_nondim_expr = {
     friction_velocity = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)
     y_plus = wall_spacing*friction_velocity*density/dynamic_viscosity
 }
+bl_nondim_expr = {}
 state_vars = momentum_expr + density_expr + energy_expr + velocity_expr + speed_expr + pressure_expr + temperature_expr + mach_expr
 compute_force = {
     integrand_surface = velocity_expr + speed_expr + pressure_expr + stress_expr

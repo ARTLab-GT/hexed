@@ -34,21 +34,22 @@ done = {iteration > 10^4 & heating_rate_max - heating_rate_min < 10.}
 freestream_mach = 3.
 altitude = 0.
 $set_shock
-art_visc_width = .0002
-adapt_start_residual = .1
-steady = false
-time_step = 1.*.02/1e3
-adapt_if = {true}
-time_step_done = {pseudotime_iteration >= 1000}
 max_safety = .1
+art_visc_width = .0002
 done = {false}
-vis_freq = 5000
-vis_freq = 2000
-vis_freq = 10
 diffusive_admissibility = true
 vis_lts_constraints = true
 vis_field_vars = vis_field_vars + field_residual_expr + {discontinuity0 = discontinuity0; discontinuity1 = discontinuity1; discontinuity2 = discontinuity2;}
-working_dir = {hexed_out_2e-3}
+working_dir = {hexed_out_inviscid}
+{
+iterate = iterate + {
+    case0 = {}
+    case1 = {
+        art_visc_width = art_visc_width/2
+    }
+    $$({case} + (art_visc_width > 2e-4 & normalized_residual < 1e-5))
+}
+}
 
 {
 $plot_history
