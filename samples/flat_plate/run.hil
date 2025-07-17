@@ -7,7 +7,7 @@ amr = true
 geom0 = {geom.csv}
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
-wall_spacing = 1e-4
+max_wall_spacing = 1e-4
 
 {freestream definition. Note that not all of the variables below are parameters considered by the solver. Some are simply user-defined variables.}
 freestream_temperature = zero_celsius

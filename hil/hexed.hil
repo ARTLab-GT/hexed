@@ -198,7 +198,7 @@ geom_rtol = 1e-5
 geom_atol = 0.
 adapt_tol_far = 1e-2
 adapt_tol_near = 1e-4
-wall_spacing = huge
+max_wall_spacing = huge
 viscosity_model = {}
 conductivity_model = {}
 turbulence_model = {}
@@ -229,7 +229,7 @@ init_refine_if = {(ref_level < init_ref_level)}
 init_unrefine_if = {false}
 geom_refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level < max_ref_level & nom_sz > min_elem_size)}
 geom_unrefine_if = {false}
-final_refine_if = {(has_wall & i_dim == wall_dimension & $({nominal_shape} + has_wall*wall_dimension) > wall_spacing)}
+final_refine_if = {(has_wall & i_dim == wall_dimension & wall_distance > max_wall_spacing)}
 final_unrefine_if = {false}
 adapt_tol = {(adapt_tol_near + (adapt_tol_far - adapt_tol_near)*!(i_dim == wall_dimension & (has_wall | wall_distance < .01*geom_length)))}
 adapt_refine_if = {($({spectral_uncertainty} + i_dim) > ($adapt_tol))}
