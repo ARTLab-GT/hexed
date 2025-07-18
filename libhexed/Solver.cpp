@@ -195,7 +195,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
 {
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
-  _namespace->assign_default("fix_admis_max_safety", .7); // staility ratio for fixing thermodynamic admissibility.
+  _namespace->assign_default("fix_admis_max_safety", .2); // staility ratio for fixing thermodynamic admissibility.
   _namespace->assign_default("av_diff_ratio", .3); // ratio of diffusion time to advection width
   // final scaling parameter applied to artificial viscosity coefficient
   _namespace->assign_default("av_visc_mult", 1e2);
@@ -798,7 +798,7 @@ void Solver::_update_recursive(int preti_level, double safety) {
       if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
       else compute_euler(km, opts);
       // note that function call must come first to ensure it is evaluated despite short-circuiting
-      fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
+      fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety"), 0) || fixed;
       stopwatch.work_units_completed += km.elems.size();
       stopwatch["cartesian"].work_units_completed += km.car_elems.size();
       stopwatch["deformed" ].work_units_completed += km.def_elems.size();
@@ -870,7 +870,7 @@ void Solver::update() {
                   compute_euler(km, opts);
                 }
                 // note that function call must come first to ensure it is evaluated despite short-circuiting
-                fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety")) || fixed;
+                fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety"), i_cheby) || fixed;
               }
               stopwatch.work_units_completed += km.elems.size();
               stopwatch["cartesian"].work_units_completed += km.car_elems.size();
@@ -892,16 +892,6 @@ void Solver::update() {
   }
   ++status.iteration;
   stopwatch.stopwatch.pause();
-}
-
-void Solver::update_implicit() {
-  HEXED_ASSERT(_implicit, "`update_implicit` called on a Solver that was not constructed in implicit mode");
-  Linearized lin(*this);
-  iterative::gmres(lin, 27, 1);
-  lin.add(-Linearized::storage_start, 1., -Linearized::storage_start + 3, 1., 0.);
-  compute_write_face(_kernel_mesh());
-  compute_prolong(_kernel_mesh());
-  fix_admissibility(.7);
 }
 
 void Solver::compute_residual() {
@@ -1180,7 +1170,7 @@ bool Solver::is_admissible() {
   return admiss && refined_admiss;
 }
 
-bool Solver::fix_admissibility(double stability_ratio) {
+bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
   if (!fix_admis) return false;
   auto& sw_fix = stopwatch["fix admis."];
   sw_fix.stopwatch.start();
@@ -1205,8 +1195,9 @@ bool Solver::fix_admissibility(double stability_ratio) {
     if (iter == 100) visualize_field("default", wd + "severe_indamis" + std::to_string(status.iteration), vis_expr);
     if (iter == 0) {
       printers::warn("Warning: ", true);
-      printers::warn(format_str(200, "Thermodynamically inadmissible state detected (solver iteration %i). Attempting to fix...\n",
-                                _namespace->get<int>("iteration")));
+      printers::warn(format_str(200, "Thermodynamically inadmissible state detected"
+                                     " (solver iteration %i, Chebyshev step %i). Attempting to fix...\n",
+                                _namespace->get<int>("iteration"), cheby_step));
     }
     printers::warn(format_str(200, "    iteration %i\n", iter));
     auto& elems = acc_mesh->elements();
