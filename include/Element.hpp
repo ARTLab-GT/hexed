@@ -47,6 +47,7 @@ class Element : public Kernel_element, public Mortal {
   std::shared_ptr<next::Element_shape> _fake_shape;
   std::vector<Face> _faces;
   std::vector<int> _desired_refinement;
+  void _set_glued_pos();
   friend Accessible_mesh; // necessary for `Accessible_mesh::set_mask`... need a better way to do this
 
   public:

@@ -191,6 +191,16 @@ bool Element::shared_fake() const {
   return _fake_shape.use_count() > 1;
 }
 
+void Element::_set_glued_pos() {
+  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+    std::vector<double> coords(params.n_dim);
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      coords[i_dim] = math::row_coordinate(params.n_dim, 2, i_dim, i_vert);
+    }
+    _shape->vertex(i_vert).set_pos(_shape->interpolate(coords));
+  }
+}
+
 void Element::split_shape(Element& split_from, double at, int from_face) {
   HEXED_ASSERT(split_from._fake_shape, "Can only create a split shape from an element that already has a fake shape.");
   HEXED_ASSERT(_shape, "Must `create_shape` before `split_shape`.");
@@ -202,6 +212,8 @@ void Element::split_shape(Element& split_from, double at, int from_face) {
   split_corners[1 - from_face%2][from_face/2] = corners[from_face%2][from_face/2];
   split_from.shape().set_glued_corners(corners);
   _shape->glue(*_fake_shape, split_corners);
+  _set_glued_pos();
+  split_from._set_glued_pos();
 }
 
 void Element::glue_shape(Element& glue_to, std::array<std::vector<double>, 2> glue_corners) {
@@ -217,13 +229,7 @@ void Element::glue_shape(Element& glue_to, std::array<std::vector<double>, 2> gl
     }
   }
   _shape->glue(glue_to.active_shape(), glue_corners);
-  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-    std::vector<double> coords(params.n_dim);
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      coords[i_dim] = math::row_coordinate(params.n_dim, 2, i_dim, i_vert);
-    }
-    _shape->vertex(i_vert).set_pos(_shape->interpolate(coords));
-  }
+  _set_glued_pos();
 }
 
 void Element::destroy_shape() {
