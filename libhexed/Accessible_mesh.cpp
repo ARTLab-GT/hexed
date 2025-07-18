@@ -1634,6 +1634,7 @@ void request_connection(Element& elem, int n_dim, int i_dim, bool i_sign, int j_
 }
 
 void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
+  if (!surf_geom) return;
   Stopwatch_tree::Starter sw_extrude(_stopwatch["update"]["extrusion"]);
   const int nd = params.n_dim;
   { // initialize vertex records to empty
@@ -1827,7 +1828,12 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
   for (auto con_plan : con_plans) {
     connect_deformed(con_plan.ref_level, con_plan.serial_ns, con_plan.dir);
   }
-  _n_verts = _blocks.verts().size();
+  auto verts = _blocks.verts();
+  _n_verts = verts.size();
+  #pragma omp parallel for
+  for (auto& vert : verts) {
+    vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
+  }
   ++_stopwatch["update"]["extrusion"].work_units_completed;
 }
 
