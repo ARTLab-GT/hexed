@@ -1073,8 +1073,10 @@ void Solver::update_bound_conds() {
                        "inv_roughness = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)*density"
                        "/(dynamic_viscosity*max_roughness_plus);";
     bounds_surface(expr, 2*params.n_dim, 20);
-    double rough = std::min(1./_namespace->get<double>("max_surface_inv_roughness"), max_rough);
-    _namespace->assign("hexed_surface_roughness", rough);
+    if (_namespace->exists("max_surface_inv_roughness")) {
+      double rough = std::min(1./_namespace->get<double>("max_surface_inv_roughness"), max_rough);
+      _namespace->assign("hexed_surface_roughness", rough);
+    }
   }
   auto inter {_interpreter()};
   auto bc_cons {acc_mesh->boundary_connections()};
@@ -1401,11 +1403,15 @@ void Solver::bounds_surface(std::string expr, int bc_sn, int n_sample = 20) {
   // setup
   const int nd = params.n_dim;
   auto bc_cons {acc_mesh->boundary_connections()};
-  if (!bc_cons.size()) return;
+  Boundary_connection* reference_con = nullptr;
+  for (auto& con : bc_cons) {
+    if (con.boundary_condition() == bc_sn) reference_con = &con;
+  }
+  if (!reference_con) return;
   Vis_evaluator<Boundary_connection> evaluator(
     _interpreter(),
     [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
-    expr, bc_cons[0], params.n_dim - 1
+    expr, *reference_con, params.n_dim - 1
   );
   std::vector<std::string> var_names = evaluator.var_names();
   Int n_var = var_names.size();
@@ -1476,11 +1482,15 @@ void Solver::integrate_surface(std::string expr, int bc_sn) {
   const int nq = params.n_qpoint();
   const int nfq = nq/basis.row_size;
   auto bc_cons {acc_mesh->boundary_connections()};
-  if (!bc_cons.size()) return;
+  Boundary_connection* reference_con = nullptr;
+  for (auto& con : bc_cons) {
+    if (con.boundary_condition() == bc_sn) reference_con = &con;
+  }
+  if (!reference_con) return;
   Vis_evaluator<Boundary_connection> evaluator(
     _interpreter(),
     [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
-    expr, bc_cons[0], params.n_dim - 1
+    expr, *reference_con, params.n_dim - 1
   );
   std::vector<std::string> var_names = evaluator.var_names();
   Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
@@ -1543,11 +1553,15 @@ void Solver::visualize_surface(std::string format, std::string name, int bc_sn, 
   HEXED_ASSERT(params.n_dim > 1, "cannot visualize surfaces in 1D");
   HEXED_ASSERT(params.n_dim > 1 + wireframe, "can only visualize surface wireframes in 3D");
   auto bc_cons {acc_mesh->boundary_connections()};
-  if (!bc_cons.size()) return;
+  Boundary_connection* reference_con = nullptr;
+  for (auto& con : bc_cons) {
+    if (con.boundary_condition() == bc_sn) reference_con = &con;
+  }
+  if (!reference_con) return;
   Vis_evaluator<Boundary_connection> evaluator(
     _interpreter(),
     [&](Namespace& space, Boundary_connection& con){vis_variables::surface(space, con);},
-    expr, bc_cons[0], params.n_dim - 1
+    expr, *reference_con, params.n_dim - 1
   );
   evaluator.visualize(format, name, n_sample, wireframe, bc_cons,
                       _namespace->get<double>("flow_time"), basis,
