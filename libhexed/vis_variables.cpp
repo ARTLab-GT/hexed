@@ -71,8 +71,8 @@ void state(Namespace& space, Element& elem) {
   auto params = elem.storage_params();
   int nq = params.n_qpoint();
   auto assign_state = [&](std::string name, int i_var) {
-    space.assign(name, Array<double>({nq}, elem.state() + i_var*nq));
-    space.assign("residual_" + name, Array<double>({nq}, elem.residual_cache() + i_var*nq));
+    space.assign(name, Array<double>({nq}, elem.state() + i_var*nq).copy());
+    space.assign("residual_" + name, Array<double>({nq}, elem.residual_cache() + i_var*nq).copy());
   };
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) assign_state("momentum" + std::to_string(i_dim), i_dim);
   for (int i_dim = params.n_dim; i_dim < 3; ++i_dim) {
@@ -91,6 +91,17 @@ void state(Namespace& space, Element& elem) {
   for (int i_var = 0; i_var < config::debug_variables; ++i_var) {
     Array<double> data({nq}, elem.debug_variables() + i_var*params.n_qpoint());
     space.assign("debug_var" + std::to_string(i_var), data());
+  }
+  if (space.get<int>("vis_art_visc_vars")) {
+    int n_adv = params.n_advection(params.row_size);
+    Array<double> advection({n_adv, nq}, elem.advection_state());
+    for (int i_adv = 0; i_adv < n_adv; ++i_adv) {
+      space.assign("av_advection" + to_string(i_adv), advection(i_adv).copy());
+    }
+    Array<double> forcing({params.n_forcing, nq}, elem.art_visc_forcing());
+    for (int i_force = 0; i_force < params.n_forcing; ++i_force) {
+      space.assign("av_forcing" + to_string(i_force), forcing(i_force).copy());
+    }
   }
 }
 

@@ -203,7 +203,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
   _namespace->assign_default("av_unscaled_max", 5.);
   _namespace->assign_default("av_advect_max_safety", .7); // stability ratio for advection
   _namespace->assign_default("av_diff_max_safety", .7); // stability ratio for diffusion
-  _namespace->assign_default("buffer_dist", .8*std::sqrt(params.n_dim));
+  _namespace->assign_default("vis_art_visc_vars", 0);
   _namespace->assign_default("n_cheby_bl", 1);
   _namespace->assign_default("n_cheby_flow", 1);
   _namespace->assign_default("max_conv_sub_iters", 1);
@@ -481,11 +481,21 @@ void Solver::diffuse_art_visc(double diff_time) {
   compute_prolong(_kernel_mesh());
   // perform pseudotime iteration
   for (int i_iter = 0; i_iter < _namespace->get<int>("av_diff_iters"); ++i_iter) {
-    for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
-      double s = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
-      apply_avc_diff_bcs();
-      opts.dt = s;
-      compute_smooth_av(_kernel_mesh(), opts, [this](){apply_avc_diff_flux_bcs();}, diff_time, s);
+    HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
+    //int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
+    int n_preti = (true && !i_iter) ? _preti_masks.size() : 1;
+    for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
+      int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
+      Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
+      opts.mask = i_preti;
+      for (int i_bl = 0; i_bl < n_bl; ++i_bl) {
+        for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
+          double s = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
+          apply_avc_diff_bcs();
+          opts.dt = s;
+          compute_smooth_av(km, opts, [this](){apply_avc_diff_flux_bcs();}, diff_time, s);
+        }
+      }
     }
   }
 }
@@ -875,9 +885,7 @@ void Solver::update() {
               stopwatch.work_units_completed += km.elems.size();
               stopwatch["cartesian"].work_units_completed += km.car_elems.size();
               stopwatch["deformed" ].work_units_completed += km.def_elems.size();
-              if (fixed) break;
             }
-            if (fixed) break;
             // update status for reporting
             if (!is_implicit(_time_scheme)) {
               _namespace->assign<double>("time_step", dt);
@@ -1207,7 +1215,8 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       for (int i_vert = 0; i_vert < nv; ++i_vert) {
-        elem.vertex_fix_admis_coef(i_vert) = elem.record;
+        //elem.vertex_fix_admis_coef(i_vert) = elem.record;
+        elem.vertex_fix_admis_coef(i_vert) = 1.;
       }
     }
     share_vertex_data(&Element::vertex_fix_admis_coef, true);

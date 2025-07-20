@@ -383,14 +383,7 @@ void No_slip::apply_flux(Boundary_connection& con) {
     ghost_state(params.n_dim + 1)[i_qpoint] = _coercion*(nrml*flux_sign*ghost_heat - inside_ener) + inside_ener;
   }
   // set turbulence variables
-  #if 1
   ghost_state(params.n_dim + 2, end) = inside_state(params.n_dim + 2, end);
-  #else
-  if (_turb == k_omega) {
-    ghost_state(params.n_dim + 2) = inside_state(params.n_dim + 2);
-    ghost_state(params.n_dim + 3) = -inside_state(params.n_dim + 3);
-  }
-  #endif
 }
 
 void No_slip::apply_advection(Boundary_connection& con) {
