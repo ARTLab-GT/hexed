@@ -1215,8 +1215,7 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       for (int i_vert = 0; i_vert < nv; ++i_vert) {
-        //elem.vertex_fix_admis_coef(i_vert) = elem.record;
-        elem.vertex_fix_admis_coef(i_vert) = 1.;
+        elem.vertex_fix_admis_coef(i_vert) = elem.record;
       }
     }
     share_vertex_data(&Element::vertex_fix_admis_coef, true);
