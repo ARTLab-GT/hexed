@@ -483,8 +483,9 @@ void Solver::diffuse_art_visc(double diff_time) {
   for (int i_iter = 0; i_iter < _namespace->get<int>("av_diff_iters"); ++i_iter) {
     HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
     //int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
-    int n_preti = (true && !i_iter) ? _preti_masks.size() : 1;
-    for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
+    int n_preti = i_iter ? 1 : _preti_masks.size();
+    for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti == 0 || i_preti > _namespace->get<int>("init_ref_level")) {
+      _preti_level = i_preti;
       int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
       Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
       opts.mask = i_preti;
@@ -539,27 +540,38 @@ void Solver::update_art_visc_smoothness(double advect_length) {
     false,
   };
   max_dt_advection(_kernel_mesh(), opts, adv_safety, 1., true, advect_length);
+  compute_write_face_advection(_kernel_mesh());
+  compute_prolong_advection(_kernel_mesh());
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
   // perform pseudotime iteration
   for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter) {
-    sw_adv["setup"].stopwatch.start();
-    // evaluate advection operator
-    compute_write_face_advection(_kernel_mesh());
-    compute_prolong_advection(_kernel_mesh());
-    sw_adv["setup"].stopwatch.pause();
-    for (int i = 0; i < 2; ++i) {
-      sw_adv["BCs"].stopwatch.start();
-      auto bc_cons {acc_mesh->boundary_connections()};
-      #pragma omp parallel for
-      for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
-        int bc_sn = bc_cons[i_con].boundary_condition();
-        acc_mesh->boundary_condition(bc_sn).apply_advection(bc_cons[i_con]);
+    HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
+    //int n_preti = (_namespace->get<int>("bl_multirate") && !iter) ? _preti_masks.size() : 1;
+    int n_preti = iter ? 1 : _preti_masks.size();
+    for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti == 0 || i_preti > _namespace->get<int>("init_ref_level")) {
+      _preti_level = i_preti;
+      int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
+      Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
+      opts.mask = i_preti;
+      for (int i_bl = 0; i_bl < n_bl; ++i_bl) {
+        sw_adv["setup"].stopwatch.start();
+        // evaluate advection operator
+        sw_adv["setup"].stopwatch.pause();
+        for (int i = 0; i < 2; ++i) {
+          sw_adv["BCs"].stopwatch.start();
+          auto bc_cons {acc_mesh->boundary_connections()};
+          #pragma omp parallel for
+          for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
+            int bc_sn = bc_cons[i_con].boundary_condition();
+            acc_mesh->boundary_condition(bc_sn).apply_advection(bc_cons[i_con]);
+          }
+          sw_adv["BCs"].stopwatch.pause();
+          sw_adv["BCs"].work_units_completed += acc_mesh->elements().size();
+          opts.i_stage = i;
+          compute_advection(km, opts, advect_length);
+        }
       }
-      sw_adv["BCs"].stopwatch.pause();
-      sw_adv["BCs"].work_units_completed += acc_mesh->elements().size();
-      opts.i_stage = i;
-      compute_advection(_kernel_mesh(), opts, advect_length);
     }
     sw_adv["cartesian"].work_units_completed += acc_mesh->cartesian().elements().size();
     sw_adv["deformed" ].work_units_completed += acc_mesh->deformed ().elements().size();
@@ -834,7 +846,7 @@ void Solver::update() {
       double dt = 0;
       HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
       int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
-      for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti != 1) {
+      for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti == 0 || i_preti > _namespace->get<int>("init_ref_level")) {
         int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
         for (int i_bl = 0; i_bl < n_bl; ++i_bl) {
           int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : _namespace->get<int>("n_cheby_flow");
@@ -842,7 +854,7 @@ void Solver::update() {
           double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
           // run chebyshev iterations
           for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
-            _preti_level = i_preti - bool(i_preti);
+            _preti_level = i_preti;
             Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
             double cheby_step = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
             int sub_iters = std::ceil(max_sub_iters*cheby_step/max_cheby - 1e-6);
