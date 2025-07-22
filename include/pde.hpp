@@ -410,7 +410,11 @@ class Advection {
 
     Mat<n_update> source;
     void compute_source() {
-      source.setConstant(2/_eq._advect_length);
+      double l = _eq._advect_length;
+      for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
+        double s = state(n_dim + i_adv) - 1.;
+        source(i_adv) = 2/l*(1. - math::pow(s, 3)/(math::pow(l*s, 2) + 1.));
+      }
     }
 
     double char_speed;
@@ -420,7 +424,12 @@ class Advection {
 
     double decay;
     void compute_decay() {
+      double l = _eq._advect_length;
       decay = 0;
+      for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
+        double s = state(n_dim + i_adv) - 1.;
+        decay = std::max(decay, 2/l*math::pow(s, 2)/(math::pow(l*s, 2) + 1.));
+      }
     }
   };
 };
