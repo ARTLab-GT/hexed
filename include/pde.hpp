@@ -413,7 +413,7 @@ class Advection {
       double l = _eq._advect_length;
       for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
         double s = state(n_dim + i_adv) - 1.;
-        source(i_adv) = 2/l*(1. - math::pow(s, 3)/(math::pow(l*s, 2) + 1.));
+        source(i_adv) = 2/l*(1. - math::pow(s*l, 5));
       }
     }
 
@@ -428,7 +428,7 @@ class Advection {
       decay = 0;
       for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
         double s = state(n_dim + i_adv) - 1.;
-        decay = std::max(decay, 2/l*math::pow(s, 2)/(math::pow(l*s, 2) + 1.));
+        decay = std::max(decay, 30*2/l*5*l*math::pow(s*l, 4));
       }
     }
   };
