@@ -355,6 +355,7 @@ class Advection {
   static constexpr int n_state = n_dim + _n_adv;
   static constexpr int n_extrap = n_dim + _n_adv;
   static constexpr int n_update = _n_adv;
+  static constexpr double regular_scale = .1;
 
   Advection(int n_var, double advect_length)
   : _n_var{n_var}, _advect_length{advect_length}, _nodes{2*Gauss_legendre(row_size).nodes() - Mat<row_size>::Ones()}
@@ -413,7 +414,7 @@ class Advection {
       double l = _eq._advect_length;
       for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
         double s = state(n_dim + i_adv) - 1.;
-        source(i_adv) = 2/l*(1. - math::pow(s*l, 5));
+        source(i_adv) = 2/l*(1. - math::pow(s*l/regular_scale, 5));
       }
     }
 
@@ -428,7 +429,7 @@ class Advection {
       decay = 0;
       for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
         double s = state(n_dim + i_adv) - 1.;
-        decay = std::max(decay, 30*2/l*5*l*math::pow(s*l, 4));
+        decay = std::max(decay, 30*2/l*5*l/regular_scale*math::pow(s*l/regular_scale, 4));
       }
     }
   };
