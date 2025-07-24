@@ -197,7 +197,7 @@ class Accessible_mesh : public Mesh {
    * where anisotropic elements are updated more frequently than isotropic ones.
    * Not ready for production use, although it was the motivation for the `Masked_mesh` feature.
    */
-  std::vector<std::unique_ptr<Masked_mesh>> preti_masks(const Basis&);
+  std::vector<std::unique_ptr<Masked_mesh>> preti_masks(const Basis&, bool iso);
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
   next::Sequence<Flow_bc&> boundary_conditions();

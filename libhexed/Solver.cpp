@@ -341,7 +341,7 @@ void Solver::write_state(std::string file_name) {
 
 void Solver::calc_jacobian() {
   acc_mesh->valid().assert_valid();
-  _preti_masks = acc_mesh->preti_masks(basis);
+  _preti_masks = acc_mesh->preti_masks(basis, !_namespace->get<int>("preti"));
   // compute element jacobians
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for
@@ -482,9 +482,8 @@ void Solver::diffuse_art_visc(double diff_time) {
   // perform pseudotime iteration
   for (int i_iter = 0; i_iter < _namespace->get<int>("av_diff_iters"); ++i_iter) {
     HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
-    //int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
-    int n_preti = i_iter ? 1 : _preti_masks.size();
-    for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti == 0 || i_preti > _namespace->get<int>("init_ref_level")) {
+    int n_preti = (_namespace->get<int>("bl_multirate") && !i_iter) ? _preti_masks.size() : 1;
+    for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
       _preti_level = i_preti;
       int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
       Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
@@ -547,9 +546,8 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   // perform pseudotime iteration
   for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter) {
     HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
-    //int n_preti = (_namespace->get<int>("bl_multirate") && !iter) ? _preti_masks.size() : 1;
-    int n_preti = iter ? 1 : _preti_masks.size();
-    for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti == 0 || i_preti > _namespace->get<int>("init_ref_level")) {
+    int n_preti = (_namespace->get<int>("bl_multirate") && !iter) ? _preti_masks.size() : 1;
+    for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
       _preti_level = i_preti;
       int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
       Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
@@ -846,7 +844,7 @@ void Solver::update() {
       double dt = 0;
       HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
       int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
-      for (int i_preti = 0; i_preti < n_preti; ++i_preti) if (i_preti == 0 || i_preti > _namespace->get<int>("init_ref_level")) {
+      for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
         int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
         for (int i_bl = 0; i_bl < n_bl; ++i_bl) {
           int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : _namespace->get<int>("n_cheby_flow");
