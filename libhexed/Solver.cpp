@@ -341,7 +341,7 @@ void Solver::write_state(std::string file_name) {
 
 void Solver::calc_jacobian() {
   acc_mesh->valid().assert_valid();
-  _preti_masks = acc_mesh->preti_masks(basis, !_namespace->get<int>("preti"));
+  _preti_masks = acc_mesh->preti_masks(basis, _namespace->get<int>("preti"));
   // compute element jacobians
   auto& elements = acc_mesh->elements();
   #pragma omp parallel for

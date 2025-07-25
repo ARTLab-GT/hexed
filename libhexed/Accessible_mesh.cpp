@@ -568,14 +568,14 @@ void Accessible_mesh::_fit_surface() {
             for (int i_face = 0; i_face < 6; ++i_face) e.face_record[i_face] = -1;
             s.extruded_direction = elem.fake_shape()->extruded_direction;
           };
-          Int inside_sn = _add_element(elem.refinement_level(), true, elem.nominal_position(), 0);
+          Int inside_sn = _add_element(elem.refinement_level(), true, elem.nominal_position(), 1);
           Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
           inside.create_fake(_blocks);
           set_vertices(inside);
           inside.active_shape().is_new = false;
           inside.active_shape().for_matching = true;
           elem.face_record[2*i_dim + !i_sign] = inside_sn;
-          Int surface_sn = _add_element(elem.refinement_level(), true, elem.nominal_position(), 0, bf);
+          Int surface_sn = _add_element(elem.refinement_level(), true, elem.nominal_position(), 1, bf);
           Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
           surface.create_fake(_blocks);
           set_vertices(surface);
@@ -601,7 +601,7 @@ void Accessible_mesh::_fit_surface() {
               int i_edge_matched = 2*(j_dim > k_dim) + j_sign;
               Int m = matched_to[i_edge_matched];
               if (m != -1) {
-                Int sn = _add_element(elem.refinement_level(), true, elem.nominal_position(), 0, bf);
+                Int sn = _add_element(elem.refinement_level(), true, elem.nominal_position(), 1, bf);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
                 match_elem.create_fake(_blocks);
                 set_vertices(match_elem);
@@ -835,7 +835,7 @@ void Accessible_mesh::_fit_surface() {
       Deformed_element& elem = elem_list[i_elem];
       auto i_face = elem.active_shape().boundary_face();
       if (i_face != next::Mesh_blocks::no_face) {
-        Int sn = _add_element(elem.refinement_level(), true, elem.nominal_position(), 0, i_face);
+        Int sn = _add_element(elem.refinement_level(), true, elem.nominal_position(), 1, i_face);
         Deformed_element& new_elem = def.elems.at(elem.refinement_level(), sn);
         for (int j_face = 0; j_face < 2*params.n_dim; ++j_face) new_elem.face_record[j_face] = -1;
         new_elem.create_fake(_blocks);
@@ -1859,8 +1859,9 @@ std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles() {
   return handles;
 }
 
-Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t) {
-  int sn = _add_element(t.refinement_level(), is_deformed, t.coordinates(), 0, next::Mesh_blocks::no_face, &t);
+Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t, int aniso_ref_level) {
+  int sn = _add_element(t.refinement_level(), is_deformed, t.coordinates(), aniso_ref_level,
+                        next::Mesh_blocks::no_face, &t);
   auto& elem = element(t.refinement_level(), is_deformed, sn);
   elem.record = sn; // put the serial number in the record so it can be used for connections
   return elem;
@@ -1880,7 +1881,7 @@ void Accessible_mesh::create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> orig
 
 void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin) {
   create_tree(extremal_bcs, origin);
-  auto& elem = add_elem(false, *tree);
+  auto& elem = add_elem(false, *tree, 0);
   int sn = elem.record;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
@@ -1992,7 +1993,7 @@ void Accessible_mesh::refine_by_record(bool is_deformed, int start, int end) {
         elem.record = 2;
         refine_set_status(elem.tree.get());
         for (Tree* child : elem.tree->children()) {
-          add_elem(is_deformed, *child).record = 0;
+          add_elem(is_deformed, *child, 0).record = 0;
         }
       }
     }
@@ -2287,7 +2288,7 @@ void Accessible_mesh::deform() {
     for (int i_elem = 0; i_elem < sz; ++i_elem) {
       auto& elem = cont_elems[i_elem];
       if (elem.record == 3) {
-        add_elem(!is_deformed, *elem.tree).record = 0;
+        add_elem(!is_deformed, *elem.tree, elem.aniso_ref_level()).record = 0;
         elem.record = 2;
         elem.tree.unpair();
       }
@@ -2358,7 +2359,7 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
       if (new_leaves[i_leaf]->elem) {
         new_elem = new_leaves[i_leaf]->elem.get();
       } else {
-        new_elem = &add_elem(is_def, *new_leaves[i_leaf]);
+        new_elem = &add_elem(is_def, *new_leaves[i_leaf], elem.aniso_ref_level());
         std::array<std::vector<double>, 2> coords;
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
           int row_coord = math::row_coordinate(params.n_dim, 2, i_dim, i_leaf);
@@ -2610,7 +2611,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
                 }
               }
               parent->unrefine();
-              add_elem(is_def, *parent).record = 0;
+              add_elem(is_def, *parent, 0).record = 0;
             }
           }
         }
@@ -2685,7 +2686,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
               for (Tree* neighbor : elem.tree->find_neighbors(math::direction(nd, i_face))) {
                 if (!exists(neighbor)) if (!is_surface(neighbor)) {
                   changed = true;
-                  add_elem(is_deformed, *neighbor).record = 0;
+                  add_elem(is_deformed, *neighbor, 0).record = 0;
                   neighbor->set_status(1);
                 }
               }
