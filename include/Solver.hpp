@@ -55,7 +55,7 @@ class Solver {
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get,
                          std::function<double&(Element&, int i_vertex)> set, bool minmax);
 
-  bool fix_admissibility(double stability_ratio);
+  bool fix_admissibility(double stability_ratio, int cheby_step);
   void apply_state_bcs();
   void apply_flux_bcs();
   void apply_avc_diff_bcs();
@@ -201,9 +201,6 @@ class Solver {
   //! \returns An integer index identifying which time integration stage you are now on.
   //! If it is 0, that means you have advanced to the next time step.
   int next_time_stage();
-  //! \brief (experimental) performs an implicit time step
-  //! \warning Experimental! Interesting for reasearch, not effective in practice (yet, anyway).
-  void update_implicit();
   void compute_residual();
   void print_preti_iters();
   void compute_spectral_uncertainty();

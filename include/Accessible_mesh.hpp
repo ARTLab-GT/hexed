@@ -64,7 +64,7 @@ class Accessible_mesh : public Mesh {
   Element_container& container(bool is_deformed);
   int _add_element(int ref_level, bool is_deformed, Eigen::VectorXi position,
                    int aniso_ref_level = 0, int surface_face = next::Mesh_blocks::no_face, Tree* = nullptr);
-  Element& add_elem(bool is_deformed, Tree&);
+  Element& add_elem(bool is_deformed, Tree&, int aniso_ref_level);
   bool intersects_surface(Tree*);
   bool is_surface(Tree*);
   // gets either `car` or `def`
@@ -197,7 +197,7 @@ class Accessible_mesh : public Mesh {
    * where anisotropic elements are updated more frequently than isotropic ones.
    * Not ready for production use, although it was the motivation for the `Masked_mesh` feature.
    */
-  std::vector<std::unique_ptr<Masked_mesh>> preti_masks(const Basis&);
+  std::vector<std::unique_ptr<Masked_mesh>> preti_masks(const Basis&, bool iso);
 
   //! \returns a view of all Bounday_condition objects owned by this mesh
   next::Sequence<Flow_bc&> boundary_conditions();
