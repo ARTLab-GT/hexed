@@ -469,7 +469,7 @@ Case::Case(std::string input_script)
           return sub.variables->get<int>("return");
         });
       }
-      changed = _solver().mesh().adapt(crits[0], crits[1]);
+      changed = _solver().mesh().adapt(crits[0], crits[1], true).changed;
       _solver().calc_jacobian();
       printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ");
       _inter.variables->assign("flow_time", double(i_ref));
@@ -529,8 +529,8 @@ Case::Case(std::string input_script)
         return sub.variables->get<int>("return");
       });
     }
-    if (!allow_ref) crits[0] = [](Element&, int){return false;};
-    _solver().mesh().adapt(crits[0], crits[1]);
+    auto result = _solver().mesh().adapt(crits[0], crits[1], allow_ref);
+    _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().calc_jacobian();
     _solver().compute_residual();
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");

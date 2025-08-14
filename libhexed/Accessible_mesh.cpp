@@ -2326,8 +2326,9 @@ void Accessible_mesh::purge() {
   }
 }
 
-bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
-                            std::function<bool(Element&, int)> unrefine_criterion) {
+Mesh::Adaptation_result Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
+                                               std::function<bool(Element&, int)> unrefine_criterion,
+                                               bool allow_refine) {
   Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
   Gauss_legendre solver_basis(params.row_size);
   {
@@ -2336,8 +2337,10 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
     for (auto& vert : verts) vert.remember_pos();
   }
   Int n_orig_elems = elems.size();
+  Int n_refine = 0;
+  Int n_coarsen = 0;
   // decide which elements to (un)refine
-  #pragma omp parallel for // parallelize this part since `predicate` could be expensive
+  #pragma omp parallel for reduction(+:n_refine,n_coarsen)
   for (Int i_elem = 0; i_elem < n_orig_elems; ++i_elem) {
     auto& elem = elems[i_elem];
     elem.record = 0;
@@ -2347,6 +2350,8 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
       if (ref && !unref) elem.desired_refinement(i_dim) = 1;
       else if (unref && !ref) elem.desired_refinement(i_dim) = -1;
       else elem.desired_refinement(i_dim) = 0;
+      n_refine += elem.desired_refinement(i_dim) > 0;
+      n_coarsen += elem.desired_refinement(i_dim) < 0;
     }
   }
   auto populate_elements = [this, &solver_basis](bool is_def, bool ref_unref, std::vector<bool> is_modified,
@@ -2425,7 +2430,7 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
           std::vector<bool> ref_dims(params.n_dim);
           bool refine = false;
           for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-            ref_dims[i_dim] = elem.desired_refinement(i_dim) == 1 || need_ref[i_dim];
+            ref_dims[i_dim] = (allow_refine && elem.desired_refinement(i_dim) == 1) || need_ref[i_dim];
             refine = refine || ref_dims[i_dim];
           }
           if (!refine) continue;
@@ -2490,7 +2495,7 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
       vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
     }
   }
-  return elems.size() != n_orig_elems;
+  return {n_refine, n_coarsen, elems.size() != n_orig_elems};
 }
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,

@@ -237,6 +237,7 @@ adapt_tol = {1e-2}
 adapt_refine_if = {($({spectral_uncertainty} + i_dim) > ($adapt_tol))}
 adapt_unrefine_if = {($({spectral_uncertainty} + i_dim) < ($adapt_tol)/2^(row_size - 1) & $({aniso_ref_level} + i_dim) > init_ref_level)}
 allow_refinement_if = {(total_spectral_uncertainty_max - total_spectral_uncertainty_min) < .1*total_spectral_uncertainty_max}
+allow_refinement_if = {(!adapt_changed)}
 adapt_if = {(iteration%adapt_freq == 0)}
 max_init_refine_iters = 100
 max_geom_refine_iters = 100
@@ -477,6 +478,7 @@ run = {
     $vis_init
     $print_init
     shell({echo > } + working_dir + {runtime_cmd.hil})
+    adapt_changed = true
     hexed_time_step_done = true
     hexed_done = false
     while = {!hexed_done}

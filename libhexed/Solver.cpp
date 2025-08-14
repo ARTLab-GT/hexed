@@ -1106,12 +1106,14 @@ void Solver::compute_spectral_uncertainty() {
         Array<double> flux = con->inside().flow_state()(1);
         Element* elem = con->inside().element();
         HEXED_ASSERT(elem, "Inside face does not have an element.")
-        double uncert = 0;
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          Mat<> proj = math::dimension_matvec(orth, flux(i_dim).vector(), i_dim);
-          uncert += proj.dot(proj.cwiseProduct(face_weights))/flux_max;
+        for (int j_dim = 0; j_dim < params.n_dim - 1; ++j_dim) {
+          double uncert = 0;
+          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+            Mat<> proj = math::dimension_matvec(orth, flux(i_dim).vector(), j_dim);
+            uncert += proj.dot(proj.cwiseProduct(face_weights))/flux_max;
+          }
+          elem->spectral_uncert()[con->inside().i_dim()] += std::sqrt(uncert);
         }
-        elem->spectral_uncert()[con->inside().i_dim()] += std::sqrt(uncert);
       }
     }
   }
