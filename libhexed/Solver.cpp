@@ -1050,33 +1050,70 @@ void Solver::print_preti_iters() {
 
 
 void Solver::compute_spectral_uncertainty() {
-  Array<double> state_min = Array<double>::make_uniform({params.n_var}, huge);
-  Array<double> state_max = Array<double>::make_uniform({params.n_var}, -huge);
+  int nv = params.n_var - (turb == k_omega);
+  Array<double> state_min = Array<double>::make_uniform({nv}, huge);
+  Array<double> state_max = Array<double>::make_uniform({nv}, -huge);
   auto& elems = acc_mesh->elements();
   #pragma omp parallel for reduction(min:state_min) reduction(max:state_max)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     Array<double> state = elems[i_elem].flow_state();
-    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+    for (int i_var = 0; i_var < nv; ++i_var) {
       state_min[i_var] = std::min(state_min[i_var], state(i_var).extreme(0));
       state_max[i_var] = std::max(state_min[i_var], state(i_var).extreme(1));
     }
   }
+  double flux_max = 0.;
+  auto bound_cons {_preti_masks[0]->bound_cons};
+  if (visc.is_viscous) {
+    #pragma omp parallel for reduction(max:flux_max)
+    for (Int i_con = 0; i_con < (Int)bound_cons.size(); ++i_con) {
+      auto& con = bound_cons[i_con];
+      if (con->boundary_condition() == 2*params.n_dim) {
+        Array<double> flux = con->inside().flow_state()(1);
+        Array<double> norm_sq = Array<double>::make_uniform({params.n_face_qpoint()}, 0.);
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) norm_sq += flux(i_dim)*flux(i_dim);
+        flux_max = std::max(flux_max, norm_sq.extreme(1));
+      }
+    }
+  }
+  flux_max = std::sqrt(flux_max);
   Mat<dyn, dyn> orth = basis.orthogonal(params.row_size - 1).transpose()*basis.node_weights().asDiagonal();
   Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
-  double total = 0;
-  #pragma omp parallel for reduction(+:total)
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+  #pragma omp parallel
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     Array<double> state = elem.flow_state();
     elem.spectral_uncert() = 0;
-    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+    for (int i_var = 0; i_var < nv; ++i_var) {
       for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
         Mat<> proj = math::dimension_matvec(orth, state(i_var).vector(), i_dim);
         double normalize = state_max[i_var] - state_min[i_var];
         elem.spectral_uncert()[i_dim] += std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize;
       }
     }
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) total += elem.spectral_uncert()[i_dim];
+  }
+  double total = 0;
+  #pragma omp parallel for reduction(+:total)
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) total += elems[i_elem].spectral_uncert()[i_dim];
+  }
+  if (visc.is_viscous) {
+    Mat<> face_weights = math::pow_outer(basis.node_weights(), params.n_dim - 2);
+    #pragma omp parallel for reduction(max:flux_max)
+    for (Int i_con = 0; i_con < (Int)bound_cons.size(); ++i_con) {
+      auto& con = bound_cons[i_con];
+      if (con->boundary_condition() == 2*params.n_dim) {
+        Array<double> flux = con->inside().flow_state()(1);
+        Element* elem = con->inside().element();
+        HEXED_ASSERT(elem, "Inside face does not have an element.")
+        double uncert = 0;
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          Mat<> proj = math::dimension_matvec(orth, flux(i_dim).vector(), i_dim);
+          uncert += proj.dot(proj.cwiseProduct(face_weights))/flux_max;
+        }
+        elem->spectral_uncert()[con->inside().i_dim()] += std::sqrt(uncert);
+      }
+    }
   }
   _namespace->assign("total_spectral_uncertainty", total);
 }
