@@ -1054,7 +1054,7 @@ void Solver::print_preti_iters() {
 
 
 void Solver::compute_spectral_uncertainty() {
-  int nv = params.n_var - (turb == k_omega);
+  int nv = params.n_dim + 2;
   Array<double> state_min = Array<double>::make_uniform({nv}, huge);
   Array<double> state_max = Array<double>::make_uniform({nv}, -huge);
   auto& elems = acc_mesh->elements();
@@ -1066,25 +1066,6 @@ void Solver::compute_spectral_uncertainty() {
       state_max[i_var] = std::max(state_min[i_var], state(i_var).extreme(1));
     }
   }
-  auto cons = acc_mesh->neighbor_connections(true);
-  #if 0
-  double flux_max = 0.;
-  if (visc.is_viscous) {
-    #pragma omp parallel for reduction(max:flux_max)
-    for (auto& con : cons) {
-      if (!con.has_elements()) continue;
-      for (int i_side = 0; i_side < 2; ++i_side) {
-        if (con.face(i_side).element()->has_wall() && !con.face(i_side).element()->has_wall()) {
-          Array<double> flux = con.face(i_side).flow_state()(1);
-          Array<double> norm_sq = Array<double>::make_uniform({params.n_face_qpoint()}, 0.);
-          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) norm_sq += flux(i_dim)*flux(i_dim);
-          flux_max = std::max(flux_max, norm_sq.extreme(1));
-        }
-      }
-    }
-  }
-  flux_max = std::sqrt(flux_max);
-  #endif
   Mat<dyn, dyn> orth = basis.orthogonal(params.row_size - 1).transpose()*basis.node_weights().asDiagonal();
   Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
   #pragma omp parallel
@@ -1096,14 +1077,10 @@ void Solver::compute_spectral_uncertainty() {
       for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
         Mat<> proj = math::dimension_matvec(orth, state(i_var).vector(), i_dim);
         double normalize = state_max[i_var] - state_min[i_var];
-        elem.spectral_uncert()[i_dim] += std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize;
+        double& elem_uncert = elem.spectral_uncert()[i_dim];
+        elem_uncert = std::max(elem_uncert, std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize);
       }
     }
-  }
-  double total = 0;
-  #pragma omp parallel for reduction(+:total)
-  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) total += elems[i_elem].spectral_uncert()[i_dim];
   }
   if (visc.is_viscous) {
     auto bc_fun = [this]() {
@@ -1132,7 +1109,8 @@ void Solver::compute_spectral_uncertainty() {
               uncert += flux_diff(i_dim).vector().dot(flux_diff(i_dim).vector().cwiseProduct(face_weights));
               total += flux(i_dim).vector().dot(flux(i_dim).vector().cwiseProduct(face_weights));
             }
-            con.face(i_side).element()->spectral_uncert()[dir.i_dim[0]] += std::sqrt(uncert/total);
+            double& elem_uncert = con.face(i_side).element()->spectral_uncert()[dir.i_dim[0]];
+            elem_uncert = std::max(elem_uncert, std::sqrt(uncert/total));
           }
         }
       }
@@ -1148,7 +1126,6 @@ void Solver::compute_spectral_uncertainty() {
     };
     compute_navier_stokes(_kernel_mesh(), opts, bc_fun, visc, therm_cond, false);
   }
-  _namespace->assign("total_spectral_uncertainty", total);
 }
 
 void Solver::update_bound_conds() {

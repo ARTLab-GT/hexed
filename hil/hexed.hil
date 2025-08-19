@@ -46,7 +46,6 @@ heat_flux_expr = {heat_flux = heat_flux;}
 iteration_expr = {iteration = iteration; time_stage = time_stage; pseudotime_iteration = pseudotime_iteration;}
 art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
 normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
-total_spectral_uncert_expr = {total_spectral_uncertainty = total_spectral_uncertainty;}
 flow_time_expr = {flow_time = flow_time;}
 time_step_expr = {time_step = time_step;}
 fix_iters_expr = {fix_iters = fix_iters;}
@@ -198,8 +197,6 @@ amr = false
 max_ref_level = 1000
 geom_rtol = 1e-5
 geom_atol = 0.
-adapt_tol_far = 1e-2
-adapt_tol_near = 1e-4
 max_wall_spacing = huge
 viscosity_model = {}
 conductivity_model = {}
@@ -233,7 +230,7 @@ geom_refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level <
 geom_unrefine_if = {false}
 final_refine_if = {(has_wall & i_dim == wall_dimension & wall_distance > max_wall_spacing)}
 final_unrefine_if = {false}
-adapt_tol = {1e-2}
+adapt_tol = {1e-3}
 adapt_refine_if = {($({spectral_uncertainty} + i_dim) > ($adapt_tol))}
 adapt_unrefine_if = {($({spectral_uncertainty} + i_dim) < ($adapt_tol)/2^(row_size - 1) & $({aniso_ref_level} + i_dim) > init_ref_level)}
 allow_refinement_if = {(n_elements_max - n_elements_min < 1e-3*n_elements_max)}
@@ -257,7 +254,7 @@ vis_field_vars = state_vars + art_visc_expr + transport_expr
 vis_contour_vars = vis_field_vars
 vis_surface_vars = state_vars + transport_expr + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr + bl_nondim_expr
 vis_n_sample = 10
-print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr + total_spectral_uncert_expr
+print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr
 monitor_window = 0.25
 monitor_samples = 1000
 monitor_min_samples = 10
@@ -465,9 +462,9 @@ start = {
     init_residual_density = 0.
     init_residual_energy = 0.
     normalized_residual = 1.
-    total_spectral_uncertainty = 0.
     prev_residual = 0.
     hexed_next_flow_time = 0.
+    last_adapt_iter = 0
 }
 
 mesh_init = false

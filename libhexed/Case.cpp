@@ -540,6 +540,7 @@ Case::Case(std::string input_script)
     _n_elem_monitor->add_sample(_vari("iteration"), _solver().mesh().n_elements());
     _inter.variables->assign<double>("n_elements_min", _n_elem_monitor->min());
     _inter.variables->assign<double>("n_elements_max", _n_elem_monitor->max());
+    _inter.variables->assign("last_adapt_iter", _vari("iteration"));
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
     _solver().print_preti_iters();
     _visualize("_post_adapt_" + _iteration_suffix());
