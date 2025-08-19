@@ -465,6 +465,7 @@ start = {
     prev_residual = 0.
     hexed_next_flow_time = 0.
     last_adapt_iter = 0
+    next_refine_iter = 10*adapt_freq
 }
 
 mesh_init = false

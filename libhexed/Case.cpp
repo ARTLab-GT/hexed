@@ -513,7 +513,8 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
-    bool allow_ref = _inter.sub_eval<int>(_vars("allow_refinement_if"));
+    //bool allow_ref = _inter.sub_eval<int>(_vars("allow_refinement_if"));
+    bool allow_ref = _vari("iteration") >= _vari("next_refine_iter");
     printers::info("adapting mesh (");
     if (allow_ref) {
       printers::info("refinement allowed", true);
@@ -521,6 +522,7 @@ Case::Case(std::string input_script)
       printers::info("only coarsening allowed");
     }
     printers::info(")...");
+    Int orig_elems = _solver().mesh().n_elements();
     _solver().compute_spectral_uncertainty();
     std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
     std::vector<std::function<bool(Element&, int)>> crits;
@@ -540,6 +542,11 @@ Case::Case(std::string input_script)
     _n_elem_monitor->add_sample(_vari("iteration"), _solver().mesh().n_elements());
     _inter.variables->assign<double>("n_elements_min", _n_elem_monitor->min());
     _inter.variables->assign<double>("n_elements_max", _n_elem_monitor->max());
+    if (allow_ref) {
+      Int new_elems = _solver().mesh().n_elements();
+      int next = _vari("iteration")*std::max(1., math::pow(new_elems*1./orig_elems, 2));
+      _inter.variables->assign("next_refine_iter", next);
+    }
     _inter.variables->assign("last_adapt_iter", _vari("iteration"));
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
     _solver().print_preti_iters();
