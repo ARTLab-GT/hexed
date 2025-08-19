@@ -1062,21 +1062,25 @@ void Solver::compute_spectral_uncertainty() {
       state_max[i_var] = std::max(state_min[i_var], state(i_var).extreme(1));
     }
   }
+  auto cons = acc_mesh->neighbor_connections(true);
+  #if 0
   double flux_max = 0.;
-  auto bound_cons {_preti_masks[0]->bound_cons};
   if (visc.is_viscous) {
     #pragma omp parallel for reduction(max:flux_max)
-    for (Int i_con = 0; i_con < (Int)bound_cons.size(); ++i_con) {
-      auto& con = bound_cons[i_con];
-      if (con->boundary_condition() == 2*params.n_dim) {
-        Array<double> flux = con->inside().flow_state()(1);
-        Array<double> norm_sq = Array<double>::make_uniform({params.n_face_qpoint()}, 0.);
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) norm_sq += flux(i_dim)*flux(i_dim);
-        flux_max = std::max(flux_max, norm_sq.extreme(1));
+    for (auto& con : cons) {
+      if (!con.has_elements()) continue;
+      for (int i_side = 0; i_side < 2; ++i_side) {
+        if (con.face(i_side).element()->has_wall() && !con.face(i_side).element()->has_wall()) {
+          Array<double> flux = con.face(i_side).flow_state()(1);
+          Array<double> norm_sq = Array<double>::make_uniform({params.n_face_qpoint()}, 0.);
+          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) norm_sq += flux(i_dim)*flux(i_dim);
+          flux_max = std::max(flux_max, norm_sq.extreme(1));
+        }
       }
     }
   }
   flux_max = std::sqrt(flux_max);
+  #endif
   Mat<dyn, dyn> orth = basis.orthogonal(params.row_size - 1).transpose()*basis.node_weights().asDiagonal();
   Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
   #pragma omp parallel
@@ -1098,24 +1102,47 @@ void Solver::compute_spectral_uncertainty() {
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) total += elems[i_elem].spectral_uncert()[i_dim];
   }
   if (visc.is_viscous) {
-    Mat<> face_weights = math::pow_outer(basis.node_weights(), params.n_dim - 2);
-    #pragma omp parallel for reduction(max:flux_max)
-    for (Int i_con = 0; i_con < (Int)bound_cons.size(); ++i_con) {
-      auto& con = bound_cons[i_con];
-      if (con->boundary_condition() == 2*params.n_dim) {
-        Array<double> flux = con->inside().flow_state()(1);
-        Element* elem = con->inside().element();
-        HEXED_ASSERT(elem, "Inside face does not have an element.")
-        for (int j_dim = 0; j_dim < params.n_dim - 1; ++j_dim) {
-          double uncert = 0;
-          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-            Mat<> proj = math::dimension_matvec(orth, flux(i_dim).vector(), j_dim);
-            uncert += proj.dot(proj.cwiseProduct(face_weights))/flux_max;
+    auto bc_fun = [this]() {
+      apply_flux_bcs();
+      Mat<> face_weights = math::pow_outer(basis.node_weights(), params.n_dim - 2);
+      #pragma omp parallel for
+      for (auto& con : acc_mesh->neighbor_connections(true)) {
+        auto dir = con.get_direction();
+        if (!con.has_elements() || dir.i_dim[0] != dir.i_dim[1]) continue;
+        bool has_wall [2] {};
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+            auto& face = con.face(i_side).element()->face(i_face);
+            if (!face.neighbor_connection()) continue;
+            auto bc = face.neighbor_connection()->opposite_face(face).boundary_connection();
+            if (bc) has_wall[i_side] = has_wall[i_side] || bc->boundary_condition() == 2*params.n_dim;
           }
-          elem->spectral_uncert()[con->inside().i_dim()] += std::sqrt(uncert);
+        }
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          if (has_wall[i_side] && !has_wall[!i_side]) {
+            Array<double> flux = con.face(i_side).flow_state()(1);
+            Array<double> flux_diff = flux - con.face(!i_side).flow_state()(1);
+            double uncert = 0;
+            double total = 0;
+            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+              uncert += flux_diff(i_dim).vector().dot(flux_diff(i_dim).vector().cwiseProduct(face_weights));
+              total += flux(i_dim).vector().dot(flux(i_dim).vector().cwiseProduct(face_weights));
+            }
+            con.face(i_side).element()->spectral_uncert()[dir.i_dim[0]] += std::sqrt(uncert/total);
+          }
         }
       }
-    }
+    };
+    Kernel_options opts {
+      .sw_car = stopwatch["cartesian"],
+      .sw_def = stopwatch["deformed"],
+      .sw_pr = stopwatch["prolong/restrict"],
+      .dt = 1.,
+      .i_stage = 0,
+      .compute_residual = true,
+      .use_filter = bool(_namespace->get<int>("use_filter")),
+    };
+    compute_navier_stokes(_kernel_mesh(), opts, bc_fun, visc, therm_cond, false);
   }
   _namespace->assign("total_spectral_uncertainty", total);
 }

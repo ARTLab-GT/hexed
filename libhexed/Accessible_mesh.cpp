@@ -2457,10 +2457,10 @@ Mesh::Adaptation_result Accessible_mesh::adapt(std::function<bool(Element&, int)
         std::vector<bool> unref(params.n_dim);
         bool needs_unref = false;
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          auto predicate = [is_deformed, &elem, i_dim](Tree* t)->bool {
+          auto predicate = [is_deformed, i_dim](Tree* t)->bool {
             if (!t->is_leaf() || !exists(t)) return false;
             if (t->elem->get_is_deformed() != is_deformed || t->has_graft_connection()) return false;
-            return elem.desired_refinement(i_dim) == -1 && t->elem->record != 3;
+            return t->elem->desired_refinement(i_dim) == -1 && t->elem->record != 3;
           };
           unref[i_dim] = std::all_of(uc.begin(), uc.end(), predicate);
           unref[i_dim] = unref[i_dim] && parent->is_refined(i_dim) && !need_ref[i_dim];

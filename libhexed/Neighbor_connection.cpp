@@ -45,4 +45,8 @@ Hard_kernel_connection Neighbor_connection::kernel_connection() {
   };
 }
 
+bool Neighbor_connection::has_elements() {
+  return _faces[0].value().element() && _faces[1].value().element();
+}
+
 }
