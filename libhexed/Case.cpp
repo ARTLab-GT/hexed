@@ -374,13 +374,14 @@ Case::Case(std::string input_script)
     else if (turb == "k-omega") turb_model = k_omega;
     else HEXED_THROW("unrecognized turbulence model `{" + turb + "}`", assert::User_error);
     // create history monitors
-    std::string monitor_vars = "total_spectral_uncertainty = total_spectral_uncertainty;" + _vars("monitor_vars");
+    std::string monitor_vars = _vars("monitor_vars");
     _monitor_expr.reset(new Struct_expr(monitor_vars));
     for (std::string name : _monitor_expr->names) {
       _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"), _vari("monitor_min_samples"));
       _inter.variables->assign_default(name + "_min", -huge);
       _inter.variables->assign_default(name + "_max",  huge);
     }
+    _n_elem_monitor.reset(new History_monitor(_vard("monitor_window")*.8, _vari("monitor_samples"), 2));
     // setup actual solver
     bool steady = _vari("steady");
     bool implicit = _vari("implicit");
@@ -485,6 +486,9 @@ Case::Case(std::string input_script)
       printers::info("\n");
     }
     printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.\n", true);
+    _n_elem_monitor->add_sample(_vari("iteration"), _solver().mesh().n_elements());
+    _inter.variables->assign<double>("n_elements_min", -huge);
+    _inter.variables->assign<double>("n_elements_max",  huge);
     _solver().print_preti_iters();
     return "";
   }));
@@ -533,6 +537,9 @@ Case::Case(std::string input_script)
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().calc_jacobian();
     _solver().compute_residual();
+    _n_elem_monitor->add_sample(_vari("iteration"), _solver().mesh().n_elements());
+    _inter.variables->assign<double>("n_elements_min", _n_elem_monitor->min());
+    _inter.variables->assign<double>("n_elements_max", _n_elem_monitor->max());
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
     _solver().print_preti_iters();
     _visualize("_post_adapt_" + _iteration_suffix());

@@ -28,6 +28,7 @@ class Case {
   std::time_t _start_time;
   std::unique_ptr<Struct_expr> _monitor_expr;
   std::vector<History_monitor> _monitors;
+  std::unique_ptr<History_monitor> _n_elem_monitor;
   std::string _assignment(std::string var_name);
   public:
   Case(std::string input_script = "interactive.hil");
