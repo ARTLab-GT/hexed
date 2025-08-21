@@ -5,14 +5,12 @@
 #include <hexed/Gauss_lobatto.hpp>
 #include <hexed/Gauss_legendre.hpp>
 
-void test_diff_mat(hexed::Basis& basis)
-{
+void test_diff_mat(hexed::Basis& basis) {
   hexed::Mat<hexed::dyn, hexed::dyn> diff_mat = basis.diff_mat();
   // test that the sum of each row (derivative of a constant) is 0
   for (int i_result = 0; i_result < basis.row_size; ++i_result) {
     double derivative = 0;
-    for (int i_operand = 0; i_operand < basis.row_size; ++i_operand)
-    {
+    for (int i_operand = 0; i_operand < basis.row_size; ++i_operand) {
       derivative += diff_mat(i_result, i_operand);
     }
     REQUIRE( derivative == Catch::Approx(0).margin(1e-13) );
@@ -38,29 +36,24 @@ void test_diff_mat(hexed::Basis& basis)
   }
 }
 
-void test_quadrature(hexed::Basis& basis)
-{
+void test_quadrature(hexed::Basis& basis) {
   Eigen::VectorXd weights = basis.node_weights();
   REQUIRE(weights.sum() == Catch::Approx(1.));
   double total = 0.;
-  if (basis.row_size >= 3)
-  {
-    for (int i = 0; i < basis.row_size; ++i)
-    {
+  if (basis.row_size >= 3) {
+    for (int i = 0; i < basis.row_size; ++i) {
       total += weights(i)*(basis.node(i)*basis.node(i));
     }
     REQUIRE(total == Catch::Approx(1./3.));
   }
 }
 
-void test_boundary(hexed::Basis& basis)
-{
+void test_boundary(hexed::Basis& basis) {
   auto boundary = basis.boundary();
   REQUIRE(boundary.rows() == 2);
   REQUIRE(boundary.cols() == basis.row_size);
   Eigen::VectorXd node_vals (basis.row_size);
-  for (int i_node = 0; i_node < basis.row_size; ++i_node)
-  {
+  for (int i_node = 0; i_node < basis.row_size; ++i_node) {
     node_vals[i_node] = 0.15*basis.node(i_node) + 0.37;
   }
   Eigen::VectorXd boundary_vals = boundary*node_vals;
@@ -68,22 +61,18 @@ void test_boundary(hexed::Basis& basis)
   REQUIRE(boundary_vals(1) == Catch::Approx(0.52));
 }
 
-void test_orthogonal(hexed::Basis& basis)
-{
+void test_orthogonal(hexed::Basis& basis) {
   Eigen::VectorXd weights = basis.node_weights();
-  for (int i_orth = 0; i_orth < basis.row_size; ++i_orth)
-  {
+  for (int i_orth = 0; i_orth < basis.row_size; ++i_orth) {
     Eigen::VectorXd weighted_orth = basis.orthogonal(i_orth).cwiseProduct(weights);
-    for (int j_orth = 0; j_orth < basis.row_size; ++j_orth)
-    {
+    for (int j_orth = 0; j_orth < basis.row_size; ++j_orth) {
       auto orth = basis.orthogonal(j_orth);
       REQUIRE(weighted_orth.dot(orth) == Catch::Approx(i_orth == j_orth ? 1. : 0.).margin(1e-10));
     }
   }
 }
 
-void test_transform(hexed::Basis& basis)
-{
+void test_transform(hexed::Basis& basis) {
   const int rs {basis.row_size};
   const double tol {1e-10};
 
@@ -109,20 +98,16 @@ void test_transform(hexed::Basis& basis)
   CHECK((same - coarse_monomial).norm() < tol);
 }
 
-TEST_CASE("Equidistant Basis")
-{
-  for (int row_size = 2; row_size < 10; ++row_size)
-  {
+TEST_CASE("Equidistant Basis") {
+  for (int row_size = 2; row_size < 10; ++row_size) {
     hexed::Equidistant equi (row_size);
     test_diff_mat(equi);
     test_boundary(equi);
   }
 }
 
-TEST_CASE("Gauss_lobatto Basis")
-{
-  for (int row_size = 2; row_size <= hexed::config::max_row_size; ++row_size)
-  {
+TEST_CASE("Gauss_lobatto Basis") {
+  for (int row_size = 2; row_size <= hexed::config::max_row_size; ++row_size) {
     hexed::Gauss_lobatto GLo (row_size);
     test_diff_mat(GLo);
     test_quadrature(GLo);
@@ -131,10 +116,8 @@ TEST_CASE("Gauss_lobatto Basis")
   }
 }
 
-TEST_CASE("Gauss_legendre Basis")
-{
-  for (int row_size = 2; row_size <= hexed::config::max_row_size; ++row_size)
-  {
+TEST_CASE("Gauss_legendre Basis") {
+  for (int row_size = 2; row_size <= hexed::config::max_row_size; ++row_size) {
     hexed::Gauss_legendre GLe (row_size);
     test_diff_mat(GLe);
     test_quadrature(GLe);
@@ -144,13 +127,11 @@ TEST_CASE("Gauss_legendre Basis")
   }
 }
 
-TEST_CASE("interpolation")
-{
+TEST_CASE("interpolation") {
   hexed::Equidistant basis {5};
   Eigen::VectorXd values {5};
   for (int i = 0; i < 5; ++i) values[i] = std::pow(i/4., 3);
-  SECTION("large sample")
-  {
+  SECTION("large sample") {
     Eigen::VectorXd sample {{0, 0.5, 0.7, 0.16, 1.2, 0., 0.}};
     Eigen::VectorXd interpolated = basis.interpolate(sample)*values;
     REQUIRE(interpolated[0] == 0.);
@@ -158,9 +139,9 @@ TEST_CASE("interpolation")
     REQUIRE(interpolated[2] == Catch::Approx(.7*.7*.7));
     REQUIRE(interpolated[4] == Catch::Approx(1.2*1.2*1.2));
     REQUIRE(interpolated[6] == 0.);
+    REQUIRE(std::abs(interpolated[2] - .7*.7*.7) == 0.);
   }
-  SECTION("small sample")
-  {
+  SECTION("small sample") {
     Eigen::VectorXd sample {{0.2}};
     Eigen::VectorXd interpolated = basis.interpolate(sample)*values;
     REQUIRE(interpolated[0] == Catch::Approx(.2*.2*.2));

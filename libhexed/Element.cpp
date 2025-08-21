@@ -45,12 +45,15 @@ Storage_params Element::storage_params() const {return params;}
 
 Array<double> Element::position(const Basis& basis) const {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
-  Array<double> shape_pos = _shape->points();
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    auto vec = shape_pos(i_dim).vector();
-    vec = math::hypercube_matvec(_shape->basis().interpolate(basis.nodes()), vec);
+  Array<double> pos({3, (Int)params.n_qpoint()});
+  for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+    std::vector<double> coords(params.n_dim);
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      coords[i_dim] = basis.node(math::row_coordinate(params.n_dim, params.row_size, i_dim, i_qpoint));
+    }
+    pos.column(i_qpoint).vector() = _shape->interpolate(coords);
   }
-  return shape_pos;
+  return pos;
 }
 
 Array<double> Element::face_position(const Basis& basis) const {
@@ -210,7 +213,13 @@ void Element::split_shape(Element& split_from, double at, int from_face) {
   double diff = corners[1 - from_face%2][from_face/2] - corners[from_face%2][from_face/2];
   corners[from_face%2][from_face/2] += at*diff;
   split_corners[1 - from_face%2][from_face/2] = corners[from_face%2][from_face/2];
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    HEXED_ASSERT(corners[0][i_dim] < corners[1][i_dim], "Corner coordinates must be increasing.")
+  }
   split_from.shape().set_glued_corners(corners);
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    HEXED_ASSERT(split_corners[0][i_dim] < split_corners[1][i_dim], "Corner coordinates must be increasing.")
+  }
   _shape->glue(*_fake_shape, split_corners);
   _set_glued_pos();
   split_from._set_glued_pos();
@@ -227,6 +236,9 @@ void Element::glue_shape(Element& glue_to, std::array<std::vector<double>, 2> gl
         glue_corners[i][i_dim] = (1. - gc)*corners[0][i_dim] + gc*corners[1][i_dim];
       }
     }
+  }
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    HEXED_ASSERT(glue_corners[0][i_dim] < glue_corners[1][i_dim], "Corner coordinates must be increasing.")
   }
   _shape->glue(glue_to.active_shape(), glue_corners);
   _set_glued_pos();

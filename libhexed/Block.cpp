@@ -495,7 +495,7 @@ Mat<3> Vertex::_unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_ot
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
     bool skip = false;
     for (int i_dim = 0; i_dim < nc; ++i_dim) {
-      skip = skip || std::abs(_glued_coords[i_dim] - !math::row_coordinate(nd, 2, i_dim, i_vert)) < 1e-6;
+      skip = skip || std::abs(_glued_coords[i_dim] - !math::row_coordinate(nd, 2, i_dim, i_vert)) < 1e-12;
     }
     if (!skip) {
       auto& v = _glued_to->vertex(i_vert);
@@ -751,45 +751,76 @@ void Surface_face::reset() {
   _interior = soln.data();
 }
 
-Mat<3> Element_shape::_vertex_point(const std::vector<int>& coords, Int recursion_depth) const {
+double skip_tol = 1e-14;
+
+Mat<3> Element_shape::_vertex_point(const std::vector<double>& coords, Int recursion_depth) const {
   // computes a point via order 1 interpolation between the vertices,
   // without accounting for boundary-side warping
   Mat<3> point = Mat<3>::Zero();
   for (int i_vert = 0; i_vert < math::pow(2, n_dim()); ++i_vert) {
     double weight = 1;
-    bool skip = false;
     for (int i_dim = 0; i_dim < n_dim(); ++i_dim) {
       bool sign = i_vert/vstride(n_dim(), i_dim)%2;
-      skip = skip || (coords[i_dim] == (row_size() - 1)*!sign);
-      weight *= !sign + math::sign(sign)*_basis->node(coords[i_dim]);
+      weight *= !sign + math::sign(sign)*coords[i_dim];
     }
-    if (!skip) point += weight*_verts[i_vert].value().point({}, recursion_depth);
+    if (std::abs(weight) > skip_tol*nominal_size()) point += weight*_verts[i_vert].value().point({}, recursion_depth);
   }
   return point;
 }
 
 Mat<3> Element_shape::_point(const std::vector<int>& coords, Int recursion_depth) const {
+  std::vector<double> interp_coords(n_dim());
+  for (int i_dim = 0; i_dim < n_dim(); ++i_dim) interp_coords[i_dim] = _basis->node(coords[i_dim]);
+  return interpolate(interp_coords, recursion_depth);
+}
+
+bool skip(int n_dim, int row_size, double nom_sz, int index, std::vector<double> coords) {
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    double coord = math::row_coordinate(n_dim, row_size, i_dim, index)/(row_size - 1.);
+    if (std::min(std::abs(coords[i_dim]), std::abs(coords[i_dim] - 1.)) < skip_tol*nom_sz &&
+        std::abs(coord - coords[i_dim]) > skip_tol*nom_sz) return true;
+  }
+  return false;
+}
+
+Mat<3> Element_shape::interpolate(std::vector<double> ref_coords, Int recursion_depth) const {
   if (glued()) {
-    Int nc = coords.size();
+    Int nc = ref_coords.size();
     std::vector<double> new_coords(nc);
     for (int i_dim = 0; i_dim < nc; ++i_dim) {
       double diff = _glued_corners[1][i_dim] - _glued_corners[0][i_dim];
-      new_coords[i_dim] = _glued_corners[0][i_dim] + _basis->node(coords[i_dim])*diff;
+      new_coords[i_dim] = _glued_corners[0][i_dim] + ref_coords[i_dim]*diff;
     }
     return _glued_to->interpolate(new_coords, recursion_depth + 1);
   }
   // first compute point by interpolating between vertices
-  Mat<3> point = _vertex_point(coords, recursion_depth + 1);
+  Mat<3> point = _vertex_point(ref_coords, recursion_depth + 1);
   // then, if `this` has a side on the boundary, adjust it to account for the actual position of the boundary nodes
   if (_i_bf != Mesh_blocks::no_face) {
-    std::vector<int> c(coords);
+    std::vector<double> c = ref_coords;
     int sign = _i_bf%2;
     int i_dim = _i_bf/2;
-    double interp_coef = !sign + math::sign(sign)*_basis->node(c[i_dim]);
-    c[i_dim] = sign*(row_size() - 1);
-    Mat<3> uncorrected = _vertex_point(c, recursion_depth + 1);
-    c.erase(c.begin() + i_dim);
-    point += interp_coef*(_bf.value().point(c) - uncorrected);
+    double interp_coef = !sign + math::sign(sign)*c[i_dim];
+    if (std::abs(interp_coef) > skip_tol*nominal_size()) {
+      c[i_dim] = sign;
+      Mat<3> uncorrected = _vertex_point(c, recursion_depth + 1);
+      c.erase(c.begin() + i_dim);
+      int n_face = math::pow(row_size(), n_dim() - 1);
+      Array<double> face_points({3, n_face});
+      face_points = 0;
+      for (int i_face = 0; i_face < n_face; ++i_face) {
+        if (!skip(n_dim() - 1, row_size(), nominal_size(), i_face, c)) {
+          face_points.column(i_face).vector() = _bf->point(i_face, recursion_depth);
+        }
+      }
+      for (int j_dim = 0; j_dim < 3; ++j_dim) {
+        Mat<> row = face_points(j_dim).vector();
+        for (int k_dim = n_dim() - 2; k_dim >= 0; --k_dim) {
+          row = math::dimension_matvec(_basis->interpolate(Mat<1>{c[k_dim]}), row, k_dim);
+        }
+        point(j_dim) += interp_coef*(row(0) - uncorrected(j_dim));
+      }
+    }
   }
   return point;
 }
@@ -836,41 +867,6 @@ Element_shape::Element_shape(int nd, const Basis& b)
 , _glued_verts(this)
 {
   for (int i_vert = 0; i_vert < math::pow(2, nd); ++i_vert) _verts.emplace_back(this);
-}
-
-Mat<3> Element_shape::interpolate(std::vector<double> ref_coords, Int recursion_depth) const {
-  int nd = n_dim();
-  int rs = row_size();
-  std::vector<Int> shape(nd + 1, rs);
-  shape[0] = 3;
-  Array<double> points(shape);
-  points = 0.;
-  for (int i_point = 0; i_point < (int)points.size()/3; ++i_point) {
-    bool skip = false;
-    std::vector<int> coords(nd);
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      coords[i_dim] = i_point/math::pow(rs, nd - 1 - i_dim)%rs;
-      skip = skip || (ref_coords[i_dim] == 0 && coords[i_dim] != 0       );
-      skip = skip || (ref_coords[i_dim] == 1 && coords[i_dim] != (rs - 1));
-    }
-    if (!skip) {
-      points.reshaped({3, whatever}).column(i_point).vector() = point(coords, recursion_depth);
-    }
-  }
-  Mat<3> p; // this is where we will put the computed position
-  // compute the interpolation matrix
-  Eigen::Map<const Mat<>> sample(ref_coords.data(), ref_coords.size());
-  Mat<dyn, dyn> interp = _basis->interpolate(sample);
-  // apply the interpolation matrix along each dimension to compute the desired point
-  for (int i_dim = 0; i_dim < 3; ++i_dim) {
-    Mat<> vec = points(i_dim).vector();
-    for (int j_dim = nd - 1; j_dim >= 0; --j_dim) {
-      Mat<> new_vec = math::dimension_matvec(interp(j_dim, all), vec, j_dim);
-      vec = new_vec;
-    }
-    p(i_dim) = vec(0);
-  }
-  return p;
 }
 
 Mat<3> Element_shape::nominal_position(int i_vert) const {

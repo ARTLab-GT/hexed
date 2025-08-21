@@ -350,8 +350,18 @@ void Solver::calc_jacobian() {
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
       //HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
       if (!(elements[i_elem].jacobian_determinant(i_qpoint) > 0.)) {
-        printers::warn("Nonpositive Jacobian" + to_string(elements[i_elem].position(basis).column(i_qpoint)) + "\n",
-                       true);
+        printers::warn("Nonpositive Jacobian\n", true);
+        std::string message = to_string(elements[i_elem].jacobian_determinant(i_qpoint)) + "\n";
+        for (int i_row = 0; i_row < params.row_size; ++i_row) {
+          for (int j_row = 0; j_row < params.row_size; ++j_row) {
+            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+              message += to_string(elements[i_elem].position(basis)(i_dim)[i_row*params.row_size + j_row]) + ",";
+            }
+            message += "  ";
+          }
+          message += "\n";
+        }
+        HEXED_THROW(message)
       }
     }
   }

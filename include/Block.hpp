@@ -469,7 +469,7 @@ class Element_shape : public Block {
 
   private:
   Element_shape(int nd, const Basis&);
-  Mat<3> _vertex_point(const std::vector<int>&, Int recursion_depth = 0) const;
+  Mat<3> _vertex_point(const std::vector<double>&, Int recursion_depth = 0) const;
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   void _glue_edges(std::vector<Element_shape*> those);
   const Basis* _basis;
