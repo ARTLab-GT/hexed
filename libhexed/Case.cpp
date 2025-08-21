@@ -227,6 +227,22 @@ void Case::_visualize(std::string suffix) {
   }
 }
 
+Transport_model Case::_transport_model(std::string name) {
+  auto sub = _inter.make_sub();
+  Struct_expr model(_vars(name + "_model"));
+  model.eval(sub);
+  if (model.names.empty()) {
+    return inviscid;
+  } else if (sub.variables->exists("offset")) {
+    return Transport_model::sutherland(sub.variables->get<double>("ref_value"),
+                                       sub.variables->get<double>("ref_temperature"),
+                                       sub.variables->get<double>("offset"));
+  } else if (sub.variables->exists("const_value")) {
+    return Transport_model::constant(sub.variables->get<double>("const_value"));
+  } else HEXED_THROW(format_str(200, "invalid transport model specification `{%s}` for %s",
+                                model, name.c_str()), assert::User_error) throw;
+}
+
 Case::Case(std::string input_script)
 : _start_time{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())}
 {
@@ -267,11 +283,13 @@ Case::Case(std::string input_script)
     int n_var = n_dim + 2 + 2*(_vars("turbulence_model") == "k-omega");
     _inter.variables->assign("n_var", n_var);
     Mat<> freestream(n_var);
-    if (_inter.variables->lookup<double>("freestream0")) freestream = _get_vector("freestream", n_dim + 2);
-    else {
+    if (_inter.variables->lookup<double>("freestream0")) {
+      freestream = _get_vector("freestream", n_dim + 2);
+    } else {
       if (_inter.variables->lookup<double>("altitude")) {
-        HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_temperature"), "cannot specify both altitude and temperature (consider `temperature_offset`)",
-                      assert::User_error);
+        HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_temperature"),
+                     "cannot specify both altitude and temperature (consider `temperature_offset`)",
+                     assert::User_error)
         auto dens_pres = standard_atmosphere(_vard("altitude"), _vard("temperature_offset"));
         _inter.variables->assign<double>("freestream_density", dens_pres[0]);
         _inter.variables->assign<double>("freestream_pressure", dens_pres[1]);
@@ -279,7 +297,8 @@ Case::Case(std::string input_script)
       HEXED_ASSERT(  _inter.variables->lookup<double>("freestream_density").has_value()
                    + _inter.variables->lookup<double>("freestream_pressure").has_value()
                    + _inter.variables->lookup<double>("freestream_temperature").has_value() == 2,
-                   "exactly two of freestream density, pressure, and temperature must be specified", assert::User_error);
+                   "exactly two of freestream density, pressure, and temperature must be specified",
+                   assert::User_error)
       if (_inter.variables->lookup<double>("freestream_density")) {
         freestream(n_dim) = _vard("freestream_density");
         if (_inter.variables->lookup<double>("freestream_pressure")) {
@@ -304,11 +323,16 @@ Case::Case(std::string input_script)
         veloc = _get_vector("freestream_velocity", n_dim);
         direction = veloc.normalized();
       } else {
-        _inter.variables->assign<double>("freestream_sound_speed", std::sqrt(heat_rat*constants::specific_gas_air*_vard("freestream_temperature")));
-        if (_inter.variables->lookup<double>("freestream_speed")) _inter.variables->assign<double>("freestream_mach", _vard("freestream_speed")/_vard("freestream_sound_speed"));
-        else _inter.variables->assign<double>("freestream_speed", _vard("freestream_mach")*_vard("freestream_sound_speed"));
-        if (_inter.variables->lookup<double>("freestream_direction0")) direction = _get_vector("freestream_direction", n_dim).normalized();
-        else {
+        double fss = std::sqrt(heat_rat*constants::specific_gas_air*_vard("freestream_temperature"));
+        _inter.variables->assign<double>("freestream_sound_speed", fss);
+        if (_inter.variables->lookup<double>("freestream_speed")) {
+          _inter.variables->assign<double>("freestream_mach", _vard("freestream_speed")/_vard("freestream_sound_speed"));
+        } else {
+          _inter.variables->assign<double>("freestream_speed", _vard("freestream_mach")*_vard("freestream_sound_speed"));
+        }
+        if (_inter.variables->lookup<double>("freestream_direction0")) {
+          direction = _get_vector("freestream_direction", n_dim).normalized();
+        } else {
           direction.setUnit(n_dim, 0);
           if (n_dim == 2) {
             direction = Eigen::Rotation2D<double>(_vard("attack"))*direction;
@@ -331,6 +355,10 @@ Case::Case(std::string input_script)
       _set_vector("freestream_direction", full_direction);
       double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*_vard("freestream_density")*veloc.squaredNorm();
       _inter.variables->assign("freestream_energy", ener);
+      double dyn_visc = _transport_model("viscosity").coefficient(std::sqrt(_vard("freestream_temperature")));
+      _inter.variables->assign("freestream_dynamic_viscosity", dyn_visc);
+      double therm_cond = _transport_model("conductivity").coefficient(std::sqrt(_vard("freestream_temperature")));
+      _inter.variables->assign("freestream_thermal_conductivity", therm_cond);
       freestream(Eigen::seqN(0, n_dim)) = _vard("freestream_density")*veloc;
       freestream(n_dim) = _vard("freestream_density");
       freestream(n_dim + 1) = ener;
@@ -354,20 +382,7 @@ Case::Case(std::string input_script)
     // construct molecular transport models
     std::vector<std::string> transport_phenomena {"viscosity", "conductivity"};
     std::vector<Transport_model> transport_models;
-    for (std::string name : transport_phenomena) {
-      auto sub = _inter.make_sub();
-      Struct_expr model(_vars(name + "_model"));
-      model.eval(sub);
-      if (model.names.empty()) transport_models.emplace_back(inviscid);
-      else if (sub.variables->exists("offset")) {
-        transport_models.emplace_back(Transport_model::sutherland(sub.variables->get<double>("ref_value"),
-                                                                  sub.variables->get<double>("ref_temperature"),
-                                                                  sub.variables->get<double>("offset")));
-      } else if (sub.variables->exists("const_value")) {
-        transport_models.emplace_back(Transport_model::constant(sub.variables->get<double>("const_value")));
-      } else HEXED_THROW(format_str(200, "invalid transport model specification `{%s}` for %s",
-                                    model, name.c_str()), assert::User_error);
-    }
+    for (std::string name : transport_phenomena) transport_models.push_back(_transport_model(name));
     Turbulence_model turb_model;
     std::string turb = _vars("turbulence_model");
     if      (turb == "") turb_model = laminar;
@@ -513,7 +528,6 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
-    //bool allow_ref = _inter.sub_eval<int>(_vars("allow_refinement_if"));
     bool allow_ref = _vari("iteration") >= _vari("next_refine_iter");
     printers::info("adapting mesh (");
     if (allow_ref) {

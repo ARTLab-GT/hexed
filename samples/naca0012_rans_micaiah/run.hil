@@ -14,7 +14,6 @@ mesh_extreme01 =  160.
 mesh_extreme11 =  160.
 
 amr = true
-max_wall_spacing = 2e-5
 local_roughness = true
 
 viscosity_model = air_viscosity
@@ -52,7 +51,7 @@ done = {iteration > 10^3 & last_adapt_iter > monitor_window*iteration & last_ada
 iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out_alpha10}
+working_dir = {hexed_out}
 
 vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
