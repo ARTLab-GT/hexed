@@ -50,7 +50,7 @@ double Tree::nominal_size() const {return nominal_shape().maxCoeff();}
 
 Mat<> Tree::nominal_shape() const {
   Mat<> nom_shape(n_dim);
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) nom_shape(i_dim) = _root_sz/math::pow(2, _ref_level[i_dim]);
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) nom_shape(i_dim) = _root_sz/math::pow(2., _ref_level[i_dim]);
   return nom_shape;
 }
 

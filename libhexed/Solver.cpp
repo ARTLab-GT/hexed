@@ -349,9 +349,9 @@ void Solver::calc_jacobian() {
     elements[i_elem].set_jacobian(basis);
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
       //HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
-      if (!(elements[i_elem].jacobian_determinant(i_qpoint) > 0.)) {
-        printers::warn("Nonpositive Jacobian\n", true);
-        std::string message = to_string(elements[i_elem].jacobian_determinant(i_qpoint)) + "\n";
+      double det = elements[i_elem].jacobian_determinant(i_qpoint);
+      if (!(det > 0. && std::isfinite(det))) {
+        std::string message = "Nonpositive Jacobian (" + to_string(det) + "). Node positions:\n";
         for (int i_row = 0; i_row < params.row_size; ++i_row) {
           for (int j_row = 0; j_row < params.row_size; ++j_row) {
             for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -363,6 +363,12 @@ void Solver::calc_jacobian() {
         }
         HEXED_THROW(message)
       }
+    }
+  }
+  for (Neighbor_connection& con : acc_mesh->neighbor_connections(1)) {
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      HEXED_ASSERT(std::isfinite((con.face(i_side).normal()).norm()), "non-finite normal")
+      HEXED_ASSERT(std::isfinite(con.face(i_side).nominal_area()), "non-finite area")
     }
   }
   // do some extra work to make sure each face knows its normal vectors
@@ -402,7 +408,7 @@ void Solver::calc_jacobian() {
     perm->match_faces();
     Array<double> nrml0 = con.face(0).normal()*(con.face(0).nominal_area()*math::sign(!dir.flip_normal(0)));
     Array<double> nrml1 = temp_storage(0, params.n_dim)*(con.face(1).nominal_area()*math::sign(!dir.flip_normal(1)));
-    if ((nrml0 - nrml1).norm() > 1e-3) {
+    if (!((nrml0 - nrml1).norm() < 1e-3)) {
       printers::warn("Warning: ", true);
       printers::warn("normal mismatch: " + to_string(dir) + "\n" + to_string(nrml0) + to_string(nrml1));
     }

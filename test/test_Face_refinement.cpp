@@ -38,7 +38,7 @@ TEST_CASE("Face_refinement") {
 
   SECTION("elements") {
     hexed::Storage_params params {2, 5, 3, 2};
-    hexed::Tree tree(2, 1.);
+    hexed::Tree tree(3, 1.);
     std::vector<std::unique_ptr<hexed::Element>> elems;
     std::vector<hexed::Face_refinement> face_refs;
     std::vector<hexed::Neighbor_connection> neighb_cons;

@@ -15,7 +15,6 @@ mesh_extreme11 =  160.
 
 amr = true
 max_wall_spacing = 2e-5
-max_wall_spacing = 1e-8
 local_roughness = true
 
 viscosity_model = air_viscosity
