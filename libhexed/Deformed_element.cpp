@@ -16,7 +16,6 @@ void Deformed_element::set_jacobian(const Basis& basis) {
   next::Element_shape& act_shape = active_shape();
   Array<double> jac({n_dim, n_dim, n_qpoint});
   auto diff_mat = act_shape.basis().diff_mat();
-  HEXED_ASSERT(act_shape.basis().row_size == params.row_size, "foo");
   Array<double> shape_pos = act_shape.points();
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     for (int j_dim = 0; j_dim < n_dim; ++j_dim) {

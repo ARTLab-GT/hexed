@@ -19,6 +19,7 @@ Element::Element(Storage_params params_arg, Tree& t, bool mobile_vertices, int a
 , _desired_refinement(params.n_dim, 0)
 , tree(this)
 , residual{0.}
+, flux_uncert{0.}
 {
   tree.pair(t.elem);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {

@@ -365,12 +365,6 @@ void Solver::calc_jacobian() {
       }
     }
   }
-  for (Neighbor_connection& con : acc_mesh->neighbor_connections(1)) {
-    for (int i_side = 0; i_side < 2; ++i_side) {
-      HEXED_ASSERT(std::isfinite((con.face(i_side).normal()).norm()), "non-finite normal")
-      HEXED_ASSERT(std::isfinite(con.face(i_side).nominal_area()), "non-finite area")
-    }
-  }
   // do some extra work to make sure each face knows its normal vectors
   auto face_refs = acc_mesh->face_refinements();
   #pragma omp parallel for
@@ -1089,6 +1083,7 @@ void Solver::compute_spectral_uncertainty() {
     auto& elem = elems[i_elem];
     Array<double> state = elem.flow_state();
     elem.spectral_uncert() = 0;
+    elem.flux_uncert = 0;
     for (int i_var = 0; i_var < nv; ++i_var) {
       for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
         Mat<> proj = math::dimension_matvec(orth, state(i_var).vector(), i_dim);
@@ -1125,8 +1120,7 @@ void Solver::compute_spectral_uncertainty() {
               uncert += flux_diff(i_dim).vector().dot(flux_diff(i_dim).vector().cwiseProduct(face_weights));
               total += flux(i_dim).vector().dot(flux(i_dim).vector().cwiseProduct(face_weights));
             }
-            double& elem_uncert = con.face(i_side).element()->spectral_uncert()[dir.i_dim[0]];
-            elem_uncert = std::max(elem_uncert, std::sqrt(uncert/total));
+            con.face(i_side).element()->flux_uncert = std::sqrt(uncert/total);
           }
         }
       }

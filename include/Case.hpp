@@ -27,7 +27,8 @@ class Case {
   bool _has_geom = false;
   std::unique_ptr<std::ofstream> _output_file; // anything printed to cout will also be printed here
   std::time_t _start_time;
-  std::unique_ptr<Struct_expr> _monitor_expr;
+  std::vector<std::string> _monitor_vars;
+  std::vector<std::string> _print_vars;
   std::vector<History_monitor> _monitors;
   std::unique_ptr<History_monitor> _n_elem_monitor;
   std::string _assignment(std::string var_name);

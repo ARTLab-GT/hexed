@@ -388,15 +388,6 @@ Case::Case(std::string input_script)
     if      (turb == "") turb_model = laminar;
     else if (turb == "k-omega") turb_model = k_omega;
     else HEXED_THROW("unrecognized turbulence model `{" + turb + "}`", assert::User_error);
-    // create history monitors
-    std::string monitor_vars = _vars("monitor_vars");
-    _monitor_expr.reset(new Struct_expr(monitor_vars));
-    for (std::string name : _monitor_expr->names) {
-      _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"), _vari("monitor_min_samples"));
-      _inter.variables->assign_default(name + "_min", -huge);
-      _inter.variables->assign_default(name + "_max",  huge);
-    }
-    _n_elem_monitor.reset(new History_monitor(_vard("monitor_window")*.8, _vari("monitor_samples"), 2));
     // setup actual solver
     bool steady = _vari("steady");
     bool implicit = _vari("implicit");
@@ -501,9 +492,6 @@ Case::Case(std::string input_script)
       printers::info("\n");
     }
     printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.\n", true);
-    _n_elem_monitor->add_sample(_vari("iteration"), _solver().mesh().n_elements());
-    _inter.variables->assign<double>("n_elements_min", -huge);
-    _inter.variables->assign<double>("n_elements_max",  huge);
     _solver().print_preti_iters();
     return "";
   }));
@@ -536,7 +524,6 @@ Case::Case(std::string input_script)
       printers::info("only coarsening allowed");
     }
     printers::info(")...");
-    Int orig_elems = _solver().mesh().n_elements();
     _solver().compute_spectral_uncertainty();
     std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
     std::vector<std::function<bool(Element&, int)>> crits;
@@ -553,12 +540,9 @@ Case::Case(std::string input_script)
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().calc_jacobian();
     _solver().compute_residual();
-    _n_elem_monitor->add_sample(_vari("iteration"), _solver().mesh().n_elements());
-    _inter.variables->assign<double>("n_elements_min", _n_elem_monitor->min());
-    _inter.variables->assign<double>("n_elements_max", _n_elem_monitor->max());
     if (allow_ref) {
-      Int new_elems = _solver().mesh().n_elements();
-      int next = _vari("iteration")*std::max(1., math::pow(new_elems*1./orig_elems, 2));
+      Int n_elem = _solver().mesh().n_elements();
+      int next = _vari("iteration")*std::max(1., math::pow((n_elem + result.n_coarsen)*1./n_elem, 2));
       _inter.variables->assign("next_refine_iter", next);
     }
     _inter.variables->assign("last_adapt_iter", _vari("iteration"));
@@ -584,6 +568,7 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
     _solver().initialize(_vars("init_cond"));
+    // implicit setup
     bool implicit = !_vari("steady") && _vari("implicit");
     if (implicit) {
       HEXED_ASSERT(_inter.variables->lookup<double>("time_step"),
@@ -592,8 +577,24 @@ Case::Case(std::string input_script)
       HEXED_ASSERT(_vard("time_step") >= 0, "`time_step` must be nonnegative.", assert::User_error)
       _inter.variables->assign("flow_time", _vard("flow_time") + _vard("time_step"));
       _inter.variables->assign("hexed_next_flow_time", _vard("flow_time") + _vard("time_step"));
-      for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
-        _inter.variables->assign(_monitor_expr->names[i_monitor] + "_prev", 0.);
+    }
+    return "";
+  }));
+
+  _inter.variables->create("init_monitors", new Namespace::Heisenberg<std::string>([this]() {
+    auto sub = _inter.make_sub();
+    sub.subspace();
+    sub.exec(_vars("monitor_vars"));
+    _monitor_vars = sub.variables->names();
+    for (std::string name : _monitor_vars) {
+      _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"), _vari("monitor_min_samples"));
+      _inter.variables->assign_default(name + "_min", -huge);
+      _inter.variables->assign_default(name + "_max",  huge);
+    }
+    bool implicit = !_vari("steady") && _vari("implicit");
+    if (implicit) {
+      for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
+        _inter.variables->assign(_monitor_vars[i_monitor] + "_prev", 0.);
       }
     }
     return "";
@@ -614,9 +615,9 @@ Case::Case(std::string input_script)
     Task_message(printers::info, "reading status");
     auto sub = _inter.make_sub();
     sub.exec("$read {" + _vars("input_data") + ".status.hil}");
-    for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
-      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_expr->names[i_monitor] + "_min"));
-      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_expr->names[i_monitor] + "_max"));
+    for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
+      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_vars[i_monitor] + "_min"));
+      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_vars[i_monitor] + "_max"));
     }
     return "";
   }));
@@ -639,7 +640,8 @@ Case::Case(std::string input_script)
     std::ofstream status_file(_vars("working_dir") + _iteration_suffix() + ".status.hil");
     std::vector<std::string> no_write {"working_dir", "input_data"};
     for (std::string name : _inter.variables->names()) {
-      if (name.substr(0, 6) != "hexed_" && std::none_of(no_write.begin(), no_write.end(), [name](std::string nw){return name == nw;})) {
+      if (name.substr(0, 6) != "hexed_" &&
+          std::none_of(no_write.begin(), no_write.end(), [name](std::string nw){return name == nw;})) {
         status_file << _assignment(name) + "\n";
       }
     }
@@ -663,8 +665,15 @@ Case::Case(std::string input_script)
 
   _inter.variables->create<std::string>("header", new Namespace::Heisenberg<std::string>([this]() {
     std::string header = "";
-    Struct_expr vars(_vars("print_vars"));
-    for (std::string name : vars.names) {
+    auto sub = _inter.make_sub();
+    sub.subspace();
+    std::string print_expr = _vars("print_vars");
+    sub.exec(print_expr);
+    _print_vars = sub.variables->names();
+    std::sort(_print_vars.begin(), _print_vars.end(), [print_expr](std::string s0, std::string s1) {
+      return print_expr.find(s0) < print_expr.find(s1);
+    });
+    for (std::string name : _print_vars) {
       int width = std::max<int>(15, name.size());
       header += format_str(1000, "%*s, ", width, name.c_str());
     }
@@ -696,23 +705,19 @@ Case::Case(std::string input_script)
 
   _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
     std::string report = "";
-    Struct_expr vars(_vars("print_vars"));
     auto sub = _inter.make_sub();
-    for (unsigned i_var = 0; i_var < vars.names.size(); ++i_var) {
-      int width = std::max<int>(15, vars.names[i_var].size());
-      sub.exec(vars.names[i_var] + " = " + vars.exprs[i_var]);
+    sub.exec(_vars("print_vars"));
+    for (std::string name : _print_vars) {
+      int width = std::max<int>(15, name.size());
       std::optional<int> vali;
       std::optional<double> vald;
       std::optional<std::string> vals;
-      if ((vali = sub.variables->lookup<int>(vars.names[i_var]))) {
+      if ((vali = sub.variables->lookup<int>(name))) {
         report += format_str(1000, "%*i, ", width, vali.value());
-        _inter.variables->assign(vars.names[i_var], vali.value());
-      } else if ((vald = sub.variables->lookup<double>(vars.names[i_var]))) {
+      } else if ((vald = sub.variables->lookup<double>(name))) {
         report += format_str(1000, "%*.8e, ", width, vald.value());
-        _inter.variables->assign(vars.names[i_var], vald.value());
-      } else if ((vals = sub.variables->lookup<std::string>(vars.names[i_var]))) {
+      } else if ((vals = sub.variables->lookup<std::string>(name))) {
         report += format_str(1000, "%*s, ", width, vals.value());
-        _inter.variables->assign(vars.names[i_var], vals.value());
       }
     }
     report.erase(report.end() - 2, report.end());
@@ -745,14 +750,19 @@ Case::Case(std::string input_script)
     }
     _inter.variables->assign(be ? "pseudotime_iteration" : "iteration", iter);
     auto sub = _inter.make_sub();
-    auto vals = _monitor_expr->eval(sub);
-    for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
-      double val = vals[i_monitor];
-      if (be) val -= _vard(_monitor_expr->names[i_monitor] + "_prev");
+    sub.exec(_vars("monitor_vars"));
+    bool monitor_converged = _monitor_vars.size();
+    for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
+      double val = sub.variables->get<double>(_monitor_vars[i_monitor]);
+      if (be) val -= _vard(_monitor_vars[i_monitor] + "_prev");
       _monitors[i_monitor].add_sample(iter, val);
-      _inter.variables->assign(_monitor_expr->names[i_monitor] + (be ? "_diff" : "") + "_min", _monitors[i_monitor].min());
-      _inter.variables->assign(_monitor_expr->names[i_monitor] + (be ? "_diff" : "") + "_max", _monitors[i_monitor].max());
+      double min = _monitors[i_monitor].min();
+      double max = _monitors[i_monitor].max();
+      _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_min", min);
+      _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_max", max);
+      monitor_converged = monitor_converged && max - min < _vard("monitor_tol")*.5*(std::abs(max) + std::abs(min));
     }
+    _inter.variables->assign<int>("monitor_converged", monitor_converged);
     return "";
   }));
 
@@ -765,10 +775,10 @@ Case::Case(std::string input_script)
       _inter.variables->assign("flow_time", _vard("hexed_next_flow_time"));
       _inter.variables->assign("hexed_next_flow_time", _vard("hexed_next_flow_time") + _vard("time_step"));
       auto sub = _inter.make_sub();
-      auto vals = _monitor_expr->eval(sub);
-      for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
+      sub.exec(_vars("monitor_vars"));
+      for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
         _monitors[i_monitor].clear();
-        _inter.variables->assign(_monitor_expr->names[i_monitor] + "_prev", vals[i_monitor]);
+        _inter.variables->assign(_monitor_vars[i_monitor] + "_prev", _vard(_monitor_vars[i_monitor]));
       }
     }
     return "";

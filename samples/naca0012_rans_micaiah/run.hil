@@ -44,14 +44,7 @@ fix_therm_admis = true
 
 {iteration parameters}
 print_freq = 1000
-vis_freq = 10000
-adapt_freq = 10000
-update_roughness_freq = 10000
-done = {iteration > 10^3 & last_adapt_iter > monitor_window*iteration & last_adapt_iter < iteration - adapt_freq/2 & drag_coef_max - drag_coef_min < 1e-2*abs(drag_coef_min + drag_coef_max)/2}
-iterate = compute_force + iterate
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
-print_vars = print_vars + force_coef_expr
-working_dir = {hexed_out}
 
 vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
