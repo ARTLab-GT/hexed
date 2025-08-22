@@ -542,13 +542,12 @@ Case::Case(std::string input_script)
     _solver().compute_residual();
     if (allow_ref) {
       Int n_elem = _solver().mesh().n_elements();
-      int next = _vari("iteration")*std::max(1., math::pow((n_elem + result.n_coarsen)*1./n_elem, 2));
+      int next = _vari("iteration")*std::max(1., (n_elem + result.n_coarsen)*1./n_elem);
       _inter.variables->assign("next_refine_iter", next);
+      _inter.variables->assign("last_adapt_iter", _vari("iteration"));
     }
-    _inter.variables->assign("last_adapt_iter", _vari("iteration"));
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
     _solver().print_preti_iters();
-    _visualize("_post_adapt_" + _iteration_suffix());
     return "";
   }));
 

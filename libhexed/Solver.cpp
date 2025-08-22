@@ -1030,7 +1030,7 @@ void Solver::compute_residual() {
     _preti_masks[level]->repeat = !level;
   }
   for (int level = min_level; level < (int)_preti_masks.size(); ++level) {
-    int desired = 100*_preti_masks[level]->max_residual/cumulative_max;
+    int desired = 10*_preti_masks[level]->max_residual/cumulative_max;
     _preti_masks[level]->desired_iters = desired;
     for (int add_at = level; add_at >= min_level && _effective_preti_iters(level) < desired; --add_at) {
       _preti_masks[add_at]->repeat = true;

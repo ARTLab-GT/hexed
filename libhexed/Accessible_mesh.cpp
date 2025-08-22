@@ -2344,15 +2344,19 @@ Mesh::Adaptation_result Accessible_mesh::adapt(std::function<bool(Element&, int)
   for (Int i_elem = 0; i_elem < n_orig_elems; ++i_elem) {
     auto& elem = elems[i_elem];
     elem.record = 0;
+    bool any_ref = false;
+    bool any_coarsen = false;
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
       bool ref = refine_criterion(elem, i_dim);
       bool unref = unrefine_criterion(elem, i_dim);
       if (ref && !unref) elem.desired_refinement(i_dim) = 1;
       else if (unref && !ref) elem.desired_refinement(i_dim) = -1;
       else elem.desired_refinement(i_dim) = 0;
-      n_refine += elem.desired_refinement(i_dim) > 0;
-      n_coarsen += elem.desired_refinement(i_dim) < 0;
+      any_ref = any_ref || elem.desired_refinement(i_dim) > 0;
+      any_coarsen = any_coarsen || elem.desired_refinement(i_dim) < 0;
     }
+    n_refine += any_ref;
+    n_coarsen += any_coarsen;
   }
   auto populate_elements = [this, &solver_basis](bool is_def, bool ref_unref, std::vector<bool> is_modified,
                                                  std::vector<Element*> orig_elems, std::vector<Tree*> new_leaves) {
@@ -2808,7 +2812,18 @@ std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::pret
   masks.emplace_back(new Masked_mesh(*this, basis));
   while (masks.back()->kernel_mesh.elems.size()) {
     auto predicate = [this, iso](Element& elem){
-      return iso*elem.tree->anisotropic_refinement_level().extreme(1) + elem.aniso_ref_level() >= _mask_levels;
+      int level;
+      if (iso) {
+        if (elem.tree->is_graft()) {
+          level = (elem.tree->anisotropic_refinement_level()
+                   - elem.tree->root()->anisotropic_refinement_level()).extreme(1);
+        } else {
+          level = 0;
+        }
+      } else {
+        level = elem.aniso_ref_level();
+      }
+      return level >= _mask_levels;
     };
     masks.emplace_back(new Masked_mesh(*this, basis, predicate));
   }
