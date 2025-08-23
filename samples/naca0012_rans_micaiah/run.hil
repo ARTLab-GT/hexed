@@ -45,6 +45,8 @@ fix_therm_admis = true
 {iteration parameters}
 print_freq = 1000
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
+adapt_refine_if = adapt_refine_if + { | (center0 < .05 & has_wall & i_dim == wall_dimension & $({nominal_shape} + i_dim) > 3e-6)}
+adapt_unrefine_if = adapt_unrefine_if + { & !(center0 < .05 & i_dim == wall_dimension)}
 
 vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0

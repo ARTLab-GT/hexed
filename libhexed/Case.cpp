@@ -517,7 +517,7 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
     bool allow_ref = _vari("iteration") >= _vari("next_refine_iter");
-    printers::info("adapting mesh (");
+    printers::info("Adapting mesh (");
     if (allow_ref) {
       printers::info("refinement allowed", true);
     } else {
@@ -540,13 +540,15 @@ Case::Case(std::string input_script)
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().calc_jacobian();
     _solver().compute_residual();
+    std::string message = "";
     if (allow_ref) {
       Int n_elem = _solver().mesh().n_elements();
-      int next = _vari("iteration")*std::max(1., (n_elem + result.n_coarsen)*1./n_elem);
+      int next = _vari("iteration")*std::max(1., math::pow((n_elem + result.n_refine)*1./n_elem, 2));
       _inter.variables->assign("next_refine_iter", next);
       _inter.variables->assign("last_adapt_iter", _vari("iteration"));
+      message = "Refinement allowed again after iteration " + to_string(next) + ".\n";
     }
-    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
+    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n" + message);
     _solver().print_preti_iters();
     return "";
   }));

@@ -2344,19 +2344,23 @@ Mesh::Adaptation_result Accessible_mesh::adapt(std::function<bool(Element&, int)
   for (Int i_elem = 0; i_elem < n_orig_elems; ++i_elem) {
     auto& elem = elems[i_elem];
     elem.record = 0;
-    bool any_ref = false;
-    bool any_coarsen = false;
+    int n_ref = 1;
+    int n_coarsen = 1;
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
       bool ref = refine_criterion(elem, i_dim);
       bool unref = unrefine_criterion(elem, i_dim);
-      if (ref && !unref) elem.desired_refinement(i_dim) = 1;
-      else if (unref && !ref) elem.desired_refinement(i_dim) = -1;
-      else elem.desired_refinement(i_dim) = 0;
-      any_ref = any_ref || elem.desired_refinement(i_dim) > 0;
-      any_coarsen = any_coarsen || elem.desired_refinement(i_dim) < 0;
+      if (ref && !unref) {
+        elem.desired_refinement(i_dim) = 1;
+        n_ref *= 2;
+      } else if (unref && !ref) {
+        elem.desired_refinement(i_dim) = -1;
+        n_coarsen *= 2;
+      } else {
+        elem.desired_refinement(i_dim) = 0;
+      }
     }
-    n_refine += any_ref;
-    n_coarsen += any_coarsen;
+    n_refine += n_ref - 1;
+    n_coarsen += n_coarsen - 1;
   }
   auto populate_elements = [this, &solver_basis](bool is_def, bool ref_unref, std::vector<bool> is_modified,
                                                  std::vector<Element*> orig_elems, std::vector<Tree*> new_leaves) {
