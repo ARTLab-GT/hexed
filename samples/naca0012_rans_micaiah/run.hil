@@ -61,7 +61,6 @@ vis_surface_vars = vis_surface_vars + {
     wall_dimension = wall_dimension
     nominal_spacing = $({nominal_shape} + wall_dimension)
 }
-monitor_tol = 1e-3
 
 $plot_history
 $simulate
