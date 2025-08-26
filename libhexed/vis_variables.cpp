@@ -34,7 +34,6 @@ void element(Namespace& space, Element& elem) {
     space.assign(index("aniso_ref_level", i_dim),
                  i_dim < params.n_dim ? elem.tree.value().anisotropic_refinement_level()[i_dim] : 0);
     space.assign(index("nominal_shape", i_dim), i_dim < params.n_dim ? elem.nominal_shape(i_dim) : 0.);
-    double spectral = 0;
     space.assign(index("spectral_uncertainty", i_dim), i_dim < params.n_dim ? elem.spectral_uncert()[i_dim] : 0);
     space.assign("flux_uncertainty", elem.flux_uncert);
   }
@@ -146,7 +145,8 @@ void surface(Namespace& space, Boundary_connection& con) {
   space.assign("roughness_height", con.prescribed_data()(params.n_dim).copy());
   Element* elem = con.inside().element();
   HEXED_ASSERT(elem, "Boundary face has no element.")
-  space.assign("wall_spacing", elem->wall_distance());
+  element(space, *elem);
+  space.assign("wall_spacing", space.get<double>("wall_distance"));
 }
 
 }

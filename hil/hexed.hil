@@ -198,11 +198,11 @@ max_ref_level = 1000
 geom_rtol = 1e-5
 geom_atol = 0.
 spectral_tol = 1e-3
-flux_tol = 1e-6
+flux_tol = 1e-7
 monitor_tol = 1e-2
 max_wall_spacing = huge
 max_wall_reynolds = 1e3
-min_cell_reynolds = .1
+min_cell_reynolds = 1e-2
 viscosity_model = {}
 conductivity_model = {}
 turbulence_model = {}
@@ -239,6 +239,8 @@ geom_refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level <
 geom_unrefine_if = {false}
 final_refine_if = {(has_wall & i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance > max_wall_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed))))}
 final_unrefine_if = {false}
+adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol | (has_wall & i_dim == wall_dimension & $({spectral_uncertainty} + i_dim) > flux_tol)) & $({nominal_shape} + i_dim) > min_cell_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
+adapt_unrefine_if = {(($({spectral_uncertainty} + i_dim) < spectral_tol*.5^(row_size - 1) & !(has_wall & i_dim == wall_dimension & $({spectral_uncertainty} + i_dim) > flux_tol*.5^(row_size - 1))) & $({aniso_ref_level} + i_dim) > init_ref_level)}
 adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol | (has_wall & i_dim == wall_dimension & $({spectral_uncertainty} + i_dim) > flux_tol)) & $({nominal_shape} + i_dim) > min_cell_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
 adapt_unrefine_if = {(($({spectral_uncertainty} + i_dim) < spectral_tol*.5^(row_size - 1) & !(has_wall & i_dim == wall_dimension & $({spectral_uncertainty} + i_dim) > flux_tol*.5^(row_size - 1))) & $({aniso_ref_level} + i_dim) > init_ref_level)}
 adapt_if = {(iteration%adapt_freq == 0)}

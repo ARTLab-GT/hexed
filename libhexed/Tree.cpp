@@ -314,7 +314,7 @@ Array<int> Tree::needs_refine(std::function<bool(Tree*)> include) {
     for (Tree* n : neighbors) if (include(n)) {
       Array<int> rl_diff = result.trans.transform(n->_ref_level) - _ref_level;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        needs[i_dim] = needs[i_dim] || ((i_dim != i_face/2) && (rl_diff[i_dim] > 1));
+        needs[i_dim] = needs[i_dim] || (rl_diff[i_dim] > 1 + (i_dim == i_face/2));
       }
     }
   }
