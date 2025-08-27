@@ -208,7 +208,7 @@ void Case::_visualize(std::string suffix) {
           } else if (!edges) { // vis_type == contour0, contour1, etc
             std::string contour_expr = _vars("vis_contour_vars") + v + "_var = " + _vars(v) + ";";
             auto tol = _inter.variables->lookup<double>(name + "_tol");
-            double const_tol = tol ? *tol : 1e-10;
+            double const_tol = (tol ? *tol : 1e-10)*_vard("general_tolerance");
             _solver().visualize_contour(format, file_name, _vars(v), _vars("vis_contour_vars"), const_tol, n_sample);
           }
           if (format == "xdmf") {
@@ -761,7 +761,8 @@ Case::Case(std::string input_script)
       double max = _monitors[i_monitor].max();
       _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_min", min);
       _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_max", max);
-      monitor_converged = monitor_converged && max - min < _vard("monitor_tol")*.5*(std::abs(max) + std::abs(min));
+      double tol = _vard("monitor_tol")*_vard("general_tolerance")*.5*(std::abs(max) + std::abs(min));
+      monitor_converged = monitor_converged && max - min < tol;
     }
     _inter.variables->assign<int>("monitor_converged", monitor_converged);
     return "";

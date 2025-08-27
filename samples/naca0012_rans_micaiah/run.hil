@@ -15,6 +15,8 @@ mesh_extreme11 =  160.
 
 amr = true
 local_roughness = true
+ref_level = 1
+general_tolerance = 2.^-ref_level
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -37,6 +39,7 @@ freestream_specific_turbulent_kinetic_energy = 1e-3*(freestream_mach*340.)^2/(ta
 freestream_specific_turbulent_dissipation = 10*freestream_mach*340./domain_length
 println({turbulent viscosity: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation + { Pa s})
 println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation/dyn_visc)
+working_dir = {hexed_out_tol} + ref_level
 
 surface_bc = {no_slip}
 diffusive_admissibility = false
@@ -54,6 +57,7 @@ vis_field_vars = vis_field_vars + {
     spectral_uncertainty2 = spectral_uncertainty2
     rms_residual = rms_residual
     mask = mask
+    aspect_ratio = (nominal_shape0 + nominal_shape1)^2/(nominal_shape0*nominal_shape1)
 }
 vis_surface_vars = vis_surface_vars + {
     roughness_height = roughness_height

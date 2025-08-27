@@ -195,11 +195,14 @@ implicit_scheme = {backward Euler}
 preti = false
 amr = false
 max_ref_level = 1000
+general_tolerance = 1.
+size_tolerance = {(general_tolerance^(1./(row_size - 1)))}
 geom_rtol = 1e-7
 geom_atol = 0.
 spectral_tol = 1e-3
 flux_tol = 1e-5
 monitor_tol = 1e-2
+max_aspect_ratio = 1e3
 max_wall_spacing = huge
 max_wall_reynolds = 1e3
 min_cell_reynolds = 1e-2
@@ -235,14 +238,12 @@ max_roughness_plus = 4.
 local_roughness = false
 init_refine_if = {(ref_level < init_ref_level)}
 init_unrefine_if = {false}
-geom_refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level < max_ref_level & nom_sz > min_elem_size)}
+geom_refine_if = {(uncertainty > (geom_rtol*geom_length + geom_atol)*general_tolerance & ref_level < max_ref_level*$size_tolerance & nom_sz > min_elem_size*$size_tolerance)}
 geom_unrefine_if = {false}
 final_refine_if = {(has_wall & i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance > max_wall_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed))))}
 final_unrefine_if = {false}
-adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol | ((wall_distance < 1e-4) & i_dim == wall_dimension & $({spectral_uncertainty} + i_dim) > wall_spectral_tol)) & $({nominal_shape} + i_dim) > min_cell_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
-adapt_unrefine_if = {(($({spectral_uncertainty} + i_dim) < spectral_tol*.5^(row_size - 1) & !((wall_distance < 1e-4) & i_dim == wall_dimension & $({spectral_uncertainty} + i_dim) > wall_spectral_tol*.5^(row_size - 1))) & $({aniso_ref_level} + i_dim) > init_ref_level)}
-adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*max_flux)) & $({nominal_shape} + i_dim) > min_cell_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
-adapt_unrefine_if = {(($({spectral_uncertainty} + i_dim) < spectral_tol*.5^(row_size - 1) & !(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*max_flux*.5^(row_size - 1))) & $({aniso_ref_level} + i_dim) > init_ref_level)}
+adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*max_flux) | $({nominal_shape} + i_dim) > max_aspect_ratio*((i_dim != 0)*nominal_shape0 + (i_dim != 1)*nominal_shape1 + (i_dim != 2)*nominal_shape2)) & $({nominal_shape} + i_dim) > min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
+adapt_unrefine_if = {(($({spectral_uncertainty} + i_dim) < spectral_tol*$size_tolerance*.5^(row_size - 1) & !(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*$size_tolerance*max_flux*.5^(row_size - 1))) & $({aniso_ref_level} + i_dim) > init_ref_level)}
 adapt_if = {(iteration%adapt_freq == 0)}
 monitor_criterion = {(iteration > min_prints*print_freq & (!amr | (last_adapt_iter > (1. - monitor_window)*iteration & last_adapt_iter < iteration - adapt_freq/2)) & monitor_converged)}
 done = {($monitor_criterion | iteration > max_iterations | flow_time > max_flow_time | wall_time > max_wall_time)}
