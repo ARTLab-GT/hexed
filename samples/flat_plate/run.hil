@@ -7,7 +7,7 @@ amr = true
 geom0 = {geom.csv}
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
-max_wall_spacing = 1e-4
+min_elem_size = .01
 
 {freestream definition. Note that not all of the variables below are parameters considered by the solver. Some are simply user-defined variables.}
 freestream_temperature = zero_celsius
@@ -17,14 +17,9 @@ freestream_direction1 = 0.6
 target_thickness = .01
 target_reynolds = (5/target_thickness)^2
 freestream_density = target_reynolds*1.8e-5/freestream_speed
+monitor_vars = {drag_coef = drag_coef;}
 
-$set_subsonic_bl_multirate
-print_freq = 10
-adapt_freq = 100
-vis_freq = 100
-done = {normalized_residual < 1e-4}
-vis_field_vars = vis_field_vars + {discontinuity0 = discontinuity0; discontinuity1 = discontinuity1; discontinuity2 = discontinuity2;}
-
+print_freq = 1000
 $simulate
 $print_force
 vis_csv = true
