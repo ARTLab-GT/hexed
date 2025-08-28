@@ -558,12 +558,6 @@ Case::Case(std::string input_script)
       message = "Refinement allowed again after iteration " + to_string(next) + ".\n";
     }
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n" + message);
-    if (_vari("iteration") > 1 && !_vari("elementwise_art_visc") && _vard("art_visc_width") > 0.) {
-      for (int iter = 0; iter < _vari("post_adapt_art_visc_iters"); ++iter) {
-        printers::info("av_iter");
-        _solver().update_art_visc_smoothness(_vard("art_visc_width"));
-      }
-    }
     _solver().print_preti_iters();
     return "";
   }));
