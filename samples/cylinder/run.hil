@@ -7,7 +7,7 @@ mesh_extreme01 =  0.*.02
 mesh_extreme10 =  0.*.02
 mesh_extreme11 =  4.*.02
 extremal_bc10 = {nonpenetration}
-extremal_bc01 = {outflow}
+extremal_bc01 = {pressure_outflow}
 geom0 = {auto.csv}
 amr = true;
 {
@@ -34,22 +34,11 @@ done = {iteration > 10^4 & heating_rate_max - heating_rate_min < 10.}
 freestream_mach = 3.
 altitude = 0.
 $set_shock
-max_safety = .1
-art_visc_width = .0002
-done = {false}
-diffusive_admissibility = true
-vis_lts_constraints = true
-vis_field_vars = vis_field_vars + field_residual_expr + {discontinuity0 = discontinuity0; discontinuity1 = discontinuity1; discontinuity2 = discontinuity2;}
-working_dir = {hexed_out_inviscid}
-{
-iterate = iterate + {
-    case0 = {}
-    case1 = {
-        art_visc_width = art_visc_width/2
-    }
-    $$({case} + (art_visc_width > 2e-4 & normalized_residual < 1e-5))
-}
-}
+$set_ramping
+art_visc_width = .002
+diffusive_admissibility = false
+vis_field_vars = vis_field_vars + field_residual_expr + {spectral_uncertainty0 = spectral_uncertainty0; spectral_uncertainty1 = spectral_uncertainty1; spectral_uncertainty2 = spectral_uncertainty2;}
+vis_freq = write_freq = adapt_freq = 1000
 
 {
 $plot_history
