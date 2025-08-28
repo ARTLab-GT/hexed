@@ -227,6 +227,7 @@ write_freq = 10^4
 iter_width = 10
 print_freq = 100
 adapt_freq = 10^4
+post_adapt_art_visc_iters = 100
 update_roughness_freq = 10^4
 min_prints = 10
 max_iterations = huge
