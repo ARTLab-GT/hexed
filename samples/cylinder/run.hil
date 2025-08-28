@@ -35,7 +35,8 @@ freestream_mach = 3.
 altitude = 0.
 $set_shock
 $set_ramping
-art_visc_width = .002
+art_visc_width = .0011
+ramping_final_safety = .1
 diffusive_admissibility = false
 vis_field_vars = vis_field_vars + field_residual_expr + {spectral_uncertainty0 = spectral_uncertainty0; spectral_uncertainty1 = spectral_uncertainty1; spectral_uncertainty2 = spectral_uncertainty2;}
 vis_freq = write_freq = adapt_freq = 1000

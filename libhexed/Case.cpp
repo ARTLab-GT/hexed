@@ -525,19 +525,28 @@ Case::Case(std::string input_script)
     }
     printers::info(")...");
     _solver().compute_spectral_uncertainty();
+    std::vector<std::string> sweep_names {"adapt", "shock"};
     std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
     std::vector<std::function<bool(Element&, int)>> crits;
-    for (std::string crit : crit_names) {
-      crits.emplace_back([this, crit](Element& elem, int i_dim) {
-        auto sub = _inter.make_sub();
-        vis_variables::element(*sub.variables, elem);
-        sub.variables->assign("i_dim", i_dim);
-        sub.exec("return = $adapt" + crit);
-        return sub.variables->get<int>("return");
-      });
+    for (std::string sweep : sweep_names) {
+      for (std::string crit : crit_names) {
+        crits.emplace_back([this, sweep, crit](Element& elem, int i_dim) {
+          auto sub = _inter.make_sub();
+          vis_variables::element(*sub.variables, elem);
+          sub.variables->assign("i_dim", i_dim);
+          sub.exec("return = $" + sweep + crit);
+          return sub.variables->get<int>("return");
+        });
+      }
     }
     auto result = _solver().mesh().adapt(crits[0], crits[1], allow_ref);
     _inter.variables->assign<int>("adapt_changed", result.changed);
+    for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
+      printers::info(" [shock sweep " + to_string(sweep) + ":");
+      auto shock_result = _solver().mesh().adapt(crits[2], crits[3], true);
+      printers::info(" " + to_string(_solver().mesh().n_elements()) + " elements]");
+      if (shock_result.n_refine == 0) break;
+    }
     _solver().calc_jacobian();
     _solver().compute_residual();
     std::string message = "";

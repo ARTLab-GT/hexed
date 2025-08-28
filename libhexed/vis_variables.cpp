@@ -37,6 +37,7 @@ void element(Namespace& space, Element& elem) {
     space.assign(index("spectral_uncertainty", i_dim), i_dim < params.n_dim ? elem.spectral_uncert()[i_dim] : 0);
     space.assign("flux_uncertainty", elem.flux_uncert);
   }
+  space.assign("max_bulk_art_visc", Array<double>({params.n_qpoint()}, elem.bulk_av_coef()).extreme(1));
 }
 
 void position(Namespace& space, Element& elem, const Basis& basis) {
