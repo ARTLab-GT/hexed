@@ -50,7 +50,7 @@ double Tree::nominal_size() const {return nominal_shape().maxCoeff();}
 
 Mat<> Tree::nominal_shape() const {
   Mat<> nom_shape(n_dim);
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) nom_shape(i_dim) = _root_sz/math::pow(2, _ref_level[i_dim]);
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) nom_shape(i_dim) = _root_sz/math::pow(2., _ref_level[i_dim]);
   return nom_shape;
 }
 
@@ -314,7 +314,7 @@ Array<int> Tree::needs_refine(std::function<bool(Tree*)> include) {
     for (Tree* n : neighbors) if (include(n)) {
       Array<int> rl_diff = result.trans.transform(n->_ref_level) - _ref_level;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        needs[i_dim] = needs[i_dim] || (rl_diff[i_dim] > 1);
+        needs[i_dim] = needs[i_dim] || (rl_diff[i_dim] > 1 + (i_dim == i_face/2));
       }
     }
   }

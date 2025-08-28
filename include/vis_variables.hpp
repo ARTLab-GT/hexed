@@ -32,6 +32,16 @@ namespace hexed::vis_variables {
  *   Trailing dimensions set to 0.
  * - `rms_residual`: RMS (within the element, in reference space) of the residual of all flow variables in the element.
  *   Residuals of all variables are summed.
+ * - `spectral_uncertainty0`, `spectral_uncertainty1`, `spectral_uncertainty2`:
+ *   An anisotropic measure of the spectral convergence of the flow variables in this element.
+ *   For each variable and each dimension,
+ *   the magnitude of the highest-order polynomial mode in each dimension normalized by the difference between
+ *   the maximum and the minimum of that variable over the entire domain is computed.
+ *   The spectral uncertainty is then set to the maximum of this metric for all mean flow variables
+ *   (but not turbulence variables).
+ * - `flux_uncertainty`: For wall elements, the norm of the jump in the momentum flux between this element and
+ *   the next farthest element from the wall normalized by the norm of the momentum flux on that same face.
+ *   For non-wall elements, 0.
  *   \todo Residual contributions from each variable need to be normalized.
  *   Right now it might as well be the energy residual.
  *

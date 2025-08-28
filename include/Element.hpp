@@ -62,8 +62,9 @@ class Element : public Kernel_element, public Mortal {
   //! \brief once any faces of this element have been snapped to the surface, set this to `false`
   bool needs_snapping = true;
   const Mat<> origin; //!< \brief origin which integer coordinates are relative to
-  Lock lock; //!< \brief for any tasks where multiple threads might access an element simultaneously
   double residual;
+  double flux_uncert;
+  Lock lock; //!< \brief for any tasks where multiple threads might access an element simultaneously
 
   Element(Storage_params, Tree& tree, int aniso_ref_level = 0);
   //! \details Can't copy an Element. Doing so would have to either duplicate or break vertex connections,

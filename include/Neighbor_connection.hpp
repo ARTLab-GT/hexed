@@ -19,6 +19,7 @@ class Neighbor_connection : public Mortal {
   Connection_direction get_direction() const;
   inline bool is_deformed() const {return _is_def;}
   Hard_kernel_connection kernel_connection();
+  bool has_elements();
 
   private:
   std::array<Reciprocal_ptr<Neighbor_connection, Face>, 2> _faces;

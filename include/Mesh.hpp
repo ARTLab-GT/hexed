@@ -163,8 +163,13 @@ class Mesh {
    */
   virtual bool update(std::function<bool(Element&)> refine_criterion = criteria::always,
                       std::function<bool(Element&)> unrefine_criterion = criteria::never) = 0;
-  virtual bool adapt(std::function<bool(Element&, int)> refine_criterion,
-                     std::function<bool(Element&, int)> unrefine_criterion) = 0;
+  struct Adaptation_result {
+    Int n_refine;
+    Int n_coarsen;
+    bool changed;
+  };
+  virtual Adaptation_result adapt(std::function<bool(Element&, int)> refine_criterion,
+                                  std::function<bool(Element&, int)> unrefine_criterion, bool allow_refine) = 0;
   virtual int surface_bc_sn() = 0; //!< what is the serial number of the geometry surface BC?
   //! \}
 

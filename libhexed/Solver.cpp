@@ -348,7 +348,21 @@ void Solver::calc_jacobian() {
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
+      //HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
+      double det = elements[i_elem].jacobian_determinant(i_qpoint);
+      if (!(det > 0. && std::isfinite(det))) {
+        std::string message = "Nonpositive Jacobian (" + to_string(det) + "). Node positions:\n";
+        for (int i_row = 0; i_row < params.row_size; ++i_row) {
+          for (int j_row = 0; j_row < params.row_size; ++j_row) {
+            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+              message += to_string(elements[i_elem].position(basis)(i_dim)[i_row*params.row_size + j_row]) + ",";
+            }
+            message += "  ";
+          }
+          message += "\n";
+        }
+        HEXED_THROW(message)
+      }
     }
   }
   // do some extra work to make sure each face knows its normal vectors
@@ -388,7 +402,7 @@ void Solver::calc_jacobian() {
     perm->match_faces();
     Array<double> nrml0 = con.face(0).normal()*(con.face(0).nominal_area()*math::sign(!dir.flip_normal(0)));
     Array<double> nrml1 = temp_storage(0, params.n_dim)*(con.face(1).nominal_area()*math::sign(!dir.flip_normal(1)));
-    if ((nrml0 - nrml1).norm() > 1e-3) {
+    if (!((nrml0 - nrml1).norm() < 1e-3)) {
       printers::warn("Warning: ", true);
       printers::warn("normal mismatch: " + to_string(dir) + "\n" + to_string(nrml0) + to_string(nrml1));
     }
@@ -1016,7 +1030,7 @@ void Solver::compute_residual() {
     _preti_masks[level]->repeat = !level;
   }
   for (int level = min_level; level < (int)_preti_masks.size(); ++level) {
-    int desired = 100*_preti_masks[level]->max_residual/cumulative_max;
+    int desired = 10*_preti_masks[level]->max_residual/cumulative_max;
     _preti_masks[level]->desired_iters = desired;
     for (int add_at = level; add_at >= min_level && _effective_preti_iters(level) < desired; --add_at) {
       _preti_masks[add_at]->repeat = true;
@@ -1050,35 +1064,98 @@ void Solver::print_preti_iters() {
 
 
 void Solver::compute_spectral_uncertainty() {
-  Array<double> state_min = Array<double>::make_uniform({params.n_var}, huge);
-  Array<double> state_max = Array<double>::make_uniform({params.n_var}, -huge);
+  int nv = params.n_dim + 2;
+  Array<double> state_min = Array<double>::make_uniform({nv}, huge);
+  Array<double> state_max = Array<double>::make_uniform({nv}, -huge);
   auto& elems = acc_mesh->elements();
   #pragma omp parallel for reduction(min:state_min) reduction(max:state_max)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     Array<double> state = elems[i_elem].flow_state();
-    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+    for (int i_var = 0; i_var < nv; ++i_var) {
       state_min[i_var] = std::min(state_min[i_var], state(i_var).extreme(0));
       state_max[i_var] = std::max(state_min[i_var], state(i_var).extreme(1));
     }
   }
   Mat<dyn, dyn> orth = basis.orthogonal(params.row_size - 1).transpose()*basis.node_weights().asDiagonal();
   Mat<> weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
-  double total = 0;
-  #pragma omp parallel for reduction(+:total)
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+  #pragma omp parallel
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     Array<double> state = elem.flow_state();
     elem.spectral_uncert() = 0;
-    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+    elem.flux_uncert = 0;
+    for (int i_var = 0; i_var < nv; ++i_var) {
       for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
         Mat<> proj = math::dimension_matvec(orth, state(i_var).vector(), i_dim);
         double normalize = state_max[i_var] - state_min[i_var];
-        elem.spectral_uncert()[i_dim] += std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize;
+        double& elem_uncert = elem.spectral_uncert()[i_dim];
+        elem_uncert = std::max(elem_uncert, std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize);
       }
     }
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) total += elem.spectral_uncert()[i_dim];
   }
-  _namespace->assign("total_spectral_uncertainty", total);
+  double max_flux = 1;
+  if (visc.is_viscous) {
+    max_flux = 0;
+    auto bc_fun = [this, &max_flux]() {
+      apply_flux_bcs();
+      Mat<> face_weights = math::pow_outer(basis.node_weights(), params.n_dim - 2);
+      #pragma omp parallel for reduction(max:max_flux)
+      for (auto& con : acc_mesh->neighbor_connections(true)) {
+        auto dir = con.get_direction();
+        if (!con.has_elements() || dir.i_dim[0] != dir.i_dim[1]) continue;
+        #if 0
+        bool has_wall [2] {};
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
+            auto& face = con.face(i_side).element()->face(i_face);
+            if (!face.neighbor_connection()) continue;
+            auto bc = face.neighbor_connection()->opposite_face(face).boundary_connection();
+            if (bc) has_wall[i_side] = has_wall[i_side] || bc->boundary_condition() == 2*params.n_dim;
+          }
+        }
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          if (has_wall[i_side] && !has_wall[!i_side]) {
+            Array<double> flux = con.face(i_side).flow_state()(1);
+            Array<double> flux_diff = flux - con.face(!i_side).flow_state()(1);
+            double uncert = 0;
+            double total = 0;
+            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+              uncert += flux_diff(i_dim).vector().dot(flux_diff(i_dim).vector().cwiseProduct(face_weights));
+              total += flux(i_dim).vector().dot(flux(i_dim).vector().cwiseProduct(face_weights));
+            }
+            con.face(i_side).element()->flux_uncert = std::sqrt(uncert/total);
+          }
+        }
+        #endif
+        if (!con.face(0).element()->is_extruded() || !con.face(1).element()->is_extruded()) continue;
+        if (dir.i_dim[0] != con.face(0).element()->wall_dimension()) continue;
+        Array<double> flux_diff = con.face(0).flow_state()(1) - con.face(1).flow_state()(1);
+        Array<double> flux_avg  = con.face(0).flow_state()(1) + con.face(1).flow_state()(1);
+        double uncert = 0;
+        double total = 0;
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          uncert += flux_diff(i_dim).vector().dot(flux_diff(i_dim).vector().cwiseProduct(face_weights));
+          total += flux_avg(i_dim).vector().dot(flux_avg(i_dim).vector().cwiseProduct(face_weights));
+        }
+        double area = con.face(0).nominal_area();
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          con.face(i_side).element()->flux_uncert += std::sqrt(uncert)/area;
+        }
+        max_flux = std::max(max_flux, std::sqrt(total)/area);
+      }
+    };
+    Kernel_options opts {
+      .sw_car = stopwatch["cartesian"],
+      .sw_def = stopwatch["deformed"],
+      .sw_pr = stopwatch["prolong/restrict"],
+      .dt = 1.,
+      .i_stage = 0,
+      .compute_residual = true,
+      .use_filter = bool(_namespace->get<int>("use_filter")),
+    };
+    compute_navier_stokes(_kernel_mesh(), opts, bc_fun, visc, therm_cond, false);
+  }
+  _namespace->assign("max_flux", max_flux);
 }
 
 void Solver::update_bound_conds() {

@@ -208,7 +208,7 @@ void Case::_visualize(std::string suffix) {
           } else if (!edges) { // vis_type == contour0, contour1, etc
             std::string contour_expr = _vars("vis_contour_vars") + v + "_var = " + _vars(v) + ";";
             auto tol = _inter.variables->lookup<double>(name + "_tol");
-            double const_tol = tol ? *tol : 1e-10;
+            double const_tol = (tol ? *tol : 1e-10)*_vard("general_tolerance");
             _solver().visualize_contour(format, file_name, _vars(v), _vars("vis_contour_vars"), const_tol, n_sample);
           }
           if (format == "xdmf") {
@@ -225,6 +225,22 @@ void Case::_visualize(std::string suffix) {
       }
     }
   }
+}
+
+Transport_model Case::_transport_model(std::string name) {
+  auto sub = _inter.make_sub();
+  Struct_expr model(_vars(name + "_model"));
+  model.eval(sub);
+  if (model.names.empty()) {
+    return inviscid;
+  } else if (sub.variables->exists("offset")) {
+    return Transport_model::sutherland(sub.variables->get<double>("ref_value"),
+                                       sub.variables->get<double>("ref_temperature"),
+                                       sub.variables->get<double>("offset"));
+  } else if (sub.variables->exists("const_value")) {
+    return Transport_model::constant(sub.variables->get<double>("const_value"));
+  } else HEXED_THROW(format_str(200, "invalid transport model specification `{%s}` for %s",
+                                model, name.c_str()), assert::User_error) throw;
 }
 
 Case::Case(std::string input_script)
@@ -267,11 +283,13 @@ Case::Case(std::string input_script)
     int n_var = n_dim + 2 + 2*(_vars("turbulence_model") == "k-omega");
     _inter.variables->assign("n_var", n_var);
     Mat<> freestream(n_var);
-    if (_inter.variables->lookup<double>("freestream0")) freestream = _get_vector("freestream", n_dim + 2);
-    else {
+    if (_inter.variables->lookup<double>("freestream0")) {
+      freestream = _get_vector("freestream", n_dim + 2);
+    } else {
       if (_inter.variables->lookup<double>("altitude")) {
-        HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_temperature"), "cannot specify both altitude and temperature (consider `temperature_offset`)",
-                      assert::User_error);
+        HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_temperature"),
+                     "cannot specify both altitude and temperature (consider `temperature_offset`)",
+                     assert::User_error)
         auto dens_pres = standard_atmosphere(_vard("altitude"), _vard("temperature_offset"));
         _inter.variables->assign<double>("freestream_density", dens_pres[0]);
         _inter.variables->assign<double>("freestream_pressure", dens_pres[1]);
@@ -279,7 +297,8 @@ Case::Case(std::string input_script)
       HEXED_ASSERT(  _inter.variables->lookup<double>("freestream_density").has_value()
                    + _inter.variables->lookup<double>("freestream_pressure").has_value()
                    + _inter.variables->lookup<double>("freestream_temperature").has_value() == 2,
-                   "exactly two of freestream density, pressure, and temperature must be specified", assert::User_error);
+                   "exactly two of freestream density, pressure, and temperature must be specified",
+                   assert::User_error)
       if (_inter.variables->lookup<double>("freestream_density")) {
         freestream(n_dim) = _vard("freestream_density");
         if (_inter.variables->lookup<double>("freestream_pressure")) {
@@ -304,11 +323,16 @@ Case::Case(std::string input_script)
         veloc = _get_vector("freestream_velocity", n_dim);
         direction = veloc.normalized();
       } else {
-        _inter.variables->assign<double>("freestream_sound_speed", std::sqrt(heat_rat*constants::specific_gas_air*_vard("freestream_temperature")));
-        if (_inter.variables->lookup<double>("freestream_speed")) _inter.variables->assign<double>("freestream_mach", _vard("freestream_speed")/_vard("freestream_sound_speed"));
-        else _inter.variables->assign<double>("freestream_speed", _vard("freestream_mach")*_vard("freestream_sound_speed"));
-        if (_inter.variables->lookup<double>("freestream_direction0")) direction = _get_vector("freestream_direction", n_dim).normalized();
-        else {
+        double fss = std::sqrt(heat_rat*constants::specific_gas_air*_vard("freestream_temperature"));
+        _inter.variables->assign<double>("freestream_sound_speed", fss);
+        if (_inter.variables->lookup<double>("freestream_speed")) {
+          _inter.variables->assign<double>("freestream_mach", _vard("freestream_speed")/_vard("freestream_sound_speed"));
+        } else {
+          _inter.variables->assign<double>("freestream_speed", _vard("freestream_mach")*_vard("freestream_sound_speed"));
+        }
+        if (_inter.variables->lookup<double>("freestream_direction0")) {
+          direction = _get_vector("freestream_direction", n_dim).normalized();
+        } else {
           direction.setUnit(n_dim, 0);
           if (n_dim == 2) {
             direction = Eigen::Rotation2D<double>(_vard("attack"))*direction;
@@ -331,6 +355,10 @@ Case::Case(std::string input_script)
       _set_vector("freestream_direction", full_direction);
       double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*_vard("freestream_density")*veloc.squaredNorm();
       _inter.variables->assign("freestream_energy", ener);
+      double dyn_visc = _transport_model("viscosity").coefficient(std::sqrt(_vard("freestream_temperature")));
+      _inter.variables->assign("freestream_dynamic_viscosity", dyn_visc);
+      double therm_cond = _transport_model("conductivity").coefficient(std::sqrt(_vard("freestream_temperature")));
+      _inter.variables->assign("freestream_thermal_conductivity", therm_cond);
       freestream(Eigen::seqN(0, n_dim)) = _vard("freestream_density")*veloc;
       freestream(n_dim) = _vard("freestream_density");
       freestream(n_dim + 1) = ener;
@@ -354,33 +382,12 @@ Case::Case(std::string input_script)
     // construct molecular transport models
     std::vector<std::string> transport_phenomena {"viscosity", "conductivity"};
     std::vector<Transport_model> transport_models;
-    for (std::string name : transport_phenomena) {
-      auto sub = _inter.make_sub();
-      Struct_expr model(_vars(name + "_model"));
-      model.eval(sub);
-      if (model.names.empty()) transport_models.emplace_back(inviscid);
-      else if (sub.variables->exists("offset")) {
-        transport_models.emplace_back(Transport_model::sutherland(sub.variables->get<double>("ref_value"),
-                                                                  sub.variables->get<double>("ref_temperature"),
-                                                                  sub.variables->get<double>("offset")));
-      } else if (sub.variables->exists("const_value")) {
-        transport_models.emplace_back(Transport_model::constant(sub.variables->get<double>("const_value")));
-      } else HEXED_THROW(format_str(200, "invalid transport model specification `{%s}` for %s",
-                                    model, name.c_str()), assert::User_error);
-    }
+    for (std::string name : transport_phenomena) transport_models.push_back(_transport_model(name));
     Turbulence_model turb_model;
     std::string turb = _vars("turbulence_model");
     if      (turb == "") turb_model = laminar;
     else if (turb == "k-omega") turb_model = k_omega;
     else HEXED_THROW("unrecognized turbulence model `{" + turb + "}`", assert::User_error);
-    // create history monitors
-    std::string monitor_vars = "total_spectral_uncertainty = total_spectral_uncertainty;" + _vars("monitor_vars");
-    _monitor_expr.reset(new Struct_expr(monitor_vars));
-    for (std::string name : _monitor_expr->names) {
-      _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"), _vari("monitor_min_samples"));
-      _inter.variables->assign_default(name + "_min", -huge);
-      _inter.variables->assign_default(name + "_max",  huge);
-    }
     // setup actual solver
     bool steady = _vari("steady");
     bool implicit = _vari("implicit");
@@ -469,7 +476,7 @@ Case::Case(std::string input_script)
           return sub.variables->get<int>("return");
         });
       }
-      changed = _solver().mesh().adapt(crits[0], crits[1]);
+      changed = _solver().mesh().adapt(crits[0], crits[1], true).changed;
       _solver().calc_jacobian();
       printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ");
       _inter.variables->assign("flow_time", double(i_ref));
@@ -509,8 +516,8 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
-    bool allow_ref = _inter.sub_eval<int>(_vars("allow_refinement_if"));
-    printers::info("adapting mesh (");
+    bool allow_ref = _vari("iteration") >= _vari("next_refine_iter");
+    printers::info("Adapting mesh (");
     if (allow_ref) {
       printers::info("refinement allowed", true);
     } else {
@@ -529,13 +536,20 @@ Case::Case(std::string input_script)
         return sub.variables->get<int>("return");
       });
     }
-    if (!allow_ref) crits[0] = [](Element&, int){return false;};
-    _solver().mesh().adapt(crits[0], crits[1]);
+    auto result = _solver().mesh().adapt(crits[0], crits[1], allow_ref);
+    _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().calc_jacobian();
     _solver().compute_residual();
-    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
+    std::string message = "";
+    if (allow_ref) {
+      Int n_elem = _solver().mesh().n_elements();
+      int next = _vari("iteration")*std::max(1., math::pow((n_elem + result.n_refine)*1./n_elem, 2));
+      _inter.variables->assign("next_refine_iter", next);
+      _inter.variables->assign("last_adapt_iter", _vari("iteration"));
+      message = "Refinement allowed again after iteration " + to_string(next) + ".\n";
+    }
+    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n" + message);
     _solver().print_preti_iters();
-    _visualize("_post_adapt_" + _iteration_suffix());
     return "";
   }));
 
@@ -555,6 +569,7 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
     _solver().initialize(_vars("init_cond"));
+    // implicit setup
     bool implicit = !_vari("steady") && _vari("implicit");
     if (implicit) {
       HEXED_ASSERT(_inter.variables->lookup<double>("time_step"),
@@ -563,8 +578,24 @@ Case::Case(std::string input_script)
       HEXED_ASSERT(_vard("time_step") >= 0, "`time_step` must be nonnegative.", assert::User_error)
       _inter.variables->assign("flow_time", _vard("flow_time") + _vard("time_step"));
       _inter.variables->assign("hexed_next_flow_time", _vard("flow_time") + _vard("time_step"));
-      for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
-        _inter.variables->assign(_monitor_expr->names[i_monitor] + "_prev", 0.);
+    }
+    return "";
+  }));
+
+  _inter.variables->create("init_monitors", new Namespace::Heisenberg<std::string>([this]() {
+    auto sub = _inter.make_sub();
+    sub.subspace();
+    sub.exec(_vars("monitor_vars"));
+    _monitor_vars = sub.variables->names();
+    for (std::string name : _monitor_vars) {
+      _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"), _vari("monitor_min_samples"));
+      _inter.variables->assign_default(name + "_min", -huge);
+      _inter.variables->assign_default(name + "_max",  huge);
+    }
+    bool implicit = !_vari("steady") && _vari("implicit");
+    if (implicit) {
+      for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
+        _inter.variables->assign(_monitor_vars[i_monitor] + "_prev", 0.);
       }
     }
     return "";
@@ -585,9 +616,9 @@ Case::Case(std::string input_script)
     Task_message(printers::info, "reading status");
     auto sub = _inter.make_sub();
     sub.exec("$read {" + _vars("input_data") + ".status.hil}");
-    for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
-      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_expr->names[i_monitor] + "_min"));
-      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_expr->names[i_monitor] + "_max"));
+    for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
+      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_vars[i_monitor] + "_min"));
+      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_vars[i_monitor] + "_max"));
     }
     return "";
   }));
@@ -610,7 +641,8 @@ Case::Case(std::string input_script)
     std::ofstream status_file(_vars("working_dir") + _iteration_suffix() + ".status.hil");
     std::vector<std::string> no_write {"working_dir", "input_data"};
     for (std::string name : _inter.variables->names()) {
-      if (name.substr(0, 6) != "hexed_" && std::none_of(no_write.begin(), no_write.end(), [name](std::string nw){return name == nw;})) {
+      if (name.substr(0, 6) != "hexed_" &&
+          std::none_of(no_write.begin(), no_write.end(), [name](std::string nw){return name == nw;})) {
         status_file << _assignment(name) + "\n";
       }
     }
@@ -634,8 +666,15 @@ Case::Case(std::string input_script)
 
   _inter.variables->create<std::string>("header", new Namespace::Heisenberg<std::string>([this]() {
     std::string header = "";
-    Struct_expr vars(_vars("print_vars"));
-    for (std::string name : vars.names) {
+    auto sub = _inter.make_sub();
+    sub.subspace();
+    std::string print_expr = _vars("print_vars");
+    sub.exec(print_expr);
+    _print_vars = sub.variables->names();
+    std::sort(_print_vars.begin(), _print_vars.end(), [print_expr](std::string s0, std::string s1) {
+      return print_expr.find(s0) < print_expr.find(s1);
+    });
+    for (std::string name : _print_vars) {
       int width = std::max<int>(15, name.size());
       header += format_str(1000, "%*s, ", width, name.c_str());
     }
@@ -667,23 +706,19 @@ Case::Case(std::string input_script)
 
   _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
     std::string report = "";
-    Struct_expr vars(_vars("print_vars"));
     auto sub = _inter.make_sub();
-    for (unsigned i_var = 0; i_var < vars.names.size(); ++i_var) {
-      int width = std::max<int>(15, vars.names[i_var].size());
-      sub.exec(vars.names[i_var] + " = " + vars.exprs[i_var]);
+    sub.exec(_vars("print_vars"));
+    for (std::string name : _print_vars) {
+      int width = std::max<int>(15, name.size());
       std::optional<int> vali;
       std::optional<double> vald;
       std::optional<std::string> vals;
-      if ((vali = sub.variables->lookup<int>(vars.names[i_var]))) {
+      if ((vali = sub.variables->lookup<int>(name))) {
         report += format_str(1000, "%*i, ", width, vali.value());
-        _inter.variables->assign(vars.names[i_var], vali.value());
-      } else if ((vald = sub.variables->lookup<double>(vars.names[i_var]))) {
+      } else if ((vald = sub.variables->lookup<double>(name))) {
         report += format_str(1000, "%*.8e, ", width, vald.value());
-        _inter.variables->assign(vars.names[i_var], vald.value());
-      } else if ((vals = sub.variables->lookup<std::string>(vars.names[i_var]))) {
+      } else if ((vals = sub.variables->lookup<std::string>(name))) {
         report += format_str(1000, "%*s, ", width, vals.value());
-        _inter.variables->assign(vars.names[i_var], vals.value());
       }
     }
     report.erase(report.end() - 2, report.end());
@@ -716,14 +751,20 @@ Case::Case(std::string input_script)
     }
     _inter.variables->assign(be ? "pseudotime_iteration" : "iteration", iter);
     auto sub = _inter.make_sub();
-    auto vals = _monitor_expr->eval(sub);
-    for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
-      double val = vals[i_monitor];
-      if (be) val -= _vard(_monitor_expr->names[i_monitor] + "_prev");
+    sub.exec(_vars("monitor_vars"));
+    bool monitor_converged = _monitor_vars.size();
+    for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
+      double val = sub.variables->get<double>(_monitor_vars[i_monitor]);
+      if (be) val -= _vard(_monitor_vars[i_monitor] + "_prev");
       _monitors[i_monitor].add_sample(iter, val);
-      _inter.variables->assign(_monitor_expr->names[i_monitor] + (be ? "_diff" : "") + "_min", _monitors[i_monitor].min());
-      _inter.variables->assign(_monitor_expr->names[i_monitor] + (be ? "_diff" : "") + "_max", _monitors[i_monitor].max());
+      double min = _monitors[i_monitor].min();
+      double max = _monitors[i_monitor].max();
+      _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_min", min);
+      _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_max", max);
+      double tol = _vard("monitor_tol")*_vard("general_tolerance")*.5*(std::abs(max) + std::abs(min));
+      monitor_converged = monitor_converged && max - min < tol;
     }
+    _inter.variables->assign<int>("monitor_converged", monitor_converged);
     return "";
   }));
 
@@ -736,10 +777,10 @@ Case::Case(std::string input_script)
       _inter.variables->assign("flow_time", _vard("hexed_next_flow_time"));
       _inter.variables->assign("hexed_next_flow_time", _vard("hexed_next_flow_time") + _vard("time_step"));
       auto sub = _inter.make_sub();
-      auto vals = _monitor_expr->eval(sub);
-      for (unsigned i_monitor = 0; i_monitor < _monitor_expr->names.size(); ++i_monitor) {
+      sub.exec(_vars("monitor_vars"));
+      for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
         _monitors[i_monitor].clear();
-        _inter.variables->assign(_monitor_expr->names[i_monitor] + "_prev", vals[i_monitor]);
+        _inter.variables->assign(_monitor_vars[i_monitor] + "_prev", _vard(_monitor_vars[i_monitor]));
       }
     }
     return "";

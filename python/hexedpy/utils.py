@@ -114,6 +114,37 @@ def sort_curve(data, coords, start_at=0, closed=True):
         new_inds.append(new_inds[0])
     return data.reindex(index=new_inds)
 
+def read_history(output_directory):
+    r"""! \brief Reads the convergence history from `output.txt` and returns it as a
+    [pandas.DataFrame](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html).
+    \param output_directory The \ref working_dir of the simulation you want to read the history of
+        (e.g. `hexed_out` if you used the default `working_dir`).
+        Can be an absolute or relative path.
+    """
+    fname = f"{output_directory}/output.txt"
+    with open(fname, "r") as output_file:
+        text = output_file.read()
+    lines = text.split("\n")
+    while lines and "Meshing complete" not in lines[0]:
+        lines.pop(0)
+    while lines and "iteration" not in lines[0]:
+        lines.pop(0)
+    assert lines, f"Could not find any convergence history data in `{fname}`."
+    col_names = [name.strip() for name in lines.pop(0).split(",")]
+    col_data = []
+    for line in lines[1:]:
+        if "simulation complete" in line:
+            break
+        if line.startswith(" "):
+            row = []
+            for entry in line.split(","):
+                if all([c.isnumeric() or c.isspace() for c in entry]):
+                    row.append(int(entry))
+                else:
+                    row.append(float(entry))
+        col_data.append(row)
+    return pd.DataFrame(data = col_data, columns = col_names)
+
 class History_plot:
     r"""! \brief creates a real-time, interactive plot of the convergence history
     \details Convergence history is obtained from the `output.txt` file which contains the console output of \ref hexecute.

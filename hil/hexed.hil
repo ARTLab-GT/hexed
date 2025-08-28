@@ -46,7 +46,6 @@ heat_flux_expr = {heat_flux = heat_flux;}
 iteration_expr = {iteration = iteration; time_stage = time_stage; pseudotime_iteration = pseudotime_iteration;}
 art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
 normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
-total_spectral_uncert_expr = {total_spectral_uncertainty = total_spectral_uncertainty;}
 flow_time_expr = {flow_time = flow_time;}
 time_step_expr = {time_step = time_step;}
 fix_iters_expr = {fix_iters = fix_iters;}
@@ -196,11 +195,17 @@ implicit_scheme = {backward Euler}
 preti = false
 amr = false
 max_ref_level = 1000
-geom_rtol = 1e-5
+general_tolerance = 1.
+size_tolerance = {(general_tolerance^(1./(row_size - 1)))}
+geom_rtol = 1e-7
 geom_atol = 0.
-adapt_tol_far = 1e-2
-adapt_tol_near = 1e-4
+spectral_tol = 1e-3
+flux_tol = 1e-5
+monitor_tol = 1e-2
+max_aspect_ratio = 1e3
 max_wall_spacing = huge
+max_wall_reynolds = 1e3
+min_cell_reynolds = 1e-2
 viscosity_model = {}
 conductivity_model = {}
 turbulence_model = {}
@@ -220,8 +225,12 @@ vis_freq = 10^4
 write_freq = 10^4
 iter_width = 10
 print_freq = 100
-adapt_freq = 1000
-update_roughness_freq = 10^3
+adapt_freq = 10^4
+update_roughness_freq = 10^4
+min_prints = 10
+max_iterations = huge
+max_flow_time = huge
+max_wall_time = huge
 surface_roughness = -1.
 max_roughness_absolute = huge
 max_roughness_relative = 1e-3
@@ -229,15 +238,15 @@ max_roughness_plus = 4.
 local_roughness = false
 init_refine_if = {(ref_level < init_ref_level)}
 init_unrefine_if = {false}
-geom_refine_if = {(uncertainty > geom_rtol*geom_length + geom_atol & ref_level < max_ref_level & nom_sz > min_elem_size)}
+geom_refine_if = {(uncertainty > (geom_rtol*geom_length + geom_atol)*general_tolerance & ref_level < max_ref_level*$size_tolerance & nom_sz > min_elem_size*$size_tolerance)}
 geom_unrefine_if = {false}
-final_refine_if = {(has_wall & i_dim == wall_dimension & wall_distance > max_wall_spacing)}
+final_refine_if = {(has_wall & i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance > max_wall_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed))))}
 final_unrefine_if = {false}
-adapt_tol = {(adapt_tol_near + (adapt_tol_far - adapt_tol_near)*!(i_dim == wall_dimension & (has_wall | wall_distance < .01*geom_length)))}
-adapt_refine_if = {($({spectral_uncertainty} + i_dim) > ($adapt_tol))}
-adapt_unrefine_if = {($({spectral_uncertainty} + i_dim) < ($adapt_tol)/2^(row_size - 1) & $({aniso_ref_level} + i_dim) > init_ref_level)}
-allow_refinement_if = {(total_spectral_uncertainty_max - total_spectral_uncertainty_min) < .1*total_spectral_uncertainty_max}
+adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*max_flux) | $({nominal_shape} + i_dim) > max_aspect_ratio*((i_dim != 0)*nominal_shape0 + (i_dim != 1)*nominal_shape1 + (i_dim != 2)*nominal_shape2)) & $({nominal_shape} + i_dim) > min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
+adapt_unrefine_if = {(($({spectral_uncertainty} + i_dim) < spectral_tol*$size_tolerance*.5^(row_size - 1) & !(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*$size_tolerance*max_flux*.5^(row_size - 1))) & $({aniso_ref_level} + i_dim) > init_ref_level)}
 adapt_if = {(iteration%adapt_freq == 0)}
+monitor_criterion = {(iteration > min_prints*print_freq & (!amr | (last_adapt_iter > (1. - monitor_window)*iteration & last_adapt_iter < iteration - adapt_freq/2)) & monitor_converged)}
+done = {($monitor_criterion | iteration > max_iterations | flow_time > max_flow_time | wall_time > max_wall_time)}
 max_init_refine_iters = 100
 max_geom_refine_iters = 100
 max_final_refine_iters = 100
@@ -257,7 +266,7 @@ vis_field_vars = state_vars + art_visc_expr + transport_expr
 vis_contour_vars = vis_field_vars
 vis_surface_vars = state_vars + transport_expr + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr + bl_nondim_expr
 vis_n_sample = 10
-print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr + total_spectral_uncert_expr
+print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr + {$monitor_vars}
 monitor_window = 0.25
 monitor_samples = 1000
 monitor_min_samples = 10
@@ -331,7 +340,6 @@ print_final = {
     println {performance summary:}
     println performance_report
 }
-done = {print_emph = true; print_type = {error}; println {Error: you forgot to set `done`} & throw}
 time_step_done = {print_emph = true; print_type = {error}; println {Error: you forgot to set `time_step_done`} & throw}
 hexed_failed = false
 terminate = {
@@ -394,6 +402,7 @@ iterate = {
     prev_residual = normalized_residual
     update
     compute_residuals
+    $compute_force
     {compute initial residual for normalization}
     case0 = {}
     case1 = {
@@ -465,18 +474,24 @@ start = {
     init_residual_density = 0.
     init_residual_energy = 0.
     normalized_residual = 1.
-    total_spectral_uncertainty = 0.
     prev_residual = 0.
     hexed_next_flow_time = 0.
+    last_adapt_iter = 0
+    next_refine_iter = 10*adapt_freq
+    monitor_converged = false
 }
 
 mesh_init = false
 
 run = {
+    compute_residuals
+    $compute_force
+    init_monitors
     $write_init
     $vis_init
     $print_init
     shell({echo > } + working_dir + {runtime_cmd.hil})
+    adapt_changed = true
     hexed_time_step_done = true
     hexed_done = false
     while = {!hexed_done}

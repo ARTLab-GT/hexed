@@ -2326,8 +2326,9 @@ void Accessible_mesh::purge() {
   }
 }
 
-bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
-                            std::function<bool(Element&, int)> unrefine_criterion) {
+Mesh::Adaptation_result Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
+                                               std::function<bool(Element&, int)> unrefine_criterion,
+                                               bool allow_refine) {
   Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
   Gauss_legendre solver_basis(params.row_size);
   {
@@ -2336,18 +2337,30 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
     for (auto& vert : verts) vert.remember_pos();
   }
   Int n_orig_elems = elems.size();
+  Int n_refine = 0;
+  Int n_coarsen = 0;
   // decide which elements to (un)refine
-  #pragma omp parallel for // parallelize this part since `predicate` could be expensive
+  #pragma omp parallel for reduction(+:n_refine,n_coarsen)
   for (Int i_elem = 0; i_elem < n_orig_elems; ++i_elem) {
     auto& elem = elems[i_elem];
     elem.record = 0;
+    int n_ref = 1;
+    int n_coarsen = 1;
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
       bool ref = refine_criterion(elem, i_dim);
       bool unref = unrefine_criterion(elem, i_dim);
-      if (ref && !unref) elem.desired_refinement(i_dim) = 1;
-      else if (unref && !ref) elem.desired_refinement(i_dim) = -1;
-      else elem.desired_refinement(i_dim) = 0;
+      if (ref && !unref) {
+        elem.desired_refinement(i_dim) = 1;
+        n_ref *= 2;
+      } else if (unref && !ref) {
+        elem.desired_refinement(i_dim) = -1;
+        n_coarsen *= 2;
+      } else {
+        elem.desired_refinement(i_dim) = 0;
+      }
     }
+    n_refine += n_ref - 1;
+    n_coarsen += n_coarsen - 1;
   }
   auto populate_elements = [this, &solver_basis](bool is_def, bool ref_unref, std::vector<bool> is_modified,
                                                  std::vector<Element*> orig_elems, std::vector<Tree*> new_leaves) {
@@ -2425,7 +2438,7 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
           std::vector<bool> ref_dims(params.n_dim);
           bool refine = false;
           for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-            ref_dims[i_dim] = elem.desired_refinement(i_dim) == 1 || need_ref[i_dim];
+            ref_dims[i_dim] = (allow_refine && elem.desired_refinement(i_dim) == 1) || need_ref[i_dim];
             refine = refine || ref_dims[i_dim];
           }
           if (!refine) continue;
@@ -2452,10 +2465,10 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
         std::vector<bool> unref(params.n_dim);
         bool needs_unref = false;
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          auto predicate = [is_deformed, &elem, i_dim](Tree* t)->bool {
+          auto predicate = [is_deformed, i_dim](Tree* t)->bool {
             if (!t->is_leaf() || !exists(t)) return false;
             if (t->elem->get_is_deformed() != is_deformed || t->has_graft_connection()) return false;
-            return elem.desired_refinement(i_dim) == -1 && t->elem->record != 3;
+            return t->elem->desired_refinement(i_dim) == -1 && t->elem->record != 3;
           };
           unref[i_dim] = std::all_of(uc.begin(), uc.end(), predicate);
           unref[i_dim] = unref[i_dim] && parent->is_refined(i_dim) && !need_ref[i_dim];
@@ -2490,7 +2503,7 @@ bool Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
       vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
     }
   }
-  return elems.size() != n_orig_elems;
+  return {n_refine, n_coarsen, elems.size() != n_orig_elems};
 }
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
@@ -2803,7 +2816,18 @@ std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::pret
   masks.emplace_back(new Masked_mesh(*this, basis));
   while (masks.back()->kernel_mesh.elems.size()) {
     auto predicate = [this, iso](Element& elem){
-      return iso*elem.tree->anisotropic_refinement_level().extreme(1) + elem.aniso_ref_level() >= _mask_levels;
+      int level;
+      if (iso) {
+        if (elem.tree->is_graft()) {
+          level = (elem.tree->anisotropic_refinement_level()
+                   - elem.tree->root()->anisotropic_refinement_level()).extreme(1);
+        } else {
+          level = 0;
+        }
+      } else {
+        level = elem.aniso_ref_level();
+      }
+      return level >= _mask_levels;
     };
     masks.emplace_back(new Masked_mesh(*this, basis, predicate));
   }

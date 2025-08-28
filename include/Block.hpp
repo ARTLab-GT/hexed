@@ -421,6 +421,7 @@ class Element_shape : public Block {
   public:
   //! \brief Obtains the edge length of this element before any vertex adjustment.
   inline double nominal_size() const {return _nom_shape.maxCoeff();}
+  inline Mat<3> nominal_shape() const {return _nom_shape;}
   //! \brief What the position of vertex `i_vert` _would_ be supposed to be if this were a Cartesian element.
   Mat<3> nominal_position(int i_vert = 0) const;
   Mat<3> nominal_center() const;
@@ -469,7 +470,7 @@ class Element_shape : public Block {
 
   private:
   Element_shape(int nd, const Basis&);
-  Mat<3> _vertex_point(const std::vector<int>&, Int recursion_depth = 0) const;
+  Mat<3> _vertex_point(const std::vector<double>&, Int recursion_depth = 0) const;
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   void _glue_edges(std::vector<Element_shape*> those);
   const Basis* _basis;
