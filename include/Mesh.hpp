@@ -169,7 +169,8 @@ class Mesh {
     bool changed;
   };
   virtual Adaptation_result adapt(std::function<bool(Element&, int)> refine_criterion,
-                                  std::function<bool(Element&, int)> unrefine_criterion, bool allow_refine) = 0;
+                                  std::function<bool(Element&, int)> unrefine_criterion,
+                                  bool allow_refine, bool set_floor) = 0;
   virtual int surface_bc_sn() = 0; //!< what is the serial number of the geometry surface BC?
   //! \}
 

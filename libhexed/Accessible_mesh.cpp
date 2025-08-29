@@ -2328,7 +2328,7 @@ void Accessible_mesh::purge() {
 
 Mesh::Adaptation_result Accessible_mesh::adapt(std::function<bool(Element&, int)> refine_criterion,
                                                std::function<bool(Element&, int)> unrefine_criterion,
-                                               bool allow_refine) {
+                                               bool allow_refine, bool set_floor) {
   Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
   Gauss_legendre solver_basis(params.row_size);
   {
@@ -2349,6 +2349,8 @@ Mesh::Adaptation_result Accessible_mesh::adapt(std::function<bool(Element&, int)
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
       bool ref = refine_criterion(elem, i_dim);
       bool unref = unrefine_criterion(elem, i_dim);
+      unref = unref && (set_floor || elem.tree->anisotropic_refinement_level()[i_dim]
+                                     > elem.refinement_floor()[i_dim]);
       if (ref && !unref) {
         elem.desired_refinement(i_dim) = 1;
         n_ref *= 2;
@@ -2362,7 +2364,7 @@ Mesh::Adaptation_result Accessible_mesh::adapt(std::function<bool(Element&, int)
     n_refine += n_ref - 1;
     n_coarsen += n_coarsen - 1;
   }
-  auto populate_elements = [this, &solver_basis](bool is_def, bool ref_unref, std::vector<bool> is_modified,
+  auto populate_elements = [this, &solver_basis, set_floor](bool is_def, bool ref_unref, std::vector<bool> is_modified,
                                                  std::vector<Element*> orig_elems, std::vector<Tree*> new_leaves) {
     for (int i_leaf = 0; i_leaf < params.n_vertices(); ++i_leaf) {
       HEXED_ASSERT(new_leaves[i_leaf], "null leaf")
@@ -2389,6 +2391,12 @@ Mesh::Adaptation_result Accessible_mesh::adapt(std::function<bool(Element&, int)
           }
         }
         if (is_def) new_elem->glue_shape(elem, coords);
+      }
+      Array<int> floor = new_elem->refinement_floor();
+      if (set_floor) {
+        floor = elem.refinement_floor().extreme(!ref_unref, new_elem->tree->anisotropic_refinement_level());
+      } else {
+        floor = elem.refinement_floor();
       }
       if (new_elem->record != 3 || elem.record != 2) {
         new_elem->record = 3;

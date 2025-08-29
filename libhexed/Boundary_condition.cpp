@@ -331,11 +331,15 @@ void No_slip::apply_state(Boundary_connection& con) {
   for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
     Mat<> state(params.n_dim + 2); // yes, this should be ignoring turbulence variables
     for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) state(i_var) = inside_state(i_var)[i_qpoint];
-    ghost_state(nd + 1)[i_qpoint] = math::pow(_thermal->ghost_energy(state), 2)/state(last);
+    double kin_ener = .5*state(Eigen::seqN(0, nd)).squaredNorm()/state(nd);
+    double internal_energy = state(last) - kin_ener;
+    double ghost_energy = _thermal->ghost_energy(state);
+    if (ghost_energy > internal_energy) ghost_energy += ghost_energy - internal_energy;
+    else ghost_energy *= ghost_energy/internal_energy;
+    ghost_state(nd + 1)[i_qpoint] = ghost_energy + kin_ener;
   }
   if (_turb == k_omega) {
     ghost_state(nd + 2) = -inside_state(nd + 2); // set turbulent kinetic energy to 0
-    #if 1
     for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
       // set dissipation based on wall roughness
       double mass = inside_state(nd)[i_qpoint];
@@ -349,9 +353,6 @@ void No_slip::apply_state(Boundary_connection& con) {
       double omega_wall = 4e4*dyn_visc/(mass*roughness*roughness);
       ghost_state(nd + 3)[i_qpoint] = 2*std::log(omega_wall)*mass - inside_state(params.n_dim + 3)[i_qpoint];
     }
-    #else
-    ghost_state(nd + 3) = inside_state(nd + 3); // do not constrain turbulent dissipation
-    #endif
   }
   // prime `state_cache` with average state for use in emissivity BC
   state_cache = (ghost_state + inside_state)/2.;

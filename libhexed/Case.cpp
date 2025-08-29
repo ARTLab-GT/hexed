@@ -476,7 +476,7 @@ Case::Case(std::string input_script)
           return sub.variables->get<int>("return");
         });
       }
-      changed = _solver().mesh().adapt(crits[0], crits[1], true).changed;
+      changed = _solver().mesh().adapt(crits[0], crits[1], true, true).changed;
       _solver().calc_jacobian();
       printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ");
       _inter.variables->assign("flow_time", double(i_ref));
@@ -539,11 +539,11 @@ Case::Case(std::string input_script)
         });
       }
     }
-    auto result = _solver().mesh().adapt(crits[0], crits[1], allow_ref);
+    auto result = _solver().mesh().adapt(crits[0], crits[1], allow_ref, true);
     _inter.variables->assign<int>("adapt_changed", result.changed);
     for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
       printers::info(" [shock sweep " + to_string(sweep) + ":");
-      auto shock_result = _solver().mesh().adapt(crits[2], crits[3], true);
+      auto shock_result = _solver().mesh().adapt(crits[2], crits[3], true, false);
       printers::info(" " + to_string(_solver().mesh().n_elements()) + " elements]");
       if (shock_result.n_refine == 0) break;
     }
