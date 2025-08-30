@@ -190,6 +190,7 @@ class Solver {
   //!\}
 
   //! \name time marching
+  void smooth_init_cond(Int n_iter);
   //!\{
   /*! \details March the simulation forward by a time step equal to `time_step` or
    * `max_safety` times the estimated maximum stable time step, whichever is smaller.

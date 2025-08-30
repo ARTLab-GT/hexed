@@ -591,6 +591,22 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  _inter.variables->create("compute_smooth_initial_condition", new Namespace::Heisenberg<std::string>([this]() {
+    Int iters = _vari("initial_smoothing_iters");
+    _solver().smooth_init_cond(iters);
+    #if 0
+    double width = _vard("art_visc_width");
+    if (width > 0 && !_vari("elementwise_art_visc")) {
+      printers::info("Initializing artificial viscosity field...");
+      Int av_iters = std::max<Int>(1, iters/std::max(_vari("av_advect_iters"), _vari("av_diff_iters")));
+      for (Int iter = 0; iter < av_iters; ++iter) {
+        _solver().update_art_visc_smoothness(width);
+      }
+    }
+    #endif
+    return "";
+  }));
+
   _inter.variables->create("init_monitors", new Namespace::Heisenberg<std::string>([this]() {
     auto sub = _inter.make_sub();
     sub.subspace();

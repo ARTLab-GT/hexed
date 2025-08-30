@@ -926,6 +926,24 @@ void Solver::update() {
   stopwatch.stopwatch.pause();
 }
 
+void Solver::smooth_init_cond(Int n_iter) {
+  printers::info("Smoothing initial state...");
+  auto km = _kernel_mesh();
+  Kernel_options opts {
+    stopwatch["fix admis."]["cartesian"],
+    stopwatch["fix admis."]["deformed"],
+    stopwatch["prolong/restrict"],
+    1.,
+    0,
+  };
+  max_dt_fix_therm_admis(km, opts, 1., _namespace->get<double>("fix_admis_max_safety"), true);
+  for (Int iter = 0; iter < n_iter; ++iter) {
+    apply_state_bcs();
+    compute_fix_therm_admis(km, opts, [this](){apply_flux_bcs();});
+  }
+  printers::info(" done.\n");
+}
+
 void Solver::compute_residual() {
   apply_state_bcs();
   auto compute_discon = [this](bool is_flux) {
