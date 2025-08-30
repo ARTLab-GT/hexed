@@ -33,6 +33,7 @@ Documentation = "https://artlab-gt.github.io/hexed/"
 hil = "hexedpy._wrappers:hil"
 hexecute = "hexedpy._wrappers:hexecute"
 hexed_test = "hexedpy._wrappers:hexed_test"
+hexed_fit_geom = "hexedpy._fit_geom:fit_geom()"
 
 [tool.hatchling.build]
 include = ["bin/*", "lib/*", "lib/hexed/*"]
