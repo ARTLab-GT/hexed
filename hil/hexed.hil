@@ -294,6 +294,7 @@ tangency_tol_angle = 1*degree
 tangency_tol_subdiv = 10.
 smooth_initial_condition = false
 initial_smoothing_iters = 10^4
+step_limit_factor = 1e3;
 
 {array parameters}
 i_dim = 0

@@ -15,8 +15,8 @@ typedef pde::Navier_stokes<true, k_omega> rans;
 double max_dt_euler(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time) COMPUTE_MAX_DT(euler::Pde)
 double max_dt_navier_stokes(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time,
                             Transport_model visc, Transport_model therm_cond) {
-  if (mesh.turb_model == k_omega) COMPUTE_MAX_DT(rans::Pde, visc, therm_cond)
-  else COMPUTE_MAX_DT(ns::Pde, visc, therm_cond)
+  if (mesh.turb_model == k_omega) COMPUTE_MAX_DT(rans::Pde, opts.step_limits, visc, therm_cond)
+  else COMPUTE_MAX_DT(ns::Pde, opts.step_limits, visc, therm_cond)
 }
 double max_dt_advection(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time, double advect_length)
   COMPUTE_MAX_DT(pde::Advection, advect_length)

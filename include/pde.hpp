@@ -46,6 +46,10 @@ class Navier_stokes {
     static constexpr int i_laplacian_art_visc = n_update + 1;
     static constexpr double heat_rat = 1.4;
 
+    private:
+    const Mat<n_update> _step_limits;
+
+    public:
     static constexpr double alpha = 13./25.;
     static constexpr double beta_s = 9./100.;
     static constexpr double beta_0 = 0.0708;
@@ -58,8 +62,9 @@ class Navier_stokes {
     Transport_model dyn_visc;
     Transport_model therm_cond;
 
-    Pde(int n_var, Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid)
-    : _n_var{n_var}, dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
+    Pde(int n_var, Mat<n_update> step_limits = Mat<n_update>::Constant(huge),
+        Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid)
+    : _n_var{n_var}, _step_limits{step_limits}, dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
     {}
 
     Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
@@ -69,7 +74,12 @@ class Navier_stokes {
     }
 
     void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-      for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
+      for (int i_var = 0; i_var < n_update; ++i_var) {
+        double u = update(i_var);
+        if (!std::isfinite(u)) u = 0;
+        u = std::max(-_step_limits(i_var), std::min(_step_limits(i_var), u));
+        data[i_var*stride] += u;
+      }
     }
 
     template <int n_dim_flux>

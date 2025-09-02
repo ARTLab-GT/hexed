@@ -19,8 +19,8 @@ namespace hexed {
 typedef pde::Navier_stokes<false, laminar> euler;
 typedef pde::Navier_stokes<false, k_omega> k_omega_euler;
 void compute_euler(Kernel_mesh mesh, Kernel_options opts) {
-  if (mesh.turb_model == k_omega) COMPUTE_CONVECTION(k_omega_euler::Pde)
-  else COMPUTE_CONVECTION(euler::Pde)
+  if (mesh.turb_model == k_omega) COMPUTE_CONVECTION(k_omega_euler::Pde, opts.step_limits)
+  else COMPUTE_CONVECTION(euler::Pde, opts.step_limits)
 }
 void compute_advection(Kernel_mesh mesh, Kernel_options opts, double advect_length) COMPUTE_CONVECTION(pde::Advection, advect_length)
 
