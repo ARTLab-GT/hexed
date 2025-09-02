@@ -70,7 +70,6 @@ class Solver {
   void _init_stage_storage(int stage);
   void _update_recursive(int level, double safety);
   Int _effective_preti_iters(int level);
-  Mat<> _step_limits();
 
   //! \brief linearizes the steady state equations by finite difference
   class Linearized : public Linear_equation {

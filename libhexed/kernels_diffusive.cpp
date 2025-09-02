@@ -29,8 +29,8 @@ namespace hexed {
 typedef pde::Navier_stokes<true, laminar> ns;
 typedef pde::Navier_stokes<true, k_omega> rans;
 void compute_navier_stokes(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, Transport_model visc, Transport_model therm_cond, bool update_prod) {
-  if (mesh.turb_model == k_omega) COMPUTE_DIFFUSION(rans::Pde, opts.step_limits, visc, therm_cond)
-  else COMPUTE_DIFFUSION(ns::Pde, opts.step_limits, visc, therm_cond)
+  if (mesh.turb_model == k_omega) COMPUTE_DIFFUSION(rans::Pde, visc, therm_cond)
+  else COMPUTE_DIFFUSION(ns::Pde, visc, therm_cond)
 }
 void compute_smooth_av(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, double diff_time, double cheby_step) {
   COMPUTE_DIFFUSION(pde::Smooth_art_visc, diff_time, cheby_step)

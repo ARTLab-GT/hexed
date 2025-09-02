@@ -14,7 +14,6 @@ struct Kernel_options {
   Stopwatch_tree& sw_pr;
   double dt;
   int i_stage;
-  Mat<> step_limits;
   bool compute_residual = false;
   bool use_filter = false;
   int mask = 0;

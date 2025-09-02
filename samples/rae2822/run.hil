@@ -6,7 +6,7 @@ mesh_extreme01 =  80.
 mesh_extreme11 =  80.
 
 $set_shock
-art_visc_width = .005
+art_visc_width = .01
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity

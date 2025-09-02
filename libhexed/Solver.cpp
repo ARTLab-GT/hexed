@@ -149,7 +149,7 @@ double Solver::max_dt(double msc, double msd) {
     stopwatch["cartesian"],
     stopwatch["deformed"],
     stopwatch["prolong/restrict"],
-    0, 0, _step_limits(), bool(_namespace->get<int>("use_filter")),
+    0, 0, bool(_namespace->get<int>("use_filter")),
   };
   bool local_time = _time_scheme != explicit_unsteady;
   if (use_ldg()) return max_dt_navier_stokes(_kernel_mesh(), opts, msc, msd, local_time, visc, therm_cond);
@@ -172,23 +172,6 @@ Interpreter Solver::_interpreter() {
   Interpreter inter(std::vector<std::string>{});
   inter.variables = _namespace;
   return inter;
-}
-
-Mat<> Solver::_step_limits() {
-  double factor = _namespace->get<double>("step_limit_factor");
-  Mat<> limits(params.n_var);
-  limits.setConstant(huge);
-  #if 0
-  double density = _namespace->get<double>("freestream_density");
-  limits(Eigen::seqN(0, params.n_dim)).setConstant(factor*density*_namespace->get<double>("freestream_speed"));
-  limits(params.n_dim) = factor*density;
-  limits(params.n_dim + 1) = factor*_namespace->get<double>("freestream_energy");
-  if (turb == k_omega) {
-    limits(params.n_dim + 2) = factor*_namespace->get<double>("freestream_specific_turbulent_kinetic_energy");
-    limits(params.n_dim + 3) = factor;
-  }
-  #endif
-  return limits;
 }
 
 Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_scheme,
@@ -503,7 +486,6 @@ void Solver::diffuse_art_visc(double diff_time) {
     stopwatch["prolong/restrict"],
     0.,
     0,
-    _step_limits(),
     false,
     false,
   };
@@ -567,7 +549,6 @@ void Solver::update_art_visc_smoothness(double advect_length) {
     stopwatch["prolong/restrict"],
     1.,
     0,
-    _step_limits(),
     false,
     false,
   };
@@ -842,7 +823,6 @@ void Solver::_update_recursive(int preti_level, double safety) {
         .sw_pr = stopwatch["prolong/restrict"],
         .dt = dt,
         .i_stage = i,
-        .step_limits = _step_limits(),
         .compute_residual = false,
         .use_filter = bool(_namespace->get<int>("use_filter")),
         .mask = preti_level,
@@ -911,7 +891,6 @@ void Solver::update() {
                   .sw_pr = stopwatch["prolong/restrict"],
                   .dt = dt/sub_iters,
                   .i_stage = i,
-                  .step_limits = _step_limits(),
                   .compute_residual = false,
                   .use_filter = bool(_namespace->get<int>("use_filter")),
                   .mask = i_preti,
@@ -956,7 +935,6 @@ void Solver::smooth_init_cond(Int n_iter) {
     stopwatch["prolong/restrict"],
     1.,
     0,
-    _step_limits(),
   };
   max_dt_fix_therm_admis(km, opts, 1., _namespace->get<double>("fix_admis_max_safety"), true);
   for (Int iter = 0; iter < n_iter; ++iter) {
@@ -1021,7 +999,6 @@ void Solver::compute_residual() {
     .sw_pr = stopwatch["prolong/restrict"],
     .dt = 1.,
     .i_stage = 0,
-    .step_limits = _step_limits(),
     .compute_residual = true,
     .use_filter = bool(_namespace->get<int>("use_filter")),
   };
@@ -1191,7 +1168,6 @@ void Solver::compute_spectral_uncertainty() {
       .sw_pr = stopwatch["prolong/restrict"],
       .dt = 1.,
       .i_stage = 0,
-      .step_limits = _step_limits(),
       .compute_residual = true,
       .use_filter = bool(_namespace->get<int>("use_filter")),
     };
@@ -1266,14 +1242,11 @@ bool Solver::is_admissible() {
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
   bool admiss = 1;
-  double freestream_tke = 0.;
-  if (turb == k_omega) freestream_tke = _namespace->get<double>("freestream" + to_string(nd + 2));
   auto check_admis = [&](double* data, int n_qpoint, int n_var) {
     bool adm = true;
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       adm = adm && (data[nd*n_qpoint + i_qpoint] > 0.)
                 && (data[(nd + 1)*n_qpoint + i_qpoint] > 0.);
-      if (turb == k_omega) adm = adm && data[(nd + 2)*n_qpoint + i_qpoint] > -1000*freestream_tke;
       for (int i_var = 0; i_var < n_var; ++i_var) {
         HEXED_ASSERT(1e10 > std::abs(data[i_var*n_qpoint + i_qpoint]),
                      format_str(200, "variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]),
@@ -1393,7 +1366,6 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
       stopwatch["prolong/restrict"],
       0.,
       0,
-      _step_limits(),
       false,
       false,
     };
