@@ -32,6 +32,7 @@ class Case {
   std::vector<History_monitor> _monitors;
   std::unique_ptr<History_monitor> _n_elem_monitor;
   std::string _assignment(std::string var_name);
+  std::function<bool(Element&, int)> _ref_crit(std::string name);
   public:
   Case(std::string input_script = "interactive.hil");
   Case(const Case&) = delete;

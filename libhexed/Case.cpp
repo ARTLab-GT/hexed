@@ -243,6 +243,16 @@ Transport_model Case::_transport_model(std::string name) {
                                 model, name.c_str()), assert::User_error) throw;
 }
 
+std::function<bool(Element&, int)> Case::_ref_crit(std::string name) {
+  return [this, name](Element& elem, int i_dim)->bool {
+    auto sub = _inter.make_sub();
+    vis_variables::element(*sub.variables, elem);
+    sub.variables->assign("i_dim", i_dim);
+    sub.exec("return = $" + name);
+    return sub.variables->get<int>("return");
+  };
+}
+
 Case::Case(std::string input_script)
 : _start_time{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())}
 {
@@ -525,28 +535,8 @@ Case::Case(std::string input_script)
     }
     printers::info(")...");
     _solver().compute_spectral_uncertainty();
-    std::vector<std::string> sweep_names {"adapt", "shock"};
-    std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
-    std::vector<std::function<bool(Element&, int)>> crits;
-    for (std::string sweep : sweep_names) {
-      for (std::string crit : crit_names) {
-        crits.emplace_back([this, sweep, crit](Element& elem, int i_dim) {
-          auto sub = _inter.make_sub();
-          vis_variables::element(*sub.variables, elem);
-          sub.variables->assign("i_dim", i_dim);
-          sub.exec("return = $" + sweep + crit);
-          return sub.variables->get<int>("return");
-        });
-      }
-    }
-    auto result = _solver().mesh().adapt(crits[0], crits[1], allow_ref, true);
+    auto result = _solver().mesh().adapt(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"), allow_ref, true);
     _inter.variables->assign<int>("adapt_changed", result.changed);
-    for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
-      printers::info(" [shock sweep " + to_string(sweep) + ":");
-      auto shock_result = _solver().mesh().adapt(crits[2], crits[3], true, false);
-      printers::info(" " + to_string(_solver().mesh().n_elements()) + " elements]");
-      if (shock_result.n_refine == 0) break;
-    }
     _solver().calc_jacobian();
     _solver().compute_residual();
     std::string message = "";
@@ -559,6 +549,19 @@ Case::Case(std::string input_script)
     }
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n" + message);
     _solver().print_preti_iters();
+    return "";
+  }));
+
+  _inter.variables->create("adapt_shock", new Namespace::Heisenberg<std::string>([this]() {
+    for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
+      printers::info("shock sweep " + to_string(sweep) + ":");
+      auto shock_result = _solver().mesh().adapt(_ref_crit("shock_refine_if"), _ref_crit("shock_unrefine_if"),
+                                                 true, false);
+      printers::info(" " + to_string(_solver().mesh().n_elements()) + " elements\n");
+      if (shock_result.n_refine == 0) break;
+    }
+    _solver().calc_jacobian();
+    _solver().compute_residual();
     return "";
   }));
 

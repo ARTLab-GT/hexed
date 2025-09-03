@@ -176,7 +176,7 @@ bool Vertex::mobile() const {
   return has_unglued && !has_cartesian && !glued();
 }
 
-const double ortho_tolerance = .06;
+const double ortho_tolerance = .1;
 const double edge_tolerance = .01;
 
 Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors, bool ignore, bool ignore_neighb, double extra_tol) {
