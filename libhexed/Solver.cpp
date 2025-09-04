@@ -194,6 +194,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
 , _time_scheme{time_scheme}
 {
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
+  _namespace->assign_default("admis_safety", 1.);
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
   _namespace->assign_default("fix_admis_max_safety", .2); // staility ratio for fixing thermodynamic admissibility.
   _namespace->assign_default("av_diff_ratio", .3); // ratio of diffusion time to advection width
@@ -848,7 +849,9 @@ void Solver::_update_recursive(int preti_level, double safety) {
 
 void Solver::update() {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
-  double safety = _namespace->get<double>("max_safety");
+  double admis_safety = _namespace->get<double>("admis_safety");
+  double safety = _namespace->get<double>("max_safety")*admis_safety;
+  fix_admissibility(_namespace->get<double>("fix_admis_max_safety"), -1);
   if (_namespace->get<int>("preti")) {
     _update_recursive(0, safety);
   } else {
@@ -916,6 +919,11 @@ void Solver::update() {
               _namespace->assign<double>("flow_time", _namespace->get<double>("flow_time") + dt);
               status.time_step = dt;
               status.flow_time += dt;
+            }
+            if (fixed) {
+              _namespace->assign("admis_safety", .1*admis_safety);
+            } else {
+              _namespace->assign("admis_safety", std::min(1., 1.01*admis_safety));
             }
           }
         }
@@ -1234,7 +1242,7 @@ Iteration_status Solver::iteration_status() {
   return stat;
 }
 
-bool Solver::is_admissible() {
+bool Solver::is_admissible(int cheby_step) {
   auto& sw = stopwatch["fix admis."]["check admis."];
   sw.stopwatch.start();
   auto& elems = _preti_masks[_preti_level]->kernel_mesh.elems;
@@ -1250,12 +1258,13 @@ bool Solver::is_admissible() {
                 && (data[(nd + 1)*n_qpoint + i_qpoint] > 0.);
       if (turb == k_omega) {
         double log_diss = data[(nd + 3)*n_qpoint + i_qpoint]/data[nd*n_qpoint + i_qpoint];
-        adm = adm && -100 < log_diss && log_diss < 100;
+        adm = adm && -10 < log_diss && log_diss < 100;
         if (!(-10 < log_diss && log_diss < 100)) diss_excession = true;
       }
       for (int i_var = 0; i_var < n_var; ++i_var) {
         HEXED_ASSERT(1e10 > std::abs(data[i_var*n_qpoint + i_qpoint]),
-                     format_str(200, "variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]),
+                     format_str(200, "variable %i = %e has non-finite value. (Chebyshev step %i)",
+                                i_var, data[i_var*n_qpoint + i_qpoint], cheby_step),
                      assert::Numerical_exception);
       }
     }
@@ -1305,7 +1314,7 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
   int n_iters = std::numeric_limits<int>::max();
   for (iter = 0; iter < n_iters; ++iter) {
     HEXED_ASSERT(iter < 1e5, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
-    if (is_admissible()) {
+    if (is_admissible(cheby_step)) {
       if (iter) n_iters = std::min(n_iters, 2*iter);
       else {
         ++iter;
