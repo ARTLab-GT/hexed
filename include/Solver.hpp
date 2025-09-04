@@ -211,7 +211,7 @@ class Solver {
    * Result is written to `min_lts_dc_ratio` in the HIL namespace.
    */
   void compute_lts_constraints();
-  bool is_admissible(int cheby_step = 0); //!< \brief check whether flowfield is admissible (e.g. density and energy are positive)
+  bool is_admissible(); //!< \brief check whether flowfield is admissible (e.g. density and energy are positive)
   //! \brief updates the aritificial viscosity coefficient based on smoothness of the flow variables
   void update_art_visc_smoothness(double advect_length);
   /*! \brief (experimental) sets artificial viscosity based on elementwise smoothness

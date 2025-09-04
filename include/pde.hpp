@@ -154,6 +154,7 @@ class Navier_stokes {
       Mat<n_update> source;
       void compute_flux_diff() {
         compute_scalars_diff();
+        Mat<n_update, n_dim> flux_diff_phys = -laplacian_av*gradient; // flux in physical space
         source.setZero();
 
         auto seq = Eigen::seqN(0, n_dim);
@@ -164,11 +165,8 @@ class Navier_stokes {
         Mat<n_dim, n_dim> rotation = .5*(veloc_grad - veloc_grad.transpose());
         Mat<n_dim, n_dim> strain_rate = .5*(veloc_grad + veloc_grad.transpose());
         Mat<n_dim, n_dim> identity = Mat<n_dim, n_dim>::Identity();
-        double smoothing_coef = std::abs(bulk_av)*std::sqrt(divergence*divergence/(divergence*divergence + strain_rate.squaredNorm() + veloc.squaredNorm()/(.005*.005)));
-        Mat<n_update, n_dim> flux_diff_phys = -laplacian_av*smoothing_coef*gradient; // flux in physical space
 
-        double effective_visc = dyn_visc_coef;
-        Mat<n_dim, n_dim> stress = 2*effective_visc*strain_rate + (bulk_av*mass - 2./3.*effective_visc)*divergence*identity;
+        Mat<n_dim, n_dim> stress = 2*dyn_visc_coef*strain_rate + (bulk_av*mass - 2./3.*dyn_visc_coef)*divergence*identity;
         double total_conductivity = energy_cond;
         if constexpr (turb == k_omega) {
           double strain_term = (strain_rate - 1./3.*divergence*identity).squaredNorm() + (3 - n_dim)*divergence*divergence/9;
@@ -209,7 +207,7 @@ class Navier_stokes {
           debug_vars_set = true;
           prod_per_k = lim_factor*prod_per_k;
           double grad_k_omega_source = std::max(sigma_do*mass/real_turb_diss*grad_k.dot(grad_omega), 0.);
-          double grad_omega_source = (dyn_visc_coef + mass*smoothing_coef + sigma*mass*k_bar/real_turb_diss)*grad_omega.squaredNorm();
+          double grad_omega_source = (dyn_visc_coef + sigma*mass*k_bar/real_turb_diss)*grad_omega.squaredNorm();
           source(i_turb_kin_ener) = prod_per_k*k_bar - beta_s*real_turb_diss*state(i_turb_kin_ener);
           source(i_turb_diss) = alpha*prod_per_k + grad_omega_source + grad_k_omega_source - beta*mass*real_turb_diss;
           source(i_energy) = -source(i_turb_kin_ener);
@@ -240,10 +238,10 @@ class Navier_stokes {
         compute_scalars_diff();
         // this is a conservative estimate for `dyn_visc_turb` because `omega_hat` is not available
         double dyn_visc_turb = (turb == k_omega) ? mass*k_bar/real_turb_diss : 0.;
-        diffusivity = std::abs(laplacian_av) + std::abs(bulk_av) + math::max(
+        diffusivity = std::abs(laplacian_av) + math::max(
           (dyn_visc_coef + math::max(1, sigma, sigma_s)*dyn_visc_turb)/mass,
           std::abs(bulk_av) + (dyn_visc_coef + dyn_visc_turb)/mass,
-          (dyn_visc_coef + dyn_visc_turb)/mass + std::abs(bulk_av) + (energy_cond + heat_rat*dyn_visc_turb/turb_prandtl)/mass
+          (dyn_visc_coef + dyn_visc_turb)/mass + (energy_cond + heat_rat*dyn_visc_turb/turb_prandtl)/mass
         );
       }
 

@@ -31,6 +31,7 @@ monitor_vars = {lift_coef = lift_coef; drag_coef = drag_coef;}
 max_safety = .2
 vis_freq = 1000
 av_advect_iters = 4
+av_diff_iters = 2
 amr = true
 
 vis_field_vars = vis_field_vars + {
