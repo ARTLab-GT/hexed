@@ -245,7 +245,9 @@ geom_unrefine_if = {false}
 final_refine_if = {(has_wall & i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance > max_wall_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed))))}
 final_unrefine_if = {false}
 shock_refine_if = {(max_bulk_art_visc > shock_refinement_threshold*art_visc_width*av_unscaled_max*freestream_speed & $({nominal_shape} + i_dim) > 4*art_visc_width)}
+shock_refine_if = {(sonic & $({nominal_shape} + i_dim) > 4*art_visc_width)}
 shock_unrefine_if = {(max_bulk_art_visc < shock_refinement_threshold*art_visc_width*av_unscaled_max*freestream_speed)}
+shock_unrefine_if = {(!sonic)}
 adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*max_flux) | $({nominal_shape} + i_dim) > max_aspect_ratio*((i_dim != 0)*nominal_shape0 + (i_dim != 1)*nominal_shape1 + (i_dim != 2)*nominal_shape2)) & $({nominal_shape} + i_dim) > min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
 adapt_unrefine_if = {(($({spectral_uncertainty} + i_dim) < spectral_tol*$size_tolerance*.5^(row_size - 1) & !(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*$size_tolerance*max_flux*.5^(row_size - 1))) & $({aniso_ref_level} + i_dim) > init_ref_level)}
 adapt_if = {(iteration%adapt_freq == 0)}
@@ -254,7 +256,7 @@ done = {($monitor_criterion | iteration > max_iterations | flow_time > max_flow_
 max_init_refine_iters = 100
 max_geom_refine_iters = 100
 max_final_refine_iters = 100
-shock_refine_iters = 100
+shock_refine_iters = 10
 vis_surface = true
 vis_field = true
 vis_contour = true
@@ -485,7 +487,7 @@ start = {
     prev_residual = 0.
     hexed_next_flow_time = 0.
     last_adapt_iter = 0
-    next_refine_iter = 100*adapt_freq
+    next_refine_iter = 10*adapt_freq
     monitor_converged = false
 }
 

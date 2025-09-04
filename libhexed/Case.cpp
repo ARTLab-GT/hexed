@@ -554,8 +554,15 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("adapt_shock", new Namespace::Heisenberg<std::string>([this]() {
     for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
-      printers::info("shock sweep " + to_string(sweep) + ":");
-      auto shock_result = _solver().mesh().adapt(_ref_crit("shock_refine_if"), _ref_crit("shock_unrefine_if"),
+      printers::info("shock coarsening sweep " + to_string(sweep) + ":");
+      auto shock_result = _solver().mesh().adapt([](Element&, int){return false;}, _ref_crit("shock_unrefine_if"),
+                                                 true, false);
+      printers::info(" " + to_string(_solver().mesh().n_elements()) + " elements\n");
+      if (shock_result.n_coarsen == 0) break;
+    }
+    for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
+      printers::info("shock refinement sweep " + to_string(sweep) + ":");
+      auto shock_result = _solver().mesh().adapt(_ref_crit("shock_refine_if"), [](Element&, int){return false;},
                                                  true, false);
       printers::info(" " + to_string(_solver().mesh().n_elements()) + " elements\n");
       if (shock_result.n_refine == 0) break;

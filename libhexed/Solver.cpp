@@ -1248,11 +1248,13 @@ bool Solver::is_admissible() {
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       adm = adm && (data[nd*n_qpoint + i_qpoint] > 0.)
                 && (data[(nd + 1)*n_qpoint + i_qpoint] > 0.);
+      #if 0
       if (turb == k_omega) {
         double log_diss = data[(nd + 3)*n_qpoint + i_qpoint]/data[nd*n_qpoint + i_qpoint];
         adm = adm && -100 < log_diss && log_diss < 100;
         if (!(-10 < log_diss && log_diss < 100)) diss_excession = true;
       }
+      #endif
       for (int i_var = 0; i_var < n_var; ++i_var) {
         HEXED_ASSERT(1e10 > std::abs(data[i_var*n_qpoint + i_qpoint]),
                      format_str(200, "variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]),
@@ -1304,7 +1306,7 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
   int iter;
   int n_iters = std::numeric_limits<int>::max();
   for (iter = 0; iter < n_iters; ++iter) {
-    HEXED_ASSERT(iter < 1e5, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
+    HEXED_ASSERT(iter < 100, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
     if (is_admissible()) {
       if (iter) n_iters = std::min(n_iters, 2*iter);
       else {

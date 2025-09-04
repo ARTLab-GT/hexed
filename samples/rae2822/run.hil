@@ -6,7 +6,7 @@ mesh_extreme01 =  80.
 mesh_extreme11 =  80.
 
 $set_shock
-art_visc_width = .005
+art_visc_width = .004
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -30,8 +30,7 @@ monitor_vars = {lift_coef = lift_coef; drag_coef = drag_coef;}
 
 max_safety = .2
 vis_freq = 1000
-av_advect_iters = 4
-av_diff_iters = 2
+diffusive_admissibility = true
 amr = true
 
 vis_field_vars = vis_field_vars + {
