@@ -597,6 +597,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   Eigen::VectorXd orth = basis.orthogonal(av_rs - 1);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+    Array<double> pos = elements[i_elem].position(basis);
     double* forcing = elements[i_elem].art_visc_forcing();
     double* adv = elements[i_elem].advection_state();
     double* state = elements[i_elem].state();
@@ -605,7 +606,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
         proj += adv[i_proj*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
       }
-      forcing[i_qpoint] = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
+      forcing[i_qpoint] = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*(pos(0)[i_qpoint] > .1);
     }
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
 
@@ -1082,7 +1083,7 @@ void Solver::print_preti_iters() {
 
 
 void Solver::compute_spectral_uncertainty() {
-  int nv = params.n_dim + 2;
+  int nv = params.n_var;
   Array<double> state_min = Array<double>::make_uniform({nv}, huge);
   Array<double> state_max = Array<double>::make_uniform({nv}, -huge);
   auto& elems = acc_mesh->elements();
@@ -1103,11 +1104,13 @@ void Solver::compute_spectral_uncertainty() {
     elem.spectral_uncert() = 0;
     elem.flux_uncert = 0;
     for (int i_var = 0; i_var < nv; ++i_var) {
-      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-        Mat<> proj = math::dimension_matvec(orth, state(i_var).vector(), i_dim);
-        double normalize = state_max[i_var] - state_min[i_var];
-        double& elem_uncert = elem.spectral_uncert()[i_dim];
-        elem_uncert = std::max(elem_uncert, std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize);
+      if (i_var < params.n_dim + 2 || elem.has_wall()) { // only wall elements consider turbulence variables
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          Mat<> proj = math::dimension_matvec(orth, state(i_var).vector(), i_dim);
+          double normalize = state_max[i_var] - state_min[i_var];
+          double& elem_uncert = elem.spectral_uncert()[i_dim];
+          elem_uncert = std::max(elem_uncert, std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize);
+        }
       }
     }
   }

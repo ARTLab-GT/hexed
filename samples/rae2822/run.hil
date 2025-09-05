@@ -30,7 +30,7 @@ monitor_vars = {lift_coef = lift_coef; drag_coef = drag_coef;}
 
 max_safety = .2
 vis_freq = 1000
-diffusive_admissibility = true
+update_roughness_freq = 1000
 amr = true
 
 vis_field_vars = vis_field_vars + {
