@@ -521,6 +521,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   const int nq = params.n_qpoint();
   const int nd = params.n_dim;
   const int rs = params.row_size;
+  double heat_rat = 1.4;
   auto& elements = acc_mesh->elements();
 
   stopwatch["set art visc"]["initialize"].stopwatch.start();
@@ -556,7 +557,9 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   compute_write_face_advection(_kernel_mesh());
   compute_prolong_advection(_kernel_mesh());
 
-  // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem using a linear advection equation.
+  // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem
+  // using a linear advection equation.
+
   // perform pseudotime iteration
   for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter) {
     HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
@@ -597,7 +600,6 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   Eigen::VectorXd orth = basis.orthogonal(av_rs - 1);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
-    Array<double> pos = elements[i_elem].position(basis);
     double* forcing = elements[i_elem].art_visc_forcing();
     double* adv = elements[i_elem].advection_state();
     double* state = elements[i_elem].state();
@@ -606,13 +608,20 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
         proj += adv[i_proj*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
       }
-      forcing[i_qpoint] = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*(pos(0)[i_qpoint] > .1);
+      double mach_suppression = 0;
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        mach_suppression += state[i_dim*nq + i_qpoint]*state[i_dim*nq + i_qpoint];
+      }
+      mach_suppression /= heat_rat*(heat_rat - 1.);
+      mach_suppression = mach_suppression*mach_suppression/(.3 + mach_suppression*mach_suppression);
+      forcing[i_qpoint] = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
     }
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
 
   // begin root-smear-square operation
   int n_real = params.n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
-  double diff_time = _namespace->get<double>("av_diff_ratio")*advect_length*advect_length/n_real; // compute size of real time step (as opposed to pseudotime)
+  // compute size of real time step (as opposed to pseudotime)
+  double diff_time = _namespace->get<double>("av_diff_ratio")*advect_length*advect_length/n_real;
   stopwatch["set art visc"]["diffusion"].stopwatch.start();
   diffuse_art_visc(diff_time);
   stopwatch["set art visc"]["diffusion"].stopwatch.pause();
@@ -620,7 +629,9 @@ void Solver::update_art_visc_smoothness(double advect_length) {
 
   // clean up
   double mult = _namespace->get<double>("av_visc_mult")*advect_length;
-  double us_max = advect_length*_namespace->get<double>("av_unscaled_max")*std::sqrt(2*_namespace->get<double>("freestream" + std::to_string(nd + 1))/_namespace->get<double>("freestream" + std::to_string(nd)));
+  double us_max = advect_length*_namespace->get<double>("av_unscaled_max")
+                  *std::sqrt(2*_namespace->get<double>("freestream" + std::to_string(nd + 1))
+                  /_namespace->get<double>("freestream" + std::to_string(nd)));
   double resid = 0;
   Mat<> qpoint_weights = math::pow_outer(basis.node_weights(), nd);
   #pragma omp parallel for reduction(+:resid)

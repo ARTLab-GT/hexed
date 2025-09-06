@@ -28,8 +28,8 @@ println({turbulent viscosity: } + freestream_density*freestream_specific_turbule
 println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation/dyn_visc)
 monitor_vars = {lift_coef = lift_coef; drag_coef = drag_coef;}
 
-max_safety = .2
-vis_freq = 1000
+vis_freq = 10000
+min_cell_reynolds = .1
 update_roughness_freq = 1000
 amr = true
 
