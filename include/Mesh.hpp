@@ -168,6 +168,9 @@ class Mesh {
     Int n_coarsen;
     bool changed;
   };
+  virtual Adaptation_result plan_adaptation(std::function<bool(Element&, int)> refine_criterion,
+                                            std::function<bool(Element&, int)> unrefine_criterion) = 0;
+  virtual void execute_adaptation() = 0;
   virtual Adaptation_result adapt(std::function<bool(Element&, int)> refine_criterion,
                                   std::function<bool(Element&, int)> unrefine_criterion,
                                   bool allow_refine, bool set_floor) = 0;

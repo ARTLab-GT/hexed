@@ -87,6 +87,7 @@ double Element::nominal_volume() const {return tree.value().nominal_shape().prod
 int Element::refinement_level() {return tree.value().refinement_level();}
 int Element::aniso_ref_level() {return _aniso_r_level;}
 int& Element::desired_refinement(int i_dim) {return _refinement_data(0)[i_dim];}
+int Element::desired_refinement(int i_dim) const {return _refinement_data(0)[i_dim];}
 Array<int> Element::refinement_floor() {return _refinement_data(1);}
 Eigen::VectorXi Element::nominal_position() {return tree.value().coordinates();}
 

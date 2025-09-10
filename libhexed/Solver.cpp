@@ -1115,7 +1115,8 @@ void Solver::compute_spectral_uncertainty() {
     elem.spectral_uncert() = 0;
     elem.flux_uncert = 0;
     for (int i_var = 0; i_var < nv; ++i_var) {
-      if (i_var < params.n_dim + 2 || elem.has_wall()) { // only wall elements consider turbulence variables
+      //if (i_var < params.n_dim + 2 || elem.has_wall()) { // only wall elements consider turbulence variables
+      if (i_var < params.n_dim + 2) {
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
           Mat<> proj = math::dimension_matvec(orth, state(i_var).vector(), i_dim);
           double normalize = state_max[i_var] - state_min[i_var];

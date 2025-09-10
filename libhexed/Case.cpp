@@ -535,7 +535,9 @@ Case::Case(std::string input_script)
     }
     printers::info(")...");
     _solver().compute_spectral_uncertainty();
-    auto result = _solver().mesh().adapt(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"), allow_ref, true);
+    auto result = _solver().mesh().plan_adaptation(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"));
+    if (result.changed) _solver().mesh().execute_adaptation();
+    //auto result = _solver().mesh().adapt(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"), allow_ref, true);
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().calc_jacobian();
     _solver().compute_residual();
@@ -553,6 +555,7 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt_shock", new Namespace::Heisenberg<std::string>([this]() {
+    #if 0
     for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
       printers::info("shock coarsening sweep " + to_string(sweep) + ":");
       auto shock_result = _solver().mesh().adapt([](Element&, int){return false;}, _ref_crit("shock_unrefine_if"),
@@ -569,6 +572,7 @@ Case::Case(std::string input_script)
     }
     _solver().calc_jacobian();
     _solver().compute_residual();
+    #endif
     return "";
   }));
 

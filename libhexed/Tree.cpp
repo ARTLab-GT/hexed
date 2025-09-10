@@ -44,6 +44,15 @@ Tree::~Tree() {
 
 Mat<> Tree::origin() const {return _orig;}
 int Tree::refinement_level() const {return _ref_level.extreme(0);}
+
+Array<int> Tree::desired_refinement_level() const {
+  Array<int> rl = _ref_level.copy();
+  if (elem) {
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) rl[i_dim] += elem->desired_refinement(i_dim);
+  }
+  return rl;
+}
+
 Array<int> Tree::anisotropic_refinement_level() const {return _ref_level.copy();}
 Eigen::VectorXi Tree::coordinates() const {return _coords;}
 double Tree::nominal_size() const {return nominal_shape().maxCoeff();}
@@ -312,7 +321,7 @@ Array<int> Tree::needs_refine(std::function<bool(Tree*)> include) {
     result.trans.reverse();
     auto neighbors = find_neighbors(i_face);
     for (Tree* n : neighbors) if (include(n)) {
-      Array<int> rl_diff = result.trans.transform(n->_ref_level) - _ref_level;
+      Array<int> rl_diff = result.trans.transform(n->desired_refinement_level()) - desired_refinement_level();
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         needs[i_dim] = needs[i_dim] || (rl_diff[i_dim] > 1 + (i_dim == i_face/2));
       }

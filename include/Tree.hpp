@@ -68,6 +68,9 @@ class Tree : public Mortal {
   //! \details E.g. the root element has refinement level 0.
   int refinement_level() const;
   Array<int> anisotropic_refinement_level() const;
+  //! \brief Total desired refinement level.
+  //! \details `anisotropic_refinement_level()` plus `elem->desired_refinement()`, if `elem` is not null.
+  Array<int> desired_refinement_level() const;
   /*! \brief coordinates of vertex 0 of this element relative to `origin` in multiples of the cell size
    * \details Combined with the `refinement_level`,
    * this is the minimal amount of information required to locate a tree element.

@@ -85,6 +85,7 @@ class Element : public Kernel_element, public Mortal {
   int refinement_level();
   int aniso_ref_level();
   int& desired_refinement(int i_dim);
+  int desired_refinement(int i_dim) const;
   Array<int> refinement_floor();
   Eigen::VectorXi nominal_position();
   double wall_distance() const; //!< \brief The distance from the farthest vertex to the wall.
