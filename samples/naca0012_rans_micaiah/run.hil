@@ -27,7 +27,7 @@ geom0 = {auto.csv}
 {freestream conditions}
 freestream_temperature = zero_celsius
 freestream_mach = .15
-attack = 5*degree
+attack = 10*degree
 target_reynolds = 6e6
 dyn_visc = 1.716e-5
 freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air*1.4*freestream_temperature)/freestream_mach
@@ -45,6 +45,7 @@ fix_therm_admis = true
 {iteration parameters}
 print_freq = 1000
 adapt_freq = 10^4
+target_n_elements = 10^3
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 
 vis_field_vars = vis_field_vars + {

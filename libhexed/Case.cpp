@@ -535,7 +535,16 @@ Case::Case(std::string input_script)
     }
     printers::info(")...");
     _solver().compute_spectral_uncertainty();
-    auto result = _solver().mesh().plan_adaptation(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"));
+    double tol_factor = _vard("hexed_tol_factor");
+    tol_factor = std::max(.25*tol_factor, 1.);
+    Mesh::Adaptation_result result;
+    do {
+      result = _solver().mesh().plan_adaptation(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"));
+      printers::info("[tol_factor = " + to_string(tol_factor) + " planned elems = " + to_string(_solver().mesh().n_elements() + result.n_refine - result.n_coarsen) + "]");
+      tol_factor *= 2;
+      _inter.variables->assign("hexed_tol_factor", tol_factor);
+    } while (_solver().mesh().n_elements() + result.n_refine - result.n_coarsen > _vari("target_n_elements")
+             && tol_factor*_vard("general_tolerance")*_vard("spectral_tol") < 1.);
     if (result.changed) _solver().mesh().execute_adaptation();
     //auto result = _solver().mesh().adapt(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"), allow_ref, true);
     _inter.variables->assign<int>("adapt_changed", result.changed);
