@@ -2346,6 +2346,26 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
       }
     }
   }
+  double n_refine_orig = 0;
+  double n_coarsen_orig = 0;
+  #pragma omp parallel for reduction(+:n_refine_orig, n_coarsen_orig)
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    // note that no element is allowed to be refined along some dimensions and unrefined along others
+    // in the same sweep
+    int p = 0;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) p += elems[i_elem].desired_refinement(i_dim);
+    if (p < 0) n_coarsen_orig -= p;
+    if (p > 0) n_refine_orig += p;
+  }
+  Int n_cant_unref = 0;
+  Int n_disagree = 0;
+  Int n_need_ref = 0;
+  Int n_orphan = 0;
+  Int n_no_elem = 0;
+  Int n_graft = 0;
+  Int n_def_disagree = 0;
+  Int n_other_ref = 0;
+  Int n_not_ref = 0;
   for (bool changed = true; changed;) {
     changed = false;
     for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -2354,22 +2374,34 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
       for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
         if (need_ref[i_dim] > 0) {
           ++elem.desired_refinement(i_dim);
+          if (elem.desired_refinement(i_dim) <= 0) {
+            ++n_need_ref;
+            ++n_cant_unref;
+          }
           changed = true;
         }
         if (elem.desired_refinement(i_dim) < 0) {
           Tree* parent = elem.tree->parent();
           bool can_unref = parent;
+          if (!parent) ++n_orphan;
           if (parent) {
-            Array<int> par_needs_ref = parent->needs_refine([](Tree* t){return t->elem.get();});
-            can_unref = can_unref && parent->is_refined(i_dim) && !par_needs_ref[i_dim];
-            for (Tree* child : parent->children()) {
+            if (!parent->is_refined(i_dim)) ++n_not_ref;
+            can_unref = can_unref && parent->is_refined(i_dim);
+            for (Tree* child : parent->unique_children()) {
               if (!child->elem) {
+                if (can_unref) ++n_no_elem;
                 can_unref = false;
               } else {
-                can_unref = can_unref && child->elem->get_is_deformed() == elem.is_deformed
+                if (can_unref) {
+                  if (child->elem->desired_refinement(i_dim) >= 0) ++n_disagree;
+                  else if (child->has_graft_connection()) ++n_graft;
+                  else if (child->elem->get_is_deformed() != elem.get_is_deformed()) ++n_def_disagree;
+                }
+                can_unref = can_unref && child->elem->get_is_deformed() == elem.get_is_deformed()
                                       && !child->has_graft_connection()
                                       && child->elem->desired_refinement(i_dim) < 0;
                 for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) {
+                  if (can_unref && child->elem->desired_refinement(j_dim) > 0) ++n_other_ref;
                   can_unref = can_unref && child->elem->desired_refinement(j_dim) <= 0;
                 }
               }
@@ -2378,11 +2410,14 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
           if (!can_unref) {
             elem.desired_refinement(i_dim) = 0;
             changed = true;
+            ++n_cant_unref;
           }
         }
       }
     }
   }
+  Int n_total = n_disagree + n_need_ref + n_orphan + n_no_elem + n_graft + n_def_disagree + n_other_ref + n_not_ref;
+  printers::info(format_str("[%li %li; %li %li %li %li %li %li %li %li]", n_cant_unref, n_total, n_disagree, n_need_ref, n_orphan, n_no_elem, n_graft, n_def_disagree, n_other_ref, n_not_ref));
   double n_refine = 0;
   double n_coarsen = 0;
   bool changed = false;
@@ -2396,6 +2431,7 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
     if (p > 0) n_refine += math::pow(2., p) - 1; // add 2^p elements and lose this one
     changed = changed || (p != 0);
   }
+  printers::info(format_str("[%e %e %e %e]", n_refine_orig, n_coarsen_orig, n_refine, n_coarsen));
   return {Int(std::round(n_refine)), Int(std::round(n_coarsen)), changed};
 }
 
@@ -2533,12 +2569,6 @@ void Accessible_mesh::execute_adaptation() {
   connect_new<Element>(0);
   connect_new<Deformed_element>(0);
   connect_rest(surface_bc_sn());
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    elem.record = 0;
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) elem.desired_refinement(i_dim) = 0;
-  }
   {
     auto verts = _blocks.verts();
     #pragma omp parallel for
