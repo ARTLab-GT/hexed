@@ -44,9 +44,9 @@ fix_therm_admis = true
 
 {iteration parameters}
 print_freq = 1000
-adapt_freq = 10^4
-target_n_elements = 10^3
+adapt_freq = 10^5
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
+working_dir = {hexed_out} + adapt_freq
 
 vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0

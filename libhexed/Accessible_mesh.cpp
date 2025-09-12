@@ -2417,7 +2417,7 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
     }
   }
   Int n_total = n_disagree + n_need_ref + n_orphan + n_no_elem + n_graft + n_def_disagree + n_other_ref + n_not_ref;
-  printers::info(format_str("[%li %li; %li %li %li %li %li %li %li %li]", n_cant_unref, n_total, n_disagree, n_need_ref, n_orphan, n_no_elem, n_graft, n_def_disagree, n_other_ref, n_not_ref));
+  //printers::info(format_str("[%li %li; %li %li %li %li %li %li %li %li]", n_cant_unref, n_total, n_disagree, n_need_ref, n_orphan, n_no_elem, n_graft, n_def_disagree, n_other_ref, n_not_ref));
   double n_refine = 0;
   double n_coarsen = 0;
   bool changed = false;
@@ -2431,7 +2431,7 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
     if (p > 0) n_refine += math::pow(2., p) - 1; // add 2^p elements and lose this one
     changed = changed || (p != 0);
   }
-  printers::info(format_str("[%e %e %e %e]", n_refine_orig, n_coarsen_orig, n_refine, n_coarsen));
+  //printers::info(format_str("[%e %e %e %e]", n_refine_orig, n_coarsen_orig, n_refine, n_coarsen));
   return {Int(std::round(n_refine)), Int(std::round(n_coarsen)), changed};
 }
 

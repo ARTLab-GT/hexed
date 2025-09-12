@@ -535,25 +535,38 @@ Case::Case(std::string input_script)
     }
     printers::info(")...");
     _solver().compute_spectral_uncertainty();
-    double tol_factor = _vard("hexed_tol_factor");
-    tol_factor = std::max(.25*tol_factor, 1.);
+    double tol_factor = 1;
     Mesh::Adaptation_result result;
-    do {
+    double max_elems = std::min(_vard("max_n_elements"),
+                                _vard("max_n_elements_increase")*_solver().mesh().n_elements());
+    bool can_adapt = true;
+    while (true) {
       result = _solver().mesh().plan_adaptation(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"));
-      printers::info("[tol_factor = " + to_string(tol_factor) + " planned elems = " + to_string(_solver().mesh().n_elements() + result.n_refine - result.n_coarsen) + "]");
-      tol_factor *= 2;
-      _inter.variables->assign("hexed_tol_factor", tol_factor);
-    } while (_solver().mesh().n_elements() + result.n_refine - result.n_coarsen > _vari("target_n_elements")
-             && tol_factor*_vard("general_tolerance")*_vard("spectral_tol") < 1.);
-    if (result.changed) _solver().mesh().execute_adaptation();
-    //auto result = _solver().mesh().adapt(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"), allow_ref, true);
+      if (tol_factor*_vard("general_tolerance")*_vard("spectral_tol") > 1.) {
+        can_adapt = false;
+        printers::warn("\n  Skipping adaptation because excessive refinement could not be avoided "
+                       "without excessive tolerance.", true);
+        break;
+      }
+      if (_solver().mesh().n_elements() + result.n_refine - result.n_coarsen < max_elems) {
+        break;
+      } else {
+        tol_factor *= 2.;
+        _inter.variables->assign("hexed_tol_factor", tol_factor);
+        printers::warn("\n  Temporarily increasing refinement tolerance to "
+                       + to_string(tol_factor*_vard("general_tolerance"))
+                       + " to keep number of elements under " + to_string(max_elems) + ".", true);
+      }
+    }
+    if (can_adapt && result.changed) _solver().mesh().execute_adaptation();
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().calc_jacobian();
     _solver().compute_residual();
     std::string message = "";
     if (allow_ref) {
       Int n_elem = _solver().mesh().n_elements();
-      int next = _vari("iteration")*std::max(1., math::pow((n_elem + result.n_refine)*1./n_elem, 2));
+      //int next = _vari("iteration")*std::max(1., math::pow((n_elem + result.n_refine)*1./n_elem, 2));
+      int next = _vari("iteration")*1.25;
       _inter.variables->assign("next_refine_iter", next);
       _inter.variables->assign("last_adapt_iter", _vari("iteration"));
       message = "Refinement allowed again after iteration " + to_string(next) + ".\n";
