@@ -2326,6 +2326,18 @@ void Accessible_mesh::purge() {
   }
 }
 
+double Accessible_mesh::total_inverse_size() {
+  double total = 0;
+  #pragma omp parallel for reduction(+:total)
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto ref_level = elems[i_elem].tree->anisotropic_refinement_level();
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      total += std::pow(2., ref_level[i_dim]);
+    }
+  }
+  return total;
+}
+
 Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Element&, int)> refine_criterion,
                                                          std::function<bool(Element&, int)> unrefine_criterion) {
   Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
@@ -2421,18 +2433,26 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
   double n_refine = 0;
   double n_coarsen = 0;
   bool changed = false;
-  #pragma omp parallel for reduction(+:n_refine, n_coarsen) reduction(||:changed)
+  double tot_inv_sz = 0;
+  #pragma omp parallel for reduction(+:n_refine, n_coarsen, tot_inv_sz) reduction(||:changed)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     // note that no element is allowed to be refined along some dimensions and unrefined along others
     // in the same sweep
     int p = 0;
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) p += elems[i_elem].desired_refinement(i_dim);
+    double new_inv_sz = 0;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      int des_ref = elems[i_elem].desired_refinement(i_dim);
+      p += des_ref;
+      int arl = elems[i_elem].tree->anisotropic_refinement_level()[i_dim];
+      new_inv_sz += std::pow(2., arl + des_ref);
+    }
     if (p < 0) n_coarsen += 1 - math::pow(2., p); // lose this element and add one shared with 2^p siblings
     if (p > 0) n_refine += math::pow(2., p) - 1; // add 2^p elements and lose this one
     changed = changed || (p != 0);
+    tot_inv_sz += math::pow(2., p)*new_inv_sz;
   }
   //printers::info(format_str("[%e %e %e %e]", n_refine_orig, n_coarsen_orig, n_refine, n_coarsen));
-  return {Int(std::round(n_refine)), Int(std::round(n_coarsen)), changed};
+  return {Int(std::round(n_refine)), Int(std::round(n_coarsen)), changed, tot_inv_sz};
 }
 
 void Accessible_mesh::execute_adaptation() {

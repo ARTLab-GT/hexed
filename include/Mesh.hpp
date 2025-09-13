@@ -167,6 +167,7 @@ class Mesh {
     Int n_refine;
     Int n_coarsen;
     bool changed;
+    double total_inv_sz = 0;
   };
   virtual Adaptation_result plan_adaptation(std::function<bool(Element&, int)> refine_criterion,
                                             std::function<bool(Element&, int)> unrefine_criterion) = 0;
@@ -174,6 +175,7 @@ class Mesh {
   virtual Adaptation_result adapt(std::function<bool(Element&, int)> refine_criterion,
                                   std::function<bool(Element&, int)> unrefine_criterion,
                                   bool allow_refine, bool set_floor) = 0;
+  virtual double total_inverse_size() = 0;
   virtual int surface_bc_sn() = 0; //!< what is the serial number of the geometry surface BC?
   //! \}
 

@@ -153,6 +153,7 @@ class Accessible_mesh : public Mesh {
   void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always,
               std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
+  double total_inverse_size() override;
   Adaptation_result plan_adaptation(std::function<bool(Element&, int)> refine_criterion,
                                     std::function<bool(Element&, int)> unrefine_criterion) override;
   void execute_adaptation() override;

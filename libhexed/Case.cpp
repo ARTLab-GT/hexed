@@ -525,6 +525,10 @@ Case::Case(std::string input_script)
     return changed;
   }));
 
+  _inter.variables->create("total_inverse_size", new Namespace::Heisenberg<double>([this]() {
+    return _solver().mesh().total_inverse_size();
+  }));
+
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
     bool allow_ref = _vari("iteration") >= _vari("next_refine_iter");
     printers::info("Adapting mesh (");
@@ -537,28 +541,31 @@ Case::Case(std::string input_script)
     _solver().compute_spectral_uncertainty();
     double tol_factor = 1;
     Mesh::Adaptation_result result;
-    double max_elems = std::min(_vard("max_n_elements"),
-                                _vard("max_n_elements_increase")*_solver().mesh().n_elements());
+    double total_inv_sz = _solver().mesh().total_inverse_size();
     bool can_adapt = true;
     while (true) {
+      _inter.variables->assign("hexed_tol_factor", tol_factor);
       result = _solver().mesh().plan_adaptation(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"));
-      if (tol_factor*_vard("general_tolerance")*_vard("spectral_tol") > 1.) {
-        can_adapt = false;
-        printers::warn("\n  Skipping adaptation because excessive refinement could not be avoided "
+      printers::info(to_string(result.total_inv_sz));
+      if (tol_factor*_vard("general_tolerance")*std::min(_vard("spectral_tol"), _vard("flux_tol")) > 1e3) {
+        printers::warn("\n  Only coarsening because excessive refinement could not be avoided "
                        "without excessive tolerance.", true);
+        result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"));
+        printers::error("[" + to_string(result.total_inv_sz) + "]", true);
         break;
       }
-      if (_solver().mesh().n_elements() + result.n_refine - result.n_coarsen < max_elems) {
+      if (_solver().mesh().n_elements() + result.n_refine - result.n_coarsen < _vard("max_n_elements")
+          && result.total_inv_sz < 1.2*total_inv_sz) {
         break;
       } else {
-        tol_factor *= 2.;
-        _inter.variables->assign("hexed_tol_factor", tol_factor);
+        tol_factor *= 1.2;
         printers::warn("\n  Temporarily increasing refinement tolerance to "
                        + to_string(tol_factor*_vard("general_tolerance"))
-                       + " to keep number of elements under " + to_string(max_elems) + ".", true);
+                       + " to satisfy refinement constraints.", true);
       }
     }
-    if (can_adapt && result.changed) _solver().mesh().execute_adaptation();
+    _inter.variables->assign("hexed_tol_factor", tol_factor);
+    if (result.changed) _solver().mesh().execute_adaptation();
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().calc_jacobian();
     _solver().compute_residual();
@@ -571,7 +578,24 @@ Case::Case(std::string input_script)
       _inter.variables->assign("last_adapt_iter", _vari("iteration"));
       message = "Refinement allowed again after iteration " + to_string(next) + ".\n";
     }
-    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n" + message);
+    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements"
+                   " with total inverse size " + to_string(_solver().mesh().total_inverse_size()) + ".\n" + message);
+    _solver().print_preti_iters();
+    return "";
+  }));
+
+  _inter.variables->create("adapt_coarsen", new Namespace::Heisenberg<std::string>([this]() {
+    printers::info("Adapting mesh (");
+    printers::info("only coarsening allowed");
+    printers::info(")...");
+    _solver().compute_spectral_uncertainty();
+    auto result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"));
+    if (result.changed) _solver().mesh().execute_adaptation();
+    _inter.variables->assign<int>("adapt_changed", result.changed);
+    _solver().calc_jacobian();
+    _solver().compute_residual();
+    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements"
+                   " with total inverse size " + to_string(_solver().mesh().total_inverse_size()) + ".\n");
     _solver().print_preti_iters();
     return "";
   }));
@@ -714,6 +738,7 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("visualize", new Namespace::Heisenberg<std::string>([this]() {
     _visualize("_" + _iteration_suffix());
+    printers::info("Current wall clock time: " + to_string(_vard("wall_time")) + "\n");
     return "";
   }));
 
