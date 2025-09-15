@@ -452,9 +452,6 @@ iterate = {
             }
             $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
             $adapt_iter
-            case0 = {}
-            case1 = {adapt_coarsen}
-            $$({case} + (iteration%adapt_freq == 0))
             $write_iter
             $vis_iter
         }
