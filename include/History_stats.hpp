@@ -27,6 +27,8 @@ class History_stats {
   double _std_dev;
   double _mean_deriv;
   double _deriv_std_dev;
+  Mat<2, 2> _lhs;
+  Mat<2> _rhs;
 };
 
 }
