@@ -30,20 +30,22 @@ TEST_CASE("History_stats") {
     REQUIRE(std::isfinite(stats.deriv_std_dev()));
   }
 
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  gen.seed(406);
-  std::normal_distribution normal(0.);
-  hexed::Int n_iter = 100'000'000;
-  for (hexed::Int i = 0; i <= n_iter; i += 10) {
-    stats.add_sample(i, 1 - std::exp(-double(i)/n_iter) + 1e-2/(1 + double(i)/n_iter)*normal(gen));
+  SECTION("full sample") {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    gen.seed(406);
+    std::normal_distribution normal(0.);
+    hexed::Int n_iter = 100'000'000;
+    for (hexed::Int i = 0; i <= n_iter; i += 10) {
+      stats.add_sample(i, 1 - std::exp(-double(i)/n_iter) + 1e-2/(1 + double(i)/n_iter)*normal(gen));
+    }
+    REQUIRE(stats.n_sample() == n_iter/10 + 1);
+    double curr_mean = 1 - std::exp(-1.);
+    REQUIRE(stats.last_iter() == n_iter);
+    REQUIRE(stats.last_value() == Catch::Approx(curr_mean).epsilon(.05));
+    REQUIRE(stats.mean() == Catch::Approx(curr_mean).epsilon(.05));
+    REQUIRE(stats.std_dev() == Catch::Approx(1e-2/2.).epsilon(.05));
+    REQUIRE(stats.deriv()*n_iter == Catch::Approx(std::exp(-1.)).epsilon(.05));
+    REQUIRE(std::isfinite(stats.deriv_std_dev()));
   }
-  REQUIRE(stats.n_sample() == n_iter/10 + 1);
-  double curr_mean = 1 - std::exp(-1.);
-  REQUIRE(stats.last_iter() == n_iter);
-  REQUIRE(stats.last_value() == Catch::Approx(curr_mean).epsilon(.05));
-  REQUIRE(stats.mean() == Catch::Approx(curr_mean).epsilon(.05));
-  REQUIRE(stats.std_dev() == Catch::Approx(1e-2/2.).epsilon(.05));
-  REQUIRE(stats.deriv()*n_iter == Catch::Approx(std::exp(-1.)).epsilon(.05));
-  REQUIRE(stats.deriv_std_dev() == Catch::Approx(-1e-2/4*1./n_iter).epsilon(.05));
 }

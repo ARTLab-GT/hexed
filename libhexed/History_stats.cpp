@@ -32,6 +32,7 @@ void History_stats::add_sample(Int iter, double value) {
   UPDATE(_mean_deriv, (_mean - old_mean)/(iter - _last_iter), 1)
   double old_std_dev = _std_dev;
   _std_dev = std::sqrt(_variance);
+  UPDATE(_deriv_std_dev, (_std_dev - old_std_dev)/(iter - _last_iter), 2)
   #undef UPDATE
   _last_iter = iter;
   _last_value = value;
