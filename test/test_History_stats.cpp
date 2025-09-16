@@ -32,8 +32,9 @@ TEST_CASE("History_stats") {
 
   std::random_device rd;
   std::mt19937 gen(rd());
+  gen.seed(406);
   std::normal_distribution normal(0.);
-  hexed::Int n_iter = 10'000'000;
+  hexed::Int n_iter = 100'000'000;
   for (hexed::Int i = 0; i <= n_iter; i += 10) {
     stats.add_sample(i, 1 - std::exp(-double(i)/n_iter) + 1e-2/(1 + double(i)/n_iter)*normal(gen));
   }
