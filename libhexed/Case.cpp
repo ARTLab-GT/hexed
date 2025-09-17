@@ -845,6 +845,8 @@ Case::Case(std::string input_script)
     auto sub = _inter.make_sub();
     sub.exec(_vars("monitor_vars"));
     bool monitor_converged = _monitor_vars.size();
+    double trend_tol = _vard("trend_tol")*_vard("monitor_window")*iter*_vard("general_tolerance");
+    double noise_tol = _vard("noise_tol")*_vard("general_tolerance");
     for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
       double val = sub.variables->get<double>(_monitor_vars[i_monitor]);
       if (be) val -= _vard(_monitor_vars[i_monitor] + "_prev");
@@ -852,19 +854,20 @@ Case::Case(std::string input_script)
       auto& stats = _hist_stats[2*i_monitor];
       auto& noise_stats = _hist_stats[2*i_monitor + 1];
       stats.add_sample(iter, val);
-      noise_stats.add_sample(iter, math::pow(stats.last_value() - stats.smoothed(), 2));
+      noise_stats.add_sample(iter, std::abs(stats.last_value() - stats.smoothed()));
       double min = _monitors[i_monitor].min();
       double max = _monitors[i_monitor].max();
       _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_min", min);
       _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_max", max);
       _inter.variables->assign(_monitor_vars[i_monitor] + "_smoothed", stats.smoothed());
       _inter.variables->assign(_monitor_vars[i_monitor] + "_trend", stats.trend());
-      double noise = std::sqrt(noise_stats.smoothed());
-      double noise_trend = .5*noise_stats.trend()/noise; // derivative of square root
+      double noise = 2*noise_stats.smoothed();
+      double noise_trend = 2*noise_stats.trend(); // derivative of square root
       _inter.variables->assign(_monitor_vars[i_monitor] + "_noise", noise);
       _inter.variables->assign(_monitor_vars[i_monitor] + "_noise_trend", noise_trend);
-      double tol = _vard("monitor_tol")*_vard("general_tolerance")*.5*(std::abs(max) + std::abs(min));
-      monitor_converged = monitor_converged && max - min < tol;
+      monitor_converged = monitor_converged
+                          && std::abs(stats.trend()) < trend_tol*stats.smoothed()
+                          && (noise < noise_tol*stats.smoothed() || std::abs(noise_trend) < trend_tol*noise);
     }
     _inter.variables->assign<int>("monitor_converged", monitor_converged);
     return "";

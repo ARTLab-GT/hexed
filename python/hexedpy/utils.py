@@ -228,7 +228,11 @@ class History_plot:
                 self._axs[i_col].set_ylim(0.1, 1.)
                 self._axs[i_col].set_yscale("log")
             if col + "_smoothed" in self._data.columns:
-                self._stats[col] = [ax.plot([], [], color = "black")[0], ax.plot([], [], color = "grey")[0], ax.plot([], [], color = "grey")[0]]
+                self._stats[col] = [
+                    ax.plot([], [], color="black")[0],
+                    ax.plot([], [], color="grey", linestyle="dashed")[0],
+                    ax.plot([], [], color="grey", linestyle="dashed")[0],
+                ]
         return self._curves
 
     def _update(self, _):
@@ -274,7 +278,7 @@ class History_plot:
                         x = [(1 - self._monitor_window)*iteration, iteration]
                         y = np.array([smoothed - trend*self._monitor_window*iteration, smoothed]);
                         self._stats[col][0].set_data(x, y)
-                        spread = 1.96*np.array([noise - noise_trend*self._monitor_window*iteration, noise])
+                        spread = np.array([noise - noise_trend*self._monitor_window*iteration, noise])
                         self._stats[col][1].set_data(x, y - spread)
                         self._stats[col][2].set_data(x, y + spread)
         for i_col in range(len(self._plot_columns)):

@@ -45,10 +45,10 @@ fix_therm_admis = true
 {iteration parameters}
 print_freq = 1000
 adapt_freq = 10^5
-monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef; norm_res = normalized_residual;}
+monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 working_dir = {hexed_out} + adapt_freq
-print_vars = print_vars + {drag_coef_smoothed = drag_coef_smoothed; drag_coef_trend = drag_coef_trend; norm_res = normalized_residual; norm_res_smoothed = norm_res_smoothed; norm_res_trend = norm_res_trend;}
-print_vars = print_vars + {drag_coef_noise = drag_coef_noise; drag_coef_noise_trend = drag_coef_noise_trend; norm_res_noise = norm_res_noise; norm_res_noise_trend = norm_res_noise_trend;}
+print_vars = print_vars + {drag_coef_smoothed = drag_coef_smoothed; drag_coef_trend = drag_coef_trend; lift_coef_smoothed = lift_coef_smoothed; lift_coef_trend = lift_coef_trend;}
+print_vars = print_vars + {drag_coef_noise = drag_coef_noise; drag_coef_noise_trend = drag_coef_noise_trend; lift_coef_noise = lift_coef_noise; lift_coef_noise_trend = lift_coef_noise_trend;}
 
 vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
