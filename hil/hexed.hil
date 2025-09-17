@@ -279,7 +279,7 @@ vis_contour_vars = vis_field_vars
 vis_surface_vars = state_vars + transport_expr + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr + bl_nondim_expr
 vis_n_sample = 10
 print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr + {($monitor_vars)}
-monitor_window = 0.25
+monitor_window = 0.1
 monitor_samples = 1000
 monitor_min_samples = 10
 monitor_vars = {}
@@ -415,7 +415,9 @@ restart = {
 iterate = {
     update
     compute_residuals
-    $normalized_residual_expr
+    case0 = {}
+    case1 = {$normalized_residual_expr}
+    $$({case} + !!residual_init)
     $compute_force
     $compute_heating
     {compute initial residual for normalization}
@@ -494,6 +496,7 @@ start = {
     last_adapt_iter = 0
     next_refine_iter = adapt_freq
     monitor_converged = false
+    println({    Monitor window: } + monitor_window)
 }
 
 mesh_init = false

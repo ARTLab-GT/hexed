@@ -676,6 +676,12 @@ Case::Case(std::string input_script)
       _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"), _vari("monitor_min_samples"));
       _inter.variables->assign_default(name + "_min", -huge);
       _inter.variables->assign_default(name + "_max",  huge);
+      _hist_stats.emplace_back(_vard("monitor_window"));
+      _hist_stats.emplace_back(_vard("monitor_window"));
+      _inter.variables->assign_default(name + "_smoothed", 0.);
+      _inter.variables->assign_default(name + "_noise", 0.);
+      _inter.variables->assign_default(name + "_trend", 0.);
+      _inter.variables->assign_default(name + "_noise_trend", 0.);
     }
     bool implicit = !_vari("steady") && _vari("implicit");
     if (implicit) {
@@ -843,10 +849,20 @@ Case::Case(std::string input_script)
       double val = sub.variables->get<double>(_monitor_vars[i_monitor]);
       if (be) val -= _vard(_monitor_vars[i_monitor] + "_prev");
       _monitors[i_monitor].add_sample(iter, val);
+      auto& stats = _hist_stats[2*i_monitor];
+      auto& noise_stats = _hist_stats[2*i_monitor + 1];
+      stats.add_sample(iter, val);
+      noise_stats.add_sample(iter, math::pow(stats.last_value() - stats.smoothed(), 2));
       double min = _monitors[i_monitor].min();
       double max = _monitors[i_monitor].max();
       _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_min", min);
       _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_max", max);
+      _inter.variables->assign(_monitor_vars[i_monitor] + "_smoothed", stats.smoothed());
+      _inter.variables->assign(_monitor_vars[i_monitor] + "_trend", stats.trend());
+      double noise = std::sqrt(noise_stats.smoothed());
+      double noise_trend = .5*noise_stats.trend()/noise; // derivative of square root
+      _inter.variables->assign(_monitor_vars[i_monitor] + "_noise", noise);
+      _inter.variables->assign(_monitor_vars[i_monitor] + "_noise_trend", noise_trend);
       double tol = _vard("monitor_tol")*_vard("general_tolerance")*.5*(std::abs(max) + std::abs(min));
       monitor_converged = monitor_converged && max - min < tol;
     }

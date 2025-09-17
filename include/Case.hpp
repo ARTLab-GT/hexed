@@ -5,6 +5,7 @@
 #include "Solver.hpp"
 #include "Interpreter.hpp"
 #include "History_monitor.hpp"
+#include "History_stats.hpp"
 
 namespace hexed {
 
@@ -30,6 +31,7 @@ class Case {
   std::vector<std::string> _monitor_vars;
   std::vector<std::string> _print_vars;
   std::vector<History_monitor> _monitors;
+  std::vector<History_stats> _hist_stats;
   std::unique_ptr<History_monitor> _n_elem_monitor;
   std::string _assignment(std::string var_name);
   std::function<bool(Element&, int)> _ref_crit(std::string name);
