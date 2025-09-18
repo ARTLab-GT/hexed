@@ -197,9 +197,6 @@ class History_plot:
                 return False
             if "iteration" in col:
                 return False
-            for ending in ["_smoothed", "_noise", "_trend", "_deriv", "_mean"]:
-                if col.endswith(ending):
-                    return False
             return True
         self._plot_columns = [col for col in self._data.columns if plot_column(col)]
         self._stop = False
@@ -227,12 +224,11 @@ class History_plot:
             if label.endswith("residual") or label.endswith("error"):
                 self._axs[i_col].set_ylim(0.1, 1.)
                 self._axs[i_col].set_yscale("log")
-            if col + "_smoothed" in self._data.columns:
-                self._stats[col] = [
-                    ax.plot([], [], color="black")[0],
-                    ax.plot([], [], color="grey", linestyle="dashed")[0],
-                    ax.plot([], [], color="grey", linestyle="dashed")[0],
-                ]
+            self._stats[col] = [
+                ax.plot([], [], color="black")[0],
+                ax.plot([], [], color="grey", linestyle="dashed")[0],
+                ax.plot([], [], color="grey", linestyle="dashed")[0],
+            ]
         return self._curves
 
     def _update(self, _):
@@ -241,6 +237,7 @@ class History_plot:
             line = self._lines.pop(0)
             if line.startswith("simulation complete"):
                 self._stop = True
+            status_data = pd.read_csv(self._directory + "status_data.txt", delimiter=":", names=["parameter", "value"], index_col=0)
             if re.match(" *[0-9]+,", line):
                 entries = line.split(",")
                 add_line = self._data.shape[0]
@@ -269,11 +266,11 @@ class History_plot:
                                 ax.set_ylim(ylim[1] + 1.5*(self._data[col].min() - ylim[1]), ylim[1])
                             elif last_value > ylim[1]:
                                 ax.set_ylim(ylim[0], ylim[0] + 1.5*(self._data[col].max() - ylim[0]))
-                    if col + "_smoothed" in self._data.columns:
-                        smoothed = self._data.at[add_line, col + "_smoothed"]
-                        trend = self._data.at[add_line, col + "_trend"]
-                        noise = self._data.at[add_line, col + "_noise"]
-                        noise_trend = self._data.at[add_line, col + "_noise_trend"]
+                    if col + "_smoothed" in status_data.index:
+                        smoothed = status_data.at[col + "_smoothed", "value"]
+                        trend = status_data.at[col + "_trend", "value"]
+                        noise = status_data.at[col + "_noise", "value"]
+                        noise_trend = status_data.at[col + "_noise_trend", "value"]
                         iteration = self._data.at[add_line, "iteration"]
                         x = [(1 - self._monitor_window)*iteration, iteration]
                         y = np.array([smoothed - trend*self._monitor_window*iteration, smoothed]);

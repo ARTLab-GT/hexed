@@ -680,10 +680,9 @@ Case::Case(std::string input_script)
       _inter.variables->assign_default(name + "_max",  huge);
       _hist_stats.emplace_back(_vard("monitor_window"));
       _hist_stats.emplace_back(_vard("monitor_window"));
-      _inter.variables->assign_default(name + "_smoothed", 0.);
-      _inter.variables->assign_default(name + "_noise", 0.);
-      _inter.variables->assign_default(name + "_trend", 0.);
-      _inter.variables->assign_default(name + "_noise_trend", 0.);
+      for (std::string suffix : {"_smoothed", "_noise", "_trend", "_noise_trend"}) {
+        _inter.variables->assign_default(name + suffix, 0.);
+      }
     }
     bool implicit = !_vari("steady") && _vari("implicit");
     if (implicit) {
@@ -862,6 +861,7 @@ Case::Case(std::string input_script)
     _inter.variables->assign(be ? "pseudotime_iteration" : "iteration", iter);
     auto sub = _inter.make_sub();
     sub.exec(_vars("monitor_vars"));
+    std::ofstream status_data ((_vars("working_dir") + "status_data.txt").c_str());
     for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
       double val = sub.variables->get<double>(_monitor_vars[i_monitor]);
       if (be) val -= _vard(_monitor_vars[i_monitor] + "_prev");
@@ -874,10 +874,15 @@ Case::Case(std::string input_script)
       double max = _monitors[i_monitor].max();
       _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_min", min);
       _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_max", max);
-      _inter.variables->assign(_monitor_vars[i_monitor] + "_smoothed", stats.smoothed());
-      _inter.variables->assign(_monitor_vars[i_monitor] + "_trend", stats.trend());
-      _inter.variables->assign(_monitor_vars[i_monitor] + "_noise", noise_stats.smoothed());
-      _inter.variables->assign(_monitor_vars[i_monitor] + "_noise_trend", noise_stats.trend());
+      auto assign = [&](std::string suffix, double value) {
+        std::string name = _monitor_vars[i_monitor] + suffix;
+        _inter.variables->assign(name, value);
+        status_data << name << ": " << value << "\n";
+      };
+      assign("_smoothed", stats.smoothed());
+      assign("_trend", stats.trend());
+      assign("_noise", noise_stats.smoothed());
+      assign("_noise_trend", noise_stats.trend());
     }
     return "";
   }));
