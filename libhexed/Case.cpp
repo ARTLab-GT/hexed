@@ -530,7 +530,7 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
-    bool allow_ref = _vari("iteration") >= _vari("next_refine_iter");
+    bool allow_ref = _vari("allow_refine");
     printers::info("Adapting mesh (");
     if (allow_ref) {
       printers::info("refinement allowed", true);
@@ -543,26 +543,28 @@ Case::Case(std::string input_script)
     Mesh::Adaptation_result result;
     double total_inv_sz = _solver().mesh().total_inverse_size();
     bool can_adapt = true;
-    while (true) {
-      _inter.variables->assign("hexed_tol_factor", tol_factor);
-      result = _solver().mesh().plan_adaptation(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"));
-      printers::info(to_string(result.total_inv_sz));
-      if (tol_factor*_vard("general_tolerance")*std::min(_vard("spectral_tol"), _vard("flux_tol")) > 1e3) {
-        printers::warn("\n  Only coarsening because excessive refinement could not be avoided "
-                       "without excessive tolerance.", true);
-        result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"));
-        printers::error("[" + to_string(result.total_inv_sz) + "]", true);
-        break;
+    if (allow_ref) {
+      while (true) {
+        _inter.variables->assign("hexed_tol_factor", tol_factor);
+        result = _solver().mesh().plan_adaptation(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"));
+        if (tol_factor*_vard("general_tolerance")*std::min(_vard("spectral_tol"), _vard("flux_tol")) > 1e3) {
+          printers::warn("\n  Only coarsening because excessive refinement could not be avoided "
+                         "without excessive tolerance.", true);
+          result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"));
+          printers::error("[" + to_string(result.total_inv_sz) + "]", true);
+          break;
+        }
+        if (_solver().mesh().n_elements() + result.n_refine - result.n_coarsen < _vard("max_n_elements")) {
+          break;
+        } else {
+          tol_factor *= 1.2;
+          printers::warn("\n  Temporarily increasing refinement tolerance to "
+                         + to_string(tol_factor*_vard("general_tolerance"))
+                         + " to satisfy refinement constraints.", true);
+        }
       }
-      if (_solver().mesh().n_elements() + result.n_refine - result.n_coarsen < _vard("max_n_elements")
-          && result.total_inv_sz < 1.2*total_inv_sz) {
-        break;
-      } else {
-        tol_factor *= 1.2;
-        printers::warn("\n  Temporarily increasing refinement tolerance to "
-                       + to_string(tol_factor*_vard("general_tolerance"))
-                       + " to satisfy refinement constraints.", true);
-      }
+    } else {
+      result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"));
     }
     _inter.variables->assign("hexed_tol_factor", tol_factor);
     if (result.changed) _solver().mesh().execute_adaptation();
@@ -818,6 +820,22 @@ Case::Case(std::string input_script)
     return report;
   }));
 
+  _inter.variables->create<int>("monitors_converged", new Namespace::Heisenberg<int>([this]() {
+    bool converged = _monitor_vars.size();
+    double iter_scale = _vard("monitor_window")*_vari("iteration");
+    double trend_tol = _vard("trend_tol")/iter_scale*_vard("general_tolerance");
+    double noise_tol = _vard("noise_tol")*_vard("general_tolerance");
+    for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size() && converged; ++i_monitor) {
+      auto& stats = _hist_stats[2*i_monitor];
+      auto& noise_stats = _hist_stats[2*i_monitor + 1];
+      converged = converged
+                  && std::abs(stats.trend()) < trend_tol*(std::abs(stats.smoothed()) + std::abs(noise_stats.smoothed()))
+                  && (noise_stats.smoothed() + .1*std::abs(noise_stats.trend()*iter_scale) < noise_tol*stats.smoothed()
+                      || std::abs(noise_stats.trend()) < trend_tol*noise_stats.smoothed());
+    }
+    return converged;
+  }));
+
   _inter.variables->create<std::string>("update", new Namespace::Heisenberg<std::string>([this]() {
     HEXED_ASSERT(_vari("mesh_init"), "attempt to update flow when mesh has not been created", assert::User_error);
     bool avw = _vard("art_visc_width") > 0;
@@ -844,9 +862,6 @@ Case::Case(std::string input_script)
     _inter.variables->assign(be ? "pseudotime_iteration" : "iteration", iter);
     auto sub = _inter.make_sub();
     sub.exec(_vars("monitor_vars"));
-    bool monitor_converged = _monitor_vars.size();
-    double trend_tol = _vard("trend_tol")*_vard("monitor_window")*iter*_vard("general_tolerance");
-    double noise_tol = _vard("noise_tol")*_vard("general_tolerance");
     for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
       double val = sub.variables->get<double>(_monitor_vars[i_monitor]);
       if (be) val -= _vard(_monitor_vars[i_monitor] + "_prev");
@@ -854,22 +869,16 @@ Case::Case(std::string input_script)
       auto& stats = _hist_stats[2*i_monitor];
       auto& noise_stats = _hist_stats[2*i_monitor + 1];
       stats.add_sample(iter, val);
-      noise_stats.add_sample(iter, std::abs(stats.last_value() - stats.smoothed()));
+      noise_stats.add_sample(iter, 2*std::abs(stats.last_value() - stats.smoothed()));
       double min = _monitors[i_monitor].min();
       double max = _monitors[i_monitor].max();
       _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_min", min);
       _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_max", max);
       _inter.variables->assign(_monitor_vars[i_monitor] + "_smoothed", stats.smoothed());
       _inter.variables->assign(_monitor_vars[i_monitor] + "_trend", stats.trend());
-      double noise = 2*noise_stats.smoothed();
-      double noise_trend = 2*noise_stats.trend(); // derivative of square root
-      _inter.variables->assign(_monitor_vars[i_monitor] + "_noise", noise);
-      _inter.variables->assign(_monitor_vars[i_monitor] + "_noise_trend", noise_trend);
-      monitor_converged = monitor_converged
-                          && std::abs(stats.trend()) < trend_tol*stats.smoothed()
-                          && (noise < noise_tol*stats.smoothed() || std::abs(noise_trend) < trend_tol*noise);
+      _inter.variables->assign(_monitor_vars[i_monitor] + "_noise", noise_stats.smoothed());
+      _inter.variables->assign(_monitor_vars[i_monitor] + "_noise_trend", noise_stats.trend());
     }
-    _inter.variables->assign<int>("monitor_converged", monitor_converged);
     return "";
   }));
 

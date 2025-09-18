@@ -256,8 +256,10 @@ shock_unrefine_if = {(!sonic)}
 adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*max_flux) | $({nominal_shape} + i_dim) > max_aspect_ratio*((i_dim != 0)*nominal_shape0 + (i_dim != 1)*nominal_shape1 + (i_dim != 2)*nominal_shape2)) & $({nominal_shape} + i_dim) > 2*min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
 adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*max_flux)) & $({nominal_shape} + i_dim) > 2*min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
 adapt_unrefine_if = {((($({spectral_uncertainty} + i_dim) < spectral_tol*general_tolerance*.5^(row_size - 1) & !(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*max_flux*.5^(row_size - 1))) | $({nominal_shape} + i_dim) < min_cell_reynolds*$unadjusted_size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed)) & $({aniso_ref_level} + i_dim) > init_ref_level)}
-adapt_if = {(iteration >= next_refine_iter)}
-monitor_criterion = {(iteration > min_prints*print_freq & monitor_converged)}
+adapt_trend_tol = 1e-1
+adapt_noise_tol = 1e-1
+adapt_if = {(iteration%adapt_freq == 0)}
+monitor_criterion = {(iteration > min_prints*print_freq & monitors_converged)}
 done = {($monitor_criterion | iteration > max_iterations | flow_time > max_flow_time | wall_time > max_wall_time)}
 max_init_refine_iters = 100
 max_geom_refine_iters = 100
@@ -431,6 +433,13 @@ iterate = {
     }
     $$({case} + !residual_init)
     println report
+    hexed_old_trend_tol = trend_tol
+    hexed_old_noise_tol = noise_tol
+    trend_tol = adapt_trend_tol
+    noise_tol = adapt_noise_tol
+    allow_refine = $monitor_criterion
+    trend_tol = hexed_old_trend_tol
+    noise_tol = hexed_old_noise_tol
     hexed_prev_except = except
     except = {println exception}
     $(read(working_dir + {runtime_cmd.hil}))
@@ -495,8 +504,8 @@ start = {
     prev_residual = 0.
     hexed_next_flow_time = 0.
     last_adapt_iter = 0
-    next_refine_iter = adapt_freq
-    monitor_converged = false
+    next_refine_iter = 1
+    allow_refine = false
     println({    Monitor window: } + monitor_window)
 }
 
