@@ -65,6 +65,7 @@ class Element : public Kernel_element, public Mortal {
   double residual;
   double flux_uncert;
   Lock lock; //!< \brief for any tasks where multiple threads might access an element simultaneously
+  bool has_shock;
 
   Element(Storage_params, Tree& tree, int aniso_ref_level = 0);
   //! \details Can't copy an Element. Doing so would have to either duplicate or break vertex connections,

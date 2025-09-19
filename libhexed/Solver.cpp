@@ -603,6 +603,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
     double* forcing = elements[i_elem].art_visc_forcing();
     double* adv = elements[i_elem].advection_state();
     double* state = elements[i_elem].state();
+    double has_shock = false;
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double proj = 0;
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
@@ -615,7 +616,9 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       mach_suppression /= heat_rat*(heat_rat - 1.);
       mach_suppression = mach_suppression*mach_suppression/(.3 + mach_suppression*mach_suppression);
       forcing[i_qpoint] = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
+      has_shock = has_shock || forcing[i_qpoint] > 1e-3;
     }
+    elements[i_elem].has_shock = has_shock;
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
 
   // begin root-smear-square operation
