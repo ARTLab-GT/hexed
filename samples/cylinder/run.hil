@@ -9,7 +9,10 @@ mesh_extreme11 =  4.*.02
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
 geom0 = {auto.csv}
-amr = true;
+{
+amr = true
+}
+elementwise_art_visc = true
 
 {freestream/wall definition}
 freestream_mach = 8.1
@@ -29,11 +32,15 @@ monitor_vars = {lift_coef = lift_coef; drag_coef = drag_coef;}
 $set_shock
 $set_ramping
 ramping_final_safety = 0.1
-working_dir = {hexed_out_inviscid}
+working_dir = {hexed_out_elwise}
+{
 diffusive_admissibility = true
+}
 art_visc_width = .001
 vis_field_vars = vis_field_vars + field_residual_expr + {spectral_uncertainty0 = spectral_uncertainty0; spectral_uncertainty1 = spectral_uncertainty1; spectral_uncertainty2 = spectral_uncertainty2;}
 vis_freq = write_freq = 1000
 
+{
 $plot_history
+}
 $simulate
