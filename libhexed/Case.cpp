@@ -473,24 +473,18 @@ Case::Case(std::string input_script)
     refine_isotropic("geom", "Geometry", true, true);
     _inter.variables->assign("flow_time", 0.);
     for (int i_split = 0; i_split < _vari("init_layer_splits"); ++i_split) _inter.make_sub().exec("split_layers");
-    for (int i_ref = 0, changed = true; i_ref < _vari("max_final_refine_iters") && changed; ++i_ref) {
+    for (int i_ref = 0; i_ref < _vari("max_final_refine_iters"); ++i_ref) {
       printers::info("  Final refinement sweep " + to_string(i_ref) + "... ");
       std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
       std::vector<std::function<bool(Element&, int)>> crits;
-      for (std::string crit : crit_names) {
-        crits.emplace_back([this, crit](Element& elem, int i_dim) {
-          auto sub = _inter.make_sub();
-          vis_variables::element(*sub.variables, elem);
-          sub.variables->assign("i_dim", i_dim);
-          sub.exec("return = $final" + crit);
-          return sub.variables->get<int>("return");
-        });
-      }
-      changed = _solver().mesh().adapt(crits[0], crits[1], true, true).changed;
+      auto result = _solver().mesh().plan_adaptation(_ref_crit("final_refine_if"), _ref_crit("final_unrefine_if"));
+      if (result.changed) _solver().mesh().execute_adaptation();
       _solver().calc_jacobian();
-      printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ");
+      printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ("
+                     + to_string(result.n_refine) + " new " + to_string(result.n_coarsen) + " lost)");
       _inter.variables->assign("flow_time", double(i_ref));
       _visualize("_final_ref_sweep" + to_string(i_ref));
+      if (!result.changed) break;
     }
     _inter.variables->assign("mesh_init", 1);
     printers::info("  geometry bounding box: \n");
@@ -536,6 +530,8 @@ Case::Case(std::string input_script)
     printers::info("Adapting mesh (");
     if (allow_ref) {
       printers::info("refinement allowed", true);
+      _inter.variables->assign("next_refine_residual", _vard("normalized_residual")*_vard("adapt_residual_factor"));
+      _inter.variables->assign("last_adapt_iter", _vari("iteration"));
     } else {
       printers::info("only coarsening allowed");
     }
@@ -574,33 +570,8 @@ Case::Case(std::string input_script)
     _solver().calc_jacobian();
     _solver().compute_residual();
     std::string message = "";
-    if (allow_ref) {
-      Int n_elem = _solver().mesh().n_elements();
-      //int next = _vari("iteration")*std::max(1., math::pow((n_elem + result.n_refine)*1./n_elem, 2));
-      int next = _vari("iteration")*1.25;
-      _inter.variables->assign("next_refine_residual", _vard("normalized_residual")*_vard("adapt_residual_factor"));
-      _inter.variables->assign("next_refine_iter", next);
-      _inter.variables->assign("last_adapt_iter", _vari("iteration"));
-      message = "Refinement allowed again after iteration " + to_string(next) + ".\n";
-    }
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements"
                    " with total inverse size " + to_string(_solver().mesh().total_inverse_size()) + ".\n" + message);
-    _solver().print_preti_iters();
-    return "";
-  }));
-
-  _inter.variables->create("adapt_coarsen", new Namespace::Heisenberg<std::string>([this]() {
-    printers::info("Adapting mesh (");
-    printers::info("only coarsening allowed");
-    printers::info(")...");
-    _solver().compute_spectral_uncertainty();
-    auto result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"));
-    if (result.changed) _solver().mesh().execute_adaptation();
-    _inter.variables->assign<int>("adapt_changed", result.changed);
-    _solver().calc_jacobian();
-    _solver().compute_residual();
-    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements"
-                   " with total inverse size " + to_string(_solver().mesh().total_inverse_size()) + ".\n");
     _solver().print_preti_iters();
     return "";
   }));
@@ -609,21 +580,25 @@ Case::Case(std::string input_script)
     #if 0
     for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
       printers::info("shock coarsening sweep " + to_string(sweep) + ":");
-      auto shock_result = _solver().mesh().adapt([](Element&, int){return false;}, _ref_crit("shock_unrefine_if"),
-                                                 true, false);
+      auto result = _solver().mesh().plan_adaptation(_ref_crit("shock_refine_if"), [](Element&, int){return false;});
+      if (result.changed) _solver().mesh().execute_adaptation();
       printers::info(" " + to_string(_solver().mesh().n_elements()) + " elements\n");
       if (shock_result.n_coarsen == 0) break;
     }
+    #endif
     for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
       printers::info("shock refinement sweep " + to_string(sweep) + ":");
-      auto shock_result = _solver().mesh().adapt(_ref_crit("shock_refine_if"), [](Element&, int){return false;},
-                                                 true, false);
+      auto result = _solver().mesh().plan_adaptation(_ref_crit("shock_refine_if"), [](Element&, int){return false;});
+      if (result.n_elements > _vard("max_n_elements")) {
+        printers::error(" aborting shock refinement to avoid exceeding maximum number of elements!", true);
+        break;
+      }
+      if (result.changed) _solver().mesh().execute_adaptation();
       printers::info(" " + to_string(_solver().mesh().n_elements()) + " elements\n");
-      if (shock_result.n_refine == 0) break;
+      if (!result.changed) break;
     }
     _solver().calc_jacobian();
     _solver().compute_residual();
-    #endif
     return "";
   }));
 

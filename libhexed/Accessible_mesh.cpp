@@ -2429,7 +2429,6 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
     }
   }
   Int n_total = n_disagree + n_need_ref + n_orphan + n_no_elem + n_graft + n_def_disagree + n_other_ref + n_not_ref;
-  //printers::info(format_str("[%li %li; %li %li %li %li %li %li %li %li]", n_cant_unref, n_total, n_disagree, n_need_ref, n_orphan, n_no_elem, n_graft, n_def_disagree, n_other_ref, n_not_ref));
   double n_refine = 0;
   double n_coarsen = 0;
   bool changed = false;
@@ -2451,8 +2450,8 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
     changed = changed || (p != 0);
     tot_inv_sz += math::pow(2., p)*new_inv_sz;
   }
-  //printers::info(format_str("[%e %e %e %e]", n_refine_orig, n_coarsen_orig, n_refine, n_coarsen));
-  return {Int(std::round(n_refine)), Int(std::round(n_coarsen)), changed, tot_inv_sz};
+  return {Int(std::round(n_refine)), Int(std::round(n_coarsen)), Int(std::round(elems.size() + n_refine - n_coarsen)),
+          changed, tot_inv_sz};
 }
 
 void Accessible_mesh::execute_adaptation() {

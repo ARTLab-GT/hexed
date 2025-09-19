@@ -7,6 +7,9 @@ mesh_extreme11 =  80.
 
 $set_shock
 art_visc_width = .004
+max_safety = .4
+vis_freq = 10^3
+adapt_freq = 10^4
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -28,9 +31,6 @@ println({turbulent viscosity: } + freestream_density*freestream_specific_turbule
 println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation/dyn_visc)
 monitor_vars = {lift_coef = lift_coef; drag_coef = drag_coef;}
 
-vis_freq = 10000
-min_cell_reynolds = .1
-update_roughness_freq = 1000
 amr = true
 
 vis_field_vars = vis_field_vars + {

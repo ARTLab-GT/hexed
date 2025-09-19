@@ -61,6 +61,7 @@ vis_surface_vars = vis_surface_vars + {
     wall_dimension = wall_dimension
     nominal_spacing = $({nominal_shape} + wall_dimension)
 }
+working_dir = {hexed_out_foo}
 
 $plot_history
 $simulate

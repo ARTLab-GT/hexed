@@ -166,6 +166,7 @@ class Mesh {
   struct Adaptation_result {
     Int n_refine;
     Int n_coarsen;
+    Int n_elements;
     bool changed;
     double total_inv_sz = 0;
   };
