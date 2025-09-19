@@ -532,7 +532,7 @@ Case::Case(std::string input_script)
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
     double res_trend = std::max(std::abs(_log_residual_hist[0].trend()), std::abs(_log_residual_hist[1].trend()));
     bool allow_ref = _vard("normalized_residual") < _vard("next_refine_residual")
-                     || res_trend*_vard("monitor_window")*_vari("iteration") < .01;
+                     || res_trend*_vard("monitor_window")*_vari("iteration") < _vard("residual_stagnation_tol");
     printers::info("Adapting mesh (");
     if (allow_ref) {
       printers::info("refinement allowed", true);
@@ -578,7 +578,7 @@ Case::Case(std::string input_script)
       Int n_elem = _solver().mesh().n_elements();
       //int next = _vari("iteration")*std::max(1., math::pow((n_elem + result.n_refine)*1./n_elem, 2));
       int next = _vari("iteration")*1.25;
-      _inter.variables->assign("next_refine_residual", _vard("normalized_residual")/2.);
+      _inter.variables->assign("next_refine_residual", _vard("normalized_residual")*_vard("adapt_residual_factor"));
       _inter.variables->assign("next_refine_iter", next);
       _inter.variables->assign("last_adapt_iter", _vari("iteration"));
       message = "Refinement allowed again after iteration " + to_string(next) + ".\n";
