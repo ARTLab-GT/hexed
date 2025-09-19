@@ -704,8 +704,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based) {
   Mass mass;
   set_uncertainty(Normalized_nonsmooth(mass));
   auto& elems = acc_mesh->elements();
-  double scale = 2*width/(basis.row_size - 1)*(_namespace->get<double>("freestream_speed")
-                                               + _namespace->get<double>("freestream_sound_speed"));
+  double scale = width/(basis.row_size - 1)*(_namespace->get<double>("freestream_speed") + _namespace->get<double>("freestream_sound_speed"));
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     double& u = elems[i_elem].uncertainty;
@@ -733,9 +732,7 @@ void Solver::update_art_visc_elwise(double width, bool pde_based) {
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       double* av = elems[i_elem].laplacian_av_coef();
       double* forcing = elems[i_elem].art_visc_forcing();
-      for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-        av[i_qpoint] = forcing[params.n_qpoint() + i_qpoint];
-      }
+      for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) av[i_qpoint] = forcing[params.n_qpoint() + i_qpoint];
     }
     compute_write_face(_kernel_mesh());
     compute_prolong(_kernel_mesh());

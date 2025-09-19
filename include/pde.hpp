@@ -135,13 +135,8 @@ class Navier_stokes {
       double real_turb_diss;
       double k_bar;
       void compute_scalars_diff() {
-        #if 0
         bulk_av = std::abs(state(i_bulk_art_visc));
         laplacian_av = std::abs(state(i_laplacian_art_visc));
-        #else
-        bulk_av = std::abs(state(i_bulk_art_visc)) + std::abs(state(i_laplacian_art_visc));
-        laplacian_av = 0.;
-        #endif
         double spec_heat_v = constants::specific_gas_air/(heat_rat - 1.);
         double spec_heat_p = heat_rat*constants::specific_gas_air;
         sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)/spec_heat_v);
