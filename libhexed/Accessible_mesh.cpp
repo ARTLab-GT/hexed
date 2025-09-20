@@ -2369,15 +2369,6 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
     if (p < 0) n_coarsen_orig -= p;
     if (p > 0) n_refine_orig += p;
   }
-  Int n_cant_unref = 0;
-  Int n_disagree = 0;
-  Int n_need_ref = 0;
-  Int n_orphan = 0;
-  Int n_no_elem = 0;
-  Int n_graft = 0;
-  Int n_def_disagree = 0;
-  Int n_other_ref = 0;
-  Int n_not_ref = 0;
   for (bool changed = true; changed;) {
     changed = false;
     for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -2386,34 +2377,21 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
       for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
         if (need_ref[i_dim] > 0) {
           ++elem.desired_refinement(i_dim);
-          if (elem.desired_refinement(i_dim) <= 0) {
-            ++n_need_ref;
-            ++n_cant_unref;
-          }
           changed = true;
         }
         if (elem.desired_refinement(i_dim) < 0) {
           Tree* parent = elem.tree->parent();
           bool can_unref = parent;
-          if (!parent) ++n_orphan;
           if (parent) {
-            if (!parent->is_refined(i_dim)) ++n_not_ref;
             can_unref = can_unref && parent->is_refined(i_dim);
             for (Tree* child : parent->unique_children()) {
               if (!child->elem) {
-                if (can_unref) ++n_no_elem;
                 can_unref = false;
               } else {
-                if (can_unref) {
-                  if (child->elem->desired_refinement(i_dim) >= 0) ++n_disagree;
-                  else if (child->has_graft_connection()) ++n_graft;
-                  else if (child->elem->get_is_deformed() != elem.get_is_deformed()) ++n_def_disagree;
-                }
                 can_unref = can_unref && child->elem->get_is_deformed() == elem.get_is_deformed()
                                       && !child->has_graft_connection()
                                       && child->elem->desired_refinement(i_dim) < 0;
                 for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) {
-                  if (can_unref && child->elem->desired_refinement(j_dim) > 0) ++n_other_ref;
                   can_unref = can_unref && child->elem->desired_refinement(j_dim) <= 0;
                 }
               }
@@ -2422,13 +2400,11 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
           if (!can_unref) {
             elem.desired_refinement(i_dim) = 0;
             changed = true;
-            ++n_cant_unref;
           }
         }
       }
     }
   }
-  Int n_total = n_disagree + n_need_ref + n_orphan + n_no_elem + n_graft + n_def_disagree + n_other_ref + n_not_ref;
   double n_refine = 0;
   double n_coarsen = 0;
   bool changed = false;

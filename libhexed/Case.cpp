@@ -519,10 +519,6 @@ Case::Case(std::string input_script)
     return changed;
   }));
 
-  _inter.variables->create("total_inverse_size", new Namespace::Heisenberg<double>([this]() {
-    return _solver().mesh().total_inverse_size();
-  }));
-
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
     double res_trend = std::max(std::abs(_log_residual_hist[0].trend()), std::abs(_log_residual_hist[1].trend()));
     bool allow_ref = _vard("normalized_residual") < _vard("next_refine_residual")
@@ -539,8 +535,6 @@ Case::Case(std::string input_script)
     _solver().compute_spectral_uncertainty();
     double tol_factor = 1;
     Mesh::Adaptation_result result;
-    double total_inv_sz = _solver().mesh().total_inverse_size();
-    bool can_adapt = true;
     if (allow_ref) {
       while (true) {
         _inter.variables->assign("hexed_tol_factor", tol_factor);
@@ -549,7 +543,6 @@ Case::Case(std::string input_script)
           printers::warn("\n  Only coarsening because excessive refinement could not be avoided "
                          "without excessive tolerance.", true);
           result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"));
-          printers::error("[" + to_string(result.total_inv_sz) + "]", true);
           break;
         }
         if (_solver().mesh().n_elements() + result.n_refine - result.n_coarsen < _vard("max_n_elements")) {
@@ -569,9 +562,7 @@ Case::Case(std::string input_script)
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().calc_jacobian();
     _solver().compute_residual();
-    std::string message = "";
-    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements"
-                   " with total inverse size " + to_string(_solver().mesh().total_inverse_size()) + ".\n" + message);
+    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
     _solver().print_preti_iters();
     return "";
   }));
