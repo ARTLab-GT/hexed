@@ -644,23 +644,13 @@ Case::Case(std::string input_script)
     sub.exec(_vars("monitor_vars"));
     _monitor_vars = sub.variables->names();
     for (std::string name : _monitor_vars) {
-      _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"), _vari("monitor_min_samples"));
-      _inter.variables->assign_default(name + "_min", -huge);
-      _inter.variables->assign_default(name + "_max",  huge);
-      _hist_stats.emplace_back(_vard("monitor_window"));
-      _hist_stats.emplace_back(_vard("monitor_window"));
+      _monitors.emplace_back(_vard("monitor_window"));
       for (std::string suffix : {"_smoothed", "_noise", "_trend", "_noise_trend"}) {
         _inter.variables->assign_default(name + suffix, 0.);
       }
     }
     _log_residual_hist.emplace_back(.2);
     _log_residual_hist.emplace_back(.4);
-    bool implicit = !_vari("steady") && _vari("implicit");
-    if (implicit) {
-      for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
-        _inter.variables->assign(_monitor_vars[i_monitor] + "_prev", 0.);
-      }
-    }
     return "";
   }));
 
@@ -679,10 +669,6 @@ Case::Case(std::string input_script)
     Task_message(printers::info, "reading status");
     auto sub = _inter.make_sub();
     sub.exec("$read {" + _vars("input_data") + ".status.hil}");
-    for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
-      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_vars[i_monitor] + "_min"));
-      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_vars[i_monitor] + "_max"));
-    }
     return "";
   }));
   _inter.variables->create("write_mesh", new Namespace::Heisenberg<std::string>([this]() {
@@ -792,16 +778,10 @@ Case::Case(std::string input_script)
 
   _inter.variables->create<int>("monitors_converged", new Namespace::Heisenberg<int>([this]() {
     bool converged = _monitor_vars.size();
-    double iter_scale = _vard("monitor_window")*_vari("iteration");
-    double trend_tol = _vard("trend_tol")/iter_scale*_vard("general_tolerance");
+    double trend_tol = _vard("trend_tol")*_vard("general_tolerance");
     double noise_tol = _vard("noise_tol")*_vard("general_tolerance");
     for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size() && converged; ++i_monitor) {
-      auto& stats = _hist_stats[2*i_monitor];
-      auto& noise_stats = _hist_stats[2*i_monitor + 1];
-      converged = converged
-                  && std::abs(stats.trend()) < trend_tol*(std::abs(stats.smoothed()) + std::abs(noise_stats.smoothed()))
-                  && (noise_stats.smoothed() + .1*std::abs(noise_stats.trend()*iter_scale) < noise_tol*stats.smoothed()
-                      || std::abs(noise_stats.trend()) < trend_tol*noise_stats.smoothed());
+      converged = converged && _monitors[i_monitor].converged({.rel=trend_tol}, {.rel=noise_tol});
     }
     return converged;
   }));
@@ -835,25 +815,17 @@ Case::Case(std::string input_script)
     std::ofstream status_data ((_vars("working_dir") + "status_data.txt").c_str());
     for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
       double val = sub.variables->get<double>(_monitor_vars[i_monitor]);
-      if (be) val -= _vard(_monitor_vars[i_monitor] + "_prev");
-      _monitors[i_monitor].add_sample(iter, val);
-      auto& stats = _hist_stats[2*i_monitor];
-      auto& noise_stats = _hist_stats[2*i_monitor + 1];
-      stats.add_sample(iter, val);
-      noise_stats.add_sample(iter, 2*std::abs(stats.last_value() - stats.smoothed()));
-      double min = _monitors[i_monitor].min();
-      double max = _monitors[i_monitor].max();
-      _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_min", min);
-      _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_max", max);
+      auto& monitor = _monitors[i_monitor];
+      monitor.add_sample(iter, val);
       auto assign = [&](std::string suffix, double value) {
         std::string name = _monitor_vars[i_monitor] + suffix;
         _inter.variables->assign(name, value);
         status_data << name << ": " << value << "\n";
       };
-      assign("_smoothed", stats.smoothed());
-      assign("_trend", stats.trend());
-      assign("_noise", noise_stats.smoothed());
-      assign("_noise_trend", noise_stats.trend());
+      assign("_smoothed", monitor.smoothed());
+      assign("_trend", monitor.trend());
+      assign("_noise", monitor.noise());
+      assign("_noise_trend", monitor.noise_trend());
     }
     for (auto& hist : _log_residual_hist) hist.add_sample(iter, std::log(_vard("normalized_residual"))/std::log(10.));
     return "";
@@ -869,10 +841,6 @@ Case::Case(std::string input_script)
       _inter.variables->assign("hexed_next_flow_time", _vard("hexed_next_flow_time") + _vard("time_step"));
       auto sub = _inter.make_sub();
       sub.exec(_vars("monitor_vars"));
-      for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
-        _monitors[i_monitor].clear();
-        _inter.variables->assign(_monitor_vars[i_monitor] + "_prev", _vard(_monitor_vars[i_monitor]));
-      }
     }
     return "";
   }));

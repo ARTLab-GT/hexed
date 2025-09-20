@@ -1,10 +1,9 @@
 #include <hexed/History_stats.hpp>
-#include <hexed/Printer.hpp> //! \todo delete this
 
 namespace hexed {
 
-History_stats::History_stats(double iteration_fraction)
-: _iter_frac{iteration_fraction}
+History_stats::History_stats(double iter_frac)
+: _iter_frac{iter_frac}
 , _last_iter{-1}
 , _last_value{std::nan("")}
 , _n_sample{0}

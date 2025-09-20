@@ -8,6 +8,12 @@
 //! \brief Miscellaneous mathematical functions that aren't in `std::math`
 namespace hexed::math {
 
+//! \brief Specifies relative and absolute tolerances for comparing a value to truth data.
+struct Tolerance {
+  double rel = 0.; //!< \brief Tolerance relative to the magnitude of the truth value
+  double abs = 0.; //!< \brief Absolute tolerance
+};
+
 /*! \brief Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.
  * \details
  * Can return `constexpr`, which `std::pow` is not allowed to do according to the standard

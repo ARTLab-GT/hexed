@@ -8,11 +8,11 @@
 #include <hexed/erase_if.hpp>
 #include <hexed/utils.hpp>
 #include <hexed/Gauss_legendre.hpp>
-#include <hexed/History_monitor.hpp>
 #include <hexed/Printer.hpp>
 #include <hexed/Visualizer.hpp>
 #include <hexed/vertex_inds.hpp>
 #include <hexed/Gauss_legendre.hpp>
+#include <hexed/Convergence_monitor.hpp>
 
 namespace hexed {
 
@@ -1175,8 +1175,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   for (auto& vert : bverts) {
     vert.record[2*params.n_dim] = 1;
   }
-  History_monitor obj_monitor(.3, 100);
-  History_monitor dist_monitor(.3, 100);
+  Convergence_monitor obj_monitor(.2);
+  Convergence_monitor dist_monitor(.2);
   std::vector<next::Vertex*> mobile_verts;
   for (auto& vert : verts) if (vert.mobile()) mobile_verts.push_back(&vert);
   #pragma omp parallel for
@@ -1195,9 +1195,8 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   double starting_objective = objective;
   for (Int i_relax = 0;
        i_relax < 300 && (i_relax < 30
-                          || (snaps_failed == 0 && obj_monitor.max() - obj_monitor.min()
-                                                   > 1e-2*(std::abs(obj_monitor.max()) + std::abs(obj_monitor.min())))
-                          || (snaps_failed != 0 && dist_monitor.max() - dist_monitor.min() > 1e-2*dist_monitor.min()));
+                         || (snaps_failed == 0 && ! obj_monitor.converged({.rel=1e-3}, {.rel=1e-2}))
+                         || (snaps_failed != 0 && !dist_monitor.converged({.rel=1e-3}, {.rel=1e-2})));
        ++i_relax) {
     #if 0
     {
