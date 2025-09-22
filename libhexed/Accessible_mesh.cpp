@@ -2326,7 +2326,8 @@ void Accessible_mesh::purge() {
 }
 
 Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Element&, int)> refine_criterion,
-                                                         std::function<bool(Element&, int)> unrefine_criterion) {
+                                                         std::function<bool(Element&, int)> unrefine_criterion,
+                                                         bool set_floor) {
   Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
   // decide which elements to (un)refine
   #pragma omp parallel for
@@ -2336,6 +2337,8 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
       bool ref = refine_criterion(elem, i_dim);
       bool unref = unrefine_criterion(elem, i_dim);
+      unref = unref && (set_floor || elem.tree->anisotropic_refinement_level()[i_dim]
+                                     > elem.refinement_floor()[i_dim]);
       if (ref && !unref) {
         elem.desired_refinement(i_dim) = 1;
       } else if (unref && !ref) {
@@ -2407,6 +2410,7 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
       p += des_ref;
       int arl = elems[i_elem].tree->anisotropic_refinement_level()[i_dim];
       new_inv_sz += std::pow(2., arl + des_ref);
+      if (set_floor) elems[i_elem].refinement_floor()[i_dim] = arl + des_ref;
     }
     if (p < 0) n_coarsen += 1 - math::pow(2., p); // lose this element and add one shared with 2^p siblings
     if (p > 0) n_refine += math::pow(2., p) - 1; // add 2^p elements and lose this one
@@ -2456,6 +2460,8 @@ void Accessible_mesh::execute_adaptation() {
       if (new_elem->record != 3 || elem.record != 2) {
         new_elem->record = 3;
         elem.record = 2;
+        new_elem->refinement_floor() = elem.refinement_floor();
+        new_elem->has_shock = new_elem->has_shock || elem.has_shock;
         Array<double> state = elem.numeric_state().copy();
         Array<double> faces({params.n_dim, params.n_var, params.n_face_qpoint()});
         int row_coords [3] {};

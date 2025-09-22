@@ -258,7 +258,7 @@ adapt_unrefine_if = {((($({spectral_uncertainty} + i_dim) < spectral_tol*general
 adapt_residual_factor = 1.
 residual_stagnation_tol = 1e-2
 adapt_if = {(iteration%adapt_freq == 0)}
-monitor_criterion = {(iteration > min_prints*print_freq & monitors_converged)}
+monitor_criterion = {(iteration > min_prints*print_freq & monitors_converged & (!amr | normalized_residual < next_refine_residual))}
 done = {($monitor_criterion | iteration > max_iterations | flow_time > max_flow_time | wall_time > max_wall_time)}
 max_init_refine_iters = 100
 max_geom_refine_iters = 100

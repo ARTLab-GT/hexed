@@ -477,7 +477,8 @@ Case::Case(std::string input_script)
       printers::info("  Final refinement sweep " + to_string(i_ref) + "... ");
       std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
       std::vector<std::function<bool(Element&, int)>> crits;
-      auto result = _solver().mesh().plan_adaptation(_ref_crit("final_refine_if"), _ref_crit("final_unrefine_if"));
+      auto result = _solver().mesh().plan_adaptation(_ref_crit("final_refine_if"),
+                                                     _ref_crit("final_unrefine_if"), true);
       if (result.changed) _solver().mesh().execute_adaptation();
       _solver().calc_jacobian();
       printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ("
@@ -538,11 +539,12 @@ Case::Case(std::string input_script)
     if (allow_ref) {
       while (true) {
         _inter.variables->assign("hexed_tol_factor", tol_factor);
-        result = _solver().mesh().plan_adaptation(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"));
+        result = _solver().mesh().plan_adaptation(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"), true);
         if (tol_factor*_vard("general_tolerance")*std::min(_vard("spectral_tol"), _vard("flux_tol")) > 1e3) {
           printers::warn("\n  Only coarsening because excessive refinement could not be avoided "
                          "without excessive tolerance.", true);
-          result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"));
+          result = _solver().mesh().plan_adaptation([](Element&, int){return false;},
+                                                    _ref_crit("adapt_unrefine_if"), true);
           break;
         }
         if (_solver().mesh().n_elements() + result.n_refine - result.n_coarsen < _vard("max_n_elements")) {
@@ -555,7 +557,7 @@ Case::Case(std::string input_script)
         }
       }
     } else {
-      result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"));
+      result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"), true);
     }
     _inter.variables->assign("hexed_tol_factor", tol_factor);
     if (result.changed) _solver().mesh().execute_adaptation();
@@ -568,18 +570,18 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt_shock", new Namespace::Heisenberg<std::string>([this]() {
-    #if 0
     for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
       printers::info("shock coarsening sweep " + to_string(sweep) + ":");
-      auto result = _solver().mesh().plan_adaptation(_ref_crit("shock_refine_if"), [](Element&, int){return false;});
+      auto result = _solver().mesh().plan_adaptation([](Element&, int){return false;},
+                                                     _ref_crit("shock_unrefine_if"), false);
       if (result.changed) _solver().mesh().execute_adaptation();
       printers::info(" " + to_string(_solver().mesh().n_elements()) + " elements\n");
-      if (shock_result.n_coarsen == 0) break;
+      if (!result.changed) break;
     }
-    #endif
     for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
       printers::info("shock refinement sweep " + to_string(sweep) + ":");
-      auto result = _solver().mesh().plan_adaptation(_ref_crit("shock_refine_if"), [](Element&, int){return false;});
+      auto result = _solver().mesh().plan_adaptation(_ref_crit("shock_refine_if"),
+                                                     [](Element&, int){return false;}, false);
       if (result.n_elements > _vard("max_n_elements")) {
         printers::error(" aborting shock refinement to avoid exceeding maximum number of elements!", true);
         break;

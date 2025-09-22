@@ -616,10 +616,36 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       mach_suppression /= heat_rat*(heat_rat - 1.);
       mach_suppression = mach_suppression*mach_suppression/(.3 + mach_suppression*mach_suppression);
       forcing[i_qpoint] = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
-      has_shock = has_shock || forcing[i_qpoint] > 1e-3;
+      has_shock = has_shock || forcing[i_qpoint] > 1e-4;
     }
     elements[i_elem].has_shock = has_shock;
+    elements[i_elem].spread_shock = false;
   } // Cauchy-Kovalevskaya-style derivative estimate complete!
+
+  for (int spread_iter = 0; spread_iter < 0; ++spread_iter) {
+    for (bool is_def : {0, 1}) {
+      #pragma omp parallel for
+      for (Neighbor_connection& con : acc_mesh->neighbor_connections(is_def)) {
+        bool shock = false;
+        bool has_elems = true;
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          Element* elem = con.face(i_side).find_element();
+          has_elems = has_elems && elem;
+          if (elem) shock = shock || elem->has_shock;
+        }
+        if (!shock || !has_elems) continue;
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          #pragma omp atomic write
+          con.face(i_side).find_element()->spread_shock = true;
+        }
+      }
+    }
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
+      auto& elem = elements[i_elem];
+      elem.has_shock = elem.has_shock || elem.spread_shock;
+    }
+  }
 
   // begin root-smear-square operation
   int n_real = params.n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)

@@ -154,7 +154,8 @@ class Accessible_mesh : public Mesh {
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always,
               std::function<bool(Element&)> unrefine_criterion = criteria::never) override;
   Adaptation_result plan_adaptation(std::function<bool(Element&, int)> refine_criterion,
-                                    std::function<bool(Element&, int)> unrefine_criterion) override;
+                                    std::function<bool(Element&, int)> unrefine_criterion,
+                                    bool set_floor) override;
   void execute_adaptation() override;
   inline int surface_bc_sn() override {return surf_bc_sn;}
   inline Surface_geom& surface_geometry() {return *surf_geom;}
