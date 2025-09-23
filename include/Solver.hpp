@@ -55,6 +55,7 @@ class Solver {
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get,
                          std::function<double&(Element&, int i_vertex)> set, bool minmax);
 
+  void _smear();
   bool fix_admissibility(double stability_ratio, int cheby_step);
   void apply_state_bcs();
   void apply_flux_bcs();

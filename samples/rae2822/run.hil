@@ -8,11 +8,10 @@ max_wall_reynolds = 3e2
 
 $set_shock
 art_visc_width = .004
-max_safety = .4
 vis_freq = 10^3
 adapt_freq = 10^4
 print_freq = 10
-shock_adapt_freq = 10
+shock_adapt_freq = 200
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
