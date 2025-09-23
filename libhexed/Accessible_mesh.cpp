@@ -1634,22 +1634,6 @@ void request_connection(Element& elem, int n_dim, int i_dim, bool i_sign, int j_
 
 void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
   if (!surf_geom) return;
-  {
-    auto all_verts = _blocks.verts();
-    #pragma omp parallel for
-    for (auto& vert : all_verts) {
-      vert.set_pos(vert.nominal_position());
-    }
-    auto faces = _blocks.faces_3d();
-    #pragma omp parallel for
-    for (auto& f : faces) {
-      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
-    }
-    auto blocks = _blocks.boundary_sides();
-    #pragma omp parallel for
-    for (auto& b : blocks) b.reset();
-    visualize("default", "before_extrusion", 0.);
-  }
   Stopwatch_tree::Starter sw_extrude(_stopwatch["update"]["extrusion"]);
   const int nd = params.n_dim;
   { // initialize vertex records to empty
@@ -1696,7 +1680,6 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     std::array<Element*, 2> el_arr {&elem, &face.elem};
     _connect(el_arr, dir);
     _extrude_cons[2].emplace_back(&_neighbor_cons[1].back());
-    // record the faces that still need to be connected at a vertex which is guaranteed to be shared with prospective neighbors
     for (int j_dim = face.i_dim + 1; j_dim%nd != face.i_dim; ++j_dim) {
       j_dim = j_dim%nd;
       for (int face_sign = 0; face_sign < 2; ++face_sign) {
@@ -1710,6 +1693,8 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
             connected_boundary = true;
           }
         }
+        // record the faces that still need to be connected
+        // at a vertex which is guaranteed to be shared with prospective neighbors
         if (!connected_boundary) request_connection(elem, nd, face.i_dim, face.face_sign, j_dim, face_sign);
       }
     }
@@ -2038,8 +2023,8 @@ bool Accessible_mesh::needs_refine(Tree* t) {
     if (t->elem) {
       // also check the diagonal neighbors since they could be extrusion neighbors
       for (int j_face = 0; j_face < 2*(i_face/2); ++j_face) {
-        auto d = dir;
-        d(j_face/2) = math::sign(j_face%2);
+        auto d = dir.copy();
+        d[j_face/2] = math::sign(j_face%2);
         neighbors = t->find_neighbors(d);
         // again, ref level difference > 1 or partially exposed -> refine
         if (std::any_of(neighbors.begin(), neighbors.end(), too_fine)) return true;
