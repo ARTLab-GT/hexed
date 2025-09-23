@@ -91,7 +91,7 @@ int Element::aniso_ref_level() {return _aniso_r_level;}
 int& Element::desired_refinement(int i_dim) {return _refinement_data(0)[i_dim];}
 int Element::desired_refinement(int i_dim) const {return _refinement_data(0)[i_dim];}
 Array<int> Element::refinement_floor() {return _refinement_data(1);}
-Eigen::VectorXi Element::nominal_position() {return tree.value().coordinates();}
+Array<Int> Element::nominal_position() {return tree.value().coordinates();}
 
 double Element::wall_distance() const {
   double dist = 0;

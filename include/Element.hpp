@@ -89,7 +89,7 @@ class Element : public Kernel_element, public Mortal {
   int& desired_refinement(int i_dim);
   int desired_refinement(int i_dim) const;
   Array<int> refinement_floor();
-  Eigen::VectorXi nominal_position();
+  Array<Int> nominal_position();
   double wall_distance() const; //!< \brief The distance from the farthest vertex to the wall.
   int wall_dimension();
   bool has_wall();

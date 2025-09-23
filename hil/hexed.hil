@@ -247,7 +247,7 @@ init_refine_if = {(ref_level < init_ref_level)}
 init_unrefine_if = {false}
 geom_refine_if = {(uncertainty > (geom_rtol*geom_length + geom_atol)*general_tolerance & ref_level < max_ref_level*$size_tolerance & nom_sz > min_elem_size*$size_tolerance)}
 geom_unrefine_if = {false}
-final_refine_if = {(has_wall & i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance > max_wall_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed))))}
+final_refine_if = {(has_wall & i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance > max_wall_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed) & 3*$({nominal_shape} + i_dim) > max_wall_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed))))}
 final_unrefine_if = {false}
 shock_refine_if = {(max_bulk_art_visc > shock_refinement_threshold*art_visc_width*av_unscaled_max*freestream_speed & $({nominal_shape} + i_dim) > 4*art_visc_width)}
 shock_unrefine_if = {(max_bulk_art_visc < shock_refinement_threshold*art_visc_width*av_unscaled_max*freestream_speed)}

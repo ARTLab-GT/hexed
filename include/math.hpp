@@ -84,13 +84,6 @@ constexpr Int row_coordinate(int n_dim, Int row_size, int i_dim, Int index) {
 //! \brief returns `angle0 - angle1`, where the difference is in \f$ [0, 2\pi) \f$
 double angle_diff(double angle0, double angle1);
 
-//! \brief the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element
-//! to the face described by `i_dim` and `sign`
-Eigen::VectorXi direction(int n_dim, int i_dim, bool is_positive);
-//! \brief the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element
-//! to the `i_face`th face
-Eigen::VectorXi direction(int n_dim, int i_face);
-
 //! \brief provides a convenient way to pass options to root-finding algorithms
 struct Root_options {
   //! \brief the algorithm should terminate if the absolute value of the _residual_ (the value of the error function)

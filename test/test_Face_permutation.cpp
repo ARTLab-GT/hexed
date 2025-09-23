@@ -11,7 +11,7 @@
 void test_mesh(hexed::Accessible_mesh& mesh) {
   // construct a mesh that has every possible connection configuration by creating a single element
   // and then extruding all its faces
-  mesh.add_element(0, 1, Eigen::VectorXi::Zero(mesh.storage_params().n_dim));
+  mesh.add_element(0, 1, hexed::Array<hexed::Int>::make_uniform({mesh.storage_params().n_dim}, 0));
   mesh.extrude();
   auto& elems = mesh.elements();
   auto params = elems[0].storage_params();

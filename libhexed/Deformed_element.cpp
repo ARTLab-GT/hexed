@@ -81,10 +81,10 @@ void Deformed_element::set_jacobian(const Basis& basis) {
   Eigen::MatrixXd vertex_nrml (params.n_vertices(), n_dim*n_dim);
   for (int i_jac = 0; i_jac < n_dim*n_dim; ++i_jac) {
     // extrapolate one entry of the Jacobian to the vertex
-    Eigen::Map<Eigen::VectorXd> rln(reference_level_normals() + i_jac*params.n_qpoint(), n_qpoint);
+    Eigen::Map<Mat<>> rln(reference_level_normals() + i_jac*params.n_qpoint(), n_qpoint);
     vertex_nrml.col(i_jac) = math::hypercube_matvec(bound_mat, rln);
   }
-  Eigen::Map<Eigen::VectorXd> jac_det(jacobian_determinant(), n_qpoint);
+  Eigen::Map<Mat<>> jac_det(jacobian_determinant(), n_qpoint);
   Eigen::VectorXd vertex_det = math::hypercube_matvec(bound_mat, jac_det);
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
     double norm_sum = 0.;

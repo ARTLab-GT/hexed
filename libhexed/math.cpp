@@ -7,17 +7,6 @@ double angle_diff(double angle0, double angle1) {
   return diff - 2*M_PI*floor(diff/(2*M_PI));
 }
 
-Eigen::VectorXi direction(int n_dim, int i_dim, bool is_positive) {
-  Eigen::VectorXi dir(n_dim);
-  dir.setZero();
-  dir(i_dim) = sign(is_positive);
-  return dir;
-}
-
-Eigen::VectorXi direction(int n_dim, int i_face) {
-  return direction(n_dim, i_face/2, i_face%2);
-}
-
 double broyden(std::function<double(double)> error, double init_guess, Root_options opts, double init_diff) {
   double guess_prev = init_guess - init_diff;
   double err_prev = error(guess_prev);

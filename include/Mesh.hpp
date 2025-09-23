@@ -8,6 +8,7 @@
 #include "Surface_geom.hpp"
 #include "Stopwatch_tree.hpp"
 #include "Kernel_connection.hpp"
+#include "Array.hpp"
 
 namespace hexed {
 
@@ -34,7 +35,7 @@ class Mesh {
    * Add an element at specified nominal position and serial number which uniquely identifies it
    * among elements of this mesh with the same refinement level and deformedness.
    */
-  virtual int add_element(int ref_level, bool is_deformed, Eigen::VectorXi position) = 0;
+  virtual int add_element(int ref_level, bool is_deformed, Array<Int> position) = 0;
   /*!
    * Specify that two elements are connected via a Cartesian face. Note: although the interface
    * is stipulated to be Cartesian, the elements themselves can be deformed
