@@ -963,7 +963,6 @@ void Solver::update() {
       }
     }
   }
-  _smear();
   ++status.iteration;
   stopwatch.stopwatch.pause();
 }
@@ -1337,79 +1336,6 @@ bool Solver::is_admissible() {
   sw.work_units_completed += acc_mesh->elements().size();
   sw.stopwatch.pause();
   return admiss && refined_admiss;
-}
-
-void Solver::_smear() {
-  #if 0
-  if (!fix_admis) return;
-  auto& sw_fix = stopwatch["fix admis."];
-  sw_fix.stopwatch.start();
-  auto& elems = acc_mesh->elements();
-  const int nd = params.n_dim;
-  const int nq = params.n_qpoint();
-  bool physical = true;
-  #pragma omp parallel for reduction(&&:physical)
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Array<double> state = elems[i_elem].flow_state();
-    for (int i_qpoint = 0; i_qpoint < state.shape()[1]; ++i_qpoint) {
-      double int_ener = state(nd + 1)[i_qpoint];
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        int_ener -= .5*state(i_dim)[i_qpoint]*state(i_dim)[i_qpoint]/state(nd)[i_qpoint];
-      }
-      physical = physical && int_ener > 0 && state(nd + 3)[i_qpoint] > 0;
-    }
-  }
-  for (bool is_def : {0, 1}) {
-    auto neighb_cons = acc_mesh->neighbor_connections(is_def);
-    #pragma omp parallel for reduction(&&:physical)
-    for (auto& con : neighb_cons) {
-      for (int i_side = 0; i_side < 2; ++i_side) {
-        Array<double> state = con.face(i_side).flow_state()(0);
-        for (int i_qpoint = 0; i_qpoint < state.shape()[1]; ++i_qpoint) {
-          double int_ener = state(nd + 1)[i_qpoint];
-          for (int i_dim = 0; i_dim < nd; ++i_dim) {
-            int_ener -= .5*state(i_dim)[i_qpoint]*state(i_dim)[i_qpoint]/state(nd)[i_qpoint];
-          }
-          physical = physical && int_ener > 0 && state(nd + 3)[i_qpoint] > 0;
-        }
-      }
-    }
-  }
-  if (!physical) {
-    double stability_ratio = _namespace->get<double>("smear_max_safety");
-    int smear_iters = _namespace->get<int>("smear_iters");
-    for (int iter = 0; iter < smear_iters; ++iter) {
-      double dt = stability_ratio;
-      Kernel_options opts {
-        stopwatch["fix admis."]["cartesian"],
-        stopwatch["fix admis."]["deformed"],
-        stopwatch["prolong/restrict"],
-        0.,
-        0,
-        false,
-        false,
-      };
-      max_dt_fix_therm_admis(_kernel_mesh(), opts, dt, dt, true);
-      dt = 1.;
-      double linear = dt;
-      double quadratic = dt*dt/8/0.9;
-      std::array<double, 2> step;
-      step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
-      step[0] = quadratic/step[1];
-      for (double s : step) {
-        auto bc_cons {acc_mesh->boundary_connections()};
-        #pragma omp parallel for
-        for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-          bc_cons[i_con].ghost().flow_state()(0) = bc_cons[i_con].inside().flow_state()(0);
-        }
-        opts.dt = s;
-        compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
-      }
-    }
-    _namespace->assign("total_smear_iters", _namespace->get<int>("total_smear_iters") + smear_iters);
-  }
-  sw_fix.stopwatch.pause();
-  #endif
 }
 
 bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {

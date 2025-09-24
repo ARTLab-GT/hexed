@@ -43,7 +43,7 @@ transport_expr = {
 visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
-iteration_expr = {iteration = iteration; time_stage = time_stage; pseudotime_iteration = pseudotime_iteration; total_smear_iters = total_smear_iters;}
+iteration_expr = {iteration = iteration; time_stage = time_stage; pseudotime_iteration = pseudotime_iteration;}
 art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
 normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
 flow_time_expr = {flow_time = flow_time;}
@@ -212,8 +212,6 @@ max_wall_spacing = huge
 max_wall_reynolds = 1e3
 min_cell_reynolds = 1e-1
 shock_refinement_threshold = 1e-2
-smear_max_safety = .7
-smear_iters = 10
 viscosity_model = {}
 conductivity_model = {}
 turbulence_model = {}
@@ -500,7 +498,6 @@ start = {
     last_adapt_iter = 0
     next_refine_residual = 1e-3
     allow_refine = false
-    total_smear_iters = 0
     println({    Monitor window: } + monitor_window)
 }
 
