@@ -69,7 +69,11 @@ class Navier_stokes {
     }
 
     void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-      for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
+      for (int i_var = 0; i_var < n_update; ++i_var) {
+        if (std::abs(update(i_var)) < 1e60) {
+          data[i_var*stride] += update(i_var);
+        }
+      }
     }
 
     template <int n_dim_flux>

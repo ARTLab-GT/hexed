@@ -8,12 +8,10 @@ max_wall_reynolds = 3e2
 
 $set_shock
 art_visc_width = .004
-max_safety = .3
 vis_freq = 10^3
 adapt_freq = 10^4
 print_freq = 10
 shock_adapt_freq = 100
-flux_tol = flux_tol/10
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -35,8 +33,6 @@ freestream_specific_turbulent_dissipation = 10*freestream_mach*340./domain_lengt
 println({turbulent viscosity: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation + { Pa s})
 println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation/dyn_visc)
 monitor_vars = {lift_coef = lift_coef; drag_coef = drag_coef;}
-
-amr = true
 
 vis_art_visc_vars = true
 vis_field_vars = vis_field_vars + {

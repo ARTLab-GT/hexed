@@ -1320,21 +1320,13 @@ bool Solver::is_admissible() {
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
   bool admiss = 1;
-  bool diss_excession = false;
   auto check_admis = [&](double* data, int n_qpoint, int n_var) {
     bool adm = true;
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       adm = adm && (data[nd*n_qpoint + i_qpoint] > 0.)
                 && (data[(nd + 1)*n_qpoint + i_qpoint] > 0.);
-      #if 0
-      if (turb == k_omega) {
-        double log_diss = data[(nd + 3)*n_qpoint + i_qpoint]/data[nd*n_qpoint + i_qpoint];
-        adm = adm && -100 < log_diss && log_diss < 100;
-        if (!(-10 < log_diss && log_diss < 100)) diss_excession = true;
-      }
-      #endif
       for (int i_var = 0; i_var < n_var; ++i_var) {
-        HEXED_ASSERT(1e20 > std::abs(data[i_var*n_qpoint + i_qpoint]),
+        HEXED_ASSERT(std::isfinite(data[i_var*n_qpoint + i_qpoint]),
                      format_str(200, "variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]),
                      assert::Numerical_exception);
       }
@@ -1345,7 +1337,7 @@ bool Solver::is_admissible() {
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].record = 0;
   }
-  #pragma omp parallel for reduction(&&:admiss) reduction(||:diss_excession)
+  #pragma omp parallel for reduction(&&:admiss)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     bool elem_admis = true;
@@ -1366,7 +1358,6 @@ bool Solver::is_admissible() {
       }
     }
   }
-  if (diss_excession) printers::warn("dissipation excession", true);
   sw.work_units_completed += acc_mesh->elements().size();
   sw.stopwatch.pause();
   return admiss && refined_admiss;
