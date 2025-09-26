@@ -1319,16 +1319,20 @@ bool Solver::is_admissible() {
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
-  bool admiss = 1;
+  bool admiss = true;
+  bool finite = true;
+  std::string message;
   auto check_admis = [&](double* data, int n_qpoint, int n_var) {
     bool adm = true;
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
       adm = adm && (data[nd*n_qpoint + i_qpoint] > 0.)
                 && (data[(nd + 1)*n_qpoint + i_qpoint] > 0.);
       for (int i_var = 0; i_var < n_var; ++i_var) {
-        HEXED_ASSERT(std::isfinite(data[i_var*n_qpoint + i_qpoint]),
-                     format_str(200, "variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]),
-                     assert::Numerical_exception);
+        if (!std::isfinite(data[i_var*n_qpoint + i_qpoint])) {
+          finite = false;
+          #pragma omp critical
+          message = format_str("variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]);
+        }
       }
     }
     return adm;
@@ -1337,7 +1341,7 @@ bool Solver::is_admissible() {
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].record = 0;
   }
-  #pragma omp parallel for reduction(&&:admiss)
+  #pragma omp parallel for reduction(&&:admiss,finite)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     bool elem_admis = true;
@@ -1350,7 +1354,7 @@ bool Solver::is_admissible() {
   }
   auto& face_refs = _preti_masks[_preti_level]->kernel_mesh.face_refinements;
   bool refined_admiss = 1;
-  #pragma omp parallel for reduction (&&:refined_admiss)
+  #pragma omp parallel for reduction (&&:refined_admiss,finite)
   for (auto& vec : face_refs) {
     for (auto& ref : vec) {
       for (int i_fine = 0; i_fine < 2; ++i_fine) {
@@ -1358,6 +1362,7 @@ bool Solver::is_admissible() {
       }
     }
   }
+  HEXED_ASSERT(finite, message, assert::Numerical_exception)
   sw.work_units_completed += acc_mesh->elements().size();
   sw.stopwatch.pause();
   return admiss && refined_admiss;
@@ -1372,7 +1377,8 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
   int iter;
   int n_iters = std::numeric_limits<int>::max();
   for (iter = 0; iter < n_iters; ++iter) {
-    HEXED_ASSERT(iter < 5000, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
+    HEXED_ASSERT(iter < 5000, format_str("failed to fix thermodynamic admissability in %i iterations", iter),
+                 assert::Numerical_exception)
     if (is_admissible()) {
       if (iter) n_iters = std::min(n_iters, 2*iter);
       else {

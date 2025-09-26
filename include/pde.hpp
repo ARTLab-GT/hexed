@@ -205,11 +205,9 @@ class Navier_stokes {
               prod_per_k += turb_stress_per_k(i, j)*veloc_grad(i, j);
             }
           }
-          double lim = 1e4*mass*real_turb_diss;
-          double lim_factor = lim/std::sqrt(lim*lim + prod_per_k*prod_per_k);
           debug_variables(0) = mass*k_bar/omega_hat;
           debug_vars_set = true;
-          prod_per_k = lim_factor*prod_per_k;
+          prod_per_k = std::min(prod_per_k, 20*mass*real_turb_diss);
           double grad_k_omega_source = std::max(sigma_do*mass/real_turb_diss*grad_k.dot(grad_omega), 0.);
           double grad_omega_source = (dyn_visc_coef + sigma*mass*k_bar/real_turb_diss)*grad_omega.squaredNorm();
           source(i_turb_kin_ener) = prod_per_k*k_bar - beta_s*real_turb_diss*state(i_turb_kin_ener);
