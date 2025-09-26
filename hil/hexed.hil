@@ -137,6 +137,7 @@ ramped = false
 ramp_action = {
     ramped = true;
     max_safety = ramping_final_safety
+    next_refine_iter = 1e-3
     print_emph = true; print{Initial phase complete.}
     print({ Increasing safety factor to } + max_safety + {.})
 }
@@ -193,19 +194,27 @@ steady = true
 implicit = true
 implicit_scheme = {backward Euler}
 preti = false
-amr = false
+amr = true
+automate_adapt_schedule = true
+adapt_start_iter = 0
+adapt_stop_iter = huge_int
+next_refine_residual = 1e-3
 max_ref_level = 1000
 general_tolerance = 1.
-size_tolerance = {(general_tolerance^(1./(row_size - 1)))}
+hexed_tol_factor = 1.
+size_tolerance = {((hexed_tol_factor*general_tolerance)^(1./(row_size - 1)))}
+unadjusted_size_tolerance = {(general_tolerance^(1./(row_size - 1)))}
+max_n_elements = huge
 geom_rtol = 1e-7
 geom_atol = 0.
 spectral_tol = 1e-3
 flux_tol = 1e-5
-monitor_tol = 1e-2
+trend_tol = 1e-3
+noise_tol = 1e-2
 max_aspect_ratio = 1e3
 max_wall_spacing = huge
 max_wall_reynolds = 1e3
-min_cell_reynolds = 1e-2
+min_cell_reynolds = 1e-1
 shock_refinement_threshold = 1e-2
 viscosity_model = {}
 conductivity_model = {}
@@ -237,21 +246,23 @@ surface_roughness = -1.
 max_roughness_absolute = huge
 max_roughness_relative = 1e-3
 max_roughness_plus = 4.
-local_roughness = false
+local_roughness = true
 init_refine_if = {(ref_level < init_ref_level)}
 init_unrefine_if = {false}
 geom_refine_if = {(uncertainty > (geom_rtol*geom_length + geom_atol)*general_tolerance & ref_level < max_ref_level*$size_tolerance & nom_sz > min_elem_size*$size_tolerance)}
 geom_unrefine_if = {false}
-final_refine_if = {(has_wall & i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance > max_wall_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed))))}
+final_refine_if = {(has_wall & i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance > max_wall_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed) & 3*$({nominal_shape} + i_dim) > max_wall_reynolds*freestream_dynamic_viscosity/(freestream_density*freestream_speed))))}
 final_unrefine_if = {false}
 shock_refine_if = {(max_bulk_art_visc > shock_refinement_threshold*art_visc_width*av_unscaled_max*freestream_speed & $({nominal_shape} + i_dim) > 4*art_visc_width)}
 shock_unrefine_if = {(max_bulk_art_visc < shock_refinement_threshold*art_visc_width*av_unscaled_max*freestream_speed)}
-shock_refine_if = {(sonic & $({nominal_shape} + i_dim) > 4*art_visc_width)}
-shock_unrefine_if = {(!sonic)}
-adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*max_flux) | $({nominal_shape} + i_dim) > max_aspect_ratio*((i_dim != 0)*nominal_shape0 + (i_dim != 1)*nominal_shape1 + (i_dim != 2)*nominal_shape2)) & $({nominal_shape} + i_dim) > 2*min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
-adapt_unrefine_if = {((($({spectral_uncertainty} + i_dim) < spectral_tol*$size_tolerance*.5^(row_size - 1) & !(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*$size_tolerance*max_flux*.5^(row_size - 1))) | $({nominal_shape} + i_dim) < min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed)) & $({aniso_ref_level} + i_dim) > init_ref_level)}
+shock_refine_if = {(has_shock & $({nominal_shape} + i_dim) > 4*art_visc_width & ($adapt_refine_if))}
+shock_unrefine_if = {(!has_shock | ($adapt_unrefine_if))}
+adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*max_flux)) & $({nominal_shape} + i_dim) > 2*min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
+adapt_unrefine_if = {((($({spectral_uncertainty} + i_dim) < spectral_tol*general_tolerance*.5^(row_size - 1) & !(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*max_flux*.5^(row_size - 1))) | $({nominal_shape} + i_dim) < min_cell_reynolds*$unadjusted_size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed)) & $({aniso_ref_level} + i_dim) > init_ref_level)}
+adapt_residual_factor = 1.
+residual_stagnation_tol = 1e-2
 adapt_if = {(iteration%adapt_freq == 0)}
-monitor_criterion = {(iteration > min_prints*print_freq & (!amr | (last_adapt_iter > (1. - monitor_window)*iteration & last_adapt_iter < (1. - monitor_window*monitor_window)*iteration)) & monitor_converged)}
+monitor_criterion = {(iteration > min_prints*print_freq & monitors_converged & (!amr | (last_adapt_iter > (1. - monitor_window)*iteration & last_adapt_iter < iteration - .5*adapt_freq)))}
 done = {($monitor_criterion | iteration > max_iterations | flow_time > max_flow_time | wall_time > max_wall_time)}
 max_init_refine_iters = 100
 max_geom_refine_iters = 100
@@ -274,7 +285,7 @@ vis_contour_vars = vis_field_vars
 vis_surface_vars = state_vars + transport_expr + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr + bl_nondim_expr
 vis_n_sample = 10
 print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr + {($monitor_vars)}
-monitor_window = 0.25
+monitor_window = 0.1
 monitor_samples = 1000
 monitor_min_samples = 10
 monitor_vars = {}
@@ -380,7 +391,7 @@ adapt_iter = {
     $$({case} + (amr & ($adapt_if)))
     case0 = {}
     case1 = {adapt_shock}
-    $$({case} + (iteration%shock_adapt_freq == 0))
+    $$({case} + (art_visc_width > 0 & iteration%shock_adapt_freq == 0))
 }
 
 setup_io = {
@@ -410,7 +421,9 @@ restart = {
 iterate = {
     update
     compute_residuals
-    $normalized_residual_expr
+    case0 = {}
+    case1 = {$normalized_residual_expr}
+    $$({case} + !!residual_init)
     $compute_force
     $compute_heating
     {compute initial residual for normalization}
@@ -487,8 +500,8 @@ start = {
     prev_residual = 0.
     hexed_next_flow_time = 0.
     last_adapt_iter = 0
-    next_refine_iter = 10*adapt_freq
-    monitor_converged = false
+    allow_refine = false
+    println({    Monitor window: } + monitor_window)
 }
 
 mesh_init = false

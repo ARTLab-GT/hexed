@@ -82,6 +82,7 @@ void element(Namespace& space, Element& elem) {
     }
   }
   space.assign<int>("sonic", sonic);
+  space.assign<int>("has_shock", elem.has_shock);
 }
 
 void position(Namespace& space, Element& elem, const Basis& basis) {

@@ -68,6 +68,9 @@ class Tree : public Mortal {
   //! \details E.g. the root element has refinement level 0.
   int refinement_level() const;
   Array<int> anisotropic_refinement_level() const;
+  //! \brief Total desired refinement level.
+  //! \details `anisotropic_refinement_level()` plus `elem->desired_refinement()`, if `elem` is not null.
+  Array<int> desired_refinement_level() const;
   /*! \brief coordinates of vertex 0 of this element relative to `origin` in multiples of the cell size
    * \details Combined with the `refinement_level`,
    * this is the minimal amount of information required to locate a tree element.
@@ -76,7 +79,7 @@ class Tree : public Mortal {
    * The root element's children will have coordinates {0, 0}, {0, 1}, {1, 0}, {1, 1}.
    * If those cells are all refined, their children will have coordinates ranging from {0, 0}, to {3, 3}.
    */
-  Eigen::VectorXi coordinates() const;
+  Array<Int> coordinates() const;
   /*! \brief the size of the element in physical coordinates (before any deformation of the actual DG element)
    * \details Equal to \f$2^{-\verb|n_dim|}\verb|root_size|\f$.
    */
@@ -143,7 +146,7 @@ class Tree : public Mortal {
   //! \brief Equivalent to `unrefine(std::vector<bool>)` on a vector with exactly one `true` element.
   std::vector<Tree*> unrefine(int i_dim);
   void force_unrefine(); //!< \brief Deletes all child elements and descendents thereof. This element is now a leaf.
-  Tree* graft(Array<int> ref_level, Eigen::VectorXi coords);
+  Tree* graft(Array<int> ref_level, Array<Int> coords);
   void connect(std::array<std::vector<Tree*>, 2>, Connection_direction);
   void connect(std::array<Tree*, 2>, Connection_direction);
   void delete_grafts();
@@ -165,9 +168,9 @@ class Tree : public Mortal {
    * `_ref_level` must be nonnegative,
    * but there are no restrictions on how it relates to the refinement levels of the cells to be searched.
    */
-  Tree* find_leaf(Array<int> ref_level, Eigen::VectorXi coords, Eigen::VectorXi bias = Eigen::VectorXi::Zero(3));
+  Tree* find_leaf(Array<int> ref_level, Array<Int> coords, Array<int> bias = Array<int>::make_uniform({3}, 0));
   //! \brief Overload for isotropic refinement level.
-  Tree* find_leaf(int ref_level, Eigen::VectorXi coords, Eigen::VectorXi bias = Eigen::VectorXi::Zero(3));
+  Tree* find_leaf(int ref_level, Array<Int> coords, Array<int> bias = Array<int>::make_uniform({3}, 0));
   /*! \brief Finds a leaf which contains a specified point in physical space.
    * \note Only considers this element and its descendents, not neighbors that share the same root.
    * \details Recursively searches this tree and its descendents for a leaf element that contains `nominal_position`.
@@ -189,8 +192,8 @@ class Tree : public Mortal {
    * and other neighbors can be found by locating the appropriate neighbors of that cell.
    * If more than one element of `direction` is nonzero, then edge or vertex neighbors are returned.
    */
-  Tree* find_neighbor(Eigen::VectorXi direction);
-  //! \brief Equivalent to `find_neighbor(Eigen::VectorXi)` with `direction(i_face/2) == math::sign(i_face%2)`.
+  Tree* find_neighbor(Array<int> direction);
+  //! \brief Equivalent to `find_neighbor(Array<int>)` with `direction[i_face/2] == math::sign(i_face%2)`.
   Tree* find_neighbor(int i_face);
   /*! \brief Finds all leaf neighbors of this element in a specified direction.
    * \details Finds all elements in the entire tree which border on this one in a given direction.
@@ -204,8 +207,8 @@ class Tree : public Mortal {
    * Neighbors are returned in a depth-first, row-major order
    * (in the coordinates of their own root, in the case of grafted neighbors).
    */
-  std::vector<Tree*> find_neighbors(Eigen::VectorXi direction);
-  //! \brief Equivalent to `find_neighbors(Eigen::VectorXi)` with `direction(i_face/2) == math::sign(i_face%2)`.
+  std::vector<Tree*> find_neighbors(Array<int> direction);
+  //! \brief Equivalent to `find_neighbors(Array<int>)` with `direction[i_face/2] == math::sign(i_face%2)`.
   std::vector<Tree*> find_neighbors(int i_face);
   Connection_neighbors find_connection_neighbors(int i_face);
   //! \brief total number of tree elements descended from this tree (including itself)
@@ -241,7 +244,7 @@ class Tree : public Mortal {
   //!\}
 
   //! \brief Converts between face indices and neighbor search directions.
-  static Eigen::VectorXi get_direction(int i_face, int n_dim);
+  static Array<int> get_direction(int i_face, int n_dim);
 
   private:
   struct _Connection {
@@ -259,7 +262,7 @@ class Tree : public Mortal {
   };
   struct _Neighbor_result {
     Tree* neighbor;
-    Eigen::VectorXi direction;
+    Array<int> direction;
     _Transformation trans;
   };
   // finds leaves of this element and adds them to `add_to`.
@@ -267,20 +270,20 @@ class Tree : public Mortal {
   // adds only the elements at the lower extreme of that dimension.
   // if 1, adds only those at the upper extreme.
   // if -1, adds all.
-  void _add_extremal_levels(std::vector<Tree*>& add_to, Eigen::VectorXi bias);
+  void _add_extremal_levels(std::vector<Tree*>& add_to, Array<int> bias);
   void _assign_leaves(std::vector<Tree*>& assign_to, Tree* search_root, int i_dim, int sign);
   std::vector<Tree*> _refine(std::vector<bool>); // performs refinement but not collapsing/interchange
   void _collapse_aniso_ref();
   void _interchange_aniso_ref();
   void _simplify_aniso_ref();
-  _Neighbor_result _neighbor(Eigen::VectorXi direction);
+  _Neighbor_result _neighbor(Array<int> direction);
   void _clear_connections();
   static int _compare_ref_level(Tree*, Tree*, _Transformation);
 
   Mat<> _orig;
   double _root_sz;
   Array<int> _ref_level;
-  Eigen::VectorXi _coords;
+  Array<Int> _coords;
   Tree* _par;
   std::vector<std::shared_ptr<Tree>> _children_storage;
   std::vector<std::unique_ptr<Tree>> _grafts;

@@ -36,7 +36,7 @@ class Spatial {
     Write_face(const Basis& basis, pde_args... args) : _eq(args...), boundary{basis.boundary()} {}
 
     //! apply to a single element
-    void operator()(const double* read, std::array<double*, 6> faces) {
+    bool operator()(const double* read, std::array<double*, 6> faces) {
       constexpr int n_qpoint = math::pow(row_size, n_dim);
       double extrap [Pde::n_extrap][n_qpoint];
       // fetch the extrapolation variables and store them in `time_rate`
@@ -44,13 +44,19 @@ class Spatial {
         Mat<Pde::n_extrap> grad_vars = _eq.fetch_extrap(n_qpoint, read + i_qpoint);
         for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) extrap[i_var][i_qpoint] = grad_vars(i_var);
       }
+      bool ok = true;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         for (Row_index ind(n_dim, row_size, i_dim); ind; ++ind) {
           auto row_r = Row_rw<Pde::n_extrap, row_size>::read_row(extrap[0], ind);
           Mat<2, Pde::n_extrap> bound = boundary*row_r;
-          Row_rw<Pde::n_extrap, row_size>::write_bound(bound, faces, ind);
+          if (_eq.check_data(bound.data(), 2, 2)) {
+            Row_rw<Pde::n_extrap, row_size>::write_bound(bound, faces, ind);
+          } else {
+            ok = false;
+          }
         }
       }
+      return ok;
     }
 
     //! apply to a sequence of elements
@@ -299,12 +305,13 @@ class Spatial {
     const bool _use_filter;
     int _mask;
     bool _conv_substep;
+    bool& _ok;
     Implicit_options _implicit_opts;
 
     public:
     template <typename... pde_args>
     Local(const Basis& basis, double dt, bool stage, bool compute_residual, bool use_filter, int mask,
-          bool conv_substep, Implicit_options implicit_opts, pde_args... args)
+          bool conv_substep, bool& ok, Implicit_options implicit_opts, pde_args... args)
     : _eq(args...)
     , derivative{basis}
     , boundary{basis.boundary()}
@@ -317,6 +324,7 @@ class Spatial {
     , _use_filter{use_filter}
     , _mask{mask}
     , _conv_substep{conv_substep}
+    , _ok{ok}
     , _implicit_opts{implicit_opts}
     {
       HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
@@ -337,7 +345,7 @@ class Spatial {
         }
       }
 
-      #pragma omp parallel for
+      #pragma omp parallel for reduction(&&:_ok)
       for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
         auto& elem = elements[i_elem];
         double* state = elem.state();
@@ -540,12 +548,16 @@ class Spatial {
             if (_compute_residual) ref_state[i_var*n_qpoint + i_qpoint] = u;
             else update(i_var) = u;
           }
-          _eq.write_update(update, n_qpoint, state + i_qpoint, !Pde::has_diffusion && !_stage);
+          if (_eq.check_update(update, n_qpoint, state + i_qpoint)) {
+            _eq.write_update(update, n_qpoint, state + i_qpoint, !Pde::has_diffusion && !_stage);
+          } else {
+            _ok = false;
+          }
         }
 
         // write updated state to face storage.
         // For viscous, don't bother since we still have to add the numerical flux term
-        if constexpr (!Pde::has_diffusion) write_face(state, faces);
+        if constexpr (!Pde::has_diffusion) _ok = _ok && write_face(state, faces);
       }
     }
   };
@@ -566,11 +578,12 @@ class Spatial {
     bool _use_filter;
     int _mask;
     bool _conv_substep;
+    bool _ok;
 
     public:
     template <typename... pde_args>
     Reconcile_ldg_flux(const Basis& basis, double dt, int which_stage, bool compute_residual, bool use_filter,
-                       int mask, bool conv_substep, pde_args... args)
+                       int mask, bool conv_substep, bool& ok, pde_args... args)
     : _eq(args...)
     , _nodes{basis.nodes()}
     , derivative{basis}
@@ -582,15 +595,15 @@ class Spatial {
     , _use_filter{use_filter}
     , _mask{mask}
     , _conv_substep{conv_substep}
+    , _ok{ok}
     {
       HEXED_ASSERT(!(Pde::has_diffusion & _stage), "two-stage stabilization is not applicable to diffusion equations");
       HEXED_ASSERT(Pde::has_convection || !_stage, "for pure diffusion use alternating time steps");
     }
 
     virtual void operator()(Sequence<Kernel_element&>& elements) {
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
-      {
+      #pragma omp parallel for reduction(&&:_ok)
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
         auto& elem = elements[i_elem];
         double* state = elem.state();
         std::array<double*, 6> visc_faces;
@@ -636,12 +649,16 @@ class Spatial {
               res_cache[(Pde::n_update + i_var)*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint];
             }
           }
-          _eq.write_update(update, n_qpoint, to_update + i_qpoint, true);
+          if (_eq.check_update(update, n_qpoint, to_update + i_qpoint)) {
+            _eq.write_update(update, n_qpoint, to_update + i_qpoint, true);
+          } else {
+            _ok = false;
+          }
         }
         // *now* we can extrapolate state to faces
         std::array<double*, 6> faces;
         for (int i_face = 0; i_face < 2*n_dim; ++i_face) faces[i_face] = elem.face(i_face, false);
-        write_face(state, faces);
+        _ok = _ok && write_face(state, faces);
       }
     }
   };
@@ -741,14 +758,18 @@ class Spatial {
           if constexpr (Pde::has_convection) {
             double* f = con.state[i_side][0];
             for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
-              f[i_dof] = face[i_side][i_dof];
+              if (std::isfinite(face[i_side][i_dof])) {
+                f[i_dof] = face[i_side][i_dof];
+              }
             }
           }
           // write average face state
           if constexpr (Pde::has_diffusion) {
             double* f = con.state[i_side][1];
             for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
-              f[i_dof] = face[2 + i_side][i_dof];
+              if (std::isfinite(face[2 + i_side][i_dof])) {
+                f[i_dof] = face[2 + i_side][i_dof];
+              }
             }
           }
         }

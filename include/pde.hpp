@@ -68,8 +68,36 @@ class Navier_stokes {
       return extrap;
     }
 
+    bool check_data(double* data, int stride, int n_qpoint) const {
+      bool ok = true;
+      for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
+        for (int i_var = 0; i_var < n_update; ++i_var) {
+          ok = ok && std::abs(data[i_var*stride + i_qpoint]) < 1e10;
+        }
+        ok = ok && data[n_dim*stride + i_qpoint] > 1./std::sqrt(huge) && data[(n_dim + 1)*stride + i_qpoint] >= 0;
+        if constexpr (turb == k_omega) {
+          ok = ok && data[(n_dim + 3)*stride + i_qpoint]/data[n_dim*stride + i_qpoint] < std::log(std::sqrt(huge));
+        }
+      }
+      return ok;
+    }
+
+    bool check_update(Mat<n_update> update, int stride, double* data) const {
+      double updated [n_update];
+      for (int i_var = 0; i_var < n_update; ++i_var) {
+        updated[i_var] = data[i_var*stride] + update[i_var];
+      }
+      return check_data(updated, 1, 1);
+    }
+
     void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-      for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
+      double mmtm = 0;
+      for (int i_var = 0; i_var < n_dim; ++i_var) mmtm += data[i_var*stride]*data[i_var*stride];
+      mmtm = std::sqrt(mmtm);
+      for (int i_var = 0; i_var < n_update; ++i_var) {
+        double lim = i_var < n_dim ? mmtm : std::abs(data[i_var*stride]);
+        data[i_var*stride] += std::isfinite(update(i_var)) ? std::max(-lim, std::min(lim, update(i_var))) : 0.;
+      }
     }
 
     template <int n_dim_flux>
@@ -137,6 +165,8 @@ class Navier_stokes {
       void compute_scalars_diff() {
         bulk_av = std::abs(state(i_bulk_art_visc));
         laplacian_av = std::abs(state(i_laplacian_art_visc));
+        HEXED_ASSERT(std::abs(bulk_av) < 1e10, "unacceptable bulk art visc")
+        HEXED_ASSERT(std::abs(laplacian_av) < 1e10, "unacceptable laplacian art visc")
         double spec_heat_v = constants::specific_gas_air/(heat_rat - 1.);
         double spec_heat_p = heat_rat*constants::specific_gas_air;
         sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)/spec_heat_v);
@@ -368,6 +398,9 @@ class Advection {
     return extrap;
   }
 
+  bool check_data(double* data, int stride, int n_qpoint) const {return true;}
+  bool check_update(Mat<n_update> update, int stride, double* data) const {return true;}
+
   void write_update(Mat<n_update> update, int stride, double* data, bool is_critical) const {
     double pseudo = 1 + data[tss_offset(_n_var)*stride]*2/_advect_length;
     for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
@@ -462,6 +495,9 @@ class Smooth_art_visc {
     return extrap;
   }
 
+  bool check_data(double* data, int stride, int n_qpoint) const {return true;}
+  bool check_update(Mat<n_update> update, int stride, double* data) const {return true;}
+
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
     double pseudo = 1 + data[tss_offset(_n_var)*stride]*_cheby/_diff_time;
     for (int i_var = 0; i_var < n_update; ++i_var) {
@@ -537,6 +573,9 @@ class Fix_therm_admis {
     for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[i_var*stride];
     return extrap;
   }
+
+  bool check_data(double* data, int stride, int n_qpoint) const {return true;}
+  bool check_update(Mat<n_update> update, int stride, double* data) const {return true;}
 
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
     for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);

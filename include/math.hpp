@@ -8,6 +8,12 @@
 //! \brief Miscellaneous mathematical functions that aren't in `std::math`
 namespace hexed::math {
 
+//! \brief Specifies relative and absolute tolerances for comparing a value to truth data.
+struct Tolerance {
+  double rel = 0.; //!< \brief Tolerance relative to the magnitude of the truth value
+  double abs = 0.; //!< \brief Absolute tolerance
+};
+
 /*! \brief Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.
  * \details
  * Can return `constexpr`, which `std::pow` is not allowed to do according to the standard
@@ -77,13 +83,6 @@ constexpr Int row_coordinate(int n_dim, Int row_size, int i_dim, Int index) {
 
 //! \brief returns `angle0 - angle1`, where the difference is in \f$ [0, 2\pi) \f$
 double angle_diff(double angle0, double angle1);
-
-//! \brief the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element
-//! to the face described by `i_dim` and `sign`
-Eigen::VectorXi direction(int n_dim, int i_dim, bool is_positive);
-//! \brief the unit vector describing the direction from the center of an `n_dim`-dimensional Cartesian element
-//! to the `i_face`th face
-Eigen::VectorXi direction(int n_dim, int i_face);
 
 //! \brief provides a convenient way to pass options to root-finding algorithms
 struct Root_options {

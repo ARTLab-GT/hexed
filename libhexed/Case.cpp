@@ -473,24 +473,19 @@ Case::Case(std::string input_script)
     refine_isotropic("geom", "Geometry", true, true);
     _inter.variables->assign("flow_time", 0.);
     for (int i_split = 0; i_split < _vari("init_layer_splits"); ++i_split) _inter.make_sub().exec("split_layers");
-    for (int i_ref = 0, changed = true; i_ref < _vari("max_final_refine_iters") && changed; ++i_ref) {
+    for (int i_ref = 0; i_ref < _vari("max_final_refine_iters"); ++i_ref) {
       printers::info("  Final refinement sweep " + to_string(i_ref) + "... ");
       std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
       std::vector<std::function<bool(Element&, int)>> crits;
-      for (std::string crit : crit_names) {
-        crits.emplace_back([this, crit](Element& elem, int i_dim) {
-          auto sub = _inter.make_sub();
-          vis_variables::element(*sub.variables, elem);
-          sub.variables->assign("i_dim", i_dim);
-          sub.exec("return = $final" + crit);
-          return sub.variables->get<int>("return");
-        });
-      }
-      changed = _solver().mesh().adapt(crits[0], crits[1], true, true).changed;
+      auto result = _solver().mesh().plan_adaptation(_ref_crit("final_refine_if"),
+                                                     _ref_crit("final_unrefine_if"), true);
+      if (result.changed) _solver().mesh().execute_adaptation();
       _solver().calc_jacobian();
-      printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ");
+      printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ("
+                     + to_string(result.n_refine) + " new " + to_string(result.n_coarsen) + " lost)");
       _inter.variables->assign("flow_time", double(i_ref));
       _visualize("_final_ref_sweep" + to_string(i_ref));
+      if (!result.changed) break;
     }
     _inter.variables->assign("mesh_init", 1);
     printers::info("  geometry bounding box: \n");
@@ -526,28 +521,56 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
-    bool allow_ref = _vari("iteration") >= _vari("next_refine_iter");
+    int iter = _vari("iteration");
+    if (iter < _vari("adapt_start_iter") || iter > _vari("adapt_stop_iter")) return "";
+    bool allow_ref = true;
+    if (_vari("automate_adapt_schedule")) {
+      bool sufficient_drop = _vard("normalized_residual") < _vard("next_refine_residual");
+      double res_trend = std::max(std::abs(_log_residual_hist[0].trend()), std::abs(_log_residual_hist[1].trend()));
+      bool stagnated = res_trend*_vard("monitor_window")*iter < _vard("residual_stagnation_tol");
+      allow_ref = allow_ref && (sufficient_drop || stagnated);
+    }
     printers::info("Adapting mesh (");
     if (allow_ref) {
       printers::info("refinement allowed", true);
+      _inter.variables->assign("next_refine_residual", _vard("normalized_residual")*_vard("adapt_residual_factor"));
+      _inter.variables->assign("last_adapt_iter", iter);
     } else {
       printers::info("only coarsening allowed");
     }
     printers::info(")...");
     _solver().compute_spectral_uncertainty();
-    auto result = _solver().mesh().adapt(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"), allow_ref, true);
+    double tol_factor = 1;
+    Mesh::Adaptation_result result;
+    if (allow_ref) {
+      while (true) {
+        _inter.variables->assign("hexed_tol_factor", tol_factor);
+        result = _solver().mesh().plan_adaptation(_ref_crit("adapt_refine_if"), _ref_crit("adapt_unrefine_if"), true);
+        if (tol_factor*_vard("general_tolerance")*std::min(_vard("spectral_tol"), _vard("flux_tol")) > 1e3) {
+          printers::warn("\n  Only coarsening because excessive refinement could not be avoided "
+                         "without excessive tolerance.", true);
+          result = _solver().mesh().plan_adaptation([](Element&, int){return false;},
+                                                    _ref_crit("adapt_unrefine_if"), true);
+          break;
+        }
+        if (_solver().mesh().n_elements() + result.n_refine - result.n_coarsen < _vard("max_n_elements")) {
+          break;
+        } else {
+          tol_factor *= 1.2;
+          printers::warn("\n  Temporarily increasing refinement tolerance to "
+                         + to_string(tol_factor*_vard("general_tolerance"))
+                         + " to satisfy refinement constraints.", true);
+        }
+      }
+    } else {
+      result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"), true);
+    }
+    _inter.variables->assign("hexed_tol_factor", tol_factor);
+    if (result.changed) _solver().mesh().execute_adaptation();
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().calc_jacobian();
     _solver().compute_residual();
-    std::string message = "";
-    if (allow_ref) {
-      Int n_elem = _solver().mesh().n_elements();
-      int next = _vari("iteration")*std::max(1., math::pow((n_elem + result.n_refine)*1./n_elem, 2));
-      _inter.variables->assign("next_refine_iter", next);
-      _inter.variables->assign("last_adapt_iter", _vari("iteration"));
-      message = "Refinement allowed again after iteration " + to_string(next) + ".\n";
-    }
-    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n" + message);
+    printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
     _solver().print_preti_iters();
     return "";
   }));
@@ -555,17 +578,23 @@ Case::Case(std::string input_script)
   _inter.variables->create("adapt_shock", new Namespace::Heisenberg<std::string>([this]() {
     for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
       printers::info("shock coarsening sweep " + to_string(sweep) + ":");
-      auto shock_result = _solver().mesh().adapt([](Element&, int){return false;}, _ref_crit("shock_unrefine_if"),
-                                                 true, false);
+      auto result = _solver().mesh().plan_adaptation([](Element&, int){return false;},
+                                                     _ref_crit("shock_unrefine_if"), false);
+      if (result.changed) _solver().mesh().execute_adaptation();
       printers::info(" " + to_string(_solver().mesh().n_elements()) + " elements\n");
-      if (shock_result.n_coarsen == 0) break;
+      if (!result.changed) break;
     }
     for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
       printers::info("shock refinement sweep " + to_string(sweep) + ":");
-      auto shock_result = _solver().mesh().adapt(_ref_crit("shock_refine_if"), [](Element&, int){return false;},
-                                                 true, false);
+      auto result = _solver().mesh().plan_adaptation(_ref_crit("shock_refine_if"),
+                                                     [](Element&, int){return false;}, false);
+      if (result.n_elements > _vard("max_n_elements")) {
+        printers::error(" aborting shock refinement to avoid exceeding maximum number of elements!", true);
+        break;
+      }
+      if (result.changed) _solver().mesh().execute_adaptation();
       printers::info(" " + to_string(_solver().mesh().n_elements()) + " elements\n");
-      if (shock_result.n_refine == 0) break;
+      if (!result.changed) break;
     }
     _solver().calc_jacobian();
     _solver().compute_residual();
@@ -623,16 +652,13 @@ Case::Case(std::string input_script)
     sub.exec(_vars("monitor_vars"));
     _monitor_vars = sub.variables->names();
     for (std::string name : _monitor_vars) {
-      _monitors.emplace_back(_vard("monitor_window"), _vari("monitor_samples"), _vari("monitor_min_samples"));
-      _inter.variables->assign_default(name + "_min", -huge);
-      _inter.variables->assign_default(name + "_max",  huge);
-    }
-    bool implicit = !_vari("steady") && _vari("implicit");
-    if (implicit) {
-      for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
-        _inter.variables->assign(_monitor_vars[i_monitor] + "_prev", 0.);
+      _monitors.emplace_back(_vard("monitor_window"));
+      for (std::string suffix : {"_smoothed", "_noise", "_trend", "_noise_trend"}) {
+        _inter.variables->assign_default(name + suffix, 0.);
       }
     }
+    _log_residual_hist.emplace_back(.2);
+    _log_residual_hist.emplace_back(.4);
     return "";
   }));
 
@@ -651,10 +677,6 @@ Case::Case(std::string input_script)
     Task_message(printers::info, "reading status");
     auto sub = _inter.make_sub();
     sub.exec("$read {" + _vars("input_data") + ".status.hil}");
-    for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
-      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_vars[i_monitor] + "_min"));
-      _monitors[i_monitor].add_sample(_vari("iteration"), _vard(_monitor_vars[i_monitor] + "_max"));
-    }
     return "";
   }));
   _inter.variables->create("write_mesh", new Namespace::Heisenberg<std::string>([this]() {
@@ -688,6 +710,7 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("visualize", new Namespace::Heisenberg<std::string>([this]() {
     _visualize("_" + _iteration_suffix());
+    printers::info("Current wall clock time: " + to_string(_vard("wall_time")) + "\n");
     return "";
   }));
 
@@ -761,8 +784,19 @@ Case::Case(std::string input_script)
     return report;
   }));
 
+  _inter.variables->create<int>("monitors_converged", new Namespace::Heisenberg<int>([this]() {
+    bool converged = _monitor_vars.size();
+    double trend_tol = _vard("trend_tol")*_vard("general_tolerance");
+    double noise_tol = _vard("noise_tol")*_vard("general_tolerance");
+    for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size() && converged; ++i_monitor) {
+      converged = converged && _monitors[i_monitor].converged({.rel=trend_tol}, {.rel=noise_tol});
+    }
+    return converged;
+  }));
+
   _inter.variables->create<std::string>("update", new Namespace::Heisenberg<std::string>([this]() {
     HEXED_ASSERT(_vari("mesh_init"), "attempt to update flow when mesh has not been created", assert::User_error);
+    _inter.variables->assign("total_smear_iters", 0);
     bool avw = _vard("art_visc_width") > 0;
     bool avc = _vard("art_visc_constant") > 0;
     bool be = !_vari("steady") && _vari("implicit");
@@ -787,19 +821,22 @@ Case::Case(std::string input_script)
     _inter.variables->assign(be ? "pseudotime_iteration" : "iteration", iter);
     auto sub = _inter.make_sub();
     sub.exec(_vars("monitor_vars"));
-    bool monitor_converged = _monitor_vars.size();
+    std::ofstream status_data ((_vars("working_dir") + "status_data.txt").c_str());
     for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
       double val = sub.variables->get<double>(_monitor_vars[i_monitor]);
-      if (be) val -= _vard(_monitor_vars[i_monitor] + "_prev");
-      _monitors[i_monitor].add_sample(iter, val);
-      double min = _monitors[i_monitor].min();
-      double max = _monitors[i_monitor].max();
-      _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_min", min);
-      _inter.variables->assign(_monitor_vars[i_monitor] + (be ? "_diff" : "") + "_max", max);
-      double tol = _vard("monitor_tol")*_vard("general_tolerance")*.5*(std::abs(max) + std::abs(min));
-      monitor_converged = monitor_converged && max - min < tol;
+      auto& monitor = _monitors[i_monitor];
+      monitor.add_sample(iter, val);
+      auto assign = [&](std::string suffix, double value) {
+        std::string name = _monitor_vars[i_monitor] + suffix;
+        _inter.variables->assign(name, value);
+        status_data << name << ": " << value << "\n";
+      };
+      assign("_smoothed", monitor.smoothed());
+      assign("_trend", monitor.trend());
+      assign("_noise", monitor.noise());
+      assign("_noise_trend", monitor.noise_trend());
     }
-    _inter.variables->assign<int>("monitor_converged", monitor_converged);
+    for (auto& hist : _log_residual_hist) hist.add_sample(iter, std::log(_vard("normalized_residual"))/std::log(10.));
     return "";
   }));
 
@@ -813,10 +850,6 @@ Case::Case(std::string input_script)
       _inter.variables->assign("hexed_next_flow_time", _vard("hexed_next_flow_time") + _vard("time_step"));
       auto sub = _inter.make_sub();
       sub.exec(_vars("monitor_vars"));
-      for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
-        _monitors[i_monitor].clear();
-        _inter.variables->assign(_monitor_vars[i_monitor] + "_prev", _vard(_monitor_vars[i_monitor]));
-      }
     }
     return "";
   }));

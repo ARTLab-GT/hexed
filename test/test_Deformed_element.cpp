@@ -86,7 +86,7 @@ TEST_CASE("Deformed_element") {
 
   SECTION("jacobian calculation") {
     hexed::Tree tree0(2, .2);
-    hexed::Tree& tree1 = *tree0.graft(hexed::Array<int>::make_uniform({2}, 0), Eigen::Vector2i{1, 1});
+    hexed::Tree& tree1 = *tree0.graft(hexed::Array<int>::make_uniform({2}, 0), hexed::Array<hexed::Int>::make(1, 1));
     hexed::Deformed_element elem0(params2, tree0);
     hexed::Deformed_element elem1(params2, tree1);
     elem0.create_shape(blocks2d);

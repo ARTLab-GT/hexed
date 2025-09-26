@@ -20,6 +20,8 @@ Element::Element(Storage_params params_arg, Tree& t, bool mobile_vertices, int a
 , tree(this)
 , residual{0.}
 , flux_uncert{0.}
+, has_shock{false}
+, spread_shock{false}
 {
   tree.pair(t.elem);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -87,8 +89,9 @@ double Element::nominal_volume() const {return tree.value().nominal_shape().prod
 int Element::refinement_level() {return tree.value().refinement_level();}
 int Element::aniso_ref_level() {return _aniso_r_level;}
 int& Element::desired_refinement(int i_dim) {return _refinement_data(0)[i_dim];}
+int Element::desired_refinement(int i_dim) const {return _refinement_data(0)[i_dim];}
 Array<int> Element::refinement_floor() {return _refinement_data(1);}
-Eigen::VectorXi Element::nominal_position() {return tree.value().coordinates();}
+Array<Int> Element::nominal_position() {return tree.value().coordinates();}
 
 double Element::wall_distance() const {
   double dist = 0;

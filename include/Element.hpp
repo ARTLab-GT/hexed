@@ -65,6 +65,8 @@ class Element : public Kernel_element, public Mortal {
   double residual;
   double flux_uncert;
   Lock lock; //!< \brief for any tasks where multiple threads might access an element simultaneously
+  bool has_shock;
+  bool spread_shock;
 
   Element(Storage_params, Tree& tree, int aniso_ref_level = 0);
   //! \details Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
@@ -85,8 +87,9 @@ class Element : public Kernel_element, public Mortal {
   int refinement_level();
   int aniso_ref_level();
   int& desired_refinement(int i_dim);
+  int desired_refinement(int i_dim) const;
   Array<int> refinement_floor();
-  Eigen::VectorXi nominal_position();
+  Array<Int> nominal_position();
   double wall_distance() const; //!< \brief The distance from the farthest vertex to the wall.
   int wall_dimension();
   bool has_wall();
