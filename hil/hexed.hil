@@ -137,6 +137,7 @@ ramped = false
 ramp_action = {
     ramped = true;
     max_safety = ramping_final_safety
+    next_refine_iter = 1e-3
     print_emph = true; print{Initial phase complete.}
     print({ Increasing safety factor to } + max_safety + {.})
 }
@@ -496,7 +497,9 @@ start = {
     prev_residual = 0.
     hexed_next_flow_time = 0.
     last_adapt_iter = 0
-    next_refine_residual = 1e-3
+    case0 = {next_refine_residual = 1e-3}
+    case1 = {next_refine_residual = 0.}
+    $$({case} + (ramped != 0))
     allow_refine = false
     println({    Monitor window: } + monitor_window)
 }

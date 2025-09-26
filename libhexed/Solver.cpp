@@ -88,6 +88,13 @@ void Solver::apply_state_bcs() {
   for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
     int bc_sn = bc_cons[i_con]->boundary_condition();
     acc_mesh->boundary_condition(bc_sn).apply_state(*bc_cons[i_con]);
+    Array<double> ghost = bc_cons[i_con]->ghost().flow_state()(0);
+    Array<double> inside = bc_cons[i_con]->inside().flow_state()(0);
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < params.n_face_qpoint(); ++i_qpoint) {
+        if (!(std::abs(ghost(i_var)[i_qpoint]) < 1e10)) ghost(i_var)[i_qpoint] = inside(i_var)[i_qpoint];
+      }
+    }
   }
   stopwatch["boundary conditions"].stopwatch.pause();
   stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
@@ -100,9 +107,14 @@ void Solver::apply_flux_bcs() {
   for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
     Boundary_connection* con = bc_cons[i_con];
     con->flux_cache() = con->inside().flow_state()(1);
-    // apply boundary conditions
     int bc_sn = con->boundary_condition();
     acc_mesh->boundary_condition(bc_sn).apply_flux(*con);
+    Array<double> ghost = bc_cons[i_con]->ghost().flow_state()(1);
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < params.n_face_qpoint(); ++i_qpoint) {
+        if (!(std::abs(ghost(i_var)[i_qpoint]) < 1e10)) ghost(i_var)[i_qpoint] = 0.;
+      }
+    }
   }
   stopwatch["boundary conditions"].stopwatch.pause();
   stopwatch["boundary conditions"].work_units_completed += bc_cons.size();
@@ -609,14 +621,19 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
         proj += adv[i_proj*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
       }
+      #if 1
       double mach_suppression = 0;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         mach_suppression += state[i_dim*nq + i_qpoint]*state[i_dim*nq + i_qpoint];
       }
       mach_suppression /= heat_rat*(heat_rat - 1.);
       mach_suppression = mach_suppression*mach_suppression/(.3 + mach_suppression*mach_suppression);
-      forcing[i_qpoint] = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
-      has_shock = has_shock || forcing[i_qpoint] > 1e-4;
+      #else
+      double mach_suppression = 1;
+      #endif
+      double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
+      forcing[i_qpoint] = std::abs(f) < 1e10 ? f : 0.;
+      has_shock = has_shock || forcing[i_qpoint] > .02*advect_length;
     }
     elements[i_elem].has_shock = has_shock;
     elements[i_elem].spread_shock = false;
@@ -894,19 +911,20 @@ void Solver::update() {
     _update_recursive(0, safety);
   } else {
     double cheby_safety = _namespace->get<double>("cheby_safety");
-    for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
+    bool ok = true;
+    for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters") && ok; ++i_flow) {
       // compute time step
       double dt = 0;
       HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
       int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
-      for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
+      for (int i_preti = 0; i_preti < n_preti && ok; ++i_preti) {
         int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
         for (int i_bl = 0; i_bl < n_bl; ++i_bl) {
           int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : _namespace->get<int>("n_cheby_flow");
           int max_sub_iters = i_preti ? _namespace->get<int>("max_conv_sub_iters") : 1;
           double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
           // run chebyshev iterations
-          for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
+          for (int i_cheby = 0; i_cheby < n_cheby && ok; ++i_cheby) {
             _preti_level = i_preti;
             Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
             double cheby_step = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
@@ -923,9 +941,9 @@ void Solver::update() {
               if (_time_scheme == crank_nicolson) implicit_opts.time_step *= .5;
               if (_time_scheme == dirk2) implicit_opts.time_step *= dirk2_gamma;
             }
-            for (int i_sub = 0; i_sub < sub_iters; ++i_sub) {
+            for (int i_sub = 0; i_sub < sub_iters && ok; ++i_sub) {
               // compute inviscid update
-              for (int i = 0; i < 2; ++i) {
+              for (int i = 0; i < 2 && ok; ++i) {
                 Kernel_options opts {
                   .sw_car = stopwatch["cartesian"],
                   .sw_def = stopwatch["deformed"],
@@ -940,10 +958,43 @@ void Solver::update() {
                 };
                 apply_state_bcs();
                 if (use_ldg() && !i && !i_sub) {
-                  compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, true);
+                  ok = compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, true);
                 } else {
-                  compute_euler(km, opts);
+                  ok = compute_euler(km, opts);
                 }
+                #if 0
+                if (!ok) {
+                  Kernel_options opts {
+                    stopwatch["fix admis."]["cartesian"],
+                    stopwatch["fix admis."]["deformed"],
+                    stopwatch["prolong/restrict"],
+                    0.,
+                    0,
+                    false,
+                    false,
+                  };
+                  double fix_safety = _namespace->get<double>("fix_admis_max_safety");
+                  max_dt_fix_therm_admis(_kernel_mesh(), opts, 1., fix_safety, true);
+                  printers::warn("Smearing\n", true);
+                  for (int fix_iter = 0; fix_iter < 100; ++fix_iter) {
+                    dt = 1.;
+                    double linear = dt;
+                    double quadratic = dt*dt/8/0.9;
+                    std::array<double, 2> step;
+                    step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
+                    step[0] = quadratic/step[1];
+                    for (double s : step) {
+                      auto bc_cons {acc_mesh->boundary_connections()};
+                      #pragma omp parallel for
+                      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+                        bc_cons[i_con].ghost().flow_state()(0) = bc_cons[i_con].inside().flow_state()(0);
+                      }
+                      opts.dt = s;
+                      compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
+                    }
+                  }
+                }
+                #endif
                 // note that function call must come first to ensure it is evaluated despite short-circuiting
                 fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety"), i_cheby) || fixed;
               }
@@ -1300,7 +1351,7 @@ bool Solver::is_admissible() {
       }
       #endif
       for (int i_var = 0; i_var < n_var; ++i_var) {
-        HEXED_ASSERT(1e10 > std::abs(data[i_var*n_qpoint + i_qpoint]),
+        HEXED_ASSERT(1e20 > std::abs(data[i_var*n_qpoint + i_qpoint]),
                      format_str(200, "variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]),
                      assert::Numerical_exception);
       }
@@ -1344,13 +1395,10 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
   sw_fix.stopwatch.start();
   std::string wd = _namespace->get<std::string>("working_dir");
   std::string vis_expr = _namespace->get<std::string>("vis_field_vars");
-  const int nq = params.n_qpoint();
-  const int rs = params.row_size;
-  const int nv = params.n_vertices();
   int iter;
   int n_iters = std::numeric_limits<int>::max();
   for (iter = 0; iter < n_iters; ++iter) {
-    HEXED_ASSERT(iter < 100, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
+    HEXED_ASSERT(iter < 5000, format_str(200, "failed to fix thermodynamic admissability in %i iterations", iter));
     if (is_admissible()) {
       if (iter) n_iters = std::min(n_iters, 2*iter);
       else {
@@ -1360,7 +1408,14 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
     } else {
       n_iters = std::numeric_limits<int>::max();
     }
-    if (iter == 100) visualize_field("default", wd + "severe_indamis" + std::to_string(status.iteration), vis_expr);
+    for (int i_vis = 0; i_vis < 2; ++i_vis) {
+      if (iter == (i_vis + 1)*100) {
+        double ft = _namespace->get<double>("flow_time");
+        _namespace->assign<double>("flow_time", i_vis);
+        visualize_field("default", format_str("%ssevere_inadmis%i_%i", wd.c_str(), status.iteration, i_vis), vis_expr);
+        _namespace->assign("flow_time", ft);
+      }
+    }
     if (iter == 0) {
       printers::warn("Warning: ", true);
       printers::warn(format_str(200, "Thermodynamically inadmissible state detected"
@@ -1368,49 +1423,9 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
                                 _namespace->get<int>("iteration"), cheby_step));
     }
     printers::warn(format_str(200, "    iteration %i\n", iter));
-    auto& elems = acc_mesh->elements();
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      for (int i_vert = 0; i_vert < nv; ++i_vert) {
-        elem.vertex_fix_admis_coef(i_vert) = elem.record;
-      }
-    }
-    share_vertex_data(&Element::vertex_fix_admis_coef, true);
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      double max_fac = 0;
-      for (int i_vert = 0; i_vert < nv; ++i_vert) {
-        max_fac = std::max(max_fac, elem.vertex_fix_admis_coef(i_vert));
-      }
-      for (int i_vert = 0; i_vert < nv; ++i_vert) {
-        elem.vertex_fix_admis_coef(i_vert) = max_fac;
-      }
-    }
-    share_vertex_data(&Element::vertex_fix_admis_coef, true);
-    Mat<dyn, dyn> interp(rs, 2);
-    interp(all, 0) = Mat<>::Ones(rs) - basis.nodes();
-    interp(all, 1) = basis.nodes();
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      Mat<> vert_fac(nv);
-      for (int i_vert = 0; i_vert < nv; ++i_vert) {
-        vert_fac(i_vert) = elem.vertex_fix_admis_coef(i_vert);
-      }
-      Eigen::Map<Mat<>>(elem.laplacian_av_coef(), nq) = math::hypercube_matvec(interp, vert_fac);
-    }
     if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
       last_fix_vis_iter = status.iteration;
       visualize_field("default", wd + "inadmis" + std::to_string(status.iteration), vis_expr);
-    }
-    #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        std::swap(elem.laplacian_av_coef()[i_qpoint], elem.bulk_av_coef()[i_qpoint]);
-      }
     }
     double dt = stability_ratio;
     Kernel_options opts {
@@ -1423,28 +1438,13 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
       false,
     };
     max_dt_fix_therm_admis(_kernel_mesh(), opts, dt, dt, true);
-    dt = 1.;
-    double linear = dt;
-    double quadratic = dt*dt/8/0.9;
-    std::array<double, 2> step;
-    step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
-    step[0] = quadratic/step[1];
-    for (double s : step) {
-      auto bc_cons {acc_mesh->boundary_connections()};
-      #pragma omp parallel for
-      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-        bc_cons[i_con].ghost().flow_state()(0) = bc_cons[i_con].inside().flow_state()(0);
-      }
-      opts.dt = s;
-      compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
-    }
+    auto bc_cons {acc_mesh->boundary_connections()};
     #pragma omp parallel for
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-        std::swap(elem.laplacian_av_coef()[i_qpoint], elem.bulk_av_coef()[i_qpoint]);
-      }
+    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+      bc_cons[i_con].ghost().flow_state()(0) = bc_cons[i_con].inside().flow_state()(0);
     }
+    opts.dt = 1.;
+    compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
   }
   --iter;
   if (iter) printers::warn("done\n");
