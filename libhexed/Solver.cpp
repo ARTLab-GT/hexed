@@ -911,20 +911,19 @@ void Solver::update() {
     _update_recursive(0, safety);
   } else {
     double cheby_safety = _namespace->get<double>("cheby_safety");
-    bool ok = true;
-    for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters") && ok; ++i_flow) {
+    for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
       // compute time step
       double dt = 0;
       HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
       int n_preti = (_namespace->get<int>("bl_multirate") && !i_flow) ? _preti_masks.size() : 1;
-      for (int i_preti = 0; i_preti < n_preti && ok; ++i_preti) {
+      for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
         int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
         for (int i_bl = 0; i_bl < n_bl; ++i_bl) {
           int n_cheby = i_preti ? _namespace->get<int>("n_cheby_bl") : _namespace->get<int>("n_cheby_flow");
           int max_sub_iters = i_preti ? _namespace->get<int>("max_conv_sub_iters") : 1;
           double max_cheby = math::chebyshev_step(n_cheby, n_cheby - 1, cheby_safety);
           // run chebyshev iterations
-          for (int i_cheby = 0; i_cheby < n_cheby && ok; ++i_cheby) {
+          for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
             _preti_level = i_preti;
             Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
             double cheby_step = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
@@ -941,9 +940,9 @@ void Solver::update() {
               if (_time_scheme == crank_nicolson) implicit_opts.time_step *= .5;
               if (_time_scheme == dirk2) implicit_opts.time_step *= dirk2_gamma;
             }
-            for (int i_sub = 0; i_sub < sub_iters && ok; ++i_sub) {
+            for (int i_sub = 0; i_sub < sub_iters; ++i_sub) {
               // compute inviscid update
-              for (int i = 0; i < 2 && ok; ++i) {
+              for (int i = 0; i < 2; ++i) {
                 Kernel_options opts {
                   .sw_car = stopwatch["cartesian"],
                   .sw_def = stopwatch["deformed"],
@@ -958,43 +957,10 @@ void Solver::update() {
                 };
                 apply_state_bcs();
                 if (use_ldg() && !i && !i_sub) {
-                  ok = compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, true);
+                  compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, true);
                 } else {
-                  ok = compute_euler(km, opts);
+                  compute_euler(km, opts);
                 }
-                #if 0
-                if (!ok) {
-                  Kernel_options opts {
-                    stopwatch["fix admis."]["cartesian"],
-                    stopwatch["fix admis."]["deformed"],
-                    stopwatch["prolong/restrict"],
-                    0.,
-                    0,
-                    false,
-                    false,
-                  };
-                  double fix_safety = _namespace->get<double>("fix_admis_max_safety");
-                  max_dt_fix_therm_admis(_kernel_mesh(), opts, 1., fix_safety, true);
-                  printers::warn("Smearing\n", true);
-                  for (int fix_iter = 0; fix_iter < 100; ++fix_iter) {
-                    dt = 1.;
-                    double linear = dt;
-                    double quadratic = dt*dt/8/0.9;
-                    std::array<double, 2> step;
-                    step[1] = (linear + std::sqrt(linear*linear - 4*quadratic))/2.;
-                    step[0] = quadratic/step[1];
-                    for (double s : step) {
-                      auto bc_cons {acc_mesh->boundary_connections()};
-                      #pragma omp parallel for
-                      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-                        bc_cons[i_con].ghost().flow_state()(0) = bc_cons[i_con].inside().flow_state()(0);
-                      }
-                      opts.dt = s;
-                      compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
-                    }
-                  }
-                }
-                #endif
                 // note that function call must come first to ensure it is evaluated despite short-circuiting
                 fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety"), i_cheby) || fixed;
               }
@@ -1037,6 +1003,7 @@ void Solver::smooth_init_cond(Int n_iter) {
 }
 
 void Solver::compute_residual() {
+  #if 0
   apply_state_bcs();
   auto compute_discon = [this](bool is_flux) {
     Mat<> face_weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
@@ -1146,6 +1113,22 @@ void Solver::compute_residual() {
       _preti_masks[add_at]->repeat = true;
     }
   }
+  #else
+  Kernel_options opts {
+    .sw_car = stopwatch["cartesian"],
+    .sw_def = stopwatch["deformed"],
+    .sw_pr = stopwatch["prolong/restrict"],
+    .dt = 1.,
+    .i_stage = 0,
+    .compute_residual = true,
+    .use_filter = false,
+  };
+  if (use_ldg()) {
+    compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, false);
+  } else {
+    compute_euler(_kernel_mesh(), opts);
+  }
+  #endif
 }
 
 Int Solver::_effective_preti_iters(int level) {

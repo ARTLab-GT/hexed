@@ -18,7 +18,6 @@ thermal_bc = {temperature = 300}
 viscosity_model = air_viscosity
 conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
 monitor_vars = {heating_rate = heating_rate;}
-spectral_tol = spectral_tol/10
 
 $set_shock
 $set_ramping
