@@ -10,6 +10,11 @@ extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
 geom0 = {auto.csv}
 amr = true
+{
+automate_adapt_schedule = false
+adapt_start_iter = 10^4
+adapt_freq = 2000
+}
 
 {freestream/wall definition}
 freestream_mach = 8.1
@@ -30,6 +35,7 @@ diffusive_admissibility = false
 art_visc_width = .001
 vis_field_vars = vis_field_vars + field_residual_expr + {spectral_uncertainty0 = spectral_uncertainty0; spectral_uncertainty1 = spectral_uncertainty1; spectral_uncertainty2 = spectral_uncertainty2; rms_residual = rms_residual;}
 vis_freq = write_freq = 1000
+working_dir = {hexed_out_auto}
 
 $plot_history
 $simulate

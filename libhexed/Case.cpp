@@ -521,14 +521,20 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
-    double res_trend = std::max(std::abs(_log_residual_hist[0].trend()), std::abs(_log_residual_hist[1].trend()));
-    bool allow_ref = _vard("normalized_residual") < _vard("next_refine_residual")
-                     || res_trend*_vard("monitor_window")*_vari("iteration") < _vard("residual_stagnation_tol");
+    int iter = _vari("iteration");
+    if (iter < _vari("adapt_start_iter") || iter > _vari("adapt_stop_iter")) return "";
+    bool allow_ref = true;
+    if (_vari("automate_adapt_schedule")) {
+      bool sufficient_drop = _vard("normalized_residual") < _vard("next_refine_residual");
+      double res_trend = std::max(std::abs(_log_residual_hist[0].trend()), std::abs(_log_residual_hist[1].trend()));
+      bool stagnated = res_trend*_vard("monitor_window")*iter < _vard("residual_stagnation_tol");
+      allow_ref = allow_ref && (sufficient_drop || stagnated);
+    }
     printers::info("Adapting mesh (");
     if (allow_ref) {
       printers::info("refinement allowed", true);
       _inter.variables->assign("next_refine_residual", _vard("normalized_residual")*_vard("adapt_residual_factor"));
-      _inter.variables->assign("last_adapt_iter", _vari("iteration"));
+      _inter.variables->assign("last_adapt_iter", iter);
     } else {
       printers::info("only coarsening allowed");
     }
