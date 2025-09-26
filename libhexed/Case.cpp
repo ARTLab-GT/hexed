@@ -530,7 +530,7 @@ Case::Case(std::string input_script)
       bool stagnated = res_trend*_vard("monitor_window")*iter < _vard("residual_stagnation_tol");
       allow_ref = allow_ref && (sufficient_drop || stagnated);
     }
-    printers::info("Adapting mesh (");
+    printers::info("Performing uncertainty-based mesh adaptation (");
     if (allow_ref) {
       printers::info("refinement allowed", true);
       _inter.variables->assign("next_refine_residual", _vard("normalized_residual")*_vard("adapt_residual_factor"));
@@ -576,8 +576,9 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("adapt_shock", new Namespace::Heisenberg<std::string>([this]() {
+    printers::info("Performing quick-response adaptation (artificial viscosity-based)...\n");
     for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
-      printers::info("shock coarsening sweep " + to_string(sweep) + ":");
+      printers::info("  coarsening sweep " + to_string(sweep) + ":");
       auto result = _solver().mesh().plan_adaptation([](Element&, int){return false;},
                                                      _ref_crit("shock_unrefine_if"), false);
       if (result.changed) _solver().mesh().execute_adaptation();
@@ -585,11 +586,11 @@ Case::Case(std::string input_script)
       if (!result.changed) break;
     }
     for (Int sweep = 0; sweep < _vari("shock_refine_iters"); ++sweep) {
-      printers::info("shock refinement sweep " + to_string(sweep) + ":");
+      printers::info("  refinement sweep " + to_string(sweep) + ":");
       auto result = _solver().mesh().plan_adaptation(_ref_crit("shock_refine_if"),
                                                      [](Element&, int){return false;}, false);
       if (result.n_elements > _vard("max_n_elements")) {
-        printers::error(" aborting shock refinement to avoid exceeding maximum number of elements!", true);
+        printers::error(" aborting refinement to avoid exceeding maximum number of elements!", true);
         break;
       }
       if (result.changed) _solver().mesh().execute_adaptation();
@@ -598,6 +599,7 @@ Case::Case(std::string input_script)
     }
     _solver().calc_jacobian();
     _solver().compute_residual();
+    printers::info("done\n");
     return "";
   }));
 
