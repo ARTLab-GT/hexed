@@ -26,3 +26,8 @@ TEST_CASE("resize") {
                Catch::Matchers::RangeEquals(std::vector<double>{.2, -.1, .03, 6., 0., 0.},
                                             hexed::math::Approx_equal(0., 1e-10)));
 }
+
+TEST_CASE("str_cat") {
+  REQUIRE(hexed::str_cat(42) == "42");
+  REQUIRE(hexed::str_cat(8314.0, "ludwig prandtl", true) == "+8.314000e+03ludwig prandtltrue");
+}

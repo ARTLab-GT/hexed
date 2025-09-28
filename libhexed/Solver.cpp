@@ -1398,11 +1398,11 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
     }
     if (iter == 0) {
       printers::warn("Warning: ", true);
-      printers::warn(format_str(200, "Thermodynamically inadmissible state detected"
-                                     " (solver iteration %i, Chebyshev step %i). Attempting to fix...\n",
+      printers::warn(format_str("Thermodynamically inadmissible state detected"
+                                " (solver iteration %i, Chebyshev step %i). Attempting to fix...\n",
                                 _namespace->get<int>("iteration"), cheby_step));
     }
-    printers::warn(format_str(200, "    iteration %i\n", iter));
+    printers::warn(format_str("    iteration %i\n", iter));
     if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
       last_fix_vis_iter = status.iteration;
       visualize_field("default", wd + "inadmis" + std::to_string(status.iteration), vis_expr);
