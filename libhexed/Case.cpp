@@ -748,10 +748,7 @@ Case::Case(std::string input_script)
     _solver().compute_residual();
     auto res = _solver().integral_field(Pow(phys_resid, 2));
     for (int i_dim = 1; i_dim < nd; ++i_dim) res[0] += res[i_dim];
-    for (double& r : res) {
-      r = std::sqrt(r);
-      HEXED_ASSERT(!std::isnan(r), "residual is NaN", assert::Numerical_exception);
-    }
+    for (double& r : res) r = std::sqrt(r);
     _inter.variables->assign("residual_momentum", res[0]);
     _inter.variables->assign("residual_density", res[nd]);
     _inter.variables->assign("residual_energy", res[nd + 1]);

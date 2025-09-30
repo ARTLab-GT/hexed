@@ -16,6 +16,7 @@ History_stats::History_stats(double iter_frac)
 void History_stats::add_sample(Int iter, double value) {
   HEXED_ASSERT(iter >= 0, "Iteration values must be nonnegative.")
   HEXED_ASSERT(iter > _last_iter, "Iteration values must be increasing.")
+  if (!std::isfinite(value)) return;
   if (_n_sample > 0) {
     double new_weight = std::min(.5, (iter - _last_iter)/(_iter_frac*std::max<Int>(iter, 1)));
     double old_weight = math::pow(1 - new_weight, 2);

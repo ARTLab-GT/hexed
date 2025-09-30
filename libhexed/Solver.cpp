@@ -911,6 +911,7 @@ void Solver::update() {
     _update_recursive(0, safety);
   } else {
     double cheby_safety = _namespace->get<double>("cheby_safety");
+    int inner = 0;
     for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
       // compute time step
       double dt = 0;
@@ -961,8 +962,11 @@ void Solver::update() {
                 } else {
                   compute_euler(km, opts);
                 }
+                ++inner;
                 // note that function call must come first to ensure it is evaluated despite short-circuiting
-                fixed = fix_admissibility(_namespace->get<double>("fix_admis_max_safety"), i_cheby) || fixed;
+                bool f = fix_admissibility(_namespace->get<double>("fix_admis_max_safety"), inner);
+                fixed = f || fixed;
+                if (f) break;
               }
               stopwatch.work_units_completed += km.elems.size();
               stopwatch["cartesian"].work_units_completed += km.car_elems.size();
@@ -1368,12 +1372,48 @@ bool Solver::is_admissible() {
   return admiss && refined_admiss;
 }
 
-bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
+bool Solver::fix_admissibility(double stability_ratio, int sub_iter) {
   if (!fix_admis) return false;
   auto& sw_fix = stopwatch["fix admis."];
   sw_fix.stopwatch.start();
   std::string wd = _namespace->get<std::string>("working_dir");
   std::string vis_expr = _namespace->get<std::string>("vis_field_vars");
+  std::vector<double> freestream(params.n_var);
+  for (int i_var = 0; i_var < params.n_var; ++i_var) {
+    freestream[i_var] = _namespace->get<double>(str_cat("freestream", i_var));
+  }
+  std::vector<double> sanity_interval(params.n_var, huge);
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    double stag_enthalpy = freestream[params.n_dim + 1] + _namespace->get<double>("freestream_pressure");
+    sanity_interval[i_dim] = 1e3*std::sqrt(freestream[params.n_dim]*stag_enthalpy);
+  }
+  for (int i_var : {params.n_dim, params.n_dim + 1}) sanity_interval[i_var] = 1e3*freestream[i_var];
+  if (turb == k_omega) {
+    // TKE should be less than total energy
+    sanity_interval[params.n_dim + 2] = freestream[params.n_dim + 1];
+    // the specific turbulent dissipation varying by a factor of more than exp(1e3) would be implausible
+    sanity_interval[params.n_dim + 3] = freestream[params.n_dim]*1e3;
+  }
+  int nq = params.n_qpoint();
+  auto& elems = _preti_masks[_preti_level]->kernel_mesh.elems;
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* state = elems[i_elem].state();
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        double& s = state[i_var*nq + i_qpoint];
+        if (!std::isfinite(s)) {
+          s = freestream[i_var];
+        } else if (s > freestream[i_var] + sanity_interval[i_var]) {
+          s = freestream[i_var] + sanity_interval[i_var];
+        } else if (s < freestream[i_var] - sanity_interval[i_var]) {
+          s = freestream[i_var] - sanity_interval[i_var];
+        }
+      }
+    }
+  }
+  compute_write_face(_kernel_mesh());
+  compute_prolong(_kernel_mesh());
   int iter;
   int n_iters = std::numeric_limits<int>::max();
   for (iter = 0; iter < n_iters; ++iter) {
@@ -1392,20 +1432,20 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
       if (iter == (i_vis + 1)*100) {
         double ft = _namespace->get<double>("flow_time");
         _namespace->assign<double>("flow_time", i_vis);
-        visualize_field("default", format_str("%ssevere_inadmis%i_%i", wd.c_str(), status.iteration, i_vis), vis_expr);
+        visualize_field("default", str_cat(wd, "severe_inadmis", status.iteration, "_", sub_iter, "_", i_vis),
+                        vis_expr);
         _namespace->assign("flow_time", ft);
       }
     }
     if (iter == 0) {
       printers::warn("Warning: ", true);
-      printers::warn(format_str("Thermodynamically inadmissible state detected"
-                                " (solver iteration %i, Chebyshev step %i). Attempting to fix...\n",
-                                _namespace->get<int>("iteration"), cheby_step));
+      printers::warn(str_cat("Nonphysical flow state detected (solver iteration ", status.iteration,
+                             " sub-iteration ", sub_iter, "). Attempting to fix...\n"));
     }
     printers::warn(format_str("    iteration %i\n", iter));
     if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
       last_fix_vis_iter = status.iteration;
-      visualize_field("default", wd + "inadmis" + std::to_string(status.iteration), vis_expr);
+      visualize_field("default", str_cat(wd, "inadmis", status.iteration, "_", sub_iter), vis_expr);
     }
     double dt = stability_ratio;
     Kernel_options opts {
@@ -1418,6 +1458,7 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
       false,
     };
     max_dt_fix_therm_admis(_kernel_mesh(), opts, dt, dt, true);
+    #if 1
     auto bc_cons {acc_mesh->boundary_connections()};
     #pragma omp parallel for
     for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -1425,13 +1466,20 @@ bool Solver::fix_admissibility(double stability_ratio, int cheby_step) {
     }
     opts.dt = 1.;
     compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
+    #else
+    apply_state_bcs();
+    opts.dt = 1.;
+    compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_flux_bcs();});
+    #endif
   }
   --iter;
+  //if (iter) visualize_field("default", str_cat(wd, "fixed_admis", status.iteration, "_", sub_iter), vis_expr);
   if (iter) printers::warn("done\n");
   status.fix_admis_iters += iter;
   _namespace->assign("fix_iters", _namespace->get<int>("fix_iters") + iter);
   sw_fix.work_units_completed += acc_mesh->elements().size()*iter;
   sw_fix.stopwatch.pause();
+  last_fix_vis_iter = status.iteration;
   return iter;
 }
 
@@ -1440,8 +1488,10 @@ void Solver::reset_counters() {
   _namespace->assign("fix_iters", 0);
 }
 
-std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint, const Qpoint_func& func) {
-  return func(acc_mesh->element(ref_level, is_deformed, serial_n), basis, i_qpoint, _namespace->get<double>("flow_time"));
+std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, int i_qpoint,
+                                   const Qpoint_func& func) {
+  return func(acc_mesh->element(ref_level, is_deformed, serial_n), basis, i_qpoint,
+                                _namespace->get<double>("flow_time"));
 }
 
 std::vector<double> Solver::sample(int ref_level, bool is_deformed, int serial_n, const Element_func& func) {

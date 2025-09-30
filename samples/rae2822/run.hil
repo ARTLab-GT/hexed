@@ -4,6 +4,10 @@ mesh_extreme00 = -80.
 mesh_extreme10 = -80.
 mesh_extreme01 =  80.
 mesh_extreme11 =  80.
+extremal_bc00 = {freestream}
+extremal_bc10 = {freestream}
+extremal_bc01 = {freestream}
+extremal_bc11 = {freestream}
 max_wall_reynolds = 3e2
 
 $set_shock
