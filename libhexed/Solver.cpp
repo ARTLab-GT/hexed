@@ -632,7 +632,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       double mach_suppression = 1;
       #endif
       double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
-      forcing[i_qpoint] = std::abs(f) < 1e10 ? f : 0.;
+      forcing[i_qpoint] = std::isfinite(f) ? std::max(0., std::min(f, 2e3*advect_length)) : 0.;
       has_shock = has_shock || forcing[i_qpoint] > .02*advect_length;
     }
     elements[i_elem].has_shock = has_shock;
@@ -1420,7 +1420,7 @@ bool Solver::fix_admissibility(double stability_ratio, int sub_iter) {
     HEXED_ASSERT(iter < 5000, format_str("failed to fix thermodynamic admissability in %i iterations", iter),
                  assert::Numerical_exception)
     if (is_admissible()) {
-      if (iter) n_iters = std::min(n_iters, 2*iter);
+      if (iter) n_iters = std::min(n_iters, std::max(100, 2*iter));
       else {
         ++iter;
         break;
