@@ -632,8 +632,8 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       double mach_suppression = 1;
       #endif
       double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
-      forcing[i_qpoint] = std::isfinite(f) ? std::max(0., std::min(f, 2e3*advect_length)) : 0.;
-      has_shock = has_shock || forcing[i_qpoint] > .02*advect_length;
+      forcing[i_qpoint] = std::isfinite(f) ? std::max(0., std::min(f, 1e6*advect_length*advect_length)) : 0.;
+      has_shock = has_shock || forcing[i_qpoint] > 5.*advect_length*advect_length;
     }
     elements[i_elem].has_shock = has_shock;
     elements[i_elem].spread_shock = false;
@@ -1414,22 +1414,22 @@ bool Solver::fix_admissibility(double stability_ratio, int sub_iter) {
   }
   compute_write_face(_kernel_mesh());
   compute_prolong(_kernel_mesh());
-  int iter;
+  int iter = 0;
   int n_iters = std::numeric_limits<int>::max();
-  for (iter = 0; iter < n_iters; ++iter) {
-    HEXED_ASSERT(iter < 5000, format_str("failed to fix thermodynamic admissability in %i iterations", iter),
+  for (; iter < n_iters;) {
+    HEXED_ASSERT(iter < 10'000, format_str("failed to fix thermodynamic admissability in %i iterations", iter),
                  assert::Numerical_exception)
     if (is_admissible()) {
-      if (iter) n_iters = std::min(n_iters, std::max(100, 2*iter));
-      else {
-        ++iter;
+      if (iter) {
+        n_iters = std::min(n_iters, 2*iter);
+      } else {
         break;
       }
     } else {
       n_iters = std::numeric_limits<int>::max();
     }
     for (int i_vis = 0; i_vis < 2; ++i_vis) {
-      if (iter == (i_vis + 1)*100) {
+      if (iter == (i_vis + 1)*1000) {
         double ft = _namespace->get<double>("flow_time");
         _namespace->assign<double>("flow_time", i_vis);
         visualize_field("default", str_cat(wd, "severe_inadmis", status.iteration, "_", sub_iter, "_", i_vis),
@@ -1447,33 +1447,33 @@ bool Solver::fix_admissibility(double stability_ratio, int sub_iter) {
       last_fix_vis_iter = status.iteration;
       visualize_field("default", str_cat(wd, "inadmis", status.iteration, "_", sub_iter), vis_expr);
     }
-    double dt = stability_ratio;
-    Kernel_options opts {
-      stopwatch["fix admis."]["cartesian"],
-      stopwatch["fix admis."]["deformed"],
-      stopwatch["prolong/restrict"],
-      0.,
-      0,
-      false,
-      false,
-    };
-    max_dt_fix_therm_admis(_kernel_mesh(), opts, dt, dt, true);
-    #if 1
-    auto bc_cons {acc_mesh->boundary_connections()};
-    #pragma omp parallel for
-    for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
-      bc_cons[i_con].ghost().flow_state()(0) = bc_cons[i_con].inside().flow_state()(0);
+    for (int inner = 0; inner < 100; ++inner, ++iter) {
+      double dt = stability_ratio;
+      Kernel_options opts {
+        stopwatch["fix admis."]["cartesian"],
+        stopwatch["fix admis."]["deformed"],
+        stopwatch["prolong/restrict"],
+        0.,
+        0,
+        false,
+        false,
+      };
+      max_dt_fix_therm_admis(_kernel_mesh(), opts, dt, dt, true);
+      #if 1
+      auto bc_cons {acc_mesh->boundary_connections()};
+      #pragma omp parallel for
+      for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
+        bc_cons[i_con].ghost().flow_state()(0) = bc_cons[i_con].inside().flow_state()(0);
+      }
+      opts.dt = 1.;
+      compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
+      #else
+      apply_state_bcs();
+      opts.dt = 1.;
+      compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_flux_bcs();});
+      #endif
     }
-    opts.dt = 1.;
-    compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
-    #else
-    apply_state_bcs();
-    opts.dt = 1.;
-    compute_fix_therm_admis(_kernel_mesh(), opts, [this](){apply_flux_bcs();});
-    #endif
   }
-  --iter;
-  //if (iter) visualize_field("default", str_cat(wd, "fixed_admis", status.iteration, "_", sub_iter), vis_expr);
   if (iter) printers::warn("done\n");
   status.fix_admis_iters += iter;
   _namespace->assign("fix_iters", _namespace->get<int>("fix_iters") + iter);
