@@ -9,10 +9,10 @@ TEST_CASE("Specific_container<Deformed_element>")
   hexed::Tree tree(3, .3, hexed::Mat<3>{.01, .01, 0.});
   hexed::Complete_element_container<hexed::Deformed_element> ctn {params, 0.3};
   // test access by refinement level and serial number
-  int sn0 = ctn.emplace(*tree.graft(hexed::Array<int>::make_uniform({3}, 2), Eigen::Vector3i{2, 3, 0}));
-  int sn1 = ctn.emplace(*tree.graft(hexed::Array<int>::make_uniform({3}, 2), Eigen::Vector3i{2, 1, 0}));
-  int sn2 = ctn.emplace(*tree.graft(hexed::Array<int>::make_uniform({3}, 3), Eigen::Vector3i{2, 1, 0}));
-  int sn3 = ctn.emplace(*tree.graft(hexed::Array<int>::make_uniform({3}, 2), Eigen::Vector3i{2, 1, 0}));
+  int sn0 = ctn.emplace(*tree.graft(hexed::Array<int>::make_uniform({3}, 2), hexed::Array<hexed::Int>::make(2, 3, 0)));
+  int sn1 = ctn.emplace(*tree.graft(hexed::Array<int>::make_uniform({3}, 2), hexed::Array<hexed::Int>::make(2, 1, 0)));
+  int sn2 = ctn.emplace(*tree.graft(hexed::Array<int>::make_uniform({3}, 3), hexed::Array<hexed::Int>::make(2, 1, 0)));
+  int sn3 = ctn.emplace(*tree.graft(hexed::Array<int>::make_uniform({3}, 2), hexed::Array<hexed::Int>::make(2, 1, 0)));
   REQUIRE(&ctn.at(2, sn0) != &ctn.at(2, sn1));
   REQUIRE(&ctn.at(2, sn3) != &ctn.at(2, sn1));
   REQUIRE_THROWS(ctn.at(2, std::abs(sn0) + std::abs(sn1) + 1));
@@ -40,7 +40,7 @@ TEST_CASE("Specific_container<Deformed_element>")
   REQUIRE(ctn.at(2, sn3).nominal_position()[1] == 1);
   REQUIRE_THROWS(ctn.at(2, sn2));
   // check that you can still construct elements properly afterward
-  int sn = ctn.emplace(*tree.graft(hexed::Array<int>::make_uniform({3}, 2), Eigen::Vector3i{2, 1, 0}));
+  int sn = ctn.emplace(*tree.graft(hexed::Array<int>::make_uniform({3}, 2), hexed::Array<hexed::Int>::make(2, 1, 0)));
   REQUIRE(sn != sn3);
   REQUIRE(sn != sn2);
   REQUIRE(sn != sn1);

@@ -1,5 +1,6 @@
 #include <hexed/vis_variables.hpp>
 #include <hexed/Tree.hpp>
+#include <Gauss_legendre.hpp>
 
 namespace hexed::vis_variables {
 
@@ -37,6 +38,51 @@ void element(Namespace& space, Element& elem) {
     space.assign(index("spectral_uncertainty", i_dim), i_dim < params.n_dim ? elem.spectral_uncert()[i_dim] : 0);
     space.assign("flux_uncertainty", elem.flux_uncert);
   }
+  space.assign("max_bulk_art_visc", Array<double>({params.n_qpoint()}, elem.bulk_av_coef()).extreme(1));
+  Array<double> flow_state = elem.flow_state().copy();
+  Array<double> spec_int_ener = flow_state(params.n_dim + 1)/flow_state(params.n_dim);
+  Array<double> velocity = flow_state(0, params.n_dim);
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    velocity(i_dim) /= flow_state(params.n_dim);
+    spec_int_ener -= .5*velocity(i_dim)*velocity(i_dim);
+  }
+  double sound_speed = std::sqrt(1.4*0.4*spec_int_ener.extreme(0));
+  Gauss_legendre basis(params.row_size);
+  Array<double> position = elem.position(basis);
+  Mat<dyn, dyn> boundary = basis.boundary();
+  int sonic = 0;
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+    Array<double> face_veloc({params.n_dim, 2, params.n_face_qpoint()});
+    Array<double> face_pos({params.n_dim, 2, params.n_face_qpoint()});
+    for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) {
+      Mat<> veloc = velocity(j_dim).vector();
+      Mat<> pos = position(j_dim).vector();
+      for (int sign = 0; sign < 2; ++sign) {
+        face_veloc(j_dim)(sign).vector() = math::dimension_matvec(boundary(sign, all), veloc, i_dim);
+        face_pos(j_dim)(sign).vector() = math::dimension_matvec(boundary(sign, all), pos, i_dim);
+      }
+    }
+    for (int i_qpoint = 0; i_qpoint < params.n_face_qpoint(); ++i_qpoint) {
+      for (int j_qpoint = 0; j_qpoint < params.n_face_qpoint(); ++j_qpoint) {
+        int k_qpoint = i_dim == elem.wall_dimension() ? i_qpoint : j_qpoint;
+        Mat<> direction(params.n_dim);
+        for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) {
+          direction(j_dim) = face_pos(j_dim)(1)[k_qpoint] - face_pos(j_dim)(0)[i_qpoint];
+        }
+        direction.normalize();
+        double veloc0 = 0;
+        double veloc1 = 0;
+        for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) {
+          veloc0 += face_veloc(j_dim)(0)[i_qpoint]*direction(j_dim);
+          veloc1 += face_veloc(j_dim)(1)[k_qpoint]*direction(j_dim);
+        }
+        sonic = sonic || (veloc0 >  sound_speed*1.03 && veloc1 <  sound_speed*0.97);
+        sonic = sonic || (veloc0 > -sound_speed*0.97 && veloc1 < -sound_speed*1.03);
+      }
+    }
+  }
+  space.assign<int>("sonic", sonic);
+  space.assign<int>("has_shock", elem.has_shock);
 }
 
 void position(Namespace& space, Element& elem, const Basis& basis) {

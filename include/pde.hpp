@@ -69,7 +69,11 @@ class Navier_stokes {
     }
 
     void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-      for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
+      for (int i_var = 0; i_var < n_update; ++i_var) {
+        if (std::abs(update(i_var)) < 1e60) {
+          data[i_var*stride] += update(i_var);
+        }
+      }
     }
 
     template <int n_dim_flux>
@@ -201,16 +205,13 @@ class Navier_stokes {
               prod_per_k += turb_stress_per_k(i, j)*veloc_grad(i, j);
             }
           }
-          double lim = 1e4*mass*real_turb_diss;
-          double lim_factor = lim/std::sqrt(lim*lim + prod_per_k*prod_per_k);
           debug_variables(0) = mass*k_bar/omega_hat;
           debug_vars_set = true;
-          prod_per_k = lim_factor*prod_per_k;
+          prod_per_k = std::min(prod_per_k, 20*mass*real_turb_diss);
           double grad_k_omega_source = std::max(sigma_do*mass/real_turb_diss*grad_k.dot(grad_omega), 0.);
           double grad_omega_source = (dyn_visc_coef + sigma*mass*k_bar/real_turb_diss)*grad_omega.squaredNorm();
           source(i_turb_kin_ener) = prod_per_k*k_bar - beta_s*real_turb_diss*state(i_turb_kin_ener);
           source(i_turb_diss) = alpha*prod_per_k + grad_omega_source + grad_k_omega_source - beta*mass*real_turb_diss;
-          source(i_energy) = -source(i_turb_kin_ener);
         }
 
         flux_diff_phys(seq, all) -= stress;
@@ -241,7 +242,7 @@ class Navier_stokes {
         diffusivity = std::abs(laplacian_av) + math::max(
           (dyn_visc_coef + math::max(1, sigma, sigma_s)*dyn_visc_turb)/mass,
           std::abs(bulk_av) + (dyn_visc_coef + dyn_visc_turb)/mass,
-          (dyn_visc_coef + dyn_visc_turb)/mass + (energy_cond + heat_rat*dyn_visc_turb/turb_prandtl)/mass
+          std::abs(bulk_av) + (dyn_visc_coef + dyn_visc_turb)/mass + (energy_cond + heat_rat*dyn_visc_turb/turb_prandtl)/mass
         );
       }
 
@@ -526,7 +527,7 @@ class Fix_therm_admis {
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
   static constexpr bool has_source = false;
-  static constexpr int n_state = n_dim + 2;
+  static constexpr int n_state = n_dim + 4;
   static constexpr int n_update = n_state;
   static constexpr int n_extrap = n_state;
 

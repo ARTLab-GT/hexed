@@ -27,6 +27,7 @@ std::string to_string(int i) {return std::to_string(i);}
 std::string to_string(Int i) {return std::to_string(i);}
 std::string to_string(double d) {return format_str(100, "%+.6e", d);}
 std::string to_string(std::string s) {return s;}
+std::string to_string(const char* c) {return std::string(c);}
 std::string to_string(bool b) {return b ? "true" : "false";}
 std::string to_string(void* p) {return format_str(("%p"), p);}
 

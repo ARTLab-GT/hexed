@@ -14,8 +14,6 @@ mesh_extreme01 =  160.
 mesh_extreme11 =  160.
 
 amr = true
-local_roughness = true
-general_tol = .5
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -28,7 +26,7 @@ geom0 = {auto.csv}
 {freestream conditions}
 freestream_temperature = zero_celsius
 freestream_mach = .15
-attack = 15*degree
+attack = 10*degree
 target_reynolds = 6e6
 dyn_visc = 1.716e-5
 freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air*1.4*freestream_temperature)/freestream_mach
@@ -38,14 +36,12 @@ freestream_specific_turbulent_kinetic_energy = 1e-3*(freestream_mach*340.)^2/(ta
 freestream_specific_turbulent_dissipation = 10*freestream_mach*340./domain_length
 println({turbulent viscosity: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation + { Pa s})
 println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation/dyn_visc)
-working_dir = {hexed_out_attack15}
 
 surface_bc = {no_slip}
 diffusive_admissibility = false
 fix_therm_admis = true
 
 {iteration parameters}
-print_freq = 1000
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 
 vis_field_vars = vis_field_vars + {

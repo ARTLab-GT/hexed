@@ -1,0 +1,40 @@
+#include <random>
+#include <catch2/catch_all.hpp>
+#include <hexed/History_stats.hpp>
+
+TEST_CASE("History_stats") {
+  hexed::History_stats stats(.01);
+  REQUIRE(stats.n_sample() == 0);
+  REQUIRE(stats.last_iter() == -1);
+  REQUIRE(std::isnan(stats.last_value()));
+  REQUIRE(std::isnan(stats.smoothed()));
+  REQUIRE(std::isnan(stats.trend()));
+  SECTION("first iterations") {
+    stats.add_sample(2, .1);
+    REQUIRE(stats.n_sample() == 1);
+    REQUIRE(stats.last_value() == Catch::Approx(.1));
+    REQUIRE(stats.smoothed() == Catch::Approx(.1));
+    REQUIRE(std::isnan(stats.trend()));
+    stats.add_sample(10, .2);
+    REQUIRE(stats.n_sample() == 2);
+    REQUIRE(stats.smoothed() == Catch::Approx(.2));
+    REQUIRE(stats.trend() == Catch::Approx(.1/8));
+  }
+
+  SECTION("full sample") {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    gen.seed(406);
+    std::normal_distribution normal(0.);
+    hexed::Int n_iter = 100'000'000;
+    for (hexed::Int i = 0; i <= n_iter; i += 10) {
+      stats.add_sample(i, 1 - std::exp(-double(i)/n_iter) + 1e-2/(1 + double(i)/n_iter)*normal(gen));
+    }
+    REQUIRE(stats.n_sample() == n_iter/10 + 1);
+    double curr_mean = 1 - std::exp(-1.);
+    REQUIRE(stats.last_iter() == n_iter);
+    REQUIRE(stats.last_value() == Catch::Approx(curr_mean).epsilon(.05));
+    REQUIRE(stats.smoothed() == Catch::Approx(curr_mean).epsilon(.05));
+    REQUIRE(stats.trend()*n_iter == Catch::Approx(std::exp(-1.)).epsilon(.05));
+  }
+}

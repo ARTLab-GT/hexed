@@ -741,14 +741,18 @@ class Spatial {
           if constexpr (Pde::has_convection) {
             double* f = con.state[i_side][0];
             for (int i_dof = 0; i_dof < Pde::n_update*n_fqpoint; ++i_dof) {
-              f[i_dof] = face[i_side][i_dof];
+              if (std::isfinite(face[i_side][i_dof])) {
+                f[i_dof] = face[i_side][i_dof];
+              }
             }
           }
           // write average face state
           if constexpr (Pde::has_diffusion) {
             double* f = con.state[i_side][1];
             for (int i_dof = 0; i_dof < Pde::n_extrap*n_fqpoint; ++i_dof) {
-              f[i_dof] = face[2 + i_side][i_dof];
+              if (std::isfinite(face[2 + i_side][i_dof])) {
+                f[i_dof] = face[2 + i_side][i_dof];
+              }
             }
           }
         }

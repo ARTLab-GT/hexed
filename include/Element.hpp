@@ -46,7 +46,7 @@ class Element : public Kernel_element, public Mortal {
   // may contain a fake element that `this` is a subset of
   std::shared_ptr<next::Element_shape> _fake_shape;
   std::vector<Face> _faces;
-  std::vector<int> _desired_refinement;
+  Array<int> _refinement_data;
   void _set_glued_pos();
   friend Accessible_mesh; // necessary for `Accessible_mesh::set_mask`... need a better way to do this
 
@@ -65,6 +65,8 @@ class Element : public Kernel_element, public Mortal {
   double residual;
   double flux_uncert;
   Lock lock; //!< \brief for any tasks where multiple threads might access an element simultaneously
+  bool has_shock;
+  bool spread_shock;
 
   Element(Storage_params, Tree& tree, int aniso_ref_level = 0);
   //! \details Can't copy an Element. Doing so would have to either duplicate or break vertex connections,
@@ -85,7 +87,9 @@ class Element : public Kernel_element, public Mortal {
   int refinement_level();
   int aniso_ref_level();
   int& desired_refinement(int i_dim);
-  Eigen::VectorXi nominal_position();
+  int desired_refinement(int i_dim) const;
+  Array<int> refinement_floor();
+  Array<Int> nominal_position();
   double wall_distance() const; //!< \brief The distance from the farthest vertex to the wall.
   int wall_dimension();
   bool has_wall();

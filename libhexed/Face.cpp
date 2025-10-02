@@ -107,4 +107,15 @@ double Face::nominal_area() const {
   HEXED_THROW("`Face` must be associated to call `nominal_area()`.") throw;
 }
 
+Element* Face::find_element() {
+  if (_element) {
+    return _element.get();
+  } else if (_boundary_connection) {
+    return nullptr;
+  } else if (_face_ref_coarse) {
+    return _face_ref_coarse->coarse().find_element();
+  }
+  HEXED_THROW("`Face` must be associated to call `find_element()`.") throw;
+}
+
 }

@@ -77,6 +77,7 @@ std::string to_string(int);
 std::string to_string(Int); //!< \overload
 std::string to_string(double); //!< \overload
 std::string to_string(std::string); //!< \overload
+std::string to_string(const char*); //!< \overload
 std::string to_string(bool); //!< \overload
 std::string to_string(Mat<dyn, dyn> mat); //!< \overload
 std::string to_string(void*); //!< \overload
@@ -88,6 +89,15 @@ std::string to_string(T* p, Int n) {
   for (Int i = 0; i < n; ++i) s += to_string(p[i]) + ", ";
   if (n) s.erase(s.end() - 2, s.end());
   return s;
+}
+
+//! \brief Overload of `str_cat(T, U...)` that returns an empty string
+inline std::string str_cat() {return "";}
+
+//! \brief Converts all arguments to strings with `to_string()` and then concatenates them.
+template <typename T, typename... U>
+std::string str_cat(T arg, U... args) {
+  return to_string(arg) + str_cat(args...);
 }
 
 }

@@ -19,7 +19,7 @@ target_reynolds = (5/target_thickness)^2
 freestream_density = target_reynolds*1.8e-5/freestream_speed
 monitor_vars = {drag_coef = drag_coef;}
 
-print_freq = 1000
+$plot_history
 $simulate
 $print_force
 vis_csv = true

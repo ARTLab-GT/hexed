@@ -55,7 +55,7 @@ class Solver {
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get,
                          std::function<double&(Element&, int i_vertex)> set, bool minmax);
 
-  bool fix_admissibility(double stability_ratio, int cheby_step);
+  bool fix_admissibility(double stability_ratio, int inner_iter);
   void apply_state_bcs();
   void apply_flux_bcs();
   void apply_avc_diff_bcs();
@@ -190,6 +190,7 @@ class Solver {
   //!\}
 
   //! \name time marching
+  void smooth_init_cond(Int n_iter);
   //!\{
   /*! \details March the simulation forward by a time step equal to `time_step` or
    * `max_safety` times the estimated maximum stable time step, whichever is smaller.

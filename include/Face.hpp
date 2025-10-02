@@ -41,6 +41,7 @@ class Face : public Mortal {
   Array<double> discontinuity(); //!< \details layout: [state, flux][n_var]
   int mask() const;
   double nominal_area() const;
+  Element* find_element();
 
   private:
   Storage_params _params;

@@ -1,15 +1,16 @@
 /*! \page geom_fitting Geometry fitting
 
 Hexed provides a script,
-[`hexed-fit-geom`](https://github.com/ARTLab-GT/hexed/blob/v0.1.1/script/hexed-fit-geom),
+`hexed_fit_geom`,
 for creating a smooth curve fit to a 2D geometry.
 Given a geometry file, it computes parametric polynomial curve as a least squares fit to the geometry points.
 A new geometry file is created that contains the smooth fit sampled at an arbitrary number of points, uniformly distributed in parameter space.
 This is useful when a geometry file is available but the resolution and/or precision is insufficient.
 The script is designed to work well for airfoils, but may also work for other geometries.
+When you install Hexed via the Python package, `hexed_fit_geom` should be installed as an executable in your `PATH`.
 
 \section geom_fit_args Arguments
-`hexed-fit-geom` accepts the following command line arguments in any order:
+`hexed_fit_geom` accepts the following command line arguments in any order:
 The following argument is required:
 - __file name:__ Name of the file containing the input data points to which a smooth curve will be fitted.
   The file may have a  `.geom` extension, in which case it must be in the [NASCART-GT](https://github.gatech.edu/ARTLab/NASCART-GT)
