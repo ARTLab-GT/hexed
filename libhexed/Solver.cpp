@@ -632,7 +632,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       double mach_suppression = 1;
       #endif
       double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
-      forcing[i_qpoint] = std::isfinite(f) ? std::max(0., std::min(f, 1e6*advect_length*advect_length)) : 0.;
+      forcing[i_qpoint] = std::isfinite(f) ? std::max(0., std::min(f, 1e10*advect_length*advect_length)) : 0.;
       has_shock = has_shock || forcing[i_qpoint] > 5.*advect_length*advect_length;
     }
     elements[i_elem].has_shock = has_shock;
@@ -1417,7 +1417,7 @@ bool Solver::fix_admissibility(double stability_ratio, int sub_iter) {
   int iter = 0;
   int n_iters = std::numeric_limits<int>::max();
   for (; iter < n_iters;) {
-    HEXED_ASSERT(iter < 10'000, format_str("failed to fix thermodynamic admissability in %i iterations", iter),
+    HEXED_ASSERT(iter < 100'000, format_str("failed to fix thermodynamic admissability in %i iterations", iter),
                  assert::Numerical_exception)
     if (is_admissible()) {
       if (iter) {
@@ -1479,7 +1479,6 @@ bool Solver::fix_admissibility(double stability_ratio, int sub_iter) {
   _namespace->assign("fix_iters", _namespace->get<int>("fix_iters") + iter);
   sw_fix.work_units_completed += acc_mesh->elements().size()*iter;
   sw_fix.stopwatch.pause();
-  last_fix_vis_iter = status.iteration;
   return iter;
 }
 

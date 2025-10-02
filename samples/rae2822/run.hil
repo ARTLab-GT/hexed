@@ -44,7 +44,7 @@ vis_field_vars = vis_field_vars + {
     turbulent_dissipation_bassi = turbulent_dissipation_bassi
     specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density)
     debug_var0 = debug_var0
-    av_forcing0 = av_forcing0
+    av_forcingA = av_forcing0
 }
 
 $plot_history

@@ -21,6 +21,7 @@ monitor_vars = {heating_rate = heating_rate;}
 
 $set_shock
 $set_ramping
+print_freq = 10
 diffusive_admissibility = false
 art_visc_width = .001
 vis_field_vars = vis_field_vars + field_residual_expr + {spectral_uncertainty0 = spectral_uncertainty0; spectral_uncertainty1 = spectral_uncertainty1; spectral_uncertainty2 = spectral_uncertainty2; rms_residual = rms_residual;}
