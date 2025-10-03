@@ -261,7 +261,7 @@ adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_
 adapt_unrefine_if = {((($({spectral_uncertainty} + i_dim) < spectral_tol*general_tolerance*.5^(row_size - 1) & !(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*max_flux*.5^(row_size - 1))) | $({nominal_shape} + i_dim) < min_cell_reynolds*$unadjusted_size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed)) & $({aniso_ref_level} + i_dim) > init_ref_level)}
 adapt_residual_factor = .8
 residual_stagnation_tol = 1e-2
-adapt_if = {(iteration%adapt_freq == 0)}
+adapt_if = {(iteration%adapt_freq == 0 & hexed_time_step_done)}
 monitor_criterion = {(iteration > min_prints*print_freq & monitors_converged & (!amr | (last_adapt_iter > (1. - monitor_window)*iteration & last_adapt_iter < iteration - .5*adapt_freq)))}
 done = {($monitor_criterion | iteration > max_iterations | flow_time > max_flow_time | wall_time > max_wall_time)}
 max_init_refine_iters = 100
@@ -376,13 +376,13 @@ write_iter = {
         write_state
         write_status
     }
-    $$({case} + (iteration%write_freq == 0))
+    $$({case} + (iteration%write_freq == 0 & hexed_time_step_done))
 }
 
 vis_iter = {
     case0 = {}
     case1 = {visualize}
-    $$({case} + (iteration%vis_freq == 0))
+    $$({case} + (iteration%vis_freq == 0 & hexed_time_step_done))
 }
 
 adapt_iter = {
@@ -458,7 +458,7 @@ iterate = {
                 update_roughness
                 println {done}
             }
-            $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & turbulence_model == {k-omega}))
+            $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & hexed_time_step_done & turbulence_model == {k-omega}))
             $adapt_iter
             $write_iter
             $vis_iter
@@ -501,6 +501,7 @@ start = {
     hexed_next_flow_time = 0.
     last_adapt_iter = 0
     allow_refine = false
+    pseudotime_iteration = 0
     println({    Monitor window: } + monitor_window)
 }
 

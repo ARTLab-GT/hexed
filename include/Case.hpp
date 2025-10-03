@@ -34,6 +34,7 @@ class Case {
   std::vector<History_stats> _log_residual_hist;
   std::string _assignment(std::string var_name);
   std::function<bool(Element&, int)> _ref_crit(std::string name);
+  void _update_monitors();
   public:
   Case(std::string input_script = "interactive.hil");
   Case(const Case&) = delete;
