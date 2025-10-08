@@ -28,7 +28,7 @@ namespace hexed {
 
 constexpr Int whatever = -1; //!< \brief used in `Array::reshaped()`
 constexpr Int same = -2; //!< \brief used in `Array::reshaped()`
-constexpr Int end = std::numeric_limits<Int>::max(); //! \brief can be passed to `Array::operator()`
+constexpr Int end = std::numeric_limits<Int>::max(); //!< \brief can be passed to `Array::operator()`
 
 inline std::vector<Int> hypercubes(Int n_var, Int n_dim, Int row_size) {
   std::vector<Int> shape(n_dim + 1, row_size);
@@ -437,7 +437,7 @@ class Array {
   //! and returns a new array with `f` applied to the entries.
   Array entrywise(std::function<T(T)> f, bool inplace = false) {
     Array operand = inplace ? (*this)() : copy();
-    for (int i = 0; i < size(); ++i) operand[i] = f(operand[i]);
+    for (Int i = 0; i < size(); ++i) operand[i] = f(operand[i]);
     return operand;
   }
 
@@ -451,6 +451,18 @@ class Array {
   Array asin(bool inplace = false) {return entrywise(std::asin, inplace);} //!< \brief Entrywise inverse sine
   Array acos(bool inplace = false) {return entrywise(std::acos, inplace);} //!< \brief Entrywise inverse cosine
   Array atan(bool inplace = false) {return entrywise(std::atan, inplace);} //!< \brief Entrywise inverse tangent
+
+  T sum() {
+    T s = 0;
+    for (Int i = 0; i < size(); ++i) s += (*this)[i];
+    return s;
+  }
+
+  T prod() {
+    T p = 1;
+    for (Int i = 0; i < size(); ++i) p *= (*this)[i];
+    return p;
+  }
 
   private:
   Array(Int o, T* d, bool own, Int* sh, Int* st) : _order{o}, _data{d}, _owns{own}, _shape{sh}, _strides{st} {}
