@@ -431,6 +431,27 @@ class Array {
   //! \details For vectors, this is the \f$ L^2 \f$ norm and for matrices this is the Frobenius norm.
   T norm() const {return std::sqrt(norm_squared());}
 
+  //! \brief Applies a function to each entry of the array.
+  //! \details If `inplace` is `true`, modifies the entries of this array and returns an array that references the data.
+  //! If `inplace` is `false`, does not modify the original array
+  //! and returns a new array with `f` applied to the entries.
+  Array entrywise(std::function<T(T)> f, bool inplace = false) {
+    Array operand = inplace ? (*this)() : copy();
+    for (int i = 0; i < size(); ++i) operand[i] = f(operand[i]);
+    return operand;
+  }
+
+  Array abs (bool inplace = false) {return entrywise(std::abs , inplace);} //!< \brief Entrywise absolute value
+  Array sqrt(bool inplace = false) {return entrywise(std::sqrt, inplace);} //!< \brief Entrywise square root
+  Array exp (bool inplace = false) {return entrywise(std::exp , inplace);} //!< \brief Entrywise exponential
+  Array log (bool inplace = false) {return entrywise(std::log , inplace);} //!< \brief Entrywise natural logarithm
+  Array sin (bool inplace = false) {return entrywise(std::sin , inplace);} //!< \brief Entrywise sine
+  Array cos (bool inplace = false) {return entrywise(std::cos , inplace);} //!< \brief Entrywise cosine
+  Array tan (bool inplace = false) {return entrywise(std::tan , inplace);} //!< \brief Entrywise tangent
+  Array asin(bool inplace = false) {return entrywise(std::asin, inplace);} //!< \brief Entrywise inverse sine
+  Array acos(bool inplace = false) {return entrywise(std::acos, inplace);} //!< \brief Entrywise inverse cosine
+  Array atan(bool inplace = false) {return entrywise(std::atan, inplace);} //!< \brief Entrywise inverse tangent
+
   private:
   Array(Int o, T* d, bool own, Int* sh, Int* st) : _order{o}, _data{d}, _owns{own}, _shape{sh}, _strides{st} {}
   void _initialize_shape() {
