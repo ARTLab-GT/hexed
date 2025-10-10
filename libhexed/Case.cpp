@@ -545,7 +545,7 @@ Case::Case(std::string input_script)
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
     int iter = _vari("iteration");
     if (iter < _vari("adapt_start_iter") || iter > _vari("adapt_stop_iter")) return "";
-    bool allow_ref = true;
+    bool allow_ref = iter > _vari("refine_start_iter");
     if (_vari("automate_adapt_schedule")) {
       bool sufficient_drop = _vard("normalized_residual") < _vard("next_refine_residual");
       double res_trend = std::max(std::abs(_log_residual_hist[0].trend()), std::abs(_log_residual_hist[1].trend()));

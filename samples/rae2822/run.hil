@@ -8,7 +8,6 @@ extremal_bc00 = {freestream}
 extremal_bc10 = {freestream}
 extremal_bc01 = {freestream}
 extremal_bc11 = {freestream}
-max_wall_reynolds = 3e2
 
 $set_shock
 art_visc_width = .004

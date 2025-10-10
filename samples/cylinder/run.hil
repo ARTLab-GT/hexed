@@ -26,7 +26,9 @@ diffusive_admissibility = false
 art_visc_width = .001
 vis_field_vars = vis_field_vars + field_residual_expr + {spectral_uncertainty0 = spectral_uncertainty0; spectral_uncertainty1 = spectral_uncertainty1; spectral_uncertainty2 = spectral_uncertainty2; rms_residual = rms_residual;}
 vis_freq = write_freq = 1000
+done = {false}
 
+vis_art_visc_vars = true
 vis_field_vars = vis_field_vars + {
     residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)
     i_dim = wall_dimension + (wall_dimension < 0)
@@ -34,6 +36,7 @@ vis_field_vars = vis_field_vars + {
     flux_unref = $flux_unref_criterion
     flux_uncertainty = flux_uncertainty
     rms_flux = rms_flux
+    av_forcingA = av_forcing0
 }
 
 $plot_history

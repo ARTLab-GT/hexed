@@ -1161,16 +1161,19 @@ void Solver::print_preti_iters() {
 
 
 void Solver::compute_spectral_uncertainty() {
-  int nv = params.n_var;
+  std::vector<int> vars;
+  for (int i_var = 0; i_var < params.n_var; ++i_var) vars.push_back(i_var);
+  if (use_art_visc) vars.push_back(params.n_var + 3);
+  int nv = vars.size();
   Array<double> state_min = Array<double>::make_uniform({nv}, huge);
   Array<double> state_max = Array<double>::make_uniform({nv}, -huge);
   auto& elems = acc_mesh->elements();
   #pragma omp parallel for reduction(min:state_min) reduction(max:state_max)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Array<double> state = elems[i_elem].flow_state();
+    Array<double> state = elems[i_elem].numeric_state();
     for (int i_var = 0; i_var < nv; ++i_var) {
-      state_min[i_var] = std::min(state_min[i_var], state(i_var).extreme(0));
-      state_max[i_var] = std::max(state_min[i_var], state(i_var).extreme(1));
+      state_min[i_var] = std::min(state_min[i_var], state(vars[i_var]).extreme(0));
+      state_max[i_var] = std::max(state_min[i_var], state(vars[i_var]).extreme(1));
     }
   }
   Mat<dyn, dyn> orth = basis.orthogonal(params.row_size - 1).transpose()*basis.node_weights().asDiagonal();
@@ -1178,13 +1181,14 @@ void Solver::compute_spectral_uncertainty() {
   #pragma omp parallel
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    Array<double> state = elem.flow_state();
+    Array<double> state = elem.numeric_state();
     elem.spectral_uncert() = 0;
     elem.flux_uncert = 0;
-    for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) {
+    for (int i_var = 0; i_var < nv; ++i_var) {
       for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-        Mat<> proj = math::dimension_matvec(orth, state(i_var).vector(), i_dim);
+        Mat<> proj = math::dimension_matvec(orth, state(vars[i_var]).vector(), i_dim);
         double normalize = state_max[i_var] - state_min[i_var];
+        if (i_var >= params.n_dim + 2) normalize *= 10;
         double& elem_uncert = elem.spectral_uncert()[i_dim];
         elem_uncert = std::max(elem_uncert, std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize);
       }
