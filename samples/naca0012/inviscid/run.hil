@@ -14,7 +14,7 @@ mesh_extreme11 =  10.
 amr = true
 
 {generate geometry with external script}
-shell {python3 make_geom.py}
+shell {python3 ../make_geom.py}
 geom0 = {auto.csv}
 
 {freestream conditions}

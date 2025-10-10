@@ -441,16 +441,16 @@ class Array {
     return operand;
   }
 
-  Array abs (bool inplace = false) {return entrywise(std::abs , inplace);} //!< \brief Entrywise absolute value
-  Array sqrt(bool inplace = false) {return entrywise(std::sqrt, inplace);} //!< \brief Entrywise square root
-  Array exp (bool inplace = false) {return entrywise(std::exp , inplace);} //!< \brief Entrywise exponential
-  Array log (bool inplace = false) {return entrywise(std::log , inplace);} //!< \brief Entrywise natural logarithm
-  Array sin (bool inplace = false) {return entrywise(std::sin , inplace);} //!< \brief Entrywise sine
-  Array cos (bool inplace = false) {return entrywise(std::cos , inplace);} //!< \brief Entrywise cosine
-  Array tan (bool inplace = false) {return entrywise(std::tan , inplace);} //!< \brief Entrywise tangent
-  Array asin(bool inplace = false) {return entrywise(std::asin, inplace);} //!< \brief Entrywise inverse sine
-  Array acos(bool inplace = false) {return entrywise(std::acos, inplace);} //!< \brief Entrywise inverse cosine
-  Array atan(bool inplace = false) {return entrywise(std::atan, inplace);} //!< \brief Entrywise inverse tangent
+  Array abs (bool inplace = false) {return entrywise((T(*)(T))std::abs , inplace);} //!< \brief Applies \ref entrywise.
+  Array sqrt(bool inplace = false) {return entrywise((T(*)(T))std::sqrt, inplace);} //!< \brief Applies \ref entrywise.
+  Array exp (bool inplace = false) {return entrywise((T(*)(T))std::exp , inplace);} //!< \brief Applies \ref entrywise.
+  Array log (bool inplace = false) {return entrywise((T(*)(T))std::log , inplace);} //!< \brief Applies \ref entrywise.
+  Array sin (bool inplace = false) {return entrywise((T(*)(T))std::sin , inplace);} //!< \brief Applies \ref entrywise.
+  Array cos (bool inplace = false) {return entrywise((T(*)(T))std::cos , inplace);} //!< \brief Applies \ref entrywise.
+  Array tan (bool inplace = false) {return entrywise((T(*)(T))std::tan , inplace);} //!< \brief Applies \ref entrywise.
+  Array asin(bool inplace = false) {return entrywise((T(*)(T))std::asin, inplace);} //!< \brief Applies \ref entrywise.
+  Array acos(bool inplace = false) {return entrywise((T(*)(T))std::acos, inplace);} //!< \brief Applies \ref entrywise.
+  Array atan(bool inplace = false) {return entrywise((T(*)(T))std::atan, inplace);} //!< \brief Applies \ref entrywise.
 
   T sum() {
     T s = 0;
