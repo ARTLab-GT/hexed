@@ -12,7 +12,8 @@ extremal_bc11 = {freestream}
 $set_shock
 art_visc_width = .004
 vis_freq = 10^3
-adapt_freq = 10^4
+adapt_freq = 10^3
+update_roughness_freq = 10^3
 print_freq = 10
 shock_adapt_freq = 100
 

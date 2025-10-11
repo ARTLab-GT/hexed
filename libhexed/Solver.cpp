@@ -1162,7 +1162,7 @@ void Solver::print_preti_iters() {
 
 void Solver::compute_spectral_uncertainty() {
   std::vector<int> vars;
-  for (int i_var = 0; i_var < params.n_var; ++i_var) vars.push_back(i_var);
+  for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) vars.push_back(i_var);
   if (use_art_visc) vars.push_back(params.n_var + 3);
   int nv = vars.size();
   Array<double> state_min = Array<double>::make_uniform({nv}, huge);
@@ -1188,7 +1188,7 @@ void Solver::compute_spectral_uncertainty() {
       for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
         Mat<> proj = math::dimension_matvec(orth, state(vars[i_var]).vector(), i_dim);
         double normalize = state_max[i_var] - state_min[i_var];
-        if (i_var >= params.n_dim + 2) normalize *= 10;
+        if (i_var >= params.n_var) normalize *= 10;
         double& elem_uncert = elem.spectral_uncert()[i_dim];
         elem_uncert = std::max(elem_uncert, std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize);
       }
@@ -1226,8 +1226,10 @@ void Solver::compute_spectral_uncertainty() {
         for (int i_side = 0; i_side < 2; ++i_side) {
           con.face(i_side).element()->flux_uncert += std::sqrt(uncert);
         }
-        total_sq_flux += total;
-        total_area += (area*face_weights).sum();
+        if (con.face(0).element()->has_wall() || con.face(1).element()->has_wall()) {
+          total_sq_flux += total;
+          total_area += (area*face_weights).sum();
+        }
       }
     };
     Kernel_options opts {
