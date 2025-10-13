@@ -2,6 +2,7 @@
 #include <hexed/Element.hpp>
 #include <hexed/Equidistant.hpp>
 #include <hexed/Tree.hpp>
+#include <hexed/Gauss_lobatto.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Element") {
@@ -56,4 +57,66 @@ TEST_CASE("Element") {
     REQUIRE(element.jacobian_determinant(i_qpoint) == 1.);
   }
   for (int i_dim = 0; i_dim < 3; ++i_dim) REQUIRE(element.desired_refinement(i_dim) == 0);
+
+  SECTION("is_sharp") {
+    hexed::Gauss_lobatto basis(params.row_size);
+    SECTION("3d") {
+      hexed::next::Mesh_blocks blocks(3, basis);
+      element.create_shape(blocks, 3);
+      element.create_fake(blocks);
+      // coordinates of this tree are irrelevant, we just need a grafted tree so elem1.is_extruded() will be true
+      hexed::Tree& tree1 = *tree.graft(hexed::Array<int>::make(0, 0, 0), hexed::Array<hexed::Int>::make(0, 1, 0));
+      hexed::Element elem1(params, tree1);
+      elem1.create_shape(blocks);
+      elem1.create_fake(blocks);
+      elem1.glue_shape(element, {std::vector<double>{0., .5, .5}, std::vector<double>{.5, 1., 1.}});
+      REQUIRE(elem1.is_extruded());
+      REQUIRE(elem1.has_wall());
+      SECTION("snapped edge") {
+        element.active_shape().boundary_face_3d()->edge(3).snapped_edge = 0;
+        REQUIRE(elem1.is_sharp(0) == false);
+        REQUIRE(elem1.is_sharp(1) == false);
+        REQUIRE(elem1.is_sharp(2) == true);
+        element.active_shape().boundary_face_3d()->edge(1).snapped_edge = 2;
+        REQUIRE(elem1.is_sharp(0) == false);
+        REQUIRE(elem1.is_sharp(1) == false);
+        REQUIRE(elem1.is_sharp(2) == true);
+        element.active_shape().boundary_face_3d()->edge(0).snapped_edge = 2;
+        REQUIRE(elem1.is_sharp(0) == true);
+        REQUIRE(elem1.is_sharp(1) == false);
+        REQUIRE(elem1.is_sharp(2) == true);
+      }
+      SECTION("snapped endpoint") {
+        element.active_shape().boundary_block()->vertices()[2]->snapped_endpoint = 1;
+        REQUIRE(elem1.is_sharp(0) == false);
+        REQUIRE(elem1.is_sharp(1) == false);
+        REQUIRE(elem1.is_sharp(2) == false);
+        element.active_shape().boundary_block()->vertices()[1]->snapped_endpoint = 1;
+        REQUIRE(elem1.is_sharp(0) == true);
+        REQUIRE(elem1.is_sharp(1) == false);
+        REQUIRE(elem1.is_sharp(2) == true);
+      }
+    }
+    SECTION("2d") {
+      hexed::Storage_params par2(1, 4, 2, 6);
+      hexed::next::Mesh_blocks blocks(2, basis);
+      hexed::Tree tree_2d(2, 1.);
+      hexed::Element elem(par2, tree);
+      hexed::Tree& tree1 = *tree_2d.graft(hexed::Array<int>::make(0, 0), hexed::Array<hexed::Int>::make(1, 0));
+      hexed::Element elem1(par2, tree1);
+      elem.create_shape(blocks, 1);
+      elem.create_fake(blocks);
+      elem1.create_shape(blocks);
+      elem1.create_fake(blocks);
+      elem1.glue_shape(elem, {std::vector<double>{.5, .5}, std::vector<double>{1., 1.}});
+      REQUIRE(elem1.is_extruded());
+      REQUIRE(elem1.has_wall());
+      elem.active_shape().vertex(2).snapped_point = 0;
+      REQUIRE(elem1.is_sharp(0) == false);
+      REQUIRE(elem1.is_sharp(1) == false);
+      elem.active_shape().vertex(3).snapped_point = 0;
+      REQUIRE(elem1.is_sharp(0) == false);
+      REQUIRE(elem1.is_sharp(1) == true);
+    }
+  }
 }

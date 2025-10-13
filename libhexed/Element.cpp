@@ -103,20 +103,43 @@ double Element::wall_distance() const {
 
 int Element::wall_dimension() {
   if (!is_extruded()) return -1;
-  HEXED_ASSERT(_fake_shape, "no fake shape")
-  int i_bf = _fake_shape->boundary_face();
+  int i_bf = _get_i_bf();
   if (i_bf == next::Mesh_blocks::no_face) return -1;
   return i_bf/2;
 }
 
+int Element::_get_i_bf() {
+  HEXED_ASSERT(_fake_shape, "no fake shape")
+  return _fake_shape->boundary_face();
+}
+
 bool Element::has_wall() {
   if (!is_extruded()) return false;
-  HEXED_ASSERT(_fake_shape, "no fake shape")
-  int i_bf = _fake_shape->boundary_face();
+  int i_bf = _get_i_bf();
   if (i_bf < 0) return false;
-  auto& face = _faces[i_bf];
-  if (!face.neighbor_connection()) return false;
-  return face.neighbor_connection()->opposite_face(face).boundary_connection();
+  return _shape->glued_to_face(i_bf);
+}
+
+bool Element::is_sharp(int i_dim) {
+  if (!has_wall()) return false;
+  if (i_dim == wall_dimension()) return false;
+  int j_dim = i_dim - (i_dim > wall_dimension());
+  auto f = _fake_shape->boundary_face_3d();
+  if (f) {
+    for (int sign = 0; sign < 2; ++sign) {
+      if (_shape->glued_to_face(2*i_dim + sign) && f->edge(2*j_dim + sign).snapped_edge >= 0) return true;
+    }
+  }
+  for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+    auto& v = _fake_shape->vertex(i_vert);
+    bool sharp_corner = v.snapped_endpoint >= 0 || v.snapped_point >= 0;
+    for (int k_dim = 0; k_dim < params.n_dim; ++k_dim) {
+      int row_coord = math::row_coordinate(params.n_dim, 2, k_dim, i_vert);
+      sharp_corner = sharp_corner && _shape->glued_to_face(2*k_dim + row_coord);
+    }
+    if (sharp_corner) return true;
+  }
+  return false;
 }
 
 double* Element::stage(int i_stage) {
@@ -188,6 +211,7 @@ void Element::create_shape(next::Mesh_blocks& blocks, int boundary_face) {
 }
 
 void Element::create_fake(next::Mesh_blocks& blocks) {
+  HEXED_ASSERT(_shape, "Must have a shape before creating a fake shape.")
   _fake_shape.reset(_shape.release());
   _shape = std::make_unique<next::Element_shape>(blocks.create_element(resize(tree.value().nominal_position(), 3),
                                                                        resize(tree.value().nominal_shape(), 3)));
