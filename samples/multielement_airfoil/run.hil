@@ -3,11 +3,7 @@ mesh_extreme00 = -10.
 mesh_extreme10 = -10.
 mesh_extreme01 =  10.1
 mesh_extreme11 =  10.1
-max_wall_reynolds = 3e2
 geom0 = {crmhl-2dcut.igs}
-geom_refine_if = geom_refine_if + { | ((center0 - 0.855)^2 + (center1 - .029)^2 < 1e-3^2 + 2*nom_sz^2 & nom_sz > 3e-4 & has_wall)}
-geom_refine_if = geom_refine_if + { | ((center0 - 1.067)^2 + (center1 + .147)^2 < 1e-3^2 + 2*nom_sz^2 & nom_sz > 3e-4 & has_wall)}
-geom_refine_if = geom_refine_if + { | ((center0 - 0.018)^2 + (center1 + .002)^2 < 3e-3^2 + 2*nom_sz^2 & nom_sz > 3e-4 & has_wall)}
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -29,7 +25,7 @@ fix_therm_admis = true
 vis_field_vars = vis_field_vars + {uncertainty = uncertainty;}
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 steady = false
-time_step = .002
+time_step = .001
 time_step_done = {pseudotime_iteration >= 10000}
 vis_freq = 1
 adapt_freq = 1
