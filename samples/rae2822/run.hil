@@ -8,12 +8,12 @@ extremal_bc00 = {freestream}
 extremal_bc10 = {freestream}
 extremal_bc01 = {freestream}
 extremal_bc11 = {freestream}
-max_wall_reynolds = 3e2
 
 $set_shock
 art_visc_width = .004
 vis_freq = 10^3
-adapt_freq = 10^4
+adapt_freq = 10^3
+update_roughness_freq = 10^3
 print_freq = 10
 shock_adapt_freq = 100
 
@@ -29,7 +29,6 @@ attack = 2.31*degree
 target_reynolds = 6.5e6
 dyn_visc = 1.716e-5
 freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air*1.4*freestream_temperature)/freestream_mach
-println({max spacing: } + max_wall_reynolds*dyn_visc/(freestream_density*sqrt(specific_gas_air*1.4*freestream_temperature)*freestream_mach))
 
 domain_length = mesh_extreme01 - mesh_extreme00
 freestream_specific_turbulent_kinetic_energy = 1e-3*(freestream_mach*340.)^2/(target_reynolds*domain_length/1.)

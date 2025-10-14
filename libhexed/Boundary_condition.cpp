@@ -164,8 +164,16 @@ void Pressure_outflow::apply_state(Boundary_connection& con) {
     double nrml_veloc = mmtm.dot(n)/inside(params.n_dim)/n.norm();
     double kin_ener = .5*mmtm.squaredNorm()/inside(params.n_dim);
     double pres = std::max(.4*(inside(params.n_dim + 1) - kin_ener), 0.);
+    #if 1
     double sound_speed = std::sqrt(1.4*pres/inside(params.n_dim));
     if (nrml_veloc*sign < sound_speed) ghost(params.n_dim + 1) = pres_spec/.4 + kin_ener;
+    #else
+    double sound_speed = std::sqrt(std::abs(1.4*pres/inside(params.n_dim)));
+    double nrml_mach = nrml_veloc*sign/sound_speed;
+    double ramp_size = 0.1;
+    double interp = std::min(0., std::max(1., (1. + ramp_size - nrml_mach)/ramp_size));
+    ghost(params.n_dim + 1) += interp*(pres_spec/.4 + kin_ener - ghost(params.n_dim + 1));
+    #endif
     // write to ghost flux
     for (int i_var = 0; i_var < params.n_var; ++i_var) {
       ghost_state(i_var)[i_qpoint] = ghost(i_var);

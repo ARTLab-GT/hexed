@@ -237,7 +237,11 @@ class History_plot:
             line = self._lines.pop(0)
             if line.startswith("simulation complete"):
                 self._stop = True
-            status_data = pd.read_csv(self._directory + "status_data.txt", delimiter=":", names=["parameter", "value"], index_col=0)
+            try:
+                status_data = pd.read_csv(self._directory + "status_data.txt", delimiter=":", names=["parameter", "value"], index_col=0)
+                has_status = True
+            except:
+                has_status = False
             if re.match(" *[0-9]+,", line):
                 entries = line.split(",")
                 add_line = self._data.shape[0]
@@ -266,18 +270,19 @@ class History_plot:
                                 ax.set_ylim(ylim[1] + 1.5*(self._data[col].min() - ylim[1]), ylim[1])
                             elif last_value > ylim[1]:
                                 ax.set_ylim(ylim[0], ylim[0] + 1.5*(self._data[col].max() - ylim[0]))
-                    if col + "_smoothed" in status_data.index:
-                        smoothed = status_data.at[col + "_smoothed", "value"]
-                        trend = status_data.at[col + "_trend", "value"]
-                        noise = status_data.at[col + "_noise", "value"]
-                        noise_trend = status_data.at[col + "_noise_trend", "value"]
-                        iteration = self._data.at[add_line, "iteration"]
-                        x = [(1 - self._monitor_window)*iteration, iteration]
-                        y = np.array([smoothed - trend*self._monitor_window*iteration, smoothed]);
-                        self._stats[col][0].set_data(x, y)
-                        spread = np.array([noise - noise_trend*self._monitor_window*iteration, noise])
-                        self._stats[col][1].set_data(x, y - spread)
-                        self._stats[col][2].set_data(x, y + spread)
+                    if has_status:
+                        if col + "_smoothed" in status_data.index:
+                            smoothed = status_data.at[col + "_smoothed", "value"]
+                            trend = status_data.at[col + "_trend", "value"]
+                            noise = status_data.at[col + "_noise", "value"]
+                            noise_trend = status_data.at[col + "_noise_trend", "value"]
+                            iteration = self._data.at[add_line, "iteration"]
+                            x = [(1 - self._monitor_window)*iteration, iteration]
+                            y = np.array([smoothed - trend*self._monitor_window*iteration, smoothed]);
+                            self._stats[col][0].set_data(x, y)
+                            spread = np.array([noise - noise_trend*self._monitor_window*iteration, noise])
+                            self._stats[col][1].set_data(x, y - spread)
+                            self._stats[col][2].set_data(x, y + spread)
         for i_col in range(len(self._plot_columns)):
             self._curves[i_col].set_data(self._data["iteration"], self._data[self._plot_columns[i_col]])
         return self._curves

@@ -48,6 +48,7 @@ class Element : public Kernel_element, public Mortal {
   std::vector<Face> _faces;
   Array<int> _refinement_data;
   void _set_glued_pos();
+  int _get_i_bf();
   friend Accessible_mesh; // necessary for `Accessible_mesh::set_mask`... need a better way to do this
 
   public:
@@ -93,6 +94,7 @@ class Element : public Kernel_element, public Mortal {
   double wall_distance() const; //!< \brief The distance from the farthest vertex to the wall.
   int wall_dimension();
   bool has_wall();
+  bool is_sharp(int i_dim);
   //! pointer to state data for `i_stage`th Runge-Kutta stage.
   double* stage(int i_stage); //!< layout: [i_var][i_qpoint]
   Array<double> flow_state(); //!< layout: [i_var][i_qpoint]

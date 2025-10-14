@@ -28,7 +28,7 @@ namespace hexed {
 
 constexpr Int whatever = -1; //!< \brief used in `Array::reshaped()`
 constexpr Int same = -2; //!< \brief used in `Array::reshaped()`
-constexpr Int end = std::numeric_limits<Int>::max(); //! \brief can be passed to `Array::operator()`
+constexpr Int end = std::numeric_limits<Int>::max(); //!< \brief can be passed to `Array::operator()`
 
 inline std::vector<Int> hypercubes(Int n_var, Int n_dim, Int row_size) {
   std::vector<Int> shape(n_dim + 1, row_size);
@@ -430,6 +430,39 @@ class Array {
   //! \brief Square root of the sum of the squares of all entries.
   //! \details For vectors, this is the \f$ L^2 \f$ norm and for matrices this is the Frobenius norm.
   T norm() const {return std::sqrt(norm_squared());}
+
+  //! \brief Applies a function to each entry of the array.
+  //! \details If `inplace` is `true`, modifies the entries of this array and returns an array that references the data.
+  //! If `inplace` is `false`, does not modify the original array
+  //! and returns a new array with `f` applied to the entries.
+  Array entrywise(std::function<T(T)> f, bool inplace = false) {
+    Array operand = inplace ? (*this)() : copy();
+    for (Int i = 0; i < size(); ++i) operand[i] = f(operand[i]);
+    return operand;
+  }
+
+  Array abs (bool inplace = false) {return entrywise((T(*)(T))std::abs , inplace);} //!< \brief Applies \ref entrywise.
+  Array sqrt(bool inplace = false) {return entrywise((T(*)(T))std::sqrt, inplace);} //!< \brief Applies \ref entrywise.
+  Array exp (bool inplace = false) {return entrywise((T(*)(T))std::exp , inplace);} //!< \brief Applies \ref entrywise.
+  Array log (bool inplace = false) {return entrywise((T(*)(T))std::log , inplace);} //!< \brief Applies \ref entrywise.
+  Array sin (bool inplace = false) {return entrywise((T(*)(T))std::sin , inplace);} //!< \brief Applies \ref entrywise.
+  Array cos (bool inplace = false) {return entrywise((T(*)(T))std::cos , inplace);} //!< \brief Applies \ref entrywise.
+  Array tan (bool inplace = false) {return entrywise((T(*)(T))std::tan , inplace);} //!< \brief Applies \ref entrywise.
+  Array asin(bool inplace = false) {return entrywise((T(*)(T))std::asin, inplace);} //!< \brief Applies \ref entrywise.
+  Array acos(bool inplace = false) {return entrywise((T(*)(T))std::acos, inplace);} //!< \brief Applies \ref entrywise.
+  Array atan(bool inplace = false) {return entrywise((T(*)(T))std::atan, inplace);} //!< \brief Applies \ref entrywise.
+
+  T sum() {
+    T s = 0;
+    for (Int i = 0; i < size(); ++i) s += (*this)[i];
+    return s;
+  }
+
+  T prod() {
+    T p = 1;
+    for (Int i = 0; i < size(); ++i) p *= (*this)[i];
+    return p;
+  }
 
   private:
   Array(Int o, T* d, bool own, Int* sh, Int* st) : _order{o}, _data{d}, _owns{own}, _shape{sh}, _strides{st} {}

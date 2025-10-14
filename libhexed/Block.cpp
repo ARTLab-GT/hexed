@@ -988,6 +988,12 @@ void Element_shape::destroy_boundary_face() {
   _i_bf = Mesh_blocks::no_face;
 }
 
+bool Element_shape::glued_to_face(int i_face) const {
+  if (!glued()) return false;
+  double scale = _glued_corners[1][i_face/2] - _glued_corners[0][i_face/2];
+  return std::abs(_glued_corners[i_face%2][i_face/2] - i_face%2) < 1e-8*scale;
+}
+
 const int Mesh_blocks::no_face = -1;
 
 Mesh_blocks::Mesh_blocks(int nd, const Basis& b): n_dim{nd}, basis{b} {}

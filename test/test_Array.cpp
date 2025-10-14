@@ -165,4 +165,27 @@ TEST_CASE("Array") {
     REQUIRE(arr0.extreme(0) == -2);
     REQUIRE(arr0.extreme(1) == 4);
   }
+
+  SECTION("entrywise") {
+    auto arr0 = hexed::Array<int>::make(12, 0, -4);
+    auto f = [](int i){return i + 1;};
+    auto arr1 = arr0.entrywise(f);
+    REQUIRE_THAT(arr1, Catch::Matchers::RangeEquals(std::vector<int>{13, 1, -3}));
+    REQUIRE_THAT(arr0, Catch::Matchers::RangeEquals(std::vector<int>{12, 0, -4}));
+    auto arr2 = arr0.entrywise(f, true);
+    REQUIRE_THAT(arr2, Catch::Matchers::RangeEquals(std::vector<int>{13, 1, -3}));
+    REQUIRE_THAT(arr0, Catch::Matchers::RangeEquals(std::vector<int>{13, 1, -3}));
+    arr2[1] += 3;
+    REQUIRE_THAT(arr2, Catch::Matchers::RangeEquals(std::vector<int>{13, 4, -3}));
+    REQUIRE_THAT(arr0, Catch::Matchers::RangeEquals(std::vector<int>{13, 4, -3}));
+  }
+
+  SECTION("reductions") {
+    auto arr0 = hexed::Array<int>::make(1, -2, 4);
+    REQUIRE(arr0.sum() == 3);
+    REQUIRE(arr0.prod() == -8);
+    hexed::Array<int> empty({});
+    REQUIRE(empty.sum() == 0);
+    REQUIRE(empty.prod() == 1);
+  }
 }

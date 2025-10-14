@@ -1161,16 +1161,19 @@ void Solver::print_preti_iters() {
 
 
 void Solver::compute_spectral_uncertainty() {
-  int nv = params.n_var;
+  std::vector<int> vars;
+  for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) vars.push_back(i_var);
+  if (use_art_visc) vars.push_back(params.n_var + 3);
+  int nv = vars.size();
   Array<double> state_min = Array<double>::make_uniform({nv}, huge);
   Array<double> state_max = Array<double>::make_uniform({nv}, -huge);
   auto& elems = acc_mesh->elements();
   #pragma omp parallel for reduction(min:state_min) reduction(max:state_max)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Array<double> state = elems[i_elem].flow_state();
+    Array<double> state = elems[i_elem].numeric_state();
     for (int i_var = 0; i_var < nv; ++i_var) {
-      state_min[i_var] = std::min(state_min[i_var], state(i_var).extreme(0));
-      state_max[i_var] = std::max(state_min[i_var], state(i_var).extreme(1));
+      state_min[i_var] = std::min(state_min[i_var], state(vars[i_var]).extreme(0));
+      state_max[i_var] = std::max(state_min[i_var], state(vars[i_var]).extreme(1));
     }
   }
   Mat<dyn, dyn> orth = basis.orthogonal(params.row_size - 1).transpose()*basis.node_weights().asDiagonal();
@@ -1178,70 +1181,55 @@ void Solver::compute_spectral_uncertainty() {
   #pragma omp parallel
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    Array<double> state = elem.flow_state();
+    Array<double> state = elem.numeric_state();
     elem.spectral_uncert() = 0;
     elem.flux_uncert = 0;
     for (int i_var = 0; i_var < nv; ++i_var) {
-      //if (i_var < params.n_dim + 2 || elem.has_wall()) { // only wall elements consider turbulence variables
-      if (i_var < params.n_dim + 2) {
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          Mat<> proj = math::dimension_matvec(orth, state(i_var).vector(), i_dim);
-          double normalize = state_max[i_var] - state_min[i_var];
-          double& elem_uncert = elem.spectral_uncert()[i_dim];
-          elem_uncert = std::max(elem_uncert, std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize);
-        }
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        Mat<> proj = math::dimension_matvec(orth, state(vars[i_var]).vector(), i_dim);
+        double normalize = state_max[i_var] - state_min[i_var];
+        if (i_var >= params.n_var) normalize *= 10;
+        double& elem_uncert = elem.spectral_uncert()[i_dim];
+        elem_uncert = std::max(elem_uncert, std::sqrt(proj.dot(proj.cwiseProduct(weights)))/normalize);
       }
     }
   }
-  double max_flux = 1;
+  double total_sq_flux = 1;
+  double total_area = 1;
   if (visc.is_viscous) {
-    max_flux = 0;
-    auto bc_fun = [this, &max_flux]() {
+    total_sq_flux = 0;
+    total_area = 0;
+    auto bc_fun = [this, &total_sq_flux, &total_area]() {
       apply_flux_bcs();
-      Mat<> face_weights = math::pow_outer(basis.node_weights(), params.n_dim - 2);
-      #pragma omp parallel for reduction(max:max_flux)
+      Array<double> face_weights(math::pow_outer(basis.node_weights(), params.n_dim - 1));
+      #pragma omp parallel for reduction(+:total_sq_flux,total_area)
       for (auto& con : acc_mesh->neighbor_connections(true)) {
         auto dir = con.get_direction();
         if (!con.has_elements() || dir.i_dim[0] != dir.i_dim[1]) continue;
-        #if 0
-        bool has_wall [2] {};
-        for (int i_side = 0; i_side < 2; ++i_side) {
-          for (int i_face = 0; i_face < 2*params.n_dim; ++i_face) {
-            auto& face = con.face(i_side).element()->face(i_face);
-            if (!face.neighbor_connection()) continue;
-            auto bc = face.neighbor_connection()->opposite_face(face).boundary_connection();
-            if (bc) has_wall[i_side] = has_wall[i_side] || bc->boundary_condition() == 2*params.n_dim;
-          }
-        }
-        for (int i_side = 0; i_side < 2; ++i_side) {
-          if (has_wall[i_side] && !has_wall[!i_side]) {
-            Array<double> flux = con.face(i_side).flow_state()(1);
-            Array<double> flux_diff = flux - con.face(!i_side).flow_state()(1);
-            double uncert = 0;
-            double total = 0;
-            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-              uncert += flux_diff(i_dim).vector().dot(flux_diff(i_dim).vector().cwiseProduct(face_weights));
-              total += flux(i_dim).vector().dot(flux(i_dim).vector().cwiseProduct(face_weights));
-            }
-            con.face(i_side).element()->flux_uncert = std::sqrt(uncert/total);
-          }
-        }
-        #endif
         if (!con.face(0).element()->is_extruded() || !con.face(1).element()->is_extruded()) continue;
         if (dir.i_dim[0] != con.face(0).element()->wall_dimension()) continue;
         Array<double> flux_diff = con.face(0).flow_state()(1) - con.face(1).flow_state()(1);
         Array<double> flux_avg  = con.face(0).flow_state()(1) + con.face(1).flow_state()(1);
+        Array<double> nrml = con.face(0).normal();
+        Array<double> area = Array<double>::make_uniform({params.n_face_qpoint()}, 0.);
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          area += nrml(i_dim)*nrml(i_dim);
+        }
+        area.sqrt(true);
+        area *= con.face(0).nominal_area();
         double uncert = 0;
         double total = 0;
         for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          uncert += flux_diff(i_dim).vector().dot(flux_diff(i_dim).vector().cwiseProduct(face_weights));
-          total += flux_avg(i_dim).vector().dot(flux_avg(i_dim).vector().cwiseProduct(face_weights));
+          uncert += (flux_diff(i_dim)*flux_diff(i_dim)*face_weights/(area*area)).sum();
+          total += (flux_avg(i_dim)*flux_avg(i_dim)*face_weights/area).sum();
         }
-        double area = con.face(0).nominal_area();
         for (int i_side = 0; i_side < 2; ++i_side) {
-          con.face(i_side).element()->flux_uncert += std::sqrt(uncert)/area;
+          con.face(i_side).element()->flux_uncert += std::sqrt(uncert);
         }
-        max_flux = std::max(max_flux, std::sqrt(total)/area);
+        if (con.face(0).element()->has_wall() || con.face(1).element()->has_wall()) {
+          total_sq_flux += total;
+          total_area += (area*face_weights).sum();
+        }
       }
     };
     Kernel_options opts {
@@ -1255,7 +1243,7 @@ void Solver::compute_spectral_uncertainty() {
     };
     compute_navier_stokes(_kernel_mesh(), opts, bc_fun, visc, therm_cond, false);
   }
-  _namespace->assign("max_flux", max_flux);
+  _namespace->assign("rms_flux", std::sqrt(total_sq_flux/total_area));
 }
 
 void Solver::update_bound_conds() {

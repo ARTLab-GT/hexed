@@ -331,7 +331,7 @@ class Edge : public Boundary_block {
   Edge(Vertex& vertex0, Vertex& vertex1, const Basis&);
   inline Vertex& vertex(int i_vert) {return _verts[i_vert].value();} //!< \brief access the vertices (index 0 or 1)
   inline const Vertex& vertex(int i_vert) const {return _verts[i_vert].value();} //!< \overload
-  std::vector<Element_shape*> dependent_elements() override;
+  std::vector<Element_shape*> dependent_elements();
   std::vector<int> element_coords(std::vector<int>) const override;
   std::vector<Vertex*> vertices() override;
   void reset() override; //!< \brief sets `interior()` to linear interpolation between vertices
@@ -459,6 +459,7 @@ class Element_shape : public Block {
   inline Boundary_block* boundary_block() {return _bf.get();}
   inline const Boundary_block* boundary_block() const {return _bf.get();}
   inline int boundary_face() const {return _i_bf;}
+  bool glued_to_face(int i_face) const;
 
   bool deformed;
   bool for_matching;

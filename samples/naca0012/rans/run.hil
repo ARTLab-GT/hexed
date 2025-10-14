@@ -7,20 +7,19 @@ Note: strings are enclosed in `{}`, and strings which are not assigned to anythi
 
 {domain and mesh parameters}
 n_dim = 2
-row_size = 6
 mesh_extreme00 = -160.
 mesh_extreme10 = -160.
 mesh_extreme01 =  160.
 mesh_extreme11 =  160.
 
-amr = true
+adapt_start_iter = 10*10^4
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
 turbulence_model = {k-omega}
 
 {generate geometry with external script}
-shell {python3 make_geom.py}
+shell {python3 ../make_geom.py}
 geom0 = {auto.csv}
 
 {freestream conditions}
@@ -47,12 +46,11 @@ monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
     residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)
-    spectral_uncertainty0 = spectral_uncertainty0
-    spectral_uncertainty1 = spectral_uncertainty1
-    spectral_uncertainty2 = spectral_uncertainty2
-    rms_residual = rms_residual
-    mask = mask
-    aspect_ratio = (nominal_shape0 + nominal_shape1)^2/(nominal_shape0*nominal_shape1)
+    i_dim = wall_dimension + (wall_dimension < 0)
+    spectral_unref = $spectral_unref_criterion
+    flux_unref = $flux_unref_criterion
+    flux_uncertainty = flux_uncertainty
+    rms_flux = rms_flux
 }
 vis_surface_vars = vis_surface_vars + {
     roughness_height = roughness_height
