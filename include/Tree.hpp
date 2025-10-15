@@ -191,6 +191,7 @@ class Tree : public Mortal {
    * If there are multiple neighbors on the same face, the one with the lowest coordinates is returned
    * and other neighbors can be found by locating the appropriate neighbors of that cell.
    * If more than one element of `direction` is nonzero, then edge or vertex neighbors are returned.
+   * \todo document behavior for grafted connections
    */
   Tree* find_neighbor(Array<int> direction);
   //! \brief Equivalent to `find_neighbor(Array<int>)` with `direction[i_face/2] == math::sign(i_face%2)`.

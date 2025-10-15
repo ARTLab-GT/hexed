@@ -603,6 +603,24 @@ Tree::_Neighbor_result Tree::_neighbor(Array<int> dir_arg) {
           search_coords[j_dim] = math::pow<Int>(2, rl_diff) - search_coords[j_dim];
           search_bias[j_dim] = 1;
         }
+        if (n_dim == 3) {
+          int dim0 = i_dim == 0;
+          int dim1 = 1 + (i_dim <= 1);
+          int rot = trans.dir.rotate*math::sign(!trans.i_side);
+          while (rot < 0) rot += 4;
+          rot = rot%4;
+          for (; rot > 0; --rot) {
+            // achieve rotation by transposing dimensions and then inverting one of them
+            // first transpose
+            std::swap(ref_level[dim0], ref_level[dim1]);
+            std::swap(search_coords[dim0], search_coords[dim1]);
+            std::swap(search_bias[dim0], search_bias[dim1]);
+            // now flip
+            int rl_diff = ref_level[dim1] - search_root->_ref_level[dim1];
+            search_coords[dim1] = math::pow<Int>(2, rl_diff) - search_coords[dim1];
+            search_bias[dim1] = !search_bias[dim1];
+          }
+        }
         for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
           int rl_diff = ref_level[k_dim] - search_root->_ref_level[k_dim];
           search_coords[k_dim] += search_root->_coords[k_dim]*math::pow<Int>(2, rl_diff);

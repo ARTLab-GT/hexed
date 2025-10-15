@@ -269,6 +269,7 @@ TEST_CASE("Tree") {
     REQUIRE(uc[0]->unique_children()[0]->find_neighbor(hexed::Array<int>::make(1, 0, 1)) == uc[3]);
     REQUIRE_THAT(uc[0]->unique_children()[0]->find_neighbors(hexed::Array<int>::make(1, 0, 1)),
                  Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{uc[3]}));
+    // test aniso ref level collapsing
     for (int i = 1; i < 4; ++i) uc[i]->refine(1);
     uc = tree.unique_children();
     REQUIRE(uc.size() == 8);
@@ -474,5 +475,39 @@ TEST_CASE("Tree") {
     tree.connect({graft2, tree.children()[1]}, {{0, 0}, {0, 1}});
     REQUIRE(tree.children()[1]->find_neighbor(1) == graft2);
     REQUIRE(graft2 == tree.children()[1]->find_neighbor(1));
+  }
+
+  SECTION("3D grafting") {
+    hexed::Tree tree(3, .9, hexed::Mat<3>{-.15, -.03, -.09});
+    REQUIRE(!tree.is_graft());
+    hexed::Tree* graft0 = tree.graft(hexed::Array<int>::make(0, 0, 0), hexed::Array<hexed::Int>::make(1, 0, 0));
+    tree.connect({&tree, graft0}, {{0, 0}, {1, 0}, 1});
+    REQUIRE(tree.has_graft_connection());
+    REQUIRE(graft0->has_graft_connection());
+    REQUIRE(graft0->find_neighbor(0) == &tree);
+    REQUIRE(graft0->find_neighbor(1) == nullptr);
+    REQUIRE(tree.find_neighbor(1) == graft0);
+    REQUIRE_THAT(tree.find_neighbors(1), Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0}));
+    REQUIRE_THAT(graft0->find_neighbors(0), Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{&tree}));
+    auto cn = graft0->find_connection_neighbors(0);
+    REQUIRE_THAT(cn.trees[0], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>(4, &tree)));
+    REQUIRE_THAT(cn.trees[1], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>(4, graft0)));
+    REQUIRE(cn.direction == hexed::Connection_direction{{0, 0}, {1, 0}, 1});
+    tree.refine({0, 1, 1});
+    REQUIRE(tree.unique_children()[1]->find_neighbor(1) == graft0);
+    REQUIRE(graft0->find_neighbor(0) == tree.unique_children()[2]);
+    REQUIRE_THAT(graft0->find_neighbors(0), Catch::Matchers::RangeEquals(tree.unique_children()));
+    graft0->refine();
+    std::vector<hexed::Tree*> trees0 = tree.unique_children();
+    std::vector<hexed::Tree*> trees1 {
+      graft0->children()[1],
+      graft0->children()[3],
+      graft0->children()[0],
+      graft0->children()[2],
+    };
+    for (int i = 0; i < 4; ++i) {
+      CHECK(trees0[i]->find_neighbor(1) == trees1[i]);
+      CHECK(trees1[i]->find_neighbor(0) == trees0[i]);
+    }
   }
 }
