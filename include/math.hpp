@@ -19,7 +19,7 @@ struct Tolerance {
  * Can return `constexpr`, which `std::pow` is not allowed to do according to the standard
  * (although the GCC implementation can anyway).
  */
-template<typename number_t>
+template <typename number_t>
 constexpr number_t pow(number_t base, int exponent) {
   number_t result = 1;
   for (int i = 0; i < exponent; ++i) result *= base;
@@ -37,6 +37,14 @@ constexpr Int log(Int base, Int arg) {
   int result = 0;
   for (int compare = 1; compare < arg; compare *= base) ++result;
   return result;
+}
+
+//! \brief Modulo operator
+//! \details Similar to the remainder operator (i%j) but returns a nonnegative result even when `i` is negative.
+template <typename T>
+constexpr T mod(T i, T j) {
+  int remainder = i%j;
+  return remainder + (remainder < 0)*j;
 }
 
 template <typename T>

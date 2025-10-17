@@ -1,6 +1,7 @@
 #include <queue>
 #include <hexed/Tree.hpp>
 #include <hexed/Row_index.hpp>
+#include <hexed/Printer.hpp>
 
 namespace hexed {
 
@@ -285,7 +286,7 @@ std::vector<Tree*> Tree::find_neighbors(Array<int> direction) {
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       bias[i_dim] = result.direction[i_dim] == 0 ? -1 : result.direction[i_dim] < 0;
     }
-    result.neighbor->_add_extremal_levels(neighbs, bias);
+    result.neighbor->_add_extremal_levels(neighbs, result.ref_level, result.coords, bias);
   }
   return neighbs;
 }
@@ -380,20 +381,25 @@ void Tree::clear_status() {
   for (auto& child : _children_storage) child->clear_status();
 }
 
-void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Array<int> bias) {
+void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Array<int> ref_level, Array<Int> coords, Array<int> bias) {
   if (is_leaf()) add_to.push_back(this);
   else {
     std::vector<Tree*> added;
     for (int i_child = 0; i_child < math::pow(2, n_dim); ++i_child) {
+      Tree* child = _children_storage[i_child].get();
       bool add = true;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        add = add && (bias[i_dim] == -1 || bias[i_dim] == math::row_coordinate(n_dim, 2, i_dim, i_child));
+        Int scale0 = math::pow<Int>(2, ref_level[i_dim]);
+        Int scale1 = math::pow<Int>(2, child->_ref_level[i_dim]);
+        bool overlap = scale0*child->_coords[i_dim] < scale1*(coords[i_dim] + 1)
+                       && scale0*(child->_coords[i_dim] + 1) > scale1*coords[i_dim];
+        add = add && (bias[i_dim] == -1 || bias[i_dim] == math::row_coordinate(n_dim, 2, i_dim, i_child))
+                  && (bias[i_dim] != -1 || overlap);
       }
-      Tree* child = _children_storage[i_child].get();
       add = add && std::none_of(added.begin(), added.end(), [child](Tree* t){return t == child;});
       if (add) {
         added.push_back(child);
-        child->_add_extremal_levels(add_to, bias);
+        child->_add_extremal_levels(add_to, ref_level, coords, bias);
       }
     }
   }
@@ -521,14 +527,15 @@ void Tree::_simplify_aniso_ref() {
   _interchange_aniso_ref();
 }
 
-Array<int> Tree::_Transformation::transform(Array<int> ref_level) {
+Array<int> Tree::_Transformation::transform(Array<int> ref_level, bool rot) {
   int i_dim = dir.i_dim[!i_side];
   int j_dim = dir.i_dim[i_side];
-  Array<int> transformed = ref_level + that_root->_ref_level - this_root->_ref_level;
-  transformed[j_dim] = ref_level[i_dim] + that_root->_ref_level[j_dim]
-                                        - this_root->_ref_level[i_dim];
-  transformed[i_dim] = ref_level[j_dim] + that_root->_ref_level[i_dim]
-                                        - this_root->_ref_level[j_dim];
+  Array<int> transformed = ref_level - this_root->_ref_level;
+  std::swap(transformed[i_dim], transformed[j_dim]);
+  int dim0 = j_dim == 0;
+  int dim1 = 1 + (j_dim <= 1);
+  if (rot && dir.rotate%2) std::swap(transformed[dim0], transformed[dim1]);
+  transformed += that_root->_ref_level;
   return transformed;
 }
 
@@ -562,10 +569,10 @@ Tree::_Neighbor_result Tree::_neighbor(Array<int> dir_arg) {
     .dir{{i_face/2, i_face/2}, {1, 0}},
     .i_side = !(i_face%2),
   };
+  Array<int> ref_level = _ref_level.copy();
+  Array<Int> search_coords = _coords.copy();
   if (i_face >= 0) if (!n) {
     Tree* search_root = this;
-    Array<int> ref_level({n_dim});
-    Array<Int> search_coords({n_dim});
     Array<int> search_bias({n_dim});
     Array<int> search_direction({n_dim});
     while (search_root) {
@@ -591,40 +598,34 @@ Tree::_Neighbor_result Tree::_neighbor(Array<int> dir_arg) {
         int j_dim = trans.dir.i_dim[trans.i_side];
         search_coords[j_dim] = search_coords[i_dim];
         search_coords[i_dim] = trans.dir.face_sign[!trans.i_side];
-        ref_level = trans.transform(_ref_level);
-        ref_level[i_dim] = search_root->_ref_level[i_dim];
+        ref_level = _ref_level - this_root->_ref_level;
+        ref_level[j_dim] = ref_level[i_dim];
+        ref_level[i_dim] = 0;
         search_bias = 0;
         search_bias[i_dim] = trans.dir.face_sign[!trans.i_side];
         search_direction = direction;
         search_direction[j_dim] = 0;
         search_direction[i_dim] = math::sign(!trans.dir.face_sign[!trans.i_side]);
         if (trans.dir.flip_tangential()) { // implies different dims
-          int rl_diff = ref_level[j_dim] - search_root->_ref_level[j_dim];
-          search_coords[j_dim] = math::pow<Int>(2, rl_diff) - search_coords[j_dim];
-          search_bias[j_dim] = 1;
+          search_coords[j_dim] = math::pow<Int>(2, ref_level[j_dim]) - search_coords[j_dim] - 1;
         }
         if (n_dim == 3) {
-          int dim0 = i_dim == 0;
-          int dim1 = 1 + (i_dim <= 1);
-          int rot = trans.dir.rotate*math::sign(!trans.i_side);
-          while (rot < 0) rot += 4;
-          rot = rot%4;
-          for (; rot > 0; --rot) {
+          int dim0 = j_dim == 0;
+          int dim1 = 1 + (j_dim <= 1);
+          for (int rot = math::mod(trans.dir.rotate*math::sign(!trans.i_side), 4); rot > 0; --rot) {
             // achieve rotation by transposing dimensions and then inverting one of them
             // first transpose
-            std::swap(ref_level[dim0], ref_level[dim1]);
             std::swap(search_coords[dim0], search_coords[dim1]);
             std::swap(search_bias[dim0], search_bias[dim1]);
+            std::swap(ref_level[dim0], ref_level[dim1]);
             // now flip
-            int rl_diff = ref_level[dim1] - search_root->_ref_level[dim1];
-            search_coords[dim1] = math::pow<Int>(2, rl_diff) - search_coords[dim1];
-            search_bias[dim1] = !search_bias[dim1];
+            search_coords[dim1] = math::pow<Int>(2, ref_level[dim1]) - search_coords[dim1] - 1;
           }
         }
         for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
-          int rl_diff = ref_level[k_dim] - search_root->_ref_level[k_dim];
-          search_coords[k_dim] += search_root->_coords[k_dim]*math::pow<Int>(2, rl_diff);
+          search_coords[k_dim] += search_root->_coords[k_dim]*math::pow<Int>(2, ref_level[k_dim]);
         }
+        ref_level += search_root->_ref_level;
         break;
       } else {
         search_root = search_root->_par;
@@ -639,7 +640,7 @@ Tree::_Neighbor_result Tree::_neighbor(Array<int> dir_arg) {
     }
   }
   if (!n) n = r->find_leaf(_ref_level, coords, bias);
-  return {n, direction, trans};
+  return {n, direction, trans, ref_level, search_coords};
 }
 
 void Tree::_clear_connections() {

@@ -258,20 +258,22 @@ class Tree : public Mortal {
     Tree* that_root = nullptr;
     Connection_direction dir {{0, 0}, {0, 0}};
     int i_side = 0;
-    Array<int> transform(Array<int> ref_level);
+    Array<int> transform(Array<int> ref_level, bool rot = true);
     void reverse();
   };
   struct _Neighbor_result {
     Tree* neighbor;
     Array<int> direction;
     _Transformation trans;
+    Array<int> ref_level;
+    Array<Int> coords;
   };
   // finds leaves of this element and adds them to `add_to`.
   // for each dimension, if the corresponding element of `bias` is 0,
   // adds only the elements at the lower extreme of that dimension.
   // if 1, adds only those at the upper extreme.
   // if -1, adds all.
-  void _add_extremal_levels(std::vector<Tree*>& add_to, Array<int> bias);
+  void _add_extremal_levels(std::vector<Tree*>& add_to, Array<int> ref_level, Array<Int> coords, Array<int> bias);
   void _assign_leaves(std::vector<Tree*>& assign_to, Tree* search_root, int i_dim, int sign);
   std::vector<Tree*> _refine(std::vector<bool>); // performs refinement but not collapsing/interchange
   void _collapse_aniso_ref();

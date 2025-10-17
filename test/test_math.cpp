@@ -4,7 +4,6 @@
 #include <cmath>
 #include <hexed/math.hpp>
 
-// yo, compile time tests! Here we test constexpr `pow` and `log`
 static_assert (hexed::math::pow(2, 0) == 1);
 static_assert (hexed::math::pow(2, 1) == 2);
 static_assert (hexed::math::pow(2, -1) == 0);
@@ -19,6 +18,11 @@ static_assert (hexed::math::log(2, 15) == 4);
 static_assert (hexed::math::log(3, 27) == 3);
 static_assert (hexed::math::log(1, 27) == -1);
 static_assert (hexed::math::log(-1, 27) == -1);
+static_assert (hexed::math::mod(4, 3) == 1);
+static_assert (hexed::math::mod(3, 3) == 0);
+static_assert (hexed::math::mod(-2, 3) == 1);
+static_assert (hexed::math::mod(-12, 5) == 3);
+static_assert (hexed::math::mod(-8, 4) == 0);
 static_assert (hexed::math::max(-2, 4, 3, 2) == 4);
 static_assert (hexed::math::max(-2, -3) == -2);
 static_assert (hexed::math::max(1, 2, 3, 4, 5) == 5);
