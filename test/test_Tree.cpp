@@ -673,5 +673,30 @@ TEST_CASE("Tree") {
         REQUIRE_THAT(cn.trees[1], Catch::Matchers::RangeEquals(trees1));
       }
     }
+    SECTION("different dims, rotated") {
+      hexed::Tree tree1(3, .9);
+      hexed::Tree* graft1 = tree1.graft(hexed::Array<int>::make(1, 3, 2), hexed::Array<hexed::Int>::make(-1, 4, 4));
+      tree1.connect({graft1, &tree1}, {{0, 2}, {1, 1}, -1});
+      REQUIRE(graft1->find_neighbor(1) == &tree1);
+      REQUIRE(tree1.find_neighbor(5) == graft1);
+      tree1.refine();
+      graft1->refine();
+      std::vector<hexed::Tree*> trees0 {
+        graft1->children()[4],
+        graft1->children()[5],
+        graft1->children()[6],
+        graft1->children()[7],
+      };
+      std::vector<hexed::Tree*> trees1 {
+        tree1.children()[5],
+        tree1.children()[7],
+        tree1.children()[1],
+        tree1.children()[3],
+      };
+      for (int i = 0; i < 4; ++i) {
+        REQUIRE(trees0[i]->find_neighbor(1) == trees1[i]);
+        REQUIRE(trees1[i]->find_neighbor(5) == trees0[i]);
+      }
+    }
   }
 }
