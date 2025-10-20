@@ -464,6 +464,17 @@ class Array {
     return p;
   }
 
+  template <typename U>
+  bool equal(const Array<U>& that) const {
+    if (order() != that.order()) return false;
+    bool eq = true;
+    auto s = that.shape();
+    for (int i_dim = 0; i_dim < _order; ++i_dim) eq = eq && _shape[i_dim] == s[i_dim];
+    if (!eq) return false;
+    for (int i = 0; i < size(); ++i) eq = eq && (*this)[i] == that[i];
+    return eq;
+  }
+
   private:
   Array(Int o, T* d, bool own, Int* sh, Int* st) : _order{o}, _data{d}, _owns{own}, _shape{sh}, _strides{st} {}
   void _initialize_shape() {
