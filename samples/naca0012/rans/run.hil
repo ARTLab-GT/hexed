@@ -12,7 +12,7 @@ mesh_extreme10 = -160.
 mesh_extreme01 =  160.
 mesh_extreme11 =  160.
 
-adapt_start_iter = 10*10^4
+refine_start_iter = 10*10^4
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity

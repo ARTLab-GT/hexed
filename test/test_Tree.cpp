@@ -706,5 +706,14 @@ TEST_CASE("Tree") {
         }
       ));
     }
+    SECTION("multiple graft") {
+      hexed::Tree tree(3, .9);
+      hexed::Tree* graft0 = tree.graft(hexed::Array<int>::make(2, 2, 2), hexed::Array<hexed::Int>::make(0, -1, -1));
+      hexed::Tree* graft1 = tree.graft(hexed::Array<int>::make(2, 2, 2), hexed::Array<hexed::Int>::make(1, -1, -1));
+      std::array<std::vector<hexed::Tree*>, 2> to_connect;
+      to_connect[0] = {graft0, graft0, graft1, graft1};
+      to_connect[1].resize(4, &tree);
+      tree.connect(to_connect, {{2, 1}, {1, 0}});
+    }
   }
 }

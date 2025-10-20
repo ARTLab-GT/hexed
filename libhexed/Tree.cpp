@@ -177,9 +177,22 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
   auto con = _connections.back().get();
   for (int i_side = 0; i_side < 2; ++i_side) {
     auto predicate = [&con, i_side](Tree* t){return t == con->trees[i_side];};
-    if (std::all_of(trees[i_side].begin(), trees[i_side].end(), predicate)) {
-    } else {
-      HEXED_THROW("Trees must all be the same.")
+    if (!std::all_of(trees[i_side].begin(), trees[i_side].end(), predicate)) {
+      Tree* t0 = trees[i_side][0];
+      for (int i_tree = 0; i_tree < _n_vert()/2; ++i_tree) {
+        Tree* t = trees[i_side][i_tree];
+        HEXED_ASSERT(t->_ref_level.equal(t0->_ref_level),
+                     "All trees on one side of a graft connection must have the same refinement level.")
+        for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) {
+          int coord_diff = math::row_coordinate(n_dim - 1, 2, i_dim, i_tree);
+          if (coord_diff) {
+            Tree* neighbor = trees[i_side][i_tree - math::stride(n_dim - 1, 2, i_dim)];
+            HEXED_ASSERT(t == neighbor || t->_coords[i_dim] - neighbor->_coords[i_dim] == 1,
+                         "Trees in graft connection have incompatible coordinates.")
+          }
+        }
+      }
+      HEXED_THROW("haven't gotten this far")
     }
     con->trees[i_side]->_face_connections[con->direction.i_face(i_side)] = con;
   }
@@ -191,9 +204,6 @@ void Tree::connect(std::array<Tree*, 2> trees, Connection_direction dir) {
   vecs[0].resize(n_tree, trees[0]);
   vecs[1].resize(n_tree, trees[1]);
   connect(vecs, dir);
-}
-
-void delete_grafts() {
 }
 
 Tree* Tree::find_leaf(Array<int> ref_level, Array<Int> c, Array<int> b) {
