@@ -27,8 +27,9 @@ monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 steady = false
 time_step = .001
 time_step_done = {pseudotime_iteration >= 10000}
-vis_freq = 1
+vis_freq = 10
 adapt_freq = 1
+update_roughness_freq = 1
 automate_adapt_schedule = false
 adapt_start_iter = 10
 
