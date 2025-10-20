@@ -532,8 +532,8 @@ Array<int> Tree::_Transformation::transform(Array<int> ref_level, bool rot) {
   int j_dim = dir.i_dim[i_side];
   Array<int> transformed = ref_level - this_root->_ref_level;
   std::swap(transformed[i_dim], transformed[j_dim]);
-  int dim0 = j_dim == 0;
-  int dim1 = 1 + (j_dim <= 1);
+  int dim0 = i_dim == 0;
+  int dim1 = 1 + (i_dim <= 1);
   if (rot && dir.rotate%2) std::swap(transformed[dim0], transformed[dim1]);
   transformed += that_root->_ref_level;
   return transformed;
