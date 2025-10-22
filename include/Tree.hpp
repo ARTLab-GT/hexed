@@ -282,7 +282,7 @@ class Tree : public Mortal {
   _Neighbor_result _neighbor(Array<int> direction);
   void _clear_connections();
   static int _compare_ref_level(Tree*, Tree*, _Transformation);
-  inline int _n_vert() const {return math::pow(n_dim, 2);}
+  inline int _n_vert() const {return math::pow(2, n_dim);}
 
   Mat<> _orig;
   double _root_sz;

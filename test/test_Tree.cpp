@@ -714,6 +714,9 @@ TEST_CASE("Tree") {
       to_connect[0] = {graft0, graft0, graft1, graft1};
       to_connect[1].resize(4, &tree);
       tree.connect(to_connect, {{2, 1}, {1, 0}});
+      REQUIRE(tree.find_neighbor(2) == graft0);
+      REQUIRE(graft0->find_neighbor(5) == &tree);
+      REQUIRE(graft1->find_neighbor(5) == &tree);
     }
   }
 }

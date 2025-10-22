@@ -86,6 +86,7 @@ std::vector<Tree*> Tree::children() {
 std::vector<Tree*> Tree::unique_children() {
   std::vector<Tree*> c;
   for (auto& t : _children_storage) {
+    HEXED_ASSERT(t, "child is null")
     if (std::none_of(c.begin(), c.end(), [&t](Tree* ptr){return ptr == t.get();})) c.push_back(t.get());
   }
   return c;
@@ -150,7 +151,7 @@ std::vector<Tree*> Tree::unrefine(int i_dim) {
 void Tree::force_unrefine() {_children_storage.clear();}
 
 Tree* Tree::graft(Array<int> ref_level, Array<Int> coords) {
-  HEXED_ASSERT(is_root(), "Can only graft to the root.")
+  HEXED_ASSERT(is_root() && !is_graft(), "Can only graft to the root.")
   HEXED_ASSERT(coords.size() == n_dim, "`coords` has wrong number of entries.")
   HEXED_ASSERT(ref_level.size() == n_dim, "`ref_level` has wrong number of entries.")
   _grafts.emplace_back(std::make_unique<Tree>(n_dim, _root_sz, _orig));
@@ -162,14 +163,16 @@ Tree* Tree::graft(Array<int> ref_level, Array<Int> coords) {
 }
 
 void Tree::delete_grafts() {
-  for (auto& ptr : _grafts) ptr->_clear_connections();
+  for (auto& ptr : _grafts) if (ptr) {
+    ptr->_clear_connections();
+  }
+  _clear_connections();
   _grafts.clear();
   _connections.clear();
-  _clear_connections();
 }
 
 void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction dir) {
-  HEXED_ASSERT(is_root(), "Can only add graft connections to the root.")
+  HEXED_ASSERT(is_root() && !is_graft(), "Can only add graft connections to the root.")
   for (int i_side = 0; i_side < 2; ++i_side) {
     HEXED_ASSERT((Int)trees[i_side].size() == math::pow(2, n_dim - 1), "Wrong number of trees provided for connection.")
   }
@@ -179,6 +182,17 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
     auto predicate = [&con, i_side](Tree* t){return t == con->trees[i_side];};
     if (!std::all_of(trees[i_side].begin(), trees[i_side].end(), predicate)) {
       Tree* t0 = trees[i_side][0];
+      Array<int> rl = t0->_ref_level.copy();
+      Array<Int> coords = t0->_coords.copy();
+      bool is_ref [3] {};
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+        if (trees[i_side][math::stride(n_dim - 1, 2, i_dim)] != t0) {
+          is_ref[i_dim] = true;
+          rl[i_dim] -= 1;
+          HEXED_ASSERT(coords[i_dim]%2 == 0, "If a graft connection is refined, first tree must have even coordinate.")
+          coords[i_dim] /= 2;
+        }
+      }
       for (int i_tree = 0; i_tree < _n_vert()/2; ++i_tree) {
         Tree* t = trees[i_side][i_tree];
         HEXED_ASSERT(t->_ref_level.equal(t0->_ref_level),
@@ -187,12 +201,32 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
           int coord_diff = math::row_coordinate(n_dim - 1, 2, i_dim, i_tree);
           if (coord_diff) {
             Tree* neighbor = trees[i_side][i_tree - math::stride(n_dim - 1, 2, i_dim)];
-            HEXED_ASSERT(t == neighbor || t->_coords[i_dim] - neighbor->_coords[i_dim] == 1,
-                         "Trees in graft connection have incompatible coordinates.")
+            if (is_ref[i_dim]) {
+              HEXED_ASSERT(t->_coords[i_dim] - neighbor->_coords[i_dim] == 1,
+                           "Trees in graft connection have incompatible coordinates.")
+            } else {
+              HEXED_ASSERT(t == neighbor, "Incompatible arrangement of (non)unique elements.")
+            }
           }
         }
       }
-      HEXED_THROW("haven't gotten this far")
+      Tree* fake_root = graft(rl, coords);
+      con->trees[i_side] = fake_root;
+      fake_root->_children_storage.resize(_n_vert());
+      for (Row_index ind(n_dim, 2, dir.i_dim[i_side]); ind; ++ind) {
+        Tree* t = trees[i_side][ind.i_face_qpoint()];
+        t->_face_connections[dir.i_face(i_side)] = con;
+        // obtain a shared pointer to `t`
+        // without creating any ownership conflicts with existing child or graft pointers
+        std::shared_ptr<Tree> child;
+        for (std::shared_ptr<Tree>& c : fake_root->_children_storage) if (c.get() == t) child = c;
+        if (!child.use_count()) {
+          for (std::unique_ptr<Tree>& g : _grafts) if (g.get() == t) g.release();
+          child.reset(t);
+        }
+        // assign the appropriate children of `fake_root` to point to `t`
+        for (int i_row = 0; i_row < 2; ++i_row) fake_root->_children_storage[ind.i_qpoint(i_row)] = child;
+      }
     }
     con->trees[i_side]->_face_connections[con->direction.i_face(i_side)] = con;
   }
