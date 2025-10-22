@@ -717,6 +717,17 @@ TEST_CASE("Tree") {
       REQUIRE(tree.find_neighbor(2) == graft0);
       REQUIRE(graft0->find_neighbor(5) == &tree);
       REQUIRE(graft1->find_neighbor(5) == &tree);
+      graft1->refine();
+      tree.refine();
+      for (hexed::Tree* c : graft1->children()) c->refine();
+      for (hexed::Tree* c : tree.children()) c->refine();
+      REQUIRE_THAT(tree.children()[4]->children()[1]->find_neighbors(2),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+        graft1->children()[3]->children()[1],
+        graft1->children()[3]->children()[5],
+      }));
+      REQUIRE_THAT(graft1->children()[3]->children()[5]->find_neighbors(5),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.children()[4]->children()[1]}));
     }
   }
 }

@@ -293,6 +293,7 @@ class Tree : public Mortal {
   std::vector<std::unique_ptr<Tree>> _grafts;
   std::vector<std::unique_ptr<_Connection>> _connections;
   std::vector<_Connection*> _face_connections;
+  std::vector<Tree*> _fake_parents;
   int _status;
   bool _is_graft;
 };

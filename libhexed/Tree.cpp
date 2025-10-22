@@ -31,6 +31,7 @@ Tree::Tree(int nd, double root_size, Mat<> origin)
 , _par{nullptr}
 , _children_storage()
 , _face_connections(2*n_dim, nullptr)
+, _fake_parents(2*n_dim, nullptr)
 , _status{unprocessed}
 , _is_graft{false}
 {
@@ -215,7 +216,7 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
       fake_root->_children_storage.resize(_n_vert());
       for (Row_index ind(n_dim, 2, dir.i_dim[i_side]); ind; ++ind) {
         Tree* t = trees[i_side][ind.i_face_qpoint()];
-        t->_face_connections[dir.i_face(i_side)] = con;
+        t->_fake_parents[dir.i_face(i_side)] = fake_root;
         // obtain a shared pointer to `t`
         // without creating any ownership conflicts with existing child or graft pointers
         std::shared_ptr<Tree> child;
@@ -620,7 +621,9 @@ Tree::_Neighbor_result Tree::_neighbor(Array<int> dir_arg) {
     Array<int> search_bias({n_dim});
     Array<int> search_direction({n_dim});
     while (search_root) {
-      if (search_root->_face_connections[i_face]) {
+      if (search_root->_fake_parents[i_face]) {
+        search_root = search_root->_fake_parents[i_face];
+      } else if (search_root->_face_connections[i_face]) {
         Int scale = math::pow<Int>(2, _ref_level[i_face/2] - search_root->_ref_level[i_face/2]);
         if (_coords[i_face/2] + i_face%2 != (search_root->_coords[i_face/2] + i_face%2)*scale) {
           search_root = nullptr;
