@@ -87,7 +87,7 @@ std::vector<Tree*> Tree::children() {
 std::vector<Tree*> Tree::unique_children() {
   std::vector<Tree*> c;
   for (auto& t : _children_storage) {
-    HEXED_ASSERT(t, "child is null")
+    HEXED_ASSERT(t.use_count(), "child is null")
     if (std::none_of(c.begin(), c.end(), [&t](Tree* ptr){return ptr == t.get();})) c.push_back(t.get());
   }
   return c;
@@ -223,15 +223,20 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
       fake_root->_children_storage.resize(_n_vert());
       for (Row_index ind(n_dim, 2, dir.i_dim[i_side]); ind; ++ind) {
         Tree* t = trees[i_side][ind.i_face_qpoint()];
-        t->_fake_parents[dir.i_face(i_side)] = fake_root;
+        HEXED_ASSERT(!t->_par, "Creating a fake parent for a tree that already has one is not yet supported.",
+                     assert::Not_implemented_error)
+        std::shared_ptr<Tree> child;
+        for (Tree* p : t->_fake_parents) if (p) {
+          for (std::shared_ptr<Tree>& c : p->_children_storage) if (c.get() == t) child = c;
+          HEXED_ASSERT(child.use_count(), "Fake parent/child relationship is not reciprocal.")
+        }
         // obtain a shared pointer to `t`
         // without creating any ownership conflicts with existing child or graft pointers
-        std::shared_ptr<Tree> child;
-        for (std::shared_ptr<Tree>& c : fake_root->_children_storage) if (c.get() == t) child = c;
         if (!child.use_count()) {
           for (std::unique_ptr<Tree>& g : _grafts) if (g.get() == t) g.release();
           child.reset(t);
         }
+        t->_fake_parents[dir.i_face(i_side)] = fake_root;
         // assign the appropriate children of `fake_root` to point to `t`
         for (int i_row = 0; i_row < 2; ++i_row) fake_root->_children_storage[ind.i_qpoint(i_row)] = child;
       }
