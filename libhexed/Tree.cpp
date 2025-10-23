@@ -182,40 +182,41 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
   for (int i_side = 0; i_side < 2; ++i_side) {
     auto predicate = [&con, i_side](Tree* t){return t == con->trees[i_side];};
     if (!std::all_of(trees[i_side].begin(), trees[i_side].end(), predicate)) {
-      Tree* t0 = trees[i_side][0];
-      Array<int> rl = t0->_ref_level.copy();
-      Array<Int> coords = t0->_coords.copy();
-      bool is_ref [3] {};
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        if (trees[i_side][math::stride(n_dim - 1, 2, i_dim)] != t0) {
-          int j_dim = i_dim + (i_dim >= dir.i_dim[i_side]);
-          is_ref[i_dim] = true;
-          rl[j_dim] -= 1;
-          HEXED_ASSERT(coords[j_dim]%2 == 0, "If a graft connection is refined, first tree must have even coordinate.")
-          coords[j_dim] /= 2;
-        }
-      }
       printers::info(to_string(dir.i_dim[i_side]) + "\n");
       for (int i_tree = 0; i_tree < _n_vert()/2; ++i_tree) {
         printers::info(to_string(trees[i_side][i_tree]) + " " + to_string(trees[i_side][i_tree]->_coords));
       }
       printers::info("\n");
+      // determine refinement level and coordinates for fake root
+      Tree* t0 = trees[i_side][0];
+      Array<int> rl = t0->_ref_level.copy();
+      Array<Int> coords = t0->_coords.copy();
       for (int i_tree = 0; i_tree < _n_vert()/2; ++i_tree) {
         Tree* t = trees[i_side][i_tree];
-        HEXED_ASSERT(t->_ref_level.equal(t0->_ref_level),
-                     "All trees on one side of a graft connection must have the same refinement level.")
         for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) {
+          int j_dim = i_dim + (i_dim >= dir.i_dim[i_side]);
           int coord_diff = math::row_coordinate(n_dim - 1, 2, i_dim, i_tree);
-          if (coord_diff) {
-            Tree* neighbor = trees[i_side][i_tree - math::stride(n_dim - 1, 2, i_dim)];
-            if (is_ref[i_dim]) {
-              int j_dim = i_dim + (i_dim >= dir.i_dim[i_side]);
-              HEXED_ASSERT(t->_coords[j_dim] - neighbor->_coords[j_dim] == 1,
-                           "Trees in graft connection have incompatible coordinates.")
-            } else {
-              HEXED_ASSERT(t == neighbor, "Incompatible arrangement of (non)unique elements.")
-            }
+          Tree* neighbor = trees[i_side][i_tree - coord_diff*math::stride(n_dim - 1, 2, i_dim)];
+          if (coord_diff && (t != neighbor)) {
+            rl[j_dim] = t->_ref_level[j_dim] - 1;
+            HEXED_ASSERT(math::mod<Int>(t->_coords[j_dim], 2) == 1,
+                         "Coordinate of greater element in refined graft connection must be odd.")
+            coords[j_dim] = (t->_coords[j_dim] - 1)/2;
           }
+        }
+      }
+      // check that refinement levels and coordinates of other trees are compatible
+      for (int i_tree = 0; i_tree < _n_vert()/2; ++i_tree) {
+        Tree* t = trees[i_side][i_tree];
+        for (int i_dim = 0; i_dim < n_dim - 1; ++i_dim) {
+          int j_dim = i_dim + (i_dim >= dir.i_dim[i_side]);
+          int coord_diff = math::row_coordinate(n_dim - 1, 2, i_dim, i_tree);
+          Tree* neighbor = trees[i_side][i_tree - math::sign(coord_diff)*math::stride(n_dim - 1, 2, i_dim)];
+          int ref = t != neighbor;
+          HEXED_ASSERT(t->_ref_level[j_dim] == rl[j_dim] + ref,
+                       "Incompatible refinement level in graft connection.")
+          HEXED_ASSERT(t->_coords[j_dim] == coords[j_dim] + ref*(coords[j_dim] + coord_diff),
+                       "Incompatible coordinates in graft connection.")
         }
       }
       Tree* fake_root = graft(rl, coords);

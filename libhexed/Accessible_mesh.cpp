@@ -572,7 +572,7 @@ void Accessible_mesh::_fit_surface() {
           auto rl = elem.tree->anisotropic_refinement_level();
           rl[i_dim] += 1;
           Array<Int> np = elem.nominal_position();
-          np[i_dim] = np[i_dim]*2 - !i_sign;
+          np[i_dim] = 2*(np[i_dim] + math::sign(i_sign)) - !i_sign;
           Int inside_sn = _add_element(rl, true, np, 1);
           Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
           inside.create_fake(_blocks);
@@ -607,7 +607,9 @@ void Accessible_mesh::_fit_surface() {
               int i_edge_matched = 2*(j_dim > k_dim) + j_sign;
               Int m = matched_to[i_edge_matched];
               if (m != -1) {
-                Int sn = _add_element(elem.refinement_level(), true, elem.nominal_position(), 1, bf);
+                Array<Int> np_match = elem.nominal_position();
+                np_match[i_dim] += math::sign(i_sign);
+                Int sn = _add_element(elem.refinement_level(), true, np_match, 1, bf);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
                 match_elem.create_fake(_blocks);
                 set_vertices(match_elem);
@@ -767,6 +769,17 @@ void Accessible_mesh::_fit_surface() {
     }
     // replacing refined connections
     printers::info("replacing refined\n");
+    {
+      auto faces = _blocks.faces_3d();
+      #pragma omp parallel for
+      for (auto& f : faces) {
+        for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+      }
+      auto blocks = _blocks.boundary_sides();
+      #pragma omp parallel for
+      for (auto& b : blocks) b.reset();
+      visualize("default", "before_replace_refined", 0.);
+    }
     for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
       auto& ref = _face_refs[i_ref][0];
       std::array<std::vector<Element*>, 2> old_elems = ref.elements();
@@ -1439,14 +1452,21 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       active_shapes[i_side].push_back(&elems[i_side][i_elem]->active_shape());
       shared_fake = shared_fake || elems[i_side][i_elem]->shared_fake();
       auto search_dir = Tree::get_direction(dir.i_face(i_side), params.n_dim);
-      Tree* neighbor = elems[i_side][i_elem]->tree.value().find_neighbor(search_dir);
-      bool connected = exists(neighbor);
+      bool connected = exists(elems[i_side][i_elem]->tree.value().find_neighbor(search_dir));
       any_trees_connected = any_trees_connected || connected;
       all_trees_connected = all_trees_connected && connected;
     }
   }
-  HEXED_ASSERT(!null_elem, "an element is null" + context)
-  HEXED_ASSERT(any_trees_connected == all_trees_connected, "Tree connecteness mismatch.")
+  HEXED_ASSERT(!null_elem, "An element is null." + context)
+  if (std::any_of(elems[0].begin() + 1, elems[0].end(), [elems](Element* e){return e != elems[0][0];}) ||
+      std::any_of(elems[1].begin() + 1, elems[1].end(), [elems](Element* e){return e != elems[1][0];})) {
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
+        elems[i_side][i_elem]->shape().visualize("default", str_cat("elem", i_side, i_elem));
+      }
+    }
+  }
+  HEXED_ASSERT(any_trees_connected == all_trees_connected, str_cat("Tree connecteness mismatch.", context))
   _face_refs.emplace_back();
   std::vector<int> fvi {face_vertex_inds(nd, dir)};
   Array<int> permute_inds({2, nv/2});
