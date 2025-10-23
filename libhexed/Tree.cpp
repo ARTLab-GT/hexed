@@ -188,12 +188,18 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
       bool is_ref [3] {};
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         if (trees[i_side][math::stride(n_dim - 1, 2, i_dim)] != t0) {
+          int j_dim = i_dim + (i_dim >= dir.i_dim[i_side]);
           is_ref[i_dim] = true;
-          rl[i_dim] -= 1;
-          HEXED_ASSERT(coords[i_dim]%2 == 0, "If a graft connection is refined, first tree must have even coordinate.")
-          coords[i_dim] /= 2;
+          rl[j_dim] -= 1;
+          HEXED_ASSERT(coords[j_dim]%2 == 0, "If a graft connection is refined, first tree must have even coordinate.")
+          coords[j_dim] /= 2;
         }
       }
+      printers::info(to_string(dir.i_dim[i_side]) + "\n");
+      for (int i_tree = 0; i_tree < _n_vert()/2; ++i_tree) {
+        printers::info(to_string(trees[i_side][i_tree]) + " " + to_string(trees[i_side][i_tree]->_coords));
+      }
+      printers::info("\n");
       for (int i_tree = 0; i_tree < _n_vert()/2; ++i_tree) {
         Tree* t = trees[i_side][i_tree];
         HEXED_ASSERT(t->_ref_level.equal(t0->_ref_level),
@@ -203,7 +209,8 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
           if (coord_diff) {
             Tree* neighbor = trees[i_side][i_tree - math::stride(n_dim - 1, 2, i_dim)];
             if (is_ref[i_dim]) {
-              HEXED_ASSERT(t->_coords[i_dim] - neighbor->_coords[i_dim] == 1,
+              int j_dim = i_dim + (i_dim >= dir.i_dim[i_side]);
+              HEXED_ASSERT(t->_coords[j_dim] - neighbor->_coords[j_dim] == 1,
                            "Trees in graft connection have incompatible coordinates.")
             } else {
               HEXED_ASSERT(t == neighbor, "Incompatible arrangement of (non)unique elements.")

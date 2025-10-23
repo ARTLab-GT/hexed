@@ -529,6 +529,7 @@ void Accessible_mesh::_fit_surface() {
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems_sz; ++i_elem) elems[i_elem].record = 0;
 
+  printers::info("creating match elements\n");
   if (params.n_dim == 3) {
     for (Int i_element = 0; i_element < elems_sz; ++i_element) {
       auto& elem = elems[i_element];
@@ -568,14 +569,19 @@ void Accessible_mesh::_fit_surface() {
             for (int i_face = 0; i_face < 6; ++i_face) e.face_record[i_face] = -1;
             s.extruded_direction = elem.fake_shape()->extruded_direction;
           };
-          Int inside_sn = _add_element(elem.refinement_level(), true, elem.nominal_position(), 1);
+          auto rl = elem.tree->anisotropic_refinement_level();
+          rl[i_dim] += 1;
+          Array<Int> np = elem.nominal_position();
+          np[i_dim] = np[i_dim]*2 - !i_sign;
+          Int inside_sn = _add_element(rl, true, np, 1);
           Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
           inside.create_fake(_blocks);
           set_vertices(inside);
           inside.active_shape().is_new = false;
           inside.active_shape().for_matching = true;
           elem.face_record[2*i_dim + !i_sign] = inside_sn;
-          Int surface_sn = _add_element(elem.refinement_level(), true, elem.nominal_position(), 1, bf);
+          np[i_dim] += math::sign(i_sign);
+          Int surface_sn = _add_element(rl, true, np, 1, bf);
           Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
           surface.create_fake(_blocks);
           set_vertices(surface);
@@ -707,6 +713,8 @@ void Accessible_mesh::_fit_surface() {
     _blocks.boundary_sides();
     Int cons_sz = _neighbor_cons[1].size();
     Int face_refs_sz = _face_refs.size();
+    // replace existing connections
+    printers::info("replacing connections\n");
     for (Int i_con = 0; i_con < cons_sz; ++i_con) {
       auto& con = _neighbor_cons[1][i_con];
       // skip dead or refined connections
@@ -743,6 +751,7 @@ void Accessible_mesh::_fit_surface() {
       if (replace) {
         for (int i_face = 0; i_face < 2; ++i_face) con.face(i_face).disconnect();
         if (bool(surfaces[0]) == bool(surfaces[1])) {
+          printers::info("  conformal\n");
           _connect(elem_arr, dir, "neighbor replacement");
           if (surfaces[0]) {
             HEXED_ASSERT(surfaces[1], "Both faces must identify a surface element or neither.")
@@ -751,10 +760,13 @@ void Accessible_mesh::_fit_surface() {
             _extrude_cons[2].emplace_back(&_neighbor_cons[1].back());
           }
         } else {
+          printers::info("  refined\n");
           _connect(to_connect, dir, "neighbor replacement (refined)");
         }
       }
     }
+    // replacing refined connections
+    printers::info("replacing refined\n");
     for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
       auto& ref = _face_refs[i_ref][0];
       std::array<std::vector<Element*>, 2> old_elems = ref.elements();
@@ -787,6 +799,8 @@ void Accessible_mesh::_fit_surface() {
         _connect(new_elems, dir, "hanging replacement");
       }
     }
+    // connect by shared vertices
+    printers::info("connecting by vertices\n");
     for (auto& vert : all_verts) {
       if (vert.record.size() == 12) {
         std::array<Element*, 2> elem_arr;
@@ -821,6 +835,7 @@ void Accessible_mesh::_fit_surface() {
   purge();
   _offset_vertices(.03, false);
 
+  printers::info("creating second layer\n");
   { // add another layer of extruded elements to improve mesh quality on sharp edges
     auto& elem_list = def.elements();
     Int elems_sz = elem_list.size();
@@ -1372,16 +1387,22 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 
 int Accessible_mesh::_add_element(int ref_level, bool is_deformed, Array<Int> position,
                                   int aniso_ref_level, int surface_face, Tree* t) {
+  return _add_element(Array<int>::make_uniform({params.n_dim}, ref_level), is_deformed, position, aniso_ref_level,
+                      surface_face, t);
+}
+
+int Accessible_mesh::_add_element(Array<int> ref_level, bool is_deformed, Array<Int> position,
+                                  int aniso_ref_level, int surface_face, Tree* t) {
   HEXED_ASSERT(tree, "All meshes need a tree now.")
   HEXED_ASSERT((Int)position.size() == params.n_dim, "`position` has wrong size")
   if (!t) {
-    t = tree->graft(Array<int>::make_uniform({params.n_dim}, ref_level), position);
+    t = tree->graft(ref_level, position);
   }
-  HEXED_ASSERT(ref_level == t->refinement_level(), "Refinement levels do not match.")
+  HEXED_ASSERT(ref_level.equal(t->anisotropic_refinement_level()), "Refinement levels do not match.")
   int sn = container(is_deformed).emplace(*t, aniso_ref_level);
-  Element& elem = element(ref_level, is_deformed, sn);
+  Element& elem = element(ref_level.extreme(0), is_deformed, sn);
   elem.create_shape(_blocks, surface_face);
-  if (is_deformed) t->def_elem = &def.elems.at(ref_level, sn);
+  if (is_deformed) t->def_elem = &def.elems.at(ref_level.extreme(0), sn);
   return sn;
 }
 
