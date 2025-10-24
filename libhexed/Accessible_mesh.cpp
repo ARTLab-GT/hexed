@@ -1879,7 +1879,7 @@ std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles() {
 }
 
 Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t, int aniso_ref_level) {
-  int sn = _add_element(t.refinement_level(), is_deformed, t.coordinates(), aniso_ref_level,
+  int sn = _add_element(t.anisotropic_refinement_level(), is_deformed, t.coordinates(), aniso_ref_level,
                         next::Mesh_blocks::no_face, &t);
   auto& elem = element(t.refinement_level(), is_deformed, sn);
   elem.record = sn; // put the serial number in the record so it can be used for connections
