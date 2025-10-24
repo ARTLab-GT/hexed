@@ -274,7 +274,7 @@ class Tree : public Mortal {
   // if 1, adds only those at the upper extreme.
   // if -1, adds all.
   void _add_extremal_levels(std::vector<Tree*>& add_to, Array<int> ref_level, Array<Int> coords, Array<int> bias);
-  void _assign_leaves(std::vector<Tree*>& assign_to, Tree* search_root, int i_dim, int sign);
+  void _assign_leaves(std::vector<Tree*>& assign_to, Array<int> ref_level, Array<Int> coords, int i_dim, int sign);
   std::vector<Tree*> _refine(std::vector<bool>); // performs refinement but not collapsing/interchange
   void _collapse_aniso_ref();
   void _interchange_aniso_ref();

@@ -355,14 +355,42 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
   Tree* search_roots [2];
   search_roots[0] = this;
   search_roots[1] = result.neighbor;
+  Array<int> rl({2, n_dim});
+  Array<Int> coords({2, n_dim});
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    _Transformation trans = result.trans;
+    Array<int> that_rl = search_roots[!i_side]->_ref_level;
+    if (trans.used) {
+      if (!i_side) trans.reverse();
+      that_rl = trans.transform(that_rl);
+    }
+    rl(i_side) = search_roots[i_side]->_ref_level.extreme(0, that_rl);
+    coords(i_side) = search_roots[i_side]->_coords;
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      int diff = search_roots[i_side]->_ref_level[i_dim] - rl(i_side)[i_dim];
+      HEXED_ASSERT(diff < 2, "Ref level difference is too large.")
+      if (diff) {
+        coords(i_side)[i_dim] -= math::mod<Int>(coords(i_side)[i_dim], 2);
+        coords(i_side)[i_dim] /= 2;
+      }
+    }
+  }
   int compare;
   while ((compare = _compare_ref_level(search_roots[0], search_roots[1], result.trans)) != 2) {
-    search_roots[!compare] = search_roots[!compare]->_par;
+    Tree*& ptr = search_roots[!compare];
+    Tree* fake = ptr->_fake_parents[result.trans.dir.i_face(result.trans.i_side == compare)];
+    if (ptr->_par) {
+      ptr = ptr->_par;
+    } else if (fake) {
+      ptr = fake;
+    } else {
+      HEXED_THROW("No (real or fake) parent.")
+    }
   }
   for (int i_side = 0; i_side < 2; ++i_side) {
     neighbors.trees[i_side].resize(math::pow(2, n_dim - 1), nullptr);
     int j_side = i_side != result.trans.i_side;
-    search_roots[j_side]->_assign_leaves(neighbors.trees[i_side], search_roots[j_side],
+    search_roots[j_side]->_assign_leaves(neighbors.trees[i_side], rl(j_side), coords(j_side),
                                          result.trans.dir.i_dim[i_side], result.trans.dir.face_sign[i_side]);
     for (Tree* n : neighbors.trees[i_side]) HEXED_ASSERT(n, "null element returned")
   }
@@ -458,19 +486,19 @@ void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Array<int> ref_level
   }
 }
 
-void Tree::_assign_leaves(std::vector<Tree*>& assign_to, Tree* search_root, int i_dim, int sign) {
+void Tree::_assign_leaves(std::vector<Tree*>& assign_to, Array<int> ref_level, Array<Int> coords, int i_dim, int sign) {
   for (Row_index index(n_dim, 2, i_dim); index; ++index) {
     int i_child = index.i_qpoint(sign);
     if (is_leaf()) {
       bool assign = true;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
         int row = math::row_coordinate(n_dim, 2, j_dim, i_child);
-        Int scale = math::pow<Int>(2, _ref_level[j_dim] - search_root->_ref_level[j_dim]);
-        assign = assign && (_coords[j_dim] + row == (search_root->_coords[j_dim] + row)*scale);
+        Int scale = math::pow<Int>(2, _ref_level[j_dim] - ref_level[j_dim]);
+        assign = assign && (_coords[j_dim] + row == (coords[j_dim] + row)*scale);
       }
       if (assign) assign_to[index.i_face_qpoint()] = this;
     } else {
-      _children_storage[i_child]->_assign_leaves(assign_to, search_root, i_dim, sign);
+      _children_storage[i_child]->_assign_leaves(assign_to, ref_level, coords, i_dim, sign);
     }
   }
 }
