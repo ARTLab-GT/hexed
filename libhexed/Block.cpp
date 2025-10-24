@@ -430,8 +430,9 @@ Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
   _set.emplace(_vert._shared_value_lock);
 }
 
-double Vertex::Shared_value::get() const {
+double Vertex::Shared_value::get(int recursion_depth) const {
   if (!_vert.glued()) return _vert._shared_value; // equivalent to checking if vertex is glued
+  if (recursion_depth == 0) return 0.;
   double value = 0;
   for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
     double interp = 1.;
@@ -441,7 +442,7 @@ double Vertex::Shared_value::get() const {
       skip = skip || (std::abs(_vert._glued_coords[i_dim] - !sign) < 1e-12);
       interp *= !sign + math::sign(sign)*_vert._glued_coords[i_dim];
     }
-    if (!skip) value += interp*Shared_value(_vert._glued_to->vertex(i_vert)).get();
+    if (!skip) value += interp*Shared_value(_vert._glued_to->vertex(i_vert)).get(recursion_depth - 1);
   }
   return value;
 }
@@ -450,16 +451,18 @@ void Vertex::Shared_value::set(double value) {
   _vert._shared_value = value;
 }
 
-void Vertex::Shared_value::set(double value, bool minmax) {
+void Vertex::Shared_value::set(double value, bool minmax, int recursion_depth) {
   _vert._shared_value = math::extreme(minmax, _vert._shared_value, value);
   if (_vert.glued()) {
+    //HEXED_ASSERT(recursion_depth > 0, "Max recursion depth exceeded.")
+    if (recursion_depth == 0) return;
     for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
       bool skip = false;
       for (int i_dim = 0; i_dim < _vert._glued_to->n_dim(); ++i_dim) {
         int sign = i_vert/vstride(_vert._glued_to->n_dim(), i_dim)%2;
         skip = skip || (std::abs(_vert._glued_coords[i_dim] - !sign) < 1e-12);
       }
-      if (!skip) Shared_value(_vert._glued_to->vertex(i_vert)).set(value, minmax);
+      if (!skip) Shared_value(_vert._glued_to->vertex(i_vert)).set(value, minmax, recursion_depth - 1);
     }
   }
 }

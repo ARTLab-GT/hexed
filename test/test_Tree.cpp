@@ -363,14 +363,13 @@ TEST_CASE("Tree") {
                  Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[2], graft0->children()[3]}));
     for (hexed::Tree::Connection_neighbors cn : {
       graft0->children()[2]->find_connection_neighbors(1),
-      //graft0->children()[3]->find_connection_neighbors(1),
-      //tree.find_connection_neighbors(2),
+      graft0->children()[3]->find_connection_neighbors(1),
+      tree.find_connection_neighbors(2),
     }) {
       REQUIRE_THAT(cn.trees[0], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[2], graft0->children()[3]}));
       REQUIRE_THAT(cn.trees[1], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{&tree, &tree}));
       REQUIRE(cn.direction == hexed::Connection_direction{{0, 1}, {1, 0}});
     }
-    #if 0
     tree.refine();
     REQUIRE(graft0->children()[2]->find_neighbor(1) == tree.children()[2]);
     REQUIRE_THAT(graft0->children()[2]->find_neighbors(1),
@@ -476,7 +475,6 @@ TEST_CASE("Tree") {
     tree.connect({graft2, tree.children()[1]}, {{0, 0}, {0, 1}});
     REQUIRE(tree.children()[1]->find_neighbor(1) == graft2);
     REQUIRE(graft2 == tree.children()[1]->find_neighbor(1));
-    #endif
   }
 
   SECTION("3D grafting") {
@@ -751,6 +749,7 @@ TEST_CASE("Tree") {
       REQUIRE(tree.find_neighbor(2) == graft0);
       REQUIRE(graft0->find_neighbor(5) == &tree);
       REQUIRE(graft1->find_neighbor(5) == &tree);
+      REQUIRE_THAT(tree.find_neighbors(2), Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0, graft1}));
       graft1->refine();
       tree.refine();
       for (hexed::Tree* c : graft1->children()) c->refine();
@@ -770,8 +769,8 @@ TEST_CASE("Tree") {
       };
       std::vector<hexed::Tree*> trees1(4, tree.children()[4]->children()[1]);
       auto cn = graft1->children()[3]->children()[5]->find_connection_neighbors(5);
-      CHECK_THAT(cn.trees[0], Catch::Matchers::RangeEquals(trees0));
-      CHECK_THAT(cn.trees[1], Catch::Matchers::RangeEquals(trees1));
+      REQUIRE_THAT(cn.trees[0], Catch::Matchers::RangeEquals(trees0));
+      REQUIRE_THAT(cn.trees[1], Catch::Matchers::RangeEquals(trees1));
     }
   }
 }

@@ -11,6 +11,7 @@ mesh_extreme00 = -160.
 mesh_extreme10 = -160.
 mesh_extreme01 =  160.
 mesh_extreme11 =  160.
+max_sharp_reynolds = huge
 
 refine_start_iter = 10*10^4
 

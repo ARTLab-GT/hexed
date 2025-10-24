@@ -325,14 +325,25 @@ int Tree::_compare_ref_level(Tree* tree0, Tree* tree1, Tree::_Transformation tra
   return 2;
 }
 
+Tree* Tree::_find_parent(int i_face) {
+  if (_par) return _par;
+  if (i_face >= 0) {
+    if (_fake_parents[i_face]) return _fake_parents[i_face];
+  }
+  HEXED_THROW("No (real or fake) parents.") throw;
+}
+
 std::vector<Tree*> Tree::find_neighbors(Array<int> direction) {
   HEXED_ASSERT(direction.size() >= n_dim, "`direction` has too few elements");
   std::vector<Tree*> neighbs;
   // start by finding some leaf neighbor
   auto result = _neighbor(direction);
   if (result.neighbor) {
+    int i_face = (direction.abs().sum() == 1) ? result.trans.dir.i_face(!result.trans.i_side) : -1;
     // find a neighbor, not necessarily a leaf, with refinement level not exceeding that of this
-    while (_compare_ref_level(this, result.neighbor, result.trans) == 0) result.neighbor = result.neighbor->parent();
+    while (_compare_ref_level(this, result.neighbor, result.trans) == 0) {
+      result.neighbor = result.neighbor->_find_parent(i_face);
+    }
     HEXED_ASSERT(result.neighbor, "Root appears not to satisfy ref level bounds")
     // find all the leaf descendents of that neighbor which are neighbors of this
     Array<int> bias({n_dim});
@@ -364,12 +375,13 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
       if (!i_side) trans.reverse();
       that_rl = trans.transform(that_rl);
     }
-    rl(i_side) = search_roots[i_side]->_ref_level.extreme(0, that_rl);
+    rl(i_side) = search_roots[i_side]->_ref_level;
     coords(i_side) = search_roots[i_side]->_coords;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      int diff = search_roots[i_side]->_ref_level[i_dim] - rl(i_side)[i_dim];
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) if (i_dim != trans.dir.i_dim[!trans.i_side]) {
+      int diff = rl(i_side)[i_dim] - that_rl[i_dim];
       HEXED_ASSERT(diff < 2, "Ref level difference is too large.")
-      if (diff) {
+      if (diff == 1) {
+        --rl(i_side)[i_dim];
         coords(i_side)[i_dim] -= math::mod<Int>(coords(i_side)[i_dim], 2);
         coords(i_side)[i_dim] /= 2;
       }
@@ -377,21 +389,17 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
   }
   int compare;
   while ((compare = _compare_ref_level(search_roots[0], search_roots[1], result.trans)) != 2) {
-    Tree*& ptr = search_roots[!compare];
-    Tree* fake = ptr->_fake_parents[result.trans.dir.i_face(result.trans.i_side == compare)];
-    if (ptr->_par) {
-      ptr = ptr->_par;
-    } else if (fake) {
-      ptr = fake;
-    } else {
-      HEXED_THROW("No (real or fake) parent.")
-    }
+    int i_fake_face = result.trans.dir.i_face(result.trans.i_side == compare);
+    search_roots[!compare] = search_roots[!compare]->_find_parent(i_fake_face);
   }
   for (int i_side = 0; i_side < 2; ++i_side) {
     neighbors.trees[i_side].resize(math::pow(2, n_dim - 1), nullptr);
     int j_side = i_side != result.trans.i_side;
+    int i_dim = result.trans.dir.i_dim[i_side];
+    rl(j_side)[i_dim] = search_roots[j_side]->_ref_level[i_dim];
+    coords(j_side)[i_dim] = search_roots[j_side]->_coords[i_dim];
     search_roots[j_side]->_assign_leaves(neighbors.trees[i_side], rl(j_side), coords(j_side),
-                                         result.trans.dir.i_dim[i_side], result.trans.dir.face_sign[i_side]);
+                                         i_dim, result.trans.dir.face_sign[i_side]);
     for (Tree* n : neighbors.trees[i_side]) HEXED_ASSERT(n, "null element returned")
   }
   neighbors.direction = result.trans.dir;
