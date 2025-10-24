@@ -529,7 +529,6 @@ void Accessible_mesh::_fit_surface() {
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems_sz; ++i_elem) elems[i_elem].record = 0;
 
-  printers::info("creating match elements\n");
   if (params.n_dim == 3) {
     for (Int i_element = 0; i_element < elems_sz; ++i_element) {
       auto& elem = elems[i_element];
@@ -715,7 +714,6 @@ void Accessible_mesh::_fit_surface() {
     Int cons_sz = _neighbor_cons[1].size();
     Int face_refs_sz = _face_refs.size();
     // replace existing connections
-    printers::info("replacing connections\n");
     for (Int i_con = 0; i_con < cons_sz; ++i_con) {
       auto& con = _neighbor_cons[1][i_con];
       // skip dead or refined connections
@@ -752,7 +750,6 @@ void Accessible_mesh::_fit_surface() {
       if (replace) {
         for (int i_face = 0; i_face < 2; ++i_face) con.face(i_face).disconnect();
         if (bool(surfaces[0]) == bool(surfaces[1])) {
-          printers::info("  conformal\n");
           _connect(elem_arr, dir, "neighbor replacement");
           if (surfaces[0]) {
             HEXED_ASSERT(surfaces[1], "Both faces must identify a surface element or neither.")
@@ -761,24 +758,11 @@ void Accessible_mesh::_fit_surface() {
             _extrude_cons[2].emplace_back(&_neighbor_cons[1].back());
           }
         } else {
-          printers::info("  refined\n");
           _connect(to_connect, dir, "neighbor replacement (refined)");
         }
       }
     }
     // replacing refined connections
-    printers::info("replacing refined\n");
-    {
-      auto faces = _blocks.faces_3d();
-      #pragma omp parallel for
-      for (auto& f : faces) {
-        for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
-      }
-      auto blocks = _blocks.boundary_sides();
-      #pragma omp parallel for
-      for (auto& b : blocks) b.reset();
-      visualize("default", "before_replace_refined", 0.);
-    }
     for (int i_ref = 0; i_ref < face_refs_sz; ++i_ref) {
       auto& ref = _face_refs[i_ref][0];
       std::array<std::vector<Element*>, 2> old_elems = ref.elements();
@@ -812,7 +796,6 @@ void Accessible_mesh::_fit_surface() {
       }
     }
     // connect by shared vertices
-    printers::info("connecting by vertices\n");
     for (auto& vert : all_verts) {
       if (vert.record.size() == 12) {
         std::array<Element*, 2> elem_arr;
@@ -847,7 +830,6 @@ void Accessible_mesh::_fit_surface() {
   purge();
   _offset_vertices(.03, false);
 
-  printers::info("creating second layer\n");
   { // add another layer of extruded elements to improve mesh quality on sharp edges
     auto& elem_list = def.elements();
     Int elems_sz = elem_list.size();
@@ -1444,7 +1426,6 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
   std::array<std::vector<next::Element_shape*>, 2> active_shapes;
   bool null_elem = false;
   bool shared_fake = false;
-  bool any_trees_connected = false;
   bool all_trees_connected = true;
   for (int i_side = 0; i_side < 2; ++i_side) {
     HEXED_ASSERT(Int(elems[i_side].size()) == nv/2, "wrong number of element pointers" + context)
@@ -1459,30 +1440,11 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       active_shapes[i_side].push_back(&elems[i_side][i_elem]->active_shape());
       shared_fake = shared_fake || elems[i_side][i_elem]->shared_fake();
       auto search_dir = Tree::get_direction(dir.i_face(i_side), params.n_dim);
-      Tree* neighbor = elems[i_side][i_elem]->tree.value().find_neighbor(search_dir);
-      bool connected = exists(neighbor);
-      any_trees_connected = any_trees_connected || connected;
+      bool connected = exists(elems[i_side][i_elem]->tree.value().find_neighbor(search_dir));
       all_trees_connected = all_trees_connected && connected;
     }
   }
   HEXED_ASSERT(!null_elem, "An element is null." + context)
-  if (std::any_of(elems[0].begin() + 1, elems[0].end(), [elems](Element* e){return e != elems[0][0];}) ||
-      std::any_of(elems[1].begin() + 1, elems[1].end(), [elems](Element* e){return e != elems[1][0];})) {
-    for (int i_side = 0; i_side < 2; ++i_side) {
-      for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
-        auto& s = elems[i_side][i_elem]->shape();
-        auto f = s.boundary_face_3d();
-        if (f) {
-          for (int i_edge = 0; i_edge < 4; ++i_edge) f->edge(i_edge).reset();
-          f->reset();
-        }
-        s.visualize("default", str_cat("elem", i_side, i_elem));
-        auto search_dir = Tree::get_direction(dir.i_face(i_side), params.n_dim);
-        printers::info(to_string(int(exists(elems[i_side][i_elem]->tree.value().find_neighbor(search_dir)))));
-      }
-    }
-    printers::info("\n");
-  }
   _face_refs.emplace_back();
   std::vector<int> fvi {face_vertex_inds(nd, dir)};
   Array<int> permute_inds({2, nv/2});
