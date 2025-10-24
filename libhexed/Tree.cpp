@@ -181,12 +181,18 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
   auto con = _connections.back().get();
   for (int i_side = 0; i_side < 2; ++i_side) {
     auto predicate = [&con, i_side](Tree* t){return t == con->trees[i_side];};
-    if (!std::all_of(trees[i_side].begin(), trees[i_side].end(), predicate)) {
+    if (!std::all_of(trees[0].begin(), trees[0].end(), predicate) ||
+        !std::all_of(trees[1].begin(), trees[1].end(), predicate)) {
       printers::info(to_string(dir.i_dim[i_side]) + "\n");
       for (int i_tree = 0; i_tree < _n_vert()/2; ++i_tree) {
-        printers::info(to_string(trees[i_side][i_tree]) + " " + to_string(trees[i_side][i_tree]->_coords));
+        printers::info(str_cat(trees[i_side][i_tree], " ", trees[i_side][i_tree]->_ref_level, trees[i_side][i_tree]->_coords));
       }
       printers::info("\n");
+    }
+  }
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    auto predicate = [&con, i_side](Tree* t){return t == con->trees[i_side];};
+    if (!std::all_of(trees[i_side].begin(), trees[i_side].end(), predicate)) {
       // determine refinement level and coordinates for fake root
       Tree* t0 = trees[i_side][0];
       Array<int> rl = t0->_ref_level.copy();

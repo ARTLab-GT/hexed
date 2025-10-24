@@ -569,10 +569,10 @@ void Accessible_mesh::_fit_surface() {
             for (int i_face = 0; i_face < 6; ++i_face) e.face_record[i_face] = -1;
             s.extruded_direction = elem.fake_shape()->extruded_direction;
           };
-          auto rl = elem.tree->anisotropic_refinement_level();
+          auto rl = elem.tree->anisotropic_refinement_level().copy();
           rl[i_dim] += 1;
-          Array<Int> np = elem.nominal_position();
-          np[i_dim] = 2*(np[i_dim] + math::sign(i_sign)) - !i_sign;
+          Array<Int> np = elem.nominal_position().copy();
+          np[i_dim] = 2*np[i_dim] + !i_sign;
           Int inside_sn = _add_element(rl, true, np, 1);
           Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
           inside.create_fake(_blocks);
@@ -607,8 +607,7 @@ void Accessible_mesh::_fit_surface() {
               int i_edge_matched = 2*(j_dim > k_dim) + j_sign;
               Int m = matched_to[i_edge_matched];
               if (m != -1) {
-                Array<Int> np_match = elem.nominal_position();
-                np_match[i_dim] += math::sign(i_sign);
+                Array<Int> np_match = elem.nominal_position().copy();
                 Int sn = _add_element(elem.refinement_level(), true, np_match, 1, bf);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
                 match_elem.create_fake(_blocks);
@@ -863,7 +862,15 @@ void Accessible_mesh::_fit_surface() {
       Deformed_element& elem = elem_list[i_elem];
       auto i_face = elem.active_shape().boundary_face();
       if (i_face != next::Mesh_blocks::no_face) {
-        Int sn = _add_element(elem.refinement_level(), true, elem.nominal_position(), 1, i_face);
+        // undo the extra refinement level added for inside/surface elements
+        Array<Int> np = elem.nominal_position();
+        np[i_face/2] += math::sign(i_face%2);
+        if (elem.tree->anisotropic_refinement_level()[i_face/2] > elem.refinement_level()) {
+          np[i_face/2] -= !(i_face%2);
+          HEXED_ASSERT(math::mod<Int>(np[i_face/2], 2) == 0, "Coordinate must be even.")
+          np[i_face/2] /= 2;
+        }
+        Int sn = _add_element(elem.refinement_level(), true, np, 1, i_face);
         Deformed_element& new_elem = def.elems.at(elem.refinement_level(), sn);
         for (int j_face = 0; j_face < 2*params.n_dim; ++j_face) new_elem.face_record[j_face] = -1;
         new_elem.create_fake(_blocks);
@@ -1452,7 +1459,8 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       active_shapes[i_side].push_back(&elems[i_side][i_elem]->active_shape());
       shared_fake = shared_fake || elems[i_side][i_elem]->shared_fake();
       auto search_dir = Tree::get_direction(dir.i_face(i_side), params.n_dim);
-      bool connected = exists(elems[i_side][i_elem]->tree.value().find_neighbor(search_dir));
+      Tree* neighbor = elems[i_side][i_elem]->tree.value().find_neighbor(search_dir);
+      bool connected = exists(neighbor);
       any_trees_connected = any_trees_connected || connected;
       all_trees_connected = all_trees_connected && connected;
     }
@@ -1462,11 +1470,19 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       std::any_of(elems[1].begin() + 1, elems[1].end(), [elems](Element* e){return e != elems[1][0];})) {
     for (int i_side = 0; i_side < 2; ++i_side) {
       for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
-        elems[i_side][i_elem]->shape().visualize("default", str_cat("elem", i_side, i_elem));
+        auto& s = elems[i_side][i_elem]->shape();
+        auto f = s.boundary_face_3d();
+        if (f) {
+          for (int i_edge = 0; i_edge < 4; ++i_edge) f->edge(i_edge).reset();
+          f->reset();
+        }
+        s.visualize("default", str_cat("elem", i_side, i_elem));
+        auto search_dir = Tree::get_direction(dir.i_face(i_side), params.n_dim);
+        printers::info(to_string(int(exists(elems[i_side][i_elem]->tree.value().find_neighbor(search_dir)))));
       }
     }
+    printers::info("\n");
   }
-  HEXED_ASSERT(any_trees_connected == all_trees_connected, str_cat("Tree connecteness mismatch.", context))
   _face_refs.emplace_back();
   std::vector<int> fvi {face_vertex_inds(nd, dir)};
   Array<int> permute_inds({2, nv/2});
@@ -1520,7 +1536,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
   // the order of the following two line is important to make sure that true vertices are glued to true shapes
   if (!shared_fake) next::Element_shape::connect(active_shapes, dir);
   next::Element_shape::connect(shapes, dir);
-  if (!any_trees_connected) {
+  if (!all_trees_connected) {
     std::array<std::vector<Tree*>, 2> trees;
     for (int i_side = 0; i_side < 2; ++i_side) {
       for (Element* elem : elems[i_side]) trees[i_side].push_back(elem->tree.get());
