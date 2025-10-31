@@ -754,7 +754,7 @@ void Surface_face::reset() {
   _interior = soln.data();
 }
 
-double skip_tol = 1e-14;
+double skip_tol = 1e-3;
 
 Mat<3> Element_shape::_vertex_point(const std::vector<double>& coords, Int recursion_depth) const {
   // computes a point via order 1 interpolation between the vertices,
@@ -762,11 +762,14 @@ Mat<3> Element_shape::_vertex_point(const std::vector<double>& coords, Int recur
   Mat<3> point = Mat<3>::Zero();
   for (int i_vert = 0; i_vert < math::pow(2, n_dim()); ++i_vert) {
     double weight = 1;
+    bool include = true;
     for (int i_dim = 0; i_dim < n_dim(); ++i_dim) {
       bool sign = i_vert/vstride(n_dim(), i_dim)%2;
-      weight *= !sign + math::sign(sign)*coords[i_dim];
+      double w = !sign + math::sign(sign)*coords[i_dim];
+      include = include && w > skip_tol;
+      weight *= w;
     }
-    if (std::abs(weight) > skip_tol*nominal_size()) point += weight*_verts[i_vert].value().point({}, recursion_depth);
+    if (include) point += weight*_verts[i_vert].value().point({}, recursion_depth);
   }
   return point;
 }
@@ -799,7 +802,8 @@ Mat<3> Element_shape::interpolate(std::vector<double> ref_coords, Int recursion_
   // first compute point by interpolating between vertices
   Mat<3> point = _vertex_point(ref_coords, recursion_depth + 1);
   // then, if `this` has a side on the boundary, adjust it to account for the actual position of the boundary nodes
-  if (_i_bf != Mesh_blocks::no_face) {
+  if (false) {
+  //if (_i_bf != Mesh_blocks::no_face) {
     std::vector<double> c = ref_coords;
     int sign = _i_bf%2;
     int i_dim = _i_bf/2;

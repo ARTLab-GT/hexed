@@ -1452,6 +1452,23 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
     permute_inds(0)[i_face] = fvi[i_face];
     permute_inds(1)[fvi[i_face]] = i_face;
   }
+  for (auto& f : faces) if (f->connected()) {
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      for (int i_elem = 0; i_elem < 4; ++i_elem) {
+        printers::info(str_cat(faces[i_side*nv/2 + i_elem]->connected(), "\n"));
+        Element* elem = elems[i_side][i_elem];
+        if (elem->shape().boundary_face_3d()) {
+          for (int i_edge = 0; i_edge < 4; ++i_edge) {
+            elem->shape().boundary_face_3d()->edge(i_edge).reset();
+          }
+          elem->shape().boundary_face_3d()->reset();
+        }
+        elem->shape().visualize("default", str_cat("elem", i_side, i_elem));
+      }
+    }
+    HEXED_THROW("already connected (before ref)")
+  }
+  #if 0
   for (int i_side = 0; i_side < 2; ++i_side) {
     for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
       for (int i_row = 0; i_row < nv/4; ++i_row) {
@@ -1478,7 +1495,47 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       }
     }
   }
+  #else
+  for (bool changed = true; changed;) {
+    changed = false;
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      for (int i_face = 0; i_face < nv/2; ++i_face) {
+        Mortal_ptr<Face> face(faces[i_side*nv/2 + i_face].get());
+        for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
+          bool needs_ref = true;
+          for (int j_face = 0; j_face < nv/2; ++j_face) {
+            int coord = math::row_coordinate(nd - 1, 2, i_dim, j_face);
+            int k_face = j_face - math::sign(coord)*math::stride(nd - 1, 2, i_dim);
+            Face* f00 = faces[i_side*nv/2 + j_face].get();
+            Face* f01 = faces[i_side*nv/2 + k_face].get();
+            Face* f10 = faces[(!i_side)*nv/2 + permute_inds(i_side)[j_face]].get();
+            Face* f11 = faces[(!i_side)*nv/2 + permute_inds(i_side)[k_face]].get();
+            needs_ref = needs_ref && (f00 != face.get() || (f00 == f01 && f10 != f11));
+          }
+          if (needs_ref) {
+            changed = true;
+            HEXED_ASSERT(!face->connected(), "already connected (creating face ref)")
+            _face_refs.back().emplace_back(*face, i_dim);
+            HEXED_ASSERT(face->connected(), "not connected??")
+            for (int j_face = 0; j_face < nv/2; ++j_face) {
+              auto& f = faces[i_side*nv/2 + j_face];
+              if (f == face) {
+                f.set(_face_refs.back().back().fine()[math::row_coordinate(nd - 1, 2, i_dim, j_face)]);
+                HEXED_ASSERT(!f->connected(), "wtf")
+              }
+            }
+            HEXED_ASSERT(face->connected(), "not connected?")
+            for (auto& g : faces) HEXED_ASSERT(!g->connected(), "already connected" + to_string(g.get() == face))
+            break;
+          }
+        }
+      }
+    }
+  }
+  #endif
+  bool ref = false;
   if (_face_refs.back().empty()) _face_refs.pop_back();
+  else ref = true;
   for (int i_face = 0; i_face < nv/2; ++i_face) {
     bool already_connected = false;
     for (int j_face = 0; j_face < i_face; ++j_face) {
@@ -1493,6 +1550,23 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
         if (!face_arr[0]->sign()) std::swap(face_arr[0], face_arr[1]);
       }
       _neighbor_cons[is_deformed].emplace_back(faces[0]->storage_params(), face_arr, dir.rotate);
+    }
+  }
+  if (ref) {
+    for (auto& fr : _face_refs.back()) {
+      auto get_message = [&]() {
+        std::string message;
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          message += "\n";
+          for (int i_elem = 0; i_elem < 4; ++i_elem) {
+            message += " " + to_string(elems[i_side][i_elem]);
+          }
+        }
+        return message;
+      };
+      HEXED_ASSERT(fr.coarse().connected(), str_cat("coarse not connected ", dir, get_message()))
+      HEXED_ASSERT(fr.fine()[0]->connected(), str_cat("fine not connected ", dir, get_message()))
+      HEXED_ASSERT(fr.fine()[1]->connected(), str_cat("fine not connected ", dir, get_message()))
     }
   }
   // the order of the following two line is important to make sure that true vertices are glued to true shapes
@@ -1975,7 +2049,6 @@ template<typename element_t>
 void Accessible_mesh::connect_new(int start_at) {
   auto& m = mbt<element_t>();
   auto elems = m.elems.elements();
-  // helper function for connecting refined elements
   for (int i_elem = start_at; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     if (elem.tree) {
@@ -2576,6 +2649,10 @@ void Accessible_mesh::execute_adaptation() {
     }
   }
   purge();
+  printers::info("[after purge]", true);
+  for (auto& vec : _face_refs) {
+    for (auto& ref : vec) auto ref_elems = ref.elements();
+  }
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     elem.record = 0;
@@ -2588,7 +2665,13 @@ void Accessible_mesh::execute_adaptation() {
   for (int i = 0; i < 3; ++i) _extrude_cons[i].clear();
   connect_new<Element>(0);
   connect_new<Deformed_element>(0);
+  printers::info("[check start]", true);
+  for (auto& vec : _face_refs) {
+    for (auto& ref : vec) auto ref_elems = ref.elements();
+  }
+  printers::info("[check done]", true);
   connect_rest(surface_bc_sn());
+  printers::info("[after connect]", true);
   {
     auto verts = _blocks.verts();
     #pragma omp parallel for
@@ -2596,6 +2679,18 @@ void Accessible_mesh::execute_adaptation() {
       vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
     }
   }
+  {
+    auto faces = _blocks.faces_3d();
+    #pragma omp parallel for
+    for (auto& f : faces) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+    }
+    auto blocks = _blocks.boundary_sides();
+    #pragma omp parallel for
+    for (auto& b : blocks) b.reset();
+    visualize("default", "post_exec", 0.);
+  }
+  printers::info("[exec complete]", true);
 }
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,

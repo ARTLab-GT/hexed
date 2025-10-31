@@ -54,6 +54,7 @@ class Mortal_ptr : protected mutual::Single<void, void>, public Pointer<T> {
 
   //! \brief Checks whether `this` points to the same object as `that`.
   bool operator==(const T* that) const {return that == get();}
+  bool operator==(const Mortal_ptr<T>& that) const {return that.get() == get();} //!< \overload
 
   #define ACCESS(CONST) \
     CONST T* get() CONST { \
