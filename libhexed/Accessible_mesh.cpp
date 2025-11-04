@@ -13,7 +13,6 @@
 #include <hexed/vertex_inds.hpp>
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/Convergence_monitor.hpp>
-#include <hexed/global_hacks.hpp> //! \todo remove this
 
 namespace hexed {
 
@@ -1448,63 +1447,11 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
   HEXED_ASSERT(!null_elem, "An element is null." + context)
   _face_refs.emplace_back();
   std::vector<int> fvi {face_vertex_inds(nd, dir)};
-  if (!shared_fake) {
-    for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
-      HEXED_ASSERT(elems[0][i_elem] != elems[1][fvi[i_elem]], "same elements")
-      if (elems[0][i_elem]->fake_shape()) {
-        HEXED_ASSERT(elems[0][i_elem]->fake_shape() != elems[1][fvi[i_elem]]->fake_shape(), "same fakes")
-      }
-    }
-  }
   Array<int> permute_inds({2, nv/2});
   for (int i_face = 0; i_face < nv/2; ++i_face) {
     permute_inds(0)[i_face] = fvi[i_face];
     permute_inds(1)[fvi[i_face]] = i_face;
   }
-  for (auto& f : faces) if (f->connected()) {
-    for (int i_side = 0; i_side < 2; ++i_side) {
-      for (int i_elem = 0; i_elem < 4; ++i_elem) {
-        printers::info(str_cat(faces[i_side*nv/2 + i_elem]->connected(), "\n"));
-        Element* elem = elems[i_side][i_elem];
-        if (elem->shape().boundary_face_3d()) {
-          for (int i_edge = 0; i_edge < 4; ++i_edge) {
-            elem->shape().boundary_face_3d()->edge(i_edge).reset();
-          }
-          elem->shape().boundary_face_3d()->reset();
-        }
-        elem->shape().visualize("default", str_cat("elem", i_side, i_elem));
-      }
-    }
-    HEXED_THROW(str_cat("already connected (before ref)", dir))
-  }
-  #if 0
-  for (int i_side = 0; i_side < 2; ++i_side) {
-    for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-      for (int i_row = 0; i_row < nv/4; ++i_row) {
-        int inds [2][2][2];
-        for (int j_row = 0; j_row < 2; ++j_row) {
-          for (int i_vert = 0; i_vert < 2; ++i_vert) {
-            for (int j_side = 0; j_side < 2; ++j_side) {
-              int row = i_row != (nd == 3 && j_row == 1);
-              inds[j_side][j_row][i_vert] = row*math::pow(2, i_dim) + i_vert*math::pow(2, nd - 2 - i_dim);
-            }
-            inds[!i_side][j_row][i_vert] = permute_inds(i_side)[inds[!i_side][j_row][i_vert]];
-          }
-        }
-        if (faces[nv/2* i_side + inds[ i_side][0][1]].get() == faces[nv/2* i_side + inds[ i_side][0][0]].get() &&
-            faces[nv/2*!i_side + inds[!i_side][0][1]].get() != faces[nv/2*!i_side + inds[!i_side][0][0]].get()) {
-          _face_refs.back().emplace_back(faces[nv/2*i_side + inds[i_side][0][0]].value(), i_dim);
-          for (int i_face = 0; i_face < 2; ++i_face) {
-            auto& f0 = faces[nv/2*i_side + inds[i_side][0][i_face]];
-            auto& f1 = faces[nv/2*i_side + inds[i_side][1][i_face]];
-            if (f1.get() == f0.get()) f1.set(_face_refs.back().back().fine()[i_face]);
-            f0.set(_face_refs.back().back().fine()[i_face]);
-          }
-        }
-      }
-    }
-  }
-  #else
   for (bool changed = true; changed;) {
     changed = false;
     for (int i_side = 0; i_side < 2; ++i_side) {
@@ -1523,28 +1470,18 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
           }
           if (needs_ref) {
             changed = true;
-            HEXED_ASSERT(!face->connected(), "already connected (creating face ref)")
             _face_refs.back().emplace_back(*face, i_dim);
-            HEXED_ASSERT(face->connected(), "not connected??")
             for (int j_face = 0; j_face < nv/2; ++j_face) {
               auto& f = faces[i_side*nv/2 + j_face];
-              if (f == face) {
-                f.set(_face_refs.back().back().fine()[math::row_coordinate(nd - 1, 2, i_dim, j_face)]);
-                HEXED_ASSERT(!f->connected(), "wtf")
-              }
+              if (f == face) f.set(_face_refs.back().back().fine()[math::row_coordinate(nd - 1, 2, i_dim, j_face)]);
             }
-            HEXED_ASSERT(face->connected(), "not connected?")
-            for (auto& g : faces) HEXED_ASSERT(!g->connected(), "already connected" + to_string(g.get() == face))
             break;
           }
         }
       }
     }
   }
-  #endif
-  bool ref = false;
   if (_face_refs.back().empty()) _face_refs.pop_back();
-  else ref = true;
   for (int i_face = 0; i_face < nv/2; ++i_face) {
     bool already_connected = false;
     for (int j_face = 0; j_face < i_face; ++j_face) {
@@ -1561,25 +1498,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       _neighbor_cons[is_deformed].emplace_back(faces[0]->storage_params(), face_arr, dir.rotate);
     }
   }
-  if (ref) {
-    for (auto& fr : _face_refs.back()) {
-      auto get_message = [&]() {
-        std::string message;
-        for (int i_side = 0; i_side < 2; ++i_side) {
-          message += "\n";
-          for (int i_elem = 0; i_elem < 4; ++i_elem) {
-            message += " " + to_string(elems[i_side][i_elem]);
-          }
-        }
-        return message;
-      };
-      HEXED_ASSERT(fr.coarse().connected(), str_cat("coarse not connected ", dir, get_message()))
-      HEXED_ASSERT(fr.fine()[0]->connected(), str_cat("fine not connected ", dir, get_message()))
-      HEXED_ASSERT(fr.fine()[1]->connected(), str_cat("fine not connected ", dir, get_message()))
-    }
-  }
   // the order of the following two line is important to make sure that true vertices are glued to true shapes
-  try {
   if (!shared_fake) next::Element_shape::connect(active_shapes, dir);
   next::Element_shape::connect(shapes, dir);
   if (!all_trees_connected) {
@@ -1588,26 +1507,6 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       for (Element* elem : elems[i_side]) trees[i_side].push_back(elem->tree.get());
     }
     tree->connect(trees, dir);
-  }
-  } catch (const std::exception& e) {
-    printers::info("\n");
-    printers::info(str_cat("shared fake? ", shared_fake, "\n"));
-    global_hacks::debug_message["verbose tree"] = 1;
-    for (int i_side = 0; i_side < 2; ++i_side) {
-      for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
-        Element* elem = elems[i_side][i_elem];
-        printers::info(str_cat(i_side, " ", i_elem, " ", &elem->shape(), " ", &elem->active_shape(), "\n"));
-        if (elem->shape().boundary_face_3d()) {
-          for (int i_edge = 0; i_edge < 4; ++i_edge) {
-            elem->shape().boundary_face_3d()->edge(i_edge).reset();
-          }
-          elem->shape().boundary_face_3d()->reset();
-        }
-        elem->shape().visualize("default", str_cat("catch", i_side, i_elem));
-      }
-      elems[i_side][0]->tree->find_neighbor(dir.i_face(i_side));
-    }
-    HEXED_THROW(str_cat(e.what(), "\n", dir))
   }
 }
 
@@ -2679,10 +2578,6 @@ void Accessible_mesh::execute_adaptation() {
     }
   }
   purge();
-  printers::info("[after purge]", true);
-  for (auto& vec : _face_refs) {
-    for (auto& ref : vec) auto ref_elems = ref.elements();
-  }
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
     elem.record = 0;
@@ -2695,13 +2590,7 @@ void Accessible_mesh::execute_adaptation() {
   for (int i = 0; i < 3; ++i) _extrude_cons[i].clear();
   connect_new<Element>(0);
   connect_new<Deformed_element>(0);
-  printers::info("[check start]", true);
-  for (auto& vec : _face_refs) {
-    for (auto& ref : vec) auto ref_elems = ref.elements();
-  }
-  printers::info("[check done]", true);
   connect_rest(surface_bc_sn());
-  printers::info("[after connect]", true);
   {
     auto verts = _blocks.verts();
     #pragma omp parallel for
@@ -2709,18 +2598,6 @@ void Accessible_mesh::execute_adaptation() {
       vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
     }
   }
-  {
-    auto faces = _blocks.faces_3d();
-    #pragma omp parallel for
-    for (auto& f : faces) {
-      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
-    }
-    auto blocks = _blocks.boundary_sides();
-    #pragma omp parallel for
-    for (auto& b : blocks) b.reset();
-    visualize("default", "post_exec", 0.);
-  }
-  printers::info("[exec complete]", true);
 }
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,

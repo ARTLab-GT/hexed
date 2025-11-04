@@ -92,7 +92,6 @@ class Vertex : public Block {
   Sequence<Edge&> edges() {return _edges.theirs().dereference();}
   Sequence<Element_shape&> elements() {return _elems.theirs().dereference();}
   inline bool glued() const {return _glued_to;}
-  inline Element_shape* glued_to() {return _glued_to.get();} //!< \todo delete this
   //! \brief Computes the position of the vertex without any face/edge warping.
   Mat<3> unwarped_point(bool orig = false) const;
 

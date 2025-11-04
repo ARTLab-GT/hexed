@@ -13,7 +13,6 @@ Face_refinement::Face_refinement(Face& face, int sdim)
   face.connect(_coarse);
   _fine0.associate(*this);
   _fine1.associate(*this);
-  HEXED_ASSERT(_coarse->connected(), "wtff")
 }
 
 Face& find_element_face(Face& face, bool upstream) {

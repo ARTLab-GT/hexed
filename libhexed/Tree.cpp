@@ -2,7 +2,6 @@
 #include <hexed/Tree.hpp>
 #include <hexed/Row_index.hpp>
 #include <hexed/Printer.hpp>
-#include <hexed/global_hacks.hpp> //! \todo remove this
 
 namespace hexed {
 
@@ -698,14 +697,8 @@ Tree::_Neighbor_result Tree::_neighbor(Array<int> dir_arg) {
         search_direction = direction;
         search_direction[j_dim] = 0;
         search_direction[i_dim] = math::sign(!trans.dir.face_sign[!trans.i_side]);
-        if (global_hacks::debug_message.count("verbose tree")) if (global_hacks::debug_message.at("verbose tree")) {
-          printers::info(str_cat("before\n", ref_level, search_coords));
-        }
         if (trans.dir.flip_tangential()) { // implies different dims
           search_coords[j_dim] = math::pow<Int>(2, ref_level[j_dim]) - search_coords[j_dim] - 1;
-          if (global_hacks::debug_message.count("verbose tree")) if (global_hacks::debug_message.at("verbose tree")) {
-            printers::info(str_cat("after flip\n", ref_level, search_coords));
-          }
         }
         if (n_dim == 3) {
           int dim0 = (i_dim + 1)%3;
@@ -720,20 +713,12 @@ Tree::_Neighbor_result Tree::_neighbor(Array<int> dir_arg) {
             std::swap(ref_level[dim0], ref_level[dim1]);
             // now flip
             search_coords[dim1] = math::pow<Int>(2, ref_level[dim1]) - search_coords[dim1] - 1;
-            if (global_hacks::debug_message.count("verbose tree")) if (global_hacks::debug_message.at("verbose tree")) {
-              printers::info(str_cat("after rot\n", ref_level, search_coords));
-            }
           }
         }
         for (int k_dim = 0; k_dim < n_dim; ++k_dim) {
           search_coords[k_dim] += search_root->_coords[k_dim]*math::pow<Int>(2, ref_level[k_dim]);
         }
         ref_level += search_root->_ref_level;
-        if (global_hacks::debug_message.count("verbose tree")) if (global_hacks::debug_message.at("verbose tree")) {
-          printers::info(str_cat("ref levels\n", _ref_level, this_root->_ref_level, search_root->_ref_level, ref_level,
-                                 "coords\n", _coords, this_root->_coords, search_root->_coords, search_coords,
-                                 "bias\n", search_bias));
-        }
         break;
       } else {
         search_root = search_root->_par;
@@ -744,9 +729,6 @@ Tree::_Neighbor_result Tree::_neighbor(Array<int> dir_arg) {
       if (n) {
         direction = search_direction;
         trans.used = true;
-        if (global_hacks::debug_message.count("verbose tree")) if (global_hacks::debug_message.at("verbose tree")) {
-          printers::info(str_cat("neighbor:\n", n->_ref_level, n->_coords));
-        }
       }
     }
   }

@@ -499,12 +499,9 @@ Case::Case(std::string input_script)
       printers::info("  Final refinement sweep " + to_string(i_ref) + "... ");
       std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
       std::vector<std::function<bool(Element&, int)>> crits;
-      printers::info("[plan]");
       auto result = _solver().mesh().plan_adaptation(_ref_crit("final_refine_if"),
                                                      _ref_crit("final_unrefine_if"), true);
-      printers::info("[execute]");
       if (result.changed) _solver().mesh().execute_adaptation();
-      printers::info("[calc]");
       _solver().calc_jacobian();
       printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ("
                      + to_string(result.n_refine) + " new " + to_string(result.n_coarsen) + " lost)");
