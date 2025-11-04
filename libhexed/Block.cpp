@@ -46,7 +46,11 @@ Mat<3> Block::point(const std::vector<int>& node_coords, Int recursion_depth) co
     HEXED_ASSERT(0 <= coord && coord < _row_size, format_str(1000, "node index %i is out of bounds", coord));
   }
   #endif
-  HEXED_ASSERT(recursion_depth <= max_recursion_depth, "Max recursion depth exceeded.", assert::Overflow_error);
+  //HEXED_ASSERT(recursion_depth <= max_recursion_depth, "Max recursion depth exceeded.", assert::Overflow_error);
+  if (!(recursion_depth <= max_recursion_depth)) {
+    //printers::error("Max recursion depth exceeded!\n", true);
+    return Mat<3>::Zero();
+  }
   return _point(node_coords, recursion_depth);
 }
 
@@ -98,16 +102,45 @@ double Vertex::nominal_size() const {
   return nom_sz;
 }
 
+#define CHECK_DUPLICATES \
+  for (int i_elem = 0; i_elem < _elems.theirs().size(); ++i_elem) { \
+    for (int i_vert = 0; i_vert < math::pow(2, n_dim()); ++i_vert) { \
+      for (int j_vert = 0; j_vert < math::pow(2, n_dim()); ++j_vert) { \
+        if (i_vert != j_vert) HEXED_ASSERT(&_elems.theirs()[i_elem]->vertex(i_vert) != &_elems.theirs()[i_elem]->vertex(j_vert), "duplicate vertices") \
+      } \
+    } \
+  } \
+  for (int i_elem = 0; i_elem < _elems.theirs().size(); ++i_elem) { \
+    for (int j_elem = 0; j_elem < _elems.theirs().size(); ++j_elem) { \
+      if (i_elem != j_elem) { \
+        HEXED_ASSERT(&_elems.partners()[i_elem] != &_elems.partners()[j_elem], "duplicate pointers") \
+        HEXED_ASSERT(_elems.theirs()[i_elem] != _elems.theirs()[j_elem], "duplicate elements") \
+      } \
+    } \
+  } \
+
 void Vertex::eat(Vertex& that) {
-  HEXED_ASSERT(alive() && that.alive(), "both vertices must be alive (at least at the start...)")
+  HEXED_ASSERT(alive() && that.alive(), "both vertices must be alive (at least at the start)")
   if (&that == this) return;
+  CHECK_DUPLICATES
   // compute averaged position
   Int sz [2] {_elems.partners().size(), that._elems.partners().size()};
   // if this line throws an Overflow_error, it exits `eat` safely and there is not harm done
   set_pos((sz[0]*point({}) + sz[1]*that.point({}))/(sz[0] + sz[1]));
   // steal pointers
   for (Int i = that._edges.partners().size() - 1; i >= 0; --i) pair(that._edges.partners()[i]);
-  for (Int i = that._elems.partners().size() - 1; i >= 0; --i) pair(that._elems.partners()[i]);
+  for (Int i = that._elems.partners().size() - 1; i >= 0; --i) {
+    auto& p = that._elems.partners()[i];
+    auto elem = that._elems.theirs()[i];
+    for (int i_vert = 0; i_vert < math::pow(2, elem->n_dim()); ++i_vert) {
+      HEXED_ASSERT(&elem->vertex(i_vert) != this, str_cat("already a vertex of elem ", get_index(*elem), that.get_index(*elem), " ", elem))
+    }
+    bool pointer_in = std::any_of(_elems.partners().begin(), _elems.partners().end(), [&p](mutual::Base<Element_shape, Vertex>& b){return &b == &p;});
+    bool elem_in = std::any_of(_elems.theirs().begin(), _elems.theirs().end(), [elem](Element_shape* e){return e == elem;});
+    HEXED_ASSERT(elem_in == pointer_in, "duplicate pointer")
+    pair(p);
+  }
+  CHECK_DUPLICATES
   if (!glued() && that.glued()) glue(*that._glued_to.get(), that._glued_coords);
   record.insert(record.end(), that.record.begin(), that.record.end());
   if ((that.snapped_endpoint >= 0 && snapped_endpoint < 0) || (that.snapped_edge >= 0 && snapped_edge < 0)) {
@@ -116,13 +149,17 @@ void Vertex::eat(Vertex& that) {
   }
   if (that.snapped_point >= 0 && snapped_point < 0) snapped_point = that.snapped_point;
   _sz_constraint = std::min(_sz_constraint, that._sz_constraint);
+  CHECK_DUPLICATES
 }
 
 void Vertex::glue(Element_shape& to, std::vector<double> coords) {
   HEXED_ASSERT(std::size_t(to.n_dim()) == coords.size(), "wrong number of glued coordinates");
+  CHECK_DUPLICATES
+  std::string message = str_cat(" ", &to, ": ");
+  for (auto& elem : elements()) message += str_cat(&elem, " ");
   for (auto& elem : elements()) {
     HEXED_ASSERT(&elem != _glued_to.get(),
-                 "Gluing to an element this vertex is already a part of would create infinite recursion.")
+                 "Gluing to an element this vertex is already a part of would create infinite recursion." + message)
   }
   _glued_to.pair(to._glued_verts);
   _glued_coords = coords;

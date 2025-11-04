@@ -13,6 +13,7 @@
 #include <hexed/vertex_inds.hpp>
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/Convergence_monitor.hpp>
+#include <hexed/global_hacks.hpp> //! \todo remove this
 
 namespace hexed {
 
@@ -1447,6 +1448,14 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
   HEXED_ASSERT(!null_elem, "An element is null." + context)
   _face_refs.emplace_back();
   std::vector<int> fvi {face_vertex_inds(nd, dir)};
+  if (!shared_fake) {
+    for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
+      HEXED_ASSERT(elems[0][i_elem] != elems[1][fvi[i_elem]], "same elements")
+      if (elems[0][i_elem]->fake_shape()) {
+        HEXED_ASSERT(elems[0][i_elem]->fake_shape() != elems[1][fvi[i_elem]]->fake_shape(), "same fakes")
+      }
+    }
+  }
   Array<int> permute_inds({2, nv/2});
   for (int i_face = 0; i_face < nv/2; ++i_face) {
     permute_inds(0)[i_face] = fvi[i_face];
@@ -1466,7 +1475,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
         elem->shape().visualize("default", str_cat("elem", i_side, i_elem));
       }
     }
-    HEXED_THROW("already connected (before ref)")
+    HEXED_THROW(str_cat("already connected (before ref)", dir))
   }
   #if 0
   for (int i_side = 0; i_side < 2; ++i_side) {
@@ -1570,6 +1579,7 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
     }
   }
   // the order of the following two line is important to make sure that true vertices are glued to true shapes
+  try {
   if (!shared_fake) next::Element_shape::connect(active_shapes, dir);
   next::Element_shape::connect(shapes, dir);
   if (!all_trees_connected) {
@@ -1578,6 +1588,26 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       for (Element* elem : elems[i_side]) trees[i_side].push_back(elem->tree.get());
     }
     tree->connect(trees, dir);
+  }
+  } catch (const std::exception& e) {
+    printers::info("\n");
+    printers::info(str_cat("shared fake? ", shared_fake, "\n"));
+    global_hacks::debug_message["verbose tree"] = 1;
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      for (int i_elem = 0; i_elem < nv/2; ++i_elem) {
+        Element* elem = elems[i_side][i_elem];
+        printers::info(str_cat(i_side, " ", i_elem, " ", &elem->shape(), " ", &elem->active_shape(), "\n"));
+        if (elem->shape().boundary_face_3d()) {
+          for (int i_edge = 0; i_edge < 4; ++i_edge) {
+            elem->shape().boundary_face_3d()->edge(i_edge).reset();
+          }
+          elem->shape().boundary_face_3d()->reset();
+        }
+        elem->shape().visualize("default", str_cat("catch", i_side, i_elem));
+      }
+      elems[i_side][0]->tree->find_neighbor(dir.i_face(i_side));
+    }
+    HEXED_THROW(str_cat(e.what(), "\n", dir))
   }
 }
 

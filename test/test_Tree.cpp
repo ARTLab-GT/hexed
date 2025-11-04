@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Tree.hpp>
+#include <hexed/vertex_inds.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Tree") {
@@ -771,6 +772,28 @@ TEST_CASE("Tree") {
       auto cn = graft1->children()[3]->children()[5]->find_connection_neighbors(5);
       REQUIRE_THAT(cn.trees[0], Catch::Matchers::RangeEquals(trees0));
       REQUIRE_THAT(cn.trees[1], Catch::Matchers::RangeEquals(trees1));
+    }
+    SECTION("thorough ordering test") {
+      hexed::Tree tree(3, 1.);
+      hexed::Tree* graft = tree.graft(hexed::Array<int>::make(0, 0, 0), hexed::Array<hexed::Int>::make(0, 0, 0));
+      tree.refine();
+      graft->refine();
+      for (int i_dim = 0; i_dim < 3; ++i_dim) for (bool i_sign : {0, 1}) {
+        for (int j_dim = 0; j_dim < 3; ++j_dim) for (bool j_sign : {0, 1}) {
+          if (i_dim != j_dim || i_sign != j_sign) {
+            for (int rotate = -3; rotate < 3; ++rotate) {
+              hexed::Connection_direction dir {{i_dim, j_dim}, {i_sign, j_sign}, rotate};
+              std::cout << to_string(dir) << std::endl;
+              tree.connect({std::vector<hexed::Tree*>(4, &tree), std::vector<hexed::Tree*>(4, graft)}, dir);
+              auto inds = hexed::vertex_inds(3, dir);
+              for (int i = 0; i < 4; ++i) {
+                REQUIRE(tree.children()[inds[0][i]]->find_neighbor(dir.i_face(0)) == graft->children()[inds[1][i]]);
+                REQUIRE(graft->children()[inds[1][i]]->find_neighbor(dir.i_face(1)) == tree.children()[inds[0][i]]);
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

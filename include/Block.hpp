@@ -92,6 +92,7 @@ class Vertex : public Block {
   Sequence<Edge&> edges() {return _edges.theirs().dereference();}
   Sequence<Element_shape&> elements() {return _elems.theirs().dereference();}
   inline bool glued() const {return _glued_to;}
+  inline Element_shape* glued_to() {return _glued_to.get();} //!< \todo delete this
   //! \brief Computes the position of the vertex without any face/edge warping.
   Mat<3> unwarped_point(bool orig = false) const;
 
@@ -489,8 +490,9 @@ class Element_shape : public Block {
 
 /*! \brief Stores all the `Block`s for an entire mesh.
  * \details To use, simply create elements with `create_element()` and connect them with `Element_shape::connect`.
- * `create_element()` will automatically allocate any lower-dimensional entities (`Vertex`, `Surface_face`, `Edge`) necessary.
- * and destroying elements will automatically free them
+ * `create_element()` will automatically allocate
+ * any lower-dimensional entities (`Vertex`, `Surface_face`, `Edge`) necessary.
+ * Destroying elements will automatically free them
  * (although they may not actually be destroyed until the relevant entity sequence is accessed).
  */
 class Mesh_blocks {

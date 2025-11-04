@@ -137,8 +137,8 @@ class Element : public Kernel_element, public Mortal {
   void destroy_fake();
   next::Element_shape& shape();
   const next::Element_shape& shape() const;
-  inline next::Element_shape* fake_shape() {return _fake_shape.get();}
-  std::shared_ptr<next::Element_shape> shared_fake_shape();
+  // note `_fake_shape.use_count() == 0` does not imply `_fake_shape.get() == nullptr`
+  inline next::Element_shape* fake_shape() {return _fake_shape.use_count() ? _fake_shape.get() : nullptr;}
   inline bool has_shape() const {return bool(_shape);}
   next::Element_shape& active_shape();
 
