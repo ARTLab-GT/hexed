@@ -178,12 +178,12 @@ class Vertex : public Block {
   class Shared_value {
     public:
     Shared_value(Vertex&); //!< \brief Sets the `Lock`
-    double get(int recursion_depth = 3) const; //!< \brief Fetches the shared value.
+    double get(int recursion_depth = 100) const; //!< \brief Fetches the shared value.
     //! \brief Writes to the shared value.
     //! \details Will not directly affect the `get()` if the vertex is glued.
     void set(double);
     //! \brief Constrains the value of `get()` to be at most (least) `value` if `minamx` is `false` (`true`).
-    void set(double value, bool minmax, int recursion_depth = 3);
+    void set(double value, bool minmax, int recursion_depth = 100);
     private:
     Vertex& _vert;
     std::optional<Lock::Set> _set;

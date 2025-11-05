@@ -454,8 +454,7 @@ void Vertex::Shared_value::set(double value) {
 void Vertex::Shared_value::set(double value, bool minmax, int recursion_depth) {
   _vert._shared_value = math::extreme(minmax, _vert._shared_value, value);
   if (_vert.glued()) {
-    //HEXED_ASSERT(recursion_depth > 0, "Max recursion depth exceeded.")
-    if (recursion_depth == 0) return;
+    HEXED_ASSERT(recursion_depth > 0, "Max recursion depth exceeded.")
     for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
       bool skip = false;
       for (int i_dim = 0; i_dim < _vert._glued_to->n_dim(); ++i_dim) {
