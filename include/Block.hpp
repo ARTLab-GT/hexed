@@ -130,7 +130,6 @@ class Vertex : public Block {
   void remove_size_constraints();
   Mat<3> nominal_position() const;
   bool mobile() const;
-  void compute_depends();
   void init_improve();
   void compute_gradient(std::function<Mat<3>(Mat<3>)> get_target);
   void compute_improve(std::function<Mat<3>(Mat<3>)> get_target);
@@ -145,13 +144,12 @@ class Vertex : public Block {
     double distance;
   };
   Snap_result check_snap(bool updated_neighbors);
-  bool has_problem() const;
   inline bool last_snap_failed() const {return _last_snap_failed;}
   inline bool last_step_rejected() const {return _last_step_rejected;}
   inline Mat<3> last_grad() const {return _last_grad;}
   bool snap_to(Mat<3> target);
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
-  double quality_objective();
+  static double objective(Element_shape& elem);
   int n_elements() const; //!< \brief The number of elements sharing this vertex
   inline bool is_surface() const {return _edges.theirs().size();}
   /*! \brief The list of vertices that share an edge with `this`.
@@ -217,15 +215,15 @@ class Vertex : public Block {
     double worst_ortho = 1;
     double worst_edge = 1;
     bool has_glued_neighbor = false;
-    bool computing_depends = false;
   };
   _Optimization_state _compute_state(bool include_neighbors = true, bool ignore = false, bool ignore_neighb = false,
                                      double extra_tol = 0.);
   // will treat the vertex `ignore` as being at its `_orig_pos`;
   Mat<3> _unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_others) const;
-  void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                Vertex* orig_vertex = nullptr, Vertex* ignore = nullptr, bool ignore_orig = false,
-                                bool ignore_neighb = false, double extra_tol = 0.);
+  void _compute_state_recursive(_Optimization_state& state, bool include_neighbors, Vertex* ignore = nullptr,
+                                bool ignore_orig = false, bool ignore_neighb = false, double extra_tol = 0.);
+  static void _compute_element_state(_Optimization_state&, Element_shape*, Vertex* ignore,
+                                     bool ignore_orig, bool ignore_neighb, double extra_tol);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   Mat<3> _get_pos() const; // fetches `_pos` with atomic reads
   Mat<3> _pos;
@@ -247,7 +245,6 @@ class Vertex : public Block {
   std::vector<double> _glued_coords;
   double _shared_value;
   Lock _shared_value_lock;
-  std::vector<Vertex*> _depends_on;
   bool _last_snap_failed;
   double _sz_constraint;
 };

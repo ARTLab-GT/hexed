@@ -63,6 +63,8 @@ Mat<3> Block::point(int i_point, Int recursion_depth) const {
   return point(node_coords, recursion_depth);
 }
 
+double skip_tol = 1e-12;
+
 Vertex::Vertex(Mat<3> pos, int row_size)
 : Block(0, row_size)
 , snapped_point{-1}
@@ -181,88 +183,90 @@ const double ortho_tolerance = .03;
 const double edge_ratio_tolerance = 0.1;
 const double edge_tolerance = 1e-4;
 
-Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors, bool ignore, bool ignore_neighb, double extra_tol) {
+Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors, bool ignore, bool ignore_neighb,
+                                                   double extra_tol) {
   _Optimization_state state;
-  _compute_state_recursive(state, 1., include_neighbors, this, this, ignore, ignore_neighb, extra_tol);
+  _compute_state_recursive(state, include_neighbors, this, ignore, ignore_neighb, extra_tol);
   return state;
 }
 
-void Vertex::_compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                      Vertex* orig_vertex, Vertex* ignore, bool ignore_orig, bool ignore_neighb,
-                                      double extra_tol) {
-  if (!orig_vertex) orig_vertex = this;
+void Vertex::_compute_state_recursive(_Optimization_state& state, bool include_neighbors,
+                                      Vertex* ignore, bool ignore_orig, bool ignore_neighb, double extra_tol) {
   HEXED_ASSERT(state.skip.size() < 100, "Max recursion depth exceeded.")
-  int nd = _elems.theirs()[0]->n_dim();
-  int nv = math::pow(2, nd);
   for (Element_shape* elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
-    if (elem->glued()) continue;
+    if (elem->glued() || !elem->deformed) continue;
     if (std::any_of(state.skip.begin(), state.skip.end(), [&elem](Element_shape* e){return e != elem;})) continue;
-    Array<double> pos({3, nv});
-    for (int i_vert = 0; i_vert < nv; ++i_vert) {
-      pos.column(i_vert).vector() = elem->vertex(i_vert)._unwarped_point(ignore, ignore_orig, ignore_neighb);
-    }
-    Array<double> jacobian = Array<double>::make_uniform({3, 3, nv}, 0.);
-    Mat<2, 2> vertex_diff_mat;
-    vertex_diff_mat << -1., 1., -1., 1.;
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      for (int j_dim = 0; j_dim < nd; ++j_dim) {
-        jacobian(i_dim)(j_dim).vector() = math::dimension_matvec(vertex_diff_mat, pos(i_dim).vector(), j_dim);
-      }
-    }
-    int rs = row_size() + 1;
-    Gauss_lobatto check_basis(rs);
-    Mat<> weights = math::pow_outer(check_basis.node_weights(), nd);
-    int np = math::pow(rs, nd);
-    Array<double> extreme_spacing({2, nd});
-    extreme_spacing(0) = huge;
-    extreme_spacing(1) = -huge;
-    for (int i_point = 0; i_point < np; ++i_point) {
-      Mat<> coords(nd);
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        coords[i_dim] = check_basis.node(math::row_coordinate(nd, rs, i_dim, i_point));
-      }
-      Mat<3, 3> point_jac = Mat<3, 3>::Identity();
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        for (int j_dim = 0; j_dim < nd; ++j_dim) {
-          point_jac(i_dim, j_dim) = math::interp(jacobian(i_dim)(j_dim).vector(), coords);
-        }
-      }
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        Mat<3> nrml = point_jac(all, (i_dim + 1)%3).cross(point_jac(all, (i_dim + 2)%3)).normalized();
-        double ns = elem->nominal_shape()[i_dim];
-        double spacing = point_jac(all, i_dim).norm()/ns;
-        double orth_spacing = point_jac(all, i_dim).dot(nrml)/ns;
-        double orth = orth_spacing/spacing;
-        state.worst_ortho = std::min(state.worst_ortho, orth);
-        state.worst_edge = std::min(state.worst_edge, spacing);
-        double point_obj = 10/(orth - ortho_tolerance) + math::pow(orth_spacing - 1., 2)/(spacing - edge_tolerance);
-        state.feasible = state.feasible && orth > ortho_tolerance + extra_tol && spacing > edge_tolerance + extra_tol;
-        state.objective += weights(i_point)*point_obj;
-        for (int i : {0, 1}) extreme_spacing(i)[i_dim] = math::extreme(i, extreme_spacing(i)[i_dim], orth_spacing);
-      }
-    }
+    _compute_element_state(state, elem, ignore, ignore_orig, ignore_neighb, extra_tol);
     if (include_neighbors) {
+      state.has_glued_neighbor = true;
+      int nd = elem->n_dim();
+      int i_this = get_index(*elem);
       for (auto& vert : elem->glued_verts()) {
-        vert._compute_state_recursive(state, 1., true, orig_vertex, ignore, ignore_orig, ignore_neighb, extra_tol);
+        bool dependent = true;
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          double diff = vert._glued_coords[i_dim] - math::row_coordinate(nd, 2, i_dim, i_this);
+          dependent = dependent && std::min(std::abs(diff), std::abs(diff - 1.)) > skip_tol;
+        }
+        if (dependent) vert._compute_state_recursive(state, true, ignore, ignore_orig, ignore_neighb, extra_tol);
       }
     }
   }
 }
 
-void Vertex::compute_depends() {
-  _depends_on.clear();
-  _Optimization_state state;
-  state.computing_depends = true;
-  _compute_state_recursive(state, 1., true);
-  // sort to prevent deadlocks
-  std::sort(_depends_on.begin(), _depends_on.end(), std::less<Vertex*>{});
-}
-
-bool Vertex::has_problem() const {
-  // note that each vertex is in its own `depends_on`
-  for (const Vertex* d : _depends_on) if (d->_last_snap_failed) return true;
-  return false;
+void Vertex::_compute_element_state(_Optimization_state& state, Element_shape* elem, Vertex* ignore,
+                                    bool ignore_orig, bool ignore_neighb, double extra_tol) {
+  int nd = elem->n_dim();
+  int nv = math::pow(2, nd);
+  Array<double> pos({3, nv});
+  for (int i_vert = 0; i_vert < nv; ++i_vert) {
+    pos.column(i_vert).vector() = elem->vertex(i_vert)._unwarped_point(ignore, ignore_orig, ignore_neighb);
+  }
+  Array<double> jacobian = Array<double>::make_uniform({3, 3, nv}, 0.);
+  Mat<2, 2> vertex_diff_mat;
+  vertex_diff_mat << -1., 1., -1., 1.;
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+    for (int j_dim = 0; j_dim < nd; ++j_dim) {
+      jacobian(i_dim)(j_dim).vector() = math::dimension_matvec(vertex_diff_mat, pos(i_dim).vector(), j_dim);
+    }
+  }
+  int rs = elem->row_size() + 1;
+  Gauss_lobatto check_basis(rs);
+  Mat<> weights = math::pow_outer(check_basis.node_weights(), nd);
+  int np = math::pow(rs, nd);
+  Array<double> extreme_spacing({2, nd});
+  extreme_spacing(0) = huge;
+  extreme_spacing(1) = -huge;
+  Mat<3> ns = elem->nominal_shape();
+  for (int i_point = 0; i_point < np; ++i_point) {
+    Mat<> coords(nd);
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      coords[i_dim] = check_basis.node(math::row_coordinate(nd, rs, i_dim, i_point));
+    }
+    Mat<3, 3> point_jac = Mat<3, 3>::Identity();
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      for (int j_dim = 0; j_dim < nd; ++j_dim) {
+        point_jac(i_dim, j_dim) = math::interp(jacobian(i_dim)(j_dim).vector(), coords);
+      }
+    }
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      Mat<3> nrml = point_jac(all, (i_dim + 1)%3).cross(point_jac(all, (i_dim + 2)%3)).normalized();
+      double spacing = point_jac(all, i_dim).dot(nrml);
+      double orth = spacing/point_jac(all, i_dim).norm();
+      spacing /= ns[i_dim];
+      state.worst_ortho = std::min(state.worst_ortho, orth);
+      state.worst_edge = std::min(state.worst_edge, spacing);
+      state.feasible = state.feasible && orth > ortho_tolerance + extra_tol && spacing > edge_tolerance + extra_tol;
+      double point_obj = 10/(orth - ortho_tolerance) + math::pow(spacing - 1., 2)/(spacing - edge_tolerance);
+      state.objective += weights(i_point)*point_obj;
+      for (int i : {0, 1}) extreme_spacing(i)[i_dim] = math::extreme(i, extreme_spacing(i)[i_dim], spacing);
+    }
+  }
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+    double ratio = extreme_spacing(0)[i_dim]/extreme_spacing(1)[i_dim];
+    state.feasible = state.feasible && ratio > edge_ratio_tolerance;
+    state.objective += 1./(ratio - edge_ratio_tolerance);
+  }
 }
 
 void Vertex::init_improve() {
@@ -378,12 +382,14 @@ bool Vertex::snap_to(Mat<3> target) {
   return state.feasible;
 }
 
-double Vertex::quality_objective() {
-  auto state = _compute_state(false);
-  HEXED_ASSERT(state.feasible, format_str(200,
-               "Vertex state violates quality criteria "
-               "(ortho = %e; edge = %e; coords = %s).",
-               state.worst_ortho, state.worst_edge, to_string(unwarped_point()).c_str()))
+double Vertex::objective(Element_shape& shape) {
+  _Optimization_state state;
+  _compute_element_state(state, &shape, nullptr, false, false, 0.);
+  if (!state.feasible) {
+    shape.visualize("default", "bad_elem");
+    HEXED_THROW(str_cat("Element shape violates quality criteria (ortho = ", state.worst_ortho,
+                        "; spacing = ", state.worst_edge, ";). Visualized in `./bad_elem.*"))
+  }
   return state.objective;
 }
 
@@ -741,8 +747,6 @@ void Surface_face::reset() {
   Mat_rm<> soln = lhs_mat.fullPivHouseholderQr().solve(rhs_mat);
   _interior = soln.data();
 }
-
-double skip_tol = 1e-12;
 
 Mat<3> Element_shape::_vertex_point(const std::vector<double>& coords, Int recursion_depth) const {
   // computes a point via order 1 interpolation between the vertices,

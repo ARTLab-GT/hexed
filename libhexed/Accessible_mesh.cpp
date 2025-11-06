@@ -319,7 +319,7 @@ void Accessible_mesh::_fit_surface() {
     auto& elem = elems[i_elem];
     elem.snapping_problem = false;
   }
-  _offset_vertices(.2, false);
+  _offset_vertices(.05, false);
   {
     auto faces = _blocks.faces_3d();
     #pragma omp parallel for
@@ -520,7 +520,7 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) {
     vert.set_pos(vert.nominal_position());
   }
-  _offset_vertices(.2, false);
+  _offset_vertices(.05, false);
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
@@ -828,7 +828,7 @@ void Accessible_mesh::_fit_surface() {
     vert.record.clear();
   }
   purge();
-  _offset_vertices(.03, false);
+  _offset_vertices(.01, false);
 
   { // add another layer of extruded elements to improve mesh quality on sharp edges
     auto& elem_list = def.elements();
@@ -1077,11 +1077,11 @@ void Accessible_mesh::_fit_surface() {
   };
 
   // snap edges to the surface (regardless of dimensionality)
-  auto boundary_sides = _blocks.boundary_sides();
   #pragma omp parallel for
-  for (auto& block : boundary_sides) block.snapping_problem = false;
+  for (auto& block : _blocks.boundary_sides()) block.snapping_problem = false;
+  #if 0
   auto edges_2d = _blocks.edges_2d();
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for (auto& edge : edges_2d) plain_snap(edge);
   auto faces_3d = _blocks.faces_3d();
   std::vector<next::Edge*> edges_3d;
@@ -1116,9 +1116,10 @@ void Accessible_mesh::_fit_surface() {
         }
         double max_deriv = std::sqrt((deriv(0)*deriv(0) + deriv(1)*deriv(1) + deriv(2)*deriv(2)).extreme(1));
         max_deriv *= .5*edge->element()->nominal_size() + .1*edge->scale_factor();
-        if (max_deriv > 1) {
+        double deriv_limit = .1;
+        if (max_deriv > deriv_limit) {
           edge->snapping_problem = true;
-          interior = orig_interior + (interior - orig_interior)/max_deriv;
+          interior = orig_interior + (interior - orig_interior)*deriv_limit/max_deriv;
         }
       } else {
         plain_snap(*edge);
@@ -1135,6 +1136,25 @@ void Accessible_mesh::_fit_surface() {
       face.snapping_problem = face.snapping_problem || edge->snapping_problem;
     }
   }
+  #else
+  auto edges_2d = _blocks.edges_2d();
+  #pragma omp parallel for
+  for (auto& edge : edges_2d) edge.reset();
+  auto faces_3d = _blocks.faces_3d();
+  std::vector<next::Edge*> edges_3d;
+  for (auto& face : faces_3d) {
+    for (int i_edge = 0; i_edge < 4; ++i_edge) {
+      if (!face.edge(i_edge).glued()) edges_3d.push_back(&face.edge(i_edge));
+    }
+  }
+  std::sort(edges_3d.begin(), edges_3d.end(), [](next::Edge* edge0, next::Edge* edge1) {
+    return edge0->element()->nominal_size() > edge1->element()->nominal_size();
+  });
+  for (next::Edge* edge : edges_3d) {
+    edge->reset();
+  }
+  for (auto& face : faces_3d) face.reset();
+  #endif
   ++_stopwatch["update"]["fit surface"].work_units_completed;
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1159,6 +1179,19 @@ void Accessible_mesh::_fit_surface() {
       vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
     }
   }
+  #if 0
+  {
+    auto faces = _blocks.faces_3d();
+    #pragma omp parallel for
+    for (auto& f : faces) {
+      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
+    }
+    auto blocks = _blocks.boundary_sides();
+    #pragma omp parallel for
+    for (auto& b : blocks) b.reset();
+  }
+  #endif
+  visualize("default", "fit_complete", 0.);
 }
 
 void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
@@ -1196,18 +1229,17 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
   Convergence_monitor dist_monitor(.2);
   std::vector<next::Vertex*> mobile_verts;
   for (auto& vert : verts) if (vert.mobile()) mobile_verts.push_back(&vert);
-  #pragma omp parallel for
-  for (auto vert : mobile_verts) vert->compute_depends();
   Int snaps_failed = 0;
   double total_dist = 0;
   Stopwatch watch;
   watch.start();
   double last_time = 0;
   std::string message;
+  auto& def_elems = deformed().elements();
   double objective = 0;
   #pragma omp parallel for reduction(+:objective)
-  for (auto& vert : verts) {
-    objective += vert.quality_objective();
+  for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
+    objective += next::Vertex::objective(def_elems[i_elem].active_shape());
   }
   double starting_objective = objective;
   for (Int i_relax = 0;
@@ -1286,9 +1318,9 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         }
         double old_objective = objective;
         objective = 0;
-        {
-          #pragma omp parallel for reduction(+:objective)
-          for (auto& vert : verts) objective += vert.quality_objective();
+        #pragma omp parallel for reduction(+:objective)
+        for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
+          objective += next::Vertex::objective(def_elems[i_elem].active_shape());
         }
         if (objective <= old_objective) {
           break;
@@ -1320,14 +1352,15 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       }
       _stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed += mobile_verts.size();
     }
-    objective = 0;
     {
       Stopwatch_tree::Starter sw_assess(_stopwatch["update"]["fit surface"]["optimization"]["assessment"]);
-      #pragma omp parallel for reduction(+:objective,total_iters)
-      for (auto& vert : verts) {
-        objective += vert.quality_objective();
-        total_iters += vert.last_improve_iters();
+      objective = 0;
+      #pragma omp parallel for reduction(+:objective)
+      for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
+        objective += next::Vertex::objective(def_elems[i_elem].active_shape());
       }
+      #pragma omp parallel for reduction(+:total_iters)
+      for (auto& vert : verts) total_iters += vert.last_improve_iters();
       _stopwatch["update"]["fit surface"]["optimization"]["assessment"].work_units_completed += verts.size();
     }
     obj_monitor.add_sample(i_relax, objective - starting_objective);
