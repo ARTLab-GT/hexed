@@ -3,6 +3,7 @@
 #include <hexed/vertex_inds.hpp>
 #include <hexed/Mesh_assessment.hpp>
 #include <hexed/Printer.hpp>
+#include <hexed/Gauss_lobatto.hpp>
 
 namespace hexed::next {
 
@@ -176,8 +177,9 @@ bool Vertex::mobile() const {
   return has_unglued && !has_cartesian && !glued();
 }
 
-const double ortho_tolerance = .1;
-const double edge_tolerance = .01;
+const double ortho_tolerance = .03;
+const double edge_ratio_tolerance = 0.1;
+const double edge_tolerance = 1e-4;
 
 Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors, bool ignore, bool ignore_neighb, double extra_tol) {
   _Optimization_state state;
@@ -189,73 +191,60 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, double gradien
                                       Vertex* orig_vertex, Vertex* ignore, bool ignore_orig, bool ignore_neighb,
                                       double extra_tol) {
   if (!orig_vertex) orig_vertex = this;
+  HEXED_ASSERT(state.skip.size() < 100, "Max recursion depth exceeded.")
   int nd = _elems.theirs()[0]->n_dim();
   int nv = math::pow(2, nd);
   for (Element_shape* elem : _elems.theirs()) {
     HEXED_ASSERT(elem, "element is null");
     if (elem->glued()) continue;
-    int i_this = get_index(*elem);
-    Mat<3, dyn> verts(3, nv);
+    if (std::any_of(state.skip.begin(), state.skip.end(), [&elem](Element_shape* e){return e != elem;})) continue;
+    Array<double> pos({3, nv});
     for (int i_vert = 0; i_vert < nv; ++i_vert) {
-      verts(all, i_vert) = elem->vertex(i_vert)._unwarped_point(ignore, ignore_orig, ignore_neighb);
+      pos.column(i_vert).vector() = elem->vertex(i_vert)._unwarped_point(ignore, ignore_orig, ignore_neighb);
     }
-    Sequence<Mat<3>> vert_seq {
-      [&](Int i_vert)->Mat<3> {return verts(all, i_vert);},
-      [&]()->Int {return nv;},
-    };
-    std::vector<int> i_those;
+    Array<double> jacobian = Array<double>::make_uniform({3, 3, nv}, 0.);
+    Mat<2, 2> vertex_diff_mat;
+    vertex_diff_mat << -1., 1., -1., 1.;
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      for (int j_dim = 0; j_dim < nd; ++j_dim) {
+        jacobian(i_dim)(j_dim).vector() = math::dimension_matvec(vertex_diff_mat, pos(i_dim).vector(), j_dim);
+      }
+    }
+    int rs = row_size() + 1;
+    Gauss_lobatto check_basis(rs);
+    Mat<> weights = math::pow_outer(check_basis.node_weights(), nd);
+    int np = math::pow(rs, nd);
+    Array<double> extreme_spacing({2, nd});
+    extreme_spacing(0) = huge;
+    extreme_spacing(1) = -huge;
+    for (int i_point = 0; i_point < np; ++i_point) {
+      Mat<> coords(nd);
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        coords[i_dim] = check_basis.node(math::row_coordinate(nd, rs, i_dim, i_point));
+      }
+      Mat<3, 3> point_jac = Mat<3, 3>::Identity();
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        for (int j_dim = 0; j_dim < nd; ++j_dim) {
+          point_jac(i_dim, j_dim) = math::interp(jacobian(i_dim)(j_dim).vector(), coords);
+        }
+      }
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        Mat<3> nrml = point_jac(all, (i_dim + 1)%3).cross(point_jac(all, (i_dim + 2)%3)).normalized();
+        double ns = elem->nominal_shape()[i_dim];
+        double spacing = point_jac(all, i_dim).norm()/ns;
+        double orth_spacing = point_jac(all, i_dim).dot(nrml)/ns;
+        double orth = orth_spacing/spacing;
+        state.worst_ortho = std::min(state.worst_ortho, orth);
+        state.worst_edge = std::min(state.worst_edge, spacing);
+        double point_obj = 10/(orth - ortho_tolerance) + math::pow(orth_spacing - 1., 2)/(spacing - edge_tolerance);
+        state.feasible = state.feasible && orth > ortho_tolerance + extra_tol && spacing > edge_tolerance + extra_tol;
+        state.objective += weights(i_point)*point_obj;
+        for (int i : {0, 1}) extreme_spacing(i)[i_dim] = math::extreme(i, extreme_spacing(i)[i_dim], orth_spacing);
+      }
+    }
     if (include_neighbors) {
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        i_those.push_back(i_this - math::sign(i_this/vstride(nd, i_dim)%2)*vstride(nd, i_dim));
-        HEXED_ASSERT(i_those.back() >= 0 && i_those.back() < nv, "`i_those` out of bounds");
-      }
-    }
-    i_those.push_back(i_this);
-    for (int i_that : i_those) {
-      Vertex& that_vert = elem->vertex(i_that);
-      double ns = that_vert.nominal_size();
-      bool skip_obj = false;
-      bool skip_grad = false;
-      for (auto s : state.skip) if (s.elem == elem) {
-        skip_obj = skip_obj || s.i == i_that;
-        skip_grad = skip_grad || (s.i == i_that && s.j == i_this);
-      }
-      if (!skip_grad) state.skip.emplace_back(elem, i_that, i_this);
-      if (state.computing_depends) {
-        bool contains = false;
-        for (Vertex* v : orig_vertex->_depends_on) contains = contains || &that_vert == v;
-        if (!contains) orig_vertex->_depends_on.push_back(&that_vert);
-      }
-      Mesh_assessment ma(vert_seq, i_that);
-      ma.edge_lengths /= ns;
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        state.feasible = state.feasible && ma.orthogonality(i_dim) > ortho_tolerance + extra_tol;
-        state.worst_ortho = std::min(state.worst_ortho, ma.orthogonality(i_dim));
-        state.feasible = state.feasible && ma.edge_lengths(i_dim) > edge_tolerance + extra_tol;
-        state.worst_edge = std::min(state.worst_edge, ma.edge_lengths(i_dim));
-      }
-      if (state.feasible) {
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          double orth_diff = ma.orthogonality(i_dim) - ortho_tolerance;
-          state.objective += (!skip_obj)*10./orth_diff;
-          double num = ma.edge_lengths(i_dim)*ma.orthogonality(i_dim) - 1.;
-          double denom = ma.edge_lengths(i_dim) - edge_tolerance;
-          state.objective += (!skip_obj)*num*num/denom;
-        }
-        // note: the valid values for `gradient_weight` are 1., .5, and .25
-        if (gradient_weight > .3 && that_vert.glued() && i_this != i_that) {
-          bool coupled = false;
-          for (Vertex* v : {this, orig_vertex}) {
-            for (auto e : v->_elems.theirs()) {
-              coupled = coupled || (!e->glued() && e == that_vert._glued_to.get());
-            }
-          }
-          if (coupled) {
-            state.has_glued_neighbor = true;
-            that_vert._compute_state_recursive(state, .5*gradient_weight, true, orig_vertex, ignore, ignore_orig,
-                                               ignore_neighb, extra_tol);
-          }
-        }
+      for (auto& vert : elem->glued_verts()) {
+        vert._compute_state_recursive(state, 1., true, orig_vertex, ignore, ignore_orig, ignore_neighb, extra_tol);
       }
     }
   }

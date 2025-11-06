@@ -210,15 +210,10 @@ class Vertex : public Block {
   double wall_distance;
 
   private:
-  struct _Gradient_entry {
-    const Element_shape* elem;
-    int i;
-    int j;
-  };
   struct _Optimization_state {
     bool feasible = true;
     double objective = 0;
-    std::vector<_Gradient_entry> skip;
+    std::vector<Element_shape*> skip;
     double worst_ortho = 1;
     double worst_edge = 1;
     bool has_glued_neighbor = false;
@@ -460,6 +455,7 @@ class Element_shape : public Block {
   inline const Boundary_block* boundary_block() const {return _bf.get();}
   inline int boundary_face() const {return _i_bf;}
   bool glued_to_face(int i_face) const;
+  inline Sequence<Vertex&> glued_verts() {return _glued_verts.theirs().dereference();}
 
   bool deformed;
   bool for_matching;
