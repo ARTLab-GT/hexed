@@ -219,7 +219,7 @@ class Vertex : public Block {
   _Optimization_state _compute_state(bool include_neighbors = true, bool ignore = false, bool ignore_neighb = false,
                                      double extra_tol = 0.);
   // will treat the vertex `ignore` as being at its `_orig_pos`;
-  Mat<3> _unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_others) const;
+  Mat<3> _unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_others, int max_depth) const;
   void _compute_state_recursive(_Optimization_state& state, bool include_neighbors, Vertex* ignore = nullptr,
                                 bool ignore_orig = false, bool ignore_neighb = false, double extra_tol = 0.);
   static void _compute_element_state(_Optimization_state&, Element_shape*, Vertex* ignore,

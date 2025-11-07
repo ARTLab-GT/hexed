@@ -30,13 +30,16 @@ void Block::visualize(std::string format, std::string file_name, double time) co
 }
 
 void Block::visualize(std::string format, std::string file_name, next::Sequence<const Block&> blocks, double time) {
-  // construct the Visualizer
-  int block_dim = blocks.empty() ? 1 : blocks[0]._n_dim;
-  std::vector<std::string> vars;
-  auto visualizer = Visualizer::create(format, 3, block_dim, file_name, vars, time, Visualizer::block);
-  // write each block via the Visualizer
-  for (const Block& block : blocks) {
-    visualizer->write_block(block.points(), Array<double>({}));
+  #pragma omp critical
+  {
+    // construct the Visualizer
+    int block_dim = blocks.empty() ? 1 : blocks[0]._n_dim;
+    std::vector<std::string> vars;
+    auto visualizer = Visualizer::create(format, 3, block_dim, file_name, vars, time, Visualizer::block);
+    // write each block via the Visualizer
+    for (const Block& block : blocks) {
+      visualizer->write_block(block.points(), Array<double>({}));
+    }
   }
 }
 
@@ -199,14 +202,14 @@ void Vertex::_compute_state_recursive(_Optimization_state& state, bool include_n
     if (std::any_of(state.skip.begin(), state.skip.end(), [&elem](Element_shape* e){return e != elem;})) continue;
     _compute_element_state(state, elem, ignore, ignore_orig, ignore_neighb, extra_tol);
     if (include_neighbors) {
-      state.has_glued_neighbor = true;
       int nd = elem->n_dim();
       int i_this = get_index(*elem);
       for (auto& vert : elem->glued_verts()) {
+        state.has_glued_neighbor = true;
         bool dependent = true;
         for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          double diff = vert._glued_coords[i_dim] - math::row_coordinate(nd, 2, i_dim, i_this);
-          dependent = dependent && std::min(std::abs(diff), std::abs(diff - 1.)) > skip_tol;
+          double diff = std::abs(vert._glued_coords[i_dim] - math::row_coordinate(nd, 2, i_dim, i_this));
+          dependent = dependent && std::abs(diff - 1.) > skip_tol;
         }
         if (dependent) vert._compute_state_recursive(state, true, ignore, ignore_orig, ignore_neighb, extra_tol);
       }
@@ -220,7 +223,7 @@ void Vertex::_compute_element_state(_Optimization_state& state, Element_shape* e
   int nv = math::pow(2, nd);
   Array<double> pos({3, nv});
   for (int i_vert = 0; i_vert < nv; ++i_vert) {
-    pos.column(i_vert).vector() = elem->vertex(i_vert)._unwarped_point(ignore, ignore_orig, ignore_neighb);
+    pos.column(i_vert).vector() = elem->vertex(i_vert)._unwarped_point(ignore, ignore_orig, ignore_neighb, 100);
   }
   Array<double> jacobian = Array<double>::make_uniform({3, 3, nv}, 0.);
   Mat<2, 2> vertex_diff_mat;
@@ -449,7 +452,7 @@ void Vertex::Shared_value::set(double value) {
 void Vertex::Shared_value::set(double value, bool minmax, int recursion_depth) {
   _vert._shared_value = math::extreme(minmax, _vert._shared_value, value);
   if (_vert.glued()) {
-    HEXED_ASSERT(recursion_depth > 0, "Max recursion depth exceeded.")
+    HEXED_ASSERT(recursion_depth > 0, "Max recursion depth exceeded.", assert::Overflow_error)
     for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
       bool skip = false;
       for (int i_dim = 0; i_dim < _vert._glued_to->n_dim(); ++i_dim) {
@@ -477,10 +480,11 @@ Mat<3> Vertex::_point(const std::vector<int>&, Int recursion_depth) const {
 }
 
 Mat<3> Vertex::unwarped_point(bool orig) const {
-  return _unwarped_point(nullptr, orig, orig);
+  return _unwarped_point(nullptr, orig, orig, 100);
 }
 
-Mat<3> Vertex::_unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_others) const {
+Mat<3> Vertex::_unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_others, int max_depth) const {
+  HEXED_ASSERT(max_depth, "Max recursion depth exceeded.", assert::Overflow_error)
   if (!_glued_to) {
     bool ig = (this == ignore) ? ignore_given : ignore_others;
     return (ig && mobile()) ? _orig_pos : _get_pos();
@@ -496,7 +500,7 @@ Mat<3> Vertex::_unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_ot
     }
     if (!skip) {
       auto& v = _glued_to->vertex(i_vert);
-      vert_pos(i_vert, all) = v._unwarped_point(ignore, ignore_given, ignore_others).transpose();
+      vert_pos(i_vert, all) = v._unwarped_point(ignore, ignore_given, ignore_others, max_depth - 1).transpose();
     }
   }
   Mat<3> coords = Mat<3>::Zero();

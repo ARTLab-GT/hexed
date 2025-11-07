@@ -319,7 +319,7 @@ void Accessible_mesh::_fit_surface() {
     auto& elem = elems[i_elem];
     elem.snapping_problem = false;
   }
-  _offset_vertices(.05, false);
+  _offset_vertices(.01, false);
   {
     auto faces = _blocks.faces_3d();
     #pragma omp parallel for
@@ -520,7 +520,7 @@ void Accessible_mesh::_fit_surface() {
   for (auto& vert : all_verts) {
     vert.set_pos(vert.nominal_position());
   }
-  _offset_vertices(.05, false);
+  _offset_vertices(.01, false);
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
@@ -828,7 +828,7 @@ void Accessible_mesh::_fit_surface() {
     vert.record.clear();
   }
   purge();
-  _offset_vertices(.01, false);
+  _offset_vertices(.001, false);
 
   { // add another layer of extruded elements to improve mesh quality on sharp edges
     auto& elem_list = def.elements();
@@ -1025,6 +1025,10 @@ void Accessible_mesh::_fit_surface() {
   #pragma omp parallel for
   for (auto& vert : all_verts) vert.record.clear();
 
+  // snap edges to the surface (regardless of dimensionality)
+  #pragma omp parallel for
+  for (auto& block : _blocks.boundary_sides()) block.snapping_problem = false;
+  #if 1
   auto plain_snap = [this](next::Boundary_block& block) {
     block.reset();
     Array<double> interior {block.interior().reshaped({whatever, 3})};
@@ -1060,6 +1064,7 @@ void Accessible_mesh::_fit_surface() {
         block.snapping_problem = true;
       }
     }
+    #if 0
     Mat<dyn, dyn> diff_mat = b.diff_mat()(Eigen::all, Eigen::seqN(1, b.row_size - 2));
     double scale = .5 + 1.*block.element()->nominal_size()/block.scale_factor();
     for (int i_dim = 0; i_dim < block.n_dim(); ++i_dim) {
@@ -1070,16 +1075,13 @@ void Accessible_mesh::_fit_surface() {
         interp_coefs /= max_deriv;
       }
     }
+    #endif
     for (int i_point = 0; i_point < n_point; ++i_point) {
       double sect = interp_coefs[i_point] + 1.;
       interior(i_point) = line_points(0)(i_point)*(1 - sect) + line_points(1)(i_point)*sect;
     }
   };
 
-  // snap edges to the surface (regardless of dimensionality)
-  #pragma omp parallel for
-  for (auto& block : _blocks.boundary_sides()) block.snapping_problem = false;
-  #if 0
   auto edges_2d = _blocks.edges_2d();
   #pragma omp parallel for
   for (auto& edge : edges_2d) plain_snap(edge);
@@ -1109,6 +1111,7 @@ void Accessible_mesh::_fit_surface() {
           node.vector() = geom_edge.point(nearest);
         }
         if (edge->snapping_problem) edge->reset();
+        #if 0
         Mat<dyn, dyn> diff_mat = _basis.diff_mat()(Eigen::all, Eigen::seqN(1, _basis.row_size - 2));
         Array<double> deriv({3, n_node});
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
@@ -1116,11 +1119,12 @@ void Accessible_mesh::_fit_surface() {
         }
         double max_deriv = std::sqrt((deriv(0)*deriv(0) + deriv(1)*deriv(1) + deriv(2)*deriv(2)).extreme(1));
         max_deriv *= .5*edge->element()->nominal_size() + .1*edge->scale_factor();
-        double deriv_limit = .1;
+        double deriv_limit = 1.;
         if (max_deriv > deriv_limit) {
           edge->snapping_problem = true;
           interior = orig_interior + (interior - orig_interior)*deriv_limit/max_deriv;
         }
+        #endif
       } else {
         plain_snap(*edge);
       }
@@ -1150,9 +1154,7 @@ void Accessible_mesh::_fit_surface() {
   std::sort(edges_3d.begin(), edges_3d.end(), [](next::Edge* edge0, next::Edge* edge1) {
     return edge0->element()->nominal_size() > edge1->element()->nominal_size();
   });
-  for (next::Edge* edge : edges_3d) {
-    edge->reset();
-  }
+  for (next::Edge* edge : edges_3d) edge->reset();
   for (auto& face : faces_3d) face.reset();
   #endif
   ++_stopwatch["update"]["fit surface"].work_units_completed;
@@ -1179,18 +1181,6 @@ void Accessible_mesh::_fit_surface() {
       vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
     }
   }
-  #if 0
-  {
-    auto faces = _blocks.faces_3d();
-    #pragma omp parallel for
-    for (auto& f : faces) {
-      for (int i_edge = 0; i_edge < 4; ++i_edge) f.edge(i_edge).reset();
-    }
-    auto blocks = _blocks.boundary_sides();
-    #pragma omp parallel for
-    for (auto& b : blocks) b.reset();
-  }
-  #endif
   visualize("default", "fit_complete", 0.);
 }
 
@@ -1288,16 +1278,19 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     #endif
     double total_iters = 0;
     {
+      printers::info("0");
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
       #pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
         vert->init_improve();
       }
+      printers::info("1");
       #pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
         auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
         vert->compute_gradient(get_target);
       }
+      printers::info("2");
       bool done;
       while (true) {
         for (bool updated_neighbors : {false, true}) {
@@ -1320,6 +1313,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
         objective = 0;
         #pragma omp parallel for reduction(+:objective)
         for (int i_elem = 0; i_elem < def_elems.size(); ++i_elem) {
+          HEXED_ASSERT(!def_elems[i_elem].active_shape().glued(), "Active shape should never be glued.")
           objective += next::Vertex::objective(def_elems[i_elem].active_shape());
         }
         if (objective <= old_objective) {
@@ -1328,11 +1322,13 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
           for (next::Vertex* vert : mobile_verts) vert->force_continue_improve();
         }
       }
+      printers::info("3");
       #pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
         auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
         vert->init_snap(get_target);
       }
+      printers::info("4");
       for (bool updated_neighbors : {false, true}) {
         do {
           #pragma omp parallel for
@@ -1350,6 +1346,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
           }
         } while (!done);
       }
+      printers::info("5");
       _stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed += mobile_verts.size();
     }
     {
@@ -1363,6 +1360,7 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       for (auto& vert : verts) total_iters += vert.last_improve_iters();
       _stopwatch["update"]["fit surface"]["optimization"]["assessment"].work_units_completed += verts.size();
     }
+    printers::info("5");
     obj_monitor.add_sample(i_relax, objective - starting_objective);
     dist_monitor.add_sample(i_relax, total_dist);
     message = format_str(
