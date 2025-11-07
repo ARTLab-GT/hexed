@@ -430,7 +430,7 @@ Vertex::Shared_value::Shared_value(Vertex& vert) : _vert{vert} {
 
 double Vertex::Shared_value::get(int recursion_depth) const {
   if (!_vert.glued()) return _vert._shared_value; // equivalent to checking if vertex is glued
-  if (recursion_depth == 0) return 0.;
+  HEXED_ASSERT(recursion_depth > 0, "Max recursion depth exceeded.", assert::Overflow_error)
   double value = 0;
   for (int i_vert = 0; i_vert < math::pow(2, _vert._glued_to->n_dim()); ++i_vert) {
     double interp = 1.;
