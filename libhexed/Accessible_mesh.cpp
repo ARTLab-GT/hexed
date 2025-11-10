@@ -1094,11 +1094,12 @@ void Accessible_mesh::_fit_surface() {
   });
   for (next::Edge* edge : edges_3d) edge->reset();
   for (auto& face : faces_3d) face.reset();
-  for (next::Edge* edge : edges_3d) {
-    if (!edge->glued() && edge->snapped_edge >= 0) {
-      for (auto& elem : edge->dependent_elements()) {
-        HEXED_ASSERT(elem->acceptable_quality(), "starting out with quality problems")
-      }
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (!elem.active_shape().acceptable_quality()) {
+      visualize("default", "failed_mesh", 0.);
+      elem.active_shape().visualize("default", "bad_elem");
+      HEXED_THROW("Unacceptable quality before surface warping.")
     }
   }
   for (next::Edge* edge : edges_3d) {

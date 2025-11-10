@@ -979,23 +979,23 @@ bool Element_shape::acceptable_quality() const {
   Gauss_lobatto check_basis(rs);
   Mat<> weights = math::pow_outer(check_basis.node_weights(), nd);
   int np = math::pow(rs, nd);
-  Array<double> orig_pts = points().reshaped({nd, whatever});
+  Array<double> orig_pts = points().reshaped({3, whatever}).copy();
   Mat<dyn, dyn> interp_mat = basis().interpolate(check_basis.nodes());
   Mat<dyn, dyn> diff_mat = check_basis.diff_mat();
   Array<double> jacobian({nd, nd, np});
   Array<double> check_pts({np});
-  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
     check_pts.vector() = math::hypercube_matvec(interp_mat, orig_pts(i_dim).vector());
-    for (int j_dim = 0; j_dim < 3; ++j_dim) {
+    for (int j_dim = 0; j_dim < nd; ++j_dim) {
       jacobian(i_dim)(j_dim).vector() = math::dimension_matvec(diff_mat, check_pts.vector(), j_dim);
     }
   }
+  double extra_tol = 1e-8;
+  bool feasible = true;
   Array<double> extreme_spacing({2, nd});
   extreme_spacing(0) = huge;
   extreme_spacing(1) = -huge;
-  bool feasible = true;
   Mat<3> ns = nominal_shape();
-  double extra_tol = 1e-8;
   for (int i_point = 0; i_point < np; ++i_point) {
     Mat<3, 3> point_jac = Mat<3, 3>::Identity();
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
