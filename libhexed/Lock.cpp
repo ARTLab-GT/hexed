@@ -58,4 +58,14 @@ std::optional<Lock::Set> Lock::test() {
   return set;
 }
 
+bool Lock::is_set() {
+  #if HEXED_THREADED
+  if (omp_test_nest_lock(&_l)) {
+    omp_unset_nest_lock(&_l);
+    return true;
+  }
+  #endif
+  return false;
+}
+
 }

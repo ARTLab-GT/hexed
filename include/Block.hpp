@@ -269,7 +269,6 @@ class Boundary_block : public Block {
   //! \brief Obtains all the `Element_shape`s whose `point()` depends on `this`
   virtual std::vector<Element_shape*> dependent_elements() = 0;
   virtual std::vector<Vertex*> vertices() = 0;
-  double scale_factor();
 
   /*! \brief Transforms node coordinates from the space of the `Block` to its `Element_shape`
    * \details That is, `element()->point(elemement_coords(coords))`
@@ -453,6 +452,7 @@ class Element_shape : public Block {
   inline int boundary_face() const {return _i_bf;}
   bool glued_to_face(int i_face) const;
   inline Sequence<Vertex&> glued_verts() {return _glued_verts.theirs().dereference();}
+  bool acceptable_quality() const;
 
   bool deformed;
   bool for_matching;

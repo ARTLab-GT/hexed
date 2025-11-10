@@ -7,6 +7,10 @@
 
 namespace hexed::next {
 
+const double ortho_tolerance = .03;
+const double edge_ratio_tolerance = 0.1;
+const double edge_tolerance = 1e-4;
+
 int vstride(int n_dim, int i_dim) {return math::pow(2, n_dim - 1 - i_dim);}
 
 Array<double> Block::points() const {
@@ -182,10 +186,6 @@ bool Vertex::mobile() const {
   return has_unglued && !has_cartesian && !glued();
 }
 
-const double ortho_tolerance = .03;
-const double edge_ratio_tolerance = 0.1;
-const double edge_tolerance = 1e-4;
-
 Vertex::_Optimization_state Vertex::_compute_state(bool include_neighbors, bool ignore, bool ignore_neighb,
                                                    double extra_tol) {
   _Optimization_state state;
@@ -233,7 +233,7 @@ void Vertex::_compute_element_state(_Optimization_state& state, Element_shape* e
       jacobian(i_dim)(j_dim).vector() = math::dimension_matvec(vertex_diff_mat, pos(i_dim).vector(), j_dim);
     }
   }
-  int rs = elem->row_size() + 1;
+  int rs = elem->row_size() + 2;
   Gauss_lobatto check_basis(rs);
   Mat<> weights = math::pow_outer(check_basis.node_weights(), nd);
   int np = math::pow(rs, nd);
@@ -533,29 +533,6 @@ Boundary_block::Boundary_block(int n_dim, const Basis& b)
 , _basis{&b}
 , _elem(this)
 {}
-
-double Boundary_block::scale_factor() {
-  HEXED_ASSERT(_elem, "`Boundary_block` has no element.")
-  int n_vert = math::pow(2, _elem->n_dim());
-  Mat<3, dyn> verts(3, n_vert);
-  for (int i_vert = 0; i_vert < n_vert; ++i_vert) {
-    verts(all, i_vert) = _elem->vertex(i_vert).point({});
-  }
-  Sequence<Mat<3>> vert_seq {
-    [&](Int i_vert)->Mat<3> {return verts(all, i_vert);},
-    [n_vert]()->Int {return n_vert;},
-  };
-  std::vector<Vertex*> bound_verts = vertices();
-  double worst = huge;
-  for (Vertex* vert : bound_verts) {
-    int i_vert = vert->get_index(*_elem);
-    Mesh_assessment ma(vert_seq, i_vert);
-    for (int i_dim = 0; i_dim < _elem->n_dim(); ++i_dim) {
-      worst = std::min(worst, ma.edge_lengths(i_dim)*ma.orthogonality(i_dim));
-    }
-  }
-  return worst;
-}
 
 Mat<3> Edge::_point(const std::vector<int>& coords, Int recursion_depth) const {
   int coord = coords[0];
@@ -994,6 +971,49 @@ bool Element_shape::glued_to_face(int i_face) const {
   if (!glued()) return false;
   double scale = _glued_corners[1][i_face/2] - _glued_corners[0][i_face/2];
   return std::abs(_glued_corners[i_face%2][i_face/2] - i_face%2) < 1e-8*scale;
+}
+
+bool Element_shape::acceptable_quality() const {
+  int nd = n_dim();
+  int rs = row_size() + 2;
+  Gauss_lobatto check_basis(rs);
+  Mat<> weights = math::pow_outer(check_basis.node_weights(), nd);
+  int np = math::pow(rs, nd);
+  Array<double> orig_pts = points().reshaped({nd, whatever});
+  Mat<dyn, dyn> interp_mat = basis().interpolate(check_basis.nodes());
+  Mat<dyn, dyn> diff_mat = check_basis.diff_mat();
+  Array<double> jacobian({nd, nd, np});
+  Array<double> check_pts({np});
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    check_pts.vector() = math::hypercube_matvec(interp_mat, orig_pts(i_dim).vector());
+    for (int j_dim = 0; j_dim < 3; ++j_dim) {
+      jacobian(i_dim)(j_dim).vector() = math::dimension_matvec(diff_mat, check_pts.vector(), j_dim);
+    }
+  }
+  Array<double> extreme_spacing({2, nd});
+  extreme_spacing(0) = huge;
+  extreme_spacing(1) = -huge;
+  bool feasible = true;
+  Mat<3> ns = nominal_shape();
+  double extra_tol = 1e-8;
+  for (int i_point = 0; i_point < np; ++i_point) {
+    Mat<3, 3> point_jac = Mat<3, 3>::Identity();
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      for (int j_dim = 0; j_dim < nd; ++j_dim) point_jac(i_dim, j_dim) = jacobian(i_dim)(j_dim)[i_point];
+    }
+    for (int i_dim = 0; i_dim < nd; ++i_dim) {
+      Mat<3> nrml = point_jac(all, (i_dim + 1)%3).cross(point_jac(all, (i_dim + 2)%3)).normalized();
+      double spacing = point_jac(all, i_dim).dot(nrml);
+      double orth = spacing/point_jac(all, i_dim).norm();
+      spacing /= ns[i_dim];
+      feasible = feasible && orth > ortho_tolerance + extra_tol && spacing > edge_tolerance + extra_tol;
+      for (int i : {0, 1}) extreme_spacing(i)[i_dim] = math::extreme(i, extreme_spacing(i)[i_dim], spacing);
+    }
+  }
+  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+    feasible = feasible && extreme_spacing(0)[i_dim]/extreme_spacing(1)[i_dim] > edge_ratio_tolerance;
+  }
+  return feasible;
 }
 
 const int Mesh_blocks::no_face = -1;
