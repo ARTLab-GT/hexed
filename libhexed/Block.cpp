@@ -973,7 +973,7 @@ bool Element_shape::glued_to_face(int i_face) const {
   return std::abs(_glued_corners[i_face%2][i_face/2] - i_face%2) < 1e-8*scale;
 }
 
-bool Element_shape::acceptable_quality() const {
+bool Element_shape::acceptable_quality(bool only_det) const {
   int nd = n_dim();
   int rs = row_size() + 2;
   Gauss_lobatto check_basis(rs);
@@ -1001,16 +1001,20 @@ bool Element_shape::acceptable_quality() const {
     for (int i_dim = 0; i_dim < nd; ++i_dim) {
       for (int j_dim = 0; j_dim < nd; ++j_dim) point_jac(i_dim, j_dim) = jacobian(i_dim)(j_dim)[i_point];
     }
-    for (int i_dim = 0; i_dim < nd; ++i_dim) {
-      Mat<3> nrml = point_jac(all, (i_dim + 1)%3).cross(point_jac(all, (i_dim + 2)%3)).normalized();
-      double spacing = point_jac(all, i_dim).dot(nrml);
-      double orth = spacing/point_jac(all, i_dim).norm();
-      spacing /= ns[i_dim];
-      feasible = feasible && orth > ortho_tolerance + extra_tol && spacing > edge_tolerance + extra_tol;
-      for (int i : {0, 1}) extreme_spacing(i)[i_dim] = math::extreme(i, extreme_spacing(i)[i_dim], spacing);
+    if (only_det) {
+      feasible = feasible && point_jac.determinant() > extra_tol;
+    } else {
+      for (int i_dim = 0; i_dim < nd; ++i_dim) {
+        Mat<3> nrml = point_jac(all, (i_dim + 1)%3).cross(point_jac(all, (i_dim + 2)%3)).normalized();
+        double spacing = point_jac(all, i_dim).dot(nrml);
+        double orth = spacing/point_jac(all, i_dim).norm();
+        spacing /= ns[i_dim];
+        feasible = feasible && orth > ortho_tolerance + extra_tol && spacing > edge_tolerance + extra_tol;
+        for (int i : {0, 1}) extreme_spacing(i)[i_dim] = math::extreme(i, extreme_spacing(i)[i_dim], spacing);
+      }
     }
   }
-  for (int i_dim = 0; i_dim < nd; ++i_dim) {
+  if (!only_det) for (int i_dim = 0; i_dim < nd; ++i_dim) {
     feasible = feasible && extreme_spacing(0)[i_dim]/extreme_spacing(1)[i_dim] > edge_ratio_tolerance;
   }
   return feasible;

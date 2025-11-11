@@ -452,7 +452,7 @@ class Element_shape : public Block {
   inline int boundary_face() const {return _i_bf;}
   bool glued_to_face(int i_face) const;
   inline Sequence<Vertex&> glued_verts() {return _glued_verts.theirs().dereference();}
-  bool acceptable_quality() const;
+  bool acceptable_quality(bool only_determinant = false) const;
 
   bool deformed;
   bool for_matching;

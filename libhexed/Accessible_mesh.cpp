@@ -1028,7 +1028,6 @@ void Accessible_mesh::_fit_surface() {
   // snap edges to the surface (regardless of dimensionality)
   #pragma omp parallel for
   for (auto& block : _blocks.boundary_sides()) block.snapping_problem = false;
-  #if 1
   auto plain_snap = [this](next::Boundary_block& block) {
     block.reset();
     Array<double> interior {block.interior().reshaped({whatever, 3})};
@@ -1064,15 +1063,6 @@ void Accessible_mesh::_fit_surface() {
         block.snapping_problem = true;
       }
     }
-    Mat<dyn, dyn> diff_mat = b.diff_mat()(Eigen::all, Eigen::seqN(1, b.row_size - 2));
-    for (int i_dim = 0; i_dim < block.n_dim(); ++i_dim) {
-      Mat<> deriv = math::dimension_matvec(diff_mat, interp_coefs.vector(), i_dim);
-      double max_deriv = deriv.cwiseAbs().maxCoeff();
-      if (max_deriv > 1) {
-        block.snapping_problem = true;
-        interp_coefs /= max_deriv;
-      }
-    }
     for (int i_point = 0; i_point < n_point; ++i_point) {
       double sect = interp_coefs[i_point] + 1.;
       interior(i_point) = line_points(0)(i_point)*(1 - sect) + line_points(1)(i_point)*sect;
@@ -1094,89 +1084,63 @@ void Accessible_mesh::_fit_surface() {
   });
   for (next::Edge* edge : edges_3d) edge->reset();
   for (auto& face : faces_3d) face.reset();
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    if (!elem.active_shape().acceptable_quality()) {
-      visualize("default", "failed_mesh", 0.);
-      elem.active_shape().visualize("default", "bad_elem");
-      HEXED_THROW("Unacceptable quality before surface warping.")
+  #define CHECK_QUALITY \
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) { \
+      auto& elem = elems[i_elem]; \
+      if (!elem.active_shape().acceptable_quality()) { \
+        visualize("default", "failed_mesh", 0.); \
+        elem.active_shape().visualize("default", "bad_elem"); \
+        HEXED_THROW("Unacceptable quality before surface warping.") \
+      } \
     }
-  }
+  CHECK_QUALITY
   for (next::Edge* edge : edges_3d) {
-    if (!edge->glued() && edge->snapped_edge >= 0) {
+    if (!edge->glued()) {
       edge->reset();
       edge->snapping_problem = false;
-      HEXED_ASSERT(edge->snapped_edge < edges.size(), "clearly erroneous `snapped_edge` value")
-      auto& geom_edge = edges[edge->snapped_edge];
-      Array<double> interior = edge->interior();
-      Array<double> orig_interior = interior.copy();
-      int n_node = interior.shape()[0];
-      for (int i_node = 0; i_node < n_node; ++i_node) {
-        auto node = interior(i_node);
-        auto nearest = geom_edge.arg_nearest_point(node.vector());
-        node.vector() = geom_edge.point(nearest);
+      if (edge->snapped_edge >= 0) {
+        HEXED_ASSERT(edge->snapped_edge < edges.size(), "clearly erroneous `snapped_edge` value")
+        auto& geom_edge = edges[edge->snapped_edge];
+        Array<double> interior = edge->interior();
+        Array<double> orig_interior = interior.copy();
+        int n_node = interior.shape()[0];
+        for (int i_node = 0; i_node < n_node; ++i_node) {
+          auto node = interior(i_node);
+          auto nearest = geom_edge.arg_nearest_point(node.vector());
+          node.vector() = geom_edge.point(nearest);
+        }
+      } else {
+        plain_snap(*edge);
       }
       if (!edge->snapping_problem) {
-        std::vector<next::Element_shape*> dep_elems = edge->dependent_elements();
-        std::sort(dep_elems.begin(), dep_elems.end());
-        for (auto elem : dep_elems) {
-          Lock::Set s(elem->lock);
+        for (auto elem : edge->dependent_elements()) {
           auto face = elem->boundary_face_3d();
           HEXED_ASSERT(face, "Dependent element of an edge does not have a boundary face.")
           face->reset();
-          if (!elem->acceptable_quality()) {
-            edge->snapping_problem = true;
-            break;
-          }
+          if (!elem->acceptable_quality()) edge->snapping_problem = true;
         }
       }
-      if (edge->snapping_problem) edge->reset();
-      #if 0
-      Mat<dyn, dyn> diff_mat = _basis.diff_mat()(Eigen::all, Eigen::seqN(1, _basis.row_size - 2));
-      Array<double> deriv({3, n_node});
-      for (int i_dim = 0; i_dim < 3; ++i_dim) {
-        deriv(i_dim).vector() = diff_mat*interior.column(i_dim).vector();
+      if (edge->snapping_problem) {
+        edge->reset();
+        for (auto elem : edge->dependent_elements()) elem->boundary_face_3d()->reset();
       }
-      double max_deriv = std::sqrt((deriv(0)*deriv(0) + deriv(1)*deriv(1) + deriv(2)*deriv(2)).extreme(1));
-      max_deriv *= .5*edge->element()->nominal_size() + .1*edge->scale_factor();
-      double deriv_limit = 1.;
-      if (max_deriv > deriv_limit) {
-        edge->snapping_problem = true;
-        interior = orig_interior + (interior - orig_interior)*deriv_limit/max_deriv;
-      }
-      #endif
     }
   }
-  for (next::Edge* edge : edges_3d) {
-    if (!edge->glued() && (edge->snapped_edge < 0 || edge->snapping_problem)) plain_snap(*edge);
-  }
+  CHECK_QUALITY
   // snap face interiors (if 3D) to surface
   #pragma omp parallel for
   for (auto& face : faces_3d) {
     plain_snap(face);
+    if (!face.element()->acceptable_quality()) {
+      face.snapping_problem = true;
+      face.reset();
+    }
     for (int i_edge = 0; i_edge < 4; ++i_edge) {
       next::Edge* edge = &face.edge(i_edge);
       if (edge->glued()) edge = edge->glued_to();
       face.snapping_problem = face.snapping_problem || edge->snapping_problem;
     }
   }
-  #else
-  auto edges_2d = _blocks.edges_2d();
-  #pragma omp parallel for
-  for (auto& edge : edges_2d) edge.reset();
-  auto faces_3d = _blocks.faces_3d();
-  std::vector<next::Edge*> edges_3d;
-  for (auto& face : faces_3d) {
-    for (int i_edge = 0; i_edge < 4; ++i_edge) {
-      if (!face.edge(i_edge).glued()) edges_3d.push_back(&face.edge(i_edge));
-    }
-  }
-  std::sort(edges_3d.begin(), edges_3d.end(), [](next::Edge* edge0, next::Edge* edge1) {
-    return edge0->element()->nominal_size() > edge1->element()->nominal_size();
-  });
-  for (next::Edge* edge : edges_3d) edge->reset();
-  for (auto& face : faces_3d) face.reset();
-  #endif
   ++_stopwatch["update"]["fit surface"].work_units_completed;
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1199,6 +1163,14 @@ void Accessible_mesh::_fit_surface() {
     for (auto& vert : new_all_verts) {
       vert.remove_size_constraints();
       vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
+    }
+  }
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    if (!elem.active_shape().acceptable_quality(true)) {
+      visualize("default", "failed_mesh", 0.);
+      elem.active_shape().visualize("default", "bad_elem");
+      HEXED_THROW("Unacceptable quality after surface warping.")
     }
   }
   visualize("default", "fit_complete", 0.);
