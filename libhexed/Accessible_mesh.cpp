@@ -1059,7 +1059,13 @@ void Accessible_mesh::_fit_surface() {
 
   auto edges_2d = _blocks.edges_2d();
   #pragma omp parallel for
-  for (auto& edge : edges_2d) plain_snap(edge);
+  for (auto& edge : edges_2d) {
+    plain_snap(edge);
+    if (!edge.element()->acceptable_quality()) {
+      edge.reset();
+      edge.snapping_problem = true;
+    }
+  }
   auto faces_3d = _blocks.faces_3d();
   std::vector<next::Edge*> edges_3d;
   for (auto& face : faces_3d) {
@@ -1258,19 +1264,16 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
     #endif
     double total_iters = 0;
     {
-      printers::info("0");
       Stopwatch_tree::Starter sw_relax(_stopwatch["update"]["fit surface"]["optimization"]["relaxation"]);
       #pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
         vert->init_improve();
       }
-      printers::info("1");
       #pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
         auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
         vert->compute_gradient(get_target);
       }
-      printers::info("2");
       bool done;
       while (true) {
         for (bool updated_neighbors : {false, true}) {
@@ -1302,13 +1305,11 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
           for (next::Vertex* vert : mobile_verts) vert->force_continue_improve();
         }
       }
-      printers::info("3");
       #pragma omp parallel for
       for (next::Vertex* vert : mobile_verts) {
         auto get_target = [vert, this](Mat<3> p)->Mat<3>{return _get_snapping_target(*vert, p);};
         vert->init_snap(get_target);
       }
-      printers::info("4");
       for (bool updated_neighbors : {false, true}) {
         do {
           #pragma omp parallel for
@@ -1326,7 +1327,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
           }
         } while (!done);
       }
-      printers::info("5");
       _stopwatch["update"]["fit surface"]["optimization"]["relaxation"].work_units_completed += mobile_verts.size();
     }
     {
@@ -1340,7 +1340,6 @@ void Accessible_mesh::_optimize(int min_pow, int max_pow, bool check_snapping) {
       for (auto& vert : verts) total_iters += vert.last_improve_iters();
       _stopwatch["update"]["fit surface"]["optimization"]["assessment"].work_units_completed += verts.size();
     }
-    printers::info("5");
     obj_monitor.add_sample(i_relax, objective - starting_objective);
     dist_monitor.add_sample(i_relax, total_dist);
     message = format_str(
