@@ -351,6 +351,7 @@ std::vector<Tree*> Tree::find_neighbors(Array<int> direction) {
       bias[i_dim] = result.direction[i_dim] == 0 ? -1 : result.direction[i_dim] < 0;
     }
     result.neighbor->_add_extremal_levels(neighbs, result.ref_level, result.coords, bias);
+    if (neighbs.empty()) neighbs.push_back(result.neighbor); // if neighbor is of lower ref level, add the one neighbor
   }
   return neighbs;
 }

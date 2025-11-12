@@ -91,58 +91,6 @@ void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
       }
     }
     if (is_new[0] != is_new[1] && has_elements) {
-      #if 0
-      bool new_elem = is_new[1];
-      if (strategy) {
-        auto& shape = con.face(!new_elem).element()->active_shape();
-        if (shape.boundary_face() != next::Mesh_blocks::no_face) {
-          for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
-            int row_coord = math::row_coordinate(nd, 2, dir.i_dim[!new_elem], i_vert);
-            auto& vert = shape.vertex(i_vert);
-            if (row_coord == dir.face_sign[!new_elem]) {
-              int opposite = i_vert - math::sign(row_coord)*math::pow(2, nd - 1 - dir.i_dim[!new_elem]);
-              vert.offset += .5*(shape.vertex(opposite).unwarped_point() - vert.unwarped_point())/vert.nominal_size();
-            }
-          }
-        }
-      } else {
-        // compute the positions of all the vertices on the face
-        auto i_verts = vertex_inds(nd, dir)[0];
-        Mat<3, dyn> vert_pos(3, nv);
-        std::vector<next::Vertex*> con_verts(nv);
-        for (int i_vert = 0; i_vert < nv; ++i_vert) {
-          con_verts[i_vert] = &con.face(0).element()->active_shape().vertex(i_verts[i_vert]);
-          vert_pos(all, i_vert) = con_verts[i_vert]->unwarped_point();
-        }
-        for (int i_vert = 0; i_vert < nv; ++i_vert) {
-          // compute the face normal
-          Mat<3, 2> edges;
-          edges(all, 1).setUnit(2);
-          for (int i_dim = 0; i_dim < nd - 1; ++i_dim) {
-            int stride = math::pow(2, nd - 2 - i_dim);
-            int start = i_vert - i_vert/stride%2*stride;
-            edges(all, i_dim) = vert_pos(all, start + stride) - vert_pos(all, start);
-          }
-          Mat<3> nrml = edges(all, 0).cross(edges(all, 1)).normalized()
-                        *math::sign(dir.face_sign[0])*math::sign(new_elem)*math::sign(dir.i_dim[0] == 1);
-          HEXED_ASSERT(std::abs(nrml.norm() - 1.) < 1e-6, "normal magnitude is 0")
-          // if this normal is in the opposite direction of the current vertex offset,
-          // orthogonalize it against the current offset
-          double dot = nrml.dot(con_verts[i_vert]->offset);
-          Mat<3> diff = nrml;
-          if (dot < 0) {
-            double norm_sq = con_verts[i_vert]->offset.squaredNorm();
-            if (norm_sq > .1) { // `offset` should be 0 or >= 1
-              diff -= con_verts[i_vert]->offset*dot/norm_sq;
-              diff /= diff.dot(nrml);
-            }
-          }
-          // make sure that the vertex offset dot `nrml` will be >= 1
-          con_verts[i_vert]->offset += std::max(0., 1 - dot)*diff;
-          con_verts[i_vert]->dijkstra_dist += math::pow(10, dir.i_dim[new_elem]);
-        }
-      }
-      #else
       auto i_verts = vertex_inds(nd, dir)[0];
       for (int i_vert = 0; i_vert < nv; ++i_vert) {
         auto& vert = con.face(0).element()->active_shape().vertex(i_verts[i_vert]);
@@ -175,7 +123,6 @@ void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
           }
         }
       }
-      #endif
     }
   }
   #pragma omp parallel for
@@ -2145,7 +2092,7 @@ void Accessible_mesh::delete_bad_extrusions() {
   }
   do {
     changed = false;
-    #pragma omp parallel for reduction(||:changed)
+    //#pragma omp parallel for reduction(||:changed)
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
       int record;
@@ -2156,8 +2103,8 @@ void Accessible_mesh::delete_bad_extrusions() {
         for (int i_face = 0; i_face < 2*nd; ++i_face) {
           // if any hanging-node face is partially covered by fine elements, delete the fine elements
           auto neighbors = elem.tree->find_neighbors(compute_direction(nd, i_face));
-          bool all_exist = std::all_of(neighbors.begin(), neighbors.end(), exists);
-          exposed[i_face] = !all_exist;
+          bool all_exist = neighbors.size() && std::all_of(neighbors.begin(), neighbors.end(), exists);
+          exposed[i_face] = !all_exist && elem.tree->find_neighbor(compute_direction(nd, i_face));
           if (neighbors.size() > 1) {
             if (std::any_of(neighbors.begin(), neighbors.end(), exists) && !all_exist) {
               changed = true;
