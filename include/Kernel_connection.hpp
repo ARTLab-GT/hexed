@@ -39,6 +39,7 @@ class Connection_direction {
 bool operator==(Connection_direction dir0, Connection_direction dir1);
 //! \relates Connection_direction
 std::string to_string(Connection_direction);
+std::ostream& operator<<(std::ostream&, Connection_direction);
 
 struct Hard_kernel_connection {
   Connection_direction direction;

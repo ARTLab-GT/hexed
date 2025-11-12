@@ -373,6 +373,7 @@ void Solver::calc_jacobian() {
           }
           message += "\n";
         }
+        elements[i_elem].shape().visualize("default", "bad_element");
         HEXED_THROW(message)
       }
     }

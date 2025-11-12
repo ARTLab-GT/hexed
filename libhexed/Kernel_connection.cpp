@@ -11,4 +11,6 @@ std::string to_string(Connection_direction dir) {
                     dir.i_dim[0], dir.i_dim[1], int(dir.face_sign[0]), int(dir.face_sign[1]), dir.rotate);
 }
 
+std::ostream& operator<<(std::ostream& stream, Connection_direction dir) {return stream << to_string(dir);}
+
 }

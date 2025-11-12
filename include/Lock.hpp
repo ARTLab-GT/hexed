@@ -24,6 +24,9 @@ namespace hexed {
  *   // only one thread at a time can execute any statements here
  * } // lock is released because `s` is destroyed
  * ~~~
+ * \warning The copy constructor and assignment operator (`Lock(const Lock&)` and `Lock::operator=(const Lock&)`)
+ * are not thread-safe!
+ * You may not copy a `Lock` that is currently owned by another thread.
  */
 class Lock {
   #if HEXED_THREADED
@@ -43,12 +46,15 @@ class Lock {
     Lock* _lock;
   };
   Lock();
-  Lock(const Lock&);
-  void operator=(const Lock&);
+  Lock(const Lock&); //!< \todo make this thread safe!
+  void operator=(const Lock&); //!< \todo make this thread safe!
   ~Lock();
   //! \brief If the lock is available, set it and return a `Set` object. Otherwise, return empty `std::optional`.
   //! \note Doesn't block if the lock isn't available.
   std::optional<Set> test();
+  //! \brief Returns `true` if the lock is currently set, but leaves it in the same state.
+  //! \details Effectively equivalent to `bool set; {set = lock.test().has_value();}`.
+  bool is_set();
 };
 
 }

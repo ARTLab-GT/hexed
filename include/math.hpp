@@ -19,7 +19,7 @@ struct Tolerance {
  * Can return `constexpr`, which `std::pow` is not allowed to do according to the standard
  * (although the GCC implementation can anyway).
  */
-template<typename number_t>
+template <typename number_t>
 constexpr number_t pow(number_t base, int exponent) {
   number_t result = 1;
   for (int i = 0; i < exponent; ++i) result *= base;
@@ -37,6 +37,14 @@ constexpr Int log(Int base, Int arg) {
   int result = 0;
   for (int compare = 1; compare < arg; compare *= base) ++result;
   return result;
+}
+
+//! \brief Modulo operator
+//! \details Similar to the remainder operator (i%j) but returns a nonnegative result even when `i` is negative.
+template <typename T>
+constexpr T mod(T i, T j) {
+  int remainder = i%j;
+  return remainder + (remainder < 0)*j;
 }
 
 template <typename T>
@@ -201,22 +209,32 @@ inline int stretched_ind(int n_dim, int ind, std::array<bool, 2> stretch) {
   return stretched;
 }
 
+#define INTERP_BODY \
+  int stride = pow(2, n_dim); \
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) { \
+    stride /= 2; \
+    for (int i = 0; i < stride; ++i) { \
+      values(i) += coords(i_dim)*(values(i + stride) - values(i)); \
+    } \
+  } \
+  return values(0); \
+
 /*! \brief \f$n\f$-linear interpolation of `values`.
  * \details ND generalization of [bilinear interpolation](https://en.wikipedia.org/wiki/Bilinear_interpolation).
  * \param values Values to interpolate. Assumed to be at corners of the unit hypercube.
  * \param coords Coordinates to interpolate to.
  */
-template <int n_dim>
-double interp(Mat<pow(2, n_dim)> values, Mat<n_dim> coords) {
-  int stride = pow(2, n_dim);
-  for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-    stride /= 2;
-    for (int i = 0; i < stride; ++i) {
-      values(i) += coords(i_dim)*(values(i + stride) - values(i));
-    }
-  }
-  return values(0);
+template<int n_dim> double interp(Mat<pow(2, n_dim)> values, Mat<n_dim> coords) {INTERP_BODY}
+
+//! \overload
+inline double interp(Mat<> values, Mat<> coords) {
+  int n_dim = coords.size();
+  #ifdef DEBUG
+  HEXED_ASSERT(values.size() == math::pow(2, n_dim), "wrong number of values")
+  #endif
+  INTERP_BODY
 }
+#undef INTERP_BODY
 
 //! \brief Finds the nearest point to `target` on the line segment defined by `endpoints`.
 //! \details Works for 2D or 3D.

@@ -104,4 +104,11 @@ TEST_CASE("vertex_inds") {
       REQUIRE(inds[0][1] == 2); REQUIRE(inds[1][1] == 1);
     }
   }
+
+  SECTION("rotate") {
+    REQUIRE_THAT(hexed::face_vertex_inds(3, {{0, 0}, {1, 0}, 1}),
+                 Catch::Matchers::RangeEquals(std::vector<int>{1, 3, 0, 2}));
+    REQUIRE_THAT(hexed::face_vertex_inds(3, {{0, 0}, {1, 0}, -1}),
+                 Catch::Matchers::RangeEquals(std::vector<int>{2, 0, 3, 1}));
+  }
 }

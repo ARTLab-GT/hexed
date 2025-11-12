@@ -109,7 +109,7 @@ int Element::wall_dimension() {
 }
 
 int Element::_get_i_bf() {
-  HEXED_ASSERT(_fake_shape, "no fake shape")
+  HEXED_ASSERT(_fake_shape.use_count(), "no fake shape")
   return _fake_shape->boundary_face();
 }
 
@@ -123,6 +123,7 @@ bool Element::has_wall() {
 bool Element::is_sharp(int i_dim) {
   if (!has_wall()) return false;
   if (i_dim == wall_dimension()) return false;
+  HEXED_ASSERT(_fake_shape.use_count(), "no fake shape")
   int j_dim = i_dim - (i_dim > wall_dimension());
   auto f = _fake_shape->boundary_face_3d();
   if (f) {
@@ -234,7 +235,8 @@ void Element::_set_glued_pos() {
 }
 
 void Element::split_shape(Element& split_from, double at, int from_face) {
-  HEXED_ASSERT(split_from._fake_shape, "Can only create a split shape from an element that already has a fake shape.");
+  HEXED_ASSERT(split_from._fake_shape.use_count(),
+               "Can only create a split shape from an element that already has a fake shape.");
   HEXED_ASSERT(_shape, "Must `create_shape` before `split_shape`.");
   _fake_shape = split_from._fake_shape;
   auto corners = split_from.shape().glued_corners();

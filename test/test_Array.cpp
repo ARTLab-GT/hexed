@@ -164,6 +164,16 @@ TEST_CASE("Array") {
     REQUIRE_THAT(arr0.extreme(1, arr1), Catch::Matchers::RangeEquals(std::vector<int>{2, -1, 4}));
     REQUIRE(arr0.extreme(0) == -2);
     REQUIRE(arr0.extreme(1) == 4);
+    REQUIRE(!arr0.equal(arr1));
+    REQUIRE(!arr0.equal(hexed::Array<int>::make(1, -2, 4, 0)));
+    REQUIRE(!arr0.equal(hexed::Array<int>::make(1, -2)));
+    REQUIRE(arr0.equal(hexed::Array<int>::make(1, -2, 4)));
+    REQUIRE(arr0.equal(arr0));
+    hexed::Array<int> arr2({1, 3});
+    arr2(0) = arr0;
+    REQUIRE(!arr2.equal(arr0));
+    REQUIRE(!arr0.equal(arr2));
+    REQUIRE(hexed::Array<long int>::make(1, -2, 4).equal(arr0));
   }
 
   SECTION("entrywise") {

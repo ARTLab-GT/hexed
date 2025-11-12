@@ -23,7 +23,7 @@ namespace hexed {
  */
 template <typename T, typename U>
 class Reciprocal_ptr : public mutual::Single<T, U> {
-public:
+  public:
   //! \brief constructs a `Reciprocal_ptr` and sets its `mine` to `data` (which can be null)
   Reciprocal_ptr(T* data) : mine(data) {}
   operator bool() const {return get() != nullptr;} //!< \brief returns `true` iff `this` is not null
@@ -60,7 +60,7 @@ public:
    */
   Mortal_ptr<T> mine;
 
-private:
+  private:
   T* _mine() override {return mine.get();}
   const T* _mine() const override {return mine.get();}
 };
@@ -107,7 +107,7 @@ class Reciprocal_list : public mutual::Multiple<T, U> {
   //! \see `Reciprocal_ptr::mine`
   Mortal_ptr<T> mine;
 
-private:
+  private:
   T* _mine() override {return mine.get();}
   const T* _mine() const override {return mine.get();}
 };

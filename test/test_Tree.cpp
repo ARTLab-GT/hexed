@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Tree.hpp>
+#include <hexed/vertex_inds.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Tree") {
@@ -124,7 +125,7 @@ TEST_CASE("Tree") {
     REQUIRE(uc.size() == 2);
     REQUIRE_THAT(child->children(),
                  Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{uc[0], uc[1], uc[0], uc[1]}));
-    REQUIRE_THAT(ref_children, Catch::Matchers::RangeEquals(uc));
+    REQUIRE_THAT(ref_children, Catch::Matchers::RangeEquals(child->children()));
     for (int i_child = 0; i_child < 2; ++i_child) {
       REQUIRE(uc[i_child]->parent() == child);
       REQUIRE(uc[i_child]->refinement_level() == 1);
@@ -191,10 +192,11 @@ TEST_CASE("Tree") {
       // note: uc[1]->unique_children() no longer valid
       REQUIRE(uc[1]->unique_children().size() == 4);
       auto new_children = uc[1]->unique_children();
+      // note that `old_children` are unique and `ref_children` are not
       REQUIRE(new_children[0] == old_children[0]);
       REQUIRE(new_children[2] == old_children[1]);
       REQUIRE(new_children[1] == ref_children[0]);
-      REQUIRE(new_children[3] == ref_children[1]);
+      REQUIRE(new_children[3] == ref_children[2]);
       REQUIRE_THAT(new_children[1]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{2, 3}));
       REQUIRE_THAT(new_children[3]->anisotropic_refinement_level(),
                    Catch::Matchers::RangeEquals(std::vector<int>{2, 3}));
@@ -268,6 +270,7 @@ TEST_CASE("Tree") {
     REQUIRE(uc[0]->unique_children()[0]->find_neighbor(hexed::Array<int>::make(1, 0, 1)) == uc[3]);
     REQUIRE_THAT(uc[0]->unique_children()[0]->find_neighbors(hexed::Array<int>::make(1, 0, 1)),
                  Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{uc[3]}));
+    // test aniso ref level collapsing
     for (int i = 1; i < 4; ++i) uc[i]->refine(1);
     uc = tree.unique_children();
     REQUIRE(uc.size() == 8);
@@ -356,7 +359,7 @@ TEST_CASE("Tree") {
     REQUIRE_THAT(graft0->children()[2]->find_neighbors(1),
                  Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{&tree}));
     REQUIRE(graft0->children()[3]->find_neighbor(1) == &tree);
-    REQUIRE(tree.find_neighbor(2) == graft0->children()[3]);
+    REQUIRE(tree.find_neighbor(2) == graft0->children()[2]);
     REQUIRE_THAT(tree.find_neighbors(2),
                  Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[2], graft0->children()[3]}));
     for (hexed::Tree::Connection_neighbors cn : {
@@ -395,7 +398,7 @@ TEST_CASE("Tree") {
     REQUIRE_THAT(cn.trees[1], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.children()[2]->unique_children()[0], tree.children()[2]->unique_children()[0]}));
     REQUIRE(cn.direction == hexed::Connection_direction{{0, 0}, {1, 0}});
     REQUIRE(graft0->children()[2]->unique_children()[1]->find_neighbor(1) ==
-            tree.children()[2]->unique_children()[1]);
+            tree.children()[2]->unique_children()[0]);
     REQUIRE_THAT(graft0->children()[2]->unique_children()[1]->find_neighbors(1),
                  Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
                    tree.children()[2]->unique_children()[0], tree.children()[2]->unique_children()[1],
@@ -410,7 +413,7 @@ TEST_CASE("Tree") {
       REQUIRE(con.direction == hexed::Connection_direction{{0, 1}, {1, 0}});
     }
     REQUIRE(graft0->children()[3]->unique_children()[1]->find_neighbor(1) ==
-            tree.children()[0]->unique_children()[1]);
+            tree.children()[0]->unique_children()[0]);
     REQUIRE(tree.children()[0]->unique_children()[1]->find_neighbor(2) ==
             graft0->children()[3]->unique_children()[1]);
     REQUIRE_THAT(tree.children()[0]->unique_children()[0]->find_neighbors(2),
@@ -473,5 +476,323 @@ TEST_CASE("Tree") {
     tree.connect({graft2, tree.children()[1]}, {{0, 0}, {0, 1}});
     REQUIRE(tree.children()[1]->find_neighbor(1) == graft2);
     REQUIRE(graft2 == tree.children()[1]->find_neighbor(1));
+  }
+
+  SECTION("3D grafting") {
+    SECTION("same dim, rotated") {
+      hexed::Tree tree(3, .9, hexed::Mat<3>{-.15, -.03, -.09});
+      REQUIRE(!tree.is_graft());
+      hexed::Tree* graft0 = tree.graft(hexed::Array<int>::make(0, 0, 0), hexed::Array<hexed::Int>::make(1, 0, 0));
+      tree.connect({&tree, graft0}, {{0, 0}, {1, 0}, 1});
+      REQUIRE(tree.has_graft_connection());
+      REQUIRE(graft0->has_graft_connection());
+      REQUIRE(graft0->find_neighbor(0) == &tree);
+      REQUIRE(graft0->find_neighbor(1) == nullptr);
+      REQUIRE(tree.find_neighbor(1) == graft0);
+      REQUIRE_THAT(tree.find_neighbors(1), Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0}));
+      REQUIRE_THAT(graft0->find_neighbors(0), Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{&tree}));
+      auto cn = graft0->find_connection_neighbors(0);
+      REQUIRE_THAT(cn.trees[0], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>(4, &tree)));
+      REQUIRE_THAT(cn.trees[1], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>(4, graft0)));
+      REQUIRE(cn.direction == hexed::Connection_direction{{0, 0}, {1, 0}, 1});
+      tree.refine({0, 1, 1});
+      REQUIRE(tree.unique_children()[1]->find_neighbor(1) == graft0);
+      REQUIRE(graft0->find_neighbor(0) == tree.unique_children()[0]);
+      REQUIRE_THAT(graft0->find_neighbors(0), Catch::Matchers::RangeEquals(tree.unique_children()));
+      graft0->refine();
+      std::vector<hexed::Tree*> trees0 = tree.unique_children();
+      std::vector<hexed::Tree*> trees1 {
+        graft0->children()[1],
+        graft0->children()[3],
+        graft0->children()[0],
+        graft0->children()[2],
+      };
+      for (int i = 0; i < 4; ++i) {
+        REQUIRE(trees0[i]->find_neighbor(1) == trees1[i]);
+        REQUIRE(trees1[i]->find_neighbor(0) == trees0[i]);
+        REQUIRE_THAT(trees0[i]->find_neighbors(1), Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{trees1[i]}));
+        REQUIRE_THAT(trees1[i]->find_neighbors(0), Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{trees0[i]}));
+        cn = trees0[i]->find_connection_neighbors(1);
+        REQUIRE_THAT(cn.trees[0], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>(4, trees0[i])));
+        REQUIRE_THAT(cn.trees[1], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>(4, trees1[i])));
+      }
+      tree.unrefine(2);
+      SECTION("4 on 2") {
+        REQUIRE(tree.unique_children()[0]->find_neighbor(1) == graft0->unique_children()[1]);
+        REQUIRE(tree.unique_children()[1]->find_neighbor(1) == graft0->unique_children()[0]);
+        REQUIRE_THAT(
+          tree.unique_children()[0]->find_neighbors(1),
+          Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+            graft0->unique_children()[1],
+            graft0->unique_children()[3],
+          })
+        );
+        REQUIRE_THAT(
+          tree.unique_children()[1]->find_neighbors(1),
+          Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+            graft0->unique_children()[0],
+            graft0->unique_children()[2],
+          })
+        );
+        for (int i : {1, 3}) {
+          REQUIRE(graft0->unique_children()[i]->find_neighbor(0) == tree.unique_children()[0]);
+          REQUIRE_THAT(graft0->unique_children()[i]->find_neighbors(0),
+                       Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.unique_children()[0]}));
+        }
+        for (int i : {0, 2}) {
+          REQUIRE(graft0->unique_children()[i]->find_neighbor(0) == tree.unique_children()[1]);
+          REQUIRE_THAT(graft0->unique_children()[i]->find_neighbors(0),
+                       Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.unique_children()[1]}));
+        }
+        trees0 = {
+          tree.unique_children()[0],
+          tree.unique_children()[0],
+          tree.unique_children()[0],
+          tree.unique_children()[0],
+        };
+        trees1 = {
+          graft0->children()[1],
+          graft0->children()[1],
+          graft0->children()[3],
+          graft0->children()[3],
+        };
+        std::vector<hexed::Tree::Connection_neighbors> cons {
+          tree.unique_children()[0]->find_connection_neighbors(1),
+        };
+        for (int i : {1, 3}) cons.push_back(graft0->unique_children()[i]->find_connection_neighbors(0));
+        for (auto con : cons) {
+          REQUIRE(con.direction == hexed::Connection_direction{{0, 0}, {1, 0}, 1});
+          REQUIRE_THAT(con.trees[0], Catch::Matchers::RangeEquals(trees0));
+          REQUIRE_THAT(con.trees[1], Catch::Matchers::RangeEquals(trees1));
+        }
+        trees0 = {
+          tree.unique_children()[1],
+          tree.unique_children()[1],
+          tree.unique_children()[1],
+          tree.unique_children()[1],
+        };
+        trees1 = {
+          graft0->children()[0],
+          graft0->children()[0],
+          graft0->children()[2],
+          graft0->children()[2],
+        };
+        cons = std::vector<hexed::Tree::Connection_neighbors> {
+          tree.unique_children()[1]->find_connection_neighbors(1),
+        };
+        for (int i : {0, 2}) cons.push_back(graft0->unique_children()[i]->find_connection_neighbors(0));
+        for (auto con : cons) {
+          REQUIRE(con.direction == hexed::Connection_direction{{0, 0}, {1, 0}, 1});
+          REQUIRE_THAT(con.trees[0], Catch::Matchers::RangeEquals(trees0));
+          REQUIRE_THAT(con.trees[1], Catch::Matchers::RangeEquals(trees1));
+        }
+      }
+      SECTION("2 on 2 conformal") {
+        graft0->unrefine(1);
+        for (int i = 0; i < 2; ++i) {
+          REQUIRE(tree.unique_children()[i]->find_neighbor(1) == graft0->unique_children()[!i]);
+          REQUIRE(graft0->unique_children()[i]->find_neighbor(0) == tree.unique_children()[!i]);
+          REQUIRE_THAT(tree.unique_children()[i]->find_neighbors(1),
+                       Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->unique_children()[!i]}));
+          REQUIRE_THAT(graft0->unique_children()[i]->find_neighbors(0),
+                       Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.unique_children()[!i]}));
+        }
+      }
+      SECTION("2 on 2 mismatched") {
+        trees0 = {
+          tree.unique_children()[0],
+          tree.unique_children()[0],
+          tree.unique_children()[1],
+          tree.unique_children()[1],
+        };
+        trees1 = {
+          graft0->children()[0],
+          graft0->children()[1],
+          graft0->children()[2],
+          graft0->children()[3],
+        };
+        graft0->unrefine(2);
+        REQUIRE(tree.unique_children()[0]->find_neighbor(1) == graft0->unique_children()[0]);
+        REQUIRE(tree.unique_children()[1]->find_neighbor(1) == graft0->unique_children()[0]);
+        REQUIRE(graft0->unique_children()[0]->find_neighbor(0) == tree.unique_children()[0]);
+        REQUIRE(graft0->unique_children()[1]->find_neighbor(0) == tree.unique_children()[0]);
+        std::vector<hexed::Tree*> graft_children {graft0->unique_children()[0], graft0->unique_children()[1]};
+        for (hexed::Tree* t : tree.unique_children()) {
+          REQUIRE_THAT(t->find_neighbors(1), Catch::Matchers::RangeEquals(graft_children));
+        }
+        for (hexed::Tree* t : graft_children) {
+          REQUIRE_THAT(t->find_neighbors(0), Catch::Matchers::RangeEquals(tree.unique_children()));
+        }
+        std::vector<hexed::Tree::Connection_neighbors> cons {
+          tree.unique_children()[0]->find_connection_neighbors(1),
+          tree.unique_children()[1]->find_connection_neighbors(1),
+          graft0->unique_children()[0]->find_connection_neighbors(0),
+          graft0->unique_children()[1]->find_connection_neighbors(0),
+        };
+        trees1 = {
+          graft0->unique_children()[0],
+          graft0->unique_children()[0],
+          graft0->unique_children()[1],
+          graft0->unique_children()[1],
+        };
+        for (auto con : cons) {
+          REQUIRE_THAT(con.trees[0], Catch::Matchers::RangeEquals(trees0));
+          REQUIRE_THAT(con.trees[1], Catch::Matchers::RangeEquals(trees1));
+        }
+      }
+    }
+    SECTION("different dimensions, not rotated") {
+      hexed::Tree tree1(3, .9);
+      hexed::Tree* graft1 = tree1.graft(hexed::Array<int>::make(1, 3, 2), hexed::Array<hexed::Int>::make(2, 4, 4));
+      tree1.connect({graft1, &tree1}, {{0, 2}, {0, 1}, 0});
+      tree1.refine();
+      graft1->refine();
+      std::vector<hexed::Tree*> trees0 {
+        graft1->children()[0],
+        graft1->children()[1],
+        graft1->children()[2],
+        graft1->children()[3],
+      };
+      std::vector<hexed::Tree*> trees1 {
+        tree1.children()[5],
+        tree1.children()[1],
+        tree1.children()[7],
+        tree1.children()[3],
+      };
+      for (int i = 0; i < 4; ++i) {
+        REQUIRE(trees0[i]->find_neighbor(0) == trees1[i]);
+        REQUIRE(trees1[i]->find_neighbor(5) == trees0[i]);
+      }
+      graft1->children()[2]->refine();
+      REQUIRE(tree1.children()[7]->find_neighbor(5) == graft1->children()[2]->children()[0]);
+      for (int i = 0; i < 4; ++i) {
+        hexed::Tree* child = graft1->children()[2]->children()[i];
+        REQUIRE(child->find_neighbor(0) == tree1.children()[7]);
+      }
+      graft1->children()[2]->unrefine(1);
+      tree1.children()[7]->refine(1);
+      REQUIRE(tree1.children()[7]->unique_children()[1]->find_neighbor(5)
+              == graft1->children()[2]->unique_children()[0]);
+      for (int i_child = 0; i_child < 2; ++i_child) {
+        REQUIRE_THAT(tree1.children()[7]->unique_children()[i_child]->find_neighbors(5),
+                     Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+          graft1->children()[2]->unique_children()[0],
+          graft1->children()[2]->unique_children()[1],
+        }));
+        REQUIRE_THAT(graft1->children()[2]->unique_children()[i_child]->find_neighbors(0),
+                     Catch::Matchers::RangeEquals(tree1.children()[7]->unique_children()));
+      }
+      trees0 = {
+        graft1->children()[2]->unique_children()[0],
+        graft1->children()[2]->unique_children()[1],
+        graft1->children()[2]->unique_children()[0],
+        graft1->children()[2]->unique_children()[1],
+      };
+      trees1 = {
+        tree1.children()[7]->unique_children()[0],
+        tree1.children()[7]->unique_children()[1],
+        tree1.children()[7]->unique_children()[0],
+        tree1.children()[7]->unique_children()[1],
+      };
+      std::vector<hexed::Tree::Connection_neighbors> cns {
+        tree1.children()[7]->unique_children()[0]->find_connection_neighbors(5),
+        tree1.children()[7]->unique_children()[1]->find_connection_neighbors(5),
+        graft1->children()[2]->unique_children()[0]->find_connection_neighbors(0),
+        graft1->children()[2]->unique_children()[1]->find_connection_neighbors(0),
+      };
+      for (auto cn : cns) {
+        REQUIRE(cn.direction == hexed::Connection_direction{{0, 2}, {0, 1}});
+        REQUIRE_THAT(cn.trees[0], Catch::Matchers::RangeEquals(trees0));
+        REQUIRE_THAT(cn.trees[1], Catch::Matchers::RangeEquals(trees1));
+      }
+    }
+    SECTION("different dims, rotated") {
+      hexed::Tree tree1(3, .9);
+      hexed::Tree* graft1 = tree1.graft(hexed::Array<int>::make(1, 3, 2), hexed::Array<hexed::Int>::make(-1, 4, 4));
+      tree1.connect({graft1, &tree1}, {{0, 2}, {1, 1}, 1});
+      REQUIRE(graft1->find_neighbor(1) == &tree1);
+      REQUIRE(tree1.find_neighbor(5) == graft1);
+      tree1.refine();
+      graft1->refine();
+      std::vector<hexed::Tree*> trees0 {
+        graft1->children()[4],
+        graft1->children()[5],
+        graft1->children()[6],
+        graft1->children()[7],
+      };
+      std::vector<hexed::Tree*> trees1 {
+        tree1.children()[5],
+        tree1.children()[7],
+        tree1.children()[1],
+        tree1.children()[3],
+      };
+      for (int i = 0; i < 4; ++i) {
+        REQUIRE(trees0[i]->find_neighbor(1) == trees1[i]);
+        REQUIRE(trees1[i]->find_neighbor(5) == trees0[i]);
+      }
+      tree1.children()[3]->refine();
+      graft1->children()[7]->refine(2);
+      REQUIRE_THAT(graft1->children()[7]->unique_children()[0]->find_neighbors(1),
+        Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+          tree1.children()[3]->children()[1],
+          tree1.children()[3]->children()[5],
+        }
+      ));
+    }
+    SECTION("multiple graft") {
+      hexed::Tree tree(3, .9);
+      hexed::Tree* graft0 = tree.graft(hexed::Array<int>::make(2, 2, 2), hexed::Array<hexed::Int>::make(0, -1, -1));
+      hexed::Tree* graft1 = tree.graft(hexed::Array<int>::make(2, 2, 2), hexed::Array<hexed::Int>::make(1, -1, -1));
+      std::array<std::vector<hexed::Tree*>, 2> to_connect;
+      to_connect[0] = {graft0, graft0, graft1, graft1};
+      to_connect[1].resize(4, &tree);
+      tree.connect(to_connect, {{2, 1}, {1, 0}});
+      REQUIRE(tree.find_neighbor(2) == graft0);
+      REQUIRE(graft0->find_neighbor(5) == &tree);
+      REQUIRE(graft1->find_neighbor(5) == &tree);
+      REQUIRE_THAT(tree.find_neighbors(2), Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0, graft1}));
+      graft1->refine();
+      tree.refine();
+      for (hexed::Tree* c : graft1->children()) c->refine();
+      for (hexed::Tree* c : tree.children()) c->refine();
+      REQUIRE_THAT(tree.children()[4]->children()[1]->find_neighbors(2),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{
+        graft1->children()[3]->children()[1],
+        graft1->children()[3]->children()[5],
+      }));
+      REQUIRE_THAT(graft1->children()[3]->children()[5]->find_neighbors(5),
+                   Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{tree.children()[4]->children()[1]}));
+      std::vector<hexed::Tree*> trees0 {
+        graft1->children()[3]->children()[1],
+        graft1->children()[3]->children()[1],
+        graft1->children()[3]->children()[5],
+        graft1->children()[3]->children()[5],
+      };
+      std::vector<hexed::Tree*> trees1(4, tree.children()[4]->children()[1]);
+      auto cn = graft1->children()[3]->children()[5]->find_connection_neighbors(5);
+      REQUIRE_THAT(cn.trees[0], Catch::Matchers::RangeEquals(trees0));
+      REQUIRE_THAT(cn.trees[1], Catch::Matchers::RangeEquals(trees1));
+    }
+    SECTION("thorough ordering test") {
+      hexed::Tree tree(3, 1.);
+      hexed::Tree* graft = tree.graft(hexed::Array<int>::make(0, 0, 0), hexed::Array<hexed::Int>::make(0, 0, 0));
+      tree.refine();
+      graft->refine();
+      for (int i_dim = 0; i_dim < 3; ++i_dim) for (bool i_sign : {0, 1}) {
+        for (int j_dim = 0; j_dim < 3; ++j_dim) for (bool j_sign : {0, 1}) {
+          if (i_dim != j_dim || i_sign != j_sign) {
+            for (int rotate = -3; rotate < 3; ++rotate) {
+              hexed::Connection_direction dir {{i_dim, j_dim}, {i_sign, j_sign}, rotate};
+              tree.connect({std::vector<hexed::Tree*>(4, &tree), std::vector<hexed::Tree*>(4, graft)}, dir);
+              auto inds = hexed::vertex_inds(3, dir);
+              for (int i = 0; i < 4; ++i) {
+                REQUIRE(tree.children()[inds[0][i]]->find_neighbor(dir.i_face(0)) == graft->children()[inds[1][i]]);
+                REQUIRE(graft->children()[inds[1][i]]->find_neighbor(dir.i_face(1)) == tree.children()[inds[0][i]]);
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }

@@ -191,6 +191,7 @@ class Tree : public Mortal {
    * If there are multiple neighbors on the same face, the one with the lowest coordinates is returned
    * and other neighbors can be found by locating the appropriate neighbors of that cell.
    * If more than one element of `direction` is nonzero, then edge or vertex neighbors are returned.
+   * \todo document behavior for grafted connections
    */
   Tree* find_neighbor(Array<int> direction);
   //! \brief Equivalent to `find_neighbor(Array<int>)` with `direction[i_face/2] == math::sign(i_face%2)`.
@@ -257,21 +258,23 @@ class Tree : public Mortal {
     Tree* that_root = nullptr;
     Connection_direction dir {{0, 0}, {0, 0}};
     int i_side = 0;
-    Array<int> transform(Array<int> ref_level);
+    Array<int> transform(Array<int> ref_level, bool rot = true);
     void reverse();
   };
   struct _Neighbor_result {
     Tree* neighbor;
     Array<int> direction;
     _Transformation trans;
+    Array<int> ref_level;
+    Array<Int> coords;
   };
   // finds leaves of this element and adds them to `add_to`.
   // for each dimension, if the corresponding element of `bias` is 0,
   // adds only the elements at the lower extreme of that dimension.
   // if 1, adds only those at the upper extreme.
   // if -1, adds all.
-  void _add_extremal_levels(std::vector<Tree*>& add_to, Array<int> bias);
-  void _assign_leaves(std::vector<Tree*>& assign_to, Tree* search_root, int i_dim, int sign);
+  void _add_extremal_levels(std::vector<Tree*>& add_to, Array<int> ref_level, Array<Int> coords, Array<int> bias);
+  void _assign_leaves(std::vector<Tree*>& assign_to, Array<int> ref_level, Array<Int> coords, int i_dim, int sign);
   std::vector<Tree*> _refine(std::vector<bool>); // performs refinement but not collapsing/interchange
   void _collapse_aniso_ref();
   void _interchange_aniso_ref();
@@ -279,6 +282,8 @@ class Tree : public Mortal {
   _Neighbor_result _neighbor(Array<int> direction);
   void _clear_connections();
   static int _compare_ref_level(Tree*, Tree*, _Transformation);
+  inline int _n_vert() const {return math::pow(2, n_dim);}
+  Tree* _find_parent(int i_face);
 
   Mat<> _orig;
   double _root_sz;
@@ -289,6 +294,7 @@ class Tree : public Mortal {
   std::vector<std::unique_ptr<Tree>> _grafts;
   std::vector<std::unique_ptr<_Connection>> _connections;
   std::vector<_Connection*> _face_connections;
+  std::vector<Tree*> _fake_parents;
   int _status;
   bool _is_graft;
 };

@@ -47,14 +47,14 @@ class Base {
   friend class Base<U, T>;
   public:
   virtual ~Base() = default;
+  virtual T* _mine() {return nullptr;}
+  virtual const T* _mine() const {return nullptr;} //!< \overload
   protected:
   //! \brief takes the necessary steps to connect `this` to `that`, without worrying about anything on `that`'s end
   virtual void _set(Base<U, T>& that) = 0;
   //! \brief takes the necessary steps to disconnect `this` from `that`, without worrying about anything on `that`'s end
   virtual void _unset(Base<U, T>& that) = 0;
   //! \brief may be overridden by derived classes to provide partners to data of some arbitrary type `T`
-  virtual T* _mine() {return nullptr;}
-  virtual const T* _mine() const {return nullptr;} //!< \overload
 
   //! \brief mutually connects `this` and `that` by calling both of their `_set()` member functions
   void _connect(Base<U, T>& that) {
@@ -167,7 +167,6 @@ class Multiple : public Base<T, U> {
   ACCESS()
   ACCESS(const)
   #undef ACCESS
-  std::vector<Base<U, T>*> _partners;
 
   private:
   void _set(Base<U, T>& that) override {
@@ -176,6 +175,7 @@ class Multiple : public Base<T, U> {
     }
   }
   void _unset(Base<U, T>& that) override {std::erase(_partners, &that);}
+  std::vector<Base<U, T>*> _partners;
 };
 
 #undef LOCK

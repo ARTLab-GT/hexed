@@ -130,7 +130,6 @@ class Vertex : public Block {
   void remove_size_constraints();
   Mat<3> nominal_position() const;
   bool mobile() const;
-  void compute_depends();
   void init_improve();
   void compute_gradient(std::function<Mat<3>(Mat<3>)> get_target);
   void compute_improve(std::function<Mat<3>(Mat<3>)> get_target);
@@ -145,13 +144,12 @@ class Vertex : public Block {
     double distance;
   };
   Snap_result check_snap(bool updated_neighbors);
-  bool has_problem() const;
   inline bool last_snap_failed() const {return _last_snap_failed;}
   inline bool last_step_rejected() const {return _last_step_rejected;}
   inline Mat<3> last_grad() const {return _last_grad;}
   bool snap_to(Mat<3> target);
   bool snap_to(std::function<Mat<3>(Mat<3>)> target);
-  double quality_objective();
+  static double objective(Element_shape& elem);
   int n_elements() const; //!< \brief The number of elements sharing this vertex
   inline bool is_surface() const {return _edges.theirs().size();}
   /*! \brief The list of vertices that share an edge with `this`.
@@ -178,12 +176,12 @@ class Vertex : public Block {
   class Shared_value {
     public:
     Shared_value(Vertex&); //!< \brief Sets the `Lock`
-    double get() const; //!< \brief Fetches the shared value.
+    double get(int recursion_depth = 100) const; //!< \brief Fetches the shared value.
     //! \brief Writes to the shared value.
     //! \details Will not directly affect the `get()` if the vertex is glued.
     void set(double);
     //! \brief Constrains the value of `get()` to be at most (least) `value` if `minamx` is `false` (`true`).
-    void set(double value, bool minmax);
+    void set(double value, bool minmax, int recursion_depth = 100);
     private:
     Vertex& _vert;
     std::optional<Lock::Set> _set;
@@ -210,27 +208,23 @@ class Vertex : public Block {
   double wall_distance;
 
   private:
-  struct _Gradient_entry {
-    const Element_shape* elem;
-    int i;
-    int j;
-  };
   struct _Optimization_state {
     bool feasible = true;
     double objective = 0;
-    std::vector<_Gradient_entry> skip;
+    std::vector<Element_shape*> skip;
     double worst_ortho = 1;
     double worst_edge = 1;
+    double worst_ratio = 1;
     bool has_glued_neighbor = false;
-    bool computing_depends = false;
   };
   _Optimization_state _compute_state(bool include_neighbors = true, bool ignore = false, bool ignore_neighb = false,
                                      double extra_tol = 0.);
   // will treat the vertex `ignore` as being at its `_orig_pos`;
-  Mat<3> _unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_others) const;
-  void _compute_state_recursive(_Optimization_state& state, double gradient_weight, bool include_neighbors,
-                                Vertex* orig_vertex = nullptr, Vertex* ignore = nullptr, bool ignore_orig = false,
-                                bool ignore_neighb = false, double extra_tol = 0.);
+  Mat<3> _unwarped_point(Vertex* ignore, bool ignore_given, bool ignore_others, int max_depth) const;
+  void _compute_state_recursive(_Optimization_state& state, bool include_neighbors, Vertex* ignore = nullptr,
+                                bool ignore_orig = false, bool ignore_neighb = false, double extra_tol = 0.);
+  static void _compute_element_state(_Optimization_state&, Element_shape*, Vertex* ignore,
+                                     bool ignore_orig, bool ignore_neighb, double extra_tol);
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
   Mat<3> _get_pos() const; // fetches `_pos` with atomic reads
   Mat<3> _pos;
@@ -252,7 +246,6 @@ class Vertex : public Block {
   std::vector<double> _glued_coords;
   double _shared_value;
   Lock _shared_value_lock;
-  std::vector<Vertex*> _depends_on;
   bool _last_snap_failed;
   double _sz_constraint;
 };
@@ -277,7 +270,6 @@ class Boundary_block : public Block {
   //! \brief Obtains all the `Element_shape`s whose `point()` depends on `this`
   virtual std::vector<Element_shape*> dependent_elements() = 0;
   virtual std::vector<Vertex*> vertices() = 0;
-  double scale_factor();
 
   /*! \brief Transforms node coordinates from the space of the `Block` to its `Element_shape`
    * \details That is, `element()->point(elemement_coords(coords))`
@@ -460,6 +452,8 @@ class Element_shape : public Block {
   inline const Boundary_block* boundary_block() const {return _bf.get();}
   inline int boundary_face() const {return _i_bf;}
   bool glued_to_face(int i_face) const;
+  inline Sequence<Vertex&> glued_verts() {return _glued_verts.theirs().dereference();}
+  bool acceptable_quality(bool only_determinant = false) const;
 
   bool deformed;
   bool for_matching;
@@ -489,8 +483,9 @@ class Element_shape : public Block {
 
 /*! \brief Stores all the `Block`s for an entire mesh.
  * \details To use, simply create elements with `create_element()` and connect them with `Element_shape::connect`.
- * `create_element()` will automatically allocate any lower-dimensional entities (`Vertex`, `Surface_face`, `Edge`) necessary.
- * and destroying elements will automatically free them
+ * `create_element()` will automatically allocate
+ * any lower-dimensional entities (`Vertex`, `Surface_face`, `Edge`) necessary.
+ * Destroying elements will automatically free them
  * (although they may not actually be destroyed until the relevant entity sequence is accessed).
  */
 class Mesh_blocks {
