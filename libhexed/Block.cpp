@@ -8,7 +8,7 @@
 namespace hexed::next {
 
 const double ortho_tolerance = .03;
-const double edge_ratio_tolerance = 0.1;
+const double edge_ratio_tolerance = 0.03;
 const double edge_tolerance = 1e-4;
 
 int vstride(int n_dim, int i_dim) {return math::pow(2, n_dim - 1 - i_dim);}
@@ -269,6 +269,7 @@ void Vertex::_compute_element_state(_Optimization_state& state, Element_shape* e
     double ratio = extreme_spacing(0)[i_dim]/extreme_spacing(1)[i_dim];
     state.feasible = state.feasible && ratio > edge_ratio_tolerance;
     state.objective += 1./(ratio - edge_ratio_tolerance);
+    state.worst_ratio = std::min(state.worst_ratio, ratio);
   }
 }
 
@@ -391,7 +392,8 @@ double Vertex::objective(Element_shape& shape) {
   if (!state.feasible) {
     shape.visualize("default", "bad_elem");
     HEXED_THROW(str_cat("Element shape violates quality criteria (ortho = ", state.worst_ortho,
-                        "; spacing = ", state.worst_edge, ";). Visualized in `./bad_elem.*"))
+                        "; spacing = ", state.worst_edge, "; ratio = ", state.worst_ratio,
+                        ";). Visualized in `./bad_elem.*"))
   }
   return state.objective;
 }

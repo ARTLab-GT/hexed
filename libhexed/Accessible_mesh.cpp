@@ -73,6 +73,7 @@ void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
   #pragma omp parallel for
   for (auto& vert : verts) {
     vert.offset.setZero();
+    vert.dijkstra_updates = 0;
     vert.dijkstra_dist = 0;
   }
   int nv = params.n_vertices()/2;
@@ -90,6 +91,7 @@ void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
       }
     }
     if (is_new[0] != is_new[1] && has_elements) {
+      #if 0
       bool new_elem = is_new[1];
       if (strategy) {
         auto& shape = con.face(!new_elem).element()->active_shape();
@@ -140,11 +142,50 @@ void Accessible_mesh::_offset_vertices(double offset, bool strategy) {
           con_verts[i_vert]->dijkstra_dist += math::pow(10, dir.i_dim[new_elem]);
         }
       }
+      #else
+      auto i_verts = vertex_inds(nd, dir)[0];
+      for (int i_vert = 0; i_vert < nv; ++i_vert) {
+        auto& vert = con.face(0).element()->active_shape().vertex(i_verts[i_vert]);
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          int i_face = 2*dir.i_dim[i_side] + (dir.face_sign[i_side] == is_new[i_side]);
+          // following line sets `i_face`th bit of `vert.dijkstra_updates` to 1
+          vert.dijkstra_updates += (1 - vert.dijkstra_updates/math::pow(2, i_face)%2)*math::pow(2, i_face);
+          // check that `vert` hasn't already recorded a face facing the exact opposite direction
+          int opposite_face = i_face - math::sign(i_face%2);
+          if (vert.dijkstra_updates/math::pow(2, opposite_face)%2 != 0) {
+            auto faces_3d = _blocks.faces_3d();
+            std::vector<next::Edge*> edges_3d;
+            for (auto& face : faces_3d) {
+              for (int i_edge = 0; i_edge < 4; ++i_edge) {
+                if (!face.edge(i_edge).glued()) edges_3d.push_back(&face.edge(i_edge));
+              }
+            }
+            std::sort(edges_3d.begin(), edges_3d.end(), [](next::Edge* edge0, next::Edge* edge1) {
+              return edge0->element()->nominal_size() > edge1->element()->nominal_size();
+            });
+            for (next::Edge* edge : edges_3d) edge->reset();
+            auto blocks = _blocks.boundary_sides();
+            #pragma omp parallel for
+            for (auto& b : blocks) b.reset();
+            for (int j_side = 0; j_side < 2; ++j_side) {
+              con.face(j_side).element()->active_shape().visualize("default", str_cat("bad_elem", j_side));
+            }
+            visualize("default", "failed_mesh", 0.);
+            HEXED_THROW("vertex has opposite faces")
+          }
+        }
+      }
+      #endif
     }
   }
   #pragma omp parallel for
   for (auto& vert : verts) {
-    vert.set_pos(vert.unwarped_point() + offset*vert.nominal_size()*vert.offset);
+    Mat<3> offset_vec = Mat<3>::Zero();
+    double scale = offset*vert.nominal_size();
+    for (int i_face = 0; i_face < 2*nd; ++i_face) {
+      offset_vec[i_face/2] += scale*math::sign(i_face%2)*(vert.dijkstra_updates/math::pow(2, i_face)%2);
+    }
+    vert.set_pos(vert.unwarped_point() + offset_vec);
   }
 }
 

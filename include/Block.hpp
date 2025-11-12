@@ -214,6 +214,7 @@ class Vertex : public Block {
     std::vector<Element_shape*> skip;
     double worst_ortho = 1;
     double worst_edge = 1;
+    double worst_ratio = 1;
     bool has_glued_neighbor = false;
   };
   _Optimization_state _compute_state(bool include_neighbors = true, bool ignore = false, bool ignore_neighb = false,
