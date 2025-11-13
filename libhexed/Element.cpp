@@ -268,9 +268,6 @@ void Element::glue_shape(Element& glue_to, std::array<std::vector<double>, 2> gl
       }
     }
   }
-  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-    HEXED_ASSERT(glue_corners[0][i_dim] < glue_corners[1][i_dim], "Corner coordinates must be increasing.")
-  }
   _shape->glue(glue_to.active_shape(), glue_corners);
   _set_glued_pos();
 }

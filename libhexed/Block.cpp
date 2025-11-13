@@ -139,11 +139,9 @@ void Vertex::glue(Element_shape& to, std::vector<double> coords) {
 }
 
 void Vertex::set_pos(Mat<3> p) {
-  if (!glued()) {
-    for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      #pragma omp atomic write
-      _pos(i_dim) = p(i_dim);
-    }
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    #pragma omp atomic write
+    _pos(i_dim) = p(i_dim);
   }
 }
 
@@ -741,7 +739,7 @@ Mat<3> Element_shape::_vertex_point(const std::vector<double>& coords, Int recur
     for (int i_dim = 0; i_dim < n_dim(); ++i_dim) {
       bool sign = i_vert/vstride(n_dim(), i_dim)%2;
       double w = !sign + math::sign(sign)*coords[i_dim];
-      include = include && w > skip_tol;
+      include = include && std::abs(w) > skip_tol;
       weight *= w;
     }
     if (include) point += weight*_verts[i_vert].value().point({}, recursion_depth);
@@ -758,8 +756,8 @@ Mat<3> Element_shape::_point(const std::vector<int>& coords, Int recursion_depth
 bool skip(int n_dim, int row_size, double nom_sz, int index, std::vector<double> coords) {
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
     double coord = math::row_coordinate(n_dim, row_size, i_dim, index)/(row_size - 1.);
-    if (std::min(std::abs(coords[i_dim]), std::abs(coords[i_dim] - 1.)) < skip_tol*nom_sz &&
-        std::abs(coord - coords[i_dim]) > skip_tol*nom_sz) return true;
+    if (std::min(std::abs(coords[i_dim]), std::abs(coords[i_dim] - 1.)) < skip_tol &&
+        std::abs(coord - coords[i_dim]) > skip_tol) return true;
   }
   return false;
 }
@@ -957,6 +955,13 @@ void Element_shape::connect(std::array<std::vector<Element_shape*>, 2> elems, Co
 void Element_shape::glue(Element_shape& that, std::array<std::vector<double>, 2> corners) {
   if (that.glued()) {
     HEXED_ASSERT(that._glued_to.get() != this, "Mutually gluing 2 elements, which would create infinite recursion.");
+  }
+  for (int i_side : {0, 1}) HEXED_ASSERT(Int(corners[i_side].size()) == n_dim(), "wrong number of corner coordinates")
+  for (int i_dim = 0; i_dim < n_dim(); ++i_dim) {
+    HEXED_ASSERT(corners[0][i_dim] > -1 - 1e-6, str_cat("Coordinates must be >= 0. Actual: ", corners[0][i_dim]))
+    HEXED_ASSERT(corners[1][i_dim] <  2 + 1e-6, str_cat("Coordinates must be <= 1. Actual: ", corners[0][i_dim]))
+    HEXED_ASSERT(corners[0][i_dim] < corners[1][i_dim],
+                 str_cat("Coordinates must be increasing. Actual: ", corners[0][i_dim], ", ", corners[1][i_dim]))
   }
   _glued_to.set(&that);
   _glued_corners = corners;

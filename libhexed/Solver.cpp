@@ -415,10 +415,8 @@ void Solver::calc_jacobian() {
     perm->match_faces();
     Array<double> nrml0 = con.face(0).normal()*(con.face(0).nominal_area()*math::sign(!dir.flip_normal(0)));
     Array<double> nrml1 = temp_storage(0, params.n_dim)*(con.face(1).nominal_area()*math::sign(!dir.flip_normal(1)));
-    if (!((nrml0 - nrml1).norm() < 1e-3)) {
-      printers::warn("Warning: ", true);
-      printers::warn("normal mismatch: " + to_string(dir) + "\n" + to_string(nrml0) + to_string(nrml1));
-    }
+    HEXED_ASSERT((nrml0 - nrml1).norm() < 1e-3*con.face(0).nominal_area(),
+                 str_cat("normal mismatch: ", dir, "\n", nrml0, nrml1))
   }
   _preti_masks[0]->desired_iters = 1;
   _preti_masks[0]->repeat = true;
