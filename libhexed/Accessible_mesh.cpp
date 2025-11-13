@@ -187,11 +187,11 @@ Mat<3> Accessible_mesh::_get_snapping_target(next::Vertex& vert, Mat<3> pos) {
         Nearest_point<3> nearest_on_edge(pos);
         for (auto& edge : edges) {
           Mat<3> nearest = edge.point(edge.arg_nearest_point(pos));
-          if (std::abs(nearest(i_dim) - tree->origin()(i_dim) + sign*tree->nominal_size()) < 1e-6*ns) {
+          if (std::abs(nearest(i_dim) - (tree->origin()(i_dim) + sign*tree->nominal_size())) < 1e-6*ns) {
             nearest_on_edge.merge(nearest);
           }
         }
-        HEXED_ASSERT(!nearest_on_edge.empty(), "no nearest point found within tolerance");
+        HEXED_ASSERT(!nearest_on_edge.empty(), "No nearest point found within tolerance.")
         pos = nearest_on_edge.point();
       } else {
         pos(seq) = surf_geom->nearest_point(pos(seq), huge, ns/2).point();

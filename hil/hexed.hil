@@ -132,7 +132,8 @@ set_shock = {
 
 ramping_initial_safety = 3e-3
 ramping_final_safety = 0.7
-ramp_if = {iteration >= 1000}
+ramp_iter = 1000
+ramp_if = {iteration >= ramp_iter}
 ramped = false
 ramp_action = {
     ramped = true;

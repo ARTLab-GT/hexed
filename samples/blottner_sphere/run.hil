@@ -1,68 +1,38 @@
 n_dim = 3
-mesh_extreme00 = -2.
-mesh_extreme01 =  0.
-mesh_extreme10 =  0.
-mesh_extreme11 =  2.
-mesh_extreme20 =  0.
-mesh_extreme21 =  2.
+radius = .0635
+mesh_extreme00 = -2.*radius
+mesh_extreme01 =  0.*radius
+mesh_extreme10 =  0.*radius
+mesh_extreme11 =  2.*radius
+mesh_extreme20 =  0.*radius
+mesh_extreme21 =  2.*radius
 extremal_bc20 = {nonpenetration}
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
-geom0 = {sphere.STEP}
-freestream_pressure = 120.96
-freestream_temperature = 75.61
+flood_fill_start0 = -1.7*radius
+flood_fill_start0 =  1.7*radius
+flood_fill_start0 =  1.7*radius
+geom0 = {quarter.iges}
+max_sharp_reynolds = huge
+max_geom_refine_iters = 0
+
+freestream_temperature = 136.1*rankine
+viscosity_model = air_viscosity
+conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
 freestream_mach = 5.
-done = {iteration >= 2*10^5}
-
-{
-  max_angle = .5*degree
-  max_refinement_iters = 3
-  init_ref_level = 2
-  refine_if = {(center0^2 + center1^2 + center2^2)^.5 < 1.4}
-  unrefine_if = {false}
-}
-
-done = {iteration >= 500}
-vis_freq = 10000
-init_ref_level = 3
-aerothermo_bl_multirate = false
-
-{settings for different variants of this case}
-isothermal = {
-    working_dir = {hexed_out_isothermal}
-    thermal_bc = {temperature = 98.89}
-    init_layer_splits = 2
-    $set_aerothermo
-    art_visc_width = art_visc_width/8
-    iterate = iterate + {
-        case0 = {}
-        case1 = {
-            print {splitting layers...}
-            split_layers
-            println({done. number of elements: } + n_elements)
-        }
-        $$({case} + (iteration == 1*10^4 | iteration == 2*10^4 | iteration == 3*10^4 | iteration == 4*10^4))
-    }
-}
-radiative_equilibrium = {
-    thermal_bc = {emissivity = 1.}
-    working_dir = {hexed_out_rad_eq}
-    init_layer_splits = 3
-    av_diff_max_safety = 0.3
-    $set_aerothermo
-}
-inviscid = {
-    working_dir = {hexed_out_inviscid}
-    vis_freq = 1000
-    av_diff_max_safety = 0.3
-    max_safety = 0.7
-}
+{compute density required to achieve desired reynolds number}
+target_reynolds = 1.8875e6
+temperature = freestream_temperature
+$transport_expr
+freestream_density = target_reynolds*dynamic_viscosity/(sqrt(specific_gas_air*1.4*freestream_temperature)*freestream_mach*2*radius)
 
 $set_shock
-$isothermal
+$set_ramping
+refine_start_iter = 2*ramp_iter
+art_visc_width = 0.02*radius
+print_freq = 10
+vis_freq = write_freq = 1000
+monitor_vars = {heating_rate = heating_rate;}
 
-vis_n_sample = 2
-$start
-$mesh
-init_state
-$run
+$plot_history
+$simulate

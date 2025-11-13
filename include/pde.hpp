@@ -527,7 +527,7 @@ class Fix_therm_admis {
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
   static constexpr bool has_source = false;
-  static constexpr int n_state = n_dim + 4;
+  static constexpr int n_state = n_dim + 2;
   static constexpr int n_update = n_state;
   static constexpr int n_extrap = n_state;
 
