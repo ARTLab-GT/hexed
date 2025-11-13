@@ -442,10 +442,10 @@ class Element_shape : public Block {
   static void connect(std::array<std::vector<Element_shape*>, 2>, Connection_direction);
 
   void glue(Element_shape& that, std::array<std::vector<double>, 2> corners);
+  inline void unglue() {_glued_to.set();}
   void destroy_boundary_face();
   inline std::array<std::vector<double>, 2> glued_corners() const {return _glued_corners;}
   inline void set_glued_corners(std::array<std::vector<double>, 2> corners) {_glued_corners = corners;}
-  inline void unglue() {_glued_to.set();}
   inline Surface_face* boundary_face_3d() {return _sf.get();}
   inline const Surface_face* boundary_face_3d() const {return _sf.get();}
   inline Boundary_block* boundary_block() {return _bf.get();}
