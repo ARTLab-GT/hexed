@@ -364,23 +364,21 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
   Connection_neighbors neighbors;
   auto result = _neighbor(get_direction(i_face, n_dim));
   HEXED_ASSERT(result.neighbor, "No neighbors on requested face.")
-  std::string message;
   Tree* search_roots [2] {this, result.neighbor};
-  Tree* orig_search_roots [2] {this, result.neighbor};
+  Array<int> rl({2, n_dim});
+  Array<Int> coords({2, n_dim});
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    rl(i_side) = search_roots[i_side]->_ref_level;
+    coords(i_side) = search_roots[i_side]->_coords;
+  }
   int compare;
   while ((compare = _compare_ref_level(search_roots[0], search_roots[1], result.trans)) != 2) {
     int i_fake_face = result.trans.dir.i_face(result.trans.i_side == compare);
     search_roots[!compare] = search_roots[!compare]->_find_parent(i_fake_face);
-    message += str_cat("compare = ", compare, "; new rl = ", search_roots[!compare]->_ref_level, "new coords = ", search_roots[!compare]->_coords);
-  }
-  Array<int> rl({2, n_dim});
-  Array<Int> coords({2, n_dim});
-  for (int i_side = 0; i_side < 2; ++i_side) {
-    rl(i_side) = orig_search_roots[i_side]->_ref_level;
-    coords(i_side) = orig_search_roots[i_side]->_coords;
   }
   for (bool decrease_rl = true; decrease_rl;) {
     HEXED_ASSERT(rl.extreme(0) >= 0, "negative refinement level")
+    // equalize refinement levels so that they are equivalent on both sides of the connection
     for (int i_side = 0; i_side < 2; ++i_side) {
       _Transformation trans = result.trans;
       Array<int> that_rl = rl(!i_side).copy();
@@ -398,17 +396,8 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
         }
       }
     }
-    message += str_cat(
-      result.trans.dir, "\n",
-      "roots 0 rl ", orig_search_roots[0]->_ref_level,
-      "roots 0 coords ", orig_search_roots[0]->_coords,
-      "roots 1 rl ", orig_search_roots[1]->_ref_level,
-      "roots 1 coords ", orig_search_roots[1]->_coords,
-      "rl", rl,
-      "coords", coords,
-      "i_side", result.trans.i_side, "\n"
-    );
     decrease_rl = false;
+    // populate neighbors
     for (int i_side = 0; i_side < 2; ++i_side) {
       neighbors.trees[i_side].clear();
       neighbors.trees[i_side].resize(math::pow(2, n_dim - 1), nullptr);
@@ -418,7 +407,8 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
       coords(j_side)[i_dim] = search_roots[j_side]->_coords[i_dim];
       search_roots[j_side]->_assign_leaves(neighbors.trees[i_side], rl(j_side), coords(j_side),
                                            i_dim, result.trans.dir.face_sign[i_side]);
-      #if 1
+      // if one of the neighbors is larger than the specified refinement level,
+      // we need to try again with a lower refinement level
       for (Tree* n : neighbors.trees[i_side]) if (n) {
         for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
           if (n->_ref_level[j_dim] < rl(j_side)[j_dim]) {
@@ -429,23 +419,10 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
           }
         }
       }
-      #endif
     }
   }
   for (int i_side = 0; i_side < 2; ++i_side) {
-    int j_side = i_side != result.trans.i_side;
-    int i_dim = result.trans.dir.i_dim[i_side];
-    for (Tree* n : neighbors.trees[i_side]) {
-      if (!n) for (int k_side = 0; k_side < 2; ++k_side) {
-        search_roots[k_side]->visualize("default", str_cat("bad_tree", k_side));
-      }
-      HEXED_ASSERT(n, str_cat("Null element returned. j_side = ", j_side, "; i_dim = ", i_dim, "; sign = ", result.trans.dir.face_sign[i_side], "\n",
-                              "search root ref level = ", search_roots[j_side]->_ref_level,
-                              "search root coords = ", search_roots[j_side]->_coords,
-                              "ref level = ", rl, "coords = ", coords,
-                              "is ref ", Array<int>::make(search_roots[j_side]->is_refined(0), search_roots[j_side]->is_refined(1), search_roots[j_side]->is_refined(2)),
-                              message))
-    }
+    for (Tree* n : neighbors.trees[i_side]) HEXED_ASSERT(n, "Connection neighbor is null.")
   }
   neighbors.direction = result.trans.dir;
   return neighbors;

@@ -34,5 +34,5 @@ print_freq = 10
 vis_freq = write_freq = 1000
 monitor_vars = {heating_rate = heating_rate;}
 
-{$plot_history}
+$plot_history
 $simulate
