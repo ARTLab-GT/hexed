@@ -6,6 +6,7 @@
 #include "Element.hpp"
 #include "Deformed_element.hpp"
 #include "Array.hpp"
+#include "Visualizer.hpp"
 
 namespace hexed {
 
@@ -215,6 +216,7 @@ class Tree : public Mortal {
   //! \brief total number of tree elements descended from this tree (including itself)
   int count();
   Array<int> needs_refine(std::function<bool(Tree*)> include);
+  void visualize(std::string format, std::string name);
   //!\}
 
   /*! \name flood fill algorithm
@@ -284,6 +286,7 @@ class Tree : public Mortal {
   static int _compare_ref_level(Tree*, Tree*, _Transformation);
   inline int _n_vert() const {return math::pow(2, n_dim);}
   Tree* _find_parent(int i_face);
+  void _visualize(Visualizer&, int tree_level);
 
   Mat<> _orig;
   double _root_sz;

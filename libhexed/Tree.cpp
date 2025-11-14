@@ -364,44 +364,88 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
   Connection_neighbors neighbors;
   auto result = _neighbor(get_direction(i_face, n_dim));
   HEXED_ASSERT(result.neighbor, "No neighbors on requested face.")
-  Tree* search_roots [2];
-  search_roots[0] = this;
-  search_roots[1] = result.neighbor;
-  Array<int> rl({2, n_dim});
-  Array<Int> coords({2, n_dim});
-  for (int i_side = 0; i_side < 2; ++i_side) {
-    _Transformation trans = result.trans;
-    Array<int> that_rl = search_roots[!i_side]->_ref_level;
-    if (trans.used) {
-      if (!i_side) trans.reverse();
-      that_rl = trans.transform(that_rl);
-    }
-    rl(i_side) = search_roots[i_side]->_ref_level;
-    coords(i_side) = search_roots[i_side]->_coords;
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) if (i_dim != trans.dir.i_dim[!trans.i_side]) {
-      int diff = rl(i_side)[i_dim] - that_rl[i_dim];
-      HEXED_ASSERT(diff < 2, "Ref level difference is too large.")
-      if (diff == 1) {
-        --rl(i_side)[i_dim];
-        coords(i_side)[i_dim] -= math::mod<Int>(coords(i_side)[i_dim], 2);
-        coords(i_side)[i_dim] /= 2;
-      }
-    }
-  }
+  std::string message;
+  Tree* search_roots [2] {this, result.neighbor};
+  Tree* orig_search_roots [2] {this, result.neighbor};
   int compare;
   while ((compare = _compare_ref_level(search_roots[0], search_roots[1], result.trans)) != 2) {
     int i_fake_face = result.trans.dir.i_face(result.trans.i_side == compare);
     search_roots[!compare] = search_roots[!compare]->_find_parent(i_fake_face);
+    message += str_cat("compare = ", compare, "; new rl = ", search_roots[!compare]->_ref_level, "new coords = ", search_roots[!compare]->_coords);
+  }
+  Array<int> rl({2, n_dim});
+  Array<Int> coords({2, n_dim});
+  for (int i_side = 0; i_side < 2; ++i_side) {
+    rl(i_side) = orig_search_roots[i_side]->_ref_level;
+    coords(i_side) = orig_search_roots[i_side]->_coords;
+  }
+  for (bool decrease_rl = true; decrease_rl;) {
+    HEXED_ASSERT(rl.extreme(0) >= 0, "negative refinement level")
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      _Transformation trans = result.trans;
+      Array<int> that_rl = rl(!i_side).copy();
+      if (trans.used) {
+        if (!i_side) trans.reverse();
+        that_rl = trans.transform(that_rl);
+      }
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) if (i_dim != trans.dir.i_dim[!trans.i_side]) {
+        int diff = rl(i_side)[i_dim] - that_rl[i_dim];
+        HEXED_ASSERT(diff < 2, "Ref level difference is too large.")
+        if (diff == 1) {
+          --rl(i_side)[i_dim];
+          coords(i_side)[i_dim] -= math::mod<Int>(coords(i_side)[i_dim], 2);
+          coords(i_side)[i_dim] /= 2;
+        }
+      }
+    }
+    message += str_cat(
+      result.trans.dir, "\n",
+      "roots 0 rl ", orig_search_roots[0]->_ref_level,
+      "roots 0 coords ", orig_search_roots[0]->_coords,
+      "roots 1 rl ", orig_search_roots[1]->_ref_level,
+      "roots 1 coords ", orig_search_roots[1]->_coords,
+      "rl", rl,
+      "coords", coords,
+      "i_side", result.trans.i_side, "\n"
+    );
+    decrease_rl = false;
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      neighbors.trees[i_side].clear();
+      neighbors.trees[i_side].resize(math::pow(2, n_dim - 1), nullptr);
+      int j_side = i_side != result.trans.i_side;
+      int i_dim = result.trans.dir.i_dim[i_side];
+      rl(j_side)[i_dim] = search_roots[j_side]->_ref_level[i_dim];
+      coords(j_side)[i_dim] = search_roots[j_side]->_coords[i_dim];
+      search_roots[j_side]->_assign_leaves(neighbors.trees[i_side], rl(j_side), coords(j_side),
+                                           i_dim, result.trans.dir.face_sign[i_side]);
+      #if 1
+      for (Tree* n : neighbors.trees[i_side]) if (n) {
+        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+          if (n->_ref_level[j_dim] < rl(j_side)[j_dim]) {
+            decrease_rl = true;
+            --rl(j_side)[j_dim];
+            coords(j_side)[j_dim] -= math::mod<Int>(coords(j_side)[j_dim], 2);
+            coords(j_side)[j_dim] /= 2;
+          }
+        }
+      }
+      #endif
+    }
   }
   for (int i_side = 0; i_side < 2; ++i_side) {
-    neighbors.trees[i_side].resize(math::pow(2, n_dim - 1), nullptr);
     int j_side = i_side != result.trans.i_side;
     int i_dim = result.trans.dir.i_dim[i_side];
-    rl(j_side)[i_dim] = search_roots[j_side]->_ref_level[i_dim];
-    coords(j_side)[i_dim] = search_roots[j_side]->_coords[i_dim];
-    search_roots[j_side]->_assign_leaves(neighbors.trees[i_side], rl(j_side), coords(j_side),
-                                         i_dim, result.trans.dir.face_sign[i_side]);
-    for (Tree* n : neighbors.trees[i_side]) HEXED_ASSERT(n, "null element returned")
+    for (Tree* n : neighbors.trees[i_side]) {
+      if (!n) for (int k_side = 0; k_side < 2; ++k_side) {
+        search_roots[k_side]->visualize("default", str_cat("bad_tree", k_side));
+      }
+      HEXED_ASSERT(n, str_cat("Null element returned. j_side = ", j_side, "; i_dim = ", i_dim, "; sign = ", result.trans.dir.face_sign[i_side], "\n",
+                              "search root ref level = ", search_roots[j_side]->_ref_level,
+                              "search root coords = ", search_roots[j_side]->_coords,
+                              "ref level = ", rl, "coords = ", coords,
+                              "is ref ", Array<int>::make(search_roots[j_side]->is_refined(0), search_roots[j_side]->is_refined(1), search_roots[j_side]->is_refined(2)),
+                              message))
+    }
   }
   neighbors.direction = result.trans.dir;
   return neighbors;
@@ -428,6 +472,11 @@ Array<int> Tree::needs_refine(std::function<bool(Tree*)> include) {
     }
   }
   return needs;
+}
+
+void Tree::visualize(std::string format, std::string name) {
+  auto vis = Visualizer::create(format, n_dim, n_dim, name, {"tree_level"}, 0., Visualizer::block);
+  _visualize(*vis, 0);
 }
 
 int Tree::get_status() {
@@ -496,14 +545,27 @@ void Tree::_add_extremal_levels(std::vector<Tree*>& add_to, Array<int> ref_level
 }
 
 void Tree::_assign_leaves(std::vector<Tree*>& assign_to, Array<int> ref_level, Array<Int> coords, int i_dim, int sign) {
+  if (!is_leaf()) {
+    for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
+      bool any_ref = false;
+      bool all_ref = true;
+      for (Row_index index(n_dim, 2, j_dim); index; ++index) {
+        bool ref = _children_storage[index.i_qpoint(0)].get() != _children_storage[index.i_qpoint(1)].get();
+        any_ref = any_ref || ref;
+        all_ref = all_ref && ref;
+      }
+      HEXED_ASSERT(any_ref == all_ref, "refinement mismatch")
+    }
+  }
   for (Row_index index(n_dim, 2, i_dim); index; ++index) {
     int i_child = index.i_qpoint(sign);
     if (is_leaf()) {
       bool assign = true;
       for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
         int row = math::row_coordinate(n_dim, 2, j_dim, i_child);
-        Int scale = math::pow<Int>(2, _ref_level[j_dim] - ref_level[j_dim]);
-        assign = assign && (_coords[j_dim] + row == (coords[j_dim] + row)*scale);
+        Int scale0 = math::pow<Int>(2, ref_level[j_dim]);
+        Int scale1 = math::pow<Int>(2, _ref_level[j_dim]);
+        assign = assign && ((_coords[j_dim] + row)*scale0 == (coords[j_dim] + row)*scale1);
       }
       if (assign) assign_to[index.i_face_qpoint()] = this;
     } else {
@@ -563,6 +625,7 @@ void Tree::_interchange_aniso_ref() {
   std::vector<bool> pass_down(n_dim);
   std::vector<bool> retain(n_dim);
   for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+    if (any_refined[i_dim] != all_refined[i_dim]) return;
     pass_down[i_dim] = is_refined(i_dim) && !any_refined[i_dim];
     retain[i_dim] = is_refined(i_dim) && all_refined[i_dim];
   }
@@ -602,6 +665,15 @@ void Tree::_collapse_aniso_ref() {
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
         collapse = collapse && !(child->is_refined(i_dim) && is_refined(i_dim));
       }
+    }
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      bool any = false;
+      bool all = true;
+      for (auto& child : _children_storage) {
+        any = any || child->is_refined(i_dim);
+        all = all && child->is_refined(i_dim);
+      }
+      collapse = collapse && (any == all);
     }
     if (collapse) {
       for (int i_child = 0; i_child < (int)_children_storage.size(); ++i_child) {
@@ -740,6 +812,23 @@ Tree::_Neighbor_result Tree::_neighbor(Array<int> dir_arg) {
 void Tree::_clear_connections() {
   for (_Connection*& c : _face_connections) c = nullptr;
   for (Tree* t : unique_children()) t->_clear_connections();
+}
+
+void Tree::_visualize(Visualizer& vis, int tree_level) {
+  int nv = math::pow(2, n_dim);
+  std::vector<Int> shape(n_dim, 2);
+  shape.insert(shape.begin(), 1);
+  Array<double> data = Array<double>::make_uniform(shape, tree_level);
+  shape[0] = n_dim;
+  Array<double> pos(shape);
+  for (int i_point = 0; i_point < nv; ++i_point) {
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      int rc = math::row_coordinate(n_dim, 2, i_dim, i_point);
+      pos(i_dim)[i_point] = nominal_position()[i_dim] + rc*nominal_shape()[i_dim];
+    }
+  }
+  vis.write_block(pos, data);
+  for (Tree* child : unique_children()) child->_visualize(vis, tree_level + 1);
 }
 
 }
