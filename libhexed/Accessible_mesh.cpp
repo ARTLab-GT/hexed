@@ -1446,6 +1446,15 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
         continue;
       }
       faces.emplace_back(&elems[i_side][i_elem]->face(dir.i_face(i_side)));
+      if (faces.back()->connected()) {
+        for (int j_side = 0; j_side < 2; ++j_side) {
+          for (int j_elem = 0; j_elem < nv/2; ++j_elem) {
+            elems[j_side][j_elem]->shape().visualize("default", str_cat("bad_elem", j_side, j_elem));
+          }
+        }
+        visualize("default", "failed_mesh");
+        HEXED_THROW("Face is already connected.")
+      }
       shapes[i_side].push_back(&elems[i_side][i_elem]->shape());
       active_shapes[i_side].push_back(&elems[i_side][i_elem]->active_shape());
       shared_fake = shared_fake || elems[i_side][i_elem]->shared_fake();
@@ -2372,7 +2381,7 @@ void Accessible_mesh::purge() {
 Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Element&, int)> refine_criterion,
                                                          std::function<bool(Element&, int)> unrefine_criterion,
                                                          bool set_floor) {
-  Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
+  //Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
   // decide which elements to (un)refine
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -2539,67 +2548,75 @@ void Accessible_mesh::execute_adaptation() {
       }
     }
   };
-  #pragma omp parallel for
-  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) elems[i_elem].record = 0;
-  // do coarsening first to minimize memory requirements
-  for (bool is_deformed : {0, 1}) {
-    auto& elems = container(is_deformed).element_view();
-    Int n_elem = elems.size();
-    for (Int i_elem = 0; i_elem < n_elem; ++i_elem) {
-      auto& elem = elems[i_elem];
-      if (elem.tree && elem.record == 0) {
-        std::vector<bool> coarsen_dims(params.n_dim);
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          coarsen_dims[i_dim] = elem.desired_refinement(i_dim) < 0;
-        }
-        if (std::any_of(coarsen_dims.begin(), coarsen_dims.end(), [](bool b){return b;})) {
-          Tree* parent = elem.tree->parent();
-          if (!parent) continue;
-          auto uc = parent->unique_children();
-          if (elem.tree.get() != uc[0]) continue;
-          std::vector<Element*> orig_elems;
-          for (int i_child = 0; i_child < params.n_vertices(); ++i_child) {
-            auto child = parent->children()[i_child]->elem.get();
-            orig_elems.push_back(child);
-          }
-          auto new_leaves = parent->unrefine(coarsen_dims);
-          populate_elements(is_deformed, true, coarsen_dims, orig_elems, new_leaves);
-        }
-      }
-    }
-  }
-  purge();
-  for (bool is_deformed : {0, 1}) {
-    auto& elems = container(is_deformed).element_view();
-    Int n_elem = elems.size();
-    for (Int i_elem = 0; i_elem < n_elem; ++i_elem) {
-      auto& elem = elems[i_elem];
-      if (elem.tree && elem.record == 0) {
-        std::vector<bool> ref_dims(params.n_dim);
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-          ref_dims[i_dim] = elem.desired_refinement(i_dim) > 0;
-        }
-        if (std::any_of(ref_dims.begin(), ref_dims.end(), [](bool b){return b;})) {
-          auto new_leaves = elem.tree->refine(ref_dims);
-          std::vector<Element*> orig_elems(params.n_vertices(), &elem);
-          populate_elements(is_deformed, false, ref_dims, orig_elems, new_leaves);
-        }
-      }
-    }
-  }
-  purge();
-  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    elem.record = 0;
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) elem.desired_refinement(i_dim) = 0;
-    if (elem.tree) {
-      HEXED_ASSERT(elem.tree->needs_refine([](Tree* t){return t->elem.get();}).norm_squared() == 0,
-                   "Refinement smoothing failed.")
-    }
-  }
   for (int i = 0; i < 3; ++i) _extrude_cons[i].clear();
+  for (bool changed = true; changed;) {
+    changed = false;
+    #pragma omp parallel for
+    for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) elems[i_elem].record = 0;
+    // do coarsening first to minimize memory requirements
+    for (bool is_deformed : {0, 1}) {
+      auto& elems = container(is_deformed).element_view();
+      Int n_elem = elems.size();
+      for (Int i_elem = 0; i_elem < n_elem; ++i_elem) {
+        auto& elem = elems[i_elem];
+        if (elem.tree && elem.record == 0) {
+          std::vector<bool> coarsen_dims(params.n_dim);
+          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+            coarsen_dims[i_dim] = elem.desired_refinement(i_dim) < 0;
+          }
+          if (std::any_of(coarsen_dims.begin(), coarsen_dims.end(), [](bool b){return b;})) {
+            Tree* parent = elem.tree->parent();
+            if (!parent) continue;
+            auto uc = parent->unique_children();
+            if (elem.tree.get() != uc[0]) continue;
+            std::vector<Element*> orig_elems;
+            for (int i_child = 0; i_child < params.n_vertices(); ++i_child) {
+              auto child = parent->children()[i_child]->elem.get();
+              orig_elems.push_back(child);
+            }
+            auto new_leaves = parent->unrefine(coarsen_dims);
+            populate_elements(is_deformed, true, coarsen_dims, orig_elems, new_leaves);
+          }
+        }
+      }
+    }
+    purge();
+    for (bool is_deformed : {0, 1}) {
+      auto& elems = container(is_deformed).element_view();
+      Int n_elem = elems.size();
+      for (Int i_elem = 0; i_elem < n_elem; ++i_elem) {
+        auto& elem = elems[i_elem];
+        if (elem.tree && elem.record == 0) {
+          std::vector<bool> ref_dims(params.n_dim);
+          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+            ref_dims[i_dim] = elem.desired_refinement(i_dim) > 0;
+          }
+          if (std::any_of(ref_dims.begin(), ref_dims.end(), [](bool b){return b;})) {
+            auto new_leaves = elem.tree->refine(ref_dims);
+            std::vector<Element*> orig_elems(params.n_vertices(), &elem);
+            populate_elements(is_deformed, false, ref_dims, orig_elems, new_leaves);
+          }
+        }
+      }
+    }
+    purge();
+    #if 0
+    for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      elem.record = 0;
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) elem.desired_refinement(i_dim) = 0;
+      if (elem.tree) {
+        HEXED_ASSERT(elem.tree->needs_refine([](Tree* t){return t->elem.get();}).norm_squared() == 0,
+                     "Refinement smoothing failed.")
+      }
+    }
+    #endif
+    changed = plan_adaptation([](Element&, int){return false;}, [](Element&, int){return false;}, false).changed;
+    if (changed) printers::info("[subsweep]", true);
+  }
   connect_new<Element>(0);
   connect_new<Deformed_element>(0);
+  purge();
   connect_rest(surface_bc_sn());
   {
     auto verts = _blocks.verts();

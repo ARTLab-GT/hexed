@@ -437,15 +437,27 @@ int Tree::count() {
 Array<int> Tree::needs_refine(std::function<bool(Tree*)> include) {
   Array<int> needs({n_dim});
   needs = 0;
+  bool other_too_big = false;
   for (int i_face = 0; i_face < 2*n_dim; ++i_face) {
     auto result = _neighbor(get_direction(i_face, n_dim));
+    int i_side = result.trans.i_side;
     result.trans.reverse();
     auto neighbors = find_neighbors(i_face);
-    for (Tree* n : neighbors) if (include(n)) {
-      Array<int> rl_diff = result.trans.transform(n->desired_refinement_level()) - desired_refinement_level();
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-        needs[i_dim] = needs[i_dim] || (rl_diff[i_dim] > 1 + (i_dim == i_face/2));
+    auto check_neighbor = [&](Tree* n) {
+      if (include(n)) {
+        Array<int> rl_diff = result.trans.transform(n->desired_refinement_level()) - desired_refinement_level();
+        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+          needs[i_dim] = needs[i_dim] || (rl_diff[i_dim] > 1 + (i_dim == i_face/2));
+          other_too_big = other_too_big || (i_dim != i_face/2 && rl_diff[i_dim] < -1);
+        }
       }
+    };
+    for (Tree* n : neighbors) check_neighbor(n);
+    if (!other_too_big && !needs.extreme(1) && neighbors.size()) {
+      auto con_neighbors = find_connection_neighbors(i_face);
+      Array<int> old_needs = needs.copy();
+      for (Tree* n : con_neighbors.trees[!i_side]) check_neighbor(n);
+      if (!old_needs.equal(needs)) printers::info("(modifying needs ref)", true);
     }
   }
   return needs;

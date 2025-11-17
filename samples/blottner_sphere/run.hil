@@ -28,7 +28,7 @@ freestream_density = target_reynolds*dynamic_viscosity/(sqrt(specific_gas_air*1.
 
 $set_shock
 $set_ramping
-refine_start_iter = 2*ramp_iter
+adapt_start_iter = 2*10^4
 art_visc_width = 0.02*radius
 print_freq = 10
 vis_freq = write_freq = 1000
