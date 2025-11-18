@@ -1449,11 +1449,11 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
       if (faces.back()->connected()) {
         for (int j_side = 0; j_side < 2; ++j_side) {
           for (int j_elem = 0; j_elem < nv/2; ++j_elem) {
-            elems[j_side][j_elem]->shape().visualize("default", str_cat("bad_elem", j_side, j_elem));
+            elems[j_side][j_elem]->shape().visualize("default", str_cat("duplicate_connection_elem", j_side, j_elem));
           }
         }
-        visualize("default", "failed_mesh");
-        HEXED_THROW("Face is already connected.")
+        visualize("default", "duplicate_connection_mesh");
+        printers::warn("(Face is already connected.)", true);
       }
       shapes[i_side].push_back(&elems[i_side][i_elem]->shape());
       active_shapes[i_side].push_back(&elems[i_side][i_elem]->active_shape());
@@ -1514,7 +1514,11 @@ void Accessible_mesh::_connect(std::array<std::vector<Element*>, 2> elems,
                      "invalid direction for Cartesian connection" + context)
         if (!face_arr[0]->sign()) std::swap(face_arr[0], face_arr[1]);
       }
-      _neighbor_cons[is_deformed].emplace_back(faces[0]->storage_params(), face_arr, dir.rotate);
+      HEXED_ASSERT(face_arr[0]->connected() == face_arr[1]->connected(),
+                   "Exactly one of the faces is already connected.")
+      if (!face_arr[0]->connected()) {
+        _neighbor_cons[is_deformed].emplace_back(faces[0]->storage_params(), face_arr, dir.rotate);
+      }
     }
   }
   // the order of the following two line is important to make sure that true vertices are glued to true shapes
@@ -2381,7 +2385,6 @@ void Accessible_mesh::purge() {
 Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Element&, int)> refine_criterion,
                                                          std::function<bool(Element&, int)> unrefine_criterion,
                                                          bool set_floor) {
-  //Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
   // decide which elements to (un)refine
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -2600,17 +2603,6 @@ void Accessible_mesh::execute_adaptation() {
       }
     }
     purge();
-    #if 0
-    for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      auto& elem = elems[i_elem];
-      elem.record = 0;
-      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) elem.desired_refinement(i_dim) = 0;
-      if (elem.tree) {
-        HEXED_ASSERT(elem.tree->needs_refine([](Tree* t){return t->elem.get();}).norm_squared() == 0,
-                     "Refinement smoothing failed.")
-      }
-    }
-    #endif
     changed = plan_adaptation([](Element&, int){return false;}, [](Element&, int){return false;}, false).changed;
     if (changed) printers::info("[subsweep]", true);
   }

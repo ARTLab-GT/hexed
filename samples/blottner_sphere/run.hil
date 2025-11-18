@@ -25,11 +25,13 @@ target_reynolds = 1.8875e6
 temperature = freestream_temperature
 $transport_expr
 freestream_density = target_reynolds*dynamic_viscosity/(sqrt(specific_gas_air*1.4*freestream_temperature)*freestream_mach*2*radius)
+wall_temperature = 1.308*freestream_temperature
+thermal_bc = {temperature = wall_temperature}
 
 $set_shock
 $set_ramping
-adapt_start_iter = 2*10^4
-art_visc_width = 0.02*radius
+refine_start_iter = 2000
+art_visc_width = 0.05*radius
 print_freq = 10
 vis_freq = write_freq = 1000
 monitor_vars = {heating_rate = heating_rate;}
