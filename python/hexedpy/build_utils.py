@@ -960,6 +960,7 @@ class Builder:
         self.prefices["python"] = (module_path,) + self.prefices["python"]
         for p in self.prefices:
             self.prefices[p] = (f"{self.build_dir}{p}/",) + self.prefices[p]
+        self.prefices["lib"] = (f"{self.build_dir}lib64/",) + self.prefices["lib"]
         cmake_paths = ()
         for p in self.prefices["bin"]:
             p = Prefices.remove_suffix(p, "bin")
