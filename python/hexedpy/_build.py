@@ -195,6 +195,7 @@ class Hexed(bu.C_project):
                 "--gen-suppressions=all",
                 f"--suppressions={self.sdir}hexed.supp",
             ] + args
+        self.builder.env["HEXED_PATH"] = self.bdir + "python_package/hexedpy/lib/hexed/"
         return self.builder.subproc(args)
 
 if __name__ == "__main__":
