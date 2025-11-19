@@ -232,7 +232,7 @@ std::string Interpreter::_Dynamic_value::to_string(std::string fd) const {
   if (i) return std::to_string(*i);
   if (d) return format_str(100, fd, *d);
   if (a) return hexed::to_string((*a)());
-  HEXED_THROW("empty_variable") throw;
+  return ""; // variable has no value
 }
 
 Interpreter::_Dynamic_value Interpreter::_general_add(const Interpreter::_Dynamic_value& o0,
