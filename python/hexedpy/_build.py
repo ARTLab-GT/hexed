@@ -8,6 +8,7 @@ class Hexed(bu.C_project):
 
     def __init__(self, builder):
         self.builder = builder
+        self.builder.rpath += ":$ORIGIN/../lib"
         #### add extra build options and information to be passed to the code
         if os.path.isdir(self.sdir + ".git/"):
             self[bu.Pip]("gitpython").do
@@ -27,7 +28,6 @@ class Hexed(bu.C_project):
             "global_hacks": bu.Option(False, convert=bu.as_bool),
             "use_xdmf": bu.Option(True, convert=bu.as_bool),
             "use_tecio": bu.Option(False, convert=bu.as_bool),
-            "use_occt": bu.Option(False, convert=bu.as_bool),
             "build_tests": bu.Option(True, convert=bu.as_bool),
             "build_docs": bu.Option(False, convert=bu.as_bool),
             "obsessive_timing": bu.Option(False, convert=bu.as_bool),
@@ -67,14 +67,6 @@ class Hexed(bu.C_project):
         ]
         if self.builder.options["use_xdmf"]:
             deps.append(self[bu.Xdmf]())
-        if self.builder.options["use_occt"]:
-            deps.append(self[bu.Occt](modules = [
-                "DETools",
-                "DataExchange",
-                "FoundationClasses",
-                "ModelingAlgorithms",
-                "ModelingData",
-            ], use_graphics=False))
         if self.builder.options["build_tests"]:
             deps.append(self[bu.Catch2](self.builder.options["sanitize"]))
         if self.builder.options["build_docs"]:
@@ -125,8 +117,6 @@ class Hexed(bu.C_project):
         libs = ["hdf5_cpp", "hdf5"]
         if self.builder.options["use_xdmf"]:
             libs += ["Xdmf", "XdmfCore", "xml2"]
-        if self.builder.options["use_occt"]:
-            libs += ["TKDEIGES", "TKDESTEP", "TKDESTL", "TKBRep"]
 
         self[bu.Link]("libhexed.so", bu.contents(self.bdir + "object/libhexed"), libs=libs).do
         self[bu.Link]("hil", ["execs/hil.o"], libs=["hexed"]).do
@@ -205,7 +195,6 @@ class Hexed(bu.C_project):
                 "--gen-suppressions=all",
                 f"--suppressions={self.sdir}hexed.supp",
             ] + args
-        self.builder.env["HEXED_PATH"] = self.bdir + "python_package/hexedpy/lib/hexed/"
         return self.builder.subproc(args)
 
 if __name__ == "__main__":

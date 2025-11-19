@@ -520,46 +520,6 @@ class Doxygen(Buildable):
                                                outputs=f"doxygen-{self.version}")[0]
         self.builder.copy(directory + "bin/", self.bdir + "bin/").do
 
-class Occt(C_project):
-    version = "7.8.1"
-    all_modules = [
-            "ApplicationFramework",
-            "DETools",
-            "DataExchange",
-            "Draw",
-            "FoundationClasses",
-            "ModelingAlgorithms",
-            "ModelingData",
-            "Visualization",
-    ]
-    def __init__(self, builder, modules=all_modules, use_graphics=True):
-        self.modules = modules
-        self.installed_files = {"include":["opencascade"], "cmake":["opencascade"]}
-        self.use_graphics = use_graphics
-    def build(self):
-        if not self.use_graphics:
-            with open(self.bdir + "empty.cpp", "w") as empty:
-                empty.write("\n")
-            self[Compile](self.bdir + "empty.cpp").do
-            for lib_name in ["GL", "EGL"]:
-                self[Link](f"lib{lib_name}.so", [self.bdir + "object/empty.o"]).do
-        underscore_version = self.version.replace('.', '_')
-        directory = self.builder.fetch_archive(
-            f"https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore_version}.tar.gz",
-            outputs=f"OCCT-{underscore_version}",
-        )[0]
-        if self.use_graphics:
-            options = []
-        else:
-            options = ["-DUSE_FREETYPE=OFF", "-DUSE_GLES2=OFF", "-DUSE_OPENGL=OFF", "-DUSE_TK=OFF", "-DUSE_XLIB=OFF"]
-        for module in self.all_modules:
-            options.append(f"-DBUILD_MODULE_{module}={['OFF', 'ON'][module in self.modules]}")
-        self.builder.cmake(directory, options)
-    def find(self):
-        found = super().find()
-        self.builder.prefices["include"] += (self.builder.find_in("include", "opencascade").find().assets[0],)
-        return found
-
 class Pip(Buildable):
     fake_names = {
         "gitpython": "git",
@@ -708,6 +668,8 @@ class Link(Subprocess):
         for lib in libs:
             args.append("-l" + lib)
             depends.append(builder.find_in("lib", f"lib{lib}.so") | builder.find_in("lib", f"lib{lib}.a") | self.builder.find_in("lib", f"lib{lib}.dylib"))
+        if self.builder.rpath:
+            args.append(f"-Wl,-rpath,{self.builder.rpath}")
         super().__init__(builder, args, name, depends=depends)
 
 class Python_package(Buildable):
@@ -921,6 +883,7 @@ class Builder:
             "internet": Option(True, convert=as_bool),
             "date": Option(time.strftime("%Y-%m-%d", time.gmtime())),
         }
+        self.rpath = ""
         self.indent = ""
         for opt in opts:
             self._merge_option(opt)
