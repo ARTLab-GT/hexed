@@ -965,7 +965,7 @@ class Builder:
         for p in self.prefices["bin"]:
             p = Prefices.remove_suffix(p, "bin")
             p = Prefices.remove_suffix(p, "sbin")
-            cmake_paths += (p, p + "lib/")
+            cmake_paths += (p, p + "lib/", p + "lib64/")
         self.prefices["cmake"] = cmake_paths + tuple(self.prefices["cmake"])
         pip_exec = self.find_in("bin", "pip").find();
         assert pip_exec.found, "no pip"
