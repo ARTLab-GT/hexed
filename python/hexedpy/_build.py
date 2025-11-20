@@ -8,6 +8,7 @@ class Hexed(bu.C_project):
 
     def __init__(self, builder):
         self.builder = builder
+        self.builder.rpath += ":$ORIGIN/../lib"
         #### add extra build options and information to be passed to the code
         if os.path.isdir(self.sdir + ".git/"):
             self[bu.Pip]("gitpython").do
@@ -27,7 +28,6 @@ class Hexed(bu.C_project):
             "global_hacks": bu.Option(False, convert=bu.as_bool),
             "use_xdmf": bu.Option(True, convert=bu.as_bool),
             "use_tecio": bu.Option(False, convert=bu.as_bool),
-            "use_occt": bu.Option(False, convert=bu.as_bool),
             "build_tests": bu.Option(True, convert=bu.as_bool),
             "build_docs": bu.Option(False, convert=bu.as_bool),
             "obsessive_timing": bu.Option(False, convert=bu.as_bool),
@@ -67,14 +67,6 @@ class Hexed(bu.C_project):
         ]
         if self.builder.options["use_xdmf"]:
             deps.append(self[bu.Xdmf]())
-        if self.builder.options["use_occt"]:
-            deps.append(self[bu.Occt](modules = [
-                "DETools",
-                "DataExchange",
-                "FoundationClasses",
-                "ModelingAlgorithms",
-                "ModelingData",
-            ], use_graphics=False))
         if self.builder.options["build_tests"]:
             deps.append(self[bu.Catch2](self.builder.options["sanitize"]))
         if self.builder.options["build_docs"]:
@@ -105,14 +97,17 @@ class Hexed(bu.C_project):
         self.builder.prefices["include"] = (self.bdir + "include/hexed",) + self.builder.prefices["include"]
         self.builder.mkdir(self.bdir + "libhexed")
         self.builder.copy(self.sdir + "include", self.bdir + "include/hexed").do
-        self[bu.Configure](self.sdir + "config.hpp.in", self.bdir + "include/hexed/config.hpp").do
-        self[bu.Configure](self.sdir + "config.cpp.in", self.bdir + "libhexed/config.cpp").do
+        self[bu.Configure](self.sdir + "include/config.hpp.in", self.bdir + "include/hexed/config.hpp").do
+        self[bu.Configure](self.sdir + "libhexed/config.cpp.in", self.bdir + "libhexed/config.cpp").do
         self[bu.Python_script](
             ["libhexed/Gauss_legendre.cpp", "libhexed/Gauss_lobatto.cpp"],
             self.sdir + "script/install/auto_generate.py",
             args=[self.bdir + "libhexed", str(self.builder.options['max_row_size'] + 1)],
         ).do
-        sources = bu.contents(self.sdir + "libhexed") + bu.contents(self.sdir + "execs") + [
+        def compile_ignore(f):
+            return bu.not_source(f) or f.endswith(".in")
+        sources = bu.contents(self.sdir + "libhexed", ignore=compile_ignore) + \
+                  bu.contents(self.sdir + "execs", ignore=compile_ignore) + [
             f"{self.bdir}libhexed/Gauss_legendre.cpp",
             f"{self.bdir}libhexed/Gauss_lobatto.cpp",
             f"{self.bdir}libhexed/config.cpp"
@@ -125,8 +120,6 @@ class Hexed(bu.C_project):
         libs = ["hdf5_cpp", "hdf5"]
         if self.builder.options["use_xdmf"]:
             libs += ["Xdmf", "XdmfCore", "xml2"]
-        if self.builder.options["use_occt"]:
-            libs += ["TKDEIGES", "TKDESTEP", "TKDESTL", "TKBRep"]
 
         self[bu.Link]("libhexed.so", bu.contents(self.bdir + "object/libhexed"), libs=libs).do
         self[bu.Link]("hil", ["execs/hil.o"], libs=["hexed"]).do

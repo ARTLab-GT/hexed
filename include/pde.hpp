@@ -142,7 +142,6 @@ class Navier_stokes {
         bulk_av = std::abs(state(i_bulk_art_visc));
         laplacian_av = std::abs(state(i_laplacian_art_visc));
         double spec_heat_v = constants::specific_gas_air/(heat_rat - 1.);
-        double spec_heat_p = heat_rat*constants::specific_gas_air;
         sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)/spec_heat_v);
         // taking abs ensures that this will never be negative
         // and makes the probability that they are exactly 0 very low, which is good cause we have to divide by them

@@ -520,46 +520,6 @@ class Doxygen(Buildable):
                                                outputs=f"doxygen-{self.version}")[0]
         self.builder.copy(directory + "bin/", self.bdir + "bin/").do
 
-class Occt(C_project):
-    version = "7.8.1"
-    all_modules = [
-            "ApplicationFramework",
-            "DETools",
-            "DataExchange",
-            "Draw",
-            "FoundationClasses",
-            "ModelingAlgorithms",
-            "ModelingData",
-            "Visualization",
-    ]
-    def __init__(self, builder, modules=all_modules, use_graphics=True):
-        self.modules = modules
-        self.installed_files = {"include":["opencascade"], "cmake":["opencascade"]}
-        self.use_graphics = use_graphics
-    def build(self):
-        if not self.use_graphics:
-            with open(self.bdir + "empty.cpp", "w") as empty:
-                empty.write("\n")
-            self[Compile](self.bdir + "empty.cpp").do
-            for lib_name in ["GL", "EGL"]:
-                self[Link](f"lib{lib_name}.so", [self.bdir + "object/empty.o"]).do
-        underscore_version = self.version.replace('.', '_')
-        directory = self.builder.fetch_archive(
-            f"https://github.com/Open-Cascade-SAS/OCCT/archive/refs/tags/V{underscore_version}.tar.gz",
-            outputs=f"OCCT-{underscore_version}",
-        )[0]
-        if self.use_graphics:
-            options = []
-        else:
-            options = ["-DUSE_FREETYPE=OFF", "-DUSE_GLES2=OFF", "-DUSE_OPENGL=OFF", "-DUSE_TK=OFF", "-DUSE_XLIB=OFF"]
-        for module in self.all_modules:
-            options.append(f"-DBUILD_MODULE_{module}={['OFF', 'ON'][module in self.modules]}")
-        self.builder.cmake(directory, options)
-    def find(self):
-        found = super().find()
-        self.builder.prefices["include"] += (self.builder.find_in("include", "opencascade").find().assets[0],)
-        return found
-
 class Pip(Buildable):
     fake_names = {
         "gitpython": "git",
@@ -598,6 +558,7 @@ class Configure(Buildable):
         for opt in re.findall(r'options\[.(\w+).\]', self._text):
             if opt != "build_dir" and opt not in self._opts:
                 self._opts.append(opt)
+                assert opt in self.builder.options, f"invalid option `{opt}` in configuration file `{self.old_name}`"
     def depends(self):
         return File(self.old_name) & all_([self.builder.cache_dir + opt for opt in self._opts], name="configuration options")
     def output(self):
@@ -702,12 +663,15 @@ class Link(Subprocess):
             raise NotImplementedError("static library linking has not been implemented yet")
         else:
             name = absolute(name, builder.build_dir + "bin/")
-        args += ["-o", name]
+        #! \todo fix the prefixing system so that the preference order of multiple available dependencies is consistent
+        args += ["-o", name, f"-L{self.builder.build_dir}lib", f"-L{self.builder.build_dir}lib64"]
         depends = [absolute(o, builder.build_dir + "object/") for o in objects]
         args += depends
         for lib in libs:
             args.append("-l" + lib)
             depends.append(builder.find_in("lib", f"lib{lib}.so") | builder.find_in("lib", f"lib{lib}.a") | self.builder.find_in("lib", f"lib{lib}.dylib"))
+        if self.builder.rpath:
+            args.append(f"-Wl,-rpath,{self.builder.rpath}")
         super().__init__(builder, args, name, depends=depends)
 
 class Python_package(Buildable):
@@ -921,6 +885,7 @@ class Builder:
             "internet": Option(True, convert=as_bool),
             "date": Option(time.strftime("%Y-%m-%d", time.gmtime())),
         }
+        self.rpath = ""
         self.indent = ""
         for opt in opts:
             self._merge_option(opt)
@@ -960,11 +925,12 @@ class Builder:
         self.prefices["python"] = (module_path,) + self.prefices["python"]
         for p in self.prefices:
             self.prefices[p] = (f"{self.build_dir}{p}/",) + self.prefices[p]
+        self.prefices["lib"] = (f"{self.build_dir}lib64/",) + self.prefices["lib"]
         cmake_paths = ()
         for p in self.prefices["bin"]:
             p = Prefices.remove_suffix(p, "bin")
             p = Prefices.remove_suffix(p, "sbin")
-            cmake_paths += (p, p + "lib/")
+            cmake_paths += (p, p + "lib/", p + "lib64/")
         self.prefices["cmake"] = cmake_paths + tuple(self.prefices["cmake"])
         pip_exec = self.find_in("bin", "pip").find();
         assert pip_exec.found, "no pip"

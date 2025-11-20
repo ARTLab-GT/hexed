@@ -2,8 +2,7 @@
 #include <hexed/Path.hpp>
 #include <fstream>
 
-TEST_CASE("Path")
-{
+TEST_CASE("Path") {
   hexed::Path p("bin");
   REQUIRE(!p.find("python3").empty()); // this should exist somewhere, since python is a mandatory dependency
   // find a file in the home directory

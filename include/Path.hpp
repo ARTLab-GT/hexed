@@ -4,8 +4,7 @@
 #include <filesystem>
 #include <vector>
 
-namespace hexed
-{
+namespace hexed {
 
 /*! \brief Finds a file in the working directory or system paths.
  * \details The "system paths" are:
@@ -16,8 +15,7 @@ namespace hexed
  * - `$HOME`
  * - `$HOME/.local`
  */
-class Path
-{
+class Path {
   std::filesystem::path _home;
   std::vector<std::filesystem::path> _paths;
 
@@ -39,6 +37,7 @@ class Path
    * If `target` is an absolute path, it will be returned if it exists and the empty path will be returned otherwise.
    */
   path find(path target, std::vector<path> extra_dirs = {{"."}});
+  static path exec_path(); //!< \brief Gets the path of the current executable.
 };
 
 }

@@ -35,4 +35,6 @@ Path::path Path::find(path target, std::vector<path> extra_dirs) {
   return found;
 }
 
+Path::path Path::exec_path() {return std::filesystem::canonical("/proc/self/exe");}
+
 }
