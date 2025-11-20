@@ -4,7 +4,6 @@
 #include <hexed/Simplex_geom.hpp>
 #include <hexed/read_csv.hpp>
 #include <hexed/standard_atmosphere.hpp>
-#include <hexed/Occt.hpp>
 #include <hexed/vis_variables.hpp>
 #include <hexed/Csv.hpp>
 #include <hexed/brep.hpp>
@@ -136,7 +135,7 @@ Surface_geom* Case::_make_geom() {
       for (int row = 0; row < data.cols(); ++row) data_arr(row)(0, 2).vector() = data(all, row);
       Tree_curve_geom* geom = new Tree_curve_geom(data_arr.copy(), 4);
       geoms.emplace_back(geom);
-    } else if ((ext == "igs" || ext == "iges") && !(HEXED_USE_OCCT && _vari("prefer_occt"))) {
+    } else if (ext == "igs" || ext == "iges") {
       if (nd == 3) {
         auto ptr = std::make_unique<brep::Geom_3d>(geom.value(), n_div_min, n_div_max, _vard("coincidence_tol_bbox"),
                                                    _vard("coincidence_tol_abs"), _vard("coincidence_tol_subdiv"),
@@ -159,11 +158,6 @@ Surface_geom* Case::_make_geom() {
         }
         geoms.emplace_back(ptr.release());
       } else HEXED_THROW("BRep geometry must be 2 or 3D", assert::User_error)
-    #if HEXED_USE_OCCT
-    } else if (ext == "stl") {
-      HEXED_ASSERT(nd == 3, "STL format is only supported for 3D", assert::User_error);
-      geoms.emplace_back(new Simplex_geom<3>(Occt::triangles(Occt::read_stl(geom.value()))));
-    #endif
     } else {
       HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", ext.c_str()), assert::User_error);
     }

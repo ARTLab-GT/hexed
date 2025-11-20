@@ -45,8 +45,6 @@ class Simplex_geom_nd : public Surface_geom {
  * so we do not care about orientation or watertightness.
  * The you are free to modify the simplex list at will, since there are no requirements on it.
  * All input points must have exactly `n_dim` entries.
- * \see `Occt::segments`
- * \see `Occt::triangles`
  */
 template <int n_dim>
 class Simplex_geom : public Simplex_geom_nd {

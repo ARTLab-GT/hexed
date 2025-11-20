@@ -97,14 +97,17 @@ class Hexed(bu.C_project):
         self.builder.prefices["include"] = (self.bdir + "include/hexed",) + self.builder.prefices["include"]
         self.builder.mkdir(self.bdir + "libhexed")
         self.builder.copy(self.sdir + "include", self.bdir + "include/hexed").do
-        self[bu.Configure](self.sdir + "config.hpp.in", self.bdir + "include/hexed/config.hpp").do
-        self[bu.Configure](self.sdir + "config.cpp.in", self.bdir + "libhexed/config.cpp").do
+        self[bu.Configure](self.sdir + "include/config.hpp.in", self.bdir + "include/hexed/config.hpp").do
+        self[bu.Configure](self.sdir + "libhexed/config.cpp.in", self.bdir + "libhexed/config.cpp").do
         self[bu.Python_script](
             ["libhexed/Gauss_legendre.cpp", "libhexed/Gauss_lobatto.cpp"],
             self.sdir + "script/install/auto_generate.py",
             args=[self.bdir + "libhexed", str(self.builder.options['max_row_size'] + 1)],
         ).do
-        sources = bu.contents(self.sdir + "libhexed") + bu.contents(self.sdir + "execs") + [
+        def compile_ignore(f):
+            return bu.not_source(f) or f.endswith(".in")
+        sources = bu.contents(self.sdir + "libhexed", ignore=compile_ignore) + \
+                  bu.contents(self.sdir + "execs", ignore=compile_ignore) + [
             f"{self.bdir}libhexed/Gauss_legendre.cpp",
             f"{self.bdir}libhexed/Gauss_lobatto.cpp",
             f"{self.bdir}libhexed/config.cpp"
