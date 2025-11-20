@@ -663,7 +663,8 @@ class Link(Subprocess):
             raise NotImplementedError("static library linking has not been implemented yet")
         else:
             name = absolute(name, builder.build_dir + "bin/")
-        args += ["-o", name]
+        #! \todo fix the prefixing system so that the preference order of multiple available dependencies is consistent
+        args += ["-o", name, f"-L{self.builder.build_dir}lib", f"-L{self.builder.build_dir}lib64"]
         depends = [absolute(o, builder.build_dir + "object/") for o in objects]
         args += depends
         for lib in libs:
