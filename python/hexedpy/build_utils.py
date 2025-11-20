@@ -558,6 +558,7 @@ class Configure(Buildable):
         for opt in re.findall(r'options\[.(\w+).\]', self._text):
             if opt != "build_dir" and opt not in self._opts:
                 self._opts.append(opt)
+                assert opt in self.builder.options, f"invalid option `{opt}` in configuration file `{self.old_name}`"
     def depends(self):
         return File(self.old_name) & all_([self.builder.cache_dir + opt for opt in self._opts], name="configuration options")
     def output(self):
