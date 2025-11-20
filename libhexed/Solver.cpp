@@ -620,19 +620,15 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       for (int i_proj = 0; i_proj < rs; ++i_proj) {
         proj += adv[i_proj*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
       }
-      #if 1
       double mach_suppression = 0;
       for (int i_dim = 0; i_dim < nd; ++i_dim) {
         mach_suppression += state[i_dim*nq + i_qpoint]*state[i_dim*nq + i_qpoint];
       }
       mach_suppression /= heat_rat*(heat_rat - 1.);
       mach_suppression = mach_suppression*mach_suppression/(.3 + mach_suppression*mach_suppression);
-      #else
-      double mach_suppression = 1;
-      #endif
       double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
       forcing[i_qpoint] = std::isfinite(f) ? std::max(0., std::min(f, 1e10*advect_length*advect_length)) : 0.;
-      has_shock = has_shock || forcing[i_qpoint] > 5.*advect_length*advect_length;
+      has_shock = has_shock || forcing[i_qpoint] > 1.*advect_length*advect_length;
     }
     elements[i_elem].has_shock = has_shock;
     elements[i_elem].spread_shock = false;
