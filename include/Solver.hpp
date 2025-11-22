@@ -64,7 +64,7 @@ class Solver {
   void diffuse_art_visc(double diff_time);
   void fta(double dt, int i_stage);
   bool use_ldg();
-  double max_dt(double max_safety_conv, double max_safety_diff);
+  double max_dt(double max_safety_conv, double max_safety_diff, double lim_thresh);
   void _init_face_state();
   Interpreter _interpreter();
   void _init_stage_storage(int stage);

@@ -156,7 +156,7 @@ bool Solver::use_ldg() {
   return visc.is_viscous || therm_cond.is_viscous || use_art_visc;
 }
 
-double Solver::max_dt(double msc, double msd) {
+double Solver::max_dt(double msc, double msd, double lim_thresh) {
   Kernel_options opts {
     stopwatch["cartesian"],
     stopwatch["deformed"],
@@ -164,8 +164,11 @@ double Solver::max_dt(double msc, double msd) {
     0, 0, bool(_namespace->get<int>("use_filter")),
   };
   bool local_time = _time_scheme != explicit_unsteady;
-  if (use_ldg()) return max_dt_navier_stokes(_kernel_mesh(), opts, msc, msd, local_time, visc, therm_cond);
-  else return max_dt_euler(_kernel_mesh(), opts, msc, msd, local_time);
+  if (use_ldg()) {
+    return max_dt_navier_stokes(_kernel_mesh(), opts, msc, msd, lim_thresh, local_time, visc, therm_cond);
+  } else {
+    return max_dt_euler(_kernel_mesh(), opts, msc, msd, local_time);
+  }
 }
 
 void Solver::_init_face_state() {
@@ -628,7 +631,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
       mach_suppression = mach_suppression*mach_suppression/(.3 + mach_suppression*mach_suppression);
       double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
       forcing[i_qpoint] = std::isfinite(f) ? std::max(0., std::min(f, 1e10*advect_length*advect_length)) : 0.;
-      has_shock = has_shock || forcing[i_qpoint] > 1.*advect_length*advect_length;
+      has_shock = has_shock || forcing[i_qpoint] > 5.*advect_length*advect_length;
     }
     elements[i_elem].has_shock = has_shock;
     elements[i_elem].spread_shock = false;
@@ -864,7 +867,7 @@ void Solver::_update_recursive(int preti_level, double safety) {
   if (preti_level + 1 < (int)_preti_masks.size()) _update_recursive(preti_level + 1, safety);
   if (_preti_masks[preti_level]->repeat) {
     Kernel_mesh& km = _preti_masks[preti_level]->kernel_mesh;
-    double dt = std::min(max_dt(safety, safety),
+    double dt = std::min(max_dt(safety, safety, _namespace->get<double>("time_step_limit_threshold")),
                          _namespace->get<double>("max_time_step"));
     HEXED_ASSERT(!std::isnan(dt), "time step is NaN", assert::Numerical_exception);
     bool fixed = false;
@@ -924,7 +927,8 @@ void Solver::update() {
             Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
             double cheby_step = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
             int sub_iters = std::ceil(max_sub_iters*cheby_step/max_cheby - 1e-6);
-            double nominal_dt = std::min(max_dt(safety/max_cheby*sub_iters, safety),
+            double lim_thresh = n_cheby > 1 ? -1. : _namespace->get<double>("time_step_limit_threshold");
+            double nominal_dt = std::min(max_dt(safety/max_cheby*sub_iters, safety, lim_thresh),
                                          _namespace->get<double>("max_time_step"));
             dt = nominal_dt*cheby_step;
             HEXED_ASSERT(!std::isnan(dt), "time step is NaN", assert::Numerical_exception);
@@ -1128,6 +1132,15 @@ void Solver::compute_residual() {
     compute_euler(_kernel_mesh(), opts);
   }
   #endif
+  Int n_diff = 0;
+  Int n_source = 0;
+  #pragma omp parallel for reduction(+:n_diff,n_source)
+  for (Int i_elem = 0; i_elem < _preti_masks[0]->kernel_mesh.elems.size(); ++i_elem) {
+    n_diff += _preti_masks[0]->kernel_mesh.elems[i_elem].diffusion_limited;
+    n_source += _preti_masks[0]->kernel_mesh.elems[i_elem].source_limited;
+  }
+  _namespace->assign<int>("n_diffusion_limited", n_diff);
+  _namespace->assign<int>("n_source_limited", n_source);
 }
 
 Int Solver::_effective_preti_iters(int level) {
@@ -1277,7 +1290,7 @@ void Solver::compute_lts_constraints() {
   // Reference state is used for storage because `Element::time_step_scale` only has space for one scalar
   for (int i_term = 0; i_term < 2; ++i_term) {
     double safeties [] {1., huge};
-    max_dt(safeties[i_term]/max_cheby, safeties[!i_term]);
+    max_dt(safeties[i_term]/max_cheby, safeties[!i_term], -1.);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       Eigen::Map<Mat<>>(elems[i_elem].residual_cache() + (params.n_dim + i_term)*nq, nq) = Eigen::Map<Mat<>>(elems[i_elem].time_step_scale(), nq);
@@ -1793,7 +1806,7 @@ void Solver::vis_lts_constraints(std::string format, std::string name, int n_sam
   // Reference state is used for storage because `Element::time_step_scale` only has space for one scalar
   for (int i_term = 0; i_term < 2; ++i_term) {
     double safeties [] {1., huge};
-    max_dt(safeties[i_term], safeties[!i_term]);
+    max_dt(safeties[i_term], safeties[!i_term], -1.);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       Eigen::Map<Mat<>>(elems[i_elem].residual_cache() + (params.n_dim + i_term)*nq, nq) = Eigen::Map<Mat<>>(elems[i_elem].time_step_scale(), nq);

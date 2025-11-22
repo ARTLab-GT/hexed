@@ -84,6 +84,8 @@ void element(Namespace& space, Element& elem) {
   }
   space.assign<int>("sonic", sonic);
   space.assign<int>("has_shock", elem.has_shock);
+  space.assign<int>("diffusion_limited", elem.diffusion_limited);
+  space.assign<int>("source_limited", elem.source_limited);
 }
 
 void position(Namespace& space, Element& elem, const Basis& basis) {

@@ -44,6 +44,11 @@ namespace hexed::vis_variables {
  *   For non-wall elements, 0.
  *   \todo Residual contributions from each variable need to be normalized.
  *   Right now it might as well be the energy residual.
+ * - `diffusion_limited`: 1 if the time step constraint imposed by diffusion is stricter
+ *   than the time step constraint imposed by convection at any of the quadrature points, and 0 otherwise.
+ * - `source_limited`: 1 if the time step constraint imposed by source_terms is stricter
+ *   than the time step constraint imposed by convection and diffusion combined
+ *   at any of the quadrature points, and 0 otherwise.
  *
  * \deprecated The following subset of the assigned variables are deprecated and will be removed in a future version:
  * \deprecated

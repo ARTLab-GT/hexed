@@ -314,6 +314,7 @@ tangency_tol_angle = 1*degree
 tangency_tol_subdiv = 10.
 smooth_initial_condition = false
 initial_smoothing_iters = 10^4
+time_step_limit_threshold = 10.
 
 {array parameters}
 i_dim = 0
@@ -509,6 +510,8 @@ start = {
     allow_refine = false
     pseudotime_iteration = 0
     rms_flux = 0.
+    n_diffusion_limited = 0
+    n_source_limited = 0
     println({    Monitor window: } + monitor_window)
 }
 

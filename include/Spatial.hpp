@@ -814,14 +814,17 @@ class Spatial {
     double max_cfl_d;
     Mat<row_size> nodes;
     bool _is_local;
+    double _lim_thresh;
 
     public:
     template <typename... pde_args>
-    Max_dt(const Basis& basis, bool is_local, bool use_filter, double safety_conv, double safety_diff, pde_args... args)
+    Max_dt(const Basis& basis, bool is_local, bool use_filter, double safety_conv, double safety_diff,
+           double limit_threshold, pde_args... args)
     : _eq(args...)
     , max_cfl_c{basis.max_cfl()*safety_conv}
     , max_cfl_d{-2/basis.min_eig_diffusion()*safety_diff}
     , _is_local{is_local}
+    , _lim_thresh{limit_threshold}
     {
       for (int i_node = 0; i_node < row_size; ++i_node) nodes(i_node) = basis.node(i_node);
     }
@@ -839,6 +842,7 @@ class Spatial {
         for (unsigned i_vert = 0; i_vert < vertex_spacing.size(); ++i_vert) {
           vertex_spacing(i_vert) = elem.vertex_time_step_scale(i_vert);
         }
+        if (_lim_thresh > 0) elem.diffusion_limited = elem.source_limited = false;
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           // get mesh spacing
           Mat<n_dim> coords;
@@ -857,10 +861,13 @@ class Spatial {
           }
           if constexpr (Pde::has_diffusion) {
             comp.compute_diffusivity();
-            scale += comp.diffusivity/max_cfl_d/spacing/spacing;
+            double diff_scale = comp.diffusivity/max_cfl_d/spacing/spacing;
+            elem.diffusion_limited = elem.diffusion_limited | (_lim_thresh > 0 && diff_scale > _lim_thresh*scale);
+            scale += diff_scale;
           }
           if constexpr (Pde::has_source) {
             comp.compute_decay();
+            elem.source_limited = elem.source_limited | (_lim_thresh > 0 && comp.decay > _lim_thresh*scale);
             scale += comp.decay; // should be comp.decay/2, but i'm nervous
           }
           if (_is_local) {
