@@ -14,8 +14,8 @@ class Kernel_element {
   public:
   virtual ~Kernel_element() = default;
   int record = 0; //!< for algorithms to book-keep general information
-  bool diffusion_limited = false;
-  bool source_limited = false;
+  double ts_ratio_diffusion = 0;
+  double ts_ratio_decay = 0;
   virtual int mask() const = 0;
   //! \brief pointer to the data where the state variables are stored
   //! \details includes any non-conservation variables such as artificial viscosity coefficient

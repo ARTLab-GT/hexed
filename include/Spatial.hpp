@@ -810,23 +810,26 @@ class Spatial {
   class Max_dt : public Kernel<Kernel_element&, double> {
     using Pde = Pde_templ<n_dim, row_size>;
     const Pde _eq;
-    double max_cfl_c;
-    double max_cfl_d;
-    Mat<row_size> nodes;
+    double _max_cfl_c;
+    double _max_cfl_d;
+    double _safety_conv;
+    double _safety_diff;
     bool _is_local;
-    double _lim_thresh;
+    bool _calc_ts_ratio;
+    Mat<row_size> _nodes;
 
     public:
     template <typename... pde_args>
-    Max_dt(const Basis& basis, bool is_local, bool use_filter, double safety_conv, double safety_diff,
-           double limit_threshold, pde_args... args)
+    Max_dt(const Basis& basis, bool is_local, bool use_filter, double safety_conv, double safety_diff, bool calc_ts_ratio, pde_args... args)
     : _eq(args...)
-    , max_cfl_c{basis.max_cfl()*safety_conv}
-    , max_cfl_d{-2/basis.min_eig_diffusion()*safety_diff}
+    , _max_cfl_c{basis.max_cfl()}
+    , _max_cfl_d{-2/basis.min_eig_diffusion()}
+    , _safety_conv{safety_conv}
+    , _safety_diff{safety_diff}
     , _is_local{is_local}
-    , _lim_thresh{limit_threshold}
+    , _calc_ts_ratio{calc_ts_ratio}
     {
-      for (int i_node = 0; i_node < row_size; ++i_node) nodes(i_node) = basis.node(i_node);
+      for (int i_node = 0; i_node < row_size; ++i_node) _nodes(i_node) = basis.node(i_node);
     }
 
     virtual double operator()(Sequence<Kernel_element&>& elements) {
@@ -842,34 +845,42 @@ class Spatial {
         for (unsigned i_vert = 0; i_vert < vertex_spacing.size(); ++i_vert) {
           vertex_spacing(i_vert) = elem.vertex_time_step_scale(i_vert);
         }
-        if (_lim_thresh > 0) elem.diffusion_limited = elem.source_limited = false;
+        if (_calc_ts_ratio) {
+          elem.ts_ratio_diffusion = 0;
+          elem.ts_ratio_decay = 0;
+        }
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
           // get mesh spacing
           Mat<n_dim> coords;
           for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-            coords(i_dim) = nodes((i_qpoint/math::pow(row_size, n_dim - 1 - i_dim))%row_size);
+            coords(i_dim) = _nodes((i_qpoint/math::pow(row_size, n_dim - 1 - i_dim))%row_size);
           }
           double spacing = math::interp(vertex_spacing, coords);
           // fetch state
           typename Pde::template Computation<n_dim> comp(_eq);
           comp.fetch_state(n_qpoint, state + i_qpoint);
           // compute time step
-          double scale = 0;
+          double scale_conv = 0;
+          double scale_diff = 0;
+          double scale_decay = 0;
           if constexpr (Pde::has_convection) {
             comp.compute_char_speed();
-            scale += comp.char_speed/max_cfl_c/spacing;
+            scale_conv = comp.char_speed/_max_cfl_c/spacing;
           }
           if constexpr (Pde::has_diffusion) {
             comp.compute_diffusivity();
-            double diff_scale = comp.diffusivity/max_cfl_d/spacing/spacing;
-            elem.diffusion_limited = elem.diffusion_limited | (_lim_thresh > 0 && diff_scale > _lim_thresh*scale);
-            scale += diff_scale;
+            scale_diff = comp.diffusivity/_max_cfl_d/spacing/spacing;
           }
           if constexpr (Pde::has_source) {
             comp.compute_decay();
-            elem.source_limited = elem.source_limited | (_lim_thresh > 0 && comp.decay > _lim_thresh*scale);
-            scale += comp.decay; // should be comp.decay/2, but i'm nervous
+            scale_decay = comp.decay; // should be comp.decay/2, but i'm nervous
           }
+          if (_calc_ts_ratio) {
+            double total_scale = scale_conv + scale_diff + scale_decay;
+            elem.ts_ratio_diffusion = std::max(elem.ts_ratio_diffusion, scale_diff/total_scale);
+            elem.ts_ratio_decay = std::max(elem.ts_ratio_decay, scale_decay/total_scale);
+          }
+          double scale = scale_conv/_safety_conv + scale_diff/_safety_diff + scale_decay;
           if (_is_local) {
             tss[i_qpoint] = 1./scale;
           } else {

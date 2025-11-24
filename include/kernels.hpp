@@ -29,7 +29,7 @@ void compute_smooth_av(Kernel_mesh, Kernel_options, std::function<void()> flux_b
 void compute_fix_therm_admis(Kernel_mesh, Kernel_options, std::function<void()> flux_bc);
 
 double max_dt_euler(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time);
-double max_dt_navier_stokes(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, double limit_threshold, bool local_time,
+double max_dt_navier_stokes(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time,
                             Transport_model visc, Transport_model therm_cond);
 double max_dt_advection(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time, double advect_length);
 double max_dt_smooth_av(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time);
