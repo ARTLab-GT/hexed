@@ -46,23 +46,15 @@ def advect(row_size, width, advection_nodes):
     print(f"Convergence error: {last_diff}")
     return advected
 
-legendre_quad = legendre(2*row_size).weights
+legendre_quad = legendre(row_size).weights
 legendre_nodes = legendre_quad[:, 0]
 legendre_weights = legendre_quad[:, 1]
 
-total = np.zeros(n)
-coefs = [[0, 1], [.5, .5], [1, 0]]
-for c in coefs:
-    quad = jacobi(row_size, c[0], c[1]).weights
-    nodes = quad[:, 0]
-    weights = quad[:, 1]
-    proj_vec = jacobi(row_size - 1, c[0], c[1])(nodes)*weights
-    advected = advect(row_size, width, nodes)
+advected = advect(row_size, width, legendre_nodes)
+for degree in range(row_size):
+    proj_vec = width**((row_size - degree)/2)*legendre(degree)(legendre_nodes)*legendre_weights
     proj = advected@proj_vec
     plt.plot(x, proj)
-    total += proj**2
-total = np.sqrt(total)
-plt.plot(x, total, color="k")
 plt.grid(True)
 plt.gcf().set_size_inches(20, 10)
 plt.show()
