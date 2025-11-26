@@ -3,14 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.special import legendre, hermite, chebyt, jacobi
 
 row_size = 6
-width = .03
-
-alpha0 = 1.
-alpha1 = 0.
-plt.scatter(jacobi(row_size, alpha0, alpha1).weights[:, 0], np.zeros(row_size))
-plt.scatter(jacobi(row_size, alpha1, alpha0).weights[:, 0], np.zeros(row_size))
-plt.grid(True)
-plt.show()
+width = .05
 
 def interp(dest_nodes, src_nodes):
     mat = np.zeros((dest_nodes.size, src_nodes.size))
@@ -29,18 +22,29 @@ def interp(dest_nodes, src_nodes):
 n = 10**3
 x = np.linspace(-1., 1., n)
 u = np.atan(40*x) + 2
+u = np.exp(-(30*x)**2) + 1
+u = x/np.sqrt(.001 + x**2) + 2
+u = np.tanh(20*x) + 2
+plt.plot(x, u)
+plt.gcf().set_size_inches(20, 10)
+plt.grid(True)
+plt.figure()
 
 def advect(row_size, width, advection_nodes):
     last_diff = 0.
     n_iter = 10**5
     advected = np.ones((n, row_size))
+    mask0 = advection_nodes < 0
+    mask1 = np.logical_not(mask0)
+    print(mask0)
+    print(mask1)
     for i in range(n_iter):
         diff = advected*u[:, np.newaxis]
-        diff[ 1:, row_size//2:] = diff[:-1, row_size//2:] - diff[ 1:, row_size//2:]
-        diff[:-1, :row_size//2] = diff[:-1, :row_size//2] - diff[ 1:, :row_size//2]
-        diff[0, row_size//2:] *= 0
-        diff[-1, :row_size//2] *= 0
-        diff = 2e-1*(advection_nodes[np.newaxis, :]*diff + (1. - advected)/width*2/n)
+        diff[ 1:, mask1] = diff[:-1, mask1] - diff[ 1:, mask1]
+        diff[:-1, mask0] = diff[:-1, mask0] - diff[ 1:, mask0]
+        diff[0, mask1] *= 0
+        diff[-1, mask0] *= 0
+        diff = 1e-1*(advection_nodes[np.newaxis, :]*diff + (1. - advected)/width*2/n)
         advected += diff
         last_diff = np.sqrt((diff*diff).sum())*n_iter
     print(f"Convergence error: {last_diff}")
@@ -50,11 +54,16 @@ legendre_quad = legendre(row_size).weights
 legendre_nodes = legendre_quad[:, 0]
 legendre_weights = legendre_quad[:, 1]
 
-advected = advect(row_size, width, legendre_nodes)
-for degree in range(row_size):
-    proj_vec = width**((row_size - degree)/2)*legendre(degree)(legendre_nodes)*legendre_weights
+proj_vec = legendre(row_size - 1)(legendre_nodes)*legendre_weights
+total = np.zeros(n)
+shift_size = np.sqrt(.5)/row_size
+for shift in [-shift_size, shift_size]:
+    advected = advect(row_size, width, legendre_nodes + shift)
     proj = advected@proj_vec
+    total += proj**2
     plt.plot(x, proj)
+total = np.sqrt(total)
+plt.plot(x, total, color="k")
 plt.grid(True)
 plt.gcf().set_size_inches(20, 10)
 plt.show()
