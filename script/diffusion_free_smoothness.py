@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.special import legendre, hermite, chebyt, jacobi
 
 row_size = 6
-width = .1
+width = .03
 
 alpha0 = 1.
 alpha1 = 0.
@@ -46,19 +46,17 @@ def advect(row_size, width, advection_nodes):
     print(f"Convergence error: {last_diff}")
     return advected
 
-legendre_quad = legendre(row_size).weights
+legendre_quad = legendre(2*row_size).weights
 legendre_nodes = legendre_quad[:, 0]
 legendre_weights = legendre_quad[:, 1]
-proj_vec = legendre(row_size - 1)(legendre_nodes)*legendre_weights
 
-"""
 total = np.zeros(n)
-for i in [0, 1]:
-    coefs = [1 - i, i]
-    quad = jacobi(row_size, coefs[0], coefs[1]).weights
+coefs = [[0, 1], [.5, .5], [1, 0]]
+for c in coefs:
+    quad = jacobi(row_size, c[0], c[1]).weights
     nodes = quad[:, 0]
     weights = quad[:, 1]
-    proj_vec = jacobi(row_size - 1, coefs[0], coefs[1])(nodes)*weights
+    proj_vec = jacobi(row_size - 1, c[0], c[1])(nodes)*weights
     advected = advect(row_size, width, nodes)
     proj = advected@proj_vec
     plt.plot(x, proj)
@@ -69,10 +67,8 @@ plt.grid(True)
 plt.gcf().set_size_inches(20, 10)
 plt.show()
 exit()
-"""
 
-row_size_advect = 4*row_size
-width_smear = .5
+row_size_advect = 3*row_size
 x_smear = np.linspace(-1., 1., 100)
 cheby_quad = chebyt(row_size_advect).weights
 cheby_nodes = cheby_quad[:, 0]
@@ -85,12 +81,15 @@ def compute_smoothness_mat(coefs):
         interp_mat = interp(jacobi_quad[:, 0], cheby_nodes)
         mat[i, :] = (jacobi(row_size - 1, coefs[i, 0], coefs[i, 1])(jacobi_quad[:, 0])*jacobi_quad[:, 1])@interp_mat
     return mat
-plot_coefs = np.array([np.linspace(0., 4., 100), np.linspace(4., 0., 100)]).transpose()
+alpha0 = 0.
+alpha1 = 6.
+plot_coefs = np.array([np.linspace(alpha0, alpha1, 100), np.linspace(alpha1, alpha0, 100)]).transpose()
 plot_smoothness = compute_smoothness_mat(plot_coefs)
-quad_coefs = np.array([2.*(legendre_nodes + 1), 2.*(1. - legendre_nodes)]).transpose()
+transformed_nodes = .5*(legendre_nodes + 1)
+quad_coefs = np.array([alpha0 + (alpha1 - alpha0)*transformed_nodes,
+                       alpha1 + (alpha0 - alpha1)*transformed_nodes]).transpose()
 quad_smoothness = compute_smoothness_mat(quad_coefs)
-smoothness_nodes = advected@quad_smoothness.transpose()
-smoothness_weights = legendre_weights
+smoothness_weights = legendre_weights*(1 + legendre_nodes)*(1 - legendre_nodes)
 for plot_at in np.array([.1, .2, .4, .8, 1.6])*width:
     plot_ind = int(n*plot_at) + n//2
     adv = advected[plot_ind, :]
@@ -105,6 +104,7 @@ for ax in axs:
 fig.set_size_inches(20, 20)
 fig, axs = plt.subplots(2, 1)
 axs[0].plot(x, u)
+smoothness_nodes = advected@quad_smoothness.transpose()
 smoothness = np.sqrt(smoothness_nodes**2@smoothness_weights)
 plt.plot(x, smoothness)
 for ax in axs:
