@@ -347,6 +347,7 @@ class Advection {
   static constexpr int _n_adv = row_size;
   const double _advect_length;
   Mat<row_size> _nodes;
+  int _offset;
 
   public:
   static constexpr bool has_diffusion = false;
@@ -357,21 +358,26 @@ class Advection {
   static constexpr int n_update = _n_adv;
   static constexpr double regular_scale = .1;
 
-  Advection(int n_var, double advect_length)
-  : _n_var{n_var}, _advect_length{advect_length}, _nodes{2*Gauss_legendre(row_size).nodes() - Mat<row_size>::Ones()}
+  Advection(int n_var, double advect_length, int offset)
+  : _n_var{n_var}
+  , _advect_length{advect_length}
+  , _offset{offset}
+  , _nodes{2*Gauss_legendre(row_size).nodes() + Mat<row_size>::Constant(math::sign(offset)*.707/row_size - 1.)}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
     Mat<n_extrap> extrap;
     for (int i_var = 0; i_var < n_dim; ++i_var) extrap(i_var) = data[i_var*stride];
-    for (int i_adv = 0; i_adv < _n_adv; ++i_adv) extrap(n_dim + i_adv) = data[(advection_offset(_n_var) + i_adv)*stride];
+    for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
+      extrap(n_dim + i_adv) = data[(advection_offset(_n_var) + _offset*_n_adv + i_adv)*stride];
+    }
     return extrap;
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool is_critical) const {
     double pseudo = 1 + data[tss_offset(_n_var)*stride]*2/_advect_length;
     for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
-      double& d = data[(advection_offset(_n_var) + i_adv)*stride];
+      double& d = data[(advection_offset(_n_var) + _offset*_n_adv + i_adv)*stride];
       if (is_critical) d = (d + update(i_adv))/pseudo;
       else d += update(i_adv)/pseudo;
     }
@@ -420,7 +426,7 @@ class Advection {
 
     double char_speed;
     void compute_char_speed() {
-      char_speed = std::max(1., state(Eigen::seqN(0, n_dim)).norm());
+      char_speed = (1. + .707/row_size)*std::max(1., state(Eigen::seqN(0, n_dim)).norm());
     }
 
     double decay;

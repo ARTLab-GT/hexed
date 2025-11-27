@@ -22,7 +22,7 @@ struct Kernel_options {
 };
 
 void compute_euler(Kernel_mesh, Kernel_options);
-void compute_advection(Kernel_mesh, Kernel_options, double advect_length);
+void compute_advection(Kernel_mesh, Kernel_options, double advect_length, int offset);
 void compute_navier_stokes(Kernel_mesh, Kernel_options, std::function<void()> flux_bc,
                            Transport_model visc, Transport_model therm_cond, bool update_prod);
 void compute_smooth_av(Kernel_mesh, Kernel_options, std::function<void()> flux_bc, double diff_time, double chebyshev_step);
@@ -40,7 +40,7 @@ void compute_restrict(Kernel_mesh, bool scale = true, bool offset = false);
 void compute_prolong_advection(Kernel_mesh);
 std::unique_ptr<Face_permutation_dynamic> face_permutation(int n_dim, int row_size, Connection_direction, double* data, Turbulence_model model);
 void compute_write_face(Kernel_mesh);
-void compute_write_face_advection(Kernel_mesh);
+void compute_write_face_advection(Kernel_mesh, int offset);
 void compute_write_face_smooth_av(Kernel_mesh);
 
 }

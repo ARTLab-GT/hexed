@@ -22,7 +22,9 @@ void compute_euler(Kernel_mesh mesh, Kernel_options opts) {
   if (mesh.turb_model == k_omega) COMPUTE_CONVECTION(k_omega_euler::Pde)
   else COMPUTE_CONVECTION(euler::Pde)
 }
-void compute_advection(Kernel_mesh mesh, Kernel_options opts, double advect_length) COMPUTE_CONVECTION(pde::Advection, advect_length)
+void compute_advection(Kernel_mesh mesh, Kernel_options opts, double advect_length, int offset) {
+  COMPUTE_CONVECTION(pde::Advection, advect_length, offset)
+}
 
 #undef COMPUTE_CONVECTION
 
@@ -65,8 +67,8 @@ void compute_write_face(Kernel_mesh mesh) {
   #undef COMPUTE
 }
 
-void compute_write_face_advection(Kernel_mesh mesh) {
-  (*kernel_factory<Spatial<pde::Advection, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var, 1.))(mesh.elems);
+void compute_write_face_advection(Kernel_mesh mesh, int offset) {
+  (*kernel_factory<Spatial<pde::Advection, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var, 1., offset))(mesh.elems);
 }
 
 void compute_write_face_smooth_av(Kernel_mesh mesh) {

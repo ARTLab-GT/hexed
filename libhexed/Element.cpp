@@ -298,7 +298,8 @@ next::Element_shape& Element::active_shape() {
 
 double* Element::state() {return data.data();}
 double* Element::residual_cache() {
-  return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();
+  int n = params.n_var + 3 + params.n_forcing + params.n_offset*params.n_advection(params.row_size);
+  return data.data() + n*params.n_qpoint();
 }
 double* Element::face(int i_face, bool is_ldg) {
   return _faces[i_face].flow_state()(is_ldg).data();

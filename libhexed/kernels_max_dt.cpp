@@ -27,7 +27,7 @@ double max_dt_navier_stokes(Kernel_mesh mesh, Kernel_options opts, double msc, d
 
 double max_dt_advection(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time, double advect_length) {
   bool calc_ts_ratio = false;
-  COMPUTE_MAX_DT(pde::Advection, advect_length)
+  COMPUTE_MAX_DT(pde::Advection, advect_length, 0)
 }
 
 double max_dt_smooth_av(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time) {

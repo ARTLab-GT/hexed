@@ -448,7 +448,7 @@ void Solver::initialize(std::string(expr)) {
     for (int i_var = 0; i_var < n_var; ++i_var) {
       sub.variables->assign_array(state(i_var), state_vars[i_var]);
     }
-    for (int i_adv = 0; i_adv < params.n_advection(params.row_size); ++i_adv) {
+    for (int i_adv = 0; i_adv < params.n_offset*params.n_advection(params.row_size); ++i_adv) {
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
         elem.advection_state()[i_adv*nq + i_qpoint] = 1.;
       }
@@ -564,43 +564,45 @@ void Solver::update_art_visc_smoothness(double advect_length) {
     false,
     false,
   };
-  max_dt_advection(_kernel_mesh(), opts, adv_safety, 1., true, advect_length);
-  compute_write_face_advection(_kernel_mesh());
-  compute_prolong_advection(_kernel_mesh());
 
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem
   // using a linear advection equation.
 
-  // perform pseudotime iteration
-  for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter) {
-    HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
-    int n_preti = (_namespace->get<int>("bl_multirate") && !iter) ? _preti_masks.size() : 1;
-    for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
-      _preti_level = i_preti;
-      int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
-      Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
-      opts.mask = i_preti;
-      for (int i_bl = 0; i_bl < n_bl; ++i_bl) {
-        sw_adv["setup"].stopwatch.start();
-        // evaluate advection operator
-        sw_adv["setup"].stopwatch.pause();
-        for (int i = 0; i < 2; ++i) {
-          sw_adv["BCs"].stopwatch.start();
-          auto bc_cons {acc_mesh->boundary_connections()};
-          #pragma omp parallel for
-          for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
-            int bc_sn = bc_cons[i_con].boundary_condition();
-            acc_mesh->boundary_condition(bc_sn).apply_advection(bc_cons[i_con]);
+  max_dt_advection(_kernel_mesh(), opts, adv_safety, 1., true, advect_length);
+  for (int i_offset : {0, 1}) {
+    compute_write_face_advection(_kernel_mesh(), i_offset);
+    compute_prolong_advection(_kernel_mesh());
+    // perform pseudotime iteration
+    for (int iter = 0; iter < _namespace->get<int>("av_advect_iters"); ++iter) {
+      HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
+      int n_preti = (_namespace->get<int>("bl_multirate") && !iter) ? _preti_masks.size() : 1;
+      for (int i_preti = 0; i_preti < n_preti; ++i_preti) {
+        _preti_level = i_preti;
+        int n_bl = i_preti ? _namespace->get<int>("bl_iters") : 1;
+        Kernel_mesh& km = _preti_masks[_preti_level]->kernel_mesh;
+        opts.mask = i_preti;
+        for (int i_bl = 0; i_bl < n_bl; ++i_bl) {
+          sw_adv["setup"].stopwatch.start();
+          // evaluate advection operator
+          sw_adv["setup"].stopwatch.pause();
+          for (int i = 0; i < 2; ++i) {
+            sw_adv["BCs"].stopwatch.start();
+            auto bc_cons {acc_mesh->boundary_connections()};
+            #pragma omp parallel for
+            for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
+              int bc_sn = bc_cons[i_con].boundary_condition();
+              acc_mesh->boundary_condition(bc_sn).apply_advection(bc_cons[i_con]);
+            }
+            sw_adv["BCs"].stopwatch.pause();
+            sw_adv["BCs"].work_units_completed += acc_mesh->elements().size();
+            opts.i_stage = i;
+            compute_advection(km, opts, advect_length, i_offset);
           }
-          sw_adv["BCs"].stopwatch.pause();
-          sw_adv["BCs"].work_units_completed += acc_mesh->elements().size();
-          opts.i_stage = i;
-          compute_advection(km, opts, advect_length);
         }
       }
+      sw_adv["cartesian"].work_units_completed += acc_mesh->cartesian().elements().size();
+      sw_adv["deformed" ].work_units_completed += acc_mesh->deformed ().elements().size();
     }
-    sw_adv["cartesian"].work_units_completed += acc_mesh->cartesian().elements().size();
-    sw_adv["deformed" ].work_units_completed += acc_mesh->deformed ().elements().size();
   }
   sw_adv["setup"].work_units_completed += elements.size();
   sw_adv["update"].work_units_completed += elements.size();
@@ -612,23 +614,27 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* forcing = elements[i_elem].art_visc_forcing();
+    double* debug = elements[i_elem].debug_variables();
     double* adv = elements[i_elem].advection_state();
     double* state = elements[i_elem].state();
     double has_shock = false;
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      double proj = 0;
-      for (int i_proj = 0; i_proj < rs; ++i_proj) {
-        proj += adv[i_proj*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
+    for (int i_offset : {0, 1}) {
+      for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+        double proj = 0;
+        for (int i_proj = 0; i_proj < rs; ++i_proj) {
+          proj += adv[(i_proj + i_offset*rs)*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
+        }
+        double mach_suppression = 0;
+        for (int i_dim = 0; i_dim < nd; ++i_dim) {
+          mach_suppression += state[i_dim*nq + i_qpoint]*state[i_dim*nq + i_qpoint];
+        }
+        mach_suppression /= heat_rat*(heat_rat - 1.);
+        mach_suppression = mach_suppression*mach_suppression/(.3 + mach_suppression*mach_suppression);
+        double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
+        double* storage = i_offset ? forcing : debug;
+        storage[i_qpoint] = std::isfinite(f) ? std::max(0., std::min(f, 1e10*advect_length*advect_length)) : 0.;
+        if (!i_offset) has_shock = has_shock || forcing[i_qpoint] > 5.*advect_length*advect_length;
       }
-      double mach_suppression = 0;
-      for (int i_dim = 0; i_dim < nd; ++i_dim) {
-        mach_suppression += state[i_dim*nq + i_qpoint]*state[i_dim*nq + i_qpoint];
-      }
-      mach_suppression /= heat_rat*(heat_rat - 1.);
-      mach_suppression = mach_suppression*mach_suppression/(.3 + mach_suppression*mach_suppression);
-      double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
-      forcing[i_qpoint] = std::isfinite(f) ? std::max(0., std::min(f, 1e10*advect_length*advect_length)) : 0.;
-      has_shock = has_shock || forcing[i_qpoint] > 5.*advect_length*advect_length;
     }
     elements[i_elem].has_shock = has_shock;
     elements[i_elem].spread_shock = false;

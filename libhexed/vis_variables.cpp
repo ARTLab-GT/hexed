@@ -130,7 +130,7 @@ void state(Namespace& space, Element& elem) {
     space.assign("debug_var" + std::to_string(i_var), data());
   }
   if (space.get<int>("vis_art_visc_vars")) {
-    int n_adv = params.n_advection(params.row_size);
+    int n_adv = params.n_offset*params.n_advection(params.row_size);
     Array<double> advection({n_adv, nq}, elem.advection_state());
     for (int i_adv = 0; i_adv < n_adv; ++i_adv) {
       space.assign("av_advection" + to_string(i_adv), advection(i_adv).copy());
