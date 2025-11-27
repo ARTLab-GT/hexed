@@ -614,10 +614,10 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     double* forcing = elements[i_elem].art_visc_forcing();
-    double* debug = elements[i_elem].debug_variables();
     double* adv = elements[i_elem].advection_state();
     double* state = elements[i_elem].state();
     double has_shock = false;
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) forcing[i_qpoint] = 0;
     for (int i_offset : {0, 1}) {
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
         double proj = 0;
@@ -631,10 +631,12 @@ void Solver::update_art_visc_smoothness(double advect_length) {
         mach_suppression /= heat_rat*(heat_rat - 1.);
         mach_suppression = mach_suppression*mach_suppression/(.3 + mach_suppression*mach_suppression);
         double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
-        double* storage = i_offset ? forcing : debug;
-        storage[i_qpoint] = std::isfinite(f) ? std::max(0., std::min(f, 1e10*advect_length*advect_length)) : 0.;
-        if (!i_offset) has_shock = has_shock || forcing[i_qpoint] > 5.*advect_length*advect_length;
+        forcing[i_qpoint] += std::isfinite(f) ? std::max(0., std::min(f, 1e10*advect_length*advect_length)) : 0.;
       }
+    }
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      forcing[i_qpoint] = std::sqrt(forcing[i_qpoint]);
+      has_shock = has_shock || forcing[i_qpoint] > 2.2*advect_length;
     }
     elements[i_elem].has_shock = has_shock;
     elements[i_elem].spread_shock = false;
@@ -688,7 +690,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
     double* forcing = elements[i_elem].art_visc_forcing();
     double volume = math::pow(elements[i_elem].nominal_size(), nd);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      double f = mult*forcing[n_real*nq + i_qpoint];
+      double f = mult*forcing[nq + i_qpoint];
       double new_av = us_max*f/(us_max + f);
       resid += math::pow(av[i_qpoint] - new_av, 2)*qpoint_weights(i_qpoint)*volume;
       av[i_qpoint] = new_av;
