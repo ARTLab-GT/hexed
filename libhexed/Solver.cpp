@@ -616,7 +616,6 @@ void Solver::update_art_visc_smoothness(double advect_length) {
     double* forcing = elements[i_elem].art_visc_forcing();
     double* adv = elements[i_elem].advection_state();
     double* state = elements[i_elem].state();
-    double has_shock = false;
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) forcing[i_qpoint] = 0;
     for (int i_offset : {0, 1}) {
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
@@ -634,9 +633,10 @@ void Solver::update_art_visc_smoothness(double advect_length) {
         forcing[i_qpoint] += std::isfinite(f) ? std::max(0., std::min(f, 1e10*advect_length*advect_length)) : 0.;
       }
     }
+    double has_shock = false;
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       forcing[i_qpoint] = std::sqrt(forcing[i_qpoint]);
-      has_shock = has_shock || forcing[i_qpoint] > 2.2*advect_length;
+      has_shock = has_shock || forcing[i_qpoint] > 16.*advect_length;
     }
     elements[i_elem].has_shock = has_shock;
     elements[i_elem].spread_shock = false;
@@ -1176,7 +1176,6 @@ void Solver::print_preti_iters() {
 void Solver::compute_spectral_uncertainty() {
   std::vector<int> vars;
   for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) vars.push_back(i_var);
-  if (use_art_visc) vars.push_back(params.n_var + 3);
   int nv = vars.size();
   Array<double> state_min = Array<double>::make_uniform({nv}, huge);
   Array<double> state_max = Array<double>::make_uniform({nv}, -huge);

@@ -2404,6 +2404,26 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
       }
     }
   }
+  // set the desired refinement level of elements on extremal boundaries to match their inside neighbors
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    Array<int> direction({params.n_dim});
+    direction = 0;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      for (int face_sign : {0, 1}) {
+        if (!elem.tree->find_neighbor(2*i_dim + face_sign)) direction[i_dim] = !face_sign;
+      }
+    }
+    if (direction.abs().extreme(1)) { // if the element is on an extremal boundary
+      Tree* n = elem.tree->find_neighbor(direction);
+      if (!n) continue;
+      if (!n->elem) continue;
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        if (direction[i_dim] != 0) elem.desired_refinement(i_dim) = n->elem->desired_refinement(i_dim);
+      }
+    }
+  }
   double n_refine_orig = 0;
   double n_coarsen_orig = 0;
   #pragma omp parallel for reduction(+:n_refine_orig, n_coarsen_orig)
@@ -2466,7 +2486,14 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
       p += des_ref;
       int arl = elems[i_elem].tree->anisotropic_refinement_level()[i_dim];
       new_inv_sz += std::pow(2., arl + des_ref);
-      if (set_floor) elems[i_elem].refinement_floor()[i_dim] = arl + des_ref;
+      if (set_floor) {
+        int& floor = elems[i_elem].refinement_floor()[i_dim];
+        if (des_ref > 0) {
+          floor = arl + des_ref;
+        } else {
+          floor = std::min(floor, arl + des_ref);
+        }
+      }
     }
     if (p < 0) n_coarsen += 1 - math::pow(2., p); // lose this element and add one shared with 2^p siblings
     if (p > 0) n_refine += math::pow(2., p) - 1; // add 2^p elements and lose this one
@@ -2857,6 +2884,10 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   _n_verts = _blocks.verts().size();
   _stopwatch["update"].work_units_completed += 1;
   Int n_after = elems.size();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < n_after; ++i_elem) {
+    elems[i_elem].refinement_floor() = elems[i_elem].tree->anisotropic_refinement_level();
+  }
   return n_after - n_before;
 }
 
