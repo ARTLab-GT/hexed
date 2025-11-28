@@ -263,14 +263,16 @@ void Case::_update_monitors() {
     };
     assign("_smoothed", monitor.smoothed());
     assign("_trend", monitor.trend());
+    assign("_curvature", monitor.curvature());
     assign("_noise", monitor.noise());
     assign("_noise_trend", monitor.noise_trend());
+    assign("_noise_curvature", monitor.noise_curvature());
   }
-  for (auto& hist : _log_residual_hist) hist.add_sample(iter, std::log(_vard("normalized_residual"))/std::log(10.));
+  _log_residual_hist.add_sample(iter, std::log(_vard("normalized_residual"))/std::log(10.));
 }
 
 Case::Case(std::string input_script)
-: _start_time{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())}
+: _start_time{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())}, _log_residual_hist{.4}
 {
   _inter.variables->assign("input_script", input_script);
   _inter.variables->assign("version_major", config::version_major);
@@ -542,8 +544,7 @@ Case::Case(std::string input_script)
     bool allow_ref = iter > _vari("refine_start_iter");
     if (_vari("automate_adapt_schedule")) {
       bool sufficient_drop = _vard("normalized_residual") < _vard("next_refine_residual");
-      double res_trend = std::max(std::abs(_log_residual_hist[0].trend()), std::abs(_log_residual_hist[1].trend()));
-      bool stagnated = res_trend*_vard("monitor_window")*iter < _vard("residual_stagnation_tol");
+      bool stagnated = _log_residual_hist.converged({_vard("residual_stagnation_tol")}, {huge});
       allow_ref = allow_ref && (sufficient_drop || stagnated);
     }
     printers::info("Performing uncertainty-based mesh adaptation (");
@@ -671,12 +672,10 @@ Case::Case(std::string input_script)
     _monitor_vars = sub.variables->names();
     for (std::string name : _monitor_vars) {
       _monitors.emplace_back(_vard("monitor_window"));
-      for (std::string suffix : {"_smoothed", "_noise", "_trend", "_noise_trend"}) {
+      for (std::string suffix : {"_smoothed", "_noise", "_trend", "_curvature", "_noise_trend", "_noise_curvature"}) {
         _inter.variables->assign_default(name + suffix, 0.);
       }
     }
-    _log_residual_hist.emplace_back(.2);
-    _log_residual_hist.emplace_back(.4);
     return "";
   }));
 

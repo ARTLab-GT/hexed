@@ -15,10 +15,11 @@ void Convergence_monitor::add_sample(Int iter, double value) {
 bool Convergence_monitor::converged(math::Tolerance trend_tol, math::Tolerance noise_tol) const {
   double trend_tol_total = trend_tol.rel*(std::abs(smoothed()) + noise()) + trend_tol.abs;
   double iter_factor = iteration_fraction()*last_iter();
-  bool trend_conv = std::abs(trend()*iter_factor) < trend_tol_total;
+  bool trend_conv = std::abs(trend()*iter_factor) + std::abs(.5*curvature()*iter_factor*iter_factor) < trend_tol_total;
   double noise_tol_total = noise_tol.rel*std::abs(smoothed()) + noise_tol.abs;
   bool noise_conv = noise() + .1*std::abs(noise_trend()) < noise_tol_total;
-  bool noise_trend_conv = std::abs(noise_trend())*iter_factor < trend_tol.rel*noise() + trend_tol.abs;
+  bool noise_trend_conv = std::abs(noise_trend())*iter_factor + std::abs(.5*noise_curvature()*iter_factor*iter_factor)
+                          < trend_tol.rel*noise() + trend_tol.abs;
   return trend_conv && (noise_conv || noise_trend_conv);
 }
 

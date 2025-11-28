@@ -11,20 +11,22 @@ class History_stats {
   void add_sample(Int iter, double value);
   double iteration_fraction() const {return _iter_frac;}
   inline Int n_sample() const {return _n_sample;}
-  inline Int last_iter() const {return _last_iter;}
-  inline double last_value() const {return _last_value;}
+  inline Int last_iter() const {return _last_iters[0];}
+  inline double last_value() const {return _last_values[0];}
   inline double smoothed() const {return _smoothed;}
   inline double trend() const {return _trend;}
+  inline double curvature() const {return _curve;}
 
   private:
   double _iter_frac;
-  Int _last_iter;
-  double _last_value;
+  Int _last_iters [2];
+  double _last_values [2];
   Int _n_sample;
   double _smoothed;
   double _trend;
-  Mat<2, 2> _lhs;
-  Mat<2> _rhs;
+  double _curve;
+  Mat<3, 3> _lhs;
+  Mat<3> _rhs;
 };
 
 }

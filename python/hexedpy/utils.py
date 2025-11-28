@@ -274,13 +274,15 @@ class History_plot:
                         if col + "_smoothed" in status_data.index:
                             smoothed = status_data.at[col + "_smoothed", "value"]
                             trend = status_data.at[col + "_trend", "value"]
+                            curve = status_data.at[col + "_curvature", "value"]
                             noise = status_data.at[col + "_noise", "value"]
                             noise_trend = status_data.at[col + "_noise_trend", "value"]
+                            noise_curve = status_data.at[col + "_noise_curvature", "value"]
                             iteration = self._data.at[add_line, "iteration"]
-                            x = [(1 - self._monitor_window)*iteration, iteration]
-                            y = np.array([smoothed - trend*self._monitor_window*iteration, smoothed]);
+                            x = np.linspace((1 - self._monitor_window)*iteration, iteration, 20)
+                            y = smoothed + trend*(x - iteration) + curve*.5*(x - iteration)**2
                             self._stats[col][0].set_data(x, y)
-                            spread = np.array([noise - noise_trend*self._monitor_window*iteration, noise])
+                            spread = noise + noise_trend*(x - iteration) + noise_curve*.5*(x - iteration)**2
                             self._stats[col][1].set_data(x, y - spread)
                             self._stats[col][2].set_data(x, y + spread)
         for i_col in range(len(self._plot_columns)):

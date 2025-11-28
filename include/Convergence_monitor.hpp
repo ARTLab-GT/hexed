@@ -16,8 +16,10 @@ class Convergence_monitor {
   inline double last_value() const {return _value.last_value();}
   inline double smoothed() const {return _value.smoothed();}
   inline double trend() const {return _value.trend();}
+  inline double curvature() const {return _value.curvature();}
   inline double noise() const {return std::max(0., _noise.smoothed());}
   inline double noise_trend() const {return _noise.trend();}
+  inline double noise_curvature() const {return _noise.curvature();}
   bool converged(math::Tolerance trend_tol, math::Tolerance noise_tol) const;
 
   private:
