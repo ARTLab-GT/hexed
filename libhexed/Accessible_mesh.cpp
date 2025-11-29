@@ -2412,7 +2412,16 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
     direction = 0;
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
       for (int face_sign : {0, 1}) {
-        if (!elem.tree->find_neighbor(2*i_dim + face_sign)) direction[i_dim] = !face_sign;
+        auto& face = elem.face(2*i_dim + face_sign);
+        if (face.neighbor_connection()) {
+          auto& opposite = face.neighbor_connection()->opposite_face(face);
+          if (opposite.boundary_connection()) {
+            if (opposite.boundary_connection()->boundary_condition() < 2*params.n_dim) {
+              // we get here iff `face` is on an extremal boundary
+              direction[i_dim] = !face_sign;
+            }
+          }
+        }
       }
     }
     if (direction.abs().extreme(1)) { // if the element is on an extremal boundary
@@ -2420,7 +2429,11 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
       if (!n) continue;
       if (!n->elem) continue;
       for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-        if (direction[i_dim] != 0) elem.desired_refinement(i_dim) = n->elem->desired_refinement(i_dim);
+        if (direction[i_dim] != 0) {
+          int des_ref = n->elem->tree->anisotropic_refinement_level()[i_dim] + n->elem->desired_refinement(i_dim)
+                        - elem.tree->anisotropic_refinement_level()[i_dim];
+          elem.desired_refinement(i_dim) = std::max(-1, std::min(1, des_ref));
+        }
       }
     }
   }
@@ -2562,10 +2575,11 @@ void Accessible_mesh::execute_adaptation() {
             for (int i_var = 0; i_var < params.n_var; ++i_var) {
               for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != i_dim) {
                 Array<double> face = faces(j_dim)(i_var);
+                double scale = ref_unref ? 2. : .5;
                 if (params.n_dim == 3) {
-                  face.vector() = math::dimension_matvec(matrix, face.vector(), i_dim > 3 - i_dim - j_dim);
+                  face.vector() = scale*math::dimension_matvec(matrix, face.vector(), i_dim > 3 - i_dim - j_dim);
                 } else if (params.n_dim == 2) {
-                  face.vector() = matrix*face.vector();
+                  face.vector() = scale*matrix*face.vector();
                 }
               }
             }

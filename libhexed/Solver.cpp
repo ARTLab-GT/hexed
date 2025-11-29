@@ -1169,6 +1169,7 @@ void Solver::print_preti_iters() {
 void Solver::compute_spectral_uncertainty() {
   std::vector<int> vars;
   for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) vars.push_back(i_var);
+  vars.push_back(params.n_var + 1);
   int nv = vars.size();
   Array<double> state_min = Array<double>::make_uniform({nv}, huge);
   Array<double> state_max = Array<double>::make_uniform({nv}, -huge);
