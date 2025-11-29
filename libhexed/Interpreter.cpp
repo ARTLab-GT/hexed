@@ -296,7 +296,12 @@ Interpreter::Interpreter(std::vector<std::string> preload)
     }},
     {"read", [](const _Dynamic_value& val) {
       HEXED_ASSERT(val.s.has_value(), "operand of `read` must be `string`", Hil_exception);
-      std::vector<Path::path> extra_dirs = {".", Path::exec_path().parent_path().parent_path()/"lib/hexed"};
+      std::vector<Path::path> extra_dirs;
+      try {
+        extra_dirs = {".", Path::exec_path().parent_path().parent_path()/"lib/hexed"};
+      } catch (const std::filesystem::filesystem_error& error) {
+        HEXED_THROW(str_cat("Could not determine executable path. (", error.what(), ")"), Hil_exception)
+      }
       std::ifstream file(Path("lib/hexed").find(*val.s, extra_dirs));
       HEXED_ASSERT(file.good(), format_str(1000, "failed to open file `%s`", (*val.s).c_str()), Hil_exception);
       _Dynamic_value str;
