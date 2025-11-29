@@ -271,20 +271,24 @@ class History_plot:
                             elif last_value > ylim[1]:
                                 ax.set_ylim(ylim[0], ylim[0] + 1.5*(self._data[col].max() - ylim[0]))
                     if has_status:
-                        if col + "_smoothed" in status_data.index:
-                            smoothed = status_data.at[col + "_smoothed", "value"]
-                            trend = status_data.at[col + "_trend", "value"]
-                            curve = status_data.at[col + "_curvature", "value"]
-                            noise = status_data.at[col + "_noise", "value"]
-                            noise_trend = status_data.at[col + "_noise_trend", "value"]
-                            noise_curve = status_data.at[col + "_noise_curvature", "value"]
-                            iteration = self._data.at[add_line, "iteration"]
-                            x = np.linspace((1 - self._monitor_window)*iteration, iteration, 20)
-                            y = smoothed + trend*(x - iteration) + curve*.5*(x - iteration)**2
-                            self._stats[col][0].set_data(x, y)
-                            spread = noise + noise_trend*(x - iteration) + noise_curve*.5*(x - iteration)**2
-                            self._stats[col][1].set_data(x, y - spread)
-                            self._stats[col][2].set_data(x, y + spread)
+                        for stats_col in [col, "log_" + col]:
+                            if stats_col + "_smoothed" in status_data.index:
+                                smoothed = status_data.at[stats_col + "_smoothed", "value"]
+                                trend = status_data.at[stats_col + "_trend", "value"]
+                                curve = status_data.at[stats_col + "_curvature", "value"]
+                                noise = status_data.at[stats_col + "_noise", "value"]
+                                noise_trend = status_data.at[stats_col + "_noise_trend", "value"]
+                                noise_curve = status_data.at[stats_col + "_noise_curvature", "value"]
+                                iteration = self._data.at[add_line, "iteration"]
+                                x = np.linspace((1 - self._monitor_window)*iteration, iteration, 20)
+                                y = smoothed + trend*(x - iteration) + curve*.5*(x - iteration)**2
+                                spread = noise + noise_trend*(x - iteration) + noise_curve*.5*(x - iteration)**2
+                                def transform(data):
+                                    if stats_col.startswith("log_"): return np.exp(data)
+                                    return data
+                                self._stats[col][0].set_data(x, transform(y))
+                                self._stats[col][1].set_data(x, transform(y - spread))
+                                self._stats[col][2].set_data(x, transform(y + spread))
         for i_col in range(len(self._plot_columns)):
             self._curves[i_col].set_data(self._data["iteration"], self._data[self._plot_columns[i_col]])
         return self._curves

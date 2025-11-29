@@ -252,12 +252,24 @@ void Case::_update_monitors() {
   std::ofstream status_data ((_vars("working_dir") + "status_data.txt").c_str());
   auto sub = _inter.make_sub();
   sub.exec(_vars("monitor_vars"));
-  for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
-    double val = sub.variables->get<double>(_monitor_vars[i_monitor]);
-    auto& monitor = _monitors[i_monitor];
-    monitor.add_sample(iter, val);
+  _log_residual_hist.add_sample(iter, std::log(_vard("normalized_residual")));
+  bool allow_ref = iter > _vari("refine_start_iter");
+  if (_vari("automate_adapt_schedule")) {
+    bool sufficient_drop = _vard("normalized_residual") < _vard("next_refine_residual");
+    bool stagnated = _log_residual_hist.converged({_vard("residual_stagnation_tol")}, {huge});
+    allow_ref = allow_ref && (sufficient_drop || stagnated);
+  }
+  _inter.variables->assign<int>("allow_refinement", allow_ref);
+  for (Int i_monitor = -1; i_monitor < Int(_monitor_vars.size()); ++i_monitor) {
+    auto& monitor = i_monitor >= 0 ? _monitors[i_monitor] : _log_residual_hist;
+    std::string var_name = "log_normalized_residual";
+    if (i_monitor >= 0) {
+      var_name = _monitor_vars[i_monitor];
+      double val = sub.variables->get<double>(var_name);
+      monitor.add_sample(iter, val);
+    }
     auto assign = [&](std::string suffix, double value) {
-      std::string name = _monitor_vars[i_monitor] + suffix;
+      std::string name = var_name + suffix;
       _inter.variables->assign(name, value);
       status_data << name << ": " << value << "\n";
     };
@@ -268,7 +280,6 @@ void Case::_update_monitors() {
     assign("_noise_trend", monitor.noise_trend());
     assign("_noise_curvature", monitor.noise_curvature());
   }
-  _log_residual_hist.add_sample(iter, std::log(_vard("normalized_residual"))/std::log(10.));
 }
 
 Case::Case(std::string input_script)
@@ -541,12 +552,7 @@ Case::Case(std::string input_script)
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
     int iter = _vari("iteration");
     if (iter < _vari("adapt_start_iter") || iter > _vari("adapt_stop_iter")) return "";
-    bool allow_ref = iter > _vari("refine_start_iter");
-    if (_vari("automate_adapt_schedule")) {
-      bool sufficient_drop = _vard("normalized_residual") < _vard("next_refine_residual");
-      bool stagnated = _log_residual_hist.converged({_vard("residual_stagnation_tol")}, {huge});
-      allow_ref = allow_ref && (sufficient_drop || stagnated);
-    }
+    bool allow_ref = _vari("allow_refinement");
     printers::info("Performing uncertainty-based mesh adaptation (");
     if (allow_ref) {
       printers::info("refinement allowed", true);
