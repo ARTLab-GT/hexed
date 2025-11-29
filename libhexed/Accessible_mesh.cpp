@@ -1161,7 +1161,7 @@ void Accessible_mesh::_fit_surface() {
   }
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    if (!elem.active_shape().acceptable_quality(true)) {
+    if (!elem.active_shape().acceptable_quality()) {
       visualize("default", "failed_mesh", 0.);
       elem.active_shape().visualize("default", "bad_elem");
       HEXED_THROW("Unacceptable quality after surface warping.")

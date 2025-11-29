@@ -532,7 +532,6 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   const int nq = params.n_qpoint();
   const int nd = params.n_dim;
   const int rs = params.row_size;
-  double heat_rat = 1.4;
   auto& elements = acc_mesh->elements();
 
   stopwatch["set art visc"]["initialize"].stopwatch.start();
@@ -623,20 +622,14 @@ void Solver::update_art_visc_smoothness(double advect_length) {
         for (int i_proj = 0; i_proj < rs; ++i_proj) {
           proj += adv[(i_proj + i_offset*rs)*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
         }
-        double mach_suppression = 0;
-        for (int i_dim = 0; i_dim < nd; ++i_dim) {
-          mach_suppression += state[i_dim*nq + i_qpoint]*state[i_dim*nq + i_qpoint];
-        }
-        mach_suppression /= heat_rat*(heat_rat - 1.);
-        mach_suppression = mach_suppression*mach_suppression/(.3 + mach_suppression*mach_suppression);
-        double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint]*mach_suppression;
+        double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
         forcing[i_qpoint] += std::isfinite(f) ? std::max(0., std::min(f, 1e10*advect_length*advect_length)) : 0.;
       }
     }
     double has_shock = false;
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       forcing[i_qpoint] = std::sqrt(forcing[i_qpoint]);
-      has_shock = has_shock || forcing[i_qpoint] > 16.*advect_length;
+      has_shock = has_shock || forcing[i_qpoint] > 4.*advect_length;
     }
     elements[i_elem].has_shock = has_shock;
     elements[i_elem].spread_shock = false;
