@@ -211,7 +211,7 @@ geom_rtol = 1e-7
 geom_atol = 0.
 spectral_tol = 1e-3
 flux_tol = 1e-3
-trend_tol = 1e-4
+trend_tol = 1e-3
 noise_tol = 1e-2
 max_aspect_ratio = 1e3
 max_wall_spacing = huge
@@ -264,7 +264,7 @@ spectral_unref_criterion = {($({spectral_uncertainty} + i_dim) < spectral_tol*ge
 flux_unref_criterion = {(!(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*rms_flux*.5^(row_size - 1)))}
 shape_unref_criterion = {($({nominal_shape} + i_dim) < min_cell_reynolds*$unadjusted_size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
 adapt_unrefine_if = {((($spectral_unref_criterion & $flux_unref_criterion) | $shape_unref_criterion) & $({aniso_ref_level} + i_dim) > init_ref_level)}
-adapt_residual_factor = .8
+adapt_residual_factor = .5
 residual_stagnation_tol = 1e-2
 adapt_if = {(iteration%adapt_freq == 0 & hexed_time_step_done)}
 monitor_criterion = {(iteration > min_prints*print_freq & monitors_converged & (!amr | (last_adapt_iter > (1. - monitor_window)*iteration & allow_refinement)))}
