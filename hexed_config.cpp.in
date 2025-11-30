@@ -1,8 +1,0 @@
-#include <config.hpp>
-
-namespace hexed::config
-{
-
-const std::string commit = "@COMMIT@";
-
-}

@@ -35,7 +35,8 @@ void History_stats::add_sample(Int iter, double value) {
       // compute the matrix for the normal equations for the last point
       Mat<1, 3> last_point {.5*iter*iter, double(iter), 1.};
       Mat<3, 3> lhs_update = last_point.transpose()*last_point;
-      // shouldn't be aliasing because entries are traversed in matching order
+      // use this matrix to update the global normal equations.
+      // there shouldn't be aliasing because entries are traversed in matching order
       _lhs = old_weight*_lhs + new_weight*lhs_update;
       _rhs = old_weight*_rhs + new_weight*last_point.transpose()*value;
     }

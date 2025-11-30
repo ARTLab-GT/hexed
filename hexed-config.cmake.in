@@ -1,2 +1,0 @@
-@PACKAGE_INIT@
-include("@CMAKE_CURRENT_BINARY_DIR@/hexed-targets.cmake" )

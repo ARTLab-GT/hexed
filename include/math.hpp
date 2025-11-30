@@ -10,7 +10,7 @@ namespace hexed::math {
 
 //! \brief Specifies relative and absolute tolerances for comparing a value to truth data.
 struct Tolerance {
-  double rel = 0.; //!< \brief Tolerance relative to the magnitude of the truth value
+  double rel = 0.; //!< \brief %Tolerance relative to the magnitude of the truth value
   double abs = 0.; //!< \brief Absolute tolerance
 };
 
