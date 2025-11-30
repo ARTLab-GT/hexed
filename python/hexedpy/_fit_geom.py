@@ -2,7 +2,7 @@ import numpy as np
 import sys
 
 ### \file _fit_geom.py
-### \brief Source code for the \ref hexed_fit_geom geom_fitting command.
+### \brief Source code for the \ref geom_fitting hexed_fit_geom command.
 
 def fit_geom():
     # configure command line arguments

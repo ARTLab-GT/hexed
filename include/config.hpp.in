@@ -4,12 +4,12 @@
 #include <string>
 #include <cstdint>
 
-/*! \file hexed_config.hpp.in
+/*! \file config.hpp.in
  * \brief Supplies options configured by `build.py` to C++ code.
  * \details Anything wrapped in `{[]}`s will be evaluated as Python code and substituted at build time.
  */
 
-//! \brief Namespace for options configured at build time. See \ref hexed_config.hpp.in.
+//! \brief Namespace for options configured at build time.
 namespace hexed::config {
 
 constexpr int version_major = {[options["version_major"]]}; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch

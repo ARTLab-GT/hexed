@@ -1,11 +1,5 @@
 /*! \page installation Installation
 
-\attention Although the Hexed source code is published under the very permissive
-[MIT License](https://github.com/ARTLab-GT/hexed/blob/main/LICENSE.txt),
-compiled binaries may be linked with OpenCASCADE, causing them to be bound by the
-[LGPL License](https://dev.opencascade.org/resources/licensing).
-If you redistribute compiled binaries, you must observe the terms of this license.
-
 \section install_prereqs Prerequisites
 
 \subsection install_prereq_os OS
@@ -60,14 +54,13 @@ python3 -m pip install --index-url https://test.pypi.org/simple/ hexedpy
 Hexed is only on the [TestPyPI](https://test.pypi.org/), not the [real PyPI](https://pypi.org/).
 
 Once you do this, you can run Hexed with the command \ref hexecute.
-You will also have access to the \ref hexedpy Python module.
-Unfortunately, due to licensing considerations, this package does not include OpenCASCADE,
-so you will not be able to import geometry in \ref add_geom "CAD file formats".
-For that, you need to build Hexed from source, as explained below.
+You will also be able to use the \ref hexedpy module in Python.
+At this time, the pre-compiled Python package is neither as optimized or as portable as the source code,
+so if you have the time, it is generally recommended to compile from source instead, as described below.
 
 \section install_source Building from source (the harder way)
 
-For optimal performance, if you want to modify the source code, or if you need OpenCASCADE support,
+For optimal performance, or if you want to modify the source code,
 you will need to build Hexed from source.
 Even when you do so, Hexed is still installed as a Python wheel,
 so you will still need pip as explained in \ref install_prereqs.
@@ -103,7 +96,7 @@ Notes:
   it you _should_ be able to just rerun `build.py` and it should do a pretty good job of
   rebuilding/reinstalling the files that were affected by the change.
   However, occasionally, a repeat build might break.
-  If you encounter inexplicable problems on repeat builds,
+  If you encounter otherwise inexplicable problems on repeat builds,
   try deleting the `build` directory and then rebuilding.
 
 \subsection build_options Build options
@@ -115,13 +108,20 @@ Every option takes the form `--option_name=value`.
 The whole option (including `value`) must be a valid shell token,
 so if `value` contains spaces you must escape them or quote it (e.g., `--some_option="some value"`).
 Any unrecognized option names are simply ignored, so watch carefully for typos.
-
-The options are listed below.
 Any options which expect a path can accept an absolute path or a path relative to your current working directory (`.`).
 Any options which expect a Boolean value can accept any of the following values, all of which are case insensitive
 (although otherwise options are case sensitive):
 - `0`, `false`, `no`, `off`, `n`, `f` all translate to False.
 - `1`, `true`, `yes`, `on`, `y`, `t` all translate to True.
+
+The options are listed below.
+My typical build command is:
+```
+python3 build.py --n_build_procs=16 --build_docs=y --run_tests=y
+```
+(That is when I'm building in a new build directory---on repeat builds I simply do `python3 build.py`.)
+That said, that my laptop has 16 cores and 32GB of RAM.
+Depending on your hardware, you might consider a more moderate \ref n_build_procs .
 
 \subsubsection source_dir
 __Expects:__ path \n
@@ -145,7 +145,8 @@ __Default:__ 1 \n
 When compiling, use up to this many parallel processes.
 This can significantly speed up the build, but it also uses more memory.
 You can easily max out your RAM this way, so use caution.
-As a rule of thumb, I usually use 1 process for every 2 GB of RAM available.
+As a rule of thumb, I usually use 1 process for every 2 GB of RAM available or 1 process per CPU core,
+whichever is lower.
 
 \subsubsection venv
 __Expects:__ Boolean \n
@@ -205,8 +206,7 @@ This option also influences the default values of some other options below.
 __Expects:__ Integer \f$ \ge \f$ 2 \n
 __Default:__ 8 \n
 Maximum \ref basis_row_size "row size" for simulations.
-The larger this number, the longer the code will take to compile
-(although usually most of the time is taken by compiling \ref use_occt "OCCT").
+The larger this number, the longer the code will take to compile.
 However, attempts to use a row size larger than Hexed was compiled for will result in a runtime exception.
 
 \subsubsection threaded
@@ -236,12 +236,6 @@ __Expects:__ Boolean \n
 __Default:__ False \n
 If true, compile with Tecplot's TecIO library to enable writing visualization files in `.szplt` format.
 This requires TecIO to already be installed on your system---it won't install it automatically.
-
-\subsubsection use_occt
-__Expects:__ Boolean \n
-__Default:__ True \n
-If true, compile with the OpenCASCADE library to enable reading geometry from \ref add_geom "CAD files".
-The LGPL license will apply to the compiled binaries iff this is option is true.
 
 \subsubsection build_tests
 __Expects:__ Boolean \n
@@ -322,7 +316,6 @@ so the versions listed are just the versions that will be installed if the depen
 - [Eigen 3.4.0](https://eigen.tuxfamily.org/index.php?title=Main_Page)
 - [HDF5 1.14.4.3](https://www.hdfgroup.org/solutions/hdf5/)
 - [XDMF](https://www.xdmf.org/index.php/Main_Page)
-- [OpenCASCADE 7.8.0](https://dev.opencascade.org/doc/overview/html/)
 - [Catch2 3.6.0](https://github.com/catchorg/Catch2?tab=readme-ov-file)
 
 Dependencies of the dependencies are not listed but are also installed automatically.

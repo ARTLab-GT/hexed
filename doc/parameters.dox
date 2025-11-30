@@ -495,7 +495,7 @@ If you actually want to simulate a rough wall, you should set `update_roughness_
 \subsubsection max_roughness_absolute
 __type:__ float \n
 __default:__ \ref huge \n
-Maximum allowable absolute (dimensional) surface roughness height when adaptive roughness is used (\ref update_roughness_feq > 0).
+Maximum allowable absolute (dimensional) surface roughness height when adaptive roughness is used (\ref update_roughness_freq > 0).
 The default value effectively does not constrain the surface roughness.
 
 <hr>
@@ -503,7 +503,7 @@ The default value effectively does not constrain the surface roughness.
 __type:__ float \n
 __default:__ 1e-3 \n
 Maximum allowable surface roughness height as a fraction of the \ref geom_length "geometry length"
-when adaptive roughness is used (\ref update_roughness_feq > 0).
+when adaptive roughness is used (\ref update_roughness_freq > 0).
 The default value stipulates a very rough surface, but this is unlikely to be a problem, as the roughness is usually constrained by \ref max_roughness_plus.
 As long as \ref max_roughness_plus is set to a reasonable value, `max_roughness_relative` will generally only be an active constraint when the skin friction vanishes
 (which is important to avoid singularities at stagnation/separation points when \ref local_roughness = \ref true).
@@ -666,18 +666,6 @@ __default:__ `{}` \n
 __type:__ string \n
 __default:__ `{}` \n
 \ref struct_expr "Structured expression" specifying what quantities integrate when surface integrals are computed.
-
-<hr>
-\subsubsection max_angle
-__type:__ float \n
-__default:__ `15*degree`
-Maximum allowable angle between adjacent panels when discretizing 3D CAD geometry with `hexed::Occt::triangles`.
-
-<hr>
-\subsubsection max_deflection
-__type:__ float \n
-__default:__ \ref huge \n
-Maximum allowable linear deflection of surface panels when discretizing 3D CAD geometry with `hexed::Occt::triangles` (dimensional).
 
 <hr>
 \subsubsection flood_fill_start flood_fill_start0, flood_fill_start1, flood_fill_start2
@@ -1172,14 +1160,6 @@ The following extension/format combinations are supported:
   Units are read from the file and converted.
   Files must be in ASCII format (there is also a binary format, although this is less common).
   Both GNU/Linux and Windows line endings are accepted.
-- `.stp`, `.step`: [STEP](https://en.wikipedia.org/wiki/ISO_10303-21) CAD format. As above.
-  Currently, IGES is preferred over STEP for Hexed simulations.
-  This is because IGES will be translated to a precise analytic representation
-  with the \ref hexed::Iges_parser "native parser",
-  whereas STEP will be discretized imprecisely with \ref hexed::Occt "OpenCASCADE".
-- `.stl`: [STL](https://en.wikipedia.org/wiki/STL_(file_format)) 3D geometry format (3D only).
-  ASCII or binary formats accepted.
-  Units are assumed to be \ref units "standard".
 Evaluates to `{}`.
 
 <hr>
