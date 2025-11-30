@@ -162,16 +162,16 @@ class Spatial {
   class Prolong_refined : public Kernel<std::vector<Kernel_face_refinement>&> {
     static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
     const Eigen::Matrix<double, row_size, row_size> prolong_mat [2];
-    bool scl;
-    bool off;
+    bool _scale;
+    bool _offset;
     int _n_var;
     int _mask;
 
     public:
     Prolong_refined(const Basis& basis, int mask, int n_var, bool scale = false, bool offset = false)
     : prolong_mat{basis.prolong(0), basis.prolong(1)}
-    , scl{scale}
-    , off{offset}
+    , _scale{scale}
+    , _offset{offset}
     , _n_var{n_var}
     , _mask{mask}
     {}
@@ -184,9 +184,9 @@ class Spatial {
       for (int i_ref_face = 0; i_ref_face < ref_faces.size(); ++i_ref_face) {
         for (Kernel_face_refinement ref : ref_faces[i_ref_face]) {
           if (ref.mask < _mask) continue;
-          double* coarse = ref.coarse[off];
+          double* coarse = ref.coarse[_offset];
           for (int i_face = 0; i_face < 2; ++i_face) {
-            double* fine = ref.fine[i_face][off];
+            double* fine = ref.fine[i_face][_offset];
             for (int i_var = 0; i_var < n_var; ++i_var) {
               double* var_face {fine + i_var*nfq};
               // initialize fine face to be equal to coarse face
@@ -200,7 +200,7 @@ class Spatial {
                 for (int i_inner = 0; i_inner < qpoint_stride; ++i_inner) {
                   Eigen::Matrix<double, row_size, 1> row;
                   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {
-                    row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner]/(1 + scl);
+                    row(i_qpoint) = var_face[(i_outer*row_size + i_qpoint)*qpoint_stride + i_inner]/(1 + _scale);
                   }
                   row = prolong_mat[i_face]*row;
                   for (int i_qpoint = 0; i_qpoint < row_size; ++i_qpoint) {

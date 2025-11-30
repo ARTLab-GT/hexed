@@ -2385,6 +2385,7 @@ void Accessible_mesh::purge() {
 Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Element&, int)> refine_criterion,
                                                          std::function<bool(Element&, int)> unrefine_criterion,
                                                          bool set_floor) {
+  printers::info("  (planning adaptation...");
   // decide which elements to (un)refine
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -2513,6 +2514,7 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
     changed = changed || (p != 0);
     tot_inv_sz += math::pow(2., p)*new_inv_sz;
   }
+  printers::info(" done)");
   return {Int(std::round(n_refine)), Int(std::round(n_coarsen)), Int(std::round(elems.size() + n_refine - n_coarsen)),
           changed};
 }
