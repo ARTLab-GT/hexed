@@ -380,7 +380,7 @@ void Solver::calc_jacobian() {
     Array<double> laplacian_av({params.n_qpoint()}, elements[i_elem].laplacian_av_coef());
     laplacian_av = 0;
     for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) laplacian_av += pos(i_dim)*pos(i_dim);
-    laplacian_av = (laplacian_av.sqrt() - .0635 + .01)*.1;
+    laplacian_av = (laplacian_av.sqrt() - .0635)*.1 + 1e-4;
   }
   // do some extra work to make sure each face knows its normal vectors
   auto face_refs = acc_mesh->face_refinements();
@@ -529,7 +529,7 @@ void Solver::diffuse_art_visc(double diff_time) {
   }
 }
 
-void Solver::update_art_visc_smoothness(double advect_length) {
+void Solver::update_art_visc_smoothness(double) {
   stopwatch.stopwatch.start();
   stopwatch["set art visc"].stopwatch.start();
   use_art_visc = true;
@@ -571,7 +571,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem
   // using a linear advection equation.
 
-  max_dt_advection(_kernel_mesh(), opts, adv_safety, 1., true, advect_length);
+  max_dt_advection(_kernel_mesh(), opts, adv_safety, 1., true, 1.);
   for (int i_offset : {0, 1}) {
     compute_write_face_advection(_kernel_mesh(), i_offset);
     compute_prolong_advection(_kernel_mesh());
@@ -599,7 +599,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
             sw_adv["BCs"].stopwatch.pause();
             sw_adv["BCs"].work_units_completed += acc_mesh->elements().size();
             opts.i_stage = i;
-            compute_advection(km, opts, advect_length, i_offset);
+            compute_advection(km, opts, 1., i_offset);
           }
         }
       }
@@ -619,22 +619,25 @@ void Solver::update_art_visc_smoothness(double advect_length) {
     double* forcing = elements[i_elem].art_visc_forcing();
     double* adv = elements[i_elem].advection_state();
     double* state = elements[i_elem].state();
-    double* debug = elements[i_elem].laplacian_av_coef();
+    double* length = elements[i_elem].laplacian_av_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) forcing[i_qpoint] = 0;
     for (int i_offset : {0, 1}) {
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
         double proj = 0;
         for (int i_proj = 0; i_proj < rs; ++i_proj) {
-          proj += adv[(i_proj + i_offset*rs)*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
+          double& a = adv[(i_proj + i_offset*rs)*nq + i_qpoint];
+          if (!std::isfinite(a)) a = 0; // try to recover from any blow-ups in the advection equation
+          proj += a*weights(i_proj)*orth(i_proj);
         }
         double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
-        forcing[i_qpoint] += std::isfinite(f) ? std::max(0., std::min(f, 1e10*debug[i_qpoint]*debug[i_qpoint])) : 0.;
+        forcing[i_qpoint] += std::isfinite(f) ? std::max(0., std::min(f, 1e10*length[i_qpoint]*length[i_qpoint])) : 0.;
       }
     }
     double has_shock = false;
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      double speed_sq = 2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
+      has_shock = has_shock || forcing[i_qpoint] > 0.01*length[i_qpoint]*length[i_qpoint]*speed_sq;
       forcing[i_qpoint] = std::sqrt(forcing[i_qpoint]);
-      has_shock = has_shock || forcing[i_qpoint] > 4.*debug[i_qpoint];
     }
     elements[i_elem].has_shock = has_shock;
     elements[i_elem].spread_shock = false;
@@ -666,17 +669,15 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   }
 
   // begin root-smear-square operation
-  int n_real = params.n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
-  // compute size of real time step (as opposed to pseudotime)
-  double diff_time = _namespace->get<double>("av_diff_ratio")/n_real;
+  double diff_ratio = _namespace->get<double>("av_diff_ratio");
   stopwatch["set art visc"]["diffusion"].stopwatch.start();
-  diffuse_art_visc(diff_time);
+  diffuse_art_visc(diff_ratio);
   stopwatch["set art visc"]["diffusion"].stopwatch.pause();
   stopwatch["set art visc"]["diffusion"].work_units_completed += elements.size();
 
   // clean up
   double mult = _namespace->get<double>("av_visc_mult");
-  double us_max = advect_length*_namespace->get<double>("av_unscaled_max")
+  double us_max = _namespace->get<double>("av_unscaled_max")
                   *std::sqrt(2*_namespace->get<double>("freestream" + std::to_string(nd + 1))
                   /_namespace->get<double>("freestream" + std::to_string(nd)));
   double resid = 0;
@@ -686,11 +687,11 @@ void Solver::update_art_visc_smoothness(double advect_length) {
     double* state = elements[i_elem].state();
     double* av = elements[i_elem].bulk_av_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
-    double* debug = elements[i_elem].laplacian_av_coef();
+    double* length = elements[i_elem].laplacian_av_coef();
     double volume = math::pow(elements[i_elem].nominal_size(), nd);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      double f = mult*debug[i_qpoint]*forcing[nq + i_qpoint];
-      double new_av = us_max*f/(us_max + f);
+      double f = mult*length[i_qpoint]*forcing[nq + i_qpoint];
+      double new_av = length[i_qpoint]*us_max*f/(length[i_qpoint]*us_max + f);
       resid += math::pow(av[i_qpoint] - new_av, 2)*qpoint_weights(i_qpoint)*volume;
       av[i_qpoint] = new_av;
       // put the flow state back how we found it
