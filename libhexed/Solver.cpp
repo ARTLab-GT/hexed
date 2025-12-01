@@ -360,7 +360,6 @@ void Solver::calc_jacobian() {
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     elements[i_elem].set_jacobian(basis);
     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      //HEXED_ASSERT(elements[i_elem].jacobian_determinant(i_qpoint) > 0., "Nonpositive Jacobian")
       double det = elements[i_elem].jacobian_determinant(i_qpoint);
       if (!(det > 0. && std::isfinite(det))) {
         std::string message = "Nonpositive Jacobian (" + to_string(det) + "). Node positions:\n";
@@ -377,6 +376,11 @@ void Solver::calc_jacobian() {
         HEXED_THROW(message)
       }
     }
+    Array<double> pos = elements[i_elem].position(basis);
+    Array<double> laplacian_av({params.n_qpoint()}, elements[i_elem].laplacian_av_coef());
+    laplacian_av = 0;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) laplacian_av += pos(i_dim)*pos(i_dim);
+    laplacian_av = (laplacian_av.sqrt() - .0635 + .01)*.1;
   }
   // do some extra work to make sure each face knows its normal vectors
   auto face_refs = acc_mesh->face_refinements();
@@ -615,6 +619,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
     double* forcing = elements[i_elem].art_visc_forcing();
     double* adv = elements[i_elem].advection_state();
     double* state = elements[i_elem].state();
+    double* debug = elements[i_elem].laplacian_av_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) forcing[i_qpoint] = 0;
     for (int i_offset : {0, 1}) {
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
@@ -623,13 +628,13 @@ void Solver::update_art_visc_smoothness(double advect_length) {
           proj += adv[(i_proj + i_offset*rs)*nq + i_qpoint]*weights(i_proj)*orth(i_proj);
         }
         double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
-        forcing[i_qpoint] += std::isfinite(f) ? std::max(0., std::min(f, 1e10*advect_length*advect_length)) : 0.;
+        forcing[i_qpoint] += std::isfinite(f) ? std::max(0., std::min(f, 1e10*debug[i_qpoint]*debug[i_qpoint])) : 0.;
       }
     }
     double has_shock = false;
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       forcing[i_qpoint] = std::sqrt(forcing[i_qpoint]);
-      has_shock = has_shock || forcing[i_qpoint] > 4.*advect_length;
+      has_shock = has_shock || forcing[i_qpoint] > 4.*debug[i_qpoint];
     }
     elements[i_elem].has_shock = has_shock;
     elements[i_elem].spread_shock = false;
@@ -670,7 +675,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   stopwatch["set art visc"]["diffusion"].work_units_completed += elements.size();
 
   // clean up
-  double mult = _namespace->get<double>("av_visc_mult")*advect_length;
+  double mult = _namespace->get<double>("av_visc_mult");
   double us_max = advect_length*_namespace->get<double>("av_unscaled_max")
                   *std::sqrt(2*_namespace->get<double>("freestream" + std::to_string(nd + 1))
                   /_namespace->get<double>("freestream" + std::to_string(nd)));
@@ -681,9 +686,10 @@ void Solver::update_art_visc_smoothness(double advect_length) {
     double* state = elements[i_elem].state();
     double* av = elements[i_elem].bulk_av_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
+    double* debug = elements[i_elem].laplacian_av_coef();
     double volume = math::pow(elements[i_elem].nominal_size(), nd);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      double f = mult*forcing[nq + i_qpoint];
+      double f = mult*debug[i_qpoint]*forcing[nq + i_qpoint];
       double new_av = us_max*f/(us_max + f);
       resid += math::pow(av[i_qpoint] - new_av, 2)*qpoint_weights(i_qpoint)*volume;
       av[i_qpoint] = new_av;

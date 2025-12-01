@@ -88,7 +88,8 @@ class Navier_stokes {
       void fetch_state(int stride, const double* data) {
         for (int i_var = 0; i_var < n_state - 2; ++i_var) state(i_var) = data[i_var*stride];
         state(i_bulk_art_visc) = data[bulk_av_offset(_eq._n_var)*stride];
-        state(i_laplacian_art_visc) = data[laplacian_av_offset(_eq._n_var)*stride];
+        //state(i_laplacian_art_visc) = data[laplacian_av_offset(_eq._n_var)*stride];
+        state(i_laplacian_art_visc) = 0.;
       }
       Mat<n_update> update_state;
       void fetch_extrap_state(int stride, const double* data) {
@@ -345,7 +346,6 @@ template <int n_dim, int row_size>
 class Advection {
   const int _n_var;
   static constexpr int _n_adv = row_size;
-  const double _advect_length;
   Mat<row_size> _nodes;
   int _offset;
 
@@ -353,14 +353,13 @@ class Advection {
   static constexpr bool has_diffusion = false;
   static constexpr bool has_convection = true;
   static constexpr bool has_source = true;
-  static constexpr int n_state = n_dim + _n_adv;
+  static constexpr int n_state = n_dim + _n_adv + 1;
   static constexpr int n_extrap = n_dim + _n_adv;
   static constexpr int n_update = _n_adv;
   static constexpr double regular_scale = .1;
 
   Advection(int n_var, double advect_length, int offset)
   : _n_var{n_var}
-  , _advect_length{advect_length}
   , _offset{offset}
   , _nodes{2*Gauss_legendre(row_size).nodes() + Mat<row_size>::Constant(math::sign(offset)*.707/row_size - 1.)}
   {}
@@ -375,7 +374,7 @@ class Advection {
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool is_critical) const {
-    double pseudo = 1 + data[tss_offset(_n_var)*stride]*2/_advect_length;
+    double pseudo = 1 + data[tss_offset(_n_var)*stride]*2/data[laplacian_av_offset(_n_var)*stride];
     for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
       double& d = data[(advection_offset(_n_var) + _offset*_n_adv + i_adv)*stride];
       if (is_critical) d = (d + update(i_adv))/pseudo;
@@ -393,7 +392,11 @@ class Advection {
 
     Mat<n_state> state;
     void fetch_state(int stride, const double* data) {
-      state = _eq.fetch_extrap(stride, data);
+      for (int i_var = 0; i_var < n_dim; ++i_var) state(i_var) = data[i_var*stride];
+      for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
+        state(n_dim + i_adv) = data[(advection_offset(_eq._n_var) + _eq._offset*_n_adv + i_adv)*stride];
+      }
+      state(n_dim + _n_adv) = data[laplacian_av_offset(_eq._n_var)*stride];
     }
     Mat<n_update> update_state;
     void fetch_extrap_state(int stride, const double* data) {
@@ -417,7 +420,7 @@ class Advection {
 
     Mat<n_update> source;
     void compute_source() {
-      double l = _eq._advect_length;
+      double l = state(n_dim + _n_adv);
       for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
         double s = state(n_dim + i_adv) - 1.;
         source(i_adv) = 2/l*(1. - math::pow(s*l/regular_scale, 5));
@@ -431,7 +434,7 @@ class Advection {
 
     double decay;
     void compute_decay() {
-      double l = _eq._advect_length;
+      double l = state(n_dim + _n_adv);
       decay = 0;
       for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
         double s = state(n_dim + i_adv) - 1.;
@@ -452,14 +455,13 @@ class Smooth_art_visc {
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
   static constexpr bool has_source = true;
-  static constexpr int n_state = 4;
+  static constexpr int n_state = 4 + 1;
   static constexpr int n_extrap = 3;
   static constexpr int n_update = 3;
-  const double _diff_time;
   const double _cheby;
 
   Smooth_art_visc(int n_var, double diff_time, double chebyshev_step)
-  : _n_var{n_var}, _diff_time{diff_time}, _cheby{chebyshev_step}
+  : _n_var{n_var}, _cheby{chebyshev_step}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
@@ -469,7 +471,7 @@ class Smooth_art_visc {
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-    double pseudo = 1 + data[tss_offset(_n_var)*stride]*_cheby/_diff_time;
+    double pseudo = 1 + data[tss_offset(_n_var)*stride]*_cheby/data[laplacian_av_offset(_n_var)*stride];
     for (int i_var = 0; i_var < n_update; ++i_var) {
       double& d = data[(forcing_offset(_n_var) + 1 + i_var)*stride];
       d += update(i_var);
@@ -487,7 +489,8 @@ class Smooth_art_visc {
 
     Mat<n_state> state;
     void fetch_state(int stride, const double* data) {
-      for (int i_var = 0; i_var < n_state; ++i_var) state(i_var) = data[(forcing_offset(_eq._n_var) + i_var)*stride];
+      for (int i_var = 0; i_var < n_extrap; ++i_var) state(i_var) = data[(forcing_offset(_eq._n_var) + i_var)*stride];
+      state(4) = data[laplacian_av_offset(_eq._n_var)*stride];
     }
     Mat<n_update> update_state;
     void fetch_extrap_state(int stride, const double* data) {
@@ -510,7 +513,7 @@ class Smooth_art_visc {
     void compute_source() {
       for (int i_var = 0; i_var < n_update; ++i_var) {
         double f = std::abs(state(i_var));
-        source(i_var) = ((i_var == 1) ? std::sqrt(f) : f)/_eq._diff_time;
+        source(i_var) = ((i_var == 1) ? std::sqrt(f) : f)/state(4);
       }
     }
 
