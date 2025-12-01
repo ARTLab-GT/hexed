@@ -668,7 +668,7 @@ void Solver::update_art_visc_smoothness(double advect_length) {
   // begin root-smear-square operation
   int n_real = params.n_forcing - 1; // number of real time steps (as apposed to pseudotime steps)
   // compute size of real time step (as opposed to pseudotime)
-  double diff_time = _namespace->get<double>("av_diff_ratio")*advect_length*advect_length/n_real;
+  double diff_time = _namespace->get<double>("av_diff_ratio")/n_real;
   stopwatch["set art visc"]["diffusion"].stopwatch.start();
   diffuse_art_visc(diff_time);
   stopwatch["set art visc"]["diffusion"].stopwatch.pause();

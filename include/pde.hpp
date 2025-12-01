@@ -458,10 +458,11 @@ class Smooth_art_visc {
   static constexpr int n_state = 4 + 1;
   static constexpr int n_extrap = 3;
   static constexpr int n_update = 3;
+  const double _diff_time;
   const double _cheby;
 
   Smooth_art_visc(int n_var, double diff_time, double chebyshev_step)
-  : _n_var{n_var}, _cheby{chebyshev_step}
+  : _n_var{n_var}, _diff_time{diff_time}, _cheby{chebyshev_step}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
@@ -471,7 +472,8 @@ class Smooth_art_visc {
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-    double pseudo = 1 + data[tss_offset(_n_var)*stride]*_cheby/data[laplacian_av_offset(_n_var)*stride];
+    double pseudo = 1 + data[tss_offset(_n_var)*stride]*_cheby
+                        /(_diff_time*math::pow(data[laplacian_av_offset(_n_var)*stride], 2));
     for (int i_var = 0; i_var < n_update; ++i_var) {
       double& d = data[(forcing_offset(_n_var) + 1 + i_var)*stride];
       d += update(i_var);
@@ -513,7 +515,7 @@ class Smooth_art_visc {
     void compute_source() {
       for (int i_var = 0; i_var < n_update; ++i_var) {
         double f = std::abs(state(i_var));
-        source(i_var) = ((i_var == 1) ? std::sqrt(f) : f)/state(4);
+        source(i_var) = ((i_var == 1) ? std::sqrt(f) : f)/(_eq._diff_time*state(4)*state(4));
       }
     }
 
