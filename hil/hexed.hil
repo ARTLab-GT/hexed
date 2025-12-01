@@ -138,7 +138,6 @@ ramped = false
 ramp_action = {
     ramped = true;
     max_safety = ramping_final_safety
-    next_refine_iter = 1e-3
     print_emph = true; print{Initial phase complete.}
     print({ Increasing safety factor to } + max_safety + {.})
 }
