@@ -1210,15 +1210,13 @@ void Solver::compute_spectral_uncertainty() {
   if (visc.is_viscous) {
     total_sq_flux = 0;
     total_area = 0;
-    auto bc_fun = [this, &total_sq_flux, &total_area]() {
+    auto bc_fun = [this, &total_sq_flux, &total_area, &weights]() {
       apply_flux_bcs();
       Array<double> face_weights(math::pow_outer(basis.node_weights(), params.n_dim - 1));
       #pragma omp parallel for reduction(+:total_sq_flux,total_area)
       for (auto& con : acc_mesh->neighbor_connections(true)) {
         auto dir = con.get_direction();
-        if (!con.has_elements() || dir.i_dim[0] != dir.i_dim[1]) continue;
-        if (!con.face(0).element()->is_extruded() || !con.face(1).element()->is_extruded()) continue;
-        if (dir.i_dim[0] != con.face(0).element()->wall_dimension()) continue;
+        if (!con.has_elements() || dir.i_dim[0] != dir.i_dim[1] || dir.rotate) continue;
         Array<double> flux_diff = con.face(0).flow_state()(1) - con.face(1).flow_state()(1);
         Array<double> flux_avg  = con.face(0).flow_state()(1) + con.face(1).flow_state()(1);
         Array<double> nrml = con.face(0).normal();
@@ -1234,11 +1232,27 @@ void Solver::compute_spectral_uncertainty() {
           uncert += (flux_diff(i_dim)*flux_diff(i_dim)*face_weights/(area*area)).sum();
           total += (flux_avg(i_dim)*flux_avg(i_dim)*face_weights/area).sum();
         }
+        double avg_visc = 0;
         for (int i_side = 0; i_side < 2; ++i_side) {
-          con.face(i_side).element()->flux_uncert += std::sqrt(uncert);
+          auto& elem = *con.face(i_side).element();
+          Array<double> state = elem.flow_state();
+          Array<double> sqrt_temp({params.n_qpoint()});
+          sqrt_temp = state(params.n_dim + 1);
+          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+            sqrt_temp -= .5*state(i_dim)*state(i_dim)/state(params.n_dim);
+          }
+          sqrt_temp *= (_namespace->get<double>("heat_rat") - 1)/constants::specific_gas_air;
+          sqrt_temp.sqrt(true);
+          for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+            double bulk = elem.bulk_av_coef()[i_qpoint]*state(params.n_dim)[i_qpoint];
+            avg_visc += .5*(visc.coefficient(sqrt_temp[i_qpoint]) + bulk)*weights[i_qpoint];
+          }
+        }
+        for (int i_side = 0; i_side < 2; ++i_side) {
+          con.face(i_side).element()->flux_uncert += std::sqrt(uncert)/avg_visc;
         }
         if (con.face(0).element()->has_wall() || con.face(1).element()->has_wall()) {
-          total_sq_flux += total;
+          total_sq_flux += total/(avg_visc*avg_visc);
           total_area += (area*face_weights).sum();
         }
       }
