@@ -258,9 +258,9 @@ final_refine_if = {(has_wall & ((i_dim == wall_dimension & (wall_distance > max_
 final_unrefine_if = {false}
 shock_refine_if = {(has_shock & $({nominal_shape} + i_dim) > 3*local_av_width & $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance)}
 shock_unrefine_if = {(!has_shock)}
-adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*rms_flux)) & $({nominal_shape} + i_dim) > 2*min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
+adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*rms_flux)) & $({nominal_shape} + i_dim) > 2*min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
 spectral_unref_criterion = {($({spectral_uncertainty} + i_dim) < spectral_tol*general_tolerance*.5^(row_size - 1))}
-flux_unref_criterion = {(!(flux_uncertainty > flux_tol*general_tolerance*rms_flux*.5^(row_size - 1)))}
+flux_unref_criterion = {(!(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*rms_flux*.5^(row_size - 2)))}
 shape_unref_criterion = {($({nominal_shape} + i_dim) < min_cell_reynolds*$unadjusted_size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
 adapt_unrefine_if = {((($spectral_unref_criterion & $flux_unref_criterion) | $shape_unref_criterion) & $({aniso_ref_level} + i_dim) > init_ref_level)}
 adapt_residual_factor = .5
