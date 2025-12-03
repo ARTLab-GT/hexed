@@ -42,13 +42,14 @@ void Case::_set_vector(std::string name, Mat<> vec) {
   }
 }
 
-Flow_bc* Case::_make_bc(std::string name) {
+std::shared_ptr<Flow_bc> Case::_make_bc(std::string name) {
+  std::shared_ptr<Flow_bc> bc;
   Mat<> freestream = _get_vector("freestream", _vari("n_var"));
-  if      (name == "characteristic") return new Riemann_invariants(freestream);
-  else if (name == "freestream") return new Freestream(freestream);
-  else if (name == "pressure_outflow") return new Pressure_outflow(_vard("freestream_pressure"));
-  else if (name == "outflow") return new Outflow;
-  else if (name == "nonpenetration") return new Nonpenetration;
+  if      (name == "characteristic") bc = std::make_shared<Riemann_invariants>(freestream);
+  else if (name == "freestream") bc = std::make_shared<Freestream>(freestream);
+  else if (name == "pressure_outflow") bc = std::make_shared<Pressure_outflow>(_vard("freestream_pressure"));
+  else if (name == "outflow") bc = std::make_shared<Outflow>();
+  else if (name == "nonpenetration") bc = std::make_shared<Nonpenetration>();
   else if (name == "no_slip") {
     auto sub = _inter.make_sub();
     sub.exec("$thermal_bc");
@@ -73,9 +74,8 @@ Flow_bc* Case::_make_bc(std::string name) {
       thermal = std::make_shared<Prescribed_energy>(energy);
     }
     HEXED_ASSERT(thermal, "thermal BC specification not understood", assert::User_error)
-    auto bc = new No_slip(thermal, heat_rat,
-                          _solver().viscosity_model(), _solver().turbulence_model(), _vard("heat_flux_coercion"));
-    return bc;
+    bc = std::make_shared<No_slip>(thermal, heat_rat, _solver().viscosity_model(), _solver().turbulence_model(),
+                                   _vard("heat_flux_coercion"));
   } else if (name == "expression") {
     HEXED_ASSERT(_inter.variables->lookup<std::string>("bc_state"),
                  "To use the `expression` BC type, you must define `bc_state` as a string.",
@@ -88,9 +88,9 @@ Flow_bc* Case::_make_bc(std::string name) {
         flux += format_str("ghost_flux%i = flux%i\n", i_var, i_var);
       }
     }
-    return new Expression_bc(_inter, _vars("bc_state"), flux);
+    bc = std::make_shared<Expression_bc>(_inter, _vars("bc_state"), flux);
   } else HEXED_THROW(format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()), assert::User_error);
-  return nullptr; // will never happen. just to shut up GCC warning
+  return bc;
 }
 
 std::string Case::_iteration_suffix() {
@@ -102,8 +102,8 @@ void force_symlink(const std::filesystem::path& target, const std::filesystem::p
   std::filesystem::create_symlink(target, link);
 }
 
-std::vector<Flow_bc*> Case::_make_extremal_bcs() {
-  std::vector<Flow_bc*> bcs;
+std::vector<std::shared_ptr<Flow_bc>> Case::_make_extremal_bcs() {
+  std::vector<std::shared_ptr<Flow_bc>> bcs;
   for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       bcs.push_back(_make_bc(_vars(format_str(50, "extremal_bc%i%i", i_dim, sign))));

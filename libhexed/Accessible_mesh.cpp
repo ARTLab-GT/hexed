@@ -1592,8 +1592,8 @@ next::Sequence<std::vector<Face_refinement>&> Accessible_mesh::face_refinements(
   return next::Sequence<std::vector<Face_refinement>&>::vector_view(_face_refs);
 }
 
-int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc) {
-  bound_conds.emplace_back(flow_bc);
+int Accessible_mesh::add_boundary_condition(std::shared_ptr<Flow_bc> flow_bc) {
+  bound_conds.push_back(flow_bc);
   // no reason to delete boundary conditions, so the serial number can just be the index
   return bound_conds.size() - 1;
 }
@@ -1912,11 +1912,11 @@ Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t, int aniso_ref_leve
   return elem;
 }
 
-void Accessible_mesh::create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin) {
+void Accessible_mesh::create_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin) {
   // take ownership of bcs (do this first to avoid memory leak)
   std::vector<int> new_tree_bcs;
   //! \todo this could, in theory, be a resource leak because these are never erased if an exception is thrown...
-  for (Flow_bc* fbc : extremal_bcs) new_tree_bcs.push_back(add_boundary_condition(fbc));
+  for (auto& fbc : extremal_bcs) new_tree_bcs.push_back(add_boundary_condition(fbc));
   HEXED_ASSERT(int(extremal_bcs.size()) == 2*params.n_dim, "`extremal_bcs` has wrong number of elements");
   HEXED_ASSERT(!tree, "each `Mesh` may only contain one tree");
   // add the tree
@@ -1924,7 +1924,7 @@ void Accessible_mesh::create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> orig
   tree.reset(new Tree(params.n_dim, root_sz, origin));
 }
 
-void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin) {
+void Accessible_mesh::add_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin) {
   create_tree(extremal_bcs, origin);
   auto& elem = add_elem(false, *tree, 0);
   int sn = elem.record;
@@ -1946,7 +1946,8 @@ bool Accessible_mesh::is_surface(Tree* t) {
   return t->get_status() == 0;
 }
 
-void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start) {
+void Accessible_mesh::set_surface(Surface_geom* geometry, std::shared_ptr<Flow_bc> surface_bc,
+                                  Eigen::VectorXd flood_fill_start) {
   printers::info("  Incorporating surface geometry...\n");
   // take ownership of the surface geometries (do this first to avoid memory leak)
   surf_bc_sn = add_boundary_condition(surface_bc);
@@ -2417,8 +2418,9 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
         if (face.neighbor_connection()) {
           auto& opposite = face.neighbor_connection()->opposite_face(face);
           if (opposite.boundary_connection()) {
-            if (opposite.boundary_connection()->boundary_condition() < 2*params.n_dim) {
-              // we get here iff `face` is on an extremal boundary
+            int bc = opposite.boundary_connection()->boundary_condition();
+            if (!bound_conds[bc]->smooth()) {
+              // we get here iff `face` is on a non-smooth extremal boundary
               direction[i_dim] = !face_sign;
             }
           }
@@ -2996,7 +2998,7 @@ std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::pret
 }
 
 next::Sequence<Flow_bc&> Accessible_mesh::boundary_conditions() {
-  return next::Sequence<std::unique_ptr<Flow_bc>&>::vector_view(bound_conds).dereference<Flow_bc&>();
+  return next::Sequence<std::shared_ptr<Flow_bc>&>::vector_view(bound_conds).dereference<Flow_bc&>();
 }
 
 next::Sequence<Boundary_connection&> Accessible_mesh::boundary_connections() {
@@ -3327,11 +3329,10 @@ void Accessible_mesh::read_file(std::string file_name) {
   cleanup();
 }
 
-Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Turbulence_model turb,
-                                 Surface_geom* geometry, Flow_bc* surface_bc)
+Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> extremal_bcs,
+                                 Turbulence_model turb, Surface_geom* geometry, std::shared_ptr<Flow_bc> surface_bc)
 : Accessible_mesh(read_params(file_name), read_root_sz(file_name), turb) {
   // take ownership of these to avoid memory leaks in case of exception
-  std::unique_ptr<Flow_bc> fbc(surface_bc);
   std::unique_ptr<Surface_geom> g(geometry);
   // create the tree
   {
@@ -3342,17 +3343,19 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> ex
     h5_read_row(orig_dset, params.n_dim, 0, orig.data());
     create_tree(extremal_bcs, orig);
   }
-  HEXED_ASSERT(bool(fbc) == bool(g), "must specify both surface geometry and surface boundary condition or neither");
+  HEXED_ASSERT(bool(surface_bc) == bool(g),
+               "You must specify both surface geometry and surface boundary condition or neither.");
   if (surface_bc) {
-    surf_bc_sn = add_boundary_condition(fbc.release());
+    surf_bc_sn = add_boundary_condition(surface_bc);
     surf_geom.reset(g.release());
   }
   read_file(file_name);
 }
 
-Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> flow_bcs, Turbulence_model turb)
+Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> flow_bcs,
+                                 Turbulence_model turb)
 : Accessible_mesh(read_params(file_name), read_root_sz(file_name), turb) {
-  for (unsigned i_bc = 0; i_bc < flow_bcs.size(); ++i_bc) add_boundary_condition(flow_bcs[i_bc]);
+  for (auto& fbc : flow_bcs) add_boundary_condition(fbc);
   read_file(file_name);
 }
 

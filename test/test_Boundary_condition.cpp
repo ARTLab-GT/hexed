@@ -77,37 +77,6 @@ TEST_CASE("Riemann_invariants") {
   }
 }
 
-TEST_CASE("Function_bc") {
-  const int row_size = hexed::config::max_row_size;
-  hexed::Storage_params params {2, 4, 2, row_size};
-  hexed::Tree tree(2, 1.);
-  hexed::Element element {params, tree};
-  const int n_qpoint = row_size;
-  hexed::Annular_diffusion_test func(1.7, 2., 1e5);
-  hexed::Function_bc bc(func);
-  hexed::Boundary_connection con(element.face(2), 0, 0);
-  for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-    // set inside face to something arbitrary
-    con.inside().flow_state()(0)(0)[i_qpoint] = 20.;
-    con.inside().flow_state()(0)(1)[i_qpoint] = -10.;
-    con.inside().flow_state()(0)(2)[i_qpoint] = 5.;
-    con.inside().flow_state()(0)(3)[i_qpoint] = 1e4;
-  }
-  con.normal() = 0.;
-  // set position at node 0 to have radius 2*e (not the actual position, but for this test that doesn't matter)
-  con.position()(0)[0] =  1.2*std::exp(1.);
-  con.position()(1)[0] = -1.6*std::exp(1.);
-  // set position at node 4 to have radius 2*e^2
-  con.position()(0)[4] =  1.2*std::exp(2.);
-  con.position()(1)[4] =  1.6*std::exp(2.);
-  bc.apply_state(con);
-  // check that ghost face state is correct at the qpoints where position was set
-  REQUIRE(con.ghost().flow_state()(0)(0)[0] == Catch::Approx(0.).scale(1.));
-  REQUIRE(con.ghost().flow_state()(0)(1)[0] == Catch::Approx(0.).scale(1.));
-  REQUIRE(con.ghost().flow_state()(0)(2)[0] == Catch::Approx(1.7));
-  REQUIRE(con.ghost().flow_state()(0)(3)[0] == Catch::Approx(1e5));
-  REQUIRE(con.ghost().flow_state()(0)(2)[4] == Catch::Approx(3.4));
-}
 
 TEST_CASE("Nonpenetration") {
   const int row_size = hexed::config::max_row_size;

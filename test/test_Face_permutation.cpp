@@ -68,15 +68,15 @@ void test_mesh(hexed::Accessible_mesh& mesh) {
 TEST_CASE("Face_permutation") {
   SECTION("2d") {
     hexed::Accessible_mesh mesh {{1, 4, 2, hexed::config::max_row_size}, 1., hexed::laminar};
-    std::vector<hexed::Flow_bc*> bc_ptrs;
-    for (int i = 0; i < 4; ++i) bc_ptrs.push_back(new hexed::Copy);
+    std::vector<std::shared_ptr<hexed::Flow_bc>> bc_ptrs;
+    for (int i = 0; i < 4; ++i) bc_ptrs.push_back(std::make_shared<hexed::Copy>());
     mesh.add_tree(bc_ptrs);
     test_mesh(mesh);
   }
   SECTION("3d") {
     hexed::Accessible_mesh mesh {{1, 5, 3, hexed::config::max_row_size}, 1., hexed::laminar};
-    std::vector<hexed::Flow_bc*> bc_ptrs;
-    for (int i = 0; i < 6; ++i) bc_ptrs.push_back(new hexed::Copy);
+    std::vector<std::shared_ptr<hexed::Flow_bc>> bc_ptrs;
+    for (int i = 0; i < 6; ++i) bc_ptrs.push_back(std::make_shared<hexed::Copy>());
     mesh.add_tree(bc_ptrs);
     test_mesh(mesh);
   }

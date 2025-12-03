@@ -28,6 +28,13 @@ class Flow_bc {
   virtual void init_cache(Boundary_connection&);
   virtual inline int n_prescribed(int n_dim) const {return 0;}
   virtual inline void set_prescribed(Interpreter&, Boundary_connection&) {}
+  /*! \brief Returns `false` if this BC tends to cause the flow not to be smooth.
+   * \details Farfield BCs should be expected to cause non-smoothness, especially if they are over-constrained,
+   * whereas wall boundary conditions should not.
+   * When performing AMR, cells on non-smooth boundaries will receive special treatment to avoid excessive refinement.
+   * So, when in doubt, have new boundary conditions return `true` so that they can be refined.
+   */
+  virtual bool smooth() const = 0;
   virtual ~Flow_bc() = default;
 };
 
@@ -41,8 +48,9 @@ class Freestream : public Flow_bc {
   public:
   //! `freestream_state.size()` must equal the `n_var()` of the `Boundary_connection` you apply_state it to
   Freestream(Mat<> freestream_state);
-  virtual void apply_state(Boundary_connection&);
-  virtual void apply_flux(Boundary_connection&);
+  void apply_state(Boundary_connection&) override;
+  void apply_flux(Boundary_connection&) override;
+  bool smooth() const override {return false;}
 };
 
 /*! \brief A freestream boundary condition that sets only the ingoing characteristics.
@@ -53,8 +61,9 @@ class Riemann_invariants : public Flow_bc {
   Mat<> fs;
   public:
   Riemann_invariants(Mat<> freestream_state);
-  virtual void apply_state(Boundary_connection&);
-  virtual void apply_flux(Boundary_connection&);
+  void apply_state(Boundary_connection&) override;
+  void apply_flux(Boundary_connection&) override;
+  bool smooth() const override {return false;}
 };
 
 /*! \brief sets pressure on outflow boundaries
@@ -72,31 +81,7 @@ class Pressure_outflow : public Flow_bc {
   inline Pressure_outflow(double pressure) : pres_spec{pressure} {}
   void apply_state(Boundary_connection&) override;
   void apply_flux(Boundary_connection&) override;
-};
-
-//! \brief Like `Freestream`, but sets state to the value of an arbitrary `Surface_func` instead of a constant.
-class Function_bc : public Flow_bc {
-  const Surface_func& func;
-  public:
-  Function_bc(const Surface_func&);
-  Function_bc(Surface_func&&) = delete;
-  void apply_state(Boundary_connection&) override;
-  void apply_flux(Boundary_connection&) override;
-};
-
-/*!
- * Like `Function_bc`, but instead of evaluating the `Surface_func` at every time integration stage,
- * it evaluates it once when the flow is initialized and then stores it in the `Boundary_connection::state_cache`.
- * Of course, this means that any time-dependence will be ignored.
- */
-class Cache_bc : public Flow_bc {
-  std::unique_ptr<Surface_func> func;
-  public:
-  //! takes ownership of `f`
-  inline Cache_bc(Surface_func* f) : func{f} {}
-  void apply_state(Boundary_connection&) override;
-  void apply_flux(Boundary_connection&) override;
-  void init_cache(Boundary_connection&) override;
+  bool smooth() const override {return false;}
 };
 
 //! \brief Copies the inside state and flips the sign of the surface-normal velocity.
@@ -106,6 +91,7 @@ class Nonpenetration : public Flow_bc {
   void apply_state(Boundary_connection&) override;
   void apply_flux(Boundary_connection&) override;
   void apply_advection(Boundary_connection&) override;
+  bool smooth() const override {return true;}
 };
 
 //! \brief specifies the thermal component of a `No_slip` wall boundary condition
@@ -174,6 +160,7 @@ class No_slip : public Flow_bc {
   void apply_flux(Boundary_connection&) override;
   inline int n_prescribed(int n_dim) const override {return n_dim + 1;}
   void set_prescribed(Interpreter&, Boundary_connection&) override;
+  bool smooth() const override {return true;}
 };
 
 //! \brief Mostly used for testing, but you can maybe get away with it for supersonic outlets.
@@ -183,6 +170,7 @@ class Copy : public Flow_bc {
   void apply_state(Boundary_connection&) override;
   void apply_flux(Boundary_connection&) override;
   void apply_advection(Boundary_connection&) override;
+  bool smooth() const override {return true;}
 };
 
 //! \brief for supersonic outlets
@@ -192,6 +180,7 @@ class Outflow : public Flow_bc {
   //! inverts flux (so that avg is zero)
   void apply_state(Boundary_connection&) override;
   void apply_flux(Boundary_connection&) override;
+  bool smooth() const override {return true;}
 };
 
 //! \brief Sets the boundary condition explicitly based on a `HIL` expression.
@@ -200,6 +189,7 @@ class Expression_bc : public Flow_bc {
   Expression_bc(Interpreter&, std::string state_expr, std::string flux_expr);
   inline void apply_state(Boundary_connection& bf) override {_apply(bf, 0);}
   inline void apply_flux(Boundary_connection& bf) override {_apply(bf, 1);}
+  bool smooth() const override {return true;}
   private:
   void _apply(Boundary_connection&, bool is_flux);
   Interpreter& _inter;

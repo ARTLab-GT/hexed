@@ -9,18 +9,18 @@ TEST_CASE("Tree meshing", "[.slow]") {
   hexed::Accessible_mesh mesh({1, 5, 3, hexed::config::max_row_size}, .7, hexed::laminar);
   REQUIRE_THROWS(mesh.update(hexed::criteria::always));
   SECTION("wrong number of BCs") {
-    std::vector<hexed::Flow_bc*> bcs;
-    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
+    std::vector<std::shared_ptr<hexed::Flow_bc>> bcs;
+    for (int i = 0; i < 4; ++i) bcs.emplace_back(new hexed::Copy);
     REQUIRE_THROWS(mesh.add_tree(bcs));
   }
   {
-    std::vector<hexed::Flow_bc*> bcs;
-    for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Copy);
+    std::vector<std::shared_ptr<hexed::Flow_bc>> bcs;
+    for (int i = 0; i < 6; ++i) bcs.emplace_back(new hexed::Copy);
     mesh.add_tree(bcs);
   }
   SECTION("multiple `add_tree` calls") {
-    std::vector<hexed::Flow_bc*> bcs;
-    for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Copy);
+    std::vector<std::shared_ptr<hexed::Flow_bc>> bcs;
+    for (int i = 0; i < 6; ++i) bcs.emplace_back(new hexed::Copy);
     REQUIRE_THROWS(mesh.add_tree(bcs));
   }
   REQUIRE(mesh.elements().size() == 1);
@@ -83,9 +83,9 @@ TEST_CASE("Tree meshing", "[.slow]") {
     mesh.valid().assert_valid();
     SECTION("neighbors with different ref levels") {
       hexed::Accessible_mesh mesh1({1, 5, 3, hexed::config::max_row_size}, .7, hexed::laminar);
-      mesh1.add_boundary_condition(new hexed::Copy);
-      std::vector<hexed::Flow_bc*> bcs;
-      for (int i = 0; i < 6; ++i) bcs.push_back(new hexed::Copy);
+      mesh1.add_boundary_condition(std::make_shared<hexed::Copy>());
+      std::vector<std::shared_ptr<hexed::Flow_bc>> bcs;
+      for (int i = 0; i < 6; ++i) bcs.push_back(std::make_shared<hexed::Copy>());
       mesh1.add_tree(bcs);
       mesh1.update();
       mesh1.update();
@@ -107,7 +107,7 @@ TEST_CASE("Tree meshing", "[.slow]") {
     triangles[1] << 2.1/8, 2.1/8, 2.1/8,
                     2.1/8, 2.1/8, 2.1/8,
                        0.,    0.,    .7;
-    mesh.set_surface(new hexed::Simplex_geom<3>(triangles), new hexed::Copy(), hexed::Mat<3>{.6, .6, .6});
+    mesh.set_surface(new hexed::Simplex_geom<3>(triangles), std::make_shared<hexed::Copy>(), hexed::Mat<3>{.6, .6, .6});
     // count number of non-extruded elements
     int count = 0;
     auto& elems = mesh.elements();
@@ -127,8 +127,8 @@ TEST_CASE("mesh I/O", "[!mayfail]") {
   int correct_n_def_after = 0;
   { // create a mesh and write it to a file
     hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size}, .8, hexed::laminar);
-    std::vector<hexed::Flow_bc*> bcs;
-    for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
+    std::vector<std::shared_ptr<hexed::Flow_bc>> bcs;
+    for (int i = 0; i < 4; ++i) bcs.emplace_back(new hexed::Copy);
     mesh.add_tree(bcs, hexed::Mat<2>{0.1, 0.2});
     mesh.update();
     mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] != elem.nominal_position()[1];});
@@ -151,8 +151,8 @@ TEST_CASE("mesh I/O", "[!mayfail]") {
     }
   }
   { // read the above mesh from the file and check that it's the same
-    std::vector<hexed::Flow_bc*> extr_bcs;
-    for (int i = 0; i < 4; ++i) extr_bcs.push_back(new hexed::Copy);
+    std::vector<std::shared_ptr<hexed::Flow_bc>> extr_bcs;
+    for (int i = 0; i < 4; ++i) extr_bcs.emplace_back(new hexed::Copy);
     hexed::Accessible_mesh mesh("io_test", extr_bcs, hexed::laminar,
                                 new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), new hexed::Nonpenetration);
     REQUIRE(mesh.root_size() == Catch::Approx(0.8));
@@ -194,8 +194,8 @@ TEST_CASE("mesh I/O", "[!mayfail]") {
 TEST_CASE("masking") {
   hexed::Accessible_mesh mesh({2, 4, 2, 2}, 1., hexed::laminar);
   hexed::Gauss_legendre basis(2);
-  std::vector<hexed::Flow_bc*> bcs;
-  for (int i = 0; i < 4; ++i) bcs.push_back(new hexed::Copy);
+  std::vector<std::shared_ptr<hexed::Flow_bc>> bcs;
+  for (int i = 0; i < 4; ++i) bcs.emplace_back(new hexed::Copy);
   mesh.add_tree(bcs);
   mesh.update();
   mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] == elem.nominal_position()[1];});

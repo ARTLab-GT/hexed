@@ -295,8 +295,8 @@ Mesh& Solver::mesh() {return *acc_mesh;}
 Storage_params Solver::storage_params() {return params;}
 const Stopwatch_tree& Solver::stopwatch_tree() {return stopwatch;}
 
-void Solver::read_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs,
-                       Surface_geom* geom, Flow_bc* surface_bc) {
+void Solver::read_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> extremal_bcs,
+                       Surface_geom* geom, std::shared_ptr<Flow_bc> surface_bc) {
   acc_mesh.reset(new Accessible_mesh(file_name, extremal_bcs, turb, geom, surface_bc));
   HEXED_ASSERT(acc_mesh->storage_params().n_stage == params.n_stage,
                "attempt to read a mesh file with a different `n_stage`");
