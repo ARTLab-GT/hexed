@@ -1,17 +1,15 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Iteration_status.hpp>
 
-bool in(std::string str0, std::string str1)
-{
+bool in(std::string str0, std::string str1) {
   return str1.find(str0) != std::string::npos;
 }
 
-TEST_CASE("Iteration_status")
-{
+TEST_CASE("Iteration_status") {
   hexed::Iteration_status stat;
   std::vector<std::string> lines;
   lines.push_back(stat.header());
-  stat.fix_admis_iters = 3;
+  stat.fix_nonphys_iters = 3;
   lines.push_back(stat.report());
   stat.flow_time = 2.314;
   stat.time_step = 0.7;

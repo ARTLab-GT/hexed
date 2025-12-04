@@ -26,14 +26,14 @@ void compute_advection(Kernel_mesh, Kernel_options, double advect_length, int of
 void compute_navier_stokes(Kernel_mesh, Kernel_options, std::function<void()> flux_bc,
                            Transport_model visc, Transport_model therm_cond, bool update_prod);
 void compute_smooth_av(Kernel_mesh, Kernel_options, std::function<void()> flux_bc, double diff_time, double chebyshev_step);
-void compute_fix_therm_admis(Kernel_mesh, Kernel_options, std::function<void()> flux_bc);
+void compute_fix_nonphysical(Kernel_mesh, Kernel_options, std::function<void()> flux_bc);
 
 double max_dt_euler(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time);
 double max_dt_navier_stokes(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time,
                             Transport_model visc, Transport_model therm_cond);
 double max_dt_advection(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time, double advect_length);
 double max_dt_smooth_av(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time);
-double max_dt_fix_therm_admis(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time);
+double max_dt_fix_nonphysical(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, bool local_time);
 
 void compute_prolong(Kernel_mesh, bool scale = false, bool offset = false);
 void compute_restrict(Kernel_mesh, bool scale = true, bool offset = false);
@@ -42,6 +42,10 @@ std::unique_ptr<Face_permutation_dynamic> face_permutation(int n_dim, int row_si
 void compute_write_face(Kernel_mesh);
 void compute_write_face_advection(Kernel_mesh, int offset);
 void compute_write_face_smooth_av(Kernel_mesh);
+
+void compute_write_face_poisson(Kernel_mesh);
+double max_dt_poisson(Kernel_mesh, Kernel_options, double diffusive_safety, double forcing);
+void compute_poisson(Kernel_mesh, Kernel_options, std::function<void()> flux_bc, double forcing, double farfield_value);
 
 }
 #endif

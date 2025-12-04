@@ -443,7 +443,7 @@ Case::Case(std::string input_script)
     _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, ts, transport_models[0],
                                  transport_models[1], turb_model, _inter.variables));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
-    _solver().set_fix_admissibility(_vari("fix_therm_admis"));
+    _solver().set_fix_nonphysical(_vari("fix_nonphysical"));
     return "";
   }));
 
@@ -525,6 +525,8 @@ Case::Case(std::string input_script)
       }
       printers::info("\n");
     }
+    _solver().init_av_length();
+    _solver().update_av_length(_vari("av_coef_iters_initial"));
     printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.\n", true);
     _solver().print_preti_iters();
     return "";
@@ -589,9 +591,12 @@ Case::Case(std::string input_script)
       result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"), true);
     }
     _inter.variables->assign("hexed_tol_factor", tol_factor);
-    if (result.changed) _solver().mesh().execute_adaptation();
+    if (result.changed) {
+      _solver().mesh().execute_adaptation();
+      _solver().calc_jacobian();
+      _solver().update_av_length(_vari("av_coef_iters_update"));
+    }
     _inter.variables->assign<int>("adapt_changed", result.changed);
-    _solver().calc_jacobian();
     _solver().compute_residual();
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
     _solver().print_preti_iters();
@@ -825,14 +830,13 @@ Case::Case(std::string input_script)
     int n = iter ? print_freq - iter%print_freq : 1;
     for (int i = 0; i < n; ++i) {
       ++iter;
-      if (_inter.variables->get<int>("diffusive_admissibility")) _solver().set_art_visc_admis();
       if (_inter.variables->get<int>("elementwise_art_visc")) {
         _solver().update_art_visc_elwise(_vard("art_visc_width"), _vari("elementwise_art_visc_pde"));
       } else if (avw) {
         _solver().update_art_visc_smoothness(_vard("art_visc_width"));
       } else if (avc) {
         _solver().set_art_visc_constant(_vard("art_visc_constant"));
-      } else if (!_vari("diffusive_admissibility") && _solver().using_art_visc()) {
+      } else if (_solver().using_art_visc()) {
         printers::info("Turning off artificial viscosity.\n", true);
         _solver().set_art_visc_off();
       }

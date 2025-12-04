@@ -35,8 +35,13 @@ void compute_navier_stokes(Kernel_mesh mesh, Kernel_options opts, std::function<
 void compute_smooth_av(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, double diff_time, double cheby_step) {
   COMPUTE_DIFFUSION(pde::Smooth_art_visc, diff_time, cheby_step)
 }
-void compute_fix_therm_admis(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc) {
-  COMPUTE_DIFFUSION(pde::Fix_therm_admis)
+void compute_fix_nonphysical(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc) {
+  if (mesh.turb_model == k_omega) COMPUTE_DIFFUSION(pde::Fix_nonphysical<4>::Pde)
+  else COMPUTE_DIFFUSION(pde::Fix_nonphysical<2>::Pde)
+}
+
+void compute_poisson(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, double forcing, double farfield_value) {
+  COMPUTE_DIFFUSION(pde::Poisson, forcing, farfield_value)
 }
 
 #undef COMPUTE_DIFFUSION

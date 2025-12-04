@@ -18,7 +18,7 @@ std::string Iteration_status::value_string() {
   r += format(double_format, diff_res);
   r += format(double_format, flow_time);
   r += format(double_format, time_step);
-  r += format("i", fix_admis_iters);
+  r += format("i", fix_nonphys_iters);
   return r;
 }
 

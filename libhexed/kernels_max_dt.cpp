@@ -35,9 +35,17 @@ double max_dt_smooth_av(Kernel_mesh mesh, Kernel_options opts, double msc, doubl
   COMPUTE_MAX_DT(pde::Smooth_art_visc, 1., 1.)
 }
 
-double max_dt_fix_therm_admis(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time) {
+double max_dt_fix_nonphysical(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time) {
   bool calc_ts_ratio = false;
-  COMPUTE_MAX_DT(pde::Fix_therm_admis)
+  if (mesh.turb_model == k_omega) COMPUTE_MAX_DT(pde::Fix_nonphysical<4>::Pde)
+  else COMPUTE_MAX_DT(pde::Fix_nonphysical<2>::Pde)
+}
+
+double max_dt_poisson(Kernel_mesh mesh, Kernel_options opts, double msd, double forcing) {
+  double msc = 1.;
+  bool local_time = true;
+  bool calc_ts_ratio = false;
+  COMPUTE_MAX_DT(pde::Poisson, forcing, 0.)
 }
 
 #undef COMPUTE_MAX_DT

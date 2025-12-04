@@ -75,4 +75,8 @@ void compute_write_face_smooth_av(Kernel_mesh mesh) {
   (*kernel_factory<Spatial<pde::Smooth_art_visc, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var, 1., 1.))(mesh.elems);
 }
 
+void compute_write_face_poisson(Kernel_mesh mesh) {
+  (*kernel_factory<Spatial<pde::Poisson, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var, 0., 0.))(mesh.elems);
+}
+
 }

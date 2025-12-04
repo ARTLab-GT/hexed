@@ -35,7 +35,7 @@ class Solver {
   Iteration_status status;
   Stopwatch_tree stopwatch;
   bool use_art_visc;
-  bool fix_admis;
+  bool fix_nonphys;
   int av_rs;
   Transport_model visc;
   Transport_model therm_cond;
@@ -55,7 +55,7 @@ class Solver {
   void share_vertex_data(std::function<double(Element&, int i_vertex)> get,
                          std::function<double&(Element&, int i_vertex)> set, bool minmax);
 
-  bool fix_admissibility(double stability_ratio, int inner_iter);
+  bool fix_nonphysical(double stability_ratio, int inner_iter);
   void apply_state_bcs();
   void apply_flux_bcs();
   void apply_avc_diff_bcs();
@@ -157,6 +157,8 @@ class Solver {
    * \details Mesh topology must be valid (no duplicate or missing connections) before calling this function.
    */
   void calc_jacobian();
+  void init_av_length();
+  void update_av_length(Int n_iter);
   //! \brief set the flow state from an HIL expression
   //! \details `espression` must set the variables `momentum0`, ..., `momentum[n_dim - 1]`, `density`, `energy`
   void initialize(std::string expression);
@@ -167,9 +169,9 @@ class Solver {
   //! \brief modify the polynomial order of smoothness-based artificial viscosity
   //! \details must be <= row size of discretization (which is the default)
   void set_art_visc_row_size(int);
-  //! \brief turns on/off the thermodynamic admissibility-preserving scheme
+  //! \brief turns on/off the nonphysical-state-fixing scheme
   //! \details increases robustness at some computational overhead
-  void set_fix_admissibility(bool);
+  void set_fix_nonphysical(bool);
   /*! \brief set `Element::uncertainty` for each element according to `func`.
    * \details Uncertainty metric can be evaluated via `sample(ref_level, is_deformed, serial_n, Uncertainty())`.
    * This function does some additional work to enforce some conditions on the uncertainty of neighboring elements.
@@ -211,7 +213,7 @@ class Solver {
    * Result is written to `min_lts_dc_ratio` in the HIL namespace.
    */
   void compute_lts_constraints();
-  bool is_admissible(); //!< \brief check whether flowfield is admissible (e.g. density and energy are positive)
+  bool is_physical(); //!< \brief check whether flowfield is physically admissible (e.g. density and energy are positive)
   //! \brief updates the aritificial viscosity coefficient based on smoothness of the flow variables
   void update_art_visc_smoothness(double advect_length);
   /*! \brief (experimental) sets artificial viscosity based on elementwise smoothness
@@ -222,8 +224,6 @@ class Solver {
    * Use `Solver::update_art_visc_smoothness`, which was developed to supplant this type of approach.
    */
   void update_art_visc_elwise(double width, bool pde_based = false);
-  //! \brief set the Laplacian artificial viscosity to a minimal value that will encourage thermodynamic admissibility
-  void set_art_visc_admis();
   /*! \brief an object providing all available information about the status of the time marching iteration.
    * \details The `Iteration_status::start_time` member will refer to when the `Solver` object was created
    * (specifically at the start of the `Solver::Solver` body).

@@ -494,10 +494,6 @@ class Smooth_art_visc {
       for (int i_var = 0; i_var < n_extrap; ++i_var) state(i_var) = data[(forcing_offset(_eq._n_var) + i_var)*stride];
       state(4) = data[laplacian_av_offset(_eq._n_var)*stride];
     }
-    Mat<n_update> update_state;
-    void fetch_extrap_state(int stride, const double* data) {
-      for (int i_var = 0; i_var < n_update; ++i_var) update_state(i_var) = data[i_var*stride];
-    }
 
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
     Mat<n_extrap, n_dim> gradient;
@@ -530,45 +526,101 @@ class Smooth_art_visc {
  * represents the uniform linear diffusion equation
  * used for fixing thermodynamic admissibility
  */
+template <int n_scalar>
+class Fix_nonphysical {
+  public:
+  template <int n_dim, int row_size>
+  class Pde {
+    public:
+    static constexpr bool has_diffusion = true;
+    static constexpr bool has_convection = false;
+    static constexpr bool has_source = false;
+    static constexpr int n_state = n_dim + n_scalar;
+    static constexpr int n_update = n_state;
+    static constexpr int n_extrap = n_state;
+
+    Pde(int n_var) {}
+
+    Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
+      Mat<n_extrap> extrap;
+      for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[i_var*stride];
+      return extrap;
+    }
+
+    void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
+      for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
+    }
+
+    template <int n_dim_flux>
+    class Computation {
+      const Pde& _eq;
+      public:
+      Mat<config::debug_variables> debug_variables; //!< \brief can be populated at any time
+      bool debug_vars_set = false;
+      Computation(const Pde& eq) : _eq{eq} {}
+
+      Mat<n_state> state;
+      void fetch_state(int stride, const double* data) {
+        for (int i_var = 0; i_var < n_state; ++i_var) state(i_var) = data[i_var*stride];
+      }
+      Mat<n_update> update_state;
+      void fetch_extrap_state(int stride, const double* data) {
+        for (int i_var = 0; i_var < n_state; ++i_var) update_state(i_var) = data[i_var*stride];
+      }
+
+      Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
+      Mat<n_extrap, n_dim> gradient;
+      Mat<n_update, n_dim_flux> flux_diff;
+      void compute_flux_diff() {
+        flux_diff.noalias() = -gradient*normal;
+      }
+
+      double diffusivity;
+      void compute_diffusivity() {
+        diffusivity = 1;
+      }
+    };
+  };
+};
+
 template <int n_dim, int row_size>
-class Fix_therm_admis {
+class Poisson {
   int _n_var;
+  double _forcing;
+  double _ff_value;
   public:
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
-  static constexpr bool has_source = false;
-  static constexpr int n_state = n_dim + 2;
-  static constexpr int n_update = n_state;
-  static constexpr int n_extrap = n_state;
+  static constexpr bool has_source = true;
+  static constexpr int n_state = 1;
+  static constexpr int n_update = 1;
+  static constexpr int n_extrap = 1;
 
-  Fix_therm_admis(int n_var) : _n_var{n_var} {}
+  Poisson(int n_var, double forcing, double farfield_value)
+  : _n_var{n_var}
+  , _forcing{forcing}
+  , _ff_value{farfield_value}
+  {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
-    Mat<n_extrap> extrap;
-    for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[i_var*stride];
-    return extrap;
+    return Mat<1>{data[laplacian_av_offset(_n_var)*stride]};
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-    for (int i_var = 0; i_var < n_update; ++i_var) data[i_var*stride] += update(i_var);
+    data[laplacian_av_offset(_n_var)*stride] += update(0);
   }
 
   template <int n_dim_flux>
   class Computation {
-    const Fix_therm_admis& _eq;
+    const Poisson& _eq;
     public:
-    Mat<config::debug_variables> debug_variables; //!< \brief can be populated at any time
+    Mat<config::debug_variables> debug_variables;
     bool debug_vars_set = false;
-    Computation(const Fix_therm_admis& eq) : _eq{eq} {}
+
+    Computation(const Poisson& eq) : _eq{eq} {}
 
     Mat<n_state> state;
-    void fetch_state(int stride, const double* data) {
-      for (int i_var = 0; i_var < n_state; ++i_var) state(i_var) = data[i_var*stride];
-    }
-    Mat<n_update> update_state;
-    void fetch_extrap_state(int stride, const double* data) {
-      for (int i_var = 0; i_var < n_state; ++i_var) update_state(i_var) = data[i_var*stride];
-    }
+    void fetch_state(int stride, const double* data) {state(0) = data[laplacian_av_offset(_eq._n_var)*stride];}
 
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
     Mat<n_extrap, n_dim> gradient;
@@ -576,11 +628,17 @@ class Fix_therm_admis {
     void compute_flux_diff() {
       flux_diff.noalias() = -gradient*normal;
     }
-
     double diffusivity;
     void compute_diffusivity() {
       diffusivity = 1;
     }
+
+    Mat<n_update> source;
+    void compute_source() {
+      source(0) = _eq._forcing*(2*_eq._ff_value - state(0));
+    }
+    double decay;
+    void compute_decay() {decay = _eq._forcing;}
   };
 };
 

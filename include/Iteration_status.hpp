@@ -54,7 +54,7 @@ class Iteration_status {
   double diff_res = 0;
   double time_step = 0.;
   int iteration = 0;
-  int fix_admis_iters = 0;
+  int fix_nonphys_iters = 0;
   //!\}
   //! return string containing the column labels separated by `sep`,
   //! justified to align with numerical data in `report()`.
