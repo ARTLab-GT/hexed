@@ -255,7 +255,7 @@ geom_unrefine_if = {false}
 inv_cell_reynolds = {(freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
 final_refine_if = {(has_wall & ((i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance > max_wall_reynolds*$inv_cell_reynolds & 3*$({nominal_shape} + i_dim) > max_wall_reynolds*$inv_cell_reynolds))) | (($({sharp} + i_dim) & $({nominal_shape} + i_dim) > max_sharp_spacing) | (viscosity_model != {} & $({sharp} + i_dim) & $({nominal_shape} + i_dim) > max_sharp_reynolds*$inv_cell_reynolds))))}
 final_unrefine_if = {false}
-shock_refine_if = {(has_shock & $({nominal_shape} + i_dim) > 3*local_av_width & $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance)}
+shock_refine_if = {(has_shock & $({nominal_shape} + i_dim) > 3*local_av_width + 2*max_sharp_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed)& $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance)}
 shock_unrefine_if = {(!has_shock)}
 adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*rms_flux)) & $({nominal_shape} + i_dim) > 2*min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
 spectral_unref_criterion = {($({spectral_uncertainty} + i_dim) < spectral_tol*general_tolerance*.5^(row_size - 1))}
@@ -312,8 +312,8 @@ tangency_tol_subdiv = 10.
 smooth_initial_condition = false
 initial_smoothing_iters = 10^4
 time_step_limit_threshold = 10.
-av_coef_iters_initial = 10^4
-av_coef_iters_update = 10^4
+av_coef_iters_initial = 2*10^4
+av_coef_iters_update = 2*10^4
 
 {array parameters}
 i_dim = 0

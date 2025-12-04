@@ -626,6 +626,7 @@ Case::Case(std::string input_script)
       if (!result.changed) break;
     }
     _solver().calc_jacobian();
+    _solver().update_av_length(100);
     _solver().compute_residual();
     printers::info("done\n");
     return "";

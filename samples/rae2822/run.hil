@@ -63,5 +63,7 @@ art_visc_width = 0.2
 av_coef_decay = 2*1.
 wall_av_coef = 1e-4
 
+{
 $plot_history
+}
 $simulate

@@ -401,6 +401,7 @@ class Advection {
     Mat<n_update> update_state;
     void fetch_extrap_state(int stride, const double* data) {
       for (int i_var = 0; i_var < n_extrap; ++i_var) state(i_var) = data[i_var*stride];
+      state(n_extrap) = 0.;
       for (int i_adv = 0; i_adv < _n_adv; ++i_adv) update_state(i_adv) = state(n_dim + i_adv);
     }
 

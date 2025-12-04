@@ -458,10 +458,11 @@ void Solver::update_av_length(Int n_iter) {
   auto bc_cons = acc_mesh->boundary_connections();
   int n_cheby = 10;
   double cheby_safety = .9;
+  compute_write_face_poisson(_kernel_mesh());
+  compute_prolong(_kernel_mesh(), false, false);
   for (Int iter = 0; iter < n_iter; ++iter) {
     for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
       opts.dt = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
-      compute_write_face_poisson(_kernel_mesh());
       #pragma omp parallel for
       for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
         auto& con = bc_cons[i_con];
