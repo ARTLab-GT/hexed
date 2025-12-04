@@ -10,8 +10,8 @@ extremal_bc01 = {freestream}
 extremal_bc11 = {freestream}
 
 $set_shock
-art_visc_width = .004
-vis_freq = 10^3
+$set_ramping
+vis_freq = 10^2
 adapt_freq = 10^3
 update_roughness_freq = 10^3
 print_freq = 10
@@ -45,7 +45,23 @@ vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
     av_forcingA = av_forcing0
     has_shock = has_shock
+    av_advectionA = av_advection0
+    av_advectionB = av_advection1
+    av_advectionC = av_advection2
+    av_advectionD = av_advection3
+    av_advectionE = av_advection4
+    av_advectionF = av_advection5
+    av_advectionG = av_advection6
+    av_advectionH = av_advection7
+    av_advectionI = av_advection8
+    av_advectionJ = av_advection9
+    av_advectionK = av_advection10
+    av_advectionL = av_advection11
 }
+
+art_visc_width = 0.2
+av_coef_decay = 2*1.
+wall_av_coef = 1e-4
 
 $plot_history
 $simulate
