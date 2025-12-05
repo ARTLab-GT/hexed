@@ -30,10 +30,9 @@ thermal_bc = {temperature = wall_temperature}
 
 $set_shock
 $set_ramping
-refine_start_iter = 2000
-art_visc_width = 0.05*radius
 print_freq = 10
 vis_freq = write_freq = 1000
+wall_av_coef = 1e-4
 monitor_vars = {heating_rate = heating_rate;}
 
 $plot_history
