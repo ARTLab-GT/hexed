@@ -709,15 +709,15 @@ void Solver::update_art_visc_smoothness(double) {
           a = std::max(-100., std::min(100., a));
           proj += a*weights(i_proj)*orth(i_proj);
         }
-        double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
+        double f = proj*proj;
         forcing[i_qpoint] += std::isfinite(f) ? std::max(0., std::min(f, 1e10*length[i_qpoint]*length[i_qpoint])) : 0.;
       }
     }
     double has_shock = false;
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      has_shock = has_shock || forcing[i_qpoint] > 1e-4*length[i_qpoint]*length[i_qpoint];
       double speed_sq = 2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
-      has_shock = has_shock || forcing[i_qpoint] > 0.01*length[i_qpoint]*length[i_qpoint]*speed_sq;
-      forcing[i_qpoint] = std::sqrt(forcing[i_qpoint]);
+      forcing[i_qpoint] = std::sqrt(forcing[i_qpoint]*std::abs(speed_sq));
     }
     elements[i_elem].has_shock = has_shock;
     elements[i_elem].spread_shock = false;
