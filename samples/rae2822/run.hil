@@ -11,7 +11,7 @@ extremal_bc11 = {freestream}
 
 $set_shock
 $set_ramping
-vis_freq = 10^2
+vis_freq = 10^3
 adapt_freq = 10^3
 update_roughness_freq = 10^3
 print_freq = 10
@@ -63,7 +63,5 @@ art_visc_width = 0.2
 av_coef_decay = 2*1.
 wall_av_coef = 1e-4
 
-{
 $plot_history
-}
 $simulate

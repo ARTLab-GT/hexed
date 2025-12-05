@@ -451,16 +451,33 @@ void Solver::update_av_length(Int n_iter) {
     stopwatch["compute av length"]["prolong/restrict"],
     0., 0, bool(_namespace->get<int>("use_filter")),
   };
-  double forcing = math::pow(1./_namespace->get<double>("av_coef_decay"), 2);
-  max_dt_poisson(_kernel_mesh(), opts, 0.7, forcing);
   double wall_condition = _namespace->get<double>("wall_av_coef");
-  double farfield_condition = _namespace->get<double>("art_visc_width");
+  auto& elems = acc_mesh->elements();
+  auto& geom = acc_mesh->surface_geometry();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    Array<double> pos = elem.position(basis);
+    double* length = elem.laplacian_av_coef();
+    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+      Mat<> p = pos.column(i_qpoint).vector();
+      auto nearest = geom.nearest_point(p);
+      HEXED_ASSERT(!nearest.empty(), "Failed to compute nearest point.")
+      length[i_qpoint] = wall_condition + 0.1*(p - nearest.point()).norm();
+    }
+  }
+  #if 0
+  max_dt_poisson(_kernel_mesh(), opts, 0.7, forcing);
+  double forcing = math::pow(1./_namespace->get<double>("av_coef_decay"), 2);
   auto bc_cons = acc_mesh->boundary_connections();
   int n_cheby = 10;
   double cheby_safety = .9;
   compute_write_face_poisson(_kernel_mesh());
   compute_prolong(_kernel_mesh(), false, false);
-  for (Int iter = 0; iter < n_iter; ++iter) {
+  //for (Int iter = 0; iter < n_iter; ++iter) {
+  for (Int iter = 0; iter < 100; ++iter) {
+    _namespace->assign<double>("flow_time", iter);
+    visualize_field("default", str_cat("hexed_out/dist", iter), "dist = laplacian_art_visc");
     for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
       opts.dt = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
       #pragma omp parallel for
@@ -484,6 +501,7 @@ void Solver::update_av_length(Int n_iter) {
     }
   }
   _init_face_state();
+  #endif
   printers::info(" done.\n");
 }
 

@@ -627,16 +627,16 @@ class Poisson {
     Mat<n_extrap, n_dim> gradient;
     Mat<n_update, n_dim_flux> flux_diff;
     void compute_flux_diff() {
-      flux_diff.noalias() = -gradient*normal;
+      flux_diff.noalias() = -std::abs(state(0))*gradient*normal;
     }
     double diffusivity;
     void compute_diffusivity() {
-      diffusivity = 1;
+      diffusivity = std::abs(state(0));
     }
 
     Mat<n_update> source;
     void compute_source() {
-      source(0) = _eq._forcing*(2*_eq._ff_value - state(0));
+      source(0) = _eq._forcing*(1. - state(0));
     }
     double decay;
     void compute_decay() {decay = _eq._forcing;}
