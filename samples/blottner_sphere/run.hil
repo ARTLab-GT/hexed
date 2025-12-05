@@ -35,9 +35,11 @@ vis_freq = write_freq = 1000
 wall_av_coef = 1e-4
 monitor_vars = {heating_rate = heating_rate;}
 contour0 = {pos0 + 1e-8}
-contour1 = {pos1 - 1e-8}
-contour2 = {pos2 - 1e-8}
-contour3 = {pos0^2 + pos1^2 + pos2^2 - radius^2 - 1e-8}
+contour1 = {pos1 - pos2}
+contour2 = {pos0^2 + pos1^2 + pos2^2 - radius^2 - 1e-8}
+vis_field = false
 
 $plot_history
 $simulate
+vis_field = true
+visualize
