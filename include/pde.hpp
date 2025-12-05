@@ -346,7 +346,7 @@ template <int n_dim, int row_size>
 class Advection {
   const int _n_var;
   static constexpr int _n_adv = row_size;
-  Mat<row_size> _nodes;
+  Mat<_n_adv> _nodes;
   int _offset;
 
   public:
@@ -361,7 +361,7 @@ class Advection {
   Advection(int n_var, double advect_length, int offset)
   : _n_var{n_var}
   , _offset{offset}
-  , _nodes{2*Gauss_legendre(row_size).nodes() + Mat<row_size>::Constant(math::sign(offset)*.707/row_size - 1.)}
+  , _nodes{2*Gauss_legendre(_n_adv).nodes() + Mat<_n_adv>::Constant(math::sign(offset)*.707/_n_adv - 1.)}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
@@ -430,7 +430,7 @@ class Advection {
 
     double char_speed;
     void compute_char_speed() {
-      char_speed = (1. + .707/row_size)*std::max(1., state(Eigen::seqN(0, n_dim)).norm());
+      char_speed = (1. + .707/_n_adv)*std::max(1., state(Eigen::seqN(0, n_dim)).norm());
     }
 
     double decay;

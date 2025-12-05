@@ -686,7 +686,9 @@ void Solver::update_art_visc_smoothness(double) {
         double proj = 0;
         for (int i_proj = 0; i_proj < rs; ++i_proj) {
           double& a = adv[(i_proj + i_offset*rs)*nq + i_qpoint];
-          if (!std::isfinite(a)) a = 0; // try to recover from any blow-ups in the advection equation
+          // try to recover from any blow-ups in the advection equation
+          if (!std::isfinite(a)) a = 0;
+          a = std::max(-100., std::min(100., a));
           proj += a*weights(i_proj)*orth(i_proj);
         }
         double f = proj*proj*2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
