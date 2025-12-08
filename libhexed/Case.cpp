@@ -597,9 +597,9 @@ Case::Case(std::string input_script)
     _inter.variables->assign("hexed_tol_factor", tol_factor);
     if (result.changed) {
       _solver().mesh().execute_adaptation();
-      _solver().calc_jacobian();
-      _solver().update_av_length(_vari("av_coef_iters_update"));
     }
+    _solver().calc_jacobian();
+    _solver().update_av_length(_vari("av_coef_iters_update"));
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().compute_residual();
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");

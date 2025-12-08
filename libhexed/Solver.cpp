@@ -478,10 +478,10 @@ void Solver::initialize(std::string(expr)) {
     state_vars.push_back("turbulent_kinetic_energy");
     state_vars.push_back("turbulent_dissipation_bassi");
   }
-  auto inter = _interpreter();
-  int n_var = state_vars.size();
+  HEXED_ASSERT(params.n_var == (Int)state_vars.size(), "wrong number of state variables")
   int nq = params.n_qpoint();
   auto& elements = acc_mesh->elements();
+  auto inter = _interpreter();
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     auto& elem = elements[i_elem];
@@ -489,8 +489,8 @@ void Solver::initialize(std::string(expr)) {
     vis_variables::element(*sub.variables, elem);
     vis_variables::position(*sub.variables, elem, basis);
     sub.exec(expr);
-    Array<double> state({n_var, nq}, elem.state());
-    for (int i_var = 0; i_var < n_var; ++i_var) {
+    Array<double> state = elem.flow_state();
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
       sub.variables->assign_array(state(i_var), state_vars[i_var]);
     }
     for (int i_adv = 0; i_adv < params.n_offset*params.n_advection(params.row_size); ++i_adv) {
@@ -498,7 +498,10 @@ void Solver::initialize(std::string(expr)) {
         elem.advection_state()[i_adv*nq + i_qpoint] = 1.;
       }
     }
-    Array<double>({n_var, nq}, elem.residual_cache()) = 0;
+    Array<double>({params.n_var, nq}, elem.residual_cache()) = 0;
+    if (_time_scheme != explicit_unsteady) {
+      Array<double>({params.n_var, nq}, elem.stage(2 + elem.get_is_deformed())) = state;
+    }
   }
   if (is_implicit(_time_scheme)) _init_stage_storage(0);
   auto& elems = acc_mesh->elements();
@@ -929,6 +932,7 @@ void Solver::_update_recursive(int preti_level, double safety) {
 void Solver::update() {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   double safety = _namespace->get<double>("max_safety");
+  auto& elems = acc_mesh->elements();
   if (_namespace->get<int>("preti")) {
     _update_recursive(0, safety);
   } else {
@@ -1004,6 +1008,14 @@ void Solver::update() {
             }
           }
         }
+      }
+      #pragma omp parallel for
+      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+        auto& elem = elems[i_elem];
+        Array<double> curr_state = elem.flow_state();
+        Array<double> lagged_state({params.n_var, params.n_qpoint()}, elem.stage(2 + elem.get_is_deformed()));
+        curr_state += 1e-4*(lagged_state - curr_state);
+        lagged_state += 1e-4*(curr_state - lagged_state);
       }
     }
   }
