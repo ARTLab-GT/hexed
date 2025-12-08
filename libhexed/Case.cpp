@@ -392,16 +392,20 @@ Case::Case(std::string input_script)
         freestream(n_dim + 3) = _vard("freestream_density")*std::log(_vard("freestream_specific_turbulent_dissipation"));
       }
       _set_vector("freestream_direction", full_direction);
-      double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*_vard("freestream_density")*veloc.squaredNorm();
+      double density = _vard("freestream_density");
+      double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*density*veloc.squaredNorm();
       _inter.variables->assign("freestream_energy", ener);
       double dyn_visc = _transport_model("viscosity").coefficient(std::sqrt(_vard("freestream_temperature")));
       _inter.variables->assign("freestream_dynamic_viscosity", dyn_visc);
       double therm_cond = _transport_model("conductivity").coefficient(std::sqrt(_vard("freestream_temperature")));
       _inter.variables->assign("freestream_thermal_conductivity", therm_cond);
-      freestream(Eigen::seqN(0, n_dim)) = _vard("freestream_density")*veloc;
-      freestream(n_dim) = _vard("freestream_density");
+      freestream(Eigen::seqN(0, n_dim)) = density*veloc;
+      freestream(n_dim) = density;
       freestream(n_dim + 1) = ener;
       _set_vector("freestream", freestream);
+      if (_transport_model("viscosity").is_viscous) {
+        _inter.variables->assign("reynolds_per_length", density*_vard("freestream_speed")/dyn_visc);
+      }
     }
     return "";
   }));

@@ -130,22 +130,26 @@ set_shock = {
     print_vars = print_vars + art_visc_residual_expr
 }
 
-ramping_initial_safety = 3e-3
+ramping_initial_safety = 1e-3
 ramping_final_safety = 0.7
-ramp_iter = 1000
-ramp_if = {iteration >= ramp_iter}
+ramp_freq = 100
+ramp_factor = 2.
+ramp_if = {(iteration%ramp_freq == 0)}
 ramped = false
-ramp_action = {
-    ramped = true;
-    max_safety = ramping_final_safety
-    print_emph = true; print{Initial phase complete.}
-    print({ Increasing safety factor to } + max_safety + {.})
-}
 set_ramping = {
     max_safety = ramping_initial_safety
     iterate = iterate + {
         case0 = {}
-        case1 = {$ramp_action; println{}}
+        case1 = {
+            max_safety = max_safety*ramp_factor
+            case1 = {
+                max_safety = ramping_final_safety
+                ramped = true
+                print {Time step ramping complete. }
+            }
+            $$({case} + (max_safety >= ramping_final_safety))
+            println({Increasing `max_safety` to } + max_safety)
+        }
         $$({case} + (!ramped & ($ramp_if) != 0))
     }
 }
@@ -155,34 +159,6 @@ set_subsonic_bl_multirate = {
     bl_multirate = true
     flow_iters = bl_multirate_iters
     bl_iters = bl_multirate_iters
-}
-
-aerothermo_bl_multirate = true
-aerothermo_conv_sub_iters = 2
-set_aerothermo = {
-    $set_shock
-    $set_ramping
-    viscosity_model = air_viscosity
-    conductivity_model = air_conductivity
-    print_vars = print_vars + heating_rate_expr
-    iterate = {$compute_heating} + iterate
-    case0 = {}
-    case1 = {
-        ramp_action = ramp_action + {
-            print{ Activating boundary layer acceleration scheme.}
-            bl_multirate = true
-            n_cheby_bl = 2
-            max_conv_sub_iters = aerothermo_conv_sub_iters
-            iterate = iterate + {
-                case0 = {}
-                case1 = {
-                    n_cheby_bl = n_cheby_bl + 2
-                }
-                $$({case} + (n_cheby_bl < bl_multirate_iters))
-            }
-        }
-    }
-    $$({case} + aerothermo_bl_multirate)
 }
 
 plot_history = {shell({python3 -c "from hexedpy.utils import History_plot;History_plot('} + working_dir + {')" &})}
@@ -217,7 +193,11 @@ max_wall_spacing = huge
 max_wall_reynolds = 1e3
 max_sharp_spacing = huge
 max_sharp_reynolds = 1e4
-min_cell_reynolds = 1e-1
+min_wall_shock_width_reynolds = 1e3
+min_wall_shock_width = 0.
+shock_width_growth = 0.1
+shock_width_limit = -1.
+min_cell_reynolds = 0.1
 viscosity_model = {}
 conductivity_model = {}
 turbulence_model = {}
@@ -252,15 +232,14 @@ init_refine_if = {(ref_level < init_ref_level)}
 init_unrefine_if = {false}
 geom_refine_if = {(uncertainty > (geom_rtol*geom_length + geom_atol)*general_tolerance & ref_level < max_ref_level*$size_tolerance & nom_sz > min_elem_size*$size_tolerance)}
 geom_unrefine_if = {false}
-inv_cell_reynolds = {(freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
-final_refine_if = {(has_wall & ((i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance > max_wall_reynolds*$inv_cell_reynolds & 3*$({nominal_shape} + i_dim) > max_wall_reynolds*$inv_cell_reynolds))) | (($({sharp} + i_dim) & $({nominal_shape} + i_dim) > max_sharp_spacing) | (viscosity_model != {} & $({sharp} + i_dim) & $({nominal_shape} + i_dim) > max_sharp_reynolds*$inv_cell_reynolds))))}
+final_refine_if = {(has_wall & ((i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance*reynolds_per_length > max_wall_reynolds & 3*$({nominal_shape} + i_dim)*reynolds_per_length > max_wall_reynolds))) | (($({sharp} + i_dim) & $({nominal_shape} + i_dim) > max_sharp_spacing) | (viscosity_model != {} & $({sharp} + i_dim) & $({nominal_shape} + i_dim)*reynolds_per_length > max_sharp_reynolds))))}
 final_unrefine_if = {false}
 shock_refine_if = {(has_shock & $({nominal_shape} + i_dim) > 3*local_av_width & $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance)}
 shock_unrefine_if = {(!has_shock)}
-adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*rms_flux)) & $({nominal_shape} + i_dim) > 2*min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
+adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*rms_flux)) & (viscosity_model == {} | $({nominal_shape} + i_dim)*reynolds_per_length > 2*min_cell_reynolds*$size_tolerance))}
 spectral_unref_criterion = {($({spectral_uncertainty} + i_dim) < spectral_tol*general_tolerance*.5^(row_size - 1))}
 flux_unref_criterion = {(!(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*rms_flux*.5^(row_size - 2)))}
-shape_unref_criterion = {($({nominal_shape} + i_dim) < min_cell_reynolds*$unadjusted_size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
+shape_unref_criterion = {($({nominal_shape} + i_dim)*reynolds_per_length < min_cell_reynolds*$unadjusted_size_tolerance)}
 adapt_unrefine_if = {((($spectral_unref_criterion & $flux_unref_criterion) | $shape_unref_criterion) & $({aniso_ref_level} + i_dim) > init_ref_level)}
 adapt_residual_factor = .5
 residual_stagnation_tol = 1e-2

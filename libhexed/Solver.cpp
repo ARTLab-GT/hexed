@@ -445,13 +445,11 @@ void Solver::init_av_length() {
 
 void Solver::update_av_length(Int n_iter) {
   printers::info("  Updating artificial viscosity length scale...");
-  Kernel_options opts {
-    stopwatch["compute av length"]["cartesian"],
-    stopwatch["compute av length"]["deformed"],
-    stopwatch["compute av length"]["prolong/restrict"],
-    0., 0, bool(_namespace->get<int>("use_filter")),
-  };
-  double wall_condition = _namespace->get<double>("wall_av_coef");
+  double wsw = std::max(_namespace->get<double>("min_wall_shock_width_reynolds")
+                        /_namespace->get<double>("reynolds_per_length"),
+                        _namespace->get<double>("min_wall_shock_width"));
+  double growth = _namespace->get<double>("shock_width_growth");
+  double limit = _namespace->get<double>("shock_width_limit");
   auto& elems = acc_mesh->elements();
   auto& geom = acc_mesh->surface_geometry();
   #pragma omp parallel for
@@ -463,45 +461,10 @@ void Solver::update_av_length(Int n_iter) {
       Mat<> p = pos.column(i_qpoint).vector();
       auto nearest = geom.nearest_point(p);
       HEXED_ASSERT(!nearest.empty(), "Failed to compute nearest point.")
-      length[i_qpoint] = wall_condition + 0.1*(p - nearest.point()).norm();
+      length[i_qpoint] = wsw + growth*(p - nearest.point()).norm();
+      if (limit > 0) length[i_qpoint] = limit*length[i_qpoint]/(limit + length[i_qpoint]);
     }
   }
-  #if 0
-  max_dt_poisson(_kernel_mesh(), opts, 0.7, forcing);
-  double forcing = math::pow(1./_namespace->get<double>("av_coef_decay"), 2);
-  auto bc_cons = acc_mesh->boundary_connections();
-  int n_cheby = 10;
-  double cheby_safety = .9;
-  compute_write_face_poisson(_kernel_mesh());
-  compute_prolong(_kernel_mesh(), false, false);
-  //for (Int iter = 0; iter < n_iter; ++iter) {
-  for (Int iter = 0; iter < 100; ++iter) {
-    _namespace->assign<double>("flow_time", iter);
-    visualize_field("default", str_cat("hexed_out/dist", iter), "dist = laplacian_art_visc");
-    for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
-      opts.dt = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
-      #pragma omp parallel for
-      for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
-        auto& con = bc_cons[i_con];
-        if (con.boundary_condition() == 2*params.n_dim) {
-          con.ghost().flow_state()(0) = 2*wall_condition - con.inside().flow_state()(0);
-        } else {
-          con.ghost().flow_state()(0) = con.inside().flow_state()(0);
-        }
-      }
-      auto flux_bc = [&bc_cons, this]() {
-        #pragma omp parallel for
-        for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
-          auto& con = bc_cons[i_con];
-          double sign = math::sign(con.boundary_condition() == 2*params.n_dim);
-          con.ghost().flow_state()(1) = sign*con.inside().flow_state()(1);
-        }
-      };
-      compute_poisson(_kernel_mesh(), opts, flux_bc, forcing, farfield_condition);
-    }
-  }
-  _init_face_state();
-  #endif
   printers::info(" done.\n");
 }
 
