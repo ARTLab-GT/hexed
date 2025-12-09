@@ -204,6 +204,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
 , _implicit{false}
 , _preti_level{0}
 , _time_scheme{time_scheme}
+, _iter{0}
 {
   _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
@@ -1014,9 +1015,11 @@ void Solver::update() {
         auto& elem = elems[i_elem];
         Array<double> curr_state = elem.flow_state();
         Array<double> lagged_state({params.n_var, params.n_qpoint()}, elem.stage(2 + elem.get_is_deformed()));
-        curr_state += 1e-4*(lagged_state - curr_state);
-        lagged_state += 1e-4*(curr_state - lagged_state);
+        double window = std::max(1e3, .2*_iter);
+        curr_state += 2e-5*(lagged_state - curr_state);
+        lagged_state += (curr_state - lagged_state)/window;
       }
+      ++_iter;
     }
   }
   ++status.iteration;
