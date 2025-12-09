@@ -138,12 +138,15 @@ class Navier_stokes {
       double therm_cond_coef;
       double energy_cond;
       double real_turb_diss;
+      double int_ener;
       double k_bar;
       void compute_scalars_diff() {
         bulk_av = std::abs(state(i_bulk_art_visc));
         laplacian_av = std::abs(state(i_laplacian_art_visc));
         double spec_heat_v = constants::specific_gas_air/(heat_rat - 1.);
-        sqrt_temp = std::sqrt(std::max((state(i_energy) - kin_ener)/mass, 0.)/spec_heat_v);
+        int_ener = state(i_energy) - kin_ener;
+        if constexpr (turb == k_omega) int_ener -= state(i_turb_kin_ener);
+        sqrt_temp = std::sqrt(std::max(int_ener/mass, 0.)/spec_heat_v);
         // taking abs ensures that this will never be negative
         // and makes the probability that they are exactly 0 very low, which is good cause we have to divide by them
         real_turb_diss = std::exp(state(i_turb_diss)/mass);
@@ -169,10 +172,13 @@ class Navier_stokes {
         Mat<n_dim, n_dim> rotation = .5*(veloc_grad - veloc_grad.transpose());
         Mat<n_dim, n_dim> strain_rate = .5*(veloc_grad + veloc_grad.transpose());
         Mat<n_dim, n_dim> identity = Mat<n_dim, n_dim>::Identity();
-
+        Mat<1, n_dim> int_ener_grad = -int_ener/mass/mass*gradient(i_mass, all)
+                                      + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
         Mat<n_dim, n_dim> stress = 2*dyn_visc_coef*strain_rate + (bulk_av*mass - 2./3.*dyn_visc_coef)*divergence*identity;
         double total_conductivity = energy_cond;
+
         if constexpr (turb == k_omega) {
+          int_ener_grad -= gradient(i_turb_kin_ener, all)/mass;
           double strain_term = (strain_rate - 1./3.*divergence*identity).squaredNorm() + (3 - n_dim)*divergence*divergence/9;
           double omega_hat = std::max(real_turb_diss, c_lim*std::sqrt(2*strain_term/beta_s));
           total_conductivity += heat_rat*mass*k_bar/omega_hat/turb_prandtl;
@@ -215,8 +221,6 @@ class Navier_stokes {
         }
 
         flux_diff_phys(seq, all) -= stress;
-        Mat<1, n_dim> int_ener_grad = -state(i_energy)/mass/mass*gradient(i_mass, all)
-                                      + gradient(i_energy, all)/mass - veloc.transpose()*veloc_grad;
         flux_diff_phys(i_energy, all) -= veloc.transpose()*stress + total_conductivity*int_ener_grad;
         flux_diff = flux_diff_phys*normal; // flux in reference space
       }
