@@ -1173,8 +1173,9 @@ void Solver::compute_residual() {
   double lim_thresh = _namespace->get<double>("time_step_limit_threshold");
   #pragma omp parallel for reduction(+:n_diff,n_source)
   for (Int i_elem = 0; i_elem < _preti_masks[0]->kernel_mesh.elems.size(); ++i_elem) {
-    n_diff += _preti_masks[0]->kernel_mesh.elems[i_elem].ts_ratio_diffusion < 1./lim_thresh;
-    n_source += _preti_masks[0]->kernel_mesh.elems[i_elem].ts_ratio_decay < 1./lim_thresh;
+    auto& elem = _preti_masks[0]->kernel_mesh.elems[i_elem];
+    n_diff += elem.ts_ratio_diffusion < 1./lim_thresh;
+    n_source += elem.ts_ratio_decay < 1./lim_thresh;
   }
   _namespace->assign<int>("n_diffusion_limited", n_diff);
   _namespace->assign<int>("n_source_limited", n_source);

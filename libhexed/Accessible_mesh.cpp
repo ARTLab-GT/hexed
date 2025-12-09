@@ -2573,15 +2573,17 @@ void Accessible_mesh::execute_adaptation() {
           if (is_modified[i_dim]) {
             int rel_pos = row_coords[i_dim];
             Mat<dyn, dyn> matrix = ref_unref ? solver_basis.restrict(rel_pos) : solver_basis.prolong(rel_pos);
-            for (int i_var = 0; i_var < params.n_var_numeric(); ++i_var) {
-              state(i_var).vector() = math::dimension_matvec(matrix, state(i_var).vector(), i_dim);
+            for (int i_var = 0; i_var < state.shape()[0]; ++i_var) {
+              Mat<> row = state(i_var).vector();
+              state(i_var).vector() = math::dimension_matvec(matrix, row, i_dim);
             }
             for (int i_var = 0; i_var < params.n_var; ++i_var) {
               for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != i_dim) {
                 Array<double> face = faces(j_dim)(i_var);
                 double scale = ref_unref ? 2. : .5;
                 if (params.n_dim == 3) {
-                  face.vector() = scale*math::dimension_matvec(matrix, face.vector(), i_dim > 3 - i_dim - j_dim);
+                  Mat<> temp = face.vector();
+                  face.vector() = scale*math::dimension_matvec(matrix, temp, i_dim > 3 - i_dim - j_dim);
                 } else if (params.n_dim == 2) {
                   face.vector() = scale*matrix*face.vector();
                 }
