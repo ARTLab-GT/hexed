@@ -60,7 +60,6 @@ vis_surface_vars = vis_surface_vars + {
 working_dir = {hexed_out}
 steady = false
 adapt_freq = 1
-print_freq = 10
 vis_freq = 10
 time_step = 3e-3
 

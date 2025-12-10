@@ -790,7 +790,7 @@ void Solver::_init_stage_storage(int stage) {
 int Solver::next_time_stage() {
   HEXED_ASSERT(is_implicit(_time_scheme), "This function is only for implicit time integration.")
   int stage = (_namespace->get<int>("time_stage") + 1)%n_total_stage(_time_scheme);
-  if (_time_scheme != backward_euler) compute_residual();
+  if (_time_scheme != backward_euler) compute_residual(false);
   _init_stage_storage(stage);
   return stage;
 }
@@ -1045,118 +1045,7 @@ void Solver::smooth_init_cond(Int n_iter) {
   printers::info(" done.\n");
 }
 
-void Solver::compute_residual() {
-  #if 0
-  apply_state_bcs();
-  auto compute_discon = [this](bool is_flux) {
-    Mat<> face_weights = math::pow_outer(basis.node_weights(), params.n_dim - 1);
-    int nd = params.n_dim;
-    Array<double> face_min = Array<double>::make_uniform({params.n_var}, huge);
-    Array<double> face_max = Array<double>::make_uniform({params.n_var}, -huge);
-    for (bool is_def : {0, 1}) {
-      #pragma omp parallel for reduction(min:face_min) reduction(max:face_max)
-      for (auto& con : acc_mesh->neighbor_connections(is_def)) {
-        for (int i_side = 0; i_side < 2; ++i_side) {
-          Array<double> state = con.face(i_side).flow_state()(is_flux);
-          for (int i_var = 0; i_var < params.n_var; ++i_var) {
-            for (int i_qpoint = 0; i_qpoint < params.n_face_qpoint(); ++i_qpoint) {
-              face_min[i_var] = std::min(face_min[i_var], state(i_var)[i_qpoint]);
-              face_max[i_var] = std::max(face_max[i_var], state(i_var)[i_qpoint]);
-            }
-          }
-        }
-      }
-    }
-    for (bool is_def : {0, 1}) {
-      #pragma omp parallel for
-      for (auto& con : acc_mesh->neighbor_connections(is_def)) {
-        bool farfield = false;
-        for (int i_side = 0; i_side < 2; ++i_side) {
-          if (con.face(i_side).boundary_connection()) {
-            farfield = farfield || con.face(i_side).boundary_connection()->boundary_condition() < 2*nd;
-          }
-        }
-        if (farfield) {
-          for (int i_side = 0; i_side < 2; ++i_side) con.face(i_side).discontinuity()(is_flux) = 0;
-        } else {
-          Array<double> diff = con.face(1).flow_state()(is_flux).copy();
-          auto dir = con.get_direction();
-          if (is_flux) diff *= math::sign(dir.flip_normal(0) == dir.flip_normal(1));
-          auto perm = face_permutation(nd, params.row_size, dir, diff.data(), turb);
-          perm->match_faces();
-          diff -= con.face(0).flow_state()(is_flux);
-          for (int i_var = 0; i_var < params.n_var; ++i_var) if (i_var != params.n_dim || !is_flux) {
-            double norm = std::sqrt(diff(i_var).vector().dot(face_weights.cwiseProduct(diff(i_var).vector())));
-            norm /= face_max[i_var] - face_min[i_var] + 1e-15*(std::abs(face_max[i_var]) + std::abs(face_min[i_var]));
-            for (int i_side = 0; i_side < 2; ++i_side) con.face(i_side).discontinuity()(is_flux)[i_var] = norm;
-          }
-        }
-      }
-    }
-  };
-  compute_discon(false);
-  Kernel_options opts {
-    .sw_car = stopwatch["cartesian"],
-    .sw_def = stopwatch["deformed"],
-    .sw_pr = stopwatch["prolong/restrict"],
-    .dt = 1.,
-    .i_stage = 0,
-    .compute_residual = true,
-    .use_filter = bool(_namespace->get<int>("use_filter")),
-  };
-  if (use_ldg()) {
-    auto bc_fun = [this, compute_discon]() {
-      apply_flux_bcs();
-      compute_discon(true);
-    };
-    compute_navier_stokes(_kernel_mesh(), opts, bc_fun, visc, therm_cond, false);
-  } else {
-    compute_euler(_kernel_mesh(), opts);
-  }
-  #pragma omp parallel for
-  for (auto& vec : acc_mesh->face_refinements()) {
-    for (int i_ref = vec.size() - 1; i_ref >= 0; --i_ref) {
-      auto& ref = vec[i_ref];
-      ref.coarse().discontinuity() = .5*(ref.fine()[0]->discontinuity() + ref.fine()[1]->discontinuity());
-    }
-  }
-  auto& elems = acc_mesh->elements();
-  Mat<> weights_1d = basis.node_weights();
-  Mat<> weights = math::pow_outer(weights_1d, params.n_dim);
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    double* res = elems[i_elem].residual_cache();
-    elems[i_elem].residual = 0;
-    for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      double mean_sq = 0;
-      for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-        double r = res[i_var*params.n_qpoint() + i_qpoint];
-        mean_sq += r*r*weights(i_qpoint);
-      }
-      elems[i_elem].residual += std::sqrt(mean_sq);
-    }
-  }
-  double cumulative_max = 0;
-  int min_level = 5;
-  for (int level = 0; level < (int)_preti_masks.size(); ++level) {
-    double max_res = 0;
-    auto km = _preti_masks[level]->kernel_mesh;
-    #pragma omp parallel for reduction(max:max_res)
-    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      if (elems[i_elem].mask() == level) max_res = std::max(max_res, elems[i_elem].residual);
-    }
-    _preti_masks[level]->max_residual = max_res;
-    cumulative_max = std::max(cumulative_max, max_res);
-    _preti_masks[level]->repeat = !level;
-  }
-  for (int level = min_level; level < (int)_preti_masks.size(); ++level) {
-    int desired = 10*_preti_masks[level]->max_residual/cumulative_max;
-    _preti_masks[level]->desired_iters = desired;
-    for (int add_at = level; add_at >= min_level && _effective_preti_iters(level) < desired; --add_at) {
-      _preti_masks[add_at]->repeat = true;
-    }
-  }
-  #else
+void Solver::compute_residual(bool unsteady_implicit) {
   Kernel_options opts {
     .sw_car = stopwatch["cartesian"],
     .sw_def = stopwatch["deformed"],
@@ -1166,23 +1055,15 @@ void Solver::compute_residual() {
     .compute_residual = true,
     .use_filter = false,
   };
-  if (use_ldg()) {
-    compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, false);
-  } else {
-    compute_euler(_kernel_mesh(), opts);
+  if (unsteady_implicit) {
+    HEXED_ASSERT(is_implicit(_time_scheme), "Time scheme is incompatible with `unsteady_implicit = true`.")
+    opts.implicit_opts.is_implicit = true;
+    opts.implicit_opts.time_step = _namespace->get<double>("time_step");
+    if (_time_scheme == crank_nicolson) opts.implicit_opts.time_step *= .5;
+    if (_time_scheme == dirk2) opts.implicit_opts.time_step *= dirk2_gamma;
   }
-  #endif
-  Int n_diff = 0;
-  Int n_source = 0;
-  double lim_thresh = _namespace->get<double>("time_step_limit_threshold");
-  #pragma omp parallel for reduction(+:n_diff,n_source)
-  for (Int i_elem = 0; i_elem < _preti_masks[0]->kernel_mesh.elems.size(); ++i_elem) {
-    auto& elem = _preti_masks[0]->kernel_mesh.elems[i_elem];
-    n_diff += elem.ts_ratio_diffusion < 1./lim_thresh;
-    n_source += elem.ts_ratio_decay < 1./lim_thresh;
-  }
-  _namespace->assign<int>("n_diffusion_limited", n_diff);
-  _namespace->assign<int>("n_source_limited", n_source);
+  if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, false);
+  else compute_euler(_kernel_mesh(), opts);
 }
 
 Int Solver::_effective_preti_iters(int level) {

@@ -271,7 +271,7 @@ void Case::_update_monitors() {
     auto assign = [&](std::string suffix, double value) {
       std::string name = var_name + suffix;
       _inter.variables->assign(name, value);
-      status_data << name << ": " << value << "\n";
+      status_data << name << ": " << to_string(value) << "\n";
     };
     assign("_smoothed", monitor.smoothed());
     assign("_trend", monitor.trend());
@@ -603,7 +603,7 @@ Case::Case(std::string input_script)
     _solver().calc_jacobian();
     _solver().update_av_length(_vari("av_coef_iters_update"));
     _inter.variables->assign<int>("adapt_changed", result.changed);
-    _solver().compute_residual();
+    _solver().compute_residual(false);
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
     _solver().print_preti_iters();
     return "";
@@ -633,7 +633,7 @@ Case::Case(std::string input_script)
     }
     _solver().calc_jacobian();
     _solver().update_av_length(100);
-    _solver().compute_residual();
+    _solver().compute_residual(false);
     printers::info("done\n");
     return "";
   }));
@@ -778,13 +778,17 @@ Case::Case(std::string input_script)
   _inter.variables->create<std::string>("compute_residuals", new Namespace::Heisenberg<std::string>([this]() {
     int nd = _solver().storage_params().n_dim;
     Physical_residual phys_resid;
-    _solver().compute_residual();
-    auto res = _solver().integral_field(Pow(phys_resid, 2));
-    for (int i_dim = 1; i_dim < nd; ++i_dim) res[0] += res[i_dim];
-    for (double& r : res) r = std::sqrt(r);
-    _inter.variables->assign("residual_momentum", res[0]);
-    _inter.variables->assign("residual_density", res[nd]);
-    _inter.variables->assign("residual_energy", res[nd + 1]);
+    auto compute_res = [&](bool unsteady_implicit, std::string prefix) {
+      _solver().compute_residual(unsteady_implicit);
+      auto res = _solver().integral_field(Pow(phys_resid, 2));
+      for (int i_dim = 1; i_dim < nd; ++i_dim) res[0] += res[i_dim];
+      for (double& r : res) r = std::sqrt(r);
+      _inter.variables->assign(prefix + "residual_momentum", res[0]);
+      _inter.variables->assign(prefix + "residual_density", res[nd]);
+      _inter.variables->assign(prefix + "residual_energy", res[nd + 1]);
+    };
+    compute_res(false, "");
+    if (!_vari("steady") && _vari("implicit")) compute_res(true, "unsteady_");
     if (_vari("iteration") > 0) _solver().compute_spectral_uncertainty();
     return "";
   }));
@@ -845,6 +849,7 @@ Case::Case(std::string input_script)
       _solver().update();
     }
     _inter.variables->assign(be ? "pseudotime_iteration" : "iteration", iter);
+    _inter.variables->assign("total_iteration", _vari("total_iteration") + n);
     if (!be) _update_monitors();
     _unsteady_residual_monitor.add_sample(_vari("pseudotime_iteration"), std::log(_vard("normalized_residual")));
     int conv = _unsteady_residual_monitor.converged({.abs = .03}, {.abs = .1});

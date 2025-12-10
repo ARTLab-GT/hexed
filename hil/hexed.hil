@@ -43,9 +43,10 @@ transport_expr = {
 visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
-iteration_expr = {iteration = iteration; time_stage = time_stage; pseudotime_iteration = pseudotime_iteration;}
+iteration_expr = {iteration = iteration; time_stage = time_stage; pseudotime_iteration = pseudotime_iteration; total_iteration = total_iteration;}
 art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
-normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
+normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3}
+unsteady_residual_expr = {unsteady_residual = (unsteady_residual_momentum/init_init_unsteady_residual_momentum + unsteady_residual_density/init_init_unsteady_residual_density + unsteady_residual_energy/init_init_unsteady_residual_energy)/3;}
 flow_time_expr = {flow_time = flow_time;}
 time_step_expr = {time_step = time_step;}
 fix_iters_expr = {fix_iters = fix_iters;}
@@ -266,7 +267,7 @@ vis_field_vars = state_vars + art_visc_expr + transport_expr
 vis_contour_vars = vis_field_vars
 vis_surface_vars = state_vars + transport_expr + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr + bl_nondim_expr
 vis_n_sample = 10
-print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr + {($monitor_vars)}
+print_vars = iteration_expr + normalized_residual_expr + unsteady_residual_expr + flow_time_expr + time_step_expr + {($monitor_vars)}
 monitor_window = 0.2
 monitor_samples = 1000
 monitor_min_samples = 10
@@ -345,7 +346,7 @@ print_final = {
     println {performance summary:}
     println performance_report
 }
-time_step_done = {(unsteady_residual_converged & pseudotime_iteration > 100)}
+time_step_done = {((unsteady_residual_momentum + unsteady_residual_density + unsteady_residual_energy)/3 < .5*(init_unsteady_residual_momentum + init_unsteady_residual_density + init_unsteady_residual_energy)/3)}
 hexed_failed = false
 terminate = {
     print_emph = true
@@ -406,9 +407,6 @@ restart = {
 iterate = {
     update
     compute_residuals
-    case0 = {}
-    case1 = {$normalized_residual_expr}
-    $$({case} + !!residual_init)
     $compute_force
     $compute_heating
     {compute initial residual for normalization}
@@ -417,9 +415,23 @@ iterate = {
         init_residual_momentum = residual_momentum
         init_residual_density = residual_density
         init_residual_energy = residual_energy
-        residual_init = true
     }
-    $$({case} + !residual_init)
+    $$({case} + ((iteration == (steady | !implicit))))
+    case0 = {}
+    case1 = {
+        init_unsteady_residual_momentum = unsteady_residual_momentum
+        init_unsteady_residual_density = unsteady_residual_density
+        init_unsteady_residual_energy = unsteady_residual_energy
+        case0 = {}
+        case1 = {
+            init_init_unsteady_residual_momentum = unsteady_residual_momentum
+            init_init_unsteady_residual_density = unsteady_residual_density
+            init_init_unsteady_residual_energy = unsteady_residual_energy
+        }
+        $$({case} + (iteration == 0))
+    }
+    $$({case} + (pseudotime_iteration == 1 & !steady & implicit))
+    $normalized_residual_expr
     println report
     hexed_prev_except = except
     except = {println exception}
@@ -450,7 +462,9 @@ iterate = {
         }
         $$({case} + (time_stage == n_time_stages - 1))
         case0 = {}
-        case1 = {next_time_stage}
+        case1 = {
+            next_time_stage
+        }
         $$({case} + (!steady & implicit))
     }
     $$({case} + (hexed_time_step_done & !hexed_done))
@@ -477,10 +491,12 @@ start = {
     $$({case} + (flood_fill_start0 == huge))
     setup_parameters
     create_solver
-    residual_init = false
     init_residual_momentum = 0.
     init_residual_density = 0.
     init_residual_energy = 0.
+    init_init_unsteady_residual_momentum = 0.
+    init_init_unsteady_residual_density = 0.
+    init_init_unsteady_residual_energy = 0.
     normalized_residual = 1.
     prev_residual = 0.
     hexed_next_flow_time = 0.
@@ -491,6 +507,7 @@ start = {
     n_diffusion_limited = 0
     n_source_limited = 0
     unsteady_residual_converged = false
+    total_iteration = 0
     println({    Monitor window: } + monitor_window)
 }
 

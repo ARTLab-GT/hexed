@@ -205,7 +205,7 @@ class Solver {
   //! \returns An integer index identifying which time integration stage you are now on.
   //! If it is 0, that means you have advanced to the next time step.
   int next_time_stage();
-  void compute_residual();
+  void compute_residual(bool unsteady_implicit);
   void print_preti_iters();
   void compute_spectral_uncertainty();
   void update_bound_conds();
