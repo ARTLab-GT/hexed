@@ -4,15 +4,9 @@ namespace hexed {
 
 History_stats::History_stats(double iter_frac)
 : _iter_frac{iter_frac}
-, _last_iters{-1, -1}
-, _last_values{std::nan(""), std::nan("")}
-, _n_sample{0}
-, _smoothed{std::nan("")}
-, _trend{std::nan("")}
-, _curve{std::nan("")}
-, _lhs{Mat<3, 3>::Zero()}
-, _rhs{Mat<3>::Zero()}
-{}
+{
+  reset();
+}
 
 void History_stats::add_sample(Int iter, double value) {
   HEXED_ASSERT(iter >= 0, "Iteration values must be nonnegative.")
@@ -52,6 +46,17 @@ void History_stats::add_sample(Int iter, double value) {
   _last_values[1] = _last_values[0];
   _last_values[0] = value;
   ++_n_sample;
+}
+
+void History_stats::reset() {
+  _last_iters[0] = _last_iters[1] = -1;
+  _last_values[0] = _last_values[1] = std::nan("");
+  _n_sample = 0;
+  _smoothed = std::nan("");
+  _trend = std::nan("");
+  _curve = std::nan("");
+  _lhs.setZero();
+  _rhs.setZero();
 }
 
 }

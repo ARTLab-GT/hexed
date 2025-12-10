@@ -57,6 +57,7 @@ class Convergence_monitor {
    * with `trend_tol.rel` being relative to `noise()` in this case.
    */
   bool converged(math::Tolerance trend_tol, math::Tolerance noise_tol) const;
+  void reset(); //!< \brief Clears the sample history.
 
   private:
   History_stats _value;

@@ -23,4 +23,9 @@ bool Convergence_monitor::converged(math::Tolerance trend_tol, math::Tolerance n
   return trend_conv && (noise_conv || noise_trend_conv);
 }
 
+void Convergence_monitor::reset() {
+  _value.reset();
+  _noise.reset();
+}
+
 }

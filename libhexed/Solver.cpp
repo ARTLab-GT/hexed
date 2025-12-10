@@ -1010,15 +1010,16 @@ void Solver::update() {
           }
         }
       }
+      #if 0
       #pragma omp parallel for
       for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
         auto& elem = elems[i_elem];
         Array<double> curr_state = elem.flow_state();
         Array<double> lagged_state({params.n_var, params.n_qpoint()}, elem.stage(2 + elem.get_is_deformed()));
-        double window = std::max(1e3, .2*_iter);
-        curr_state += 2e-5*(lagged_state - curr_state);
-        lagged_state += (curr_state - lagged_state)/window;
+        curr_state += 1e-5*(lagged_state - curr_state);
+        lagged_state += 1e-4*(curr_state - lagged_state);
       }
+      #endif
       ++_iter;
     }
   }

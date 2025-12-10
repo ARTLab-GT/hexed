@@ -57,8 +57,12 @@ vis_surface_vars = vis_surface_vars + {
     nominal_spacing = $({nominal_shape} + wall_dimension)
 }
 
-working_dir = {hexed_out_damped}
-adapt_freq = 10^4
+working_dir = {hexed_out}
+steady = false
+adapt_freq = 1
+print_freq = 10
+vis_freq = 10
+time_step = 3e-3
 
 $plot_history
 $simulate

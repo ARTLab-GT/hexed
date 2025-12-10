@@ -345,7 +345,7 @@ print_final = {
     println {performance summary:}
     println performance_report
 }
-time_step_done = {print_emph = true; print_type = {error}; println {Error: you forgot to set `time_step_done`} & throw}
+time_step_done = {(unsteady_residual_converged & pseudotime_iteration > 100)}
 hexed_failed = false
 terminate = {
     print_emph = true
@@ -490,6 +490,7 @@ start = {
     rms_flux = 0.
     n_diffusion_limited = 0
     n_source_limited = 0
+    unsteady_residual_converged = false
     println({    Monitor window: } + monitor_window)
 }
 

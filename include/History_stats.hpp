@@ -37,6 +37,7 @@ class History_stats {
   //! \brief The second derivative of the curve fit with respect to iteration count
   //! at the last iteration (`last_iter()`)
   inline double curvature() const {return _curve;}
+  void reset(); //!< \brief Clears the sample history.
 
   private:
   double _iter_frac;
