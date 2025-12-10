@@ -459,6 +459,9 @@ iterate = {
             $adapt_iter
             $write_iter
             $vis_iter
+            case0 = {time_step = time_step*0.9}
+            case1 = {time_step = time_step*1.1}
+            $$({case} + (init_unsteady_residual_momentum + init_unsteady_residual_density + init_unsteady_residual_energy < residual_momentum + residual_density + residual_energy))
         }
         $$({case} + (time_stage == n_time_stages - 1))
         case0 = {}
