@@ -180,7 +180,10 @@ class Navier_stokes {
         if constexpr (turb == k_omega) {
           int_ener_grad -= gradient(i_turb_kin_ener, all)/mass;
           double strain_term = (strain_rate - 1./3.*divergence*identity).squaredNorm() + (3 - n_dim)*divergence*divergence/9;
-          double omega_hat = std::max(real_turb_diss, c_lim*std::sqrt(2*strain_term/beta_s));
+          double stress_lim = c_lim*std::sqrt(2*strain_term/beta_s);
+          //double omega_hat = std::max(real_turb_diss, stress_lim);
+          double omega_hat = .5*(real_turb_diss + std::sqrt(math::pow(real_turb_diss - stress_lim, 2)
+                                                            + 1e-2*stress_lim*stress_lim));
           total_conductivity += heat_rat*mass*k_bar/omega_hat/turb_prandtl;
           Mat<n_dim, n_dim> turb_stress_per_k = 2*mass/omega_hat*strain_rate - 2./3.*mass*(1. + divergence/omega_hat)*identity;
           stress += turb_stress_per_k*k_bar;
@@ -214,8 +217,11 @@ class Navier_stokes {
           debug_variables(0) = mass*k_bar/omega_hat;
           debug_vars_set = true;
           prod_per_k = std::min(prod_per_k, 20*mass*real_turb_diss);
-          double grad_k_omega_source = std::max(sigma_do*mass/real_turb_diss*grad_k.dot(grad_omega), 0.);
           double grad_omega_source = (dyn_visc_coef + sigma*mass*k_bar/real_turb_diss)*grad_omega.squaredNorm();
+          //double grad_k_omega_source = std::max(sigma_do*mass/real_turb_diss*grad_k.dot(grad_omega), 0.);
+          double grad_k_omega_source = sigma_do*mass/real_turb_diss*grad_k.dot(grad_omega);
+          grad_k_omega_source = .5*(grad_k_omega_source + std::sqrt(grad_k_omega_source*grad_k_omega_source
+                                                                    + 1e-2*grad_omega_source*grad_omega_source));
           source(i_turb_kin_ener) = prod_per_k*k_bar - beta_s*real_turb_diss*state(i_turb_kin_ener);
           source(i_turb_diss) = alpha*prod_per_k + grad_omega_source + grad_k_omega_source - beta*mass*real_turb_diss;
         }
