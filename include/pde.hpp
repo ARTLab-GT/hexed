@@ -212,8 +212,10 @@ class Navier_stokes {
             }
           }
           debug_variables(0) = mass*k_bar/omega_hat;
+          debug_variables(1) = std::max(std::abs(prod_per_k/mass - beta_s*real_turb_diss),
+                                        std::abs(-alpha*2/3.*divergence - 2*beta*real_turb_diss));
           debug_vars_set = true;
-          prod_per_k = std::min(prod_per_k, 20*mass*real_turb_diss);
+          prod_per_k = std::min(prod_per_k, 1e4*mass*real_turb_diss);
           double grad_k_omega_source = std::max(sigma_do*mass/real_turb_diss*grad_k.dot(grad_omega), 0.);
           double grad_omega_source = (dyn_visc_coef + sigma*mass*k_bar/real_turb_diss)*grad_omega.squaredNorm();
           source(i_turb_kin_ener) = prod_per_k*k_bar - beta_s*real_turb_diss*state(i_turb_kin_ener);
@@ -253,7 +255,7 @@ class Navier_stokes {
       double decay;
       void compute_decay() {
         decay = 0;
-        if constexpr (turb == k_omega) decay = std::max(beta_s*real_turb_diss, beta_s); // note: beta <= beta_s
+        //if constexpr (turb == k_omega) decay = beta_s*real_turb_diss; // note: beta <= beta_s
       }
     };
 

@@ -27,7 +27,7 @@ constexpr int n_threads = {[options["n_threads"]]}; //!< \brief number of thread
 #define HEXED_USE_TECPLOT {[int(options["use_tecio"])]}
 #define HEXED_USE_NLOPT 0
 #define HEXED_OBSESSIVE_TIMING {[int(options["obsessive_timing"])]}
-constexpr int debug_variables = 1;
+constexpr int debug_variables = 2;
 #define HEXED_VIS_MESH_OPT 0
 
 }
