@@ -210,6 +210,7 @@ class History_plot:
     def _init(self):
         self._curves = []
         self._stats = {}
+        self._i_unsteady_res = -1
         for i_col in range(len(self._plot_columns)):
             col = self._plot_columns[i_col]
             label = col.replace("_", " ")
@@ -233,7 +234,8 @@ class History_plot:
                 ax.plot([], [], color="grey", linestyle="dashed")[0],
                 ax.plot([], [], color="grey", linestyle="dashed")[0],
             ]
-        self._iter_scatter = self._axs[self._i_unsteady_res].plot([], [], color="black", linestyle="", marker="o")[0]
+        if self._i_unsteady_res >= 0:
+            self._iter_scatter = self._axs[self._i_unsteady_res].plot([], [], color="black", linestyle="", marker="o")[0]
         return self._curves
 
     def _update(self, _):
@@ -306,7 +308,8 @@ class History_plot:
             x = np.array(x, dtype=np.int64)
             mask = np.concatenate([x[:-1] != x[1:], [True]])
             self._curves[i_col].set_data(x[mask], self._data[self._plot_columns[i_col]][mask])
-        x = np.array(self._data["iteration"], dtype=np.int64)
-        mask = np.concatenate([[True], x[1:] != x[:-1]])
-        self._iter_scatter.set_data(self._data["total_iteration"][mask], self._data["unsteady_residual"][mask])
+        if self._i_unsteady_res >= 0:
+            x = np.array(self._data["iteration"], dtype=np.int64)
+            mask = np.concatenate([[True], x[1:] != x[:-1]])
+            self._iter_scatter.set_data(self._data["total_iteration"][mask], self._data["unsteady_residual"][mask])
         return self._curves

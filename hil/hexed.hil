@@ -43,7 +43,8 @@ transport_expr = {
 visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
-iteration_expr = {iteration = iteration; time_stage = time_stage; pseudotime_iteration = pseudotime_iteration; total_iteration = total_iteration;}
+iteration_expr = {iteration = iteration;}
+unsteady_iteration_expr = {time_stage = time_stage; pseudotime_iteration = pseudotime_iteration; total_iteration = total_iteration;}
 art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
 normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3}
 unsteady_residual_expr = {unsteady_residual = (unsteady_residual_momentum/init_init_unsteady_residual_momentum + unsteady_residual_density/init_init_unsteady_residual_density + unsteady_residual_energy/init_init_unsteady_residual_energy)/3;}
@@ -267,7 +268,7 @@ vis_field_vars = state_vars + art_visc_expr + transport_expr
 vis_contour_vars = vis_field_vars
 vis_surface_vars = state_vars + transport_expr + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr + bl_nondim_expr
 vis_n_sample = 10
-print_vars = iteration_expr + normalized_residual_expr + unsteady_residual_expr + flow_time_expr + time_step_expr + {($monitor_vars)}
+print_vars = {($iteration_expr)} + normalized_residual_expr + flow_time_expr + time_step_expr + {($monitor_vars)}
 monitor_window = 0.2
 monitor_samples = 1000
 monitor_min_samples = 10
@@ -346,7 +347,7 @@ print_final = {
     println {performance summary:}
     println performance_report
 }
-time_step_done = {((unsteady_residual_momentum + unsteady_residual_density + unsteady_residual_energy)/3 < .5*(init_unsteady_residual_momentum + init_unsteady_residual_density + init_unsteady_residual_energy)/3)}
+time_step_done = {((unsteady_residual_momentum + unsteady_residual_density + unsteady_residual_energy)/3 < .1*(init_unsteady_residual_momentum + init_unsteady_residual_density + init_unsteady_residual_energy)/3)}
 hexed_failed = false
 terminate = {
     print_emph = true
@@ -459,9 +460,6 @@ iterate = {
             $adapt_iter
             $write_iter
             $vis_iter
-            case0 = {time_step = time_step*0.9}
-            case1 = {time_step = time_step*1.1}
-            $$({case} + (init_unsteady_residual_momentum + init_unsteady_residual_density + init_unsteady_residual_energy < residual_momentum + residual_density + residual_energy))
         }
         $$({case} + (time_stage == n_time_stages - 1))
         case0 = {}
@@ -509,8 +507,13 @@ start = {
     rms_flux = 0.
     n_diffusion_limited = 0
     n_source_limited = 0
-    unsteady_residual_converged = false
     total_iteration = 0
+    case0 = {}
+    case1 = {
+        iteration_expr = iteration_expr + unsteady_iteration_expr
+        print_vars = print_vars + unsteady_residual_expr
+    }
+    $$({case} + (!steady & implicit))
     println({    Monitor window: } + monitor_window)
 }
 

@@ -285,7 +285,6 @@ void Case::_update_monitors() {
 Case::Case(std::string input_script)
 : _start_time{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())}
 , _log_residual_hist{.4}
-, _unsteady_residual_monitor{.2}
 {
   _inter.variables->assign("input_script", input_script);
   _inter.variables->assign("version_major", config::version_major);
@@ -851,9 +850,6 @@ Case::Case(std::string input_script)
     _inter.variables->assign(be ? "pseudotime_iteration" : "iteration", iter);
     _inter.variables->assign("total_iteration", _vari("total_iteration") + n);
     if (!be) _update_monitors();
-    _unsteady_residual_monitor.add_sample(_vari("pseudotime_iteration"), std::log(_vard("normalized_residual")));
-    int conv = _unsteady_residual_monitor.converged({.abs = .03}, {.abs = .1});
-    _inter.variables->assign("unsteady_residual_converged", conv);
     return "";
   }));
 
@@ -867,7 +863,6 @@ Case::Case(std::string input_script)
       _inter.variables->assign("hexed_next_flow_time", _vard("hexed_next_flow_time") + _vard("time_step"));
       _update_monitors();
     }
-    _unsteady_residual_monitor.reset();
     return "";
   }));
 

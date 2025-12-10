@@ -32,7 +32,6 @@ class Case {
   std::vector<std::string> _print_vars;
   std::vector<Convergence_monitor> _monitors;
   Convergence_monitor _log_residual_hist;
-  Convergence_monitor _unsteady_residual_monitor;
   std::string _assignment(std::string var_name);
   std::function<bool(Element&, int)> _ref_crit(std::string name);
   void _update_monitors();
