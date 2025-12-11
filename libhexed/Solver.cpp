@@ -933,12 +933,12 @@ void Solver::update() {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   double safety = _namespace->get<double>("max_safety");
   auto& elems = acc_mesh->elements();
-  if (_namespace->get<int>("preti")) {
-    _update_recursive(0, safety);
-  } else {
-    double cheby_safety = _namespace->get<double>("cheby_safety");
-    int inner = 0;
-    for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
+  double cheby_safety = _namespace->get<double>("cheby_safety");
+  int inner = 0;
+  for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
+    if (_namespace->get<int>("preti")) {
+      _update_recursive(0, safety);
+    } else {
       // compute time step
       double dt = 0;
       HEXED_ASSERT(_preti_masks.size(), "meshing mask list is empty");
@@ -1009,9 +1009,10 @@ void Solver::update() {
           }
         }
       }
-      ++_iter;
     }
-    #if 1
+    ++_iter;
+  }
+  if (_time_scheme == explicit_steady) {
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       auto& elem = elems[i_elem];
@@ -1020,7 +1021,6 @@ void Solver::update() {
       curr_state += 1e-4*(lagged_state - curr_state);
       lagged_state += 1e-4*(curr_state - lagged_state);
     }
-    #endif
   }
   ++status.iteration;
   stopwatch.stopwatch.pause();
