@@ -206,6 +206,7 @@ class Solver {
   //! If it is 0, that means you have advanced to the next time step.
   int next_time_stage();
   void compute_residual(bool unsteady_implicit);
+  void update_preti_iters();
   void print_preti_iters();
   void compute_spectral_uncertainty();
   void update_bound_conds();

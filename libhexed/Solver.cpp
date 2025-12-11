@@ -926,7 +926,6 @@ void Solver::_update_recursive(int preti_level, double safety) {
     _namespace->assign<double>("flow_time", _namespace->get<double>("flow_time") + dt);
     status.time_step = dt;
     status.flow_time += dt;
-    if (preti_level + 1 < (int)_preti_masks.size()) _update_recursive(preti_level + 1, safety);
   }
 }
 
@@ -1010,18 +1009,18 @@ void Solver::update() {
           }
         }
       }
-      #if 1
-      #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-        auto& elem = elems[i_elem];
-        Array<double> curr_state = elem.flow_state();
-        Array<double> lagged_state({params.n_var, params.n_qpoint()}, elem.stage(2 + elem.get_is_deformed()));
-        curr_state += 1e-4*(lagged_state - curr_state);
-        lagged_state += 1e-4*(curr_state - lagged_state);
-      }
-      #endif
       ++_iter;
     }
+    #if 1
+    #pragma omp parallel for
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      Array<double> curr_state = elem.flow_state();
+      Array<double> lagged_state({params.n_var, params.n_qpoint()}, elem.stage(2 + elem.get_is_deformed()));
+      curr_state += 1e-4*(lagged_state - curr_state);
+      lagged_state += 1e-4*(curr_state - lagged_state);
+    }
+    #endif
   }
   ++status.iteration;
   stopwatch.stopwatch.pause();
@@ -1064,6 +1063,58 @@ void Solver::compute_residual(bool unsteady_implicit) {
   }
   if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, false);
   else compute_euler(_kernel_mesh(), opts);
+}
+
+void Solver::update_preti_iters() {
+  #if 0
+  compute_residual(is_implicit(_time_scheme));
+  // update PRETI schedule
+  auto& elems = acc_mesh->elements();
+  Mat<> weights_1d = basis.node_weights();
+  Mat<> weights = math::pow_outer(weights_1d, params.n_dim);
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    double* res = elems[i_elem].residual_cache();
+    elems[i_elem].residual = 0;
+    for (int i_var = 0; i_var < params.n_var; ++i_var) {
+      double mean_sq = 0;
+      for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+        double r = res[i_var*params.n_qpoint() + i_qpoint];
+        mean_sq += r*r*weights(i_qpoint);
+      }
+      elems[i_elem].residual += std::sqrt(mean_sq);
+    }
+  }
+  double cumulative_max = 0;
+  int min_level = 5;
+  for (int level = 0; level < (int)_preti_masks.size(); ++level) {
+    double max_res = 0;
+    auto km = _preti_masks[level]->kernel_mesh;
+    #pragma omp parallel for reduction(max:max_res)
+    for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      if (elems[i_elem].mask() == level) max_res = std::max(max_res, elems[i_elem].residual);
+    }
+    _preti_masks[level]->max_residual = max_res;
+    cumulative_max = std::max(cumulative_max, max_res);
+    _preti_masks[level]->repeat = !level;
+  }
+  for (int level = min_level; level < (int)_preti_masks.size(); ++level) {
+    int desired = 10*_preti_masks[level]->max_residual/cumulative_max;
+    _preti_masks[level]->desired_iters = desired;
+    for (int add_at = level; add_at >= min_level && _effective_preti_iters(level) < desired; --add_at) {
+      _preti_masks[add_at]->repeat = true;
+    }
+  }
+  #else
+  _preti_masks[0]->repeat = true;
+  Int n = acc_mesh->elements().size();
+  for (int level = 1; level < (int)_preti_masks.size(); ++level) {
+    if ((Int)_preti_masks[level]->kernel_mesh.elems.size() <= n/2) {
+      _preti_masks[level]->repeat = true;
+      n /= 2;
+    }
+  }
+  #endif
 }
 
 Int Solver::_effective_preti_iters(int level) {

@@ -2978,13 +2978,13 @@ std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::pret
   reset_masks();
   std::vector<std::unique_ptr<Masked_mesh>> masks;
   masks.emplace_back(new Masked_mesh(*this, basis));
+  Array<int> root_arl = tree->root()->anisotropic_refinement_level();
   while (masks.back()->kernel_mesh.elems.size()) {
-    auto predicate = [this, iso](Element& elem){
+    auto predicate = [this, iso, &root_arl](Element& elem){
       int level;
       if (iso) {
         if (elem.tree->is_graft()) {
-          level = (elem.tree->anisotropic_refinement_level()
-                   - elem.tree->root()->anisotropic_refinement_level()).extreme(1);
+          level = (elem.tree->anisotropic_refinement_level() - root_arl).extreme(1);
         } else {
           level = 0;
         }

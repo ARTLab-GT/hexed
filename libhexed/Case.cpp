@@ -604,6 +604,7 @@ Case::Case(std::string input_script)
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().compute_residual(false);
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
+    _solver().update_preti_iters();
     _solver().print_preti_iters();
     return "";
   }));

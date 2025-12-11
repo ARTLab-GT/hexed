@@ -505,16 +505,6 @@ class Spatial {
           }
         }
 
-        if constexpr (Pde::n_update == 6) {
-          for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-            for (int i = 0; i < 2; ++i) {
-              for (int i_var : {4, 5}) {
-                time_rate[i][i_var][i_qpoint] /= tss[i_qpoint]*(1./tss[i_qpoint] + debug_variables[n_qpoint + i_qpoint]);
-              }
-            }
-          }
-        }
-
         bool fringe = elem.mask() < _mask;
         // write update to interior
         double* ref_state = elem.residual_cache();

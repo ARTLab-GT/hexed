@@ -12,22 +12,28 @@
 //! \brief Namespace for options configured at build time.
 namespace hexed::config {
 
-constexpr int version_major = {[options["version_major"]]}; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
-constexpr int version_minor = {[options["version_minor"]]}; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
-constexpr int version_patch = {[options["version_patch"]]}; //!< \brief this is Hexed version \ref version_major .\ref version_minor .\ref version_patch
+//! \brief This is Hexed version \ref version_major .\ref version_minor .\ref version_patch .
+constexpr int version_major = {[options["version_major"]]};
+//! \brief This is Hexed version \ref version_major .\ref version_minor .\ref version_patch .
+constexpr int version_minor = {[options["version_minor"]]};
+//! \brief This is Hexed version \ref version_major .\ref version_minor .\ref version_patch .
+constexpr int version_patch = {[options["version_patch"]]};
 //! \brief commit hash of the source this code was compiled from
-//! \note hex digits stored as a c-string since there isn't a standard integer type large enough to hold it as an integer
+//! \note hex digits stored as a c-string since there isn't a standard integer type large enough
+//! to hold it as an integer
 extern const std::string commit;
-constexpr int max_row_size = {[options["max_row_size"]]}; //!< \brief maximum \ref basis_row_size "row size" that a `Basis` is allowed to have
+//! \brief maximum \ref basis_row_size "row size" that a `Basis` is allowed to have
+constexpr int max_row_size = {[options["max_row_size"]]};
 #define HEXED_THREADED {[int(options["threaded"])]}
 #if HEXED_THREADED
-constexpr int n_threads = {[options["n_threads"]]}; //!< \brief number of threads with which to execute parallel regions
+//! \brief number of threads with which to execute parallel regions
+constexpr int n_threads = {[options["n_threads"]]};
 #endif
 #define HEXED_USE_XDMF {[int(options["use_xdmf"])]}
 #define HEXED_USE_TECPLOT {[int(options["use_tecio"])]}
 #define HEXED_USE_NLOPT 0
 #define HEXED_OBSESSIVE_TIMING {[int(options["obsessive_timing"])]}
-constexpr int debug_variables = 2;
+constexpr int debug_variables = 1;
 #define HEXED_VIS_MESH_OPT 0
 
 }
