@@ -23,7 +23,7 @@ class Accessible_mesh : public Mesh {
   Vector_view<Element&, Deformed_element&, &trivial_convert<Element&, Deformed_element&>, Sequence> def_as_car;
   Concatenation<Element&> elems;
   Vector_view<Kernel_element&, Element&, &trivial_convert<Kernel_element&, Element&>, Sequence> kernel_elems;
-  std::vector<std::unique_ptr<Flow_bc>> bound_conds;
+  std::vector<std::shared_ptr<Flow_bc>> bound_conds;
   std::array<std::vector<Neighbor_connection>, 2> _neighbor_cons;
   std::vector<std::vector<Face_refinement>> _face_refs;
   std::vector<Boundary_connection> _bound_cons;
@@ -80,7 +80,7 @@ class Accessible_mesh : public Mesh {
   void purge();
   void delete_bad_extrusions();
   void deform();
-  void create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
+  void create_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
   void read_file(std::string file_name);
 
   void _connect(std::array<std::vector<Element*>, 2> elems, Connection_direction dir, std::string context);
@@ -114,13 +114,13 @@ class Accessible_mesh : public Mesh {
    * The surface boundary condition and geometry arguments must be specified
    * iff the original mesh had a surface geometry (else exception).
    */
-  Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Turbulence_model,
-                  Surface_geom* = nullptr, Flow_bc* surface_bc = nullptr);
+  Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Turbulence_model,
+                  Surface_geom* = nullptr, std::shared_ptr<Flow_bc> surface_bc = {});
   /*! \brief Reads mesh from a file created by `Mesh::write`.
    * \details Acquires ownership of boundary condition pointers.
    * This variant is not for tree meshing.
    */
-  Accessible_mesh(std::string file_name, std::vector<Flow_bc*>, Turbulence_model);
+  Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>>, Turbulence_model);
   inline double root_size() override {return root_sz;}
   inline Storage_params storage_params() {return params;}
   //! \returns a View_by_type containing only the Cartesian elements in the mesh
@@ -141,7 +141,7 @@ class Accessible_mesh : public Mesh {
                        std::array<bool, 2> stretch = {false, false}) override;
   next::Sequence<Neighbor_connection&> neighbor_connections(bool is_deformed);
   next::Sequence<std::vector<Face_refinement>&> face_refinements();
-  int add_boundary_condition(Flow_bc*) override;
+  int add_boundary_condition(std::shared_ptr<Flow_bc>) override;
   void connect_boundary(int ref_level, bool is_deformed, Int element_serial_n, int i_dim, int face_sign,
                         int bc_serial_n) override;
   void disconnect_boundary(int bc_sn) override;
@@ -149,8 +149,8 @@ class Accessible_mesh : public Mesh {
   next::Sequence<next::Vertex&> shape_vertices() {return _blocks.verts();}
   next::Sequence<next::Vertex&> shape_boundary_vertices() {return _blocks.boundary_verts();}
 
-  void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
-  void set_surface(Surface_geom* geometry, Flow_bc* surface_bc,
+  void add_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
+  void set_surface(Surface_geom* geometry, std::shared_ptr<Flow_bc> surface_bc,
                    Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
   void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always,

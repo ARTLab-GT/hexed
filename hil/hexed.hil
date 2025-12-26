@@ -43,9 +43,11 @@ transport_expr = {
 visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
 stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
 heat_flux_expr = {heat_flux = heat_flux;}
-iteration_expr = {iteration = iteration; time_stage = time_stage; pseudotime_iteration = pseudotime_iteration;}
+iteration_expr = {iteration = iteration;}
+unsteady_iteration_expr = {time_stage = time_stage; pseudotime_iteration = pseudotime_iteration; total_iteration = total_iteration;}
 art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
-normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3;}
+normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3}
+unsteady_residual_expr = {unsteady_residual = (unsteady_residual_momentum/init_init_unsteady_residual_momentum + unsteady_residual_density/init_init_unsteady_residual_density + unsteady_residual_energy/init_init_unsteady_residual_energy)/3;}
 flow_time_expr = {flow_time = flow_time;}
 time_step_expr = {time_step = time_step;}
 fix_iters_expr = {fix_iters = fix_iters;}
@@ -123,30 +125,33 @@ air_conductivity = {ref_value = air_cond_ref; ref_temperature = air_cond_ref_tem
 shock_sub_iters = 12; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
 set_shock = {
     art_visc_width = (mesh_extreme01 - mesh_extreme00)*2.^-init_ref_level
-    fix_therm_admis = true
+    fix_nonphysical = true
     n_cheby_av = shock_sub_iters
     flow_iters = shock_sub_iters
     av_advect_iters = ceil(shock_sub_iters/5.)
     print_vars = print_vars + art_visc_residual_expr
 }
 
-ramping_initial_safety = 3e-3
+ramping_initial_safety = 1e-3
 ramping_final_safety = 0.7
-ramp_iter = 1000
-ramp_if = {iteration >= ramp_iter}
+ramp_freq = 100
+ramp_factor = 2.
+ramp_if = {(iteration%ramp_freq == 0)}
 ramped = false
-ramp_action = {
-    ramped = true;
-    max_safety = ramping_final_safety
-    next_refine_iter = 1e-3
-    print_emph = true; print{Initial phase complete.}
-    print({ Increasing safety factor to } + max_safety + {.})
-}
 set_ramping = {
     max_safety = ramping_initial_safety
     iterate = iterate + {
         case0 = {}
-        case1 = {$ramp_action; println{}}
+        case1 = {
+            max_safety = max_safety*ramp_factor
+            case1 = {
+                max_safety = ramping_final_safety
+                ramped = true
+                print {Time step ramping complete. }
+            }
+            $$({case} + (max_safety >= ramping_final_safety))
+            println({Increasing `max_safety` to } + max_safety)
+        }
         $$({case} + (!ramped & ($ramp_if) != 0))
     }
 }
@@ -156,34 +161,6 @@ set_subsonic_bl_multirate = {
     bl_multirate = true
     flow_iters = bl_multirate_iters
     bl_iters = bl_multirate_iters
-}
-
-aerothermo_bl_multirate = true
-aerothermo_conv_sub_iters = 2
-set_aerothermo = {
-    $set_shock
-    $set_ramping
-    viscosity_model = air_viscosity
-    conductivity_model = air_conductivity
-    print_vars = print_vars + heating_rate_expr
-    iterate = {$compute_heating} + iterate
-    case0 = {}
-    case1 = {
-        ramp_action = ramp_action + {
-            print{ Activating boundary layer acceleration scheme.}
-            bl_multirate = true
-            n_cheby_bl = 2
-            max_conv_sub_iters = aerothermo_conv_sub_iters
-            iterate = iterate + {
-                case0 = {}
-                case1 = {
-                    n_cheby_bl = n_cheby_bl + 2
-                }
-                $$({case} + (n_cheby_bl < bl_multirate_iters))
-            }
-        }
-    }
-    $$({case} + aerothermo_bl_multirate)
 }
 
 plot_history = {shell({python3 -c "from hexedpy.utils import History_plot;History_plot('} + working_dir + {')" &})}
@@ -211,15 +188,18 @@ geom_rtol = 1e-7
 geom_atol = 0.
 spectral_tol = 1e-3
 flux_tol = 1e-3
-trend_tol = 1e-3
-noise_tol = 1e-2
+trend_tol = 3e-3
+noise_tol = 3e-2
 max_aspect_ratio = 1e3
 max_wall_spacing = huge
 max_wall_reynolds = 1e3
 max_sharp_spacing = huge
 max_sharp_reynolds = 1e4
-min_cell_reynolds = 1e-1
-shock_refinement_threshold = 1e-2
+min_wall_shock_width_reynolds = 1e3
+min_wall_shock_width = 0.
+shock_width_growth = 0.1
+shock_width_limit = -1.
+min_cell_reynolds = 0.1
 viscosity_model = {}
 conductivity_model = {}
 turbulence_model = {}
@@ -231,8 +211,7 @@ attack = 0.
 sideslip = 0.
 art_visc_constant = -1.
 art_visc_width = -1.
-fix_therm_admis = false
-diffusive_admissibility = false
+fix_nonphysical = false
 working_dir = {hexed_out/}
 input_data = {auto}
 vis_freq = 10^4
@@ -255,20 +234,19 @@ init_refine_if = {(ref_level < init_ref_level)}
 init_unrefine_if = {false}
 geom_refine_if = {(uncertainty > (geom_rtol*geom_length + geom_atol)*general_tolerance & ref_level < max_ref_level*$size_tolerance & nom_sz > min_elem_size*$size_tolerance)}
 geom_unrefine_if = {false}
-inv_cell_reynolds = {(freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
-final_refine_if = {(has_wall & ((i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance > max_wall_reynolds*$inv_cell_reynolds & 3*$({nominal_shape} + i_dim) > max_wall_reynolds*$inv_cell_reynolds))) | (($({sharp} + i_dim) & $({nominal_shape} + i_dim) > max_sharp_spacing) | (viscosity_model != {} & $({sharp} + i_dim) & $({nominal_shape} + i_dim) > max_sharp_reynolds*$inv_cell_reynolds))))}
+final_refine_if = {(has_wall & ((i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance*reynolds_per_length > max_wall_reynolds & 3*$({nominal_shape} + i_dim)*reynolds_per_length > max_wall_reynolds))) | (($({sharp} + i_dim) & $({nominal_shape} + i_dim) > max_sharp_spacing) | (viscosity_model != {} & $({sharp} + i_dim) & $({nominal_shape} + i_dim)*reynolds_per_length > max_sharp_reynolds))))}
 final_unrefine_if = {false}
-shock_refine_if = {(has_shock & $({nominal_shape} + i_dim) > 4*art_visc_width & ($adapt_refine_if))}
-shock_unrefine_if = {(!has_shock | ($adapt_unrefine_if))}
-adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*rms_flux)) & $({nominal_shape} + i_dim) > 2*min_cell_reynolds*$size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
+shock_refine_if = {(has_shock & $({nominal_shape} + i_dim) > 3*local_av_width & $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance)}
+shock_unrefine_if = {(!has_shock)}
+adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*rms_flux)) & (viscosity_model == {} | $({nominal_shape} + i_dim)*reynolds_per_length > 2*min_cell_reynolds*$size_tolerance))}
 spectral_unref_criterion = {($({spectral_uncertainty} + i_dim) < spectral_tol*general_tolerance*.5^(row_size - 1))}
-flux_unref_criterion = {(!(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*rms_flux*.5^(row_size - 1)))}
-shape_unref_criterion = {($({nominal_shape} + i_dim) < min_cell_reynolds*$unadjusted_size_tolerance*freestream_dynamic_viscosity/(freestream_density*freestream_speed))}
+flux_unref_criterion = {(!(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*rms_flux*.5^(row_size - 2)))}
+shape_unref_criterion = {($({nominal_shape} + i_dim)*reynolds_per_length < min_cell_reynolds*$unadjusted_size_tolerance)}
 adapt_unrefine_if = {((($spectral_unref_criterion & $flux_unref_criterion) | $shape_unref_criterion) & $({aniso_ref_level} + i_dim) > init_ref_level)}
-adapt_residual_factor = .8
+adapt_residual_factor = .5
 residual_stagnation_tol = 1e-2
 adapt_if = {(iteration%adapt_freq == 0 & hexed_time_step_done)}
-monitor_criterion = {(iteration > min_prints*print_freq & monitors_converged & (!amr | (last_adapt_iter > (1. - monitor_window)*iteration & last_adapt_iter < iteration - .5*adapt_freq)))}
+monitor_criterion = {(iteration > min_prints*print_freq & monitors_converged & (!amr | (last_adapt_iter > (1. - monitor_window)*iteration & last_adapt_iter < iteration + 3*print_freq)))}
 done = {($monitor_criterion | iteration > max_iterations | flow_time > max_flow_time | wall_time > max_wall_time)}
 max_init_refine_iters = 100
 max_geom_refine_iters = 100
@@ -290,8 +268,8 @@ vis_field_vars = state_vars + art_visc_expr + transport_expr
 vis_contour_vars = vis_field_vars
 vis_surface_vars = state_vars + transport_expr + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr + bl_nondim_expr
 vis_n_sample = 10
-print_vars = iteration_expr + normalized_residual_expr + flow_time_expr + time_step_expr + {($monitor_vars)}
-monitor_window = 0.1
+print_vars = {($iteration_expr)} + normalized_residual_expr + flow_time_expr + time_step_expr + {($monitor_vars)}
+monitor_window = 0.2
 monitor_samples = 1000
 monitor_min_samples = 10
 monitor_vars = {}
@@ -314,6 +292,9 @@ tangency_tol_angle = 1*degree
 tangency_tol_subdiv = 10.
 smooth_initial_condition = false
 initial_smoothing_iters = 10^4
+time_step_limit_threshold = 10.
+av_coef_iters_initial = 2*10^4
+av_coef_iters_update = 2*10^4
 
 {array parameters}
 i_dim = 0
@@ -366,7 +347,7 @@ print_final = {
     println {performance summary:}
     println performance_report
 }
-time_step_done = {print_emph = true; print_type = {error}; println {Error: you forgot to set `time_step_done`} & throw}
+time_step_done = {((unsteady_residual_momentum + unsteady_residual_density + unsteady_residual_energy)/3 < .1*(init_unsteady_residual_momentum + init_unsteady_residual_density + init_unsteady_residual_energy)/3)}
 hexed_failed = false
 terminate = {
     print_emph = true
@@ -427,9 +408,6 @@ restart = {
 iterate = {
     update
     compute_residuals
-    case0 = {}
-    case1 = {$normalized_residual_expr}
-    $$({case} + !!residual_init)
     $compute_force
     $compute_heating
     {compute initial residual for normalization}
@@ -438,9 +416,23 @@ iterate = {
         init_residual_momentum = residual_momentum
         init_residual_density = residual_density
         init_residual_energy = residual_energy
-        residual_init = true
     }
-    $$({case} + !residual_init)
+    $$({case} + ((iteration == (steady | !implicit))))
+    case0 = {}
+    case1 = {
+        init_unsteady_residual_momentum = unsteady_residual_momentum
+        init_unsteady_residual_density = unsteady_residual_density
+        init_unsteady_residual_energy = unsteady_residual_energy
+        case0 = {}
+        case1 = {
+            init_init_unsteady_residual_momentum = unsteady_residual_momentum
+            init_init_unsteady_residual_density = unsteady_residual_density
+            init_init_unsteady_residual_energy = unsteady_residual_energy
+        }
+        $$({case} + (iteration == 0))
+    }
+    $$({case} + (pseudotime_iteration == 1 & !steady & implicit))
+    $normalized_residual_expr
     println report
     hexed_prev_except = except
     except = {println exception}
@@ -471,7 +463,9 @@ iterate = {
         }
         $$({case} + (time_stage == n_time_stages - 1))
         case0 = {}
-        case1 = {next_time_stage}
+        case1 = {
+            next_time_stage
+        }
         $$({case} + (!steady & implicit))
     }
     $$({case} + (hexed_time_step_done & !hexed_done))
@@ -498,17 +492,28 @@ start = {
     $$({case} + (flood_fill_start0 == huge))
     setup_parameters
     create_solver
-    residual_init = false
     init_residual_momentum = 0.
     init_residual_density = 0.
     init_residual_energy = 0.
+    init_init_unsteady_residual_momentum = 0.
+    init_init_unsteady_residual_density = 0.
+    init_init_unsteady_residual_energy = 0.
     normalized_residual = 1.
     prev_residual = 0.
     hexed_next_flow_time = 0.
     last_adapt_iter = 0
-    allow_refine = false
+    allow_refinement = false
     pseudotime_iteration = 0
     rms_flux = 0.
+    n_diffusion_limited = 0
+    n_source_limited = 0
+    total_iteration = 0
+    case0 = {}
+    case1 = {
+        iteration_expr = iteration_expr + unsteady_iteration_expr
+        print_vars = print_vars + unsteady_residual_expr
+    }
+    $$({case} + (!steady & implicit))
     println({    Monitor window: } + monitor_window)
 }
 

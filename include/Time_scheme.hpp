@@ -13,7 +13,7 @@ constexpr bool is_time_accurate(Time_scheme ts) {return ts != explicit_steady;}
 constexpr bool is_implicit(Time_scheme ts) {return ts != explicit_steady && ts != explicit_unsteady;}
 
 constexpr int n_extra_stage(Time_scheme ts) {
-  if (!is_implicit(ts)) return 0;
+  if (ts == explicit_unsteady) return 0;
   else return 1;
 }
 

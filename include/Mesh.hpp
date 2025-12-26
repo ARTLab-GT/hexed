@@ -65,7 +65,7 @@ class Mesh {
    * Returns a serial number which uniquely identifies the new boundary condition among this `Mesh`'s boundary conditions.
    * It is recommended to use this with `new`, like the constructor for `std::unique_ptr`.
    */
-  virtual int add_boundary_condition(Flow_bc* flow_bc) = 0;
+  virtual int add_boundary_condition(std::shared_ptr<Flow_bc> flow_bc) = 0;
   /*!
    * Connect a face of an element to a boundary condition. This BC will now be applied to that face. `i_dim` and `face_sign`
    * are used to identify which face of the element is participating in the boundary condition.
@@ -131,7 +131,7 @@ class Mesh {
    *   `extremal_bcs[2]` is for minimum \f$x_1\f$.
    * \param origin The minimal corner of the tree root will be located at `origin`.
    */
-  virtual void add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) = 0;
+  virtual void add_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) = 0;
   /*! \brief Defines the surface geometry to be meshed as a boundary.
    * \details Acquires ownership of the objects pointed to `geometry` and `surface_bc`.
    * The geometric surface represented by `geometry` is now a boundary of the domain
@@ -145,7 +145,7 @@ class Mesh {
    * So, `Mesh::update` should be calling a few times before `Mesh::set_surfaces`.
    * Any surfaces defined by previous invokations of `set_surface` are forgotten.
    */
-  virtual void set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
+  virtual void set_surface(Surface_geom* geometry, std::shared_ptr<Flow_bc> surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
   //!< sets the `Element::unrefinement_locked` member of all elements
   virtual void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) = 0;
   /*! \brief Updates tree mesh based on user-supplied (un)refinement criteria.

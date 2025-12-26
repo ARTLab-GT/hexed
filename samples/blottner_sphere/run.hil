@@ -10,8 +10,8 @@ extremal_bc20 = {nonpenetration}
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
 flood_fill_start0 = -1.7*radius
-flood_fill_start0 =  1.7*radius
-flood_fill_start0 =  1.7*radius
+flood_fill_start1 =  1.7*radius
+flood_fill_start2 =  1.7*radius
 geom0 = {quarter.iges}
 max_sharp_reynolds = huge
 max_geom_refine_iters = 0
@@ -30,11 +30,16 @@ thermal_bc = {temperature = wall_temperature}
 
 $set_shock
 $set_ramping
-refine_start_iter = 2000
-art_visc_width = 0.05*radius
 print_freq = 10
 vis_freq = write_freq = 1000
+wall_av_coef = 1e-4
 monitor_vars = {heating_rate = heating_rate;}
+contour0 = {pos0 + 1e-8}
+contour1 = {pos1 - pos2}
+contour2 = {pos0^2 + pos1^2 + pos2^2 - radius^2 - 1e-8}
+vis_field = false
 
 $plot_history
 $simulate
+vis_field = true
+visualize

@@ -12,8 +12,6 @@ mesh_extreme10 = -160.
 mesh_extreme01 =  160.
 mesh_extreme11 =  160.
 
-refine_start_iter = 10*10^4
-
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
 turbulence_model = {k-omega}
@@ -46,11 +44,6 @@ monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
     residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)
-    i_dim = wall_dimension + (wall_dimension < 0)
-    spectral_unref = $spectral_unref_criterion
-    flux_unref = $flux_unref_criterion
-    flux_uncertainty = flux_uncertainty
-    rms_flux = rms_flux
 }
 vis_surface_vars = vis_surface_vars + {
     roughness_height = roughness_height
@@ -58,6 +51,10 @@ vis_surface_vars = vis_surface_vars + {
     wall_dimension = wall_dimension
     nominal_spacing = $({nominal_shape} + wall_dimension)
 }
+
+working_dir = {hexed_out}
+adapt_freq = adapt_freq*10
+preti = true
 
 $plot_history
 $simulate

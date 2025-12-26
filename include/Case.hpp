@@ -18,8 +18,8 @@ class Case {
   std::string _vars(std::string name);
   Mat<> _get_vector(std::string name, int size);
   void _set_vector(std::string name, Mat<>);
-  Flow_bc* _make_bc(std::string name);
-  std::vector<Flow_bc*> _make_extremal_bcs();
+  std::shared_ptr<Flow_bc> _make_bc(std::string name);
+  std::vector<std::shared_ptr<Flow_bc>> _make_extremal_bcs();
   Surface_geom* _make_geom(); // `nullptr` if no geometry
   std::string _iteration_suffix();
   std::string _input_data_file();
@@ -31,7 +31,7 @@ class Case {
   std::vector<std::string> _monitor_vars;
   std::vector<std::string> _print_vars;
   std::vector<Convergence_monitor> _monitors;
-  std::vector<History_stats> _log_residual_hist;
+  Convergence_monitor _log_residual_hist;
   std::string _assignment(std::string var_name);
   std::function<bool(Element&, int)> _ref_crit(std::string name);
   void _update_monitors();

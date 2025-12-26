@@ -24,7 +24,8 @@ int Storage_params::n_vertices() const {
 }
 
 int Storage_params::n_var_numeric() const {
-  return n_var + 3 + n_forcing + n_advection(row_size) + std::max((n_stage - 1)*n_var, n_advection(row_size));
+  return n_var + 3 + n_forcing + n_offset*n_advection(row_size)
+         + std::max(n_var, n_advection(row_size)) + std::max(n_stage - 2, 0)*n_var;
 }
 
 int Storage_params::n_dof_numeric() const {

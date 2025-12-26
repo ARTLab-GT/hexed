@@ -42,13 +42,14 @@ void Case::_set_vector(std::string name, Mat<> vec) {
   }
 }
 
-Flow_bc* Case::_make_bc(std::string name) {
+std::shared_ptr<Flow_bc> Case::_make_bc(std::string name) {
+  std::shared_ptr<Flow_bc> bc;
   Mat<> freestream = _get_vector("freestream", _vari("n_var"));
-  if      (name == "characteristic") return new Riemann_invariants(freestream);
-  else if (name == "freestream") return new Freestream(freestream);
-  else if (name == "pressure_outflow") return new Pressure_outflow(_vard("freestream_pressure"));
-  else if (name == "outflow") return new Outflow;
-  else if (name == "nonpenetration") return new Nonpenetration;
+  if      (name == "characteristic") bc = std::make_shared<Riemann_invariants>(freestream);
+  else if (name == "freestream") bc = std::make_shared<Freestream>(freestream);
+  else if (name == "pressure_outflow") bc = std::make_shared<Pressure_outflow>(_vard("freestream_pressure"));
+  else if (name == "outflow") bc = std::make_shared<Outflow>();
+  else if (name == "nonpenetration") bc = std::make_shared<Nonpenetration>();
   else if (name == "no_slip") {
     auto sub = _inter.make_sub();
     sub.exec("$thermal_bc");
@@ -73,9 +74,8 @@ Flow_bc* Case::_make_bc(std::string name) {
       thermal = std::make_shared<Prescribed_energy>(energy);
     }
     HEXED_ASSERT(thermal, "thermal BC specification not understood", assert::User_error)
-    auto bc = new No_slip(thermal, heat_rat,
-                          _solver().viscosity_model(), _solver().turbulence_model(), _vard("heat_flux_coercion"));
-    return bc;
+    bc = std::make_shared<No_slip>(thermal, heat_rat, _solver().viscosity_model(), _solver().turbulence_model(),
+                                   _vard("heat_flux_coercion"));
   } else if (name == "expression") {
     HEXED_ASSERT(_inter.variables->lookup<std::string>("bc_state"),
                  "To use the `expression` BC type, you must define `bc_state` as a string.",
@@ -88,9 +88,9 @@ Flow_bc* Case::_make_bc(std::string name) {
         flux += format_str("ghost_flux%i = flux%i\n", i_var, i_var);
       }
     }
-    return new Expression_bc(_inter, _vars("bc_state"), flux);
+    bc = std::make_shared<Expression_bc>(_inter, _vars("bc_state"), flux);
   } else HEXED_THROW(format_str(1000, "unrecognized boundary condition type `%s`", name.c_str()), assert::User_error);
-  return nullptr; // will never happen. just to shut up GCC warning
+  return bc;
 }
 
 std::string Case::_iteration_suffix() {
@@ -102,8 +102,8 @@ void force_symlink(const std::filesystem::path& target, const std::filesystem::p
   std::filesystem::create_symlink(target, link);
 }
 
-std::vector<Flow_bc*> Case::_make_extremal_bcs() {
-  std::vector<Flow_bc*> bcs;
+std::vector<std::shared_ptr<Flow_bc>> Case::_make_extremal_bcs() {
+  std::vector<std::shared_ptr<Flow_bc>> bcs;
   for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
     for (int sign = 0; sign < 2; ++sign) {
       bcs.push_back(_make_bc(_vars(format_str(50, "extremal_bc%i%i", i_dim, sign))));
@@ -252,25 +252,39 @@ void Case::_update_monitors() {
   std::ofstream status_data ((_vars("working_dir") + "status_data.txt").c_str());
   auto sub = _inter.make_sub();
   sub.exec(_vars("monitor_vars"));
-  for (unsigned i_monitor = 0; i_monitor < _monitor_vars.size(); ++i_monitor) {
-    double val = sub.variables->get<double>(_monitor_vars[i_monitor]);
-    auto& monitor = _monitors[i_monitor];
-    monitor.add_sample(iter, val);
+  _log_residual_hist.add_sample(iter, std::log(_vard("normalized_residual")));
+  bool allow_ref = iter > _vari("refine_start_iter");
+  if (_vari("automate_adapt_schedule")) {
+    bool sufficient_drop = _vard("normalized_residual") < _vard("next_refine_residual");
+    bool stagnated = _log_residual_hist.converged({_vard("residual_stagnation_tol")}, {huge});
+    allow_ref = allow_ref && (sufficient_drop || stagnated);
+  }
+  _inter.variables->assign<int>("allow_refinement", allow_ref);
+  for (Int i_monitor = -1; i_monitor < Int(_monitor_vars.size()); ++i_monitor) {
+    auto& monitor = i_monitor >= 0 ? _monitors[i_monitor] : _log_residual_hist;
+    std::string var_name = "log_normalized_residual";
+    if (i_monitor >= 0) {
+      var_name = _monitor_vars[i_monitor];
+      double val = sub.variables->get<double>(var_name);
+      monitor.add_sample(iter, val);
+    }
     auto assign = [&](std::string suffix, double value) {
-      std::string name = _monitor_vars[i_monitor] + suffix;
+      std::string name = var_name + suffix;
       _inter.variables->assign(name, value);
-      status_data << name << ": " << value << "\n";
+      status_data << name << ": " << to_string(value) << "\n";
     };
     assign("_smoothed", monitor.smoothed());
     assign("_trend", monitor.trend());
+    assign("_curvature", monitor.curvature());
     assign("_noise", monitor.noise());
     assign("_noise_trend", monitor.noise_trend());
+    assign("_noise_curvature", monitor.noise_curvature());
   }
-  for (auto& hist : _log_residual_hist) hist.add_sample(iter, std::log(_vard("normalized_residual"))/std::log(10.));
 }
 
 Case::Case(std::string input_script)
 : _start_time{std::chrono::system_clock::to_time_t(std::chrono::system_clock::now())}
+, _log_residual_hist{.4}
 {
   _inter.variables->assign("input_script", input_script);
   _inter.variables->assign("version_major", config::version_major);
@@ -379,16 +393,20 @@ Case::Case(std::string input_script)
         freestream(n_dim + 3) = _vard("freestream_density")*std::log(_vard("freestream_specific_turbulent_dissipation"));
       }
       _set_vector("freestream_direction", full_direction);
-      double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*_vard("freestream_density")*veloc.squaredNorm();
+      double density = _vard("freestream_density");
+      double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*density*veloc.squaredNorm();
       _inter.variables->assign("freestream_energy", ener);
       double dyn_visc = _transport_model("viscosity").coefficient(std::sqrt(_vard("freestream_temperature")));
       _inter.variables->assign("freestream_dynamic_viscosity", dyn_visc);
       double therm_cond = _transport_model("conductivity").coefficient(std::sqrt(_vard("freestream_temperature")));
       _inter.variables->assign("freestream_thermal_conductivity", therm_cond);
-      freestream(Eigen::seqN(0, n_dim)) = _vard("freestream_density")*veloc;
-      freestream(n_dim) = _vard("freestream_density");
+      freestream(Eigen::seqN(0, n_dim)) = density*veloc;
+      freestream(n_dim) = density;
       freestream(n_dim + 1) = ener;
       _set_vector("freestream", freestream);
+      if (_transport_model("viscosity").is_viscous) {
+        _inter.variables->assign("reynolds_per_length", density*_vard("freestream_speed")/dyn_visc);
+      }
     }
     return "";
   }));
@@ -430,7 +448,7 @@ Case::Case(std::string input_script)
     _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, ts, transport_models[0],
                                  transport_models[1], turb_model, _inter.variables));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
-    _solver().set_fix_admissibility(_vari("fix_therm_admis"));
+    _solver().set_fix_nonphysical(_vari("fix_nonphysical"));
     return "";
   }));
 
@@ -512,6 +530,8 @@ Case::Case(std::string input_script)
       }
       printers::info("\n");
     }
+    _solver().init_av_length();
+    _solver().update_av_length(_vari("av_coef_iters_initial"));
     printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.\n", true);
     _solver().print_preti_iters();
     return "";
@@ -539,13 +559,7 @@ Case::Case(std::string input_script)
   _inter.variables->create("adapt", new Namespace::Heisenberg<std::string>([this]() {
     int iter = _vari("iteration");
     if (iter < _vari("adapt_start_iter") || iter > _vari("adapt_stop_iter")) return "";
-    bool allow_ref = iter > _vari("refine_start_iter");
-    if (_vari("automate_adapt_schedule")) {
-      bool sufficient_drop = _vard("normalized_residual") < _vard("next_refine_residual");
-      double res_trend = std::max(std::abs(_log_residual_hist[0].trend()), std::abs(_log_residual_hist[1].trend()));
-      bool stagnated = res_trend*_vard("monitor_window")*iter < _vard("residual_stagnation_tol");
-      allow_ref = allow_ref && (sufficient_drop || stagnated);
-    }
+    bool allow_ref = _vari("allow_refinement");
     printers::info("Performing uncertainty-based mesh adaptation (");
     if (allow_ref) {
       printers::info("refinement allowed", true);
@@ -582,11 +596,15 @@ Case::Case(std::string input_script)
       result = _solver().mesh().plan_adaptation([](Element&, int){return false;}, _ref_crit("adapt_unrefine_if"), true);
     }
     _inter.variables->assign("hexed_tol_factor", tol_factor);
-    if (result.changed) _solver().mesh().execute_adaptation();
-    _inter.variables->assign<int>("adapt_changed", result.changed);
+    if (result.changed) {
+      _solver().mesh().execute_adaptation();
+    }
     _solver().calc_jacobian();
-    _solver().compute_residual();
+    _solver().update_av_length(_vari("av_coef_iters_update"));
+    _inter.variables->assign<int>("adapt_changed", result.changed);
+    _solver().compute_residual(false);
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
+    _solver().update_preti_iters();
     _solver().print_preti_iters();
     return "";
   }));
@@ -614,7 +632,8 @@ Case::Case(std::string input_script)
       if (!result.changed) break;
     }
     _solver().calc_jacobian();
-    _solver().compute_residual();
+    _solver().update_av_length(100);
+    _solver().compute_residual(false);
     printers::info("done\n");
     return "";
   }));
@@ -671,12 +690,10 @@ Case::Case(std::string input_script)
     _monitor_vars = sub.variables->names();
     for (std::string name : _monitor_vars) {
       _monitors.emplace_back(_vard("monitor_window"));
-      for (std::string suffix : {"_smoothed", "_noise", "_trend", "_noise_trend"}) {
+      for (std::string suffix : {"_smoothed", "_noise", "_trend", "_curvature", "_noise_trend", "_noise_curvature"}) {
         _inter.variables->assign_default(name + suffix, 0.);
       }
     }
-    _log_residual_hist.emplace_back(.2);
-    _log_residual_hist.emplace_back(.4);
     return "";
   }));
 
@@ -761,19 +778,18 @@ Case::Case(std::string input_script)
   _inter.variables->create<std::string>("compute_residuals", new Namespace::Heisenberg<std::string>([this]() {
     int nd = _solver().storage_params().n_dim;
     Physical_residual phys_resid;
-    _solver().compute_residual();
-    auto res = _solver().integral_field(Pow(phys_resid, 2));
-    for (int i_dim = 1; i_dim < nd; ++i_dim) res[0] += res[i_dim];
-    for (double& r : res) r = std::sqrt(r);
-    _inter.variables->assign("residual_momentum", res[0]);
-    _inter.variables->assign("residual_density", res[nd]);
-    _inter.variables->assign("residual_energy", res[nd + 1]);
+    auto compute_res = [&](bool unsteady_implicit, std::string prefix) {
+      _solver().compute_residual(unsteady_implicit);
+      auto res = _solver().integral_field(Pow(phys_resid, 2));
+      for (int i_dim = 1; i_dim < nd; ++i_dim) res[0] += res[i_dim];
+      for (double& r : res) r = std::sqrt(r);
+      _inter.variables->assign(prefix + "residual_momentum", res[0]);
+      _inter.variables->assign(prefix + "residual_density", res[nd]);
+      _inter.variables->assign(prefix + "residual_energy", res[nd + 1]);
+    };
+    compute_res(false, "");
+    if (!_vari("steady") && _vari("implicit")) compute_res(true, "unsteady_");
     if (_vari("iteration") > 0) _solver().compute_spectral_uncertainty();
-    return "";
-  }));
-
-  _inter.variables->create<std::string>("compute_lts_constraints", new Namespace::Heisenberg<std::string>([this]() {
-    _solver().compute_lts_constraints();
     return "";
   }));
 
@@ -820,20 +836,20 @@ Case::Case(std::string input_script)
     int n = iter ? print_freq - iter%print_freq : 1;
     for (int i = 0; i < n; ++i) {
       ++iter;
-      if (_inter.variables->get<int>("diffusive_admissibility")) _solver().set_art_visc_admis();
       if (_inter.variables->get<int>("elementwise_art_visc")) {
         _solver().update_art_visc_elwise(_vard("art_visc_width"), _vari("elementwise_art_visc_pde"));
       } else if (avw) {
         _solver().update_art_visc_smoothness(_vard("art_visc_width"));
       } else if (avc) {
         _solver().set_art_visc_constant(_vard("art_visc_constant"));
-      } else if (!_vari("diffusive_admissibility") && _solver().using_art_visc()) {
+      } else if (_solver().using_art_visc()) {
         printers::info("Turning off artificial viscosity.\n", true);
         _solver().set_art_visc_off();
       }
       _solver().update();
     }
     _inter.variables->assign(be ? "pseudotime_iteration" : "iteration", iter);
+    _inter.variables->assign("total_iteration", _vari("total_iteration") + n);
     if (!be) _update_monitors();
     return "";
   }));

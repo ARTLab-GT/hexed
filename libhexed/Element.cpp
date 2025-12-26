@@ -12,7 +12,8 @@ Element::Element(Storage_params params_arg, Tree& t, bool mobile_vertices, int a
 , n_dof(params.n_dof())
 , n_vert(params.n_vertices())
 , data_size{params.n_dof_numeric() + config::debug_variables*params.n_qpoint() + n_dim}
-, face_size{(is_def*params.n_dim + std::max(2*params.n_var, params.n_dim + params.n_advection(params.row_size)))*params.n_face_qpoint()}
+, face_size{(is_def*params.n_dim +
+             std::max(2*params.n_var, params.n_dim + params.n_advection(params.row_size)))*params.n_face_qpoint()}
 , data{Eigen::VectorXd::Zero(data_size + 2*n_dim*face_size)}
 , _vertex_data({3, params.n_vertices()})
 , _mask{0}
@@ -144,7 +145,13 @@ bool Element::is_sharp(int i_dim) {
 }
 
 double* Element::stage(int i_stage) {
-  return (i_stage > 0) ? residual_cache() + (i_stage - 1)*n_dof : state();
+  if (i_stage == 0) {
+    return state();
+  } else if (i_stage == 1) {
+    return residual_cache();
+  } else {
+    return residual_cache() + (params.n_advection(params.row_size) + i_stage - 2)*params.n_qpoint();
+  }
 }
 
 Array<double> Element::flow_state() {
@@ -298,7 +305,8 @@ next::Element_shape& Element::active_shape() {
 
 double* Element::state() {return data.data();}
 double* Element::residual_cache() {
-  return data.data() + (params.n_var + 3 + params.n_forcing + params.row_size)*params.n_qpoint();
+  int n = params.n_var + 3 + params.n_forcing + params.n_offset*params.n_advection(params.row_size);
+  return data.data() + n*params.n_qpoint();
 }
 double* Element::face(int i_face, bool is_ldg) {
   return _faces[i_face].flow_state()(is_ldg).data();

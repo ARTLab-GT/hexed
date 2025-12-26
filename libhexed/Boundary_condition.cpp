@@ -186,68 +186,7 @@ void Pressure_outflow::apply_flux(Boundary_connection& con) {
   con.ghost().flow_state()(1) = -con.inside().flow_state()(1);
 }
 
-Function_bc::Function_bc(const Surface_func& func_arg) : func{func_arg} {}
-
-void Function_bc::apply_state(Boundary_connection& con) {
-  auto params = con.ghost().storage_params();
-  const int nfq = params.n_qpoint()/params.row_size;
-  Array<double> ghost_state = con.ghost().flow_state()(0);
-  Array<double> inside_state = con.inside().flow_state()(0);
-  Array<double> normal = con.normal();
-  Array<double> position = con.position();
-  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-    // fetch shared/inside face data
-    std::vector<double> n(params.n_dim);
-    std::vector<double> p(params.n_dim);
-    std::vector<double> s(params.n_var);
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-      n[i_dim] = normal(i_dim)[i_qpoint];
-      p[i_dim] = position(i_dim)[i_qpoint];
-    }
-    for (int i_var = 0; i_var < params.n_var; ++i_var) s[i_var] = inside_state(i_var)[i_qpoint];
-    // apply function
-    auto state = func(p, 0, s, n);
-    // write result to ghost face
-    for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      ghost_state(i_var)[i_qpoint] = state[i_var];
-    }
-  }
-}
-
-void Cache_bc::apply_state(Boundary_connection& con) {
-  con.ghost().flow_state()(0) = con.state_cache();
-  con.ghost().flow_state()(1) = con.inside().flow_state()(1);
-}
-
-void Cache_bc::init_cache(Boundary_connection& con) {
-  auto params = con.ghost().storage_params();
-  const int nfq = params.n_qpoint()/params.row_size;
-  Array<double> inside_state = con.inside().flow_state()(0);
-  Array<double> state_cache = con.state_cache();
-  Array<double> normal = con.normal();
-  Array<double> position = con.position();
-  for (int i_qpoint = 0; i_qpoint < nfq; ++i_qpoint) {
-    // fetch shared/inside face data
-    std::vector<double> n(params.n_dim);
-    std::vector<double> p(params.n_dim);
-    std::vector<double> s(params.n_var);
-    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-      n[i_dim] = normal(i_dim)[i_qpoint];
-      p[i_dim] = position(i_dim)[i_qpoint];
-    }
-    for (int i_var = 0; i_var < params.n_var; ++i_var) s[i_var] = inside_state(i_var)[i_qpoint];
-    // apply function
-    auto state = (*func)(p, 0, s, n);
-    // write result to ghost face
-    for (int i_var = 0; i_var < params.n_var; ++i_var) {
-      state_cache(i_var)[i_qpoint] = state[i_var];
-    }
-  }
-}
-
-void Function_bc::apply_flux(Boundary_connection& con) {copy_state(con);}
 void Freestream::apply_flux(Boundary_connection& con) {copy_state(con);}
-void Cache_bc::apply_flux(Boundary_connection& con) {copy_state(con);}
 
 void reflect_normal(double* gh_f, double* nrml, int nq, int nd) {
   for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {

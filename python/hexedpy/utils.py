@@ -210,6 +210,7 @@ class History_plot:
     def _init(self):
         self._curves = []
         self._stats = {}
+        self._i_unsteady_res = -1
         for i_col in range(len(self._plot_columns)):
             col = self._plot_columns[i_col]
             label = col.replace("_", " ")
@@ -219,7 +220,11 @@ class History_plot:
             self._curves.append(ax.plot([], [])[0])
             ax.set_xlim(0., 1.)
             ax.grid(True)
-            ax.set_xlabel("iteration")
+            if label == "unsteady residual":
+                ax.set_xlabel("total iteration")
+                self._i_unsteady_res = i_col
+            else:
+                ax.set_xlabel("iteration")
             ax.set_ylabel(label)
             if label.endswith("residual") or label.endswith("error"):
                 self._axs[i_col].set_ylim(0.1, 1.)
@@ -229,6 +234,8 @@ class History_plot:
                 ax.plot([], [], color="grey", linestyle="dashed")[0],
                 ax.plot([], [], color="grey", linestyle="dashed")[0],
             ]
+        if self._i_unsteady_res >= 0:
+            self._iter_scatter = self._axs[self._i_unsteady_res].plot([], [], color="black", linestyle="", marker="o")[0]
         return self._curves
 
     def _update(self, _):
@@ -238,20 +245,24 @@ class History_plot:
             if line.startswith("simulation complete"):
                 self._stop = True
             try:
-                status_data = pd.read_csv(self._directory + "status_data.txt", delimiter=":", names=["parameter", "value"], index_col=0)
+                status_data = pd.read_csv(self._directory + "status_data.txt", delimiter=":", names=["parameter", "value"], index_col=0, na_values=["+nan"])
+                assert status_data["value"].dtype == np.float64
                 has_status = True
             except:
                 has_status = False
             if re.match(" *[0-9]+,", line):
                 entries = line.split(",")
                 add_line = self._data.shape[0]
-                if add_line > 0 and int(entries[0]) == self._data["iteration"][add_line - 1]:
-                    add_line -= 1
-                self._data.loc[add_line] = [int(entries[0])] + [float(e) for e in entries[1:]]
-                last_iter = self._data["iteration"][self._data.shape[0] - 1]
-                if last_iter > self._axs[0].get_xlim()[1]:
-                    for ax in self._axs:
-                        ax.set_xlim(0, self._data["iteration"].max()*2)
+                self._data.loc[self._data.shape[0]] = [int(entries[0])] + [float(e) for e in entries[1:]]
+                for i_col in range(len(self._plot_columns)):
+                    last_iter = self._data["iteration"][self._data.shape[0] - 1]
+                    if self._plot_columns[i_col] == "unsteady_residual":
+                        index = "total_iteration"
+                    else:
+                        index = "iteration"
+                    xlim = self._axs[i_col].get_xlim();
+                    if self._data[index][self._data.shape[0] - 1] > xlim[1]:
+                        self._axs[i_col].set_xlim(xlim[0], self._data[index].max()*2)
                 for i_col in range(len(self._plot_columns)):
                     ax = self._axs[i_col]
                     col = self._plot_columns[i_col]
@@ -271,18 +282,34 @@ class History_plot:
                             elif last_value > ylim[1]:
                                 ax.set_ylim(ylim[0], ylim[0] + 1.5*(self._data[col].max() - ylim[0]))
                     if has_status:
-                        if col + "_smoothed" in status_data.index:
-                            smoothed = status_data.at[col + "_smoothed", "value"]
-                            trend = status_data.at[col + "_trend", "value"]
-                            noise = status_data.at[col + "_noise", "value"]
-                            noise_trend = status_data.at[col + "_noise_trend", "value"]
-                            iteration = self._data.at[add_line, "iteration"]
-                            x = [(1 - self._monitor_window)*iteration, iteration]
-                            y = np.array([smoothed - trend*self._monitor_window*iteration, smoothed]);
-                            self._stats[col][0].set_data(x, y)
-                            spread = np.array([noise - noise_trend*self._monitor_window*iteration, noise])
-                            self._stats[col][1].set_data(x, y - spread)
-                            self._stats[col][2].set_data(x, y + spread)
+                        for stats_col in [col, "log_" + col]:
+                            if stats_col + "_smoothed" in status_data.index:
+                                smoothed = status_data.at[stats_col + "_smoothed", "value"]
+                                trend = status_data.at[stats_col + "_trend", "value"]
+                                curve = status_data.at[stats_col + "_curvature", "value"]
+                                noise = status_data.at[stats_col + "_noise", "value"]
+                                noise_trend = status_data.at[stats_col + "_noise_trend", "value"]
+                                noise_curve = status_data.at[stats_col + "_noise_curvature", "value"]
+                                iteration = self._data.at[add_line, "iteration"]
+                                x = np.linspace((1 - self._monitor_window)*iteration, iteration, 20)
+                                y = smoothed + trend*(x - iteration) + curve*.5*(x - iteration)**2
+                                spread = noise + noise_trend*(x - iteration) + noise_curve*.5*(x - iteration)**2
+                                def transform(data):
+                                    if stats_col.startswith("log_"): return np.exp(data)
+                                    return data
+                                self._stats[col][0].set_data(x, transform(y))
+                                self._stats[col][1].set_data(x, transform(y - spread))
+                                self._stats[col][2].set_data(x, transform(y + spread))
         for i_col in range(len(self._plot_columns)):
-            self._curves[i_col].set_data(self._data["iteration"], self._data[self._plot_columns[i_col]])
+            if self._plot_columns[i_col] == "unsteady_residual":
+                x = self._data["total_iteration"]
+            else:
+                x = self._data["iteration"]
+            x = np.array(x, dtype=np.int64)
+            mask = np.concatenate([x[:-1] != x[1:], [True]])
+            self._curves[i_col].set_data(x[mask], self._data[self._plot_columns[i_col]][mask])
+        if self._i_unsteady_res >= 0:
+            x = np.array(self._data["iteration"], dtype=np.int64)
+            mask = np.concatenate([[True], x[1:] != x[:-1]])
+            self._iter_scatter.set_data(self._data["total_iteration"][mask], self._data["unsteady_residual"][mask])
         return self._curves

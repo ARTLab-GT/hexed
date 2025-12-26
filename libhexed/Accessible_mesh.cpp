@@ -1161,7 +1161,7 @@ void Accessible_mesh::_fit_surface() {
   }
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    if (!elem.active_shape().acceptable_quality(true)) {
+    if (!elem.active_shape().acceptable_quality()) {
       visualize("default", "failed_mesh", 0.);
       elem.active_shape().visualize("default", "bad_elem");
       HEXED_THROW("Unacceptable quality after surface warping.")
@@ -1592,8 +1592,8 @@ next::Sequence<std::vector<Face_refinement>&> Accessible_mesh::face_refinements(
   return next::Sequence<std::vector<Face_refinement>&>::vector_view(_face_refs);
 }
 
-int Accessible_mesh::add_boundary_condition(Flow_bc* flow_bc) {
-  bound_conds.emplace_back(flow_bc);
+int Accessible_mesh::add_boundary_condition(std::shared_ptr<Flow_bc> flow_bc) {
+  bound_conds.push_back(flow_bc);
   // no reason to delete boundary conditions, so the serial number can just be the index
   return bound_conds.size() - 1;
 }
@@ -1912,11 +1912,11 @@ Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t, int aniso_ref_leve
   return elem;
 }
 
-void Accessible_mesh::create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin) {
+void Accessible_mesh::create_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin) {
   // take ownership of bcs (do this first to avoid memory leak)
   std::vector<int> new_tree_bcs;
   //! \todo this could, in theory, be a resource leak because these are never erased if an exception is thrown...
-  for (Flow_bc* fbc : extremal_bcs) new_tree_bcs.push_back(add_boundary_condition(fbc));
+  for (auto& fbc : extremal_bcs) new_tree_bcs.push_back(add_boundary_condition(fbc));
   HEXED_ASSERT(int(extremal_bcs.size()) == 2*params.n_dim, "`extremal_bcs` has wrong number of elements");
   HEXED_ASSERT(!tree, "each `Mesh` may only contain one tree");
   // add the tree
@@ -1924,7 +1924,7 @@ void Accessible_mesh::create_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> orig
   tree.reset(new Tree(params.n_dim, root_sz, origin));
 }
 
-void Accessible_mesh::add_tree(std::vector<Flow_bc*> extremal_bcs, Mat<> origin) {
+void Accessible_mesh::add_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin) {
   create_tree(extremal_bcs, origin);
   auto& elem = add_elem(false, *tree, 0);
   int sn = elem.record;
@@ -1946,7 +1946,8 @@ bool Accessible_mesh::is_surface(Tree* t) {
   return t->get_status() == 0;
 }
 
-void Accessible_mesh::set_surface(Surface_geom* geometry, Flow_bc* surface_bc, Eigen::VectorXd flood_fill_start) {
+void Accessible_mesh::set_surface(Surface_geom* geometry, std::shared_ptr<Flow_bc> surface_bc,
+                                  Eigen::VectorXd flood_fill_start) {
   printers::info("  Incorporating surface geometry...\n");
   // take ownership of the surface geometries (do this first to avoid memory leak)
   surf_bc_sn = add_boundary_condition(surface_bc);
@@ -2385,6 +2386,7 @@ void Accessible_mesh::purge() {
 Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Element&, int)> refine_criterion,
                                                          std::function<bool(Element&, int)> unrefine_criterion,
                                                          bool set_floor) {
+  printers::info("  (planning adaptation...");
   // decide which elements to (un)refine
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -2401,6 +2403,40 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
         elem.desired_refinement(i_dim) = -1;
       } else {
         elem.desired_refinement(i_dim) = 0;
+      }
+    }
+  }
+  // set the desired refinement level of elements on extremal boundaries to match their inside neighbors
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+    auto& elem = elems[i_elem];
+    Array<int> direction({params.n_dim});
+    direction = 0;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      for (int face_sign : {0, 1}) {
+        auto& face = elem.face(2*i_dim + face_sign);
+        if (face.neighbor_connection()) {
+          auto& opposite = face.neighbor_connection()->opposite_face(face);
+          if (opposite.boundary_connection()) {
+            int bc = opposite.boundary_connection()->boundary_condition();
+            if (!bound_conds[bc]->smooth()) {
+              // we get here iff `face` is on a non-smooth extremal boundary
+              direction[i_dim] = !face_sign;
+            }
+          }
+        }
+      }
+    }
+    if (direction.abs().extreme(1)) { // if the element is on an extremal boundary
+      Tree* n = elem.tree->find_neighbor(direction);
+      if (!n) continue;
+      if (!n->elem) continue;
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        if (direction[i_dim] != 0) {
+          int des_ref = n->elem->tree->anisotropic_refinement_level()[i_dim] + n->elem->desired_refinement(i_dim)
+                        - elem.tree->anisotropic_refinement_level()[i_dim];
+          elem.desired_refinement(i_dim) = std::max(-1, std::min(1, des_ref));
+        }
       }
     }
   }
@@ -2466,13 +2502,21 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
       p += des_ref;
       int arl = elems[i_elem].tree->anisotropic_refinement_level()[i_dim];
       new_inv_sz += std::pow(2., arl + des_ref);
-      if (set_floor) elems[i_elem].refinement_floor()[i_dim] = arl + des_ref;
+      if (set_floor) {
+        int& floor = elems[i_elem].refinement_floor()[i_dim];
+        if (des_ref > 0) {
+          floor = arl + des_ref;
+        } else {
+          floor = std::min(floor, arl + des_ref);
+        }
+      }
     }
     if (p < 0) n_coarsen += 1 - math::pow(2., p); // lose this element and add one shared with 2^p siblings
     if (p > 0) n_refine += math::pow(2., p) - 1; // add 2^p elements and lose this one
     changed = changed || (p != 0);
     tot_inv_sz += math::pow(2., p)*new_inv_sz;
   }
+  printers::info(" done)");
   return {Int(std::round(n_refine)), Int(std::round(n_coarsen)), Int(std::round(elems.size() + n_refine - n_coarsen)),
           changed};
 }
@@ -2529,16 +2573,19 @@ void Accessible_mesh::execute_adaptation() {
           if (is_modified[i_dim]) {
             int rel_pos = row_coords[i_dim];
             Mat<dyn, dyn> matrix = ref_unref ? solver_basis.restrict(rel_pos) : solver_basis.prolong(rel_pos);
-            for (int i_var = 0; i_var < params.n_var_numeric(); ++i_var) {
-              state(i_var).vector() = math::dimension_matvec(matrix, state(i_var).vector(), i_dim);
+            for (int i_var = 0; i_var < state.shape()[0]; ++i_var) {
+              Mat<> row = state(i_var).vector();
+              state(i_var).vector() = math::dimension_matvec(matrix, row, i_dim);
             }
             for (int i_var = 0; i_var < params.n_var; ++i_var) {
               for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) if (j_dim != i_dim) {
                 Array<double> face = faces(j_dim)(i_var);
+                double scale = ref_unref ? 2. : .5;
                 if (params.n_dim == 3) {
-                  face.vector() = math::dimension_matvec(matrix, face.vector(), i_dim > 3 - i_dim - j_dim);
+                  Mat<> temp = face.vector();
+                  face.vector() = scale*math::dimension_matvec(matrix, temp, i_dim > 3 - i_dim - j_dim);
                 } else if (params.n_dim == 2) {
-                  face.vector() = matrix*face.vector();
+                  face.vector() = scale*matrix*face.vector();
                 }
               }
             }
@@ -2857,6 +2904,10 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   _n_verts = _blocks.verts().size();
   _stopwatch["update"].work_units_completed += 1;
   Int n_after = elems.size();
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < n_after; ++i_elem) {
+    elems[i_elem].refinement_floor() = elems[i_elem].tree->anisotropic_refinement_level();
+  }
   return n_after - n_before;
 }
 
@@ -2927,13 +2978,13 @@ std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::pret
   reset_masks();
   std::vector<std::unique_ptr<Masked_mesh>> masks;
   masks.emplace_back(new Masked_mesh(*this, basis));
+  Array<int> root_arl = tree->root()->anisotropic_refinement_level();
   while (masks.back()->kernel_mesh.elems.size()) {
-    auto predicate = [this, iso](Element& elem){
+    auto predicate = [this, iso, &root_arl](Element& elem){
       int level;
       if (iso) {
         if (elem.tree->is_graft()) {
-          level = (elem.tree->anisotropic_refinement_level()
-                   - elem.tree->root()->anisotropic_refinement_level()).extreme(1);
+          level = (elem.tree->anisotropic_refinement_level() - root_arl).extreme(1);
         } else {
           level = 0;
         }
@@ -2949,7 +3000,7 @@ std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::pret
 }
 
 next::Sequence<Flow_bc&> Accessible_mesh::boundary_conditions() {
-  return next::Sequence<std::unique_ptr<Flow_bc>&>::vector_view(bound_conds).dereference<Flow_bc&>();
+  return next::Sequence<std::shared_ptr<Flow_bc>&>::vector_view(bound_conds).dereference<Flow_bc&>();
 }
 
 next::Sequence<Boundary_connection&> Accessible_mesh::boundary_connections() {
@@ -3280,11 +3331,10 @@ void Accessible_mesh::read_file(std::string file_name) {
   cleanup();
 }
 
-Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> extremal_bcs, Turbulence_model turb,
-                                 Surface_geom* geometry, Flow_bc* surface_bc)
+Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> extremal_bcs,
+                                 Turbulence_model turb, Surface_geom* geometry, std::shared_ptr<Flow_bc> surface_bc)
 : Accessible_mesh(read_params(file_name), read_root_sz(file_name), turb) {
   // take ownership of these to avoid memory leaks in case of exception
-  std::unique_ptr<Flow_bc> fbc(surface_bc);
   std::unique_ptr<Surface_geom> g(geometry);
   // create the tree
   {
@@ -3295,17 +3345,19 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> ex
     h5_read_row(orig_dset, params.n_dim, 0, orig.data());
     create_tree(extremal_bcs, orig);
   }
-  HEXED_ASSERT(bool(fbc) == bool(g), "must specify both surface geometry and surface boundary condition or neither");
+  HEXED_ASSERT(bool(surface_bc) == bool(g),
+               "You must specify both surface geometry and surface boundary condition or neither.");
   if (surface_bc) {
-    surf_bc_sn = add_boundary_condition(fbc.release());
+    surf_bc_sn = add_boundary_condition(surface_bc);
     surf_geom.reset(g.release());
   }
   read_file(file_name);
 }
 
-Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<Flow_bc*> flow_bcs, Turbulence_model turb)
+Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> flow_bcs,
+                                 Turbulence_model turb)
 : Accessible_mesh(read_params(file_name), read_root_sz(file_name), turb) {
-  for (unsigned i_bc = 0; i_bc < flow_bcs.size(); ++i_bc) add_boundary_condition(flow_bcs[i_bc]);
+  for (auto& fbc : flow_bcs) add_boundary_condition(fbc);
   read_file(file_name);
 }
 
