@@ -446,24 +446,36 @@ void Solver::init_av_length() {
 
 void Solver::update_av_length(Int n_iter) {
   printers::info("  Updating artificial viscosity length scale...");
-  double wsw = std::max(_namespace->get<double>("min_wall_shock_width_reynolds")
-                        /_namespace->get<double>("reynolds_per_length"),
-                        _namespace->get<double>("min_wall_shock_width"));
-  double growth = _namespace->get<double>("shock_width_growth");
-  double limit = _namespace->get<double>("shock_width_limit");
-  auto& elems = acc_mesh->elements();
-  auto& geom = acc_mesh->surface_geometry();
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    Array<double> pos = elem.position(basis);
-    double* length = elem.laplacian_av_coef();
-    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-      Mat<> p = pos.column(i_qpoint).vector();
-      auto nearest = geom.nearest_point(p);
-      HEXED_ASSERT(!nearest.empty(), "Failed to compute nearest point.")
-      length[i_qpoint] = wsw + growth*(p - nearest.point()).norm();
-      if (limit > 0) length[i_qpoint] = limit*length[i_qpoint]/(limit + length[i_qpoint]);
+  auto state_bc = [&]() {
+    auto bc_cons {_preti_masks[0]->bound_cons};
+    #pragma omp parallel for
+    for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
+      Array<double> ghost = bc_cons[i_con]->ghost().flow_state()(0);
+      Array<double> inside = bc_cons[i_con]->inside().flow_state()(0);
+      ghost = double(math::sign(bc_cons[i_con]->boundary_condition() < 2*params.n_dim))*inside;
+    }
+  };
+  auto flux_bc = [&]() {
+    auto bc_cons {_preti_masks[0]->bound_cons};
+    #pragma omp parallel for
+    for (Int i_con = 0; i_con < (Int)bc_cons.size(); ++i_con) {
+      Array<double> ghost = bc_cons[i_con]->ghost().flow_state()(1);
+      Array<double> inside = bc_cons[i_con]->inside().flow_state()(1);
+      ghost = double(math::sign(bc_cons[i_con]->boundary_condition() == 2*params.n_dim))*inside;
+    }
+  };
+  Kernel_options opts {
+    .sw_car = stopwatch["compute av length"]["cartesian"],
+    .sw_def = stopwatch["compute av length"]["deformed"],
+    .sw_pr = stopwatch["compute av length"]["prolong/restrict"],
+    .dt = 1.,
+    .i_stage = 0,
+  };
+  Int print_freq = _namespace->get<int>("print_freq");
+  for (Int i_iter = 0; i_iter < std::max<Int>(n_iter/print_freq, 1); ++i_iter) {
+    printers::info(str_cat("  Iteration ", i_iter*print_freq, "\n"));
+    for (int j_iter = 0; j_iter < print_freq; ++j_iter) {
+      compute_eikonal(_preti_masks[0]->kernel_mesh, opts, state_bc, flux_bc, .7, .7, 0.1);
     }
   }
   printers::info(" done.\n");
@@ -1012,6 +1024,7 @@ void Solver::update() {
     }
     ++_iter;
   }
+  #if 0
   if (_time_scheme == explicit_steady) {
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1022,6 +1035,7 @@ void Solver::update() {
       lagged_state += 1e-4*(curr_state - lagged_state);
     }
   }
+  #endif
   ++status.iteration;
   stopwatch.stopwatch.pause();
 }

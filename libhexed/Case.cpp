@@ -406,6 +406,8 @@ Case::Case(std::string input_script)
       _set_vector("freestream", freestream);
       if (_transport_model("viscosity").is_viscous) {
         _inter.variables->assign("reynolds_per_length", density*_vard("freestream_speed")/dyn_visc);
+      } else {
+        _inter.variables->assign("reynolds_per_length", huge);
       }
     }
     return "";

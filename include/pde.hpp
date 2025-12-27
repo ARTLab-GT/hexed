@@ -13,11 +13,17 @@
  */
 namespace hexed::pde {
 
+constexpr int n_forcing = 4;
+constexpr int n_offset = 2;
 constexpr int tss_offset(int n_var) {return n_var + 0;}
 constexpr int bulk_av_offset(int n_var) {return n_var + 1;}
 constexpr int laplacian_av_offset(int n_var) {return n_var + 2;}
 constexpr int forcing_offset(int n_var) {return n_var + 3;}
-constexpr int advection_offset(int n_var) {return n_var + 7;}
+constexpr int advection_offset(int n_var) {return n_var + 3 + n_forcing;}
+
+constexpr int residual_cache_offset(int n_var, int row_size) {
+  return advection_offset(n_var) + n_offset*row_size;
+}
 
 /*!
  * contains a PDE class representing the Naver-Stokes equations
@@ -589,22 +595,20 @@ class Fix_nonphysical {
 };
 
 template <int n_dim, int row_size>
-class Poisson {
+class Eikonal {
   int _n_var;
-  double _forcing;
-  double _ff_value;
+  double _smoothing;
   public:
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
   static constexpr bool has_source = true;
-  static constexpr int n_state = 1;
+  static constexpr int n_state = 2;
   static constexpr int n_update = 1;
   static constexpr int n_extrap = 1;
 
-  Poisson(int n_var, double forcing, double farfield_value)
+  Eikonal(int n_var, double smoothing)
   : _n_var{n_var}
-  , _forcing{forcing}
-  , _ff_value{farfield_value}
+  , _smoothing{smoothing}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
@@ -617,33 +621,70 @@ class Poisson {
 
   template <int n_dim_flux>
   class Computation {
-    const Poisson& _eq;
+    const Eikonal& _eq;
     public:
     Mat<config::debug_variables> debug_variables;
     bool debug_vars_set = false;
 
-    Computation(const Poisson& eq) : _eq{eq} {}
+    Computation(const Eikonal& eq) : _eq{eq} {}
 
     Mat<n_state> state;
-    void fetch_state(int stride, const double* data) {state(0) = data[laplacian_av_offset(_eq._n_var)*stride];}
+    void fetch_state(int stride, const double* data) {
+      state(0) = data[laplacian_av_offset(_eq._n_var)*stride];
+      state(1) = data[(residual_cache_offset(_eq._n_var, row_size) + 1)*stride];
+    }
 
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
     Mat<n_extrap, n_dim> gradient;
     Mat<n_update, n_dim_flux> flux_diff;
     void compute_flux_diff() {
-      flux_diff.noalias() = -std::abs(state(0))*gradient*normal;
+      //flux_diff.noalias() = -std::abs(state(0))*gradient*normal;
+      flux_diff.noalias() = -gradient*normal;
     }
     double diffusivity;
     void compute_diffusivity() {
-      diffusivity = std::abs(state(0));
+      diffusivity = 1.;
     }
 
     Mat<n_update> source;
-    void compute_source() {
-      source(0) = _eq._forcing*(1. - state(0));
-    }
+    void compute_source() {source(0) = 1.;}
     double decay;
-    void compute_decay() {decay = _eq._forcing;}
+    void compute_decay() {decay = 0.;}
+  };
+};
+
+template <int n_dim, int row_size>
+class Laplace {
+  int _offset;
+  public:
+  static constexpr bool has_diffusion = true;
+  static constexpr bool has_convection = false;
+  static constexpr bool has_source = false;
+  static constexpr int n_state = 1;
+  static constexpr int n_update = 1;
+  static constexpr int n_extrap = 1;
+
+  Laplace(int n_var, int offset) : _offset{offset} {}
+  Mat<n_extrap> fetch_extrap(int stride, const double* data) const {return Mat<1>{data[_offset*stride]};}
+  void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
+    data[_offset*stride] += update(0);
+  }
+
+  template <int n_dim_flux>
+  class Computation {
+    const Laplace& _eq;
+    public:
+    Mat<config::debug_variables> debug_variables;
+    bool debug_vars_set = false;
+    Computation(const Laplace& eq) : _eq{eq} {}
+    Mat<n_state> state;
+    void fetch_state(int stride, const double* data) {state(0) = data[_eq._offset*stride];}
+    Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
+    Mat<n_extrap, n_dim> gradient;
+    Mat<n_update, n_dim_flux> flux_diff;
+    void compute_flux_diff() {flux_diff.noalias() = -gradient*normal;}
+    double diffusivity;
+    void compute_diffusivity() {diffusivity = 1.;}
   };
 };
 

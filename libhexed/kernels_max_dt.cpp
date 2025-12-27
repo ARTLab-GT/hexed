@@ -41,12 +41,5 @@ double max_dt_fix_nonphysical(Kernel_mesh mesh, Kernel_options opts, double msc,
   else COMPUTE_MAX_DT(pde::Fix_nonphysical<2>::Pde)
 }
 
-double max_dt_poisson(Kernel_mesh mesh, Kernel_options opts, double msd, double forcing) {
-  double msc = 1.;
-  bool local_time = true;
-  bool calc_ts_ratio = false;
-  COMPUTE_MAX_DT(pde::Poisson, forcing, 0.)
-}
-
 #undef COMPUTE_MAX_DT
 }

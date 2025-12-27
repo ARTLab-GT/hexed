@@ -43,9 +43,9 @@ void compute_write_face(Kernel_mesh);
 void compute_write_face_advection(Kernel_mesh, int offset);
 void compute_write_face_smooth_av(Kernel_mesh);
 
-void compute_write_face_poisson(Kernel_mesh);
-double max_dt_poisson(Kernel_mesh, Kernel_options, double diffusive_safety, double forcing);
-void compute_poisson(Kernel_mesh, Kernel_options, std::function<void()> flux_bc, double forcing, double farfield_value);
+// performs an update, but doesn't require any preparation (write_face, boundary conditions, etc)
+void compute_eikonal(Kernel_mesh, Kernel_options, std::function<void()> state_bc, std::function<void()> flux_bc,
+                     double convective_safety, double diffusive_safety, double smoothing);
 
 }
 #endif

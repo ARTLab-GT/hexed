@@ -40,8 +40,39 @@ void compute_fix_nonphysical(Kernel_mesh mesh, Kernel_options opts, std::functio
   else COMPUTE_DIFFUSION(pde::Fix_nonphysical<2>::Pde)
 }
 
-void compute_poisson(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, double forcing, double farfield_value) {
-  COMPUTE_DIFFUSION(pde::Poisson, forcing, farfield_value)
+void compute_eikonal(Kernel_mesh mesh, Kernel_options opts, std::function<void()> state_bc,
+                     std::function<void()> flux_bc, double msc, double msd, double smoothing) {
+  int offset = pde::laplacian_av_offset(mesh.n_var);
+  bool compute_res = opts.compute_residual;
+  (*kernel_factory<Spatial<pde::Laplace, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
+                                                             offset))(mesh.elems);
+  state_bc();
+  const int nq = math::pow(mesh.row_size, mesh.n_dim);
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < mesh.elems.size(); ++i_elem) {
+    double* tss = mesh.elems[i_elem].time_step_scale();
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) tss[i_qpoint] = 1.;
+  }
+  opts.compute_residual = true;
+  COMPUTE_DIFFUSION(pde::Laplace, offset);
+  opts.compute_residual = compute_res;
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < mesh.elems.size(); ++i_elem) {
+    double* res = mesh.elems[i_elem].residual_cache();
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
+      res[nq + i_qpoint] = res[i_qpoint];
+    }
+  }
+  (*kernel_factory<Spatial<pde::Eikonal, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
+                                                             smoothing))(mesh.elems);
+  state_bc();
+  (*kernel_factory<Spatial<pde::Eikonal, false>::Max_dt>(mesh.n_dim, mesh.row_size, mesh.basis, true,
+                                                         opts.use_filter, msc, msd, false, mesh.n_var, smoothing))
+                                                        (mesh.car_elems, opts.sw_car, "compute time step");
+  (*kernel_factory<Spatial<pde::Eikonal,  true>::Max_dt>(mesh.n_dim, mesh.row_size, mesh.basis, true,
+                                                         opts.use_filter, msc, msd, false, mesh.n_var, smoothing))
+                                                        (mesh.def_elems, opts.sw_def, "compute time step");
+  COMPUTE_DIFFUSION(pde::Eikonal, smoothing)
 }
 
 #undef COMPUTE_DIFFUSION
