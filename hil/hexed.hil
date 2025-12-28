@@ -123,10 +123,10 @@ air_viscosity = {ref_value = air_visc_ref; ref_temperature = air_visc_ref_temp; 
 air_conductivity = {ref_value = air_cond_ref; ref_temperature = air_cond_ref_temp; offset = air_cond_offset;}
 
 shock_sub_iters = 12; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
+n_cheby_av = 12
 set_shock = {
     art_visc_width = (mesh_extreme01 - mesh_extreme00)*2.^-init_ref_level
     fix_nonphysical = true
-    n_cheby_av = shock_sub_iters
     flow_iters = shock_sub_iters
     av_advect_iters = ceil(shock_sub_iters/5.)
     print_vars = print_vars + art_visc_residual_expr
@@ -293,7 +293,7 @@ tangency_tol_subdiv = 10.
 smooth_initial_condition = false
 initial_smoothing_iters = 10^4
 time_step_limit_threshold = 10.
-av_coef_iters_initial = 10^4
+av_coef_iters_initial = 4*10^5
 av_coef_iters_update = 10^3
 
 {array parameters}

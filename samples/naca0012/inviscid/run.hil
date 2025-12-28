@@ -29,6 +29,7 @@ adapt_freq = 10000
 iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}
 vis_field_vars = vis_field_vars + {spectral_uncertainty0 = spectral_uncertainty0; spectral_uncertainty1 = spectral_uncertainty1; spectral_uncertainty2 = spectral_uncertainty2;}
+done = {true}
 
 {run simulation}
 $simulate

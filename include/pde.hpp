@@ -638,16 +638,15 @@ class Eikonal {
     Mat<n_extrap, n_dim> gradient;
     Mat<n_update, n_dim_flux> flux_diff;
     void compute_flux_diff() {
-      //flux_diff.noalias() = -std::abs(state(0))*gradient*normal;
-      flux_diff.setZero();
+      flux_diff.noalias() = -std::abs(state(0))*gradient*normal;
     }
     double diffusivity;
     void compute_diffusivity() {
-      diffusivity = std::abs(state(0)) + 1.;
+      diffusivity = std::abs(state(0)) + 0.1;
     }
 
     Mat<n_update> source;
-    void compute_source() {source(0) = 1. + state(1);}
+    void compute_source() {source(0) = 1. + std::abs(state(0))*state(1);}
     double decay;
     void compute_decay() {decay = 0.;}
   };

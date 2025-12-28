@@ -44,6 +44,7 @@ void compute_eikonal(Kernel_mesh mesh, Kernel_options opts, std::function<void()
                      std::function<void()> flux_bc, double msc, double msd, double smoothing) {
   int offset = pde::laplacian_av_offset(mesh.n_var);
   bool compute_res = opts.compute_residual;
+  double dt = opts.dt;
   (*kernel_factory<Spatial<pde::Laplace, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
                                                              offset))(mesh.elems);
   Vector_view<std::vector<Kernel_face_refinement>&, std::vector<Kernel_face_refinement>> face_refs(mesh.face_refinements);
@@ -58,8 +59,10 @@ void compute_eikonal(Kernel_mesh mesh, Kernel_options opts, std::function<void()
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) tss[i_qpoint] = 1.;
   }
   opts.compute_residual = true;
+  opts.dt = 1.;
   COMPUTE_DIFFUSION(pde::Laplace, offset);
   opts.compute_residual = compute_res;
+  opts.dt = dt;
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < mesh.elems.size(); ++i_elem) {
     double* res = mesh.elems[i_elem].residual_cache();

@@ -470,11 +470,16 @@ void Solver::update_av_length(Int n_iter) {
     .dt = 1.,
     .i_stage = 0,
   };
-  Int print_freq = _namespace->get<int>("print_freq");
-  for (Int i_iter = 0; i_iter < std::max<Int>(n_iter/print_freq, 1); ++i_iter) {
-    printers::info(str_cat("  Iteration ", i_iter*print_freq, "\n"));
-    for (int j_iter = 0; j_iter < print_freq; ++j_iter) {
-      compute_eikonal(_preti_masks[0]->kernel_mesh, opts, state_bc, flux_bc, .7, .7, 0.1);
+  Int n_cheby = 10;
+  double cheby_safety = _namespace->get<double>("cheby_safety");
+  int n_inner = 10;
+  for (Int i_iter = 0; i_iter < std::max<Int>(n_iter/(n_cheby*n_inner), 1); ++i_iter) {
+    printers::info(str_cat("  Iteration ", i_iter*n_cheby*n_inner, "\n"));
+    for (int j_iter = 0; j_iter < n_inner; ++j_iter) {
+      for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
+        opts.dt = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
+        compute_eikonal(_preti_masks[0]->kernel_mesh, opts, state_bc, flux_bc, .5, .5, 0.1);
+      }
     }
   }
   printers::info(" done.\n");
