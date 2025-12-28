@@ -437,10 +437,9 @@ void Solver::calc_jacobian() {
 
 void Solver::init_av_length() {
   auto& elems = acc_mesh->elements();
-  double farfield_coef = _namespace->get<double>("art_visc_width");
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Array<double>({params.n_qpoint()}, elems[i_elem].laplacian_av_coef()) = farfield_coef;
+    Array<double>({params.n_qpoint()}, elems[i_elem].laplacian_av_coef()) = 0.;
   }
 }
 
@@ -944,7 +943,6 @@ void Solver::_update_recursive(int preti_level, double safety) {
 void Solver::update() {
   stopwatch.stopwatch.start(); // ready or not the clock is countin'
   double safety = _namespace->get<double>("max_safety");
-  auto& elems = acc_mesh->elements();
   double cheby_safety = _namespace->get<double>("cheby_safety");
   int inner = 0;
   for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
@@ -1025,6 +1023,7 @@ void Solver::update() {
     ++_iter;
   }
   #if 0
+  auto& elems = acc_mesh->elements();
   if (_time_scheme == explicit_steady) {
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {

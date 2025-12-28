@@ -589,8 +589,7 @@ class Spatial {
 
     virtual void operator()(Sequence<Kernel_element&>& elements) {
       #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
-      {
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
         auto& elem = elements[i_elem];
         double* state = elem.state();
         std::array<double*, 6> visc_faces;
@@ -624,19 +623,24 @@ class Spatial {
 
         bool fringe = elem.mask() < _mask;
         // write update to interior
-        double* to_update = _compute_residual ? elem.residual_cache() : state;
         double* res_cache = elem.residual_cache();
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-          Mat<Pde::n_update> update;
           double mult = _update*tss[i_qpoint]/nominal_volume*(!fringe);
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
-          for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-            update(i_var) = time_rate[i_var][i_qpoint]*mult;
-            if constexpr (is_deformed) if (_conv_substep) {
-              res_cache[(Pde::n_update + i_var)*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint];
+          if (_compute_residual) {
+            for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+              res_cache[i_var*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint]*mult;
             }
+          } else {
+            Mat<Pde::n_update> update;
+            for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+              update(i_var) = time_rate[i_var][i_qpoint]*mult;
+              if constexpr (is_deformed) if (_conv_substep) {
+                res_cache[(Pde::n_update + i_var)*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint];
+              }
+            }
+            _eq.write_update(update, n_qpoint, state + i_qpoint, true);
           }
-          _eq.write_update(update, n_qpoint, to_update + i_qpoint, true);
         }
         // *now* we can extrapolate state to faces
         std::array<double*, 6> faces;

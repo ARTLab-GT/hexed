@@ -46,6 +46,10 @@ void compute_eikonal(Kernel_mesh mesh, Kernel_options opts, std::function<void()
   bool compute_res = opts.compute_residual;
   (*kernel_factory<Spatial<pde::Laplace, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
                                                              offset))(mesh.elems);
+  Vector_view<std::vector<Kernel_face_refinement>&, std::vector<Kernel_face_refinement>> face_refs(mesh.face_refinements);
+  (*kernel_factory<Spatial<pde::Laplace,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size,
+                                                                  mesh.basis, mesh.mask_level, mesh.n_var))
+                                                                 (face_refs, opts.sw_pr);
   state_bc();
   const int nq = math::pow(mesh.row_size, mesh.n_dim);
   #pragma omp parallel for
@@ -65,6 +69,9 @@ void compute_eikonal(Kernel_mesh mesh, Kernel_options opts, std::function<void()
   }
   (*kernel_factory<Spatial<pde::Eikonal, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
                                                              smoothing))(mesh.elems);
+  (*kernel_factory<Spatial<pde::Eikonal,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size,
+                                                                  mesh.basis, mesh.mask_level, mesh.n_var))
+                                                                 (face_refs, opts.sw_pr);
   state_bc();
   (*kernel_factory<Spatial<pde::Eikonal, false>::Max_dt>(mesh.n_dim, mesh.row_size, mesh.basis, true,
                                                          opts.use_filter, msc, msd, false, mesh.n_var, smoothing))
