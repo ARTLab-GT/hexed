@@ -600,7 +600,7 @@ class Eikonal {
   double _smoothing;
   public:
   static constexpr bool has_diffusion = true;
-  static constexpr bool has_convection = false;
+  static constexpr bool has_convection = true;
   static constexpr bool has_source = true;
   static constexpr int n_state = 2;
   static constexpr int n_update = 1;
@@ -633,22 +633,28 @@ class Eikonal {
       state(0) = data[laplacian_av_offset(_eq._n_var)*stride];
       state(1) = data[(residual_cache_offset(_eq._n_var, row_size) + 1)*stride];
     }
+    Mat<n_update> update_state;
+    void fetch_extrap_state(int stride, const double* data) {update_state(0) = data[0];}
 
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
+    Mat<n_update, n_dim_flux> flux_conv;
+    void compute_flux_conv() {flux_conv.setZero();}
     Mat<n_extrap, n_dim> gradient;
     Mat<n_update, n_dim_flux> flux_diff;
     void compute_flux_diff() {
-      flux_diff.noalias() = -std::abs(state(0))*gradient*normal;
+      flux_diff.noalias() = std::abs(state(0))*gradient*normal;
     }
+    double char_speed;
+    void compute_char_speed() {char_speed = std::abs(state(0));}
     double diffusivity;
     void compute_diffusivity() {
-      diffusivity = std::abs(state(0)) + 0.1;
+      diffusivity = 2.1*std::abs(state(0)) + 0.1;
     }
 
     Mat<n_update> source;
-    void compute_source() {source(0) = 1. + std::abs(state(0))*state(1);}
+    void compute_source() {source(0) = 1. + std::max(0., -state(0)) + 1.1*std::abs(state(0))*state(1);}
     double decay;
-    void compute_decay() {decay = 0.;}
+    void compute_decay() {decay = 1.;}
   };
 };
 
