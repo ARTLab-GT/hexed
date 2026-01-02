@@ -160,7 +160,7 @@ class Spatial {
    */
   template <int n_dim, int row_size>
   class Prolong_refined : public Kernel<std::vector<Kernel_face_refinement>&> {
-    static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
+    static constexpr int n_var = std::max(Pde_templ<n_dim, row_size>::n_extrap, Pde_templ<n_dim, row_size>::n_update);
     const Eigen::Matrix<double, row_size, row_size> prolong_mat [2];
     bool _scale;
     bool _offset;
@@ -223,7 +223,7 @@ class Spatial {
    */
   template <int n_dim, int row_size>
   class Restrict_refined : public Kernel<std::vector<Kernel_face_refinement>&> {
-    static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
+    static constexpr int n_var = std::max(Pde_templ<n_dim, row_size>::n_extrap, Pde_templ<n_dim, row_size>::n_update);
     const Eigen::Matrix<double, row_size, row_size> restrict_mat [2];
     bool scl;
     bool off;
@@ -364,7 +364,8 @@ class Spatial {
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
         std::array<double*, 6> face_nrml;
-        double visc_storage [n_dim][Pde::n_extrap][n_qpoint] {}; // for viscous PDEs, will be used to store gradients and later viscous flux
+        constexpr int visc_storage_sz = std::max(Pde::n_update, Pde::n_extrap);
+        double visc_storage [n_dim][visc_storage_sz][n_qpoint] {}; // for viscous PDEs, will be used to store gradients and later viscous flux
         #pragma GCC diagnostic pop
         if constexpr (is_deformed) {
           elem_det = elem.jacobian_determinant();
@@ -379,7 +380,6 @@ class Spatial {
 
         // compute gradient (times jacobian determinant, cause that's easier)
         if constexpr (Pde::has_diffusion) {
-          static_assert(Pde::n_extrap >= Pde::n_update);
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             Mat<Pde::n_extrap> grad_vars = _eq.fetch_extrap(n_qpoint, state + i_qpoint);
             for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) (&time_rate[0][0][i_qpoint])[i_var*n_qpoint] = grad_vars(i_var);
@@ -409,7 +409,13 @@ class Spatial {
               }
             }
           }
-          for (int i = 0; i < 2*Pde::n_update*n_qpoint; ++i) (&time_rate[0][0][0])[i] = 0;
+          for (int i = 0; i < 2; ++i) {
+            for (int j = 0; j < Pde::n_update; ++j) {
+              for (int k = 0; k < n_qpoint; ++k) {
+                time_rate[i][j][k] = 0.;
+              }
+            }
+          }
         }
 
         // compute flux

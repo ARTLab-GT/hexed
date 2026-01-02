@@ -15,6 +15,7 @@
 #include <hexed/Array.hpp>
 #include <hexed/vis_variables.hpp>
 #include <hexed/Printer.hpp>
+#include <hexed/pde.hpp>
 
 namespace hexed {
 
@@ -440,6 +441,7 @@ void Solver::init_av_length() {
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     Array<double>({params.n_qpoint()}, elems[i_elem].laplacian_av_coef()) = 0.;
+    Array<double>({params.n_var, params.n_qpoint()}, elems[i_elem].residual_cache()) = 0.;
   }
 }
 
@@ -472,18 +474,25 @@ void Solver::update_av_length(Int n_iter) {
   };
   Int n_cheby = 1;
   double cheby_safety = _namespace->get<double>("cheby_safety");
-  int n_inner = 100;
-  n_iter = 10'000;
-  for (Int i_iter = 0; i_iter < std::max<Int>(n_iter/(n_cheby*n_inner), 1); ++i_iter) {
-    printers::info(str_cat("  Iteration ", i_iter*n_cheby*n_inner, "\n"));
+  int n_inner = 1000;
+  for (Int i_iter = 0; i_iter < n_iter; ++i_iter) {
+    printers::info(str_cat("  Iteration ", i_iter, "\n"));
+    compute_gradient(_preti_masks[0]->kernel_mesh, opts, state_bc, flux_bc, pde::laplacian_av_offset(params.n_var),
+                     pde::residual_cache_offset(params.n_var, params.row_size) + 1);
+    _namespace->assign<double>("flow_time", i_iter);
+    std::string expr =
+      "dist = laplacian_art_visc;"
+      "grad0 = residual_momentum1;"
+      "grad1 = residual_density;"
+      "laplacian = residual_energy;"
+    ;
+    visualize_field("default", str_cat("eikonal", i_iter), expr);
     for (int j_iter = 0; j_iter < n_inner; ++j_iter) {
       for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
         opts.dt = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
-        compute_eikonal(_preti_masks[0]->kernel_mesh, opts, state_bc, flux_bc, .5, .2, 0.1);
+        compute_eikonal(_preti_masks[0]->kernel_mesh, opts, .1, .1, state_bc, flux_bc, 0.1);
       }
     }
-    _namespace->assign<double>("flow_time", i_iter);
-    visualize_field("default", str_cat("eikonal", i_iter), "dist = laplacian_art_visc");
   }
   printers::info(" done.\n");
 }

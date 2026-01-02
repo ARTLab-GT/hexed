@@ -293,7 +293,7 @@ tangency_tol_subdiv = 10.
 smooth_initial_condition = false
 initial_smoothing_iters = 10^4
 time_step_limit_threshold = 10.
-av_coef_iters_initial = 4*10^5
+av_coef_iters_initial = 100
 av_coef_iters_update = 10^3
 
 {array parameters}

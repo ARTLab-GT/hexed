@@ -602,9 +602,9 @@ class Eikonal {
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = true;
   static constexpr bool has_source = true;
-  static constexpr int n_state = 2;
+  static constexpr int n_state = n_dim + 2;
   static constexpr int n_update = 1;
-  static constexpr int n_extrap = 1;
+  static constexpr int n_extrap = n_dim + 1;
 
   Eikonal(int n_var, double smoothing)
   : _n_var{n_var}
@@ -612,7 +612,12 @@ class Eikonal {
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
-    return Mat<1>{data[laplacian_av_offset(_n_var)*stride]};
+    Mat<n_extrap> extrap;
+    extrap(0) = data[laplacian_av_offset(_n_var)*stride];
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      extrap(1 + i_dim) = data[(residual_cache_offset(_n_var, row_size) + 1 + i_dim)*stride];
+    }
+    return extrap;
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
@@ -631,36 +636,46 @@ class Eikonal {
     Mat<n_state> state;
     void fetch_state(int stride, const double* data) {
       state(0) = data[laplacian_av_offset(_eq._n_var)*stride];
-      state(1) = data[(residual_cache_offset(_eq._n_var, row_size) + 1)*stride];
+      for (int i_var = 1; i_var < n_state; ++i_var) {
+        state(i_var) = data[(residual_cache_offset(_eq._n_var, row_size) + i_var)*stride];
+      }
     }
     Mat<n_update> update_state;
-    void fetch_extrap_state(int stride, const double* data) {update_state(0) = data[0];}
+    void fetch_extrap_state(int stride, const double* data) {
+      update_state(0) = data[0];
+      for (int i_var = 0; i_var < n_extrap; ++i_var) state(i_var) = data[i_var*stride];
+      state(n_dim + 1) = 0;
+    }
 
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
     Mat<n_update, n_dim_flux> flux_conv;
-    void compute_flux_conv() {flux_conv.setZero();}
+    void compute_flux_conv() {flux_conv.setZero()/*flux_conv = state(Eigen::seqN(1, n_dim)).transpose()*normal*state(0)*/;}
     Mat<n_extrap, n_dim> gradient;
     Mat<n_update, n_dim_flux> flux_diff;
-    void compute_flux_diff() {
-      flux_diff.noalias() = std::abs(state(0))*gradient*normal;
-    }
+    void compute_flux_diff() {flux_diff.setZero();}
     double char_speed;
-    void compute_char_speed() {char_speed = std::abs(state(0));}
-    double diffusivity;
-    void compute_diffusivity() {
-      diffusivity = 2.1*std::abs(state(0)) + 0.1;
+    void compute_char_speed() {
+      char_speed = 0;
+      #if 0
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) char_speed += state(1 + i_dim)*state(1 + i_dim);
+      char_speed = std::sqrt(char_speed);
+      #endif
+      char_speed = std::max(1., char_speed);
     }
+    double diffusivity;
+    void compute_diffusivity() {diffusivity = (1. + _eq._smoothing)*std::abs(state(0));}
 
     Mat<n_update> source;
-    void compute_source() {source(0) = 1. + std::max(0., -state(0)) + 1.1*std::abs(state(0))*state(1);}
+    void compute_source() {source(0) = 1. + (1. + _eq._smoothing)*std::abs(state(0))*state(n_dim + 1);}
     double decay;
-    void compute_decay() {decay = 1.;}
+    void compute_decay() {decay = 0.;}
   };
 };
 
 template <int n_dim, int row_size>
 class Laplace {
-  int _offset;
+  int _read_offset;
+  int _write_offset;
   public:
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
@@ -669,10 +684,10 @@ class Laplace {
   static constexpr int n_update = 1;
   static constexpr int n_extrap = 1;
 
-  Laplace(int n_var, int offset) : _offset{offset} {}
-  Mat<n_extrap> fetch_extrap(int stride, const double* data) const {return Mat<1>{data[_offset*stride]};}
+  Laplace(int n_var, int read_offset, int write_offset) : _read_offset{read_offset}, _write_offset{write_offset} {}
+  Mat<n_extrap> fetch_extrap(int stride, const double* data) const {return Mat<1>{data[_read_offset*stride]};}
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-    data[_offset*stride] += update(0);
+    data[_write_offset*stride] = critical*data[_write_offset*stride] + update(0);
   }
 
   template <int n_dim_flux>
@@ -683,13 +698,60 @@ class Laplace {
     bool debug_vars_set = false;
     Computation(const Laplace& eq) : _eq{eq} {}
     Mat<n_state> state;
-    void fetch_state(int stride, const double* data) {state(0) = data[_eq._offset*stride];}
+    void fetch_state(int stride, const double* data) {state(0) = data[_eq._read_offset*stride];}
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
     Mat<n_extrap, n_dim> gradient;
     Mat<n_update, n_dim_flux> flux_diff;
     void compute_flux_diff() {flux_diff.noalias() = -gradient*normal;}
     double diffusivity;
     void compute_diffusivity() {diffusivity = 1.;}
+  };
+};
+
+template <int n_dim, int row_size>
+class Gradient {
+  int _read_offset;
+  int _write_offset;
+  public:
+  static constexpr bool has_diffusion = true; // just to make the spatial kernel compute the gradient
+  static constexpr bool has_convection = false;
+  static constexpr bool has_source = true;
+  static constexpr int n_state = 1;
+  static constexpr int n_update = n_dim;
+  static constexpr int n_extrap = 1;
+
+  Gradient(int n_var, int read_offset, int write_offset) : _read_offset{read_offset}, _write_offset{write_offset} {}
+  Mat<n_extrap> fetch_extrap(int stride, const double* data) const {return Mat<1>{data[_read_offset*stride]};}
+  void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
+    for (int i_var = 0; i_var < n_update; ++i_var) {
+      double& d = data[(_write_offset + i_var)*stride];
+      d = critical*d + update(i_var);
+    }
+  }
+
+  template <int n_dim_flux>
+  class Computation {
+    const Gradient& _eq;
+    public:
+    Mat<config::debug_variables> debug_variables;
+    bool debug_vars_set = false;
+    Computation(const Gradient& eq) : _eq{eq} {}
+    Mat<n_state> state;
+    void fetch_state(int stride, const double* data) {state(0) = data[_eq._read_offset*stride];}
+    Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
+    Mat<n_extrap, n_dim> gradient;
+    Mat<n_update, n_dim_flux> flux_diff;
+    void compute_flux_diff() {
+      flux_diff.setZero();
+    }
+    Mat<n_update> source;
+    void compute_source() {
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) source(i_dim) = gradient(0, i_dim);
+    }
+    double diffusivity;
+    void compute_diffusivity() {diffusivity = 0.;}
+    double decay;
+    void compute_decay() {decay = 1.;}
   };
 };
 

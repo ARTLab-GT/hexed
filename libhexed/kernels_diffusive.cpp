@@ -40,49 +40,54 @@ void compute_fix_nonphysical(Kernel_mesh mesh, Kernel_options opts, std::functio
   else COMPUTE_DIFFUSION(pde::Fix_nonphysical<2>::Pde)
 }
 
-void compute_eikonal(Kernel_mesh mesh, Kernel_options opts, std::function<void()> state_bc,
-                     std::function<void()> flux_bc, double msc, double msd, double smoothing) {
-  int offset = pde::laplacian_av_offset(mesh.n_var);
-  bool compute_res = opts.compute_residual;
-  double dt = opts.dt;
-  (*kernel_factory<Spatial<pde::Laplace, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
-                                                             offset))(mesh.elems);
-  Vector_view<std::vector<Kernel_face_refinement>&, std::vector<Kernel_face_refinement>> face_refs(mesh.face_refinements);
-  (*kernel_factory<Spatial<pde::Laplace,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size,
-                                                                  mesh.basis, mesh.mask_level, mesh.n_var))
-                                                                 (face_refs, opts.sw_pr);
-  state_bc();
+void compute_eikonal(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, std::function<void()> state_bc,
+                     std::function<void()> flux_bc, double smoothing) {
   const int nq = math::pow(mesh.row_size, mesh.n_dim);
+  double dt = opts.dt;
+  Vector_view<std::vector<Kernel_face_refinement>&, std::vector<Kernel_face_refinement>> face_refs(mesh.face_refinements);
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < mesh.elems.size(); ++i_elem) {
     double* tss = mesh.elems[i_elem].time_step_scale();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) tss[i_qpoint] = 1.;
   }
-  opts.compute_residual = true;
+  const int read_offset = pde::laplacian_av_offset(mesh.n_var);
+  const int write_offset = pde::residual_cache_offset(mesh.n_var, mesh.row_size) + 1 + mesh.n_dim;
+  (*kernel_factory<Spatial<pde::Laplace, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
+                                                             read_offset, write_offset))(mesh.elems);
+  (*kernel_factory<Spatial<pde::Laplace,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size,
+                                                                  mesh.basis, mesh.mask_level, mesh.n_var))
+                                                                 (face_refs, opts.sw_pr);
+  state_bc();
   opts.dt = 1.;
-  COMPUTE_DIFFUSION(pde::Laplace, offset);
-  opts.compute_residual = compute_res;
+  COMPUTE_DIFFUSION(pde::Laplace, read_offset, write_offset)
   opts.dt = dt;
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < mesh.elems.size(); ++i_elem) {
-    double* res = mesh.elems[i_elem].residual_cache();
-    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      res[nq + i_qpoint] = res[i_qpoint];
-    }
-  }
+  max_dt_eikonal(mesh, opts, msc, msd, smoothing);
   (*kernel_factory<Spatial<pde::Eikonal, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
                                                              smoothing))(mesh.elems);
   (*kernel_factory<Spatial<pde::Eikonal,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size,
                                                                   mesh.basis, mesh.mask_level, mesh.n_var))
                                                                  (face_refs, opts.sw_pr);
   state_bc();
-  (*kernel_factory<Spatial<pde::Eikonal, false>::Max_dt>(mesh.n_dim, mesh.row_size, mesh.basis, true,
-                                                         opts.use_filter, msc, msd, false, mesh.n_var, smoothing))
-                                                        (mesh.car_elems, opts.sw_car, "compute time step");
-  (*kernel_factory<Spatial<pde::Eikonal,  true>::Max_dt>(mesh.n_dim, mesh.row_size, mesh.basis, true,
-                                                         opts.use_filter, msc, msd, false, mesh.n_var, smoothing))
-                                                        (mesh.def_elems, opts.sw_def, "compute time step");
   COMPUTE_DIFFUSION(pde::Eikonal, smoothing)
+}
+
+void compute_gradient(Kernel_mesh mesh, Kernel_options opts, std::function<void()> state_bc,
+                      std::function<void()> flux_bc, int read_offset, int write_offset) {
+  const int nq = math::pow(mesh.row_size, mesh.n_dim);
+  #pragma omp parallel for
+  for (int i_elem = 0; i_elem < mesh.elems.size(); ++i_elem) {
+    double* tss = mesh.elems[i_elem].time_step_scale();
+    for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) tss[i_qpoint] = 1.;
+  }
+  (*kernel_factory<Spatial<pde::Gradient, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
+                                                              read_offset, write_offset))(mesh.elems);
+  Vector_view<std::vector<Kernel_face_refinement>&, std::vector<Kernel_face_refinement>> face_refs(mesh.face_refinements);
+  (*kernel_factory<Spatial<pde::Gradient,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size,
+                                                                   mesh.basis, mesh.mask_level, mesh.n_var))
+                                                                  (face_refs, opts.sw_pr);
+  state_bc();
+  opts.dt = 1.;
+  COMPUTE_DIFFUSION(pde::Gradient, read_offset, write_offset)
 }
 
 #undef COMPUTE_DIFFUSION
