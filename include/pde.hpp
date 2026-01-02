@@ -649,24 +649,30 @@ class Eikonal {
 
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
     Mat<n_update, n_dim_flux> flux_conv;
-    void compute_flux_conv() {flux_conv.setZero()/*flux_conv = state(Eigen::seqN(1, n_dim)).transpose()*normal*state(0)*/;}
+    void compute_flux_conv() {flux_conv = state(Eigen::seqN(1, n_dim)).transpose()*normal*state(0);}
     Mat<n_extrap, n_dim> gradient;
     Mat<n_update, n_dim_flux> flux_diff;
     void compute_flux_diff() {flux_diff.setZero();}
     double char_speed;
     void compute_char_speed() {
       char_speed = 0;
-      #if 0
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) char_speed += state(1 + i_dim)*state(1 + i_dim);
-      char_speed = std::sqrt(char_speed);
-      #endif
-      char_speed = std::max(1., char_speed);
+      char_speed = std::max(1., std::sqrt(char_speed));
     }
     double diffusivity;
-    void compute_diffusivity() {diffusivity = (1. + _eq._smoothing)*std::abs(state(0));}
+    void compute_diffusivity() {
+      char_speed = 0;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) char_speed += state(1 + i_dim)*state(1 + i_dim);
+      diffusivity = (1. + _eq._smoothing)*std::abs(state(0)) + .1 + .1*std::abs(std::sqrt(char_speed) - 1.);
+    }
 
     Mat<n_update> source;
-    void compute_source() {source(0) = 1. + (1. + _eq._smoothing)*std::abs(state(0))*state(n_dim + 1);}
+    void compute_source() {
+      char_speed = 0;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) char_speed += state(1 + i_dim)*state(1 + i_dim);
+      double extra_diff = std::abs(std::sqrt(char_speed) - 1.);
+      source(0) = 1. + ((1. + _eq._smoothing)*std::abs(state(0)) + .1*extra_diff)*state(n_dim + 1);
+    }
     double decay;
     void compute_decay() {decay = 0.;}
   };
@@ -741,9 +747,7 @@ class Gradient {
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
     Mat<n_extrap, n_dim> gradient;
     Mat<n_update, n_dim_flux> flux_diff;
-    void compute_flux_diff() {
-      flux_diff.setZero();
-    }
+    void compute_flux_diff() {flux_diff.setZero();}
     Mat<n_update> source;
     void compute_source() {
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) source(i_dim) = gradient(0, i_dim);
