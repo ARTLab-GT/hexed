@@ -474,7 +474,7 @@ void Solver::update_av_length(Int n_iter) {
   };
   Int n_cheby = 10;
   double cheby_safety = _namespace->get<double>("cheby_safety");
-  int n_inner = 1'000;
+  int n_inner = 100;
   for (Int i_iter = 0; i_iter < n_iter; ++i_iter) {
     printers::info(str_cat("  Iteration ", i_iter, "\n"));
     compute_gradient(_preti_masks[0]->kernel_mesh, opts, state_bc, flux_bc, pde::laplacian_av_offset(params.n_var),
@@ -489,8 +489,8 @@ void Solver::update_av_length(Int n_iter) {
     visualize_field("default", str_cat("eikonal", i_iter), expr);
     for (int j_iter = 0; j_iter < n_inner; ++j_iter) {
       for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
-        opts.dt = math::chebyshev_step(n_cheby, i_cheby, .5);
-        compute_eikonal(_preti_masks[0]->kernel_mesh, opts, .7, .7, state_bc, flux_bc, 0.1);
+        opts.dt = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
+        compute_eikonal(_preti_masks[0]->kernel_mesh, opts, .7, .7, state_bc, flux_bc, .1, .03, .03);
       }
     }
   }

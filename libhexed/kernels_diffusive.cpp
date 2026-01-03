@@ -41,7 +41,7 @@ void compute_fix_nonphysical(Kernel_mesh mesh, Kernel_options opts, std::functio
 }
 
 void compute_eikonal(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, std::function<void()> state_bc,
-                     std::function<void()> flux_bc, double smoothing) {
+                     std::function<void()> flux_bc, double smoothing, double grad_smoothing, double base_diff) {
   const int nq = math::pow(mesh.row_size, mesh.n_dim);
   double dt = opts.dt;
   Vector_view<std::vector<Kernel_face_refinement>&, std::vector<Kernel_face_refinement>> face_refs(mesh.face_refinements);
@@ -61,14 +61,14 @@ void compute_eikonal(Kernel_mesh mesh, Kernel_options opts, double msc, double m
   opts.dt = 1.;
   COMPUTE_DIFFUSION(pde::Laplace, read_offset, write_offset)
   opts.dt = dt;
-  max_dt_eikonal(mesh, opts, msc, msd, smoothing);
+  max_dt_eikonal(mesh, opts, msc, msd, smoothing, grad_smoothing, base_diff);
   (*kernel_factory<Spatial<pde::Eikonal, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
-                                                             smoothing))(mesh.elems);
+                                                             smoothing, grad_smoothing, base_diff))(mesh.elems);
   (*kernel_factory<Spatial<pde::Eikonal,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size,
                                                                   mesh.basis, mesh.mask_level, mesh.n_var))
                                                                  (face_refs, opts.sw_pr);
   state_bc();
-  COMPUTE_DIFFUSION(pde::Eikonal, smoothing)
+  COMPUTE_DIFFUSION(pde::Eikonal, smoothing, grad_smoothing, base_diff)
 }
 
 void compute_gradient(Kernel_mesh mesh, Kernel_options opts, std::function<void()> state_bc,

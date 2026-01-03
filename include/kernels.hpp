@@ -44,9 +44,11 @@ void compute_write_face_advection(Kernel_mesh, int offset);
 void compute_write_face_smooth_av(Kernel_mesh);
 
 // performs an update, but doesn't require any preparation (write_face, boundary conditions, etc)
-double max_dt_eikonal(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety, double smoothing);
+double max_dt_eikonal(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety,
+                      double smoothing, double gradient_smoothing, double base_diffusion);
 void compute_eikonal(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety,
-                     std::function<void()> state_bc, std::function<void()> flux_bc, double smoothing);
+                     std::function<void()> state_bc, std::function<void()> flux_bc, double smoothing,
+                     double gradient_smoothing, double base_diffusion);
 void compute_gradient(Kernel_mesh, Kernel_options, std::function<void()> state_bc, std::function<void()> flux_bc,
                       int read_offset, int write_offset);
 

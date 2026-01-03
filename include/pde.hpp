@@ -598,6 +598,8 @@ template <int n_dim, int row_size>
 class Eikonal {
   int _n_var;
   double _smoothing;
+  double _grad_smoothing;
+  double _base_diff;
   public:
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = true;
@@ -606,9 +608,11 @@ class Eikonal {
   static constexpr int n_update = 1;
   static constexpr int n_extrap = n_dim + 1;
 
-  Eikonal(int n_var, double smoothing)
+  Eikonal(int n_var, double smoothing, double grad_smoothing, double base_diffusion)
   : _n_var{n_var}
   , _smoothing{smoothing}
+  , _grad_smoothing{grad_smoothing}
+  , _base_diff{base_diffusion}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
@@ -663,7 +667,7 @@ class Eikonal {
     void compute_diffusivity() {
       char_speed = 0;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) char_speed += state(1 + i_dim)*state(1 + i_dim);
-      diffusivity = (1. + _eq._smoothing)*std::abs(state(0)) + .1 + .1*std::abs(std::sqrt(char_speed) - 1.);
+      diffusivity = (1. + _eq._smoothing)*std::abs(state(0)) + _eq._base_diff + _eq._grad_smoothing*std::abs(std::sqrt(char_speed) - 1.);
     }
 
     Mat<n_update> source;
@@ -671,7 +675,7 @@ class Eikonal {
       char_speed = 0;
       for (int i_dim = 0; i_dim < n_dim; ++i_dim) char_speed += state(1 + i_dim)*state(1 + i_dim);
       double extra_diff = std::abs(std::sqrt(char_speed) - 1.);
-      source(0) = 1. + ((1. + _eq._smoothing)*std::abs(state(0)) + .1*extra_diff)*state(n_dim + 1);
+      source(0) = 1. + ((1. + _eq._smoothing)*std::abs(state(0)) + _eq._grad_smoothing*extra_diff)*state(n_dim + 1);
     }
     double decay;
     void compute_decay() {decay = 0.;}
