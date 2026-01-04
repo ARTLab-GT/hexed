@@ -14,8 +14,8 @@ void compute_eikonal(Kernel_mesh mesh, Kernel_options opts, double msc, double m
     double* tss = mesh.elems[i_elem].time_step_scale();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) tss[i_qpoint] = 1.;
   }
-  const int read_offset = pde::laplacian_av_offset(mesh.n_var);
-  const int write_offset = pde::residual_cache_offset(mesh.n_var, mesh.row_size) + 1 + mesh.n_dim;
+  const int read_offset = Storage_params::laplacian_av_offset(mesh.n_var);
+  const int write_offset = Storage_params::residual_cache_offset(mesh.n_var, mesh.row_size) + 1 + mesh.n_dim;
   (*kernel_factory<Spatial<pde::Laplace, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
                                                              read_offset, write_offset))(mesh.elems);
   (*kernel_factory<Spatial<pde::Laplace,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size,

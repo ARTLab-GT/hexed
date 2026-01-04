@@ -5,6 +5,7 @@
 #include "constants.hpp"
 #include "Transport_model.hpp"
 #include "Gauss_legendre.hpp"
+#include "Storage_params.hpp"
 
 /*! \brief This namespace contains classes representing the different PDEs Hexed can solve.
  * \details They are all possible arguments to the `Spatial` class template.
@@ -12,18 +13,6 @@
  * propagation for computing time steps.
  */
 namespace hexed::pde {
-
-constexpr int n_forcing = 4;
-constexpr int n_offset = 2;
-constexpr int tss_offset(int n_var) {return n_var + 0;}
-constexpr int bulk_av_offset(int n_var) {return n_var + 1;}
-constexpr int laplacian_av_offset(int n_var) {return n_var + 2;}
-constexpr int forcing_offset(int n_var) {return n_var + 3;}
-constexpr int advection_offset(int n_var) {return n_var + 3 + n_forcing;}
-
-constexpr int residual_cache_offset(int n_var, int row_size) {
-  return advection_offset(n_var) + n_offset*row_size;
-}
 
 /*!
  * contains a PDE class representing the Naver-Stokes equations
@@ -93,8 +82,8 @@ class Navier_stokes {
       Mat<n_state> state;
       void fetch_state(int stride, const double* data) {
         for (int i_var = 0; i_var < n_state - 2; ++i_var) state(i_var) = data[i_var*stride];
-        state(i_bulk_art_visc) = data[bulk_av_offset(_eq._n_var)*stride];
-        //state(i_laplacian_art_visc) = data[laplacian_av_offset(_eq._n_var)*stride];
+        state(i_bulk_art_visc) = data[Storage_params::bulk_av_offset(_eq._n_var)*stride];
+        //state(i_laplacian_art_visc) = data[Storage_params::laplacian_av_offset(_eq._n_var)*stride];
         state(i_laplacian_art_visc) = 0.;
       }
       Mat<n_update> update_state;
@@ -378,15 +367,15 @@ class Advection {
     Mat<n_extrap> extrap;
     for (int i_var = 0; i_var < n_dim; ++i_var) extrap(i_var) = data[i_var*stride];
     for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
-      extrap(n_dim + i_adv) = data[(advection_offset(_n_var) + _offset*_n_adv + i_adv)*stride];
+      extrap(n_dim + i_adv) = data[(Storage_params::advection_offset(_n_var) + _offset*_n_adv + i_adv)*stride];
     }
     return extrap;
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool is_critical) const {
-    double pseudo = 1 + data[tss_offset(_n_var)*stride]*2/data[laplacian_av_offset(_n_var)*stride];
+    double pseudo = 1 + data[Storage_params::tss_offset(_n_var)*stride]*2/data[Storage_params::laplacian_av_offset(_n_var)*stride];
     for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
-      double& d = data[(advection_offset(_n_var) + _offset*_n_adv + i_adv)*stride];
+      double& d = data[(Storage_params::advection_offset(_n_var) + _offset*_n_adv + i_adv)*stride];
       if (is_critical) d = (d + update(i_adv))/pseudo;
       else d += update(i_adv)/pseudo;
     }
@@ -404,9 +393,9 @@ class Advection {
     void fetch_state(int stride, const double* data) {
       for (int i_var = 0; i_var < n_dim; ++i_var) state(i_var) = data[i_var*stride];
       for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
-        state(n_dim + i_adv) = data[(advection_offset(_eq._n_var) + _eq._offset*_n_adv + i_adv)*stride];
+        state(n_dim + i_adv) = data[(Storage_params::advection_offset(_eq._n_var) + _eq._offset*_n_adv + i_adv)*stride];
       }
-      state(n_dim + _n_adv) = data[laplacian_av_offset(_eq._n_var)*stride];
+      state(n_dim + _n_adv) = data[Storage_params::laplacian_av_offset(_eq._n_var)*stride];
     }
     Mat<n_update> update_state;
     void fetch_extrap_state(int stride, const double* data) {
@@ -478,15 +467,15 @@ class Smooth_art_visc {
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
     Mat<n_extrap> extrap;
-    for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[(forcing_offset(_n_var) + 1 + i_var)*stride];
+    for (int i_var = 0; i_var < n_extrap; ++i_var) extrap(i_var) = data[(Storage_params::forcing_offset(_n_var) + 1 + i_var)*stride];
     return extrap;
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-    double pseudo = 1 + data[tss_offset(_n_var)*stride]*_cheby
-                        /(_diff_time*math::pow(data[laplacian_av_offset(_n_var)*stride], 2));
+    double pseudo = 1 + data[Storage_params::tss_offset(_n_var)*stride]*_cheby
+                        /(_diff_time*math::pow(data[Storage_params::laplacian_av_offset(_n_var)*stride], 2));
     for (int i_var = 0; i_var < n_update; ++i_var) {
-      double& d = data[(forcing_offset(_n_var) + 1 + i_var)*stride];
+      double& d = data[(Storage_params::forcing_offset(_n_var) + 1 + i_var)*stride];
       d += update(i_var);
       if (critical) d /= pseudo;
     }
@@ -502,8 +491,8 @@ class Smooth_art_visc {
 
     Mat<n_state> state;
     void fetch_state(int stride, const double* data) {
-      for (int i_var = 0; i_var < n_extrap; ++i_var) state(i_var) = data[(forcing_offset(_eq._n_var) + i_var)*stride];
-      state(4) = data[laplacian_av_offset(_eq._n_var)*stride];
+      for (int i_var = 0; i_var < n_extrap; ++i_var) state(i_var) = data[(Storage_params::forcing_offset(_eq._n_var) + i_var)*stride];
+      state(4) = data[Storage_params::laplacian_av_offset(_eq._n_var)*stride];
     }
 
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
@@ -617,15 +606,15 @@ class Eikonal {
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
     Mat<n_extrap> extrap;
-    extrap(0) = data[laplacian_av_offset(_n_var)*stride];
+    extrap(0) = data[Storage_params::laplacian_av_offset(_n_var)*stride];
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      extrap(1 + i_dim) = data[(residual_cache_offset(_n_var, row_size) + 1 + i_dim)*stride];
+      extrap(1 + i_dim) = data[(Storage_params::residual_cache_offset(_n_var, row_size) + 1 + i_dim)*stride];
     }
     return extrap;
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-    data[laplacian_av_offset(_n_var)*stride] += update(0);
+    data[Storage_params::laplacian_av_offset(_n_var)*stride] += update(0);
   }
 
   template <int n_dim_flux>
@@ -639,9 +628,9 @@ class Eikonal {
 
     Mat<n_state> state;
     void fetch_state(int stride, const double* data) {
-      state(0) = data[laplacian_av_offset(_eq._n_var)*stride];
+      state(0) = data[Storage_params::laplacian_av_offset(_eq._n_var)*stride];
       for (int i_var = 1; i_var < n_state; ++i_var) {
-        state(i_var) = data[(residual_cache_offset(_eq._n_var, row_size) + i_var)*stride];
+        state(i_var) = data[(Storage_params::residual_cache_offset(_eq._n_var, row_size) + i_var)*stride];
       }
     }
     Mat<n_update> update_state;

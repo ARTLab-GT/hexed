@@ -477,8 +477,9 @@ void Solver::update_av_length(Int n_iter) {
   int n_inner = 100;
   for (Int i_iter = 0; i_iter < n_iter; ++i_iter) {
     printers::info(str_cat("  Iteration ", i_iter, "\n"));
-    compute_gradient(_preti_masks[0]->kernel_mesh, opts, state_bc, flux_bc, pde::laplacian_av_offset(params.n_var),
-                     pde::residual_cache_offset(params.n_var, params.row_size) + 1);
+    compute_gradient(_preti_masks[0]->kernel_mesh, opts, state_bc, flux_bc,
+                     Storage_params::laplacian_av_offset(params.n_var),
+                     Storage_params::residual_cache_offset(params.n_var, params.row_size) + 1);
     _namespace->assign<double>("flow_time", i_iter);
     std::string expr =
       "dist = laplacian_art_visc;"

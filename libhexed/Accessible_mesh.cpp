@@ -3047,7 +3047,6 @@ Storage_params read_params(std::string file_name) {
     h5_get_attr(file, "n_var"),
     h5_get_attr(file, "n_dim"),
     h5_get_attr(file, "row_size"),
-    h5_get_attr(file, "n_forcing"),
   };
   return params;
 }
