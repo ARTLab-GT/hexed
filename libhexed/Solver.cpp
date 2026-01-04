@@ -424,7 +424,7 @@ void Solver::calc_jacobian() {
     auto dir = con.get_direction();
     Array<double> temp_storage = Array<double>::make_uniform({params.n_var, params.n_face_qpoint()}, 0.);
     temp_storage(0, params.n_dim) = con.face(1).normal();
-    auto perm = face_permutation(params.n_dim, params.row_size, dir, temp_storage.data(), turb);
+    auto perm = compute_face_permutation(params.n_dim, params.row_size, dir, temp_storage.data(), turb);
     perm->match_faces();
     Array<double> nrml0 = con.face(0).normal()*(con.face(0).nominal_area()*math::sign(!dir.flip_normal(0)));
     Array<double> nrml1 = temp_storage(0, params.n_dim)*(con.face(1).nominal_area()*math::sign(!dir.flip_normal(1)));
