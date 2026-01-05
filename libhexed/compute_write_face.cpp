@@ -1,10 +1,11 @@
 #include <hexed/kernel_utils.hpp>
 #include <hexed/compute_write_face.hpp>
+#include <hexed/Navier_stokes.hpp>
 
 namespace hexed {
 
-typedef pde::Navier_stokes<false, laminar> euler;
-typedef pde::Navier_stokes<false, k_omega> k_omega_euler;
+typedef Navier_stokes<false, laminar> euler;
+typedef Navier_stokes<false, k_omega> k_omega_euler;
 
 void compute_write_face(Kernel_mesh mesh) {
   #define COMPUTE(pde_class) (*kernel_factory<Spatial<pde_class::Pde, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var))(mesh.elems);

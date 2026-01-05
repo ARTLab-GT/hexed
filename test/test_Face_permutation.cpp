@@ -5,7 +5,7 @@
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/kernels.hpp>
 #include <hexed/Spatial.hpp>
-#include <hexed/pde.hpp>
+#include <hexed/Navier_stokes.hpp>
 #include <hexed/vertex_inds.hpp>
 
 void test_mesh(hexed::Accessible_mesh& mesh) {
@@ -90,7 +90,7 @@ TEST_CASE("Face_permutation") {
       }
     }
     SECTION("+1") {
-      hexed::Spatial<hexed::pde::Navier_stokes<>::Pde, false>::Face_permutation<3, rs> perm({{0, 0}, {1, 0}, 1}, data.data());
+      hexed::Spatial<hexed::Navier_stokes<>::Pde, false>::Face_permutation<3, rs> perm({{0, 0}, {1, 0}, 1}, data.data());
       perm.match_faces();
       for (int i = 0; i < rs; ++i) {
         for (int j = 0; j < rs; ++j) {
@@ -105,7 +105,7 @@ TEST_CASE("Face_permutation") {
       }
     }
     SECTION("-1") {
-      hexed::Spatial<hexed::pde::Navier_stokes<>::Pde, false>::Face_permutation<3, rs> perm({{0, 0}, {1, 0}, -1}, data.data());
+      hexed::Spatial<hexed::Navier_stokes<>::Pde, false>::Face_permutation<3, rs> perm({{0, 0}, {1, 0}, -1}, data.data());
       perm.match_faces();
       for (int i = 0; i < rs; ++i) {
         for (int j = 0; j < rs; ++j) {
@@ -120,7 +120,7 @@ TEST_CASE("Face_permutation") {
       }
     }
     SECTION("+2") {
-      hexed::Spatial<hexed::pde::Navier_stokes<>::Pde, false>::Face_permutation<3, rs> perm({{0, 0}, {1, 0}, 2}, data.data());
+      hexed::Spatial<hexed::Navier_stokes<>::Pde, false>::Face_permutation<3, rs> perm({{0, 0}, {1, 0}, 2}, data.data());
       perm.match_faces();
       for (int i = 0; i < rs; ++i) {
         for (int j = 0; j < rs; ++j) {
@@ -146,7 +146,7 @@ TEST_CASE("Face_permutation") {
             if (i_dim == j_dim && i_sign == j_sign) continue;
             for (int rotate : {-1, 0, 1, 2}) {
               hexed::Connection_direction dir {{i_dim, j_dim}, {i_sign, j_sign}, rotate};
-              hexed::Spatial<hexed::pde::Navier_stokes<>::Pde, false>::Face_permutation<3, 2> perm(dir, data.data());
+              hexed::Spatial<hexed::Navier_stokes<>::Pde, false>::Face_permutation<3, 2> perm(dir, data.data());
               perm.match_faces();
               auto inds = hexed::face_vertex_inds(3, dir);
               for (int i = 0; i < 4; ++i) {

@@ -1,6 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Spatial.hpp>
-#include <hexed/pde.hpp>
+#include <hexed/Navier_stokes.hpp>
 #include <hexed/Gauss_legendre.hpp>
 
 TEST_CASE("Restrict_refined") {
@@ -44,7 +44,7 @@ TEST_CASE("Restrict_refined") {
         }
       }
     }
-    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Restrict_refined>
+    (*hexed::kernel_factory<hexed::Spatial<hexed::Navier_stokes<false>::Pde, false>::Restrict_refined>
       (3, row_size, basis, 0, 5))(ref_face_v);
     check(2.);
   }
@@ -61,7 +61,7 @@ TEST_CASE("Restrict_refined") {
         }
       }
     }
-    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Restrict_refined>
+    (*hexed::kernel_factory<hexed::Spatial<hexed::Navier_stokes<false>::Pde, false>::Restrict_refined>
       (3, row_size, basis, 0, 5))(ref_face_v);
     check(2.);
   }

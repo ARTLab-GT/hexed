@@ -1,10 +1,11 @@
 #include <hexed/kernel_utils.hpp>
 #include <hexed/max_dt_navier_stokes.hpp>
+#include <hexed/Navier_stokes.hpp>
 
 namespace hexed {
 
-typedef pde::Navier_stokes<true, laminar> ns;
-typedef pde::Navier_stokes<true, k_omega> rans;
+typedef Navier_stokes<true, laminar> ns;
+typedef Navier_stokes<true, k_omega> rans;
 double max_dt_navier_stokes(Kernel_mesh mesh, Kernel_options opts, double msc, double msd, bool local_time,
                             Transport_model visc, Transport_model therm_cond) {
   bool calc_ts_ratio = true;

@@ -1,10 +1,11 @@
 #include <hexed/kernel_utils.hpp>
 #include <hexed/compute_restrict.hpp>
+#include <hexed/Navier_stokes.hpp>
 
 namespace hexed {
 
-typedef pde::Navier_stokes<false, laminar> euler;
-typedef pde::Navier_stokes<false, k_omega> k_omega_euler;
+typedef Navier_stokes<false, laminar> euler;
+typedef Navier_stokes<false, k_omega> k_omega_euler;
 void compute_restrict(Kernel_mesh mesh, bool scale, bool offset) {
   #define COMPUTE(pde_class) { \
     Vector_view<std::vector<Kernel_face_refinement>&, std::vector<Kernel_face_refinement>> face_refs(mesh.face_refinements); \

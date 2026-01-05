@@ -1,5 +1,5 @@
 #include <catch2/catch_all.hpp>
-#include <hexed/pde.hpp>
+#include <hexed/Navier_stokes.hpp>
 
 TEST_CASE("Characteristics") {
   // arbitrary state to linearize about
@@ -12,7 +12,7 @@ TEST_CASE("Characteristics") {
   state(4) = pres/.4 + .5*mass*veloc.squaredNorm();
   hexed::Mat<3> normal {1., 1., 1.};
   // find eigenvalues
-  hexed::pde::Navier_stokes<>::Pde<3, 2>::Characteristics c(state, normal);
+  hexed::Navier_stokes<>::Pde<3, 2>::Characteristics c(state, normal);
   auto eigvals = c.eigvals();
   // decompose another arbitrary state
   hexed::Mat<> state1(5);
@@ -22,8 +22,8 @@ TEST_CASE("Characteristics") {
   REQUIRE((decomp.rowwise().sum() - state1).cwiseQuotient(state1).norm() == Catch::Approx(0).scale(1.));
   // check that the columns are indeed eigenvectors of linearized flux
   double diff = 1e-6; // use a small perturbation so that flux is effectively linear
-  hexed::pde::Navier_stokes<>::Pde<3, 2> ns(5);
-  hexed::pde::Navier_stokes<>::Pde<3, 2>::Computation<1> comp (ns);
+  hexed::Navier_stokes<>::Pde<3, 2> ns(5);
+  hexed::Navier_stokes<>::Pde<3, 2>::Computation<1> comp (ns);
   comp.normal = normal;
   for (int i = 0; i < 3; ++i) {
     hexed::Mat<> eigvec = decomp(Eigen::all, i);
