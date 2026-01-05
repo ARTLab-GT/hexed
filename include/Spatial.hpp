@@ -432,6 +432,9 @@ class Spatial {
           } else {
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) comp.normal(i_dim, i_dim) = nominal_area[i_dim];
           }
+          if constexpr (Pde::needs_size) {
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) comp.nominal_size(i_dim) = nominal_shape[i_dim];
+          }
           if constexpr (Pde::has_convection) {
             comp.compute_flux_conv();
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -869,6 +872,9 @@ class Spatial {
           // fetch state
           typename Pde::template Computation<n_dim> comp(_eq);
           comp.fetch_state(n_qpoint, state + i_qpoint);
+          if constexpr (Pde::needs_size) {
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) comp.nominal_size(i_dim) = elem.nominal_shape(i_dim);
+          }
           // compute time step
           double scale_conv = 0;
           double scale_diff = 0;

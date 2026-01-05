@@ -19,6 +19,7 @@ class Fix_nonphysical {
     static constexpr bool has_diffusion = true;
     static constexpr bool has_convection = false;
     static constexpr bool has_source = false;
+    static constexpr bool needs_size = false;
     static constexpr int n_state = n_dim + n_scalar;
     static constexpr int n_update = n_state;
     static constexpr int n_extrap = n_state;

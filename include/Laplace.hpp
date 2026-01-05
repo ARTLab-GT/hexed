@@ -14,6 +14,7 @@ class Laplace {
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
   static constexpr bool has_source = false;
+  static constexpr bool needs_size = false;
   static constexpr int n_state = 1;
   static constexpr int n_update = 1;
   static constexpr int n_extrap = 1;

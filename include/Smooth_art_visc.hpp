@@ -17,6 +17,7 @@ class Smooth_art_visc {
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
   static constexpr bool has_source = true;
+  static constexpr bool needs_size = false;
   static constexpr int n_state = 4 + 1;
   static constexpr int n_extrap = 3;
   static constexpr int n_update = 3;

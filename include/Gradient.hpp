@@ -14,6 +14,7 @@ class Gradient {
   static constexpr bool has_diffusion = true; // just to make the spatial kernel compute the gradient
   static constexpr bool has_convection = false;
   static constexpr bool has_source = true;
+  static constexpr bool needs_size = false;
   static constexpr int n_state = 1;
   static constexpr int n_update = n_dim;
   static constexpr int n_extrap = 1;

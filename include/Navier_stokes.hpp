@@ -24,6 +24,7 @@ class Navier_stokes {
     static constexpr bool has_diffusion = visc;
     static constexpr bool has_convection = true;
     static constexpr bool has_source = visc && (turb != laminar);
+    static constexpr bool needs_size = false;
     static constexpr int n_update = n_dim + 2 + 2*(turb == k_omega);
     static constexpr int n_state = n_dim + 4 + 2*(turb == k_omega);
     static constexpr int n_extrap = n_dim + 2 + 2*(turb == k_omega);

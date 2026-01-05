@@ -16,6 +16,7 @@ class Eikonal {
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = true;
   static constexpr bool has_source = true;
+  static constexpr bool needs_size = true;
   static constexpr int n_state = n_dim + 2;
   static constexpr int n_update = 1;
   static constexpr int n_extrap = n_dim + 1;
@@ -64,6 +65,7 @@ class Eikonal {
     }
 
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();
+    Mat<n_dim> nominal_size;
     Mat<n_update, n_dim_flux> flux_conv;
     void compute_flux_conv() {flux_conv = state(Eigen::seqN(1, n_dim)).transpose()*normal*state(0);}
     Mat<n_extrap, n_dim> gradient;
@@ -77,13 +79,19 @@ class Eikonal {
     }
     double diffusivity;
     void compute_diffusivity() {
-      diffusivity = _eq._grad_smoothing + (1. + _eq._smoothing)*std::abs(state(0)) + _eq._base_diff + _eq._smoothing;
+      double min_sz = huge;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) min_sz = std::min(min_sz, nominal_size(i_dim));
+      diffusivity = _eq._grad_smoothing*2*min_sz
+                    + (1. + _eq._smoothing)*std::abs(state(0)) + _eq._base_diff + _eq._smoothing;
     }
 
     Mat<n_update> source;
     void compute_source() {
-      double grad_diff = std::min(1., (state(Eigen::seqN(1, n_dim)) - gradient(0, all).transpose()).norm());
-      source(0) = 1. + ((1. + _eq._smoothing)*std::abs(state(0)) + _eq._grad_smoothing*grad_diff)*state(n_dim + 1);
+      double min_sz = huge;
+      for (int i_dim = 0; i_dim < n_dim; ++i_dim) min_sz = std::min(min_sz, nominal_size(i_dim));
+      double grad_diff = std::min(2., (state(Eigen::seqN(1, n_dim)) - gradient(0, all).transpose()).norm());
+      double diff_coef = (1. + _eq._smoothing)*std::abs(state(0)) + _eq._grad_smoothing*min_sz*grad_diff;
+      source(0) = 1. + diff_coef*state(n_dim + 1);
     }
     double decay;
     void compute_decay() {decay = 0.;}

@@ -22,6 +22,7 @@ class Advection {
   static constexpr bool has_diffusion = false;
   static constexpr bool has_convection = true;
   static constexpr bool has_source = true;
+  static constexpr bool needs_size = false;
   static constexpr int n_state = n_dim + _n_adv + 1;
   static constexpr int n_extrap = n_dim + _n_adv;
   static constexpr int n_update = _n_adv;
