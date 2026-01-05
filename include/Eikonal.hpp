@@ -68,14 +68,7 @@ class Eikonal {
     void compute_flux_conv() {flux_conv = state(Eigen::seqN(1, n_dim)).transpose()*normal*state(0);}
     Mat<n_extrap, n_dim> gradient;
     Mat<n_update, n_dim_flux> flux_diff;
-    void compute_flux_diff() {
-      flux_diff.setZero();
-      for (int i_dim = 0; i_dim < n_dim_flux; ++i_dim) {
-        for (int j_dim = 0; j_dim < n_dim; ++j_dim) {
-          flux_diff(0, i_dim) += _eq._smoothing*(state(1 + j_dim) - gradient(0, j_dim))*normal(j_dim, i_dim);
-        }
-      }
-    }
+    void compute_flux_diff() {flux_diff.setZero();}
     double char_speed;
     void compute_char_speed() {
       char_speed = 0;
@@ -84,18 +77,13 @@ class Eikonal {
     }
     double diffusivity;
     void compute_diffusivity() {
-      double grad_sq = 0;
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) grad_sq += state(1 + i_dim)*state(1 + i_dim);
-      double extra_diff = math::pow(std::sqrt(grad_sq) - 1., 2);
-      diffusivity = (1. + _eq._smoothing)*std::abs(state(0)) + _eq._base_diff + _eq._grad_smoothing*extra_diff + _eq._smoothing;
+      diffusivity = _eq._grad_smoothing + (1. + _eq._smoothing)*std::abs(state(0)) + _eq._base_diff + _eq._smoothing;
     }
 
     Mat<n_update> source;
     void compute_source() {
-      double grad_sq = 0;
-      for (int i_dim = 0; i_dim < n_dim; ++i_dim) grad_sq += state(1 + i_dim)*state(1 + i_dim);
-      double extra_diff = math::pow(std::sqrt(grad_sq) - 1., 2);
-      source(0) = 1. + ((1. + _eq._smoothing)*std::abs(state(0)) + _eq._grad_smoothing*extra_diff)*state(n_dim + 1);
+      double grad_diff = std::min(1., (state(Eigen::seqN(1, n_dim)) - gradient(0, all).transpose()).norm());
+      source(0) = 1. + ((1. + _eq._smoothing)*std::abs(state(0)) + _eq._grad_smoothing*grad_diff)*state(n_dim + 1);
     }
     double decay;
     void compute_decay() {decay = 0.;}

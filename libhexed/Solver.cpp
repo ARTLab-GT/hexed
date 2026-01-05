@@ -490,7 +490,7 @@ void Solver::update_av_length(Int n_iter) {
     for (int j_iter = 0; j_iter < n_inner; ++j_iter) {
       for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
         opts.dt = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
-        compute_eikonal(_preti_masks[0]->kernel_mesh, opts, .7, .7, state_bc, flux_bc, .1, .03, .03);
+        compute_eikonal(_preti_masks[0]->kernel_mesh, opts, .7, .7, state_bc, flux_bc, .1, .03, .00);
       }
     }
   }
