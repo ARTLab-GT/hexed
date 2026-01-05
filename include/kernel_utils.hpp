@@ -2,7 +2,6 @@
 #define HEXED_KERNEL_UTILS_HPP_
 
 #include <kernels.hpp>
-#include <pde.hpp>
 #include <Spatial.hpp>
 
 #define COMPUTE_CONVECTION(Pde_templ, ...) { \

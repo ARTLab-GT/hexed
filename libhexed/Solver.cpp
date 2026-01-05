@@ -15,7 +15,6 @@
 #include <hexed/Array.hpp>
 #include <hexed/vis_variables.hpp>
 #include <hexed/Printer.hpp>
-#include <hexed/pde.hpp>
 
 namespace hexed {
 

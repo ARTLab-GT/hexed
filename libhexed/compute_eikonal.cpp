@@ -1,5 +1,7 @@
 #include <hexed/kernel_utils.hpp>
 #include <hexed/compute_eikonal.hpp>
+#include <hexed/Eikonal.hpp>
+#include <hexed/Laplace.hpp>
 
 namespace hexed {
 
@@ -16,23 +18,23 @@ void compute_eikonal(Kernel_mesh mesh, Kernel_options opts, double msc, double m
   }
   const int read_offset = Storage_params::laplacian_av_offset(mesh.n_var);
   const int write_offset = Storage_params::residual_cache_offset(mesh.n_var, mesh.row_size) + 1 + mesh.n_dim;
-  (*kernel_factory<Spatial<pde::Laplace, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
-                                                             read_offset, write_offset))(mesh.elems);
-  (*kernel_factory<Spatial<pde::Laplace,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size,
-                                                                  mesh.basis, mesh.mask_level, mesh.n_var))
-                                                                 (face_refs, opts.sw_pr);
+  (*kernel_factory<Spatial<Laplace, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
+                                                        read_offset, write_offset))(mesh.elems);
+  (*kernel_factory<Spatial<Laplace,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size,
+                                                             mesh.basis, mesh.mask_level, mesh.n_var))
+                                                            (face_refs, opts.sw_pr);
   state_bc();
   opts.dt = 1.;
-  COMPUTE_DIFFUSION(pde::Laplace, read_offset, write_offset)
+  COMPUTE_DIFFUSION(Laplace, read_offset, write_offset)
   opts.dt = dt;
   max_dt_eikonal(mesh, opts, msc, msd, smoothing, grad_smoothing, base_diff);
-  (*kernel_factory<Spatial<pde::Eikonal, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
-                                                             smoothing, grad_smoothing, base_diff))(mesh.elems);
-  (*kernel_factory<Spatial<pde::Eikonal,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size,
-                                                                  mesh.basis, mesh.mask_level, mesh.n_var))
-                                                                 (face_refs, opts.sw_pr);
+  (*kernel_factory<Spatial<Eikonal, false>::Write_face>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.n_var,
+                                                        smoothing, grad_smoothing, base_diff))(mesh.elems);
+  (*kernel_factory<Spatial<Eikonal,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size,
+                                                             mesh.basis, mesh.mask_level, mesh.n_var))
+                                                            (face_refs, opts.sw_pr);
   state_bc();
-  COMPUTE_DIFFUSION(pde::Eikonal, smoothing, grad_smoothing, base_diff)
+  COMPUTE_DIFFUSION(Eikonal, smoothing, grad_smoothing, base_diff)
 }
 
 }
