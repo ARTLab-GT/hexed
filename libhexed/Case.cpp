@@ -509,6 +509,8 @@ Case::Case(std::string input_script)
     refine_isotropic("geom", "Geometry", true, true);
     _inter.variables->assign("flow_time", 0.);
     for (int i_split = 0; i_split < _vari("init_layer_splits"); ++i_split) _inter.make_sub().exec("split_layers");
+    _solver().init_av_length();
+    _solver().update_av_length(_vari("av_coef_iters_initial"));
     for (int i_ref = 0; i_ref < _vari("max_final_refine_iters"); ++i_ref) {
       printers::info("  Final refinement sweep " + to_string(i_ref) + "... ");
       std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
@@ -523,6 +525,7 @@ Case::Case(std::string input_script)
       _visualize("_final_ref_sweep" + to_string(i_ref));
       if (!result.changed) break;
     }
+    _solver().update_av_length(_vari("av_coef_iters_update"));
     _inter.variables->assign("mesh_init", 1);
     printers::info("  geometry bounding box: \n");
     for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
@@ -532,8 +535,6 @@ Case::Case(std::string input_script)
       }
       printers::info("\n");
     }
-    _solver().init_av_length();
-    _solver().update_av_length(_vari("av_coef_iters_initial"));
     printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.\n", true);
     _solver().print_preti_iters();
     return "";
