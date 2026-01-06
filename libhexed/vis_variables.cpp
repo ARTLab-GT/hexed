@@ -12,7 +12,7 @@ void element(Namespace& space, Element& elem) {
   space.assign("aniso_ref_level", elem.aniso_ref_level());
   space.assign("mask", elem.mask());
   space.assign("nom_sz", elem.nominal_size());
-  space.assign("wall_distance", elem.wall_distance());
+  space.assign("farthest_vert", elem.wall_distance());
   space.assign("wall_dimension", elem.wall_dimension());
   space.assign("has_wall", int(elem.has_wall()));
   space.assign("uncertainty", elem.uncertainty);
@@ -124,7 +124,7 @@ void state(Namespace& space, Element& elem) {
     assign_state("turbulent_dissipation_bassi", params.n_dim + 3);
   }
   space.assign("bulk_art_visc", Array<double>({nq}, elem.bulk_av_coef()));
-  space.assign("laplacian_art_visc", Array<double>({nq}, elem.laplacian_av_coef()));
+  space.assign("wall_distance", Array<double>({nq}, elem.laplacian_av_coef()));
   space.assign("tss", Array<double>({nq}, elem.time_step_scale()));
   for (int i_var = 0; i_var < config::debug_variables; ++i_var) {
     Array<double> data({nq}, elem.debug_variables() + i_var*params.n_qpoint());
@@ -198,7 +198,7 @@ void surface(Namespace& space, Boundary_connection& con) {
   Element* elem = con.inside().element();
   HEXED_ASSERT(elem, "Boundary face has no element.")
   element(space, *elem);
-  space.assign("wall_spacing", space.get<double>("wall_distance"));
+  space.assign("wall_spacing", space.get<double>("farthest_vert"));
 }
 
 }

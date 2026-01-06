@@ -4,8 +4,8 @@
 
 namespace hexed {
 
-void compute_advection(Kernel_mesh mesh, Kernel_options opts, double advect_length, int offset) {
-  COMPUTE_CONVECTION(Advection, advect_length, offset)
+void compute_advection(Kernel_mesh mesh, Kernel_options opts, double wsw, double swg, int offset) {
+  COMPUTE_CONVECTION(Advection, wsw, swg, offset)
 }
 
 }

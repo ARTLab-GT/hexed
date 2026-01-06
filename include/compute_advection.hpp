@@ -5,7 +5,7 @@
 
 namespace hexed {
 
-void compute_advection(Kernel_mesh, Kernel_options, double advect_length, int offset);
+void compute_advection(Kernel_mesh, Kernel_options, double wall_shock_width, double shock_width_growth, int offset);
 
 }
 #endif

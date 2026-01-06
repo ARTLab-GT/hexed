@@ -13,6 +13,10 @@ namespace hexed {
 template <int n_dim, int row_size>
 class Smooth_art_visc {
   const int _n_var;
+  const double _diff_time;
+  const double _cheby;
+  const double _wall_shock_width;
+  const double _shock_width_growth;
   public:
   static constexpr bool has_diffusion = true;
   static constexpr bool has_convection = false;
@@ -21,11 +25,14 @@ class Smooth_art_visc {
   static constexpr int n_state = 4 + 1;
   static constexpr int n_extrap = 3;
   static constexpr int n_update = 3;
-  const double _diff_time;
-  const double _cheby;
 
-  Smooth_art_visc(int n_var, double diff_time, double chebyshev_step)
-  : _n_var{n_var}, _diff_time{diff_time}, _cheby{chebyshev_step}
+  Smooth_art_visc(int n_var, double diff_time, double chebyshev_step, double wall_shock_width,
+                  double shock_width_growth)
+  : _n_var{n_var}
+  , _diff_time{diff_time}
+  , _cheby{chebyshev_step}
+  , _wall_shock_width{wall_shock_width}
+  , _shock_width_growth{shock_width_growth}
   {}
 
   Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
@@ -35,8 +42,8 @@ class Smooth_art_visc {
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-    double pseudo = 1 + data[Storage_params::tss_offset(_n_var)*stride]*_cheby
-                        /(_diff_time*math::pow(data[Storage_params::laplacian_av_offset(_n_var)*stride], 2));
+    double l = _wall_shock_width + _shock_width_growth*data[Storage_params::laplacian_av_offset(_n_var)*stride];
+    double pseudo = 1 + data[Storage_params::tss_offset(_n_var)*stride]*_cheby/(_diff_time*l*l);
     for (int i_var = 0; i_var < n_update; ++i_var) {
       double& d = data[(Storage_params::forcing_offset(_n_var) + 1 + i_var)*stride];
       d += update(i_var);
@@ -55,7 +62,8 @@ class Smooth_art_visc {
     Mat<n_state> state;
     void fetch_state(int stride, const double* data) {
       for (int i_var = 0; i_var < n_extrap; ++i_var) state(i_var) = data[(Storage_params::forcing_offset(_eq._n_var) + i_var)*stride];
-      state(4) = data[Storage_params::laplacian_av_offset(_eq._n_var)*stride];
+      double wall_dist = data[Storage_params::laplacian_av_offset(_eq._n_var)*stride];
+      state(4) = _eq._wall_shock_width + _eq._shock_width_growth*wall_dist;
     }
 
     Mat<n_dim, n_dim_flux> normal = Mat<n_dim, n_dim_flux>::Identity();

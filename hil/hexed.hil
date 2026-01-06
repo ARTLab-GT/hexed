@@ -21,7 +21,8 @@ speed_expr = {speed = sqrt(velocity0^2 + velocity1^2 + velocity2^2);}
 pressure_expr = {pressure = (heat_rat - 1)*(energy - 0.5*density*speed^2);}
 temperature_expr = {temperature = pressure/(density*specific_gas_air);}
 mach_expr = {mach = speed/sqrt(heat_rat*pressure/density);}
-art_visc_expr = {bulk_art_visc = bulk_art_visc; laplacian_art_visc = laplacian_art_visc;}
+wall_dist_expr = {wall_distance = wall_distance;}
+art_visc_expr = {bulk_art_visc = bulk_art_visc;}
 {define arbitrary default transport parameters so that `transport_expr` doesn't break in inviscid flows}
 offset = 0.
 ref_temperature = 1.
@@ -124,8 +125,9 @@ air_conductivity = {ref_value = air_cond_ref; ref_temperature = air_cond_ref_tem
 
 shock_sub_iters = 12; {number of sub-iterations to run in each nominal iteration to get efficient Chebyshev-accelerated diffusion}
 n_cheby_av = 12
+capture_shocks = false
 set_shock = {
-    art_visc_width = (mesh_extreme01 - mesh_extreme00)*2.^-init_ref_level
+    capture_shocks = true
     fix_nonphysical = true
     flow_iters = shock_sub_iters
     av_advect_iters = ceil(shock_sub_iters/5.)
@@ -196,9 +198,8 @@ max_wall_reynolds = 1e3
 max_sharp_spacing = huge
 max_sharp_reynolds = 1e4
 min_wall_shock_width_reynolds = 1e3
-min_wall_shock_width = 0.
+wall_shock_width = 0.
 shock_width_growth = 0.1
-shock_width_limit = -1.
 min_cell_reynolds = 0.1
 viscosity_model = {}
 conductivity_model = {}
@@ -210,7 +211,6 @@ temperature_offset = 0.
 attack = 0.
 sideslip = 0.
 art_visc_constant = -1.
-art_visc_width = -1.
 fix_nonphysical = false
 working_dir = {hexed_out/}
 input_data = {auto}
@@ -234,7 +234,7 @@ init_refine_if = {(ref_level < init_ref_level)}
 init_unrefine_if = {false}
 geom_refine_if = {(uncertainty > (geom_rtol*geom_length + geom_atol)*general_tolerance & ref_level < max_ref_level*$size_tolerance & nom_sz > min_elem_size*$size_tolerance)}
 geom_unrefine_if = {false}
-final_refine_if = {(has_wall & ((i_dim == wall_dimension & (wall_distance > max_wall_spacing | (viscosity_model != {} & wall_distance*reynolds_per_length > max_wall_reynolds & 3*$({nominal_shape} + i_dim)*reynolds_per_length > max_wall_reynolds))) | (($({sharp} + i_dim) & $({nominal_shape} + i_dim) > max_sharp_spacing) | (viscosity_model != {} & $({sharp} + i_dim) & $({nominal_shape} + i_dim)*reynolds_per_length > max_sharp_reynolds))))}
+final_refine_if = {(has_wall & ((i_dim == wall_dimension & (farthest_vert > max_wall_spacing | (viscosity_model != {} & farthest_vert*reynolds_per_length > max_wall_reynolds & 3*$({nominal_shape} + i_dim)*reynolds_per_length > max_wall_reynolds))) | (($({sharp} + i_dim) & $({nominal_shape} + i_dim) > max_sharp_spacing) | (viscosity_model != {} & $({sharp} + i_dim) & $({nominal_shape} + i_dim)*reynolds_per_length > max_sharp_reynolds))))}
 final_unrefine_if = {false}
 shock_refine_if = {(has_shock & $({nominal_shape} + i_dim) > 3*local_av_width & $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance)}
 shock_unrefine_if = {(!has_shock)}
@@ -264,7 +264,7 @@ vis_lts_constraints = false
 vis_edges = true
 vis_geom = true
 vis_geom_distance = false
-vis_field_vars = state_vars + art_visc_expr + transport_expr
+vis_field_vars = state_vars + wall_dist_expr + art_visc_expr + transport_expr
 vis_contour_vars = vis_field_vars
 vis_surface_vars = state_vars + transport_expr + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr + bl_nondim_expr
 vis_n_sample = 10
@@ -293,8 +293,10 @@ tangency_tol_subdiv = 10.
 smooth_initial_condition = false
 initial_smoothing_iters = 10^4
 time_step_limit_threshold = 10.
-av_coef_iters_initial = 100
-av_coef_iters_update = 10
+wall_dist_iters_initial = 100
+wall_dist_iters_update = 10
+n_cheby_wall_dist = 10
+n_wall_dist_inner_iters = 100
 
 {array parameters}
 i_dim = 0
@@ -378,7 +380,7 @@ adapt_iter = {
     $$({case} + (amr & ($adapt_if)))
     case0 = {}
     case1 = {adapt_shock}
-    $$({case} + (art_visc_width > 0 & iteration%shock_adapt_freq == 0))
+    $$({case} + (capture_shocks & iteration%shock_adapt_freq == 0))
 }
 
 setup_io = {

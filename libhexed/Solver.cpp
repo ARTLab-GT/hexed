@@ -255,15 +255,15 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
   stopwatch["set art visc"]["advection"].emplace("setup", stopwatch.work_unit_name);
   stopwatch["set art visc"]["advection"].emplace("BCs", unit);
   stopwatch["set art visc"].emplace("diffusion", stopwatch.work_unit_name);
-  stopwatch.emplace("compute av length", "solution");
-  stopwatch["compute av length"].emplace("prolong/restrict", "(element*update)");
+  stopwatch.emplace("compute wall distance", "solution");
+  stopwatch["compute wall distance"].emplace("prolong/restrict", "(element*update)");
   for (std::string type : {"cartesian", "deformed"}) {
     for (auto* sw : {
       &stopwatch,
       &stopwatch["set art visc"]["advection"],
       &stopwatch["set art visc"]["diffusion"],
       &stopwatch["fix nonphysical"],
-      &stopwatch["compute av length"],
+      &stopwatch["compute wall distance"],
     }) {
       sw->emplace(type, stopwatch.work_unit_name);
       (*sw)[type].emplace("compute time step", stopwatch.work_unit_name);
@@ -274,7 +274,7 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
       &stopwatch,
       &stopwatch["fix nonphysical"],
       &stopwatch["set art visc"]["diffusion"],
-      &stopwatch["compute av length"],
+      &stopwatch["compute wall distance"],
     }) {
       (*sw)[type].emplace("reconcile LDG flux", unit);
     }
@@ -435,7 +435,7 @@ void Solver::calc_jacobian() {
   _init_face_state();
 }
 
-void Solver::init_av_length() {
+void Solver::init_wall_dist() {
   auto& elems = acc_mesh->elements();
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -444,8 +444,8 @@ void Solver::init_av_length() {
   }
 }
 
-void Solver::update_av_length(Int n_iter) {
-  printers::info("  Updating artificial viscosity length scale...");
+void Solver::update_wall_dist(Int n_iter) {
+  printers::info("  Updating wall distance estimate...\n");
   auto state_bc = [&]() {
     auto bc_cons {_preti_masks[0]->bound_cons};
     #pragma omp parallel for
@@ -465,28 +465,20 @@ void Solver::update_av_length(Int n_iter) {
     }
   };
   Kernel_options opts {
-    .sw_car = stopwatch["compute av length"]["cartesian"],
-    .sw_def = stopwatch["compute av length"]["deformed"],
-    .sw_pr = stopwatch["compute av length"]["prolong/restrict"],
+    .sw_car = stopwatch["compute wall distance"]["cartesian"],
+    .sw_def = stopwatch["compute wall distance"]["deformed"],
+    .sw_pr = stopwatch["compute wall distance"]["prolong/restrict"],
     .dt = 1.,
     .i_stage = 0,
   };
-  Int n_cheby = 10;
+  Int n_cheby = _namespace->get<int>("n_cheby_wall_dist");
   double cheby_safety = _namespace->get<double>("cheby_safety");
-  int n_inner = 100;
+  int n_inner = _namespace->get<int>("n_wall_dist_inner_iters");
   for (Int i_iter = 0; i_iter < n_iter; ++i_iter) {
-    printers::info(str_cat("  Iteration ", i_iter, "\n"));
+    printers::info(str_cat("    Iteration ", i_iter, "\n"));
     compute_gradient(_preti_masks[0]->kernel_mesh, opts, state_bc, flux_bc,
                      Storage_params::laplacian_av_offset(params.n_var),
                      Storage_params::residual_cache_offset(params.n_var, params.row_size) + 1);
-    _namespace->assign<double>("flow_time", i_iter);
-    std::string expr =
-      "dist = laplacian_art_visc;"
-      "grad0 = residual_momentum1;"
-      "grad1 = residual_density;"
-      "laplacian = residual_energy;"
-    ;
-    visualize_field("default", str_cat("eikonal", i_iter), expr);
     for (int j_iter = 0; j_iter < n_inner; ++j_iter) {
       for (int i_cheby = 0; i_cheby < n_cheby; ++i_cheby) {
         opts.dt = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
@@ -577,6 +569,8 @@ void Solver::diffuse_art_visc(double diff_time) {
     false,
     false,
   };
+  double wall_shock_width = _namespace->get<double>("wall_shock_width");
+  double shock_width_growth = _namespace->get<double>("shock_width_growth");
   max_dt_smooth_av(_kernel_mesh(), opts, 1., diff_safety, true);
   // initialize residual to zero (will compute RMS over all real time steps)
   compute_write_face_smooth_av(_kernel_mesh());
@@ -595,14 +589,15 @@ void Solver::diffuse_art_visc(double diff_time) {
           double s = math::chebyshev_step(n_cheby, i_cheby, cheby_safety);
           apply_avc_diff_bcs();
           opts.dt = s;
-          compute_smooth_av(km, opts, [this](){apply_avc_diff_flux_bcs();}, diff_time, s);
+          compute_smooth_av(km, opts, [this](){apply_avc_diff_flux_bcs();}, diff_time, s, wall_shock_width,
+                            shock_width_growth);
         }
       }
     }
   }
 }
 
-void Solver::update_art_visc_smoothness(double) {
+void Solver::update_art_visc_smoothness() {
   stopwatch.stopwatch.start();
   stopwatch["set art visc"].stopwatch.start();
   use_art_visc = true;
@@ -644,7 +639,9 @@ void Solver::update_art_visc_smoothness(double) {
   // begin estimation of high-order derivative in the style of the Cauchy-Kovalevskaya theorem
   // using a linear advection equation.
 
-  max_dt_advection(_kernel_mesh(), opts, adv_safety, 1., true, 1.);
+  double wall_shock_width = _namespace->get<double>("wall_shock_width");
+  double shock_width_growth = _namespace->get<double>("shock_width_growth");
+  max_dt_advection(_kernel_mesh(), opts, adv_safety, 1., true);
   for (int i_offset : {0, 1}) {
     compute_write_face_advection(_kernel_mesh(), i_offset);
     compute_prolong_advection(_kernel_mesh());
@@ -672,7 +669,7 @@ void Solver::update_art_visc_smoothness(double) {
             sw_adv["BCs"].stopwatch.pause();
             sw_adv["BCs"].work_units_completed += acc_mesh->elements().size();
             opts.i_stage = i;
-            compute_advection(km, opts, 1., i_offset);
+            compute_advection(km, opts, wall_shock_width, shock_width_growth, i_offset);
           }
         }
       }
@@ -692,7 +689,7 @@ void Solver::update_art_visc_smoothness(double) {
     double* forcing = elements[i_elem].art_visc_forcing();
     double* adv = elements[i_elem].advection_state();
     double* state = elements[i_elem].state();
-    double* length = elements[i_elem].laplacian_av_coef();
+    double* wall_dist = elements[i_elem].laplacian_av_coef();
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) forcing[i_qpoint] = 0;
     for (int i_offset : {0, 1}) {
       for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
@@ -705,12 +702,14 @@ void Solver::update_art_visc_smoothness(double) {
           proj += a*weights(i_proj)*orth(i_proj);
         }
         double f = proj*proj;
-        forcing[i_qpoint] += std::isfinite(f) ? std::max(0., std::min(f, 1e10*length[i_qpoint]*length[i_qpoint])) : 0.;
+        double l = wall_shock_width + wall_dist[i_qpoint]*shock_width_growth;
+        forcing[i_qpoint] += std::isfinite(f) ? std::max(0., std::min(f, 1e10*l*l)) : 0.;
       }
     }
     double has_shock = false;
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      has_shock = has_shock || forcing[i_qpoint] > 1e-4*length[i_qpoint]*length[i_qpoint];
+      double l = wall_shock_width + wall_dist[i_qpoint]*shock_width_growth;
+      has_shock = has_shock || forcing[i_qpoint] > 1e-4*l*l;
       double speed_sq = 2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
       forcing[i_qpoint] = std::sqrt(forcing[i_qpoint]*std::abs(speed_sq));
     }
@@ -762,11 +761,12 @@ void Solver::update_art_visc_smoothness(double) {
     double* state = elements[i_elem].state();
     double* av = elements[i_elem].bulk_av_coef();
     double* forcing = elements[i_elem].art_visc_forcing();
-    double* length = elements[i_elem].laplacian_av_coef();
+    double* wall_dist = elements[i_elem].laplacian_av_coef();
     double volume = math::pow(elements[i_elem].nominal_size(), nd);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
-      double f = mult*length[i_qpoint]*forcing[nq + i_qpoint];
-      double new_av = length[i_qpoint]*us_max*f/(length[i_qpoint]*us_max + f);
+      double l = wall_shock_width + wall_dist[i_qpoint]*shock_width_growth;
+      double f = mult*l*forcing[nq + i_qpoint];
+      double new_av = l*us_max*f/(l*us_max + f);
       resid += math::pow(av[i_qpoint] - new_av, 2)*qpoint_weights(i_qpoint)*volume;
       av[i_qpoint] = new_av;
       // put the flow state back how we found it

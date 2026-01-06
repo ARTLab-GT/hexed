@@ -20,7 +20,7 @@ namespace hexed::vis_variables {
  * - `mask = Element::mask()`
  * - `nom_sz = Element::nominal_size()` __deprecated__
  * - `nominal_size = Element::nominal_size()`
- * - `wall_distance = Element::wall_distance()`
+ * - `farthest_vert = Element::wall_distance()`
  * - `wall_dimension = Element::wall_dimension()`
  * - `has_wall = Element::has_wall()`
  * - `uncertainty = Element::uncertainty`
@@ -71,7 +71,10 @@ void position(Namespace&, Element&, const Basis&);
  * - `mass`: mass per volume (aka density)
  * - `energy`: total energy per volume
  * - `tss`: time step scale
- * - `art_visc`: artificial viscosity coefficient
+ * - `bulk_art_visc`: artificial viscosity coefficient
+ * - `wall_distance`: Approximate distance from the nearest wall (computed by solving an
+ *   [Eikonal equation](https://en.wikipedia.org/wiki/Eikonal_equation#Continuous_shortest-path_problems)
+ *   with artificial diffusion to ensure that the result is smooth).
  * - `residual_xxx` for `xxx` in {`momentum0`, ..., `energy`}: residual of each of the conserved state variables
  *
  * If turbulent, also assigns the following variables:

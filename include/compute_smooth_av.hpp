@@ -7,7 +7,7 @@
 namespace hexed {
 
 void compute_smooth_av(Kernel_mesh, Kernel_options, std::function<void()> flux_bc, double diff_time,
-                       double chebyshev_step);
+                       double chebyshev_step, double wall_shock_width, double shock_width_growth);
 
 }
 #endif

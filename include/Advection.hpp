@@ -16,6 +16,8 @@ class Advection {
   const int _n_var;
   static constexpr int _n_adv = row_size;
   Mat<_n_adv> _nodes;
+  double _wall_shock_width;
+  double _shock_width_growth;
   int _offset;
 
   public:
@@ -28,8 +30,10 @@ class Advection {
   static constexpr int n_update = _n_adv;
   static constexpr double regular_scale = .1;
 
-  Advection(int n_var, double advect_length, int offset)
+  Advection(int n_var, double wall_shock_width, double shock_width_growth, int offset)
   : _n_var{n_var}
+  , _wall_shock_width{wall_shock_width}
+  , _shock_width_growth{shock_width_growth}
   , _offset{offset}
   , _nodes{2*Gauss_legendre(_n_adv).nodes() + Mat<_n_adv>::Constant(math::sign(offset)*.707/_n_adv - 1.)}
   {}
@@ -44,7 +48,8 @@ class Advection {
   }
 
   void write_update(Mat<n_update> update, int stride, double* data, bool is_critical) const {
-    double pseudo = 1 + data[Storage_params::tss_offset(_n_var)*stride]*2/data[Storage_params::laplacian_av_offset(_n_var)*stride];
+    double l = _wall_shock_width + _shock_width_growth*data[Storage_params::laplacian_av_offset(_n_var)*stride];
+    double pseudo = 1 + data[Storage_params::tss_offset(_n_var)*stride]*2/l;
     for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
       double& d = data[(Storage_params::advection_offset(_n_var) + _offset*_n_adv + i_adv)*stride];
       if (is_critical) d = (d + update(i_adv))/pseudo;
@@ -66,7 +71,8 @@ class Advection {
       for (int i_adv = 0; i_adv < _n_adv; ++i_adv) {
         state(n_dim + i_adv) = data[(Storage_params::advection_offset(_eq._n_var) + _eq._offset*_n_adv + i_adv)*stride];
       }
-      state(n_dim + _n_adv) = data[Storage_params::laplacian_av_offset(_eq._n_var)*stride];
+      double wall_dist = data[Storage_params::laplacian_av_offset(_eq._n_var)*stride];
+      state(n_dim + _n_adv) = _eq._wall_shock_width + _eq._shock_width_growth*wall_dist;
     }
     Mat<n_update> update_state;
     void fetch_extrap_state(int stride, const double* data) {
