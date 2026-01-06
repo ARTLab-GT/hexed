@@ -297,6 +297,7 @@ wall_dist_iters_initial = 100
 wall_dist_iters_update = 10
 n_cheby_wall_dist = 10
 n_wall_dist_inner_iters = 100
+freeze_pressure = false
 
 {array parameters}
 i_dim = 0

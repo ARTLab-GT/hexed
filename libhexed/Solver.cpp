@@ -941,7 +941,7 @@ void Solver::_update_recursive(int preti_level, double safety) {
         .conv_substep = false,
       };
       apply_state_bcs();
-      if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, _namespace->get<int>("iteration")%100000 == 0 && _namespace->get<int>("iteration") != 0);
+      if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
       else compute_euler(km, opts);
       // note that function call must come first to ensure it is evaluated despite short-circuiting
       fixed = fix_nonphysical(_namespace->get<double>("fix_nonphys_max_safety"), 0) || fixed;
@@ -1012,7 +1012,7 @@ void Solver::update() {
                 };
                 apply_state_bcs();
                 if (use_ldg() && !i && !i_sub) {
-                  compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, true);
+                  compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
                 } else {
                   compute_euler(km, opts);
                 }
@@ -1091,7 +1091,7 @@ void Solver::compute_residual(bool unsteady_implicit) {
     if (_time_scheme == crank_nicolson) opts.implicit_opts.time_step *= .5;
     if (_time_scheme == dirk2) opts.implicit_opts.time_step *= dirk2_gamma;
   }
-  if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, false);
+  if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond);
   else compute_euler(_kernel_mesh(), opts);
 }
 
@@ -1251,7 +1251,7 @@ void Solver::compute_spectral_uncertainty() {
       .compute_residual = true,
       .use_filter = bool(_namespace->get<int>("use_filter")),
     };
-    compute_navier_stokes(_kernel_mesh(), opts, bc_fun, visc, therm_cond, false);
+    compute_navier_stokes(_kernel_mesh(), opts, bc_fun, visc, therm_cond);
   }
   _namespace->assign("rms_flux", std::sqrt(total_sq_flux/total_area));
 }
@@ -1801,7 +1801,6 @@ void Solver::visualize_contour(std::string format, std::string name, std::string
 
 void Solver::vis_lts_constraints(std::string format, std::string name, int n_sample) {
   auto& elems = acc_mesh->elements();
-  int nf = params.n_dof();
   int nq = params.n_qpoint();
   // write local time steps for convection and diffusion to the mass and energy of the reference state.
   // Reference state is used for storage because `Element::time_step_scale` only has space for one scalar
@@ -1810,26 +1809,13 @@ void Solver::vis_lts_constraints(std::string format, std::string name, int n_sam
     max_dt(safeties[i_term], safeties[!i_term]);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      Eigen::Map<Mat<>>(elems[i_elem].residual_cache() + (params.n_dim + i_term)*nq, nq) = Eigen::Map<Mat<>>(elems[i_elem].time_step_scale(), nq);
+      Array<double> res_cache({params.n_var, nq}, elems[i_elem].residual_cache());
+      res_cache(params.n_dim + i_term) = elems[i_elem].time_step_scale();
     }
   }
-  // swap current state and reference state
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Eigen::Map<Mat<>> state(elems[i_elem].state(), nf);
-    Eigen::Map<Mat<>> res_cache(elems[i_elem].residual_cache(), nf);
-    Mat<> temp = res_cache;
-    res_cache = state;
-    state = temp;
-  }
-  // visualize. Note that visualizing straight from the reference state would require implementing another `Qpoint_func` which would be ugly
-  std::string expr {"lts_convective = density; lts_diffusive = energy; lts_ratio = lts_diffusive/lts_convective;"};
+  std::string expr {"lts_convective = residual_density; lts_diffusive = residual_energy;"
+                    "lts_ratio = lts_diffusive/lts_convective;"};
   visualize_field(format, name, expr, n_sample);
-  // restore the current state from the reference state
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Eigen::Map<Mat<>>(elems[i_elem].state(), nf) = Eigen::Map<Mat<>>(elems[i_elem].residual_cache(), nf);
-  }
 }
 
 Array<double> Solver::skews() {

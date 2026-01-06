@@ -8,7 +8,7 @@
 namespace hexed {
 
 void compute_navier_stokes(Kernel_mesh, Kernel_options, std::function<void()> flux_bc,
-                           Transport_model visc, Transport_model therm_cond, bool update_prod);
+                           Transport_model visc, Transport_model therm_cond);
 
 }
 #endif

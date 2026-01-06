@@ -51,10 +51,10 @@ vis_surface_vars = vis_surface_vars + {
     wall_dimension = wall_dimension
     nominal_spacing = $({nominal_shape} + wall_dimension)
 }
+vis_lts_constraints = true
 
 working_dir = {hexed_out}
 adapt_freq = adapt_freq*10
-preti = true
 
 $plot_history
 $simulate
