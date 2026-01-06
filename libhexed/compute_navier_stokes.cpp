@@ -7,9 +7,9 @@ namespace hexed {
 typedef Navier_stokes<true, laminar> ns;
 typedef Navier_stokes<true, k_omega> rans;
 void compute_navier_stokes(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc,
-                           Transport_model visc, Transport_model therm_cond, bool update_prod) {
-  if (mesh.turb_model == k_omega) COMPUTE_DIFFUSION(rans::Pde, visc, therm_cond)
-  else COMPUTE_DIFFUSION(ns::Pde, visc, therm_cond)
+                           Transport_model visc, Transport_model therm_cond, bool freeze_pressure) {
+  if (mesh.turb_model == k_omega) COMPUTE_DIFFUSION(rans::Pde, visc, therm_cond, freeze_pressure)
+  else COMPUTE_DIFFUSION(ns::Pde, visc, therm_cond, freeze_pressure)
 }
 
 }

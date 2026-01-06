@@ -53,9 +53,22 @@ vis_surface_vars = vis_surface_vars + {
 }
 vis_lts_constraints = true
 
-working_dir = {hexed_out}
+working_dir = {hexed_out_freeze_pres}
 adapt_freq = adapt_freq*10
 preti = true
+
+iterate = iterate + {
+    case0 = {}
+    case1 = {
+        println{
+
+PRESSURE FROZEN
+
+}
+        freeze_pressure = true
+    }
+    $$({case} + (iteration == 1e5))
+}
 
 $plot_history
 $simulate
