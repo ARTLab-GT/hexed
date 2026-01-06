@@ -257,7 +257,8 @@ void Case::_update_monitors() {
   if (_vari("automate_adapt_schedule")) {
     bool sufficient_drop = _vard("normalized_residual") < _vard("next_refine_residual");
     bool stagnated = _log_residual_hist.converged({_vard("residual_stagnation_tol")}, {huge});
-    allow_ref = allow_ref && (sufficient_drop || stagnated);
+    bool converged = _vari("monitors_converged");
+    allow_ref = allow_ref && (sufficient_drop || stagnated || converged);
   }
   _inter.variables->assign<int>("allow_refinement", allow_ref);
   for (Int i_monitor = -1; i_monitor < Int(_monitor_vars.size()); ++i_monitor) {
@@ -570,7 +571,7 @@ Case::Case(std::string input_script)
     if (allow_ref) {
       printers::info("refinement allowed", true);
       _inter.variables->assign("next_refine_residual", _vard("normalized_residual")*_vard("adapt_residual_factor"));
-      _inter.variables->assign("last_adapt_iter", iter);
+      _inter.variables->assign("last_refine_iter", iter);
     } else {
       printers::info("only coarsening allowed");
     }

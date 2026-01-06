@@ -246,7 +246,7 @@ adapt_unrefine_if = {((($spectral_unref_criterion & $flux_unref_criterion) | $sh
 adapt_residual_factor = .5
 residual_stagnation_tol = 1e-2
 adapt_if = {(iteration%adapt_freq == 0 & hexed_time_step_done)}
-monitor_criterion = {(iteration > min_prints*print_freq & monitors_converged & (!amr | (last_adapt_iter > (1. - monitor_window)*iteration & last_adapt_iter < iteration + 3*print_freq)))}
+monitor_criterion = {(iteration > min_prints*print_freq & monitors_converged & (!amr | (last_refine_iter > (1. - monitor_window)*iteration & last_refine_iter < iteration - 3*print_freq)))}
 done = {($monitor_criterion | iteration > max_iterations | flow_time > max_flow_time | wall_time > max_wall_time)}
 max_init_refine_iters = 100
 max_geom_refine_iters = 100
@@ -504,7 +504,7 @@ start = {
     normalized_residual = 1.
     prev_residual = 0.
     hexed_next_flow_time = 0.
-    last_adapt_iter = 0
+    last_refine_iter = 0
     allow_refinement = false
     pseudotime_iteration = 0
     rms_flux = 0.
