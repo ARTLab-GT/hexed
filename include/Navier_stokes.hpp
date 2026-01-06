@@ -20,7 +20,6 @@ class Navier_stokes {
   template <int n_dim, int row_size>
   class Pde {
     const int _n_var;
-    bool _freeze_pressure;
     public:
     static constexpr bool has_diffusion = visc;
     static constexpr bool has_convection = true;
@@ -49,9 +48,8 @@ class Navier_stokes {
     Transport_model dyn_visc;
     Transport_model therm_cond;
 
-    Pde(int n_var, Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid,
-        bool freeze_pressure = false)
-    : _n_var{n_var}, dyn_visc{dynamic_visc}, therm_cond{thermal_cond}, _freeze_pressure{freeze_pressure}
+    Pde(int n_var, Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid)
+    : _n_var{n_var}, dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
     {}
 
     Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
@@ -61,15 +59,6 @@ class Navier_stokes {
     }
 
     void write_update(Mat<n_update> update, int stride, double* data, bool critical) const {
-      if (_freeze_pressure) {
-        double old_kin_ener = 0;
-        double new_kin_ener = 0;
-        for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-          old_kin_ener += .5*data[i_dim*stride]*data[i_dim*stride]/data[n_dim*stride];
-          new_kin_ener += .5*math::pow(data[i_dim*stride] + update(i_dim), 2)/(data[n_dim*stride] + update(n_dim));
-        }
-        update(n_dim + 1) = new_kin_ener - old_kin_ener + 30*update(n_dim)/0.4;
-      }
       for (int i_var = 0; i_var < n_update; ++i_var) {
         if (std::abs(update(i_var)) < 1e60) {
           data[i_var*stride] += update(i_var);
