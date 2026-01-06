@@ -86,7 +86,6 @@ void element(Namespace& space, Element& elem) {
   space.assign<int>("has_shock", elem.has_shock);
   space.assign<int>("time_step_ratio_diffusion", elem.ts_ratio_diffusion);
   space.assign<int>("time_step_ratio_decay", elem.ts_ratio_decay);
-  space.assign<double>("local_av_width", Array<double>({params.n_qpoint()}, elem.laplacian_av_coef()).extreme(0));
 }
 
 void position(Namespace& space, Element& elem, const Basis& basis) {
