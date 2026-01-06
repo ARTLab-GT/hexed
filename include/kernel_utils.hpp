@@ -1,8 +1,20 @@
+#ifndef HEXED_KERNEL_UTILS_HPP_
+#define HEXED_KERNEL_UTILS_HPP_
+
 #include <kernels.hpp>
-#include <pde.hpp>
 #include <Spatial.hpp>
 
-namespace hexed {
+#define COMPUTE_CONVECTION(Pde_templ, ...) { \
+  Vector_view<Hard_kernel_connection> car_cons(mesh.car_connections); \
+  Vector_view<Hard_kernel_connection> def_cons(mesh.def_connections); \
+  Vector_view<std::vector<Kernel_face_refinement>&, std::vector<Kernel_face_refinement>> face_refs(mesh.face_refinements); \
+  (*kernel_factory<Spatial<Pde_templ, false>::Neighbor>(mesh.n_dim, mesh.row_size, opts.i_stage, mesh.mask_level, mesh.n_var __VA_OPT__(,) __VA_ARGS__))(car_cons, opts.sw_car, "neighbor"); \
+  (*kernel_factory<Spatial<Pde_templ,  true>::Neighbor>(mesh.n_dim, mesh.row_size, opts.i_stage, mesh.mask_level, mesh.n_var __VA_OPT__(,) __VA_ARGS__))(def_cons, opts.sw_def, "neighbor"); \
+  (*kernel_factory<Spatial<Pde_templ, false>::Restrict_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var))(face_refs, opts.sw_pr); \
+  (*kernel_factory<Spatial<Pde_templ, false>::Local>(mesh.n_dim, mesh.row_size, mesh.basis, opts.dt, opts.i_stage, opts.compute_residual, opts.use_filter, opts.mask, opts.conv_substep, opts.implicit_opts, mesh.n_var __VA_OPT__(,) __VA_ARGS__))(mesh.car_elems, opts.sw_car, "local"); \
+  (*kernel_factory<Spatial<Pde_templ,  true>::Local>(mesh.n_dim, mesh.row_size, mesh.basis, opts.dt, opts.i_stage, opts.compute_residual, opts.use_filter, opts.mask, opts.conv_substep, opts.implicit_opts, mesh.n_var __VA_OPT__(,) __VA_ARGS__))(mesh.def_elems, opts.sw_def, "local"); \
+  (*kernel_factory<Spatial<Pde_templ, false>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var))(face_refs, opts.sw_pr); \
+}
 
 #define COMPUTE_DIFFUSION(Pde_templ, ...) { \
   Vector_view<Hard_kernel_connection> car_cons(mesh.car_connections); \
@@ -26,24 +38,9 @@ namespace hexed {
   (*kernel_factory<Spatial<Pde_templ,  true>::Prolong_refined>(mesh.n_dim, mesh.row_size, mesh.basis, mesh.mask_level, mesh.n_var))(face_refs, opts.sw_pr); \
 }
 
-typedef pde::Navier_stokes<true, laminar> ns;
-typedef pde::Navier_stokes<true, k_omega> rans;
-void compute_navier_stokes(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, Transport_model visc, Transport_model therm_cond, bool update_prod) {
-  if (mesh.turb_model == k_omega) COMPUTE_DIFFUSION(rans::Pde, visc, therm_cond)
-  else COMPUTE_DIFFUSION(ns::Pde, visc, therm_cond)
-}
-void compute_smooth_av(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, double diff_time, double cheby_step) {
-  COMPUTE_DIFFUSION(pde::Smooth_art_visc, diff_time, cheby_step)
-}
-void compute_fix_nonphysical(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc) {
-  if (mesh.turb_model == k_omega) COMPUTE_DIFFUSION(pde::Fix_nonphysical<4>::Pde)
-  else COMPUTE_DIFFUSION(pde::Fix_nonphysical<2>::Pde)
+#define COMPUTE_MAX_DT(Pde_templ, ...) { \
+  return std::min((*kernel_factory<Spatial<Pde_templ, false>::Max_dt>(mesh.n_dim, mesh.row_size, mesh.basis, local_time, opts.use_filter, msc, msd, calc_ts_ratio, mesh.n_var __VA_OPT__(,) __VA_ARGS__))(mesh.car_elems, opts.sw_car, "compute time step"), \
+                  (*kernel_factory<Spatial<Pde_templ,  true>::Max_dt>(mesh.n_dim, mesh.row_size, mesh.basis, local_time, opts.use_filter, msc, msd, calc_ts_ratio, mesh.n_var __VA_OPT__(,) __VA_ARGS__))(mesh.def_elems, opts.sw_def, "compute time step")); \
 }
 
-void compute_poisson(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, double forcing, double farfield_value) {
-  COMPUTE_DIFFUSION(pde::Poisson, forcing, farfield_value)
-}
-
-#undef COMPUTE_DIFFUSION
-
-}
+#endif

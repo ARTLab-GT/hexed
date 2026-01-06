@@ -12,6 +12,9 @@ mesh_extreme10 = -10.
 mesh_extreme01 =  10.
 mesh_extreme11 =  10.
 amr = true
+{
+geom_refine_if = geom_refine_if + {| (has_wall & nom_sz > 0.1)}
+}
 
 {generate geometry with external script}
 shell {python3 ../make_geom.py}
@@ -25,7 +28,7 @@ attack = 4*degree
 {iteration parameters}
 print_freq = 100
 vis_freq = 10000
-adapt_freq = 1000
+adapt_freq = 10000
 iterate = compute_force + iterate
 monitor_vars = {lift_coef = lift_coef;}
 vis_field_vars = vis_field_vars + {spectral_uncertainty0 = spectral_uncertainty0; spectral_uncertainty1 = spectral_uncertainty1; spectral_uncertainty2 = spectral_uncertainty2;}

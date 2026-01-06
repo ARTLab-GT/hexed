@@ -15,8 +15,8 @@ class Storage_params {
   int n_var; //!< \brief number of independent physical state variables
   int n_dim; //!< \brief number of dimensions
   int row_size; //!< \brief \ref basis_row_size "row size" of basis
-  int n_forcing = 4; //!< \brief number of artificial viscosity forcing variables
-  int n_offset = 2;
+  static constexpr int n_forcing = 4; //!< \brief number of artificial viscosity forcing variables
+  static constexpr int n_offset = 2;
 
   int n_qpoint() const; //!< \brief number of quadrature points per element
   int n_face_qpoint() const; //!< \brief number of quadrature points on each element face
@@ -29,6 +29,16 @@ class Storage_params {
   std::vector<int> physical_shape() const;
   //! \brief Shape of the `Array` required to hold the full numerical state variables
   std::vector<int> numerical_shape() const;
+
+  static constexpr int tss_offset(int n_var) {return n_var + 0;}
+  static constexpr int bulk_av_offset(int n_var) {return n_var + 1;}
+  static constexpr int laplacian_av_offset(int n_var) {return n_var + 2;}
+  static constexpr int forcing_offset(int n_var) {return n_var + 3;}
+  static constexpr int advection_offset(int n_var) {return n_var + 3 + n_forcing;}
+
+  static constexpr int residual_cache_offset(int n_var, int row_size) {
+    return advection_offset(n_var) + n_offset*n_advection(row_size);
+  }
 };
 
 //! \relates Storage_params

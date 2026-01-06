@@ -134,7 +134,6 @@ std::vector<Tree*> Tree::unrefine(std::vector<bool> dims) {
     HEXED_ASSERT(is_refined(i_dim) || !dims[i_dim], "Cannot unrefine dimension that is not refined.")
     dims[i_dim] = is_refined(i_dim) && !dims[i_dim];
   }
-  for (auto& c : _children_storage) HEXED_ASSERT(c->is_leaf(), "At least one child is not a leaf.")
   _children_storage.clear();
   return refine(dims);
 }

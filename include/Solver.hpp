@@ -158,8 +158,8 @@ class Solver {
    * \details Mesh topology must be valid (no duplicate or missing connections) before calling this function.
    */
   void calc_jacobian();
-  void init_av_length();
-  void update_av_length(Int n_iter);
+  void init_wall_dist();
+  void update_wall_dist(Int n_iter);
   //! \brief set the flow state from an HIL expression
   //! \details `espression` must set the variables `momentum0`, ..., `momentum[n_dim - 1]`, `density`, `energy`
   void initialize(std::string expression);
@@ -217,7 +217,7 @@ class Solver {
   void compute_lts_constraints();
   bool is_physical(); //!< \brief check whether flowfield is physically admissible (e.g. density and energy are positive)
   //! \brief updates the aritificial viscosity coefficient based on smoothness of the flow variables
-  void update_art_visc_smoothness(double advect_length);
+  void update_art_visc_smoothness();
   /*! \brief (experimental) sets artificial viscosity based on elementwise smoothness
    * \details Based on the work of Persson et al. on artificial viscosity with elementwise smoothness indicators.
    * Implemented primarily for evaluating the difference

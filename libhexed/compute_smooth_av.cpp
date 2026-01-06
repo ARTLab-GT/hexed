@@ -1,0 +1,12 @@
+#include <hexed/kernel_utils.hpp>
+#include <hexed/compute_smooth_av.hpp>
+#include <hexed/Smooth_art_visc.hpp>
+
+namespace hexed {
+
+void compute_smooth_av(Kernel_mesh mesh, Kernel_options opts, std::function<void()> flux_bc, double diff_time,
+                       double cheby_step, double wsw, double swg) {
+  COMPUTE_DIFFUSION(Smooth_art_visc, diff_time, cheby_step, wsw, swg)
+}
+
+}

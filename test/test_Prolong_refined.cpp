@@ -1,6 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Spatial.hpp>
-#include <hexed/pde.hpp>
+#include <hexed/Navier_stokes.hpp>
 #include <hexed/Gauss_legendre.hpp>
 
 TEST_CASE("Prolong_refined") {
@@ -30,7 +30,7 @@ TEST_CASE("Prolong_refined") {
 
   SECTION("split dim 0") {
     ref.split_dim = 0;
-    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Prolong_refined>(3, row_size, basis, 0, 5))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Spatial<hexed::Navier_stokes<false>::Pde, false>::Prolong_refined>(3, row_size, basis, 0, 5))(ref_face_v);
     for (int i_half : {0, 1}) {
       for (int i_node = 0; i_node < row_size; ++i_node) {
         for (int j_node = 0; j_node < row_size; ++j_node) {
@@ -46,7 +46,7 @@ TEST_CASE("Prolong_refined") {
 
   SECTION("split dim 1") {
     ref.split_dim = 1;
-    (*hexed::kernel_factory<hexed::Spatial<hexed::pde::Navier_stokes<false>::Pde, false>::Prolong_refined>(3, row_size, basis, 0, 5))(ref_face_v);
+    (*hexed::kernel_factory<hexed::Spatial<hexed::Navier_stokes<false>::Pde, false>::Prolong_refined>(3, row_size, basis, 0, 5))(ref_face_v);
     for (int j_half : {0, 1}) {
       for (int i_node = 0; i_node < row_size; ++i_node) {
         for (int j_node = 0; j_node < row_size; ++j_node) {

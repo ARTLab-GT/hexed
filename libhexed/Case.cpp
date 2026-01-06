@@ -405,7 +405,12 @@ Case::Case(std::string input_script)
       freestream(n_dim + 1) = ener;
       _set_vector("freestream", freestream);
       if (_transport_model("viscosity").is_viscous) {
-        _inter.variables->assign("reynolds_per_length", density*_vard("freestream_speed")/dyn_visc);
+        double rpl = density*_vard("freestream_speed")/dyn_visc;
+        _inter.variables->assign("reynolds_per_length", rpl);
+        double min_shock_width = _vard("min_wall_shock_width_reynolds")/rpl;
+        _inter.variables->assign("wall_shock_width", std::max(_vard("wall_shock_width"), min_shock_width));
+      } else {
+        _inter.variables->assign("reynolds_per_length", huge);
       }
     }
     return "";
@@ -507,6 +512,8 @@ Case::Case(std::string input_script)
     refine_isotropic("geom", "Geometry", true, true);
     _inter.variables->assign("flow_time", 0.);
     for (int i_split = 0; i_split < _vari("init_layer_splits"); ++i_split) _inter.make_sub().exec("split_layers");
+    _solver().init_wall_dist();
+    _solver().update_wall_dist(_vari("wall_dist_iters_initial"));
     for (int i_ref = 0; i_ref < _vari("max_final_refine_iters"); ++i_ref) {
       printers::info("  Final refinement sweep " + to_string(i_ref) + "... ");
       std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
@@ -521,6 +528,7 @@ Case::Case(std::string input_script)
       _visualize("_final_ref_sweep" + to_string(i_ref));
       if (!result.changed) break;
     }
+    _solver().update_wall_dist(_vari("wall_dist_iters_update"));
     _inter.variables->assign("mesh_init", 1);
     printers::info("  geometry bounding box: \n");
     for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
@@ -530,8 +538,6 @@ Case::Case(std::string input_script)
       }
       printers::info("\n");
     }
-    _solver().init_av_length();
-    _solver().update_av_length(_vari("av_coef_iters_initial"));
     printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.\n", true);
     _solver().print_preti_iters();
     return "";
@@ -600,7 +606,7 @@ Case::Case(std::string input_script)
       _solver().mesh().execute_adaptation();
     }
     _solver().calc_jacobian();
-    _solver().update_av_length(_vari("av_coef_iters_update"));
+    _solver().update_wall_dist(_vari("wall_dist_iters_update"));
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().compute_residual(false);
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
@@ -632,7 +638,6 @@ Case::Case(std::string input_script)
       if (!result.changed) break;
     }
     _solver().calc_jacobian();
-    _solver().update_av_length(100);
     _solver().compute_residual(false);
     printers::info("done\n");
     return "";
@@ -828,7 +833,7 @@ Case::Case(std::string input_script)
   _inter.variables->create<std::string>("update", new Namespace::Heisenberg<std::string>([this]() {
     HEXED_ASSERT(_vari("mesh_init"), "attempt to update flow when mesh has not been created", assert::User_error);
     _inter.variables->assign("total_smear_iters", 0);
-    bool avw = _vard("art_visc_width") > 0;
+    bool avw = _vari("capture_shocks");
     bool avc = _vard("art_visc_constant") > 0;
     bool be = !_vari("steady") && _vari("implicit");
     int iter = _vari(be ? "pseudotime_iteration" : "iteration");
@@ -837,9 +842,9 @@ Case::Case(std::string input_script)
     for (int i = 0; i < n; ++i) {
       ++iter;
       if (_inter.variables->get<int>("elementwise_art_visc")) {
-        _solver().update_art_visc_elwise(_vard("art_visc_width"), _vari("elementwise_art_visc_pde"));
+        HEXED_THROW("Elementwise artificial viscosity is no longer supported.", assert::Not_implemented_error)
       } else if (avw) {
-        _solver().update_art_visc_smoothness(_vard("art_visc_width"));
+        _solver().update_art_visc_smoothness();
       } else if (avc) {
         _solver().set_art_visc_constant(_vard("art_visc_constant"));
       } else if (_solver().using_art_visc()) {

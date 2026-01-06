@@ -160,7 +160,7 @@ class Spatial {
    */
   template <int n_dim, int row_size>
   class Prolong_refined : public Kernel<std::vector<Kernel_face_refinement>&> {
-    static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
+    static constexpr int n_var = std::max(Pde_templ<n_dim, row_size>::n_extrap, Pde_templ<n_dim, row_size>::n_update);
     const Eigen::Matrix<double, row_size, row_size> prolong_mat [2];
     bool _scale;
     bool _offset;
@@ -223,7 +223,7 @@ class Spatial {
    */
   template <int n_dim, int row_size>
   class Restrict_refined : public Kernel<std::vector<Kernel_face_refinement>&> {
-    static constexpr int n_var = Pde_templ<n_dim, row_size>::n_extrap;
+    static constexpr int n_var = std::max(Pde_templ<n_dim, row_size>::n_extrap, Pde_templ<n_dim, row_size>::n_update);
     const Eigen::Matrix<double, row_size, row_size> restrict_mat [2];
     bool scl;
     bool off;
@@ -364,7 +364,8 @@ class Spatial {
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
         std::array<double*, 6> face_nrml;
-        double visc_storage [n_dim][Pde::n_extrap][n_qpoint] {}; // for viscous PDEs, will be used to store gradients and later viscous flux
+        constexpr int visc_storage_sz = std::max(Pde::n_update, Pde::n_extrap);
+        double visc_storage [n_dim][visc_storage_sz][n_qpoint] {}; // for viscous PDEs, will be used to store gradients and later viscous flux
         #pragma GCC diagnostic pop
         if constexpr (is_deformed) {
           elem_det = elem.jacobian_determinant();
@@ -379,7 +380,6 @@ class Spatial {
 
         // compute gradient (times jacobian determinant, cause that's easier)
         if constexpr (Pde::has_diffusion) {
-          static_assert(Pde::n_extrap >= Pde::n_update);
           for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
             Mat<Pde::n_extrap> grad_vars = _eq.fetch_extrap(n_qpoint, state + i_qpoint);
             for (int i_var = 0; i_var < Pde::n_extrap; ++i_var) (&time_rate[0][0][i_qpoint])[i_var*n_qpoint] = grad_vars(i_var);
@@ -409,7 +409,13 @@ class Spatial {
               }
             }
           }
-          for (int i = 0; i < 2*Pde::n_update*n_qpoint; ++i) (&time_rate[0][0][0])[i] = 0;
+          for (int i = 0; i < 2; ++i) {
+            for (int j = 0; j < Pde::n_update; ++j) {
+              for (int k = 0; k < n_qpoint; ++k) {
+                time_rate[i][j][k] = 0.;
+              }
+            }
+          }
         }
 
         // compute flux
@@ -425,6 +431,9 @@ class Spatial {
             }
           } else {
             for (int i_dim = 0; i_dim < n_dim; ++i_dim) comp.normal(i_dim, i_dim) = nominal_area[i_dim];
+          }
+          if constexpr (Pde::needs_size) {
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) comp.nominal_size(i_dim) = nominal_shape[i_dim];
           }
           if constexpr (Pde::has_convection) {
             comp.compute_flux_conv();
@@ -589,8 +598,7 @@ class Spatial {
 
     virtual void operator()(Sequence<Kernel_element&>& elements) {
       #pragma omp parallel for
-      for (int i_elem = 0; i_elem < elements.size(); ++i_elem)
-      {
+      for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
         auto& elem = elements[i_elem];
         double* state = elem.state();
         std::array<double*, 6> visc_faces;
@@ -624,19 +632,24 @@ class Spatial {
 
         bool fringe = elem.mask() < _mask;
         // write update to interior
-        double* to_update = _compute_residual ? elem.residual_cache() : state;
         double* res_cache = elem.residual_cache();
         for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-          Mat<Pde::n_update> update;
           double mult = _update*tss[i_qpoint]/nominal_volume*(!fringe);
           if constexpr (is_deformed) mult /= elem_det[i_qpoint];
-          for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
-            update(i_var) = time_rate[i_var][i_qpoint]*mult;
-            if constexpr (is_deformed) if (_conv_substep) {
-              res_cache[(Pde::n_update + i_var)*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint];
+          if (_compute_residual) {
+            for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+              res_cache[i_var*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint]*mult;
             }
+          } else {
+            Mat<Pde::n_update> update;
+            for (int i_var = 0; i_var < Pde::n_update; ++i_var) {
+              update(i_var) = time_rate[i_var][i_qpoint]*mult;
+              if constexpr (is_deformed) if (_conv_substep) {
+                res_cache[(Pde::n_update + i_var)*n_qpoint + i_qpoint] += time_rate[i_var][i_qpoint];
+              }
+            }
+            _eq.write_update(update, n_qpoint, state + i_qpoint, true);
           }
-          _eq.write_update(update, n_qpoint, to_update + i_qpoint, true);
         }
         // *now* we can extrapolate state to faces
         std::array<double*, 6> faces;
@@ -859,6 +872,9 @@ class Spatial {
           // fetch state
           typename Pde::template Computation<n_dim> comp(_eq);
           comp.fetch_state(n_qpoint, state + i_qpoint);
+          if constexpr (Pde::needs_size) {
+            for (int i_dim = 0; i_dim < n_dim; ++i_dim) comp.nominal_size(i_dim) = elem.nominal_shape(i_dim);
+          }
           // compute time step
           double scale_conv = 0;
           double scale_diff = 0;

@@ -2,9 +2,9 @@
 #include <hexed/math.hpp>
 #include <hexed/kernel_factory.hpp>
 #include <hexed/constants.hpp>
-#include <hexed/pde.hpp>
 #include <hexed/Gauss_lobatto.hpp>
 #include <hexed/Printer.hpp>
+#include <hexed/Navier_stokes.hpp>
 
 namespace hexed {
 
@@ -50,7 +50,7 @@ Riemann_invariants::Riemann_invariants(Mat<> freestream_state)
 template <int n_dim>
 Mat<> apply_char(Mat<> state, Mat<> normal, int sign, Mat<> inside, Mat<> outside) {
   // compute characteristics
-  typename pde::Navier_stokes<>::Pde<n_dim, 2>::Characteristics ch(state, normal);
+  typename Navier_stokes<>::Pde<n_dim, 2>::Characteristics ch(state, normal);
   auto eigvals = ch.eigvals();
   auto decomp = ch.decomp(inside);
   auto fs_decomp = ch.decomp(outside);
