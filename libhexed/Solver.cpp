@@ -1801,7 +1801,6 @@ void Solver::visualize_contour(std::string format, std::string name, std::string
 
 void Solver::vis_lts_constraints(std::string format, std::string name, int n_sample) {
   auto& elems = acc_mesh->elements();
-  int nf = params.n_dof();
   int nq = params.n_qpoint();
   // write local time steps for convection and diffusion to the mass and energy of the reference state.
   // Reference state is used for storage because `Element::time_step_scale` only has space for one scalar
@@ -1810,26 +1809,13 @@ void Solver::vis_lts_constraints(std::string format, std::string name, int n_sam
     max_dt(safeties[i_term], safeties[!i_term]);
     #pragma omp parallel for
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-      Eigen::Map<Mat<>>(elems[i_elem].residual_cache() + (params.n_dim + i_term)*nq, nq) = Eigen::Map<Mat<>>(elems[i_elem].time_step_scale(), nq);
+      Array<double> res_cache({params.n_var, nq}, elems[i_elem].residual_cache());
+      res_cache(params.n_dim + i_term) = elems[i_elem].time_step_scale();
     }
   }
-  // swap current state and reference state
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Eigen::Map<Mat<>> state(elems[i_elem].state(), nf);
-    Eigen::Map<Mat<>> res_cache(elems[i_elem].residual_cache(), nf);
-    Mat<> temp = res_cache;
-    res_cache = state;
-    state = temp;
-  }
-  // visualize. Note that visualizing straight from the reference state would require implementing another `Qpoint_func` which would be ugly
-  std::string expr {"lts_convective = density; lts_diffusive = energy; lts_ratio = lts_diffusive/lts_convective;"};
+  std::string expr {"lts_convective = residual_density; lts_diffusive = residual_energy;"
+                    "lts_ratio = lts_diffusive/lts_convective;"};
   visualize_field(format, name, expr, n_sample);
-  // restore the current state from the reference state
-  #pragma omp parallel for
-  for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    Eigen::Map<Mat<>>(elems[i_elem].state(), nf) = Eigen::Map<Mat<>>(elems[i_elem].residual_cache(), nf);
-  }
 }
 
 Array<double> Solver::skews() {
