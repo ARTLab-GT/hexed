@@ -39,29 +39,11 @@ monitor_vars = {lift_coef = lift_coef; drag_coef = drag_coef;}
 
 vis_art_visc_vars = true
 vis_field_vars = vis_field_vars + {
-    specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
-    turbulent_dissipation_bassi = turbulent_dissipation_bassi
-    specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density)
     debug_var0 = debug_var0
     av_forcingA = av_forcing0
     has_shock = has_shock
-    av_advectionA = av_advection0
-    av_advectionB = av_advection1
-    av_advectionC = av_advection2
-    av_advectionD = av_advection3
-    av_advectionE = av_advection4
-    av_advectionF = av_advection5
-    av_advectionG = av_advection6
-    av_advectionH = av_advection7
-    av_advectionI = av_advection8
-    av_advectionJ = av_advection9
-    av_advectionK = av_advection10
-    av_advectionL = av_advection11
 }
-
-art_visc_width = 0.2
-av_coef_decay = 2*1.
-wall_av_coef = 1e-4
+preti = true
 
 $plot_history
 $simulate

@@ -31,6 +31,7 @@ The following arguments are optional:
   This is designed to fix nonsmooth distributions of geometry points which can disrupt the polynomial interpolation.
   However, it is computationally expensive and not very robust, so only use it if necessary.
   If your curve fit is ugly and you notice rapid changes in the density of data points or irregular spacing, try this option.
+  When `--spline` is passed, this flag has no effect.
 - `--close_deform`: If provided, the output geometry will be smoothly deformed such that the first and last points match exactly.
   For airfoils, it is generally recommended that you use this option, especially if the trailing edge of your original geometry was closed.
   Note that by default, i.e. if none of `--close_deform`, `--close_segment`, or `--periodic` are provided, the output will not be exactly watertight.
@@ -39,13 +40,23 @@ The following arguments are optional:
 - `--periodic`: Specifies that a trigonometric basis shall be used instead of a polynomial one.
   Use this if the end of your geometry curve is supposed to blend smoothly into the beginning (e.g., the starfish case).
   Do not use this if your geometry has an edge that coincides with the start/end of the curve (e.g., an airfoil).
+- `--spline`: If provided, an interpolating cubic spline will be used to fit the points
+  rather than an under-fitted polynomial/trigonometric series.
+  The `--periodic` flag can still be passed to make the spline periodic.
 - `--order=[n]`: Specifies an `[n]`th order curve fit.
   If not periodic, this is the number of polynomial coefficients.
   E.g. `--order=20` specifies a 19th-degree polynomial curve fit.
   If periodic, this is the number of cosine *and* sine functions that will be used.
   If not provided, defaults to 10.
+  When `--spline` is passed, this flag has no effect.
 - `--num-points=[n]`: Specifies that the output file should include `[n]` sample points.
-  If not provided, defaults to 1000.
+  If not provided, defaults to 8193 (\f$ 2^{13} + 1 \f$).
+- `--sample_freq=[n]`: Specifies that only every `n`th point will be incorporated into the curve fit.
+  This is useful if the source geometry contains too many points with insufficient precision, especially with `--spline`.
+  The sequence always starts with the first point.
+  If the last point in the uniformly spaced sequence does not happen to coincide with the last point in the source geometry,
+  The last point in the geometry will be substituted instead.
+  As a result the distance between the last two sample points may be larger than average.
 
 ## Output
 Depending on the `--quiet` argument, some diagnostic information may be printed and plots may be displayed.

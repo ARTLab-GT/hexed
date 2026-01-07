@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+from scipy.interpolate import make_interp_spline
 
 ### \file _fit_geom.py
 ### \brief Source code for the \ref geom_fitting hexed_fit_geom command.
@@ -14,8 +15,9 @@ def fit_geom():
     close_segment = False
     quiet = False
     periodic = False
+    spline = False
     order = 10
-    n_interp = 1000
+    n_interp = 2**13 + 1
     for arg in args:
         if ".geom" in arg:
             points = np.loadtxt(arg, skiprows=2)
@@ -38,12 +40,18 @@ def fit_geom():
             quiet = True
         elif arg == "--periodic":
             periodic = True
+        elif arg == "--spline":
+            spline = True
         else:
             parts = arg.split("=")
             if parts[0] == "--order":
                 order = int(parts[1])
             elif parts[0] == "--num-points":
                 n_interp = int(parts[1])
+            elif parts[0] == "--sample_freq":
+                rows = list(range(0, points.shape[0], int(parts[1])))
+                rows[-1] = points.shape[0] - 1
+                points = points[rows, :]
             else:
                 raise Exception(f"unrecognized argument `{arg}`")
     assert fname, "must specify a file to process"
@@ -78,29 +86,36 @@ def fit_geom():
 
     # compute mode coefficients as a least squares fit to the data points
     def soln(p):
-        return np.linalg.lstsq(monde(p), points, rcond=None)
+        return np.linalg.lstsq(monde(p), points.transpose(), rcond=None)
 
-    # optimize distribution of data points in parametric space if desired
-    if optimize:
-        # optimization minimizes residual of curve fit
-        def res(theta):
-            return (soln(np.cos(theta))[1]).sum()
-        from scipy.optimize import minimize
-        min_result = minimize(res, np.arccos(param_in))
-        if not quiet:
-            print("optimization result:")
-            print(min_result)
-            print()
-        param_in = np.cos(min_result.x)
-
-    # obtain final curve fit with whatever distribution of data points we have
-    s = soln(param_in)
-    coef = s[0]
-    if not quiet:
-        print(f"curve fit residual: {s[1].sum()**.5}")
-    # sample at uniformly-spaced (in parameter space) interpolation points
     param_out = np.linspace(-1, 1, n_interp)
-    interp = monde(param_out) @ coef
+    if spline:
+        if periodic:
+            bc = "periodic"
+        else:
+            bc = None
+        interp = make_interp_spline(param_in, points, bc_type=bc)(param_out)
+    else:
+        # optimize distribution of data points in parametric space if desired
+        if optimize:
+            # optimization minimizes residual of curve fit
+            def res(theta):
+                return (soln(np.cos(theta))[1]).sum()
+            from scipy.optimize import minimize
+            min_result = minimize(res, np.arccos(param_in))
+            if not quiet:
+                print("optimization result:")
+                print(min_result)
+                print()
+            param_in = np.cos(min_result.x)
+
+        # obtain final curve fit with whatever distribution of data points we have
+        s = soln(param_in)
+        coef = s[0]
+        if not quiet:
+            print(f"curve fit residual: {s[1].sum()**.5}")
+        # sample at uniformly-spaced (in parameter space) interpolation points
+        interp = monde(param_out) @ coef
 
     # plot results in parameter space
     if not quiet:
