@@ -2984,7 +2984,8 @@ std::vector<std::unique_ptr<Accessible_mesh::Masked_mesh>> Accessible_mesh::pret
       int level;
       if (iso) {
         if (elem.tree->is_graft()) {
-          level = (elem.tree->anisotropic_refinement_level() - root_arl).extreme(1);
+          Array<int> arl = elem.tree->anisotropic_refinement_level();
+          level = params.n_dim*arl.extreme(1) - arl.sum();
         } else {
           level = 0;
         }

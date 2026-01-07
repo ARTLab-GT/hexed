@@ -44,6 +44,7 @@ monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
     residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)
+    mask = mask
 }
 vis_surface_vars = vis_surface_vars + {
     roughness_height = roughness_height
@@ -53,7 +54,7 @@ vis_surface_vars = vis_surface_vars + {
 }
 vis_lts_constraints = true
 
-working_dir = {hexed_out_preti0}
+working_dir = {hexed_out_preti1}
 adapt_freq = adapt_freq*20
 vis_freq = write_freq = adapt_freq
 preti = true
