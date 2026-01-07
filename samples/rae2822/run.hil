@@ -15,7 +15,6 @@ vis_freq = 10^3
 adapt_freq = 10^3
 update_roughness_freq = 10^3
 print_freq = 10
-shock_adapt_freq = 100
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity

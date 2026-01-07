@@ -540,6 +540,7 @@ Case::Case(std::string input_script)
       printers::info("\n");
     }
     printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.\n", true);
+    _solver().update_preti_iters();
     _solver().print_preti_iters();
     return "";
   }));
@@ -639,6 +640,8 @@ Case::Case(std::string input_script)
       if (!result.changed) break;
     }
     _solver().calc_jacobian();
+    _solver().update_preti_iters();
+    _solver().print_preti_iters();
     _solver().compute_residual(false);
     printers::info("done\n");
     return "";

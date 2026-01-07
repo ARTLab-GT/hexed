@@ -138,16 +138,20 @@ ramping_initial_safety = 1e-3
 ramping_final_safety = 0.7
 ramp_freq = 100
 ramp_factor = 2.
+final_shock_adapt_freq = 100
 ramp_if = {(iteration%ramp_freq == 0)}
 ramped = false
 set_ramping = {
     max_safety = ramping_initial_safety
+    shock_adapt_freq = round(final_shock_adapt_freq*ramping_final_safety/max_safety)
     iterate = iterate + {
         case0 = {}
         case1 = {
             max_safety = max_safety*ramp_factor
+            shock_adapt_freq = round(final_shock_adapt_freq*ramping_final_safety/max_safety)
             case1 = {
                 max_safety = ramping_final_safety
+                shock_adapt_freq = final_shock_adapt_freq
                 ramped = true
                 print {Time step ramping complete. }
             }
@@ -381,7 +385,7 @@ adapt_iter = {
     $$({case} + (amr & ($adapt_if)))
     case0 = {}
     case1 = {adapt_shock}
-    $$({case} + (capture_shocks & iteration%shock_adapt_freq == 0))
+    $$({case} + (capture_shocks & iteration > print_freq & iteration%shock_adapt_freq < print_freq))
 }
 
 setup_io = {
