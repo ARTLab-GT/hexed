@@ -31,7 +31,8 @@ std::string Case::_vars(std::string name) {return _inter.variables->get<std::str
 Mat<> Case::_get_vector(std::string name, int size) {
   Mat<> vec(size);
   for (int i = 0; i < size; ++i) {
-    HEXED_ASSERT(_inter.variables->lookup<double>(name + std::to_string(i)), "must specify all components of `" + name + "` or none", assert::User_error);
+    HEXED_ASSERT(_inter.variables->lookup<double>(name + std::to_string(i)),
+                 "must specify all components of `" + name + "` or none", assert::User_error)
     vec(i) = _vard(name + std::to_string(i));
   }
   return vec;
@@ -306,10 +307,6 @@ Case::Case(std::string input_script)
     std::strftime(utc, 100, "%Y-%m-%d %H:%M:%S", std::gmtime(&_start_time));
     printers::info(format_str(1000, "Commencing simulation with Hexed version %i.%i.%i (commit %s) at %s UTC (%i Unix Time).\n",
                               config::version_major, config::version_minor, config::version_patch, config::commit.c_str(), utc, _start_time));
-    return "";
-  }));
-
-  _inter.variables->create("setup_parameters", new Namespace::Heisenberg<std::string>([this]() {
     // setup storage parameters
     int n_dim = _inter.variables->get<int, assert::User_error>("n_dim", "User must define `n_dim`.");
     HEXED_ASSERT((n_dim > 0) && (n_dim <= 3), "`n_dim` must be an integer in [1, 3]", assert::User_error);
@@ -320,9 +317,14 @@ Case::Case(std::string input_script)
     );
     HEXED_ASSERT(row_size >= 2 && row_size <= config::max_row_size,
                  format_str(300, "`row_size` must be between 2 and %i", config::max_row_size), assert::User_error);
-    // compute freestream
-    int n_var = n_dim + 2 + 2*(_vars("turbulence_model") == "k-omega");
-    _inter.variables->assign("n_var", n_var);
+    _inter.variables->assign("n_var", n_dim + 2 + 2*(_vars("turbulence_model") == "k-omega"));
+    _inter.variables->get<double, assert::User_error>("reference_length", "Must specify `reference_length`.");
+    return "";
+  }));
+
+  _inter.variables->create("compute_freestream", new Namespace::Heisenberg<std::string>([this]() {
+    int n_dim = _vari("n_dim");
+    int n_var = _vari("n_var");
     Mat<> freestream(n_var);
     if (_inter.variables->lookup<double>("freestream0")) {
       freestream = _get_vector("freestream", n_dim + 2);
@@ -389,10 +391,6 @@ Case::Case(std::string input_script)
           _inter.variables->assign("freestream_velocity" + std::to_string(i_dim), 0.);
         }
       }
-      if (_vars("turbulence_model") == "k-omega") {
-        freestream(n_dim + 2) = _vard("freestream_density")*_vard("freestream_specific_turbulent_kinetic_energy");
-        freestream(n_dim + 3) = _vard("freestream_density")*std::log(_vard("freestream_specific_turbulent_dissipation"));
-      }
       _set_vector("freestream_direction", full_direction);
       double density = _vard("freestream_density");
       double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*density*veloc.squaredNorm();
@@ -404,7 +402,6 @@ Case::Case(std::string input_script)
       freestream(Eigen::seqN(0, n_dim)) = density*veloc;
       freestream(n_dim) = density;
       freestream(n_dim + 1) = ener;
-      _set_vector("freestream", freestream);
       if (_transport_model("viscosity").is_viscous) {
         double rpl = density*_vard("freestream_speed")/dyn_visc;
         _inter.variables->assign("reynolds_per_length", rpl);
@@ -412,7 +409,24 @@ Case::Case(std::string input_script)
         _inter.variables->assign("wall_shock_width", std::max(_vard("wall_shock_width"), min_shock_width));
       } else {
         _inter.variables->assign("reynolds_per_length", huge);
+        _inter.variables->assign("reynolds", huge);
       }
+      double stke = 0.;
+      double turb_diss = 0.;
+      double turb_len = 0.;
+      if (_vars("turbulence_model") == "k-omega") {
+        double speed = _vard("freestream_speed");
+        stke = 1.5*math::pow(_vard("freestream_turbulence_intensity")*speed, 2);
+        freestream(n_dim + 2) = _vard("freestream_density")*stke;
+        turb_len = _vard("freestream_turbulence_length");
+        if (turb_len < 0) turb_len = _vard("reference_length");
+        turb_diss = 5.*speed/turb_len;
+        freestream(n_dim + 3) = _vard("freestream_density")*std::log(turb_diss);
+      }
+      _inter.variables->assign("freestream_specific_turbulent_kinetic_energy", stke);
+      _inter.variables->assign("freestream_turbulence_length", turb_len);
+      _inter.variables->assign("freestream_specific_turbulent_dissipation", turb_diss);
+      _set_vector("freestream", freestream);
     }
     return "";
   }));

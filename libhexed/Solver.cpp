@@ -164,8 +164,13 @@ double Solver::max_dt(double msc, double msd) {
     0, 0, bool(_namespace->get<int>("use_filter")),
   };
   bool local_time = _time_scheme != explicit_unsteady;
-  if (use_ldg()) return max_dt_navier_stokes(_kernel_mesh(), opts, msc, msd, local_time, visc, therm_cond);
-  else return max_dt_euler(_kernel_mesh(), opts, msc, msd, local_time);
+  double stke_amb = _namespace->get<double>("freestream_specific_turbulent_kinetic_energy");
+  double std_amb = _namespace->get<double>("freestream_specific_turbulent_dissipation");
+  if (use_ldg()) {
+    return max_dt_navier_stokes(_kernel_mesh(), opts, msc, msd, local_time, visc, therm_cond, stke_amb, std_amb);
+  } else {
+    return max_dt_euler(_kernel_mesh(), opts, msc, msd, local_time);
+  }
 }
 
 void Solver::_init_face_state() {
@@ -237,7 +242,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
   _namespace->assign_default("iteration", 0);
   _namespace->assign_default("pseudotime_iteration", 0);
   _namespace->assign_default("flow_time", 0.);
-  _namespace->assign_default("geom_length", 0.);
   if (!is_implicit(_time_scheme)) _namespace->assign_default("time_step", 0.);
   _namespace->assign("time_stage", 0);
   _namespace->assign("n_time_stages", n_total_stage(_time_scheme));
@@ -921,6 +925,8 @@ void Solver::set_uncert_surface_rep(int bc_sn) {
 }
 
 void Solver::_update_recursive(int preti_level, double safety) {
+  double stke_amb = _namespace->get<double>("freestream_specific_turbulent_kinetic_energy");
+  double std_amb = _namespace->get<double>("freestream_specific_turbulent_dissipation");
   if (preti_level + 1 < (int)_preti_masks.size()) _update_recursive(preti_level + 1, safety);
   if (_preti_masks[preti_level]->repeat) {
     Kernel_mesh& km = _preti_masks[preti_level]->kernel_mesh;
@@ -941,8 +947,11 @@ void Solver::_update_recursive(int preti_level, double safety) {
         .conv_substep = false,
       };
       apply_state_bcs();
-      if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
-      else compute_euler(km, opts);
+      if (use_ldg() && !i) {
+        compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, stke_amb, std_amb);
+      } else {
+        compute_euler(km, opts);
+      }
       // note that function call must come first to ensure it is evaluated despite short-circuiting
       fixed = fix_nonphysical(_namespace->get<double>("fix_nonphys_max_safety"), 0) || fixed;
       stopwatch.work_units_completed += km.elems.size();
@@ -962,6 +971,8 @@ void Solver::update() {
   double safety = _namespace->get<double>("max_safety");
   double cheby_safety = _namespace->get<double>("cheby_safety");
   int inner = 0;
+  double stke_amb = _namespace->get<double>("freestream_specific_turbulent_kinetic_energy");
+  double std_amb = _namespace->get<double>("freestream_specific_turbulent_dissipation");
   for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
     if (_namespace->get<int>("preti")) {
       _update_recursive(0, safety);
@@ -1012,7 +1023,7 @@ void Solver::update() {
                 };
                 apply_state_bcs();
                 if (use_ldg() && !i && !i_sub) {
-                  compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+                  compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, stke_amb, std_amb);
                 } else {
                   compute_euler(km, opts);
                 }
@@ -1075,6 +1086,8 @@ void Solver::smooth_init_cond(Int n_iter) {
 }
 
 void Solver::compute_residual(bool unsteady_implicit) {
+  double stke_amb = _namespace->get<double>("freestream_specific_turbulent_kinetic_energy");
+  double std_amb = _namespace->get<double>("freestream_specific_turbulent_dissipation");
   Kernel_options opts {
     .sw_car = stopwatch["cartesian"],
     .sw_def = stopwatch["deformed"],
@@ -1091,8 +1104,11 @@ void Solver::compute_residual(bool unsteady_implicit) {
     if (_time_scheme == crank_nicolson) opts.implicit_opts.time_step *= .5;
     if (_time_scheme == dirk2) opts.implicit_opts.time_step *= dirk2_gamma;
   }
-  if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond);
-  else compute_euler(_kernel_mesh(), opts);
+  if (use_ldg()) {
+    compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, stke_amb, std_amb);
+  } else {
+    compute_euler(_kernel_mesh(), opts);
+  }
 }
 
 void Solver::update_preti_iters() {
@@ -1173,6 +1189,8 @@ void Solver::print_preti_iters() {
 
 
 void Solver::compute_spectral_uncertainty() {
+  double stke_amb = _namespace->get<double>("freestream_specific_turbulent_kinetic_energy");
+  double std_amb = _namespace->get<double>("freestream_specific_turbulent_dissipation");
   std::vector<int> vars;
   for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) vars.push_back(i_var);
   int nv = vars.size();
@@ -1251,13 +1269,13 @@ void Solver::compute_spectral_uncertainty() {
       .compute_residual = true,
       .use_filter = bool(_namespace->get<int>("use_filter")),
     };
-    compute_navier_stokes(_kernel_mesh(), opts, bc_fun, visc, therm_cond);
+    compute_navier_stokes(_kernel_mesh(), opts, bc_fun, visc, therm_cond, stke_amb, std_amb);
   }
   _namespace->assign("rms_flux", std::sqrt(total_sq_flux/total_area));
 }
 
 void Solver::update_bound_conds() {
-  double relative = _namespace->get<double>("max_roughness_relative")*_namespace->get<double>("geom_length");
+  double relative = _namespace->get<double>("max_roughness_relative")*_namespace->get<double>("reference_length");
   double max_rough = std::min(_namespace->get<double>("max_roughness_absolute"), relative);
   if (_namespace->get<int>("local_roughness")) {
     _namespace->assign("hexed_max_roughness", max_rough);

@@ -43,6 +43,7 @@ vis_field_vars = vis_field_vars + {
     has_shock = has_shock
 }
 preti = true
+reference_length = 1.
 
 $plot_history
 $simulate
