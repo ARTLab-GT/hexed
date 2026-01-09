@@ -44,6 +44,11 @@ void Solver::_get_cache() {
   }
 }
 
+double Solver::_max_roughness() {
+  double relative = _namespace->get<double>("max_roughness_relative")*_namespace->get<double>("reference_length");
+  return std::min(_namespace->get<double>("max_roughness_absolute"), relative);
+}
+
 double max_fun(double x, double y) {return std::max(x, y);}
 double min_fun(double x, double y) {return std::min(x, y);}
 
@@ -507,6 +512,7 @@ void Solver::initialize(std::string(expr)) {
   int nq = params.n_qpoint();
   auto& elements = acc_mesh->elements();
   auto inter = _interpreter();
+  _namespace->assign("hexed_max_roughness", _max_roughness());
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     auto& elem = elements[i_elem];
@@ -1275,8 +1281,7 @@ void Solver::compute_spectral_uncertainty() {
 }
 
 void Solver::update_bound_conds() {
-  double relative = _namespace->get<double>("max_roughness_relative")*_namespace->get<double>("reference_length");
-  double max_rough = std::min(_namespace->get<double>("max_roughness_absolute"), relative);
+  double max_rough = _max_roughness();
   if (_namespace->get<int>("local_roughness")) {
     _namespace->assign("hexed_max_roughness", max_rough);
   } else {

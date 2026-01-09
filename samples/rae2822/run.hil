@@ -45,5 +45,16 @@ vis_field_vars = vis_field_vars + {
 preti = true
 reference_length = 1.
 
+{
+iterate = iterate + {
+    case0 = {}
+    case1 = {
+        print_freq = 10
+        vis_freq = print_freq
+    }
+    $$({case} + (iteration == 800))
+}
+}
+
 $plot_history
 $simulate

@@ -250,7 +250,7 @@ class Navier_stokes {
       void compute_decay() {
         decay = 0;
         // note: beta <= beta_s
-        if constexpr (turb == k_omega) decay = 2*beta_s*real_turb_diss + math::pow(_eq._std_amb/real_turb_diss, 2);
+        if constexpr (turb == k_omega) decay = 2*beta_s*real_turb_diss + beta_s*math::pow(_eq._std_amb/real_turb_diss, 2);
       }
     };
 

@@ -537,13 +537,13 @@ Case::Case(std::string input_script)
                                                      _ref_crit("final_unrefine_if"), true);
       if (result.changed) _solver().mesh().execute_adaptation();
       _solver().calc_jacobian();
+      _solver().update_wall_dist(_vari("wall_dist_iters_update"));
       printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ("
                      + to_string(result.n_refine) + " new " + to_string(result.n_coarsen) + " lost)");
       _inter.variables->assign("flow_time", double(i_ref));
       _visualize("_final_ref_sweep" + to_string(i_ref));
       if (!result.changed) break;
     }
-    _solver().update_wall_dist(_vari("wall_dist_iters_update"));
     _inter.variables->assign("mesh_init", 1);
     printers::info("  geometry bounding box: \n");
     for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {

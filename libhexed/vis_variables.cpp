@@ -97,11 +97,13 @@ void position(Namespace& space, Element& elem, const Basis& basis) {
     space.assign(index("pos", i_dim), 0.);
   }
   double* jac = elem.jacobian_determinant();
+  int nq = elem.storage_params().n_qpoint();
   if (jac) {
-    space.assign("jacobian_det", Array<double>({elem.storage_params().n_qpoint()}, jac));
+    space.assign("jacobian_det", Array<double>({nq}, jac));
   } else {
     space.assign("jacobian_det", 1);
   }
+  space.assign("wall_distance", Array<double>({nq}, elem.laplacian_av_coef()));
 }
 
 void state(Namespace& space, Element& elem) {
@@ -123,7 +125,6 @@ void state(Namespace& space, Element& elem) {
     assign_state("turbulent_dissipation_bassi", params.n_dim + 3);
   }
   space.assign("bulk_art_visc", Array<double>({nq}, elem.bulk_av_coef()));
-  space.assign("wall_distance", Array<double>({nq}, elem.laplacian_av_coef()));
   space.assign("tss", Array<double>({nq}, elem.time_step_scale()));
   for (int i_var = 0; i_var < config::debug_variables; ++i_var) {
     Array<double> data({nq}, elem.debug_variables() + i_var*params.n_qpoint());
