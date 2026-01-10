@@ -9,9 +9,8 @@ std::string index(std::string name, int i) {return name + std::to_string(i);}
 void element(Namespace& space, Element& elem) {
   space.assign("is_extruded", int(elem.is_extruded()));
   space.assign("ref_level", elem.refinement_level());
-  space.assign("aniso_ref_level", elem.aniso_ref_level());
   space.assign("mask", elem.mask());
-  space.assign("nom_sz", elem.nominal_size());
+  space.assign("nominal_size", elem.nominal_size());
   space.assign("farthest_vert", elem.wall_distance());
   space.assign("wall_dimension", elem.wall_dimension());
   space.assign("has_wall", int(elem.has_wall()));
@@ -30,6 +29,8 @@ void element(Namespace& space, Element& elem) {
   }
   space.assign("sharp", sharp);
   center /= params.n_vertices();
+  Gauss_legendre basis(params.row_size);
+  Array<double> mean_shape = elem.mean_shape(basis);
   for (int i_dim = 0; i_dim < 3; ++i_dim) {
     space.assign(index("center", i_dim), center(i_dim));
     space.assign(index("aniso_ref_level", i_dim),
@@ -38,6 +39,7 @@ void element(Namespace& space, Element& elem) {
     space.assign(index("spectral_uncertainty", i_dim), i_dim < params.n_dim ? elem.spectral_uncert()[i_dim] : 0);
     space.assign("flux_uncertainty", elem.flux_uncert);
     space.assign<int>(index("sharp", i_dim), elem.is_sharp(i_dim));
+    space.assign(str_cat("mean_shape", i_dim), i_dim < params.n_dim ? mean_shape[i_dim] : 0.);
   }
   space.assign("max_bulk_art_visc", Array<double>({params.n_qpoint()}, elem.bulk_av_coef()).extreme(1));
   Array<double> flow_state = elem.flow_state().copy();
@@ -48,7 +50,6 @@ void element(Namespace& space, Element& elem) {
     spec_int_ener -= .5*velocity(i_dim)*velocity(i_dim);
   }
   double sound_speed = std::sqrt(1.4*0.4*spec_int_ener.extreme(0));
-  Gauss_legendre basis(params.row_size);
   Array<double> position = elem.position(basis);
   Mat<dyn, dyn> boundary = basis.boundary();
   int sonic = 0;

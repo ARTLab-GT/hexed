@@ -117,8 +117,12 @@ class Element : public Kernel_element, public Mortal {
    * For convenience, not performance.
    * For high-performance, use `double* Deformed_element::jacobian()`
    */
-  virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
-  virtual inline double jacobian_determinant(int i_qpoint) {return 1.;} //!< \brief determinant of `jacobian`
+  virtual double jacobian(int i_dim, int j_dim, int i_qpoint) const;
+  virtual inline double jacobian_determinant(int i_qpoint) const {return 1.;} //!< \brief determinant of `jacobian`
+  //! \brief Effective element dimensions accounting for deformation.
+  //! \details layout: [i_dim]
+  //! `mean_shape[i_dim]` is the mean over the element of the norm of the `i_dim`th column of the Jacobian matrix.
+  Array<double> mean_shape(const Basis&) const;
 
   //! \brief Time step scale at the vertices. TSS in the interior is set by interpolating this.
   double& vertex_time_step_scale(int i_vertex) override;
