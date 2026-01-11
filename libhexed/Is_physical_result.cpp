@@ -9,7 +9,7 @@ void Is_physical_result::merge(Is_physical_result that) {
 }
 
 Is_physical_result::operator bool() const {
-  return min_density > 0. && min_energy >= 0. && max_dissipation_diff < 30.;
+  return min_density > 0. && min_energy >= 0./* && max_dissipation_diff < 30.*/;
 }
 
 std::string to_string(Is_physical_result p) {

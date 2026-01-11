@@ -40,21 +40,11 @@ vis_art_visc_vars = true
 vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
     av_forcingA = av_forcing0
+    av_forcingB = av_forcing1
     has_shock = has_shock
 }
-preti = true
+preti = false
 reference_length = 1.
-
-{
-iterate = iterate + {
-    case0 = {}
-    case1 = {
-        print_freq = 10
-        vis_freq = print_freq
-    }
-    $$({case} + (iteration == 800))
-}
-}
 
 $plot_history
 $simulate
