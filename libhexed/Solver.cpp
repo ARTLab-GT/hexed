@@ -719,7 +719,7 @@ void Solver::update_art_visc_smoothness() {
     double has_shock = false;
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double l = wall_shock_width + wall_dist[i_qpoint]*shock_width_growth;
-      has_shock = has_shock || forcing[i_qpoint] > 1e-4*l*l;
+      has_shock = has_shock || forcing[i_qpoint] > 1e-6*l*l;
       double speed_sq = 2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
       forcing[i_qpoint] = std::sqrt(forcing[i_qpoint]*std::abs(speed_sq));
     }
@@ -1337,20 +1337,21 @@ Iteration_status Solver::iteration_status() {
   return stat;
 }
 
-bool Solver::is_physical() {
+Is_physical_result Solver::is_physical() {
   auto& sw = stopwatch["fix nonphysical"]["check nonphysical"];
   sw.stopwatch.start();
   auto& elems = _preti_masks[_preti_level]->kernel_mesh.elems;
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
-  bool phys = true;
+  Is_physical_result result;
   bool finite = true;
   std::string message;
   auto check_phys = [&](double* data, int n_qpoint, int n_var) {
-    bool p = true;
+    double extreme_diss [2] {huge, -huge};
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-      p= p && (data[nd*n_qpoint + i_qpoint] > 0.) && (data[(nd + 1)*n_qpoint + i_qpoint] > 0.);
+      result.min_density = std::min(result.min_density, data[nd*n_qpoint + i_qpoint]);
+      result.min_energy = std::min(result.min_energy, data[(nd + 1)*n_qpoint + i_qpoint]);
       for (int i_var = 0; i_var < n_var; ++i_var) {
         if (!std::isfinite(data[i_var*n_qpoint + i_qpoint])) {
           finite = false;
@@ -1358,38 +1359,40 @@ bool Solver::is_physical() {
           message = format_str("variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]);
         }
       }
+      if (turb == k_omega) {
+        for (int i = 0; i < 2; ++i) {
+          double log_diss = data[(nd + 2)*n_qpoint + i_qpoint]/data[nd*n_qpoint + i_qpoint];
+          extreme_diss[i] = math::extreme(i, extreme_diss[i], log_diss);
+        }
+      }
     }
-    return p;
+    result.max_dissipation_diff = std::max(result.max_dissipation_diff, extreme_diss[1] - extreme_diss[0]);
   };
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].record = 0;
   }
-  #pragma omp parallel for reduction(&&:phys,finite)
+  #pragma omp parallel for reduction(&&:result,finite)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    bool elem_phys = true;
-    elem_phys = elem_phys && check_phys(elem.state(), nq, params.n_var);
+    check_phys(elem.state(), nq, params.n_var);
     for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
-      elem_phys = elem_phys && check_phys(elem.face(i_face, false), nq/rs, nd + 2);
+      check_phys(elem.face(i_face, false), nq/rs, nd + 2);
     }
-    if (!elem_phys) elem.record = 1;
-    phys = phys && elem_phys;
   }
   auto& face_refs = _preti_masks[_preti_level]->kernel_mesh.face_refinements;
-  bool refined_phys = 1;
-  #pragma omp parallel for reduction (&&:refined_phys,finite)
+  #pragma omp parallel for reduction (&&:result,finite)
   for (auto& vec : face_refs) {
     for (auto& ref : vec) {
       for (int i_fine = 0; i_fine < 2; ++i_fine) {
-        refined_phys = refined_phys && check_phys(ref.fine[i_fine][0], nq/rs, nd + 2);
+        check_phys(ref.fine[i_fine][0], nq/rs, nd + 2);
       }
     }
   }
   HEXED_ASSERT(finite, message, assert::Numerical_exception)
   sw.work_units_completed += acc_mesh->elements().size();
   sw.stopwatch.pause();
-  return phys && refined_phys;
+  return result;
 }
 
 bool Solver::fix_nonphysical(double stability_ratio, int sub_iter) {
@@ -1439,7 +1442,8 @@ bool Solver::fix_nonphysical(double stability_ratio, int sub_iter) {
   for (; iter < n_iters;) {
     HEXED_ASSERT(iter < 100'000, format_str("failed to fix nonphysical state in %i iterations", iter),
                  assert::Numerical_exception)
-    if (is_physical()) {
+    auto is_phys = is_physical();
+    if (is_phys) {
       if (iter) {
         n_iters = std::min(n_iters, 2*iter);
       } else {
@@ -1460,7 +1464,7 @@ bool Solver::fix_nonphysical(double stability_ratio, int sub_iter) {
     if (iter == 0) {
       printers::warn("Warning: ", true);
       printers::warn(str_cat("Nonphysical flow state detected (solver iteration ", status.iteration,
-                             " sub-iteration ", sub_iter, "). Attempting to fix...\n"));
+                             " sub-iteration ", sub_iter, ").\n", is_phys, "\n", "Attempting to fix...\n"));
     }
     printers::warn(format_str("    nonphysical iteration %i\n", iter));
     if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {

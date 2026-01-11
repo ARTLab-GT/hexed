@@ -240,8 +240,8 @@ geom_refine_if = {(uncertainty > (geom_rtol*geom_length + geom_atol)*general_tol
 geom_unrefine_if = {false}
 final_refine_if = {(has_wall & ((i_dim == wall_dimension & (farthest_vert > max_wall_spacing | (viscosity_model != {} & farthest_vert*reynolds_per_length > max_wall_reynolds & 3*$({mean_shape} + i_dim)*reynolds_per_length > max_wall_reynolds))) | (($({sharp} + i_dim) & $({mean_shape} + i_dim) > max_sharp_spacing) | (viscosity_model != {} & $({sharp} + i_dim) & $({mean_shape} + i_dim)*reynolds_per_length > max_sharp_reynolds))))}
 final_unrefine_if = {false}
-shock_refine_if = {(has_shock & $({mean_shape} + i_dim) > 3*(wall_shock_width + shock_width_growth*farthest_vert) & $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance) & center0 < 0.9}
-shock_refine_if = {(has_shock & $({mean_shape} + i_dim) > 3*(wall_shock_width + shock_width_growth*farthest_vert) & $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance)}
+shock_refine_if = {(has_shock & $({mean_shape} + i_dim) > 1.5*(wall_shock_width + shock_width_growth*farthest_vert) & $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance) & center0 < 0.9}
+shock_refine_if = {(has_shock & $({mean_shape} + i_dim) > 1.5*(wall_shock_width + shock_width_growth*farthest_vert) & $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance)}
 shock_unrefine_if = {(!has_shock)}
 adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*rms_flux)) & (viscosity_model == {} | $({mean_shape} + i_dim)*reynolds_per_length > 2*min_cell_reynolds*$size_tolerance))}
 spectral_unref_criterion = {($({spectral_uncertainty} + i_dim) < spectral_tol*general_tolerance*.5^(row_size - 1))}

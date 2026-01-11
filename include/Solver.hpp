@@ -14,6 +14,7 @@
 #include "Linear_equation.hpp"
 #include "Visualizer.hpp"
 #include "kernels.hpp"
+#include "Is_physical_result.hpp"
 
 namespace hexed {
 
@@ -216,7 +217,8 @@ class Solver {
    * Result is written to `min_lts_dc_ratio` in the HIL namespace.
    */
   void compute_lts_constraints();
-  bool is_physical(); //!< \brief check whether flowfield is physically admissible (e.g. density and energy are positive)
+  //! \brief check whether flowfield is physically admissible (e.g. density and energy are positive)
+  Is_physical_result is_physical();
   //! \brief updates the aritificial viscosity coefficient based on smoothness of the flow variables
   void update_art_visc_smoothness();
   /*! \brief (experimental) sets artificial viscosity based on elementwise smoothness
