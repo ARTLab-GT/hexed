@@ -20,6 +20,8 @@ class Navier_stokes {
   template <int n_dim, int row_size>
   class Pde {
     const int _n_var;
+    const double _stke_amb;
+    const double _std_amb;
     public:
     static constexpr bool has_diffusion = visc;
     static constexpr bool has_convection = true;
@@ -48,8 +50,9 @@ class Navier_stokes {
     Transport_model dyn_visc;
     Transport_model therm_cond;
 
-    Pde(int n_var, Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid)
-    : _n_var{n_var}, dyn_visc{dynamic_visc}, therm_cond{thermal_cond}
+    Pde(int n_var, Transport_model dynamic_visc = inviscid, Transport_model thermal_cond = inviscid,
+        double stke_amb = 0., double std_amb = 0.)
+    : _n_var{n_var}, dyn_visc{dynamic_visc}, therm_cond{thermal_cond}, _stke_amb{stke_amb}, _std_amb{std_amb}
     {}
 
     Mat<n_extrap> fetch_extrap(int stride, const double* data) const {
@@ -206,8 +209,10 @@ class Navier_stokes {
           prod_per_k = std::min(prod_per_k, 1e4*mass*real_turb_diss);
           double grad_k_omega_source = std::max(sigma_do*mass/real_turb_diss*grad_k.dot(grad_omega), 0.);
           double grad_omega_source = (dyn_visc_coef + sigma*mass*k_bar/real_turb_diss)*grad_omega.squaredNorm();
-          source(i_turb_kin_ener) = prod_per_k*k_bar - beta_s*real_turb_diss*state(i_turb_kin_ener);
-          source(i_turb_diss) = alpha*prod_per_k + grad_omega_source + grad_k_omega_source - beta*mass*real_turb_diss;
+          source(i_turb_kin_ener) = prod_per_k*k_bar
+                                    + beta_s*(mass*_eq._std_amb*_eq._stke_amb - real_turb_diss*state(i_turb_kin_ener));
+          source(i_turb_diss) = alpha*prod_per_k + grad_omega_source + grad_k_omega_source
+                                + beta*mass*(_eq._std_amb*_eq._std_amb/real_turb_diss - real_turb_diss);
         }
 
         flux_diff_phys(seq, all) -= stress;
@@ -236,14 +241,16 @@ class Navier_stokes {
         diffusivity = std::abs(laplacian_av) + math::max(
           (dyn_visc_coef + math::max(1, sigma, sigma_s)*dyn_visc_turb)/mass,
           std::abs(bulk_av) + (dyn_visc_coef + dyn_visc_turb)/mass,
-          std::abs(bulk_av) + (dyn_visc_coef + dyn_visc_turb)/mass + (energy_cond + heat_rat*dyn_visc_turb/turb_prandtl)/mass
+          std::abs(bulk_av) + (dyn_visc_coef + dyn_visc_turb)/mass
+                               + (energy_cond + heat_rat*dyn_visc_turb/turb_prandtl)/mass
         );
       }
 
       double decay;
       void compute_decay() {
         decay = 0;
-        if constexpr (turb == k_omega) decay = 2*beta_s*real_turb_diss; // note: beta <= beta_s
+        // note: beta <= beta_s
+        if constexpr (turb == k_omega) decay = 2*beta_s*real_turb_diss + beta_s*math::pow(_eq._std_amb/real_turb_diss, 2);
       }
     };
 

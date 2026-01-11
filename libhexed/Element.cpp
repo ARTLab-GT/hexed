@@ -60,6 +60,25 @@ Array<double> Element::position(const Basis& basis) const {
   return pos;
 }
 
+Array<double> Element::mean_shape(const Basis& basis) const {
+  Array<double> shape({params.n_dim});
+  shape = 0;
+  Mat<> node_weights = basis.node_weights();
+  for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+    double w = 1.;
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      w *= node_weights(math::row_coordinate(params.n_dim, params.row_size, i_dim, i_qpoint));
+    }
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      Mat<> col(params.n_dim);
+      for (int j_dim = 0; j_dim < params.n_dim; ++j_dim) col(j_dim) = jacobian(j_dim, i_dim, i_qpoint);
+      shape[i_dim] += w*col.norm();
+    }
+  }
+  for (int i_dim = 0; i_dim < n_dim; ++i_dim) shape[i_dim] *= nominal_shape(i_dim);
+  return shape;
+}
+
 Array<double> Element::face_position(const Basis& basis) const {
   HEXED_ASSERT(_shape, "Shape does not exist. Call `create_shape` first.");
   Array<double> shape_pos = _shape->points();
@@ -182,7 +201,7 @@ double* Element::advection_state() {
   return art_visc_forcing() + params.n_forcing*params.n_qpoint();
 }
 
-double Element::jacobian(int i_dim, int j_dim, int i_qpoint) {
+double Element::jacobian(int i_dim, int j_dim, int i_qpoint) const {
   return (i_dim == j_dim) ? 1. : 0.;
 }
 

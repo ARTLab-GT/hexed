@@ -44,6 +44,11 @@ void Solver::_get_cache() {
   }
 }
 
+double Solver::_max_roughness() {
+  double relative = _namespace->get<double>("max_roughness_relative")*_namespace->get<double>("reference_length");
+  return std::min(_namespace->get<double>("max_roughness_absolute"), relative);
+}
+
 double max_fun(double x, double y) {return std::max(x, y);}
 double min_fun(double x, double y) {return std::min(x, y);}
 
@@ -164,8 +169,13 @@ double Solver::max_dt(double msc, double msd) {
     0, 0, bool(_namespace->get<int>("use_filter")),
   };
   bool local_time = _time_scheme != explicit_unsteady;
-  if (use_ldg()) return max_dt_navier_stokes(_kernel_mesh(), opts, msc, msd, local_time, visc, therm_cond);
-  else return max_dt_euler(_kernel_mesh(), opts, msc, msd, local_time);
+  double stke_amb = _namespace->get<double>("freestream_specific_turbulent_kinetic_energy");
+  double std_amb = _namespace->get<double>("freestream_specific_turbulent_dissipation");
+  if (use_ldg()) {
+    return max_dt_navier_stokes(_kernel_mesh(), opts, msc, msd, local_time, visc, therm_cond, stke_amb, std_amb);
+  } else {
+    return max_dt_euler(_kernel_mesh(), opts, msc, msd, local_time);
+  }
 }
 
 void Solver::_init_face_state() {
@@ -237,7 +247,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
   _namespace->assign_default("iteration", 0);
   _namespace->assign_default("pseudotime_iteration", 0);
   _namespace->assign_default("flow_time", 0.);
-  _namespace->assign_default("geom_length", 0.);
   if (!is_implicit(_time_scheme)) _namespace->assign_default("time_step", 0.);
   _namespace->assign("time_stage", 0);
   _namespace->assign("n_time_stages", n_total_stage(_time_scheme));
@@ -503,6 +512,7 @@ void Solver::initialize(std::string(expr)) {
   int nq = params.n_qpoint();
   auto& elements = acc_mesh->elements();
   auto inter = _interpreter();
+  _namespace->assign("hexed_max_roughness", _max_roughness());
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elements.size(); ++i_elem) {
     auto& elem = elements[i_elem];
@@ -709,7 +719,7 @@ void Solver::update_art_visc_smoothness() {
     double has_shock = false;
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double l = wall_shock_width + wall_dist[i_qpoint]*shock_width_growth;
-      has_shock = has_shock || forcing[i_qpoint] > 1e-4*l*l;
+      has_shock = has_shock || forcing[i_qpoint] > 1e-6*l*l;
       double speed_sq = 2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
       forcing[i_qpoint] = std::sqrt(forcing[i_qpoint]*std::abs(speed_sq));
     }
@@ -921,6 +931,8 @@ void Solver::set_uncert_surface_rep(int bc_sn) {
 }
 
 void Solver::_update_recursive(int preti_level, double safety) {
+  double stke_amb = _namespace->get<double>("freestream_specific_turbulent_kinetic_energy");
+  double std_amb = _namespace->get<double>("freestream_specific_turbulent_dissipation");
   if (preti_level + 1 < (int)_preti_masks.size()) _update_recursive(preti_level + 1, safety);
   if (_preti_masks[preti_level]->repeat) {
     Kernel_mesh& km = _preti_masks[preti_level]->kernel_mesh;
@@ -941,8 +953,11 @@ void Solver::_update_recursive(int preti_level, double safety) {
         .conv_substep = false,
       };
       apply_state_bcs();
-      if (use_ldg() && !i) compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
-      else compute_euler(km, opts);
+      if (use_ldg() && !i) {
+        compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, stke_amb, std_amb);
+      } else {
+        compute_euler(km, opts);
+      }
       // note that function call must come first to ensure it is evaluated despite short-circuiting
       fixed = fix_nonphysical(_namespace->get<double>("fix_nonphys_max_safety"), 0) || fixed;
       stopwatch.work_units_completed += km.elems.size();
@@ -962,6 +977,8 @@ void Solver::update() {
   double safety = _namespace->get<double>("max_safety");
   double cheby_safety = _namespace->get<double>("cheby_safety");
   int inner = 0;
+  double stke_amb = _namespace->get<double>("freestream_specific_turbulent_kinetic_energy");
+  double std_amb = _namespace->get<double>("freestream_specific_turbulent_dissipation");
   for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
     if (_namespace->get<int>("preti")) {
       _update_recursive(0, safety);
@@ -1012,7 +1029,7 @@ void Solver::update() {
                 };
                 apply_state_bcs();
                 if (use_ldg() && !i && !i_sub) {
-                  compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond);
+                  compute_navier_stokes(km, opts, [this](){apply_flux_bcs();}, visc, therm_cond, stke_amb, std_amb);
                 } else {
                   compute_euler(km, opts);
                 }
@@ -1075,6 +1092,8 @@ void Solver::smooth_init_cond(Int n_iter) {
 }
 
 void Solver::compute_residual(bool unsteady_implicit) {
+  double stke_amb = _namespace->get<double>("freestream_specific_turbulent_kinetic_energy");
+  double std_amb = _namespace->get<double>("freestream_specific_turbulent_dissipation");
   Kernel_options opts {
     .sw_car = stopwatch["cartesian"],
     .sw_def = stopwatch["deformed"],
@@ -1091,8 +1110,11 @@ void Solver::compute_residual(bool unsteady_implicit) {
     if (_time_scheme == crank_nicolson) opts.implicit_opts.time_step *= .5;
     if (_time_scheme == dirk2) opts.implicit_opts.time_step *= dirk2_gamma;
   }
-  if (use_ldg()) compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond);
-  else compute_euler(_kernel_mesh(), opts);
+  if (use_ldg()) {
+    compute_navier_stokes(_kernel_mesh(), opts, [this](){apply_flux_bcs();}, visc, therm_cond, stke_amb, std_amb);
+  } else {
+    compute_euler(_kernel_mesh(), opts);
+  }
 }
 
 void Solver::update_preti_iters() {
@@ -1173,6 +1195,8 @@ void Solver::print_preti_iters() {
 
 
 void Solver::compute_spectral_uncertainty() {
+  double stke_amb = _namespace->get<double>("freestream_specific_turbulent_kinetic_energy");
+  double std_amb = _namespace->get<double>("freestream_specific_turbulent_dissipation");
   std::vector<int> vars;
   for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) vars.push_back(i_var);
   int nv = vars.size();
@@ -1251,14 +1275,13 @@ void Solver::compute_spectral_uncertainty() {
       .compute_residual = true,
       .use_filter = bool(_namespace->get<int>("use_filter")),
     };
-    compute_navier_stokes(_kernel_mesh(), opts, bc_fun, visc, therm_cond);
+    compute_navier_stokes(_kernel_mesh(), opts, bc_fun, visc, therm_cond, stke_amb, std_amb);
   }
   _namespace->assign("rms_flux", std::sqrt(total_sq_flux/total_area));
 }
 
 void Solver::update_bound_conds() {
-  double relative = _namespace->get<double>("max_roughness_relative")*_namespace->get<double>("geom_length");
-  double max_rough = std::min(_namespace->get<double>("max_roughness_absolute"), relative);
+  double max_rough = _max_roughness();
   if (_namespace->get<int>("local_roughness")) {
     _namespace->assign("hexed_max_roughness", max_rough);
   } else {
@@ -1314,20 +1337,21 @@ Iteration_status Solver::iteration_status() {
   return stat;
 }
 
-bool Solver::is_physical() {
+Is_physical_result Solver::is_physical() {
   auto& sw = stopwatch["fix nonphysical"]["check nonphysical"];
   sw.stopwatch.start();
   auto& elems = _preti_masks[_preti_level]->kernel_mesh.elems;
   const int nd = params.n_dim;
   const int nq = params.n_qpoint();
   const int rs = params.row_size;
-  bool phys = true;
+  Is_physical_result result;
   bool finite = true;
   std::string message;
   auto check_phys = [&](double* data, int n_qpoint, int n_var) {
-    bool p = true;
+    double extreme_diss [2] {huge, -huge};
     for (int i_qpoint = 0; i_qpoint < n_qpoint; ++i_qpoint) {
-      p= p && (data[nd*n_qpoint + i_qpoint] > 0.) && (data[(nd + 1)*n_qpoint + i_qpoint] > 0.);
+      result.min_density = std::min(result.min_density, data[nd*n_qpoint + i_qpoint]);
+      result.min_energy = std::min(result.min_energy, data[(nd + 1)*n_qpoint + i_qpoint]);
       for (int i_var = 0; i_var < n_var; ++i_var) {
         if (!std::isfinite(data[i_var*n_qpoint + i_qpoint])) {
           finite = false;
@@ -1335,38 +1359,40 @@ bool Solver::is_physical() {
           message = format_str("variable %i = %e has non-finite value.", i_var, data[i_var*n_qpoint + i_qpoint]);
         }
       }
+      if (turb == k_omega) {
+        for (int i = 0; i < 2; ++i) {
+          double log_diss = data[(nd + 2)*n_qpoint + i_qpoint]/data[nd*n_qpoint + i_qpoint];
+          extreme_diss[i] = math::extreme(i, extreme_diss[i], log_diss);
+        }
+      }
     }
-    return p;
+    result.max_dissipation_diff = std::max(result.max_dissipation_diff, extreme_diss[1] - extreme_diss[0]);
   };
   #pragma omp parallel for
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].record = 0;
   }
-  #pragma omp parallel for reduction(&&:phys,finite)
+  #pragma omp parallel for reduction(&&:result,finite)
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     auto& elem = elems[i_elem];
-    bool elem_phys = true;
-    elem_phys = elem_phys && check_phys(elem.state(), nq, params.n_var);
+    check_phys(elem.state(), nq, params.n_var);
     for (int i_face = 0; i_face < params.n_dim*2; ++i_face) {
-      elem_phys = elem_phys && check_phys(elem.face(i_face, false), nq/rs, nd + 2);
+      check_phys(elem.face(i_face, false), nq/rs, nd + 2);
     }
-    if (!elem_phys) elem.record = 1;
-    phys = phys && elem_phys;
   }
   auto& face_refs = _preti_masks[_preti_level]->kernel_mesh.face_refinements;
-  bool refined_phys = 1;
-  #pragma omp parallel for reduction (&&:refined_phys,finite)
+  #pragma omp parallel for reduction (&&:result,finite)
   for (auto& vec : face_refs) {
     for (auto& ref : vec) {
       for (int i_fine = 0; i_fine < 2; ++i_fine) {
-        refined_phys = refined_phys && check_phys(ref.fine[i_fine][0], nq/rs, nd + 2);
+        check_phys(ref.fine[i_fine][0], nq/rs, nd + 2);
       }
     }
   }
   HEXED_ASSERT(finite, message, assert::Numerical_exception)
   sw.work_units_completed += acc_mesh->elements().size();
   sw.stopwatch.pause();
-  return phys && refined_phys;
+  return result;
 }
 
 bool Solver::fix_nonphysical(double stability_ratio, int sub_iter) {
@@ -1416,7 +1442,8 @@ bool Solver::fix_nonphysical(double stability_ratio, int sub_iter) {
   for (; iter < n_iters;) {
     HEXED_ASSERT(iter < 100'000, format_str("failed to fix nonphysical state in %i iterations", iter),
                  assert::Numerical_exception)
-    if (is_physical()) {
+    auto is_phys = is_physical();
+    if (is_phys) {
       if (iter) {
         n_iters = std::min(n_iters, 2*iter);
       } else {
@@ -1437,7 +1464,7 @@ bool Solver::fix_nonphysical(double stability_ratio, int sub_iter) {
     if (iter == 0) {
       printers::warn("Warning: ", true);
       printers::warn(str_cat("Nonphysical flow state detected (solver iteration ", status.iteration,
-                             " sub-iteration ", sub_iter, "). Attempting to fix...\n"));
+                             " sub-iteration ", sub_iter, ").\n", is_phys, "\n", "Attempting to fix...\n"));
     }
     printers::warn(format_str("    nonphysical iteration %i\n", iter));
     if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {

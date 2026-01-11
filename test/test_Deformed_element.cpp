@@ -135,4 +135,20 @@ TEST_CASE("Deformed_element") {
     REQUIRE(elem2.jacobian(2, 1, 26) == Catch::Approx(-0.2));
     REQUIRE(elem2.jacobian(2, 2, 26) == Catch::Approx( 0.8));
   }
+
+  SECTION("mean_shape") {
+    hexed::Tree tree0(2, .1);
+    hexed::Deformed_element elem0(params2, tree0);
+    elem0.create_shape(blocks2d);
+    elem0.shape().vertex(1).set_pos(hexed::Mat<3>{.04, .03, 0.});
+    elem0.shape().vertex(2).set_pos(hexed::Mat<3>{.07, 0., 0.});
+    elem0.shape().vertex(3).set_pos(hexed::Mat<3>{.07 + .04, .03, 0.});
+    hexed::Gauss_legendre basis(params2.row_size);
+    elem0.set_jacobian(basis);
+    hexed::Array<double> ms = elem0.mean_shape(basis);
+    REQUIRE_THAT(ms, Catch::Matchers::RangeEquals(std::vector<double>{.07, .05}, hexed::math::Approx_equal()));
+    elem0.shape().vertex(2).set_pos(hexed::Mat<3>{.1, 0., 0.});
+    elem0.set_jacobian(basis);
+    REQUIRE(elem0.mean_shape(basis)[0] == Catch::Approx(0.085));
+  }
 }

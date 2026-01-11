@@ -11,6 +11,7 @@ mesh_extreme00 = -160.
 mesh_extreme10 = -160.
 mesh_extreme01 =  160.
 mesh_extreme11 =  160.
+reference_length = 1.
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
@@ -28,12 +29,6 @@ target_reynolds = 6e6
 dyn_visc = 1.716e-5
 freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air*1.4*freestream_temperature)/freestream_mach
 
-domain_length = mesh_extreme01 - mesh_extreme00
-freestream_specific_turbulent_kinetic_energy = 1e-3*(freestream_mach*340.)^2/(target_reynolds*domain_length/1.)
-freestream_specific_turbulent_dissipation = 10*freestream_mach*340./domain_length
-println({turbulent viscosity: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation + { Pa s})
-println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation/dyn_visc)
-
 surface_bc = {no_slip}
 diffusive_admissibility = false
 fix_therm_admis = true
@@ -44,6 +39,7 @@ monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 vis_field_vars = vis_field_vars + {
     debug_var0 = debug_var0
     residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)
+    mask = mask
 }
 vis_surface_vars = vis_surface_vars + {
     roughness_height = roughness_height
@@ -53,8 +49,9 @@ vis_surface_vars = vis_surface_vars + {
 }
 vis_lts_constraints = true
 
-working_dir = {hexed_out}
-adapt_freq = adapt_freq*10
+adapt_freq = adapt_freq*20
+vis_freq = write_freq = adapt_freq
+preti = true
 
 $plot_history
 $simulate

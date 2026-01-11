@@ -26,8 +26,8 @@ class Deformed_element : public Element {
   double* reference_level_normals() override;
   double* jacobian_determinant() override;
 
-  virtual double jacobian(int i_dim, int j_dim, int i_qpoint);
-  virtual double jacobian_determinant(int i_qpoint);
+  double jacobian(int i_dim, int j_dim, int i_qpoint) const override;
+  double jacobian_determinant(int i_qpoint) const override;
 
   bool deformed() const override;
 };

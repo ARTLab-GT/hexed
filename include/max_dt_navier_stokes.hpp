@@ -6,7 +6,8 @@
 namespace hexed {
 
 double max_dt_navier_stokes(Kernel_mesh, Kernel_options, double convective_safety, double diffusive_safety,
-                            bool local_time, Transport_model visc, Transport_model therm_cond);
+                            bool local_time, Transport_model visc, Transport_model therm_cond,
+                            double spec_turb_kin_ener_ambient, double spec_turb_diss_ambient);
 
 }
 #endif

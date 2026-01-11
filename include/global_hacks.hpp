@@ -1,5 +1,6 @@
 #ifdef HEXED_USE_GLOBAL_HACKS
 #ifndef HEXED_GLOBAL_HACKS_HPP_
+#define HEXED_GLOBAL_HACKS_HPP_
 #include <map>
 #include <vector>
 #include "Stopwatch_tree.hpp"

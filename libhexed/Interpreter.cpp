@@ -285,7 +285,9 @@ Interpreter::Interpreter(std::vector<std::string> preload)
     {"acos", _numeric_unary(&std::acos, "acos")},
     {"atan", _numeric_unary(&std::atan, "atan")},
     {"round", [](const _Dynamic_value& val){
-      return _Dynamic_value((int)std::lround(_numeric_unary(&std::round, "round")(val).d.value()));}
+      return _Dynamic_value((int)std::min<double>(std::numeric_limits<int>::max(),
+                                                  std::max<double>(std::numeric_limits<int>::min(),
+                                                  std::lround(_numeric_unary(&std::round, "round")(val).d.value()))));}
     },
     {"floor", [this](const _Dynamic_value& val){return _un_ops["round"](_numeric_unary(&std::floor, "floor")(val));}},
     {"ceil" , [this](const _Dynamic_value& val){return _un_ops["round"](_numeric_unary(&std::ceil , "ceil" )(val));}},

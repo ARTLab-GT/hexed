@@ -9,9 +9,8 @@ std::string index(std::string name, int i) {return name + std::to_string(i);}
 void element(Namespace& space, Element& elem) {
   space.assign("is_extruded", int(elem.is_extruded()));
   space.assign("ref_level", elem.refinement_level());
-  space.assign("aniso_ref_level", elem.aniso_ref_level());
   space.assign("mask", elem.mask());
-  space.assign("nom_sz", elem.nominal_size());
+  space.assign("nominal_size", elem.nominal_size());
   space.assign("farthest_vert", elem.wall_distance());
   space.assign("wall_dimension", elem.wall_dimension());
   space.assign("has_wall", int(elem.has_wall()));
@@ -30,6 +29,8 @@ void element(Namespace& space, Element& elem) {
   }
   space.assign("sharp", sharp);
   center /= params.n_vertices();
+  Gauss_legendre basis(params.row_size);
+  Array<double> mean_shape = elem.mean_shape(basis);
   for (int i_dim = 0; i_dim < 3; ++i_dim) {
     space.assign(index("center", i_dim), center(i_dim));
     space.assign(index("aniso_ref_level", i_dim),
@@ -38,6 +39,7 @@ void element(Namespace& space, Element& elem) {
     space.assign(index("spectral_uncertainty", i_dim), i_dim < params.n_dim ? elem.spectral_uncert()[i_dim] : 0);
     space.assign("flux_uncertainty", elem.flux_uncert);
     space.assign<int>(index("sharp", i_dim), elem.is_sharp(i_dim));
+    space.assign(str_cat("mean_shape", i_dim), i_dim < params.n_dim ? mean_shape[i_dim] : 0.);
   }
   space.assign("max_bulk_art_visc", Array<double>({params.n_qpoint()}, elem.bulk_av_coef()).extreme(1));
   Array<double> flow_state = elem.flow_state().copy();
@@ -48,7 +50,6 @@ void element(Namespace& space, Element& elem) {
     spec_int_ener -= .5*velocity(i_dim)*velocity(i_dim);
   }
   double sound_speed = std::sqrt(1.4*0.4*spec_int_ener.extreme(0));
-  Gauss_legendre basis(params.row_size);
   Array<double> position = elem.position(basis);
   Mat<dyn, dyn> boundary = basis.boundary();
   int sonic = 0;
@@ -97,11 +98,13 @@ void position(Namespace& space, Element& elem, const Basis& basis) {
     space.assign(index("pos", i_dim), 0.);
   }
   double* jac = elem.jacobian_determinant();
+  int nq = elem.storage_params().n_qpoint();
   if (jac) {
-    space.assign("jacobian_det", Array<double>({elem.storage_params().n_qpoint()}, jac));
+    space.assign("jacobian_det", Array<double>({nq}, jac));
   } else {
     space.assign("jacobian_det", 1);
   }
+  space.assign("wall_distance", Array<double>({nq}, elem.laplacian_av_coef()));
 }
 
 void state(Namespace& space, Element& elem) {
@@ -123,7 +126,6 @@ void state(Namespace& space, Element& elem) {
     assign_state("turbulent_dissipation_bassi", params.n_dim + 3);
   }
   space.assign("bulk_art_visc", Array<double>({nq}, elem.bulk_av_coef()));
-  space.assign("wall_distance", Array<double>({nq}, elem.laplacian_av_coef()));
   space.assign("tss", Array<double>({nq}, elem.time_step_scale()));
   for (int i_var = 0; i_var < config::debug_variables; ++i_var) {
     Array<double> data({nq}, elem.debug_variables() + i_var*params.n_qpoint());
