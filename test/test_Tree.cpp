@@ -495,10 +495,16 @@ TEST_CASE("Tree") {
     tree.delete_grafts(); // `graft0` and `graft1` now invalid
     tree.children()[1]->unrefine(0);
     REQUIRE(tree.children()[0]->find_neighbor(2) == nullptr);
-    graft0 = tree.graft(hexed::Array<int>::make(0, 1), hexed::Array<hexed::Int>::make(-1, 1));
+    graft0 = tree.children()[1]->graft(hexed::Array<int>::make(0, 1), hexed::Array<hexed::Int>::make(-1, 1));
+    REQUIRE( graft0->is_root(true));
+    REQUIRE(!graft0->is_root(false));
     REQUIRE_THAT(graft0->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{0, 1}));
     tree.connect({tree.children()[1], graft0}, {{0, 1}, {0, 0}});
     graft0->refine();
+    REQUIRE(!graft0->children()[1]->is_root(true));
+    REQUIRE(!graft0->children()[1]->is_root(false));
+    REQUIRE(graft0->children()[1]->root() == graft0);
+    REQUIRE(graft0->children()[1]->root(false) == &tree);
     REQUIRE(tree.children()[1]->find_neighbor(0) == graft0->children()[0]);
     REQUIRE(graft0->children()[0]->find_neighbor(2) == tree.children()[1]);
     REQUIRE(graft0->children()[2]->find_neighbor(2) == tree.children()[1]);

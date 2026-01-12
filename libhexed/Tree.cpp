@@ -29,6 +29,7 @@ Tree::Tree(int nd, double root_size, Mat<> origin)
 , _root_sz{root_size}
 , _ref_level{Array<int>::make_uniform({nd}, 0)}, _coords{Array<Int>::make_uniform({nd}, 0)}
 , _par{nullptr}
+, _graft_par{nullptr}
 , _children_storage()
 , _face_connections(2*n_dim, nullptr)
 , _fake_parents(2*n_dim, nullptr)
@@ -77,6 +78,7 @@ Mat<> Tree::nominal_position() const {
 Mat<> Tree::center() const {return nominal_position() + .5*nominal_shape();}
 
 Tree* Tree::parent() {return _par;}
+Tree* Tree::graft_parent() {return _graft_par;}
 
 std::vector<Tree*> Tree::children() {
   std::vector<Tree*> c;
@@ -93,13 +95,13 @@ std::vector<Tree*> Tree::unique_children() {
   return c;
 }
 
-Tree* Tree::root() {
+Tree* Tree::root(bool graft) {
   Tree* r = this;
-  while (!r->is_root()) r = r->parent();
+  while (!r->is_root(graft)) r = r->graft_parent() ? r->graft_parent() : r->parent();
   return r;
 }
 
-bool Tree::is_root() {return !_par;}
+bool Tree::is_root(bool graft) {return !_par && (graft || !_graft_par);}
 bool Tree::is_graft() {return root()->_is_graft;}
 bool Tree::is_leaf() {return _children_storage.empty();}
 
@@ -151,14 +153,15 @@ std::vector<Tree*> Tree::unrefine(int i_dim) {
 void Tree::force_unrefine() {_children_storage.clear();}
 
 Tree* Tree::graft(Array<int> ref_level, Array<Int> coords) {
-  HEXED_ASSERT(is_root() && !is_graft(), "Can only graft to the root.")
   HEXED_ASSERT(coords.size() == n_dim, "`coords` has wrong number of entries.")
   HEXED_ASSERT(ref_level.size() == n_dim, "`ref_level` has wrong number of entries.")
-  _grafts.emplace_back(std::make_unique<Tree>(n_dim, _root_sz, _orig));
-  Tree* g = _grafts.back().get();
+  Tree* r = root(false);
+  r->_grafts.emplace_back(std::make_unique<Tree>(n_dim, _root_sz, _orig));
+  Tree* g = r->_grafts.back().get();
   g->_ref_level = ref_level.copy();
   g->_coords = coords.copy();
   g->_is_graft = true;
+  g->_graft_par = this;
   return g;
 }
 

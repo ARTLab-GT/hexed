@@ -93,21 +93,51 @@ class Tree : public Mortal {
    */
   Mat<> nominal_position() const;
   Mat<> center() const; //!< return the center of this tree element
+  //! \brief Lowest index of the leaves of this tree in a global ordering.
+  //! \details Every leaf is assigned an index that uniquely identifies it in the global tree (starting with 0).
+  //! If `this` is a leaf, then `leaf_index()` returns that index.
+  //! If `this` is not a leaf, then `leaf_index()` returns the lowest index of all the leaves descended from `this`.
+  //! New elements created by refinement/coarsening will have an index of -1 until `update_indices()` is called
+  //! to recompute the indices of the entire tree.
+  //! All leaves descended from `this` will have consecutive indices,
+  //! implying that the difference between the lowest and highest indices is equal to `n_leaves() - 1`.
+  //! \warning
+  //! Any modifications to the tree (refinement, unrefinement, grafting)
+  //! will invalidate the indices of any leaves that formerly had higher indices than the modified leaves.
+  //! Indices will not be accurate again until `update_indices()` is called on the root.
+  Int leaf_index() const;
+  //! \brief The number of leaves descended from `this`.
+  //! \warning This count is computed by `update_indices()`.
+  //! As a result, `n_leaves()` is inexpensive to call,
+  //! but modifications to any of the descendents of `this` will cause it to be inaccurate until `update_indices()`
+  //! is called again.
+  Int n_leaves() const;
   //!\}
 
   //! \name parent/child status
   //!\{
   //
-  //! \details If this element is not the root,
+  //! \details If this element is not the root or a graft root,
   //! then this is a pointer to the element which was refined to obtain this element.
   //! If it is the root, then this is `nullptr`.
   Tree* parent();
+  Tree* graft_parent(); //!< \brief If grafted, the tree `this` was created from. Otherwise `nullptr`.
   //! \details If this cell has been refined, then this vector contains pointers to its children.
   //! If it has not, the vector is empty.
   std::vector<Tree*> children();
   std::vector<Tree*> unique_children();
-  Tree* root(); //!< \brief fetch the root element of this tree
-  bool is_root(); //!< \brief gives the same result as `!parent()`
+  //! \brief Fetches the root element of this tree.
+  //! \details If `graft == true` _and_ `this` is grafted, then this will be only the _graft_ root.
+  //! That is, it will traverse up the parent hierarchy,
+  //! but when it gets to the original grafted tree that was refined to create `this`,
+  //! it will stop and return that tree.
+  //! If `graft == false`, then it will traverse graft-parent relations as well,
+  //! so it will always return the global root of the entire tree.
+  Tree* root(bool graft = true);
+  //! \brief Checks whether `this` is the root of the tree.
+  //! \details Depending on `graft`, this can check for either the graft root or the global root.
+  //! See `root()` for more details.
+  bool is_root(bool graft = true);
   bool is_graft(); //!< \brief `true` iff `this` was created by grafting.
   bool is_leaf(); //!< \brief gives the same result as `children().empty()`
   bool is_refined(int i_dim);
@@ -147,10 +177,22 @@ class Tree : public Mortal {
   //! \brief Equivalent to `unrefine(std::vector<bool>)` on a vector with exactly one `true` element.
   std::vector<Tree*> unrefine(int i_dim);
   void force_unrefine(); //!< \brief Deletes all child elements and descendents thereof. This element is now a leaf.
+  //! \brief Adds a new tree outside the existing refinement heirarchy.
+  //! \details A tree created this way and all its descendents are said to be "grafted".
+  //! By default, this tree will not have any neighbors, regardless of its ref level and coordinates.
+  //! `connect()` can be called to establish a neighbor connection with other trees.
+  //! Grafted trees can be refined, and their descendents will share their neighbor connections.
+  //! For the purpose of indexing (see `leaf_index()`), a tree created with `graft()`
+  //! is considered to be descended from the tree that `graft()` was called on.
+  //! Therefore, for efficient mesh partitioning,
+  //! it is recommended to graft trees from a tree you intend to connect them to.
   Tree* graft(Array<int> ref_level, Array<Int> coords);
   void connect(std::array<std::vector<Tree*>, 2>, Connection_direction);
   void connect(std::array<Tree*, 2>, Connection_direction);
+  //! \brief Deletes and disconnects all grafted trees, including their descendent. Can only be called on the root.
   void delete_grafts();
+  //! \brief Updates the `leaf_index()` and `n_leaves()` of the entire tree. Can only be called on the root.
+  void update_indices();
   //!\}
 
   //! \name traversing functions
@@ -293,6 +335,7 @@ class Tree : public Mortal {
   Array<int> _ref_level;
   Array<Int> _coords;
   Tree* _par;
+  Tree* _graft_par;
   std::vector<std::shared_ptr<Tree>> _children_storage;
   std::vector<std::unique_ptr<Tree>> _grafts;
   std::vector<std::unique_ptr<_Connection>> _connections;
