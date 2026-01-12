@@ -168,9 +168,7 @@ TEST_CASE("Tree") {
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.2, .7}) == tree.unique_children()[1]);
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.5, .21}) == child->unique_children()[0]);
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.5, .54}) == child->unique_children()[1]);
-    SECTION("unrefinement") {
-      REQUIRE_THROWS(tree.unrefine(0));
-      REQUIRE_THROWS(child->unrefine(0));
+    SECTION("leaf unrefinement") {
       child->unrefine(1);
       REQUIRE(child->is_leaf());
       tree.unrefine(0);
@@ -178,6 +176,16 @@ TEST_CASE("Tree") {
       REQUIRE(children.size() == 2);
       REQUIRE_THAT(children[0]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{0, 1}));
       REQUIRE_THAT(children[1]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{0, 1}));
+    }
+    SECTION("non-leaf unrefinement") {
+      REQUIRE( tree.is_refined(0));
+      REQUIRE( tree.is_refined(1));
+      REQUIRE(!tree.is_refined(2));
+      tree.unrefine(0);
+      REQUIRE(!tree.is_refined(0));
+      REQUIRE( tree.is_refined(1));
+      REQUIRE(!tree.is_refined(2));
+      for (int i_child = 0; i_child < 2; ++i_child) REQUIRE(tree.unique_children()[i_child]->is_leaf());
     }
     SECTION("aniso collapsing") {
       uc[1]->refine(1);
