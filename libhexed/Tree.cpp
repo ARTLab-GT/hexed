@@ -27,7 +27,10 @@ Tree::Tree(int nd, double root_size, Mat<> origin)
 : n_dim{nd}
 , elem(this)
 , _root_sz{root_size}
-, _ref_level{Array<int>::make_uniform({nd}, 0)}, _coords{Array<Int>::make_uniform({nd}, 0)}
+, _ref_level{Array<int>::make_uniform({nd}, 0)}
+, _coords{Array<Int>::make_uniform({nd}, 0)}
+, _leaf_index{-1}
+, _n_leaves{0}
 , _par{nullptr}
 , _graft_par{nullptr}
 , _children_storage()
@@ -76,6 +79,9 @@ Mat<> Tree::nominal_position() const {
 }
 
 Mat<> Tree::center() const {return nominal_position() + .5*nominal_shape();}
+
+Int Tree::leaf_index() const {return _leaf_index;}
+Int Tree::n_leaves() const {return _n_leaves;}
 
 Tree* Tree::parent() {return _par;}
 Tree* Tree::graft_parent() {return _graft_par;}
@@ -172,6 +178,24 @@ void Tree::delete_grafts() {
   _clear_connections();
   _grafts.clear();
   _connections.clear();
+}
+
+void Tree::update_indices() {
+  HEXED_ASSERT(is_root(false), "Can only call `update_indices()` on the global root.")
+  _update_inds(0);
+}
+
+Int Tree::_update_inds(Int curr_ind) {
+  _leaf_index = curr_ind;
+  if (is_leaf()) {
+    _n_leaves = 1;
+  } else {
+    _n_leaves = 0;
+    for (Tree* child : unique_children()) {
+      _n_leaves += child->_update_inds(_leaf_index + _n_leaves);
+    }
+  }
+  return _n_leaves;
 }
 
 void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction dir) {

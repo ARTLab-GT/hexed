@@ -1,6 +1,7 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Tree.hpp>
 #include <hexed/vertex_inds.hpp>
+#include <hexed/Printer.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Tree") {
@@ -843,5 +844,36 @@ TEST_CASE("Tree") {
         }
       }
     }
+  }
+  SECTION("indexing") {
+    hexed::Tree tree(3, 1.);
+    tree.update_indices();
+    REQUIRE(tree.leaf_index() == 0);
+    REQUIRE(tree.n_leaves() == 1);
+    tree.refine();
+    tree.children()[1]->refine(1);
+    tree.children()[1]->children()[0]->refine(2);
+    REQUIRE_THROWS(tree.children()[0]->update_indices());
+    tree.update_indices();
+    REQUIRE(tree.leaf_index() == 0);
+    REQUIRE(tree.n_leaves() == 10);
+    REQUIRE(tree.children()[0]->leaf_index() == 0);
+    REQUIRE(tree.children()[0]->n_leaves() == 1);
+    REQUIRE(tree.children()[1]->leaf_index() == 1);
+    REQUIRE(tree.children()[1]->n_leaves() == 3);
+    REQUIRE(tree.children()[1]->unique_children()[0]->leaf_index() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->n_leaves() == 2);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->leaf_index() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->n_leaves() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->leaf_index() == 2);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->n_leaves() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[1]->leaf_index() == 3);
+    REQUIRE(tree.children()[1]->unique_children()[1]->n_leaves() == 1);
+    REQUIRE(tree.children()[2]->leaf_index() == 4);
+    REQUIRE(tree.children()[2]->n_leaves() == 1);
+    REQUIRE(tree.children()[3]->leaf_index() == 5);
+    REQUIRE(tree.children()[3]->n_leaves() == 1);
+    REQUIRE(tree.children()[7]->leaf_index() == 9);
+    REQUIRE(tree.children()[7]->n_leaves() == 1);
   }
 }

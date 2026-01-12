@@ -329,11 +329,14 @@ class Tree : public Mortal {
   inline int _n_vert() const {return math::pow(2, n_dim);}
   Tree* _find_parent(int i_face);
   void _visualize(Visualizer&, int tree_level);
+  Int _update_inds(Int curr_ind);
 
   Mat<> _orig;
   double _root_sz;
   Array<int> _ref_level;
   Array<Int> _coords;
+  Int _leaf_index;
+  Int _n_leaves;
   Tree* _par;
   Tree* _graft_par;
   std::vector<std::shared_ptr<Tree>> _children_storage;
