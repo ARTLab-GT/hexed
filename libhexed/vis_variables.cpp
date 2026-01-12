@@ -10,6 +10,7 @@ void element(Namespace& space, Element& elem) {
   space.assign("is_extruded", int(elem.is_extruded()));
   space.assign("ref_level", elem.refinement_level());
   space.assign("mask", elem.mask());
+  space.assign("tree_index", int(elem.tree->leaf_index()));
   space.assign("nominal_size", elem.nominal_size());
   space.assign("farthest_vert", elem.wall_distance());
   space.assign("wall_dimension", elem.wall_dimension());

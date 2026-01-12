@@ -22,7 +22,7 @@ println({turbulent viscosity: } + freestream_density*freestream_specific_turbule
 println({ratio: } + freestream_density*freestream_specific_turbulent_kinetic_energy/freestream_specific_turbulent_dissipation/dyn_visc)
 
 fix_therm_admis = true
-vis_field_vars = vis_field_vars + {uncertainty = uncertainty;}
+vis_field_vars = vis_field_vars + {uncertainty = uncertainty; tree_index = tree_index;}
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 steady = false
 time_step = .001
@@ -32,6 +32,7 @@ adapt_freq = 1
 update_roughness_freq = 1
 automate_adapt_schedule = false
 adapt_start_iter = 10
+reference_length = 1.
 
 $plot_history
 $simulate

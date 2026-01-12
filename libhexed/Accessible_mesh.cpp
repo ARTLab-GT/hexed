@@ -560,7 +560,7 @@ void Accessible_mesh::_fit_surface() {
           rl[i_dim] += 1;
           Array<Int> np = elem.nominal_position().copy();
           np[i_dim] = 2*np[i_dim] + !i_sign;
-          Int inside_sn = _add_element(rl, true, np, 1);
+          Int inside_sn = _add_element(rl, true, np, 1, next::Mesh_blocks::no_face, *elem.tree->graft(rl, np));
           Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
           inside.create_fake(_blocks);
           set_vertices(inside);
@@ -568,7 +568,7 @@ void Accessible_mesh::_fit_surface() {
           inside.active_shape().for_matching = true;
           elem.face_record[2*i_dim + !i_sign] = inside_sn;
           np[i_dim] += math::sign(i_sign);
-          Int surface_sn = _add_element(rl, true, np, 1, bf);
+          Int surface_sn = _add_element(rl, true, np, 1, bf, *inside.tree->graft(rl, np));
           Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
           surface.create_fake(_blocks);
           set_vertices(surface);
@@ -595,7 +595,8 @@ void Accessible_mesh::_fit_surface() {
               Int m = matched_to[i_edge_matched];
               if (m != -1) {
                 Array<Int> np_match = elem.nominal_position().copy();
-                Int sn = _add_element(elem.refinement_level(), true, np_match, 1, bf);
+                Tree* t = inside.tree->graft(inside.tree->anisotropic_refinement_level(), np_match);
+                Int sn = _add_element(elem.refinement_level(), true, np_match, 1, bf, *t);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
                 match_elem.create_fake(_blocks);
                 set_vertices(match_elem);
@@ -840,7 +841,8 @@ void Accessible_mesh::_fit_surface() {
           HEXED_ASSERT(math::mod<Int>(np[i_face/2], 2) == 0, "Coordinate must be even.")
           np[i_face/2] /= 2;
         }
-        Int sn = _add_element(elem.refinement_level(), true, np, 1, i_face);
+        Tree* t = elem.tree->graft(elem.tree->anisotropic_refinement_level(), np);
+        Int sn = _add_element(elem.refinement_level(), true, np, 1, i_face, *t);
         Deformed_element& new_elem = def.elems.at(elem.refinement_level(), sn);
         for (int j_face = 0; j_face < 2*params.n_dim; ++j_face) new_elem.face_record[j_face] = -1;
         new_elem.create_fake(_blocks);
@@ -1398,28 +1400,21 @@ Accessible_mesh::Accessible_mesh(Storage_params params_arg, double root_size_arg
 }
 
 int Accessible_mesh::_add_element(int ref_level, bool is_deformed, Array<Int> position,
-                                  int aniso_ref_level, int surface_face, Tree* t) {
+                                  int aniso_ref_level, int surface_face, Tree& t) {
   return _add_element(Array<int>::make_uniform({params.n_dim}, ref_level), is_deformed, position, aniso_ref_level,
                       surface_face, t);
 }
 
 int Accessible_mesh::_add_element(Array<int> ref_level, bool is_deformed, Array<Int> position,
-                                  int aniso_ref_level, int surface_face, Tree* t) {
+                                  int aniso_ref_level, int surface_face, Tree& t) {
   HEXED_ASSERT(tree, "All meshes need a tree now.")
   HEXED_ASSERT((Int)position.size() == params.n_dim, "`position` has wrong size")
-  if (!t) {
-    t = tree->graft(ref_level, position);
-  }
-  HEXED_ASSERT(ref_level.equal(t->anisotropic_refinement_level()), "Refinement levels do not match.")
-  int sn = container(is_deformed).emplace(*t, aniso_ref_level);
+  HEXED_ASSERT(ref_level.equal(t.anisotropic_refinement_level()), "Refinement levels do not match.")
+  int sn = container(is_deformed).emplace(t, aniso_ref_level);
   Element& elem = element(ref_level.extreme(0), is_deformed, sn);
   elem.create_shape(_blocks, surface_face);
-  if (is_deformed) t->def_elem = &def.elems.at(ref_level.extreme(0), sn);
+  if (is_deformed) t.def_elem = &def.elems.at(ref_level.extreme(0), sn);
   return sn;
-}
-
-int Accessible_mesh::add_element(int ref_level, bool is_deformed, Array<Int> position) {
-  return _add_element(ref_level, is_deformed, position);
 }
 
 Element& Accessible_mesh::element(int ref_level, bool is_deformed, int serial_n) {
@@ -1714,7 +1709,9 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     auto nom_pos = face.elem.nominal_position();
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
     const int ref_level = face.elem.refinement_level();
-    int sn = _add_element(ref_level, true, nom_pos, face.elem.aniso_ref_level() + 1, 2*face.i_dim + face.face_sign);
+    Tree* t = face.elem.tree->graft(face.elem.tree->anisotropic_refinement_level(), nom_pos);
+    int sn = _add_element(ref_level, true, nom_pos, face.elem.aniso_ref_level() + 1, 2*face.i_dim + face.face_sign,
+                          *t);
     Connection_direction dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
     if (face.elem.fake_shape()) elem.split_shape(face.elem, offset, 2*face.i_dim + face.face_sign);
@@ -1906,7 +1903,7 @@ std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles() {
 
 Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t, int aniso_ref_level) {
   int sn = _add_element(t.anisotropic_refinement_level(), is_deformed, t.coordinates(), aniso_ref_level,
-                        next::Mesh_blocks::no_face, &t);
+                        next::Mesh_blocks::no_face, t);
   auto& elem = element(t.refinement_level(), is_deformed, sn);
   elem.record = sn; // put the serial number in the record so it can be used for connections
   return elem;
@@ -1922,6 +1919,7 @@ void Accessible_mesh::create_tree(std::vector<std::shared_ptr<Flow_bc>> extremal
   // add the tree
   tree_bcs = new_tree_bcs;
   tree.reset(new Tree(params.n_dim, root_sz, origin));
+  tree->update_indices();
 }
 
 void Accessible_mesh::add_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin) {
@@ -2664,6 +2662,7 @@ void Accessible_mesh::execute_adaptation() {
       vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
     }
   }
+  tree->update_indices();
 }
 
 bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
@@ -2908,6 +2907,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   for (int i_elem = 0; i_elem < n_after; ++i_elem) {
     elems[i_elem].refinement_floor() = elems[i_elem].tree->anisotropic_refinement_level();
   }
+  tree->update_indices();
   return n_after - n_before;
 }
 
@@ -3224,6 +3224,7 @@ void Accessible_mesh::write(std::string name) {
 }
 
 void Accessible_mesh::read_file(std::string file_name) {
+  #if 0
   H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
   hsize_t dims [2];
   // read elements
@@ -3277,7 +3278,6 @@ void Accessible_mesh::read_file(std::string file_name) {
     read_tree(tree.get(), 0);
   }
   // read conformal connections
-  #if 0
   auto con_dset = file.openDataSet("/connections/conformal");
   con_dset.getSpace().getSimpleExtentDims(dims);
   int n_con = dims[0];

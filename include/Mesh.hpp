@@ -28,14 +28,6 @@ class Mesh {
   //! \returns Nominal size (\f$\Delta h\f$) of elements with refinement level 0.
   virtual double root_size() = 0;
 
-  //! \name Manual mesh creation
-  //! \attention You __must__ call `cleanup()` in between calling any of these functions and doing anything else (like relaxing vertices).
-  //! \{
-  /*!
-   * Add an element at specified nominal position and serial number which uniquely identifies it
-   * among elements of this mesh with the same refinement level and deformedness.
-   */
-  virtual int add_element(int ref_level, bool is_deformed, Array<Int> position) = 0;
   /*!
    * Specify that two elements are connected via a Cartesian face. Note: although the interface
    * is stipulated to be Cartesian, the elements themselves can be deformed
