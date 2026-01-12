@@ -184,8 +184,9 @@ class Tree : public Mortal {
   //! Grafted trees can be refined, and their descendents will share their neighbor connections.
   //! For the purpose of indexing (see `leaf_index()`), a tree created with `graft()`
   //! is considered to be descended from the tree that `graft()` was called on.
-  //! Therefore, for efficient mesh partitioning,
-  //! it is recommended to graft trees from a tree you intend to connect them to.
+  //! Furthermore, it will only be assigned an index if you subsequently connect the grafted tree
+  //! to the tree you called `graft()` on.
+  //! Therefore, it is recommended to graft trees from a tree you intend to connect them to.
   Tree* graft(Array<int> ref_level, Array<Int> coords);
   void connect(std::array<std::vector<Tree*>, 2>, Connection_direction);
   void connect(std::array<Tree*, 2>, Connection_direction);

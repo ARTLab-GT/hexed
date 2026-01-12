@@ -195,6 +195,11 @@ Int Tree::_update_inds(Int curr_ind) {
       _n_leaves += child->_update_inds(_leaf_index + _n_leaves);
     }
   }
+  for (_Connection* con : _face_connections) if (con) {
+    for (Tree* t : con->trees) if (t->graft_parent() == this) {
+      _n_leaves += t->_update_inds(_leaf_index + _n_leaves);
+    }
+  }
   return _n_leaves;
 }
 

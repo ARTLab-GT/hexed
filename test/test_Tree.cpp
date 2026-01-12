@@ -852,8 +852,8 @@ TEST_CASE("Tree") {
     REQUIRE(tree.n_leaves() == 1);
     tree.refine();
     tree.children()[1]->refine(1);
-    tree.children()[1]->children()[0]->refine(2);
-    REQUIRE_THROWS(tree.children()[0]->update_indices());
+    tree.children()[1]->unique_children()[0]->refine(2);
+    REQUIRE_THROWS(tree.unique_children()[0]->update_indices());
     tree.update_indices();
     REQUIRE(tree.leaf_index() == 0);
     REQUIRE(tree.n_leaves() == 10);
@@ -874,6 +874,41 @@ TEST_CASE("Tree") {
     REQUIRE(tree.children()[3]->leaf_index() == 5);
     REQUIRE(tree.children()[3]->n_leaves() == 1);
     REQUIRE(tree.children()[7]->leaf_index() == 9);
+    REQUIRE(tree.children()[7]->n_leaves() == 1);
+    hexed::Tree* graft0 = tree.children()[1]->unique_children()[0]->graft(hexed::Array<int>::make(1, 1, 1),
+                                                                          hexed::Array<hexed::Int>::make(-1, 0, 1));
+    hexed::Tree* graft1 = graft0->graft(hexed::Array<int>::make(1, 1, 1), hexed::Array<hexed::Int>::make(-1, 0, 1));
+    tree.connect({graft0, tree.children()[1]->unique_children()[0]}, {{0, 0}, {1, 0}});
+    tree.connect({graft1, graft0}, {{0, 0}, {1, 0}});
+    graft1->refine();
+    tree.update_indices();
+    REQUIRE(tree.leaf_index() == 0);
+    REQUIRE(tree.n_leaves() == 19);
+    REQUIRE(tree.children()[0]->leaf_index() == 0);
+    REQUIRE(tree.children()[0]->n_leaves() == 1);
+    REQUIRE(tree.children()[1]->leaf_index() == 1);
+    REQUIRE(tree.children()[1]->n_leaves() == 12);
+    REQUIRE(tree.children()[1]->unique_children()[0]->leaf_index() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->n_leaves() == 11);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->leaf_index() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->n_leaves() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->leaf_index() == 2);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->n_leaves() == 1);
+
+    REQUIRE(graft0->leaf_index() == 3);
+    REQUIRE(graft0->n_leaves() == 9);
+    REQUIRE(graft1->leaf_index() == 4);
+    REQUIRE(graft1->n_leaves() == 8);
+    REQUIRE(graft1->children()[5]->leaf_index() == 9);
+    REQUIRE(graft1->children()[5]->n_leaves() == 1);
+
+    REQUIRE(tree.children()[1]->unique_children()[1]->leaf_index() == 12);
+    REQUIRE(tree.children()[1]->unique_children()[1]->n_leaves() == 1);
+    REQUIRE(tree.children()[2]->leaf_index() == 13);
+    REQUIRE(tree.children()[2]->n_leaves() == 1);
+    REQUIRE(tree.children()[3]->leaf_index() == 14);
+    REQUIRE(tree.children()[3]->n_leaves() == 1);
+    REQUIRE(tree.children()[7]->leaf_index() == 18);
     REQUIRE(tree.children()[7]->n_leaves() == 1);
   }
 }
