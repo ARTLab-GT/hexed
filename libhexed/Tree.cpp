@@ -204,9 +204,9 @@ void Tree::update_indices() {
 
 void Tree::traverse(std::function<void(Tree&)> task) {
   task(*this);
-  for (Tree* child : unique_children()) task(*child);
+  for (Tree* child : unique_children()) child->traverse(task);
   for (_Connection* con : _face_connections) if (con) {
-    for (Tree* t : con->trees) if (t->graft_parent() == this) task(*t);
+    for (Tree* t : con->trees) if (t->graft_parent() == this) t->traverse(task);
   }
 }
 
@@ -379,8 +379,35 @@ void Tree::write(std::string file_name) {
   update_indices();
   hsize_t dims[2];
   dims[0] = n_total();
-  dims[1] = 2 + _n_vert();
+  dims[1] = _n_vert() + 2*n_dim;
   auto child_dset = file.createDataSet("/children", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
+  auto task = [&child_dset, &dims](Tree& t) {
+    for (int i_child = 0; i_child < (Int)t._children_storage.size(); ++i_child) {
+      hdf5_utils::write(child_dset, t.total_index(), i_child, t._children_storage[i_child]->total_index());
+    }
+    for (int i_child = (Int)t._children_storage.size(); i_child < t._n_vert(); ++i_child) {
+      hdf5_utils::write<Int>(child_dset, t.total_index(), i_child, -1);
+    }
+    for (int i_face = 0; i_face < 2*t.n_dim; ++i_face) {
+      Int i_graft = -1;
+      if (t._face_connections[i_face]) {
+        for (Tree* g : t._face_connections[i_face]->trees) if (g->graft_parent() == &t) i_graft = g->total_index();
+      }
+      hdf5_utils::write(child_dset, t.total_index(), t._n_vert() + i_face, i_graft);
+    }
+  };
+  traverse(task);
+  dims[0] = _connections.size();
+  dims[1] = 7;
+  auto connection_dset = file.createDataSet("/connections", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
+  for (int i_con = 0; i_con < (Int)_connections.size(); ++i_con) {
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      hdf5_utils::write(connection_dset, i_con, i_side, _connections[i_con]->trees[i_side]->total_index());
+      hdf5_utils::write<Int>(connection_dset, i_con, i_side + 2, _connections[i_con]->direction.i_dim[i_side]);
+      hdf5_utils::write<Int>(connection_dset, i_con, i_side + 4, _connections[i_con]->direction.face_sign[i_side]);
+    }
+    hdf5_utils::write<Int>(connection_dset, i_con, 6, _connections[i_con]->direction.rotate);
+  }
 }
 
 // the return value can be 0, 1, or 2, indicating the following:

@@ -47,6 +47,7 @@ T get_attr(std::string file_name, std::string attr_name) {
 //! \brief Writes an entry to a 2D HDF5 DataSet.
 template <typename T>
 void write(H5::DataSet& dset, Int row, Int col, T value) {
+  HEXED_ASSERT(dset.getDataType() == type<T>(), "Type mismatch.")
   hsize_t dims [2] {1, 1};
   H5::DataSpace mspace (2, dims, nullptr);
   hsize_t offset [2] {hsize_t(row), hsize_t(col)};
@@ -60,6 +61,7 @@ void write(H5::DataSet& dset, Int row, Int col, T value) {
 //! \brief Reads an entry from a 2D HDF5 DataSet.
 template <typename T>
 T read(H5::DataSet& dset, Int row, Int col) {
+  HEXED_ASSERT(dset.getDataType() == type<T>(), "Type mismatch.")
   hsize_t dims [2] {1, 1};
   H5::DataSpace mspace (2, dims, nullptr);
   hsize_t offset [2] {hsize_t(row), hsize_t(col)};
