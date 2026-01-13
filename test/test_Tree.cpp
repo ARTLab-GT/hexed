@@ -82,8 +82,9 @@ TEST_CASE("Tree") {
                                                                      }));
   REQUIRE_THAT(children[3]->children()[1]->find_neighbors(hexed::Array<int>::make(0, -1)),
                Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{children[3]->children()[0]->children()[1], children[3]->children()[0]->children()[3]}));
-  REQUIRE(tree2.total_size() == 13);
-  REQUIRE(children[3]->total_size() == 9);
+  tree2.update_indices();
+  REQUIRE(tree2.n_total() == 13);
+  REQUIRE(children[3]->n_total() == 9);
 
   // flood fill
   REQUIRE(children[0]->get_status() == hexed::Tree::unprocessed);
@@ -876,6 +877,26 @@ TEST_CASE("Tree") {
     REQUIRE(tree.children()[3]->n_leaves() == 1);
     REQUIRE(tree.children()[7]->leaf_index() == 9);
     REQUIRE(tree.children()[7]->n_leaves() == 1);
+    REQUIRE(tree.total_index() == 0);
+    REQUIRE(tree.n_total() == 13);
+    REQUIRE(tree.children()[0]->total_index() == 1);
+    REQUIRE(tree.children()[0]->n_total() == 1);
+    REQUIRE(tree.children()[1]->total_index() == 2);
+    REQUIRE(tree.children()[1]->n_total() == 5);
+    REQUIRE(tree.children()[1]->unique_children()[0]->total_index() == 3);
+    REQUIRE(tree.children()[1]->unique_children()[0]->n_total() == 3);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->total_index() == 4);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->n_total() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->total_index() == 5);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->n_total() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[1]->total_index() == 6);
+    REQUIRE(tree.children()[1]->unique_children()[1]->n_total() == 1);
+    REQUIRE(tree.children()[2]->total_index() == 7);
+    REQUIRE(tree.children()[2]->n_total() == 1);
+    REQUIRE(tree.children()[3]->total_index() == 8);
+    REQUIRE(tree.children()[3]->n_total() == 1);
+    REQUIRE(tree.children()[7]->total_index() == 12);
+    REQUIRE(tree.children()[7]->n_total() == 1);
     hexed::Tree* graft0 = tree.children()[1]->unique_children()[0]->graft(hexed::Array<int>::make(1, 1, 1),
                                                                           hexed::Array<hexed::Int>::make(-1, 0, 1));
     hexed::Tree* graft1 = graft0->graft(hexed::Array<int>::make(1, 1, 1), hexed::Array<hexed::Int>::make(-1, 0, 1));
@@ -909,7 +930,32 @@ TEST_CASE("Tree") {
     REQUIRE(tree.children()[3]->n_leaves() == 1);
     REQUIRE(tree.children()[7]->leaf_index() == 18);
     REQUIRE(tree.children()[7]->n_leaves() == 1);
-    REQUIRE(tree.total_size() == 23);
+    REQUIRE(tree.total_index() == 0);
+    REQUIRE(tree.n_total() == 23);
+    REQUIRE(tree.children()[0]->total_index() == 1);
+    REQUIRE(tree.children()[0]->n_total() == 1);
+    REQUIRE(tree.children()[1]->total_index() == 2);
+    REQUIRE(tree.children()[1]->n_total() == 15);
+    REQUIRE(tree.children()[1]->unique_children()[0]->total_index() == 3);
+    REQUIRE(tree.children()[1]->unique_children()[0]->n_total() == 13);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->total_index() == 4);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->n_total() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->total_index() == 5);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->n_total() == 1);
+    REQUIRE(graft0->total_index() == 6);
+    REQUIRE(graft0->n_total() == 10);
+    REQUIRE(graft1->total_index() == 7);
+    REQUIRE(graft1->n_total() == 9);
+    REQUIRE(graft1->children()[5]->total_index() == 13);
+    REQUIRE(graft1->children()[5]->n_total() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[1]->total_index() == 16);
+    REQUIRE(tree.children()[1]->unique_children()[1]->n_total() == 1);
+    REQUIRE(tree.children()[2]->total_index() == 17);
+    REQUIRE(tree.children()[2]->n_total() == 1);
+    REQUIRE(tree.children()[3]->total_index() == 18);
+    REQUIRE(tree.children()[3]->n_total() == 1);
+    REQUIRE(tree.children()[7]->total_index() == 22);
+    REQUIRE(tree.children()[7]->n_total() == 1);
 
     tree.write("test");
     hexed::Tree tree_copy("test");

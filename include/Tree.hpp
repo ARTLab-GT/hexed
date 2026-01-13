@@ -112,6 +112,18 @@ class Tree : public Mortal {
   //! will invalidate the indices of any leaves that formerly had higher indices than the modified leaves.
   //! Indices will not be accurate again until `update_indices()` is called on the root.
   Int leaf_index() const;
+  //! \brief An index that uniquely identifies this branch in the whole tree (not just the leaves).
+  //! \details All `Tree` instances are assigned indices that uniquely and consecutively identify them
+  //! among all `Tree`s descended from the same root.
+  //! (This is different from the `leaf_index()`, which is only unique for the leaves.)
+  //! This function returns that index.
+  //! Like `leaf_index()`, descendents are indexed consecutively
+  //! and the difference between the highest index of any descendent of `this` is `n_total() - 1`.
+  //! \warning
+  //! Any modifications to the tree (refinement, unrefinement, grafting)
+  //! will invalidate the indices of any leaves that formerly had higher indices than the modified leaves.
+  //! Indices will not be accurate again until `update_indices()` is called on the root.
+  Int total_index() const;
   //! \brief The number of leaves descended from `this`.
   //! \warning This count is computed by `update_indices()`.
   //! As a result, `n_leaves()` is inexpensive to call,
@@ -120,9 +132,11 @@ class Tree : public Mortal {
   Int n_leaves() const;
   //! \brief Returns the total number of trees descended from `this`.
   //! \details Includes leaves, non-leavs, grafts, and `this` itself.
-  //! Does not rely on any pre-recorded counts.
-  //! Thus no updating is needed for it to be accurate, but it takes O(`total_size()`) time to traverse the whole tree.
-  Int total_size() const;
+  //! \warning This count is computed by `update_indices()`.
+  //! As a result, `n_total()` is inexpensive to call,
+  //! but modifications to any of the descendents of `this` will cause it to be inaccurate until `update_indices()`
+  //! is called again.
+  Int n_total() const;
   //!\}
 
   //! \name parent/child status
@@ -306,6 +320,8 @@ class Tree : public Mortal {
   //! \brief Writes the structure of this tree to a file.
   //! \details File extension (`.tree.h5`) is added automatically.
   void write(std::string file_name);
+  //! \brief Calls `task` on every tree in index order.
+  void traverse(std::function<void(Tree&)> task);
 
   private:
   struct _Connection {
@@ -345,14 +361,16 @@ class Tree : public Mortal {
   inline int _n_vert() const {return math::pow(2, n_dim);}
   Tree* _find_parent(int i_face);
   void _visualize(Visualizer&, int tree_level);
-  Int _update_inds(Int curr_ind);
+  void _update_inds();
 
   Mat<> _orig;
   double _root_sz;
   Array<int> _ref_level;
   Array<Int> _coords;
   Int _leaf_index;
+  Int _total_index;
   Int _n_leaves;
+  Int _n_total;
   Tree* _par;
   Tree* _graft_par;
   std::vector<std::shared_ptr<Tree>> _children_storage;

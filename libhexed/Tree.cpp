@@ -31,7 +31,9 @@ Tree::Tree(int nd, double root_size, Mat<> origin)
 , _ref_level{Array<int>::make_uniform({nd}, 0)}
 , _coords{Array<Int>::make_uniform({nd}, 0)}
 , _leaf_index{-1}
+, _total_index{-1}
 , _n_leaves{0}
+, _n_total{0}
 , _par{nullptr}
 , _graft_par{nullptr}
 , _children_storage()
@@ -94,24 +96,9 @@ Mat<> Tree::nominal_position() const {
 Mat<> Tree::center() const {return nominal_position() + .5*nominal_shape();}
 
 Int Tree::leaf_index() const {return _leaf_index;}
+Int Tree::total_index() const {return _total_index;}
 Int Tree::n_leaves() const {return _n_leaves;}
-
-Int Tree::total_size() const {
-  Int sz = 1;
-  std::vector<const Tree*> c;
-  for (auto& t : _children_storage) {
-    if (std::none_of(c.begin(), c.end(), [&t](const Tree* ptr){return ptr == t.get();})) {
-      c.push_back(t.get());
-      sz += t->total_size();
-    }
-  }
-  for (_Connection* con : _face_connections) if (con) {
-    for (Tree* t : con->trees) if (t->graft_parent() == this) {
-      sz += t->total_size();
-    }
-  }
-  return sz;
-}
+Int Tree::n_total() const {return _n_total;}
 
 Tree* Tree::parent() {return _par;}
 Tree* Tree::graft_parent() {return _graft_par;}
@@ -212,25 +199,38 @@ void Tree::delete_grafts() {
 
 void Tree::update_indices() {
   HEXED_ASSERT(is_root(false), "Can only call `update_indices()` on the global root.")
-  _update_inds(0);
+  _update_inds();
 }
 
-Int Tree::_update_inds(Int curr_ind) {
-  _leaf_index = curr_ind;
-  if (is_leaf()) {
-    _n_leaves = 1;
-  } else {
-    _n_leaves = 0;
-    for (Tree* child : unique_children()) {
-      _n_leaves += child->_update_inds(_leaf_index + _n_leaves);
-    }
+void Tree::traverse(std::function<void(Tree&)> task) {
+  task(*this);
+  for (Tree* child : unique_children()) task(*child);
+  for (_Connection* con : _face_connections) if (con) {
+    for (Tree* t : con->trees) if (t->graft_parent() == this) task(*t);
   }
+}
+
+void Tree::_update_inds() {
+  Tree* p = _graft_par ? _graft_par : _par;
+  if (p) {
+    _leaf_index = p->_leaf_index + p->_n_leaves;
+    _total_index = p->_total_index + p->_n_total;
+  } else {
+    _leaf_index = 0;
+    _total_index = 0;
+  }
+  _n_total = 1;
+  _n_leaves = is_leaf();
+  for (Tree* child : unique_children()) child->_update_inds();
   for (_Connection* con : _face_connections) if (con) {
     for (Tree* t : con->trees) if (t->graft_parent() == this) {
-      _n_leaves += t->_update_inds(_leaf_index + _n_leaves);
+      t->_update_inds();
     }
   }
-  return _n_leaves;
+  if (p) {
+    p->_n_leaves += _n_leaves;
+    p->_n_total += _n_total;
+  }
 }
 
 void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction dir) {
@@ -378,7 +378,7 @@ void Tree::write(std::string file_name) {
   }
   update_indices();
   hsize_t dims[2];
-  dims[0] = total_size();
+  dims[0] = n_total();
   dims[1] = 2 + _n_vert();
   auto child_dset = file.createDataSet("/children", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
 }
