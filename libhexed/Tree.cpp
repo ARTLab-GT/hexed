@@ -2,6 +2,7 @@
 #include <hexed/Tree.hpp>
 #include <hexed/Row_index.hpp>
 #include <hexed/Printer.hpp>
+#include <hexed/hdf5_utils.hpp>
 
 namespace hexed {
 
@@ -42,6 +43,18 @@ Tree::Tree(int nd, double root_size, Mat<> origin)
   HEXED_ASSERT(origin.size() >= n_dim, "`origin` is too small");
   _orig = origin(Eigen::seqN(0, n_dim));
 }
+
+Tree::Tree(std::string file_name)
+: Tree(
+    hdf5_utils::get_attr<int>(file_name + ".tree.h5", "n_dim"),
+    hdf5_utils::get_attr<double>(file_name + ".tree.h5", "root_size"),
+    Mat<3>{
+      hdf5_utils::get_attr<double>(file_name + ".tree.h5", "origin0"),
+      hdf5_utils::get_attr<double>(file_name + ".tree.h5", "origin1"),
+      hdf5_utils::get_attr<double>(file_name + ".tree.h5", "origin2"),
+    }
+  )
+{}
 
 Tree::~Tree() {
   delete_grafts();
@@ -328,14 +341,24 @@ Tree* Tree::find_neighbor(Array<int> direction) {
   return _neighbor(direction).neighbor;
 }
 
+Tree* Tree::find_neighbor(int i_face) {
+  return find_neighbor(get_direction(i_face, n_dim));
+}
+
 Array<int> Tree::get_direction(int i_face, int n_dim) {
   Array<int> dir = Array<int>::make_uniform({n_dim}, 0);
   dir[i_face/2] = math::sign(i_face%2);
   return dir;
 }
 
-Tree* Tree::find_neighbor(int i_face) {
-  return find_neighbor(get_direction(i_face, n_dim));
+void Tree::write(std::string file_name) {
+  HEXED_ASSERT(is_root(false), "Can only write from the tree root.")
+  H5::H5File file(file_name + ".tree.h5", H5F_ACC_TRUNC);
+  hdf5_utils::add_attr(file, "n_dim", n_dim);
+  hdf5_utils::add_attr(file, "root_size", _root_sz);
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    hdf5_utils::add_attr(file, str_cat("origin", i_dim), i_dim < n_dim ? _orig(i_dim) : 0.);
+  }
 }
 
 // the return value can be 0, 1, or 2, indicating the following:

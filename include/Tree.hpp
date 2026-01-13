@@ -53,6 +53,12 @@ class Tree : public Mortal {
    *   `origin` must have at least `n_dim` elements, and only the first `n_dim` will be read.
    */
   Tree(int n_dim, double root_size, Mat<> origin = Mat<>::Zero(3));
+  //! \brief Reads a tree from a file previously written with `write()`.
+  //! \details New trees will automatically `update_indices()`
+  //! (resulting in the same `leaf_index()` and `n_leaves()` as the original)
+  //! but will forget the `Tree::elem`, `Tree::def_elem`, and `Tree::misc_data`.
+  //! File extension (`.tree.h5`) is added automatically.
+  Tree(std::string file_name);
   virtual ~Tree();
   const int n_dim;
   //! \brief `Element` generated from this tree (to be managed by the user of this class)
@@ -289,8 +295,14 @@ class Tree : public Mortal {
   void clear_status(); //!< \brief sets the flood fill status of this and all child elements to `unprocessed`
   //!\}
 
+  //! \name Miscellaneous
+  //!\{
+  //
   //! \brief Converts between face indices and neighbor search directions.
   static Array<int> get_direction(int i_face, int n_dim);
+  //! \brief Writes the structure of this tree to a file.
+  //! \details File extension (`.tree.h5`) is added automatically.
+  void write(std::string file_name);
 
   private:
   struct _Connection {

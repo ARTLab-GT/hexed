@@ -126,7 +126,7 @@ class Hexed(bu.C_project):
         self[bu.Link]("hexecute", ["execs/hexecute.o"], libs=["hexed"]).do
         if self.builder.options["build_tests"]:
             self[bu.Link]("hexed_test", bu.contents(self.bdir + "object/test"),
-                          libs=["hexed", "Catch2Main", "Catch2"]).do
+                          libs=["hexed", "Catch2Main", "Catch2", "hdf5_cpp", "hdf5"]).do
 
         ### build python package
         package_dir = self.bdir + "python_package/"

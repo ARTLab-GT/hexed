@@ -845,8 +845,9 @@ TEST_CASE("Tree") {
       }
     }
   }
-  SECTION("indexing") {
-    hexed::Tree tree(3, 1.);
+
+  SECTION("indexing and writing") {
+    hexed::Tree tree(3, .6, hexed::Mat<3>{-.1, -.2, -.3});
     tree.update_indices();
     REQUIRE(tree.leaf_index() == 0);
     REQUIRE(tree.n_leaves() == 1);
@@ -894,14 +895,12 @@ TEST_CASE("Tree") {
     REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->n_leaves() == 1);
     REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->leaf_index() == 2);
     REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->n_leaves() == 1);
-
     REQUIRE(graft0->leaf_index() == 3);
     REQUIRE(graft0->n_leaves() == 9);
     REQUIRE(graft1->leaf_index() == 4);
     REQUIRE(graft1->n_leaves() == 8);
     REQUIRE(graft1->children()[5]->leaf_index() == 9);
     REQUIRE(graft1->children()[5]->n_leaves() == 1);
-
     REQUIRE(tree.children()[1]->unique_children()[1]->leaf_index() == 12);
     REQUIRE(tree.children()[1]->unique_children()[1]->n_leaves() == 1);
     REQUIRE(tree.children()[2]->leaf_index() == 13);
@@ -910,5 +909,12 @@ TEST_CASE("Tree") {
     REQUIRE(tree.children()[3]->n_leaves() == 1);
     REQUIRE(tree.children()[7]->leaf_index() == 18);
     REQUIRE(tree.children()[7]->n_leaves() == 1);
+
+    tree.write("test");
+    hexed::Tree tree_copy("test");
+    REQUIRE(tree_copy.n_dim == 3);
+    REQUIRE(tree_copy.nominal_size() == Catch::Approx(.6));
+    REQUIRE_THAT(tree_copy.origin(), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.1, -.2, -.3},
+                                                                  hexed::math::Approx_equal()));
   }
 }
