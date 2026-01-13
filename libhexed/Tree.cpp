@@ -96,6 +96,23 @@ Mat<> Tree::center() const {return nominal_position() + .5*nominal_shape();}
 Int Tree::leaf_index() const {return _leaf_index;}
 Int Tree::n_leaves() const {return _n_leaves;}
 
+Int Tree::total_size() const {
+  Int sz = 1;
+  std::vector<const Tree*> c;
+  for (auto& t : _children_storage) {
+    if (std::none_of(c.begin(), c.end(), [&t](const Tree* ptr){return ptr == t.get();})) {
+      c.push_back(t.get());
+      sz += t->total_size();
+    }
+  }
+  for (_Connection* con : _face_connections) if (con) {
+    for (Tree* t : con->trees) if (t->graft_parent() == this) {
+      sz += t->total_size();
+    }
+  }
+  return sz;
+}
+
 Tree* Tree::parent() {return _par;}
 Tree* Tree::graft_parent() {return _graft_par;}
 
@@ -359,6 +376,11 @@ void Tree::write(std::string file_name) {
   for (int i_dim = 0; i_dim < 3; ++i_dim) {
     hdf5_utils::add_attr(file, str_cat("origin", i_dim), i_dim < n_dim ? _orig(i_dim) : 0.);
   }
+  update_indices();
+  hsize_t dims[2];
+  dims[0] = total_size();
+  dims[1] = 2 + _n_vert();
+  auto child_dset = file.createDataSet("/children", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
 }
 
 // the return value can be 0, 1, or 2, indicating the following:
@@ -480,12 +502,6 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
   }
   neighbors.direction = result.trans.dir;
   return neighbors;
-}
-
-int Tree::count() {
-  int total = 1;
-  for (auto& child : _children_storage) total += child->count(); //! \todo make this work for aniso
-  return total;
 }
 
 Array<int> Tree::needs_refine(std::function<bool(Tree*)> include) {

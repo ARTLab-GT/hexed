@@ -118,6 +118,11 @@ class Tree : public Mortal {
   //! but modifications to any of the descendents of `this` will cause it to be inaccurate until `update_indices()`
   //! is called again.
   Int n_leaves() const;
+  //! \brief Returns the total number of trees descended from `this`.
+  //! \details Includes leaves, non-leavs, grafts, and `this` itself.
+  //! Does not rely on any pre-recorded counts.
+  //! Thus no updating is needed for it to be accurate, but it takes O(`total_size()`) time to traverse the whole tree.
+  Int total_size() const;
   //!\}
 
   //! \name parent/child status
@@ -262,8 +267,6 @@ class Tree : public Mortal {
   //! \brief Equivalent to `find_neighbors(Array<int>)` with `direction[i_face/2] == math::sign(i_face%2)`.
   std::vector<Tree*> find_neighbors(int i_face);
   Connection_neighbors find_connection_neighbors(int i_face);
-  //! \brief total number of tree elements descended from this tree (including itself)
-  int count();
   Array<int> needs_refine(std::function<bool(Tree*)> include);
   void visualize(std::string format, std::string name);
   //!\}

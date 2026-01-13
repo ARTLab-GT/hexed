@@ -82,8 +82,8 @@ TEST_CASE("Tree") {
                                                                      }));
   REQUIRE_THAT(children[3]->children()[1]->find_neighbors(hexed::Array<int>::make(0, -1)),
                Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{children[3]->children()[0]->children()[1], children[3]->children()[0]->children()[3]}));
-  REQUIRE(tree2.count() == 13);
-  REQUIRE(children[3]->count() == 9);
+  REQUIRE(tree2.total_size() == 13);
+  REQUIRE(children[3]->total_size() == 9);
 
   // flood fill
   REQUIRE(children[0]->get_status() == hexed::Tree::unprocessed);
@@ -909,6 +909,7 @@ TEST_CASE("Tree") {
     REQUIRE(tree.children()[3]->n_leaves() == 1);
     REQUIRE(tree.children()[7]->leaf_index() == 18);
     REQUIRE(tree.children()[7]->n_leaves() == 1);
+    REQUIRE(tree.total_size() == 23);
 
     tree.write("test");
     hexed::Tree tree_copy("test");

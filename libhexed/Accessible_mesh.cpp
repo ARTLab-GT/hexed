@@ -3195,7 +3195,6 @@ void Accessible_mesh::write(std::string name) {
     data[3] = con.inside_face_sign();
     h5_write_row(bound_con_dset, 4, i_con, data);
   }
-  #endif
   // write tree
   if (tree) {
     file.createGroup("/tree");
@@ -3221,6 +3220,7 @@ void Accessible_mesh::write(std::string name) {
     };
     write_tree(tree.get());
   }
+  #endif
 }
 
 void Accessible_mesh::read_file(std::string file_name) {

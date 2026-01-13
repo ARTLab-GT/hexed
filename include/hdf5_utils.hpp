@@ -44,5 +44,33 @@ T get_attr(std::string file_name, std::string attr_name) {
   return get_attr<T>(file, attr_name);
 }
 
+//! \brief Writes an entry to a 2D HDF5 DataSet.
+template <typename T>
+void write(H5::DataSet& dset, Int row, Int col, T value) {
+  hsize_t dims [2] {1, 1};
+  H5::DataSpace mspace (2, dims, nullptr);
+  hsize_t offset [2] {hsize_t(row), hsize_t(col)};
+  hsize_t stride [2] {1, 1};
+  hsize_t block [2] {1, 1};
+  auto dspace = dset.getSpace();
+  dspace.selectHyperslab(H5S_SELECT_SET, dims, offset, stride, block);
+  dset.write(&value, dset.getDataType(), mspace, dspace);
+}
+
+//! \brief Reads an entry from a 2D HDF5 DataSet.
+template <typename T>
+T read(H5::DataSet& dset, Int row, Int col) {
+  hsize_t dims [2] {1, 1};
+  H5::DataSpace mspace (2, dims, nullptr);
+  hsize_t offset [2] {hsize_t(row), hsize_t(col)};
+  hsize_t stride [2] {1, 1};
+  hsize_t block [2] {1, 1};
+  auto dspace = dset.getSpace();
+  dspace.selectHyperslab(H5S_SELECT_SET, dims, offset, stride, block);
+  T data;
+  dset.read(&data, dset.getDataType(), mspace, dspace);
+  return data;
+}
+
 }
 #endif
