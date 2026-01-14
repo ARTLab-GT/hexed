@@ -56,7 +56,58 @@ Tree::Tree(std::string file_name)
       hdf5_utils::get_attr<double>(file_name + ".tree.h5", "origin2"),
     }
   )
-{}
+{
+  H5::H5File file(file_name + ".tree.h5", H5F_ACC_RDONLY);
+  auto child_dset = file.openDataSet("/children");
+  hsize_t dims[2];
+  child_dset.getSpace().getSimpleExtentDims(dims);
+  std::vector<Tree*> addr_lookup(dims[0], nullptr);
+  _total_index = 0;
+  auto task = [&child_dset, &addr_lookup](Tree& t) {
+    std::vector<Int> child_inds(t._n_vert());
+    addr_lookup[t._total_index] = &t;
+    for (int i_child = 0; i_child < t._n_vert(); ++i_child) {
+      child_inds[i_child] = hdf5_utils::read<Int>(child_dset, t.total_index(), i_child);
+    }
+    std::vector<Int> graft_inds(2*t.n_dim);
+    for (int i_face = 0; i_face < 2*t.n_dim; ++i_face) {
+      graft_inds[i_face] = hdf5_utils::read<Int>(child_dset, t.total_index(), t._n_vert() + i_face);
+    }
+    std::vector<bool> ref_dims(t.n_dim);
+    for (int i_dim = 0; i_dim < t.n_dim; ++i_dim) {
+      ref_dims[i_dim] = child_inds[math::stride(t.n_dim, 2, i_dim)] != child_inds[0];
+    }
+    if (std::any_of(ref_dims.begin(), ref_dims.end(), [](bool b){return b;})) {
+      t.refine(ref_dims);
+      for (int i_child = 0; i_child < t._n_vert(); ++i_child) {
+        t._children_storage[i_child]->_total_index = child_inds[i_child];
+      }
+    }
+    for (int i_face = 0; i_face < 2*t.n_dim; ++i_face) {
+      if (graft_inds[i_face] >= 0) {
+        t.graft(t.anisotropic_refinement_level(), t.coordinates() + get_direction(i_face, t.n_dim).copy<Int>())->_total_index = graft_inds[i_face];
+      }
+    }
+  };
+  traverse(task);
+  for (Int i_graft = 0; i_graft < (Int)_grafts.size(); ++i_graft) {
+    _grafts[i_graft]->traverse(task);
+  }
+  auto con_dset = file.openDataSet("/connections");
+  con_dset.getSpace().getSimpleExtentDims(dims);
+  for (int i_con = 0; i_con < (Int)dims[0]; ++i_con) {
+    std::array<Tree*, 2> trees;
+    Connection_direction dir;
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      trees[i_side] = addr_lookup[hdf5_utils::read<Int>(con_dset, i_con, i_side)];
+      dir.i_dim[i_side] = hdf5_utils::read<Int>(con_dset, i_con, 2 + i_side);
+      dir.face_sign[i_side] = hdf5_utils::read<Int>(con_dset, i_con, 4 + i_side);
+    }
+    dir.rotate = hdf5_utils::read<Int>(con_dset, i_con, 6);
+    connect(trees, dir);
+  }
+  update_indices();
+}
 
 Tree::~Tree() {
   delete_grafts();
@@ -189,10 +240,7 @@ Tree* Tree::graft(Array<int> ref_level, Array<Int> coords) {
 }
 
 void Tree::delete_grafts() {
-  for (auto& ptr : _grafts) if (ptr) {
-    ptr->_clear_connections();
-  }
-  _clear_connections();
+  traverse([](Tree& t){for (_Connection*& c : t._face_connections) c = nullptr;});
   _grafts.clear();
   _connections.clear();
 }
@@ -562,8 +610,20 @@ Array<int> Tree::needs_refine(std::function<bool(Tree*)> include) {
 }
 
 void Tree::visualize(std::string format, std::string name) {
-  auto vis = Visualizer::create(format, n_dim, n_dim, name, {"tree_level"}, 0., Visualizer::block);
-  _visualize(*vis, 0);
+  auto vis = Visualizer::create(format, n_dim, n_dim, name, {}, 0., Visualizer::block);
+  auto task = [&vis](Tree& t) {
+    std::vector<Int> shape(t.n_dim, 2);
+    shape.insert(shape.begin(), t.n_dim);
+    Array<double> pos(shape);
+    for (int i_point = 0; i_point < t._n_vert(); ++i_point) {
+      for (int i_dim = 0; i_dim < t.n_dim; ++i_dim) {
+        int rc = math::row_coordinate(t.n_dim, 2, i_dim, i_point);
+        pos(i_dim)[i_point] = t.nominal_position()[i_dim] + rc*t.nominal_shape()[i_dim];
+      }
+    }
+    vis->write_block(pos, Array<double>({}));
+  };
+  traverse(task);
 }
 
 int Tree::get_status() {
@@ -894,28 +954,6 @@ Tree::_Neighbor_result Tree::_neighbor(Array<int> dir_arg) {
   }
   if (!n) n = r->find_leaf(_ref_level, coords, bias);
   return {n, direction, trans, ref_level, search_coords};
-}
-
-void Tree::_clear_connections() {
-  for (_Connection*& c : _face_connections) c = nullptr;
-  for (Tree* t : unique_children()) t->_clear_connections();
-}
-
-void Tree::_visualize(Visualizer& vis, int tree_level) {
-  int nv = math::pow(2, n_dim);
-  std::vector<Int> shape(n_dim, 2);
-  shape.insert(shape.begin(), 1);
-  Array<double> data = Array<double>::make_uniform(shape, tree_level);
-  shape[0] = n_dim;
-  Array<double> pos(shape);
-  for (int i_point = 0; i_point < nv; ++i_point) {
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      int rc = math::row_coordinate(n_dim, 2, i_dim, i_point);
-      pos(i_dim)[i_point] = nominal_position()[i_dim] + rc*nominal_shape()[i_dim];
-    }
-  }
-  vis.write_block(pos, data);
-  for (Tree* child : unique_children()) child->_visualize(vis, tree_level + 1);
 }
 
 }

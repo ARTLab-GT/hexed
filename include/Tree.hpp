@@ -356,11 +356,9 @@ class Tree : public Mortal {
   void _interchange_aniso_ref();
   void _simplify_aniso_ref();
   _Neighbor_result _neighbor(Array<int> direction);
-  void _clear_connections();
   static int _compare_ref_level(Tree*, Tree*, _Transformation);
   inline int _n_vert() const {return math::pow(2, n_dim);}
   Tree* _find_parent(int i_face);
-  void _visualize(Visualizer&, int tree_level);
   void _update_inds();
 
   Mat<> _orig;
