@@ -59,11 +59,13 @@ Tree::Tree(std::string file_name)
 {
   H5::H5File file(file_name + ".tree.h5", H5F_ACC_RDONLY);
   auto child_dset = file.openDataSet("/children");
+  auto graft_dset = file.openDataSet("/graft_geometry");
   hsize_t dims[2];
   child_dset.getSpace().getSimpleExtentDims(dims);
   std::vector<Tree*> addr_lookup(dims[0], nullptr);
   _total_index = 0;
-  auto task = [&child_dset, &addr_lookup](Tree& t) {
+  Int graft_row = 0;
+  auto task = [&child_dset, &addr_lookup, &graft_dset, &graft_row](Tree& t) {
     std::vector<Int> child_inds(t._n_vert());
     addr_lookup[t._total_index] = &t;
     for (int i_child = 0; i_child < t._n_vert(); ++i_child) {
@@ -85,7 +87,14 @@ Tree::Tree(std::string file_name)
     }
     for (int i_face = 0; i_face < 2*t.n_dim; ++i_face) {
       if (graft_inds[i_face] >= 0) {
-        t.graft(t.anisotropic_refinement_level(), t.coordinates() + get_direction(i_face, t.n_dim).copy<Int>())->_total_index = graft_inds[i_face];
+        Array<int> ref_level({t.n_dim});
+        Array<Int> coords({t.n_dim});
+        for (int i_dim = 0; i_dim < t.n_dim; ++i_dim) {
+          ref_level[i_dim] = hdf5_utils::read<Int>(graft_dset, graft_row, i_dim);
+          coords[i_dim] = hdf5_utils::read<Int>(graft_dset, graft_row, t.n_dim + i_dim);
+        }
+        t.graft(ref_level, coords)->_total_index = graft_inds[i_face];
+        ++graft_row;
       }
     }
   };
@@ -429,7 +438,13 @@ void Tree::write(std::string file_name) {
   dims[0] = n_total();
   dims[1] = _n_vert() + 2*n_dim;
   auto child_dset = file.createDataSet("/children", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
-  auto task = [&child_dset, &dims](Tree& t) {
+  dims[0] = _grafts.size();
+  dims[1] = 2*n_dim;
+  // The following `DataSet` contains the ref levels and coordinates of grafted `Tree`s
+  // in order of increasing `total_index`.
+  auto graft_dset = file.createDataSet("/graft_geometry", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
+  Int graft_row = 0;
+  auto task = [&child_dset, &graft_dset, &graft_row](Tree& t) {
     for (int i_child = 0; i_child < (Int)t._children_storage.size(); ++i_child) {
       hdf5_utils::write(child_dset, t.total_index(), i_child, t._children_storage[i_child]->total_index());
     }
@@ -439,7 +454,14 @@ void Tree::write(std::string file_name) {
     for (int i_face = 0; i_face < 2*t.n_dim; ++i_face) {
       Int i_graft = -1;
       if (t._face_connections[i_face]) {
-        for (Tree* g : t._face_connections[i_face]->trees) if (g->graft_parent() == &t) i_graft = g->total_index();
+        for (Tree* g : t._face_connections[i_face]->trees) if (g->graft_parent() == &t) {
+          i_graft = g->total_index();
+          for (int i_dim = 0; i_dim < t.n_dim; ++i_dim) {
+            hdf5_utils::write<Int>(graft_dset, graft_row, i_dim, g->_ref_level[i_dim]);
+            hdf5_utils::write(graft_dset, graft_row, i_dim + t.n_dim, g->_coords[i_dim]);
+          }
+          ++graft_row;
+        }
       }
       hdf5_utils::write(child_dset, t.total_index(), t._n_vert() + i_face, i_graft);
     }

@@ -898,8 +898,8 @@ TEST_CASE("Tree") {
     REQUIRE(tree.children()[7]->total_index() == 12);
     REQUIRE(tree.children()[7]->n_total() == 1);
     hexed::Tree* graft0 = tree.children()[1]->unique_children()[0]->graft(hexed::Array<int>::make(1, 1, 1),
-                                                                          hexed::Array<hexed::Int>::make(-1, 0, 1));
-    hexed::Tree* graft1 = graft0->graft(hexed::Array<int>::make(1, 1, 1), hexed::Array<hexed::Int>::make(-1, 0, 1));
+                                                                          hexed::Array<hexed::Int>::make(-2, 0, 1));
+    hexed::Tree* graft1 = graft0->graft(hexed::Array<int>::make(1, 3, 1), hexed::Array<hexed::Int>::make(-4, 0, 1));
     tree.connect({graft0, tree.children()[1]->unique_children()[0]}, {{0, 0}, {1, 0}});
     tree.connect({graft1, graft0}, {{0, 0}, {1, 0}});
     graft1->refine();
@@ -981,6 +981,10 @@ TEST_CASE("Tree") {
     REQUIRE(graft_copy0);
     hexed::Tree* graft_copy1 = graft_copy0->find_neighbor(0)->parent();
     REQUIRE(graft_copy1);
+    REQUIRE(graft_copy0->anisotropic_refinement_level().equal(graft0->anisotropic_refinement_level()));
+    REQUIRE(graft_copy1->anisotropic_refinement_level().equal(graft1->anisotropic_refinement_level()));
+    REQUIRE(graft_copy0->coordinates().equal(graft0->coordinates()));
+    REQUIRE(graft_copy1->coordinates().equal(graft1->coordinates()));
     REQUIRE(graft_copy0->leaf_index() == 3);
     REQUIRE(graft_copy0->n_leaves() == 9);
     REQUIRE(graft_copy1->n_leaves() == 8);

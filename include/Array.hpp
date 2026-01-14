@@ -464,6 +464,7 @@ class Array {
     return p;
   }
 
+  //! \brief Returns `true` iff `this` and `that` have the same shape and equal entries.
   template <typename U>
   bool equal(const Array<U>& that) const {
     if (order() != that.order()) return false;
