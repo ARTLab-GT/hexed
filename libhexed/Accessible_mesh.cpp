@@ -560,7 +560,7 @@ void Accessible_mesh::_fit_surface() {
           rl[i_dim] += 1;
           Array<Int> np = elem.nominal_position().copy();
           np[i_dim] = 2*np[i_dim] + !i_sign;
-          Int inside_sn = _add_element(rl, true, np, 1, next::Mesh_blocks::no_face, *elem.tree->graft(bf, rl, np));
+          Int inside_sn = _add_element(rl, true, np, 1, next::Mesh_blocks::no_face, *elem.tree->graft(rl, np));
           Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
           inside.create_fake(_blocks);
           set_vertices(inside);
@@ -568,7 +568,7 @@ void Accessible_mesh::_fit_surface() {
           inside.active_shape().for_matching = true;
           elem.face_record[2*i_dim + !i_sign] = inside_sn;
           np[i_dim] += math::sign(i_sign);
-          Int surface_sn = _add_element(rl, true, np, 1, bf, *inside.tree->graft(bf, rl, np));
+          Int surface_sn = _add_element(rl, true, np, 1, bf, *inside.tree->graft(rl, np));
           Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
           surface.create_fake(_blocks);
           set_vertices(surface);
@@ -595,8 +595,7 @@ void Accessible_mesh::_fit_surface() {
               Int m = matched_to[i_edge_matched];
               if (m != -1) {
                 Array<Int> np_match = elem.nominal_position().copy();
-                Connection_direction inside_dir {{i_dim, j_dim}, {!i_sign, j_sign}};
-                Tree* t = inside.tree->graft(inside_dir, inside.tree->anisotropic_refinement_level(), np_match);
+                Tree* t = inside.tree->graft(inside.tree->anisotropic_refinement_level(), np_match);
                 Int sn = _add_element(elem.refinement_level(), true, np_match, 1, bf, *t);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
                 match_elem.create_fake(_blocks);
@@ -605,7 +604,8 @@ void Accessible_mesh::_fit_surface() {
                 match_elem.active_shape().for_matching = true;
                 _connect({&match_elem, &surface}, Connection_direction{{j_dim, j_dim}, {!j_sign, j_sign}},
                          "match to surface");
-                _connect({&match_elem, &inside}, inside_dir, "match to inside");
+                _connect({&match_elem, &inside}, Connection_direction{{i_dim, j_dim}, {!i_sign, j_sign}},
+                         "match to inside");
                 _extrude_cons[1].emplace_back(&_neighbor_cons[1].back());
                 matched_elems[2*j_dim + j_sign] = &match_elem;
                 elem.face_record[2*j_dim + j_sign] = sn;
@@ -841,7 +841,7 @@ void Accessible_mesh::_fit_surface() {
           HEXED_ASSERT(math::mod<Int>(np[i_face/2], 2) == 0, "Coordinate must be even.")
           np[i_face/2] /= 2;
         }
-        Tree* t = elem.tree->graft(i_face, elem.tree->anisotropic_refinement_level(), np);
+        Tree* t = elem.tree->graft(elem.tree->anisotropic_refinement_level(), np);
         Int sn = _add_element(elem.refinement_level(), true, np, 1, i_face, *t);
         Deformed_element& new_elem = def.elems.at(elem.refinement_level(), sn);
         for (int j_face = 0; j_face < 2*params.n_dim; ++j_face) new_elem.face_record[j_face] = -1;
@@ -1709,8 +1709,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     auto nom_pos = face.elem.nominal_position();
     nom_pos[face.i_dim] += 2*face.face_sign - 1;
     const int ref_level = face.elem.refinement_level();
-    int i_face = 2*face.i_dim + face.face_sign;
-    Tree* t = face.elem.tree->graft(i_face, face.elem.tree->anisotropic_refinement_level(), nom_pos);
+    Tree* t = face.elem.tree->graft(face.elem.tree->anisotropic_refinement_level(), nom_pos);
     int sn = _add_element(ref_level, true, nom_pos, face.elem.aniso_ref_level() + 1, 2*face.i_dim + face.face_sign,
                           *t);
     Connection_direction dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
@@ -1719,7 +1718,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
     else elem.create_fake(_blocks);
     elem.record = sn;
     elem.needs_snapping = !force;
-    elem.fake_shape()->extruded_direction = i_face;
+    elem.fake_shape()->extruded_direction = 2*face.i_dim + face.face_sign;
     std::array<Element*, 2> el_arr {&elem, &face.elem};
     _connect(el_arr, dir);
     _extrude_cons[2].emplace_back(&_neighbor_cons[1].back());

@@ -112,6 +112,15 @@ Tree::Tree(std::string file_name)
       trees[i_side] = addr_lookup[ind];
       dir.i_dim[i_side] = hdf5_utils::read<Int>(con_dset, i_con, 2 + i_side);
       dir.face_sign[i_side] = hdf5_utils::read<Int>(con_dset, i_con, 4 + i_side);
+      bool is_fake = hdf5_utils::read<Int>(child_dset, ind, _n_vert() + 2*n_dim);
+      if (is_fake) {
+        for (int i_child = 0; i_child < _n_vert(); ++i_child) {
+          Tree& child = *trees[i_side]->_children_storage[i_child];
+          child._graft_par = trees[i_side];
+          child._fake_parents[dir.i_face(i_side)] = trees[i_side];
+          child._par = nullptr;
+        }
+      }
     }
     dir.rotate = hdf5_utils::read<Int>(con_dset, i_con, 6);
     connect(trees, dir);
@@ -236,7 +245,7 @@ std::vector<Tree*> Tree::unrefine(int i_dim) {
 
 void Tree::force_unrefine() {_children_storage.clear();}
 
-Tree* Tree::graft(Connection_direction dir, Array<int> ref_level, Array<Int> coords) {
+Tree* Tree::graft(Array<int> ref_level, Array<Int> coords) {
   HEXED_ASSERT(coords.size() == n_dim, "`coords` has wrong number of entries.")
   HEXED_ASSERT(ref_level.size() == n_dim, "`ref_level` has wrong number of entries.")
   Tree* r = root(false);
@@ -246,18 +255,7 @@ Tree* Tree::graft(Connection_direction dir, Array<int> ref_level, Array<Int> coo
   g->_coords = coords.copy();
   g->_is_graft = true;
   g->_graft_par = this;
-  connect({this, g}, dir);
   return g;
-}
-
-Tree* Tree::graft(int i_face, Array<int> ref_level, Array<Int> coords) {
-  graft({{i_face/2, i_face/2}, {i_face%2, !(i_face%2)}}, ref_level, coords);
-}
-
-Tree* Tree::graft(int i_face) {
-  Array<Int> coords = _coords.copy();
-  coords[i_face/2] += math::sign(i_face%2);
-  graft(i_face, ansiotropic_refinement_level(), coords);
 }
 
 void Tree::delete_grafts() {
@@ -469,7 +467,7 @@ void Tree::write(std::string file_name) {
   update_indices();
   hsize_t dims[2];
   dims[0] = n_total();
-  dims[1] = _n_vert() + 2*n_dim;
+  dims[1] = _n_vert() + 2*n_dim + 1;
   auto child_dset = file.createDataSet("/children", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
   dims[0] = _grafts.size();
   dims[1] = 2*n_dim;
@@ -478,8 +476,12 @@ void Tree::write(std::string file_name) {
   auto graft_dset = file.createDataSet("/graft_geometry", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
   Int graft_row = 0;
   auto task = [&child_dset, &graft_dset, &graft_row](Tree& t) {
+    Int is_fake = false;
     for (int i_child = 0; i_child < (Int)t._children_storage.size(); ++i_child) {
       hdf5_utils::write(child_dset, t.total_index(), i_child, t._children_storage[i_child]->total_index());
+      for (int i_face = 0; i_face < 2*t.n_dim; ++i_face) {
+        is_fake = is_fake || t._children_storage[i_child]->_fake_parents[i_face] == &t;
+      }
     }
     for (int i_child = (Int)t._children_storage.size(); i_child < t._n_vert(); ++i_child) {
       hdf5_utils::write<Int>(child_dset, t.total_index(), i_child, -1);
@@ -498,6 +500,7 @@ void Tree::write(std::string file_name) {
       }
       hdf5_utils::write(child_dset, t.total_index(), t._n_vert() + i_face, i_graft);
     }
+    hdf5_utils::write(child_dset, t.total_index(), t._n_vert() + 2*t.n_dim, is_fake);
   };
   traverse(task);
   dims[0] = _connections.size();

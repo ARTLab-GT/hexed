@@ -364,7 +364,7 @@ TEST_CASE("Tree") {
   SECTION("2D grafting") {
     hexed::Tree tree(2, .9, hexed::Mat<2>{.2, .1});
     REQUIRE(!tree.is_graft());
-    auto graft0 = tree.graft({{1, 0}, {0, 1}}, hexed::Array<int>::make(0, 0), hexed::Array<hexed::Int>::make(-1, -1));
+    auto graft0 = tree.graft(hexed::Array<int>::make(0, 0), hexed::Array<hexed::Int>::make(-1, -1));
     REQUIRE(graft0->is_root());
     REQUIRE(graft0->is_graft());
     REQUIRE(graft0->parent() == nullptr);
@@ -374,6 +374,8 @@ TEST_CASE("Tree") {
     REQUIRE(graft0->coordinates()[1] == -1);
     REQUIRE(!tree.has_graft_connection());
     REQUIRE(!graft0->has_graft_connection());
+    tree.connect({std::vector<hexed::Tree*>{graft0, graft0},
+                  std::vector<hexed::Tree*>{&tree, &tree}}, {{0, 1}, {1, 0}});
     REQUIRE(tree.has_graft_connection());
     REQUIRE(graft0->has_graft_connection());
     REQUIRE(graft0->find_neighbor(0) == nullptr);
@@ -467,7 +469,9 @@ TEST_CASE("Tree") {
             graft0->children()[2]->unique_children()[1]);
     REQUIRE(tree.children()[2]->unique_children()[0]->find_neighbor(2) ==
             graft0->children()[2]->unique_children()[1]);
-    auto graft1 = tree.graft(0);
+    auto graft1 = tree.graft(hexed::Array<int>::make(0, 0), hexed::Array<hexed::Int>::make(-1, 0));
+    tree.connect({std::vector<hexed::Tree*>{graft1, graft1},
+                  std::vector<hexed::Tree*>{&tree, &tree}}, {{0, 0}, {1, 0}});
     graft1->refine();
     for (int i_child : {2, 3}) graft1->children()[i_child]->refine(1);
     tree.children()[1]->refine(0);
@@ -493,10 +497,11 @@ TEST_CASE("Tree") {
     tree.delete_grafts(); // `graft0` and `graft1` now invalid
     tree.children()[1]->unrefine(0);
     REQUIRE(tree.children()[0]->find_neighbor(2) == nullptr);
-    graft0 = tree.children()[1]->graft({{0, 1}, {0, 0}}, hexed::Array<int>::make(0, 1), hexed::Array<hexed::Int>::make(-1, 1));
+    graft0 = tree.children()[1]->graft(hexed::Array<int>::make(0, 1), hexed::Array<hexed::Int>::make(-1, 1));
     REQUIRE( graft0->is_root(true));
     REQUIRE(!graft0->is_root(false));
     REQUIRE_THAT(graft0->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{0, 1}));
+    tree.connect({tree.children()[1], graft0}, {{0, 1}, {0, 0}});
     graft0->refine();
     REQUIRE(!graft0->children()[1]->is_root(true));
     REQUIRE(!graft0->children()[1]->is_root(false));
@@ -518,7 +523,8 @@ TEST_CASE("Tree") {
       REQUIRE_THAT(con.trees[1], Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{graft0->children()[0], graft0->children()[2]}));
       REQUIRE(con.direction == hexed::Connection_direction{{0, 1}, {0, 0}});
     }
-    hexed::Tree* graft2 = tree.graft({{0, 0}, {1, 0}}, hexed::Array<int>::make(1, 1), hexed::Array<hexed::Int>::make(1, 1));
+    hexed::Tree* graft2 = tree.graft(hexed::Array<int>::make(1, 1), hexed::Array<hexed::Int>::make(1, 1));
+    tree.connect({graft2, tree.children()[1]}, {{0, 0}, {0, 1}});
     REQUIRE(tree.children()[1]->find_neighbor(1) == graft2);
     REQUIRE(graft2 == tree.children()[1]->find_neighbor(1));
   }
@@ -527,7 +533,8 @@ TEST_CASE("Tree") {
     SECTION("same dim, rotated") {
       hexed::Tree tree(3, .9, hexed::Mat<3>{-.15, -.03, -.09});
       REQUIRE(!tree.is_graft());
-      hexed::Tree* graft0 = tree.graft({{0, 0}, {1, 0}, 1}, hexed::Array<int>::make(0, 0, 0), hexed::Array<hexed::Int>::make(1, 0, 0));
+      hexed::Tree* graft0 = tree.graft(hexed::Array<int>::make(0, 0, 0), hexed::Array<hexed::Int>::make(1, 0, 0));
+      tree.connect({&tree, graft0}, {{0, 0}, {1, 0}, 1});
       REQUIRE(tree.has_graft_connection());
       REQUIRE(graft0->has_graft_connection());
       REQUIRE(graft0->find_neighbor(0) == &tree);
@@ -687,7 +694,8 @@ TEST_CASE("Tree") {
     }
     SECTION("different dimensions, not rotated") {
       hexed::Tree tree1(3, .9);
-      hexed::Tree* graft1 = tree1.graft({{2, 0}, {1, 0}, 0}, hexed::Array<int>::make(1, 3, 2), hexed::Array<hexed::Int>::make(2, 4, 4));
+      hexed::Tree* graft1 = tree1.graft(hexed::Array<int>::make(1, 3, 2), hexed::Array<hexed::Int>::make(2, 4, 4));
+      tree1.connect({graft1, &tree1}, {{0, 2}, {0, 1}, 0});
       tree1.refine();
       graft1->refine();
       std::vector<hexed::Tree*> trees0 {
@@ -751,7 +759,8 @@ TEST_CASE("Tree") {
     }
     SECTION("different dims, rotated") {
       hexed::Tree tree1(3, .9);
-      hexed::Tree* graft1 = tree1.graft({{2, 0}, {1, 1}, 1}, hexed::Array<int>::make(1, 3, 2), hexed::Array<hexed::Int>::make(-1, 4, 4));
+      hexed::Tree* graft1 = tree1.graft(hexed::Array<int>::make(1, 3, 2), hexed::Array<hexed::Int>::make(-1, 4, 4));
+      tree1.connect({graft1, &tree1}, {{0, 2}, {1, 1}, 1});
       REQUIRE(graft1->find_neighbor(1) == &tree1);
       REQUIRE(tree1.find_neighbor(5) == graft1);
       tree1.refine();
@@ -783,11 +792,8 @@ TEST_CASE("Tree") {
     }
     SECTION("multiple graft") {
       hexed::Tree tree(3, .9);
-      hexed::Tree* intermediate = tree.graft(4);
-      hexed::Tree* graft0 = intermediate->graft({{1, 1}, {0, 1}}, hexed::Array<int>::make(2, 2, 2),
-                                                hexed::Array<hexed::Int>::make(0, -1, -1));
-      hexed::Tree* graft1 = intermediate->graft({{1, 1}, {0, 1}}, hexed::Array<int>::make(2, 2, 2),
-                                                hexed::Array<hexed::Int>::make(1, -1, -1));
+      hexed::Tree* graft0 = tree.graft(hexed::Array<int>::make(2, 2, 2), hexed::Array<hexed::Int>::make(0, -1, -1));
+      hexed::Tree* graft1 = tree.graft(hexed::Array<int>::make(2, 2, 2), hexed::Array<hexed::Int>::make(1, -1, -1));
       std::array<std::vector<hexed::Tree*>, 2> to_connect;
       to_connect[0] = {graft0, graft0, graft1, graft1};
       to_connect[1].resize(4, &tree);
@@ -819,16 +825,16 @@ TEST_CASE("Tree") {
       REQUIRE_THAT(cn.trees[1], Catch::Matchers::RangeEquals(trees1));
     }
     SECTION("thorough ordering test") {
+      hexed::Tree tree(3, 1.);
+      hexed::Tree* graft = tree.graft(hexed::Array<int>::make(0, 0, 0), hexed::Array<hexed::Int>::make(0, 0, 0));
+      tree.refine();
+      graft->refine();
       for (int i_dim = 0; i_dim < 3; ++i_dim) for (bool i_sign : {0, 1}) {
         for (int j_dim = 0; j_dim < 3; ++j_dim) for (bool j_sign : {0, 1}) {
           if (i_dim != j_dim || i_sign != j_sign) {
             for (int rotate = -3; rotate < 3; ++rotate) {
-              hexed::Tree tree(3, 1.);
-              tree.refine();
               hexed::Connection_direction dir {{i_dim, j_dim}, {i_sign, j_sign}, rotate};
-              hexed::Tree* graft = tree.graft(dir, hexed::Array<int>::make(0, 0, 0),
-                                              hexed::Array<hexed::Int>::make(0, 0, 0));
-              graft->refine();
+              tree.connect({std::vector<hexed::Tree*>(4, &tree), std::vector<hexed::Tree*>(4, graft)}, dir);
               auto inds = hexed::vertex_inds(3, dir);
               for (int i = 0; i < 4; ++i) {
                 REQUIRE(tree.children()[inds[0][i]]->find_neighbor(dir.i_face(0)) == graft->children()[inds[1][i]]);
@@ -891,10 +897,18 @@ TEST_CASE("Tree") {
     REQUIRE(tree.children()[3]->n_total() == 1);
     REQUIRE(tree.children()[7]->total_index() == 12);
     REQUIRE(tree.children()[7]->n_total() == 1);
+    hexed::Tree* graft0 = tree.children()[1]->unique_children()[0]->graft(hexed::Array<int>::make(1, 1, 2),
+                                                                          hexed::Array<hexed::Int>::make(-2, 0, 2));
+    hexed::Tree* graft1 = tree.children()[1]->unique_children()[0]->graft(hexed::Array<int>::make(1, 1, 2),
+                                                                          hexed::Array<hexed::Int>::make(-2, 0, 3));
+    hexed::Tree* graft2 = graft0->graft(hexed::Array<int>::make(1, 3, 1), hexed::Array<hexed::Int>::make(-4, 0, 1));
     hexed::Tree* child = tree.children()[1]->unique_children()[0];
-    hexed::Tree* graft0 = child->graft(0, hexed::Array<int>::make(1, 1, 2), hexed::Array<hexed::Int>::make(-2, 0, 2));
-    hexed::Tree* graft1 = graft0->graft(5, hexed::Array<int>::make(1, 1, 2), hexed::Array<hexed::Int>::make(-2, 0, 3));
-    hexed::Tree* graft2 = graft0->graft(0, hexed::Array<int>::make(1, 3, 1), hexed::Array<hexed::Int>::make(-4, 0, 1));
+    std::array<std::vector<hexed::Tree*>, 2> trees;
+    trees[0] = {graft0, graft1, graft0, graft1};
+    trees[1] = std::vector<hexed::Tree*>(4, child);
+    tree.connect(trees, {{0, 0}, {1, 0}});
+    tree.connect({graft2, graft0}, {{0, 0}, {1, 0}});
+    tree.connect({graft1, graft0}, {{2, 2}, {0, 1}});
     graft2->refine();
     tree.update_indices();
     REQUIRE(graft1->root(false) == &tree);
@@ -915,7 +929,7 @@ TEST_CASE("Tree") {
     REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->leaf_index() == 2);
     REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->n_leaves() == 1);
     REQUIRE(graft0->leaf_index() == 3);
-    REQUIRE(graft0->n_leaves() == 10);
+    REQUIRE(graft0->n_leaves() == 9);
     REQUIRE(graft2->leaf_index() == 4);
     REQUIRE(graft2->n_leaves() == 8);
     REQUIRE(graft2->children()[5]->leaf_index() == 9);
@@ -931,32 +945,32 @@ TEST_CASE("Tree") {
     REQUIRE(tree.children()[7]->leaf_index() == 19);
     REQUIRE(tree.children()[7]->n_leaves() == 1);
     REQUIRE(tree.total_index() == 0);
-    REQUIRE(tree.n_total() == 24);
+    REQUIRE(tree.n_total() == 25);
     REQUIRE(tree.children()[0]->total_index() == 1);
     REQUIRE(tree.children()[0]->n_total() == 1);
     REQUIRE(tree.children()[1]->total_index() == 2);
-    REQUIRE(tree.children()[1]->n_total() == 16);
+    REQUIRE(tree.children()[1]->n_total() == 17);
     REQUIRE(tree.children()[1]->unique_children()[0]->total_index() == 3);
-    REQUIRE(tree.children()[1]->unique_children()[0]->n_total() == 14);
+    REQUIRE(tree.children()[1]->unique_children()[0]->n_total() == 15);
     REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->total_index() == 4);
     REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->n_total() == 1);
     REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->total_index() == 5);
     REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->n_total() == 1);
-    REQUIRE(graft0->total_index() == 6);
-    REQUIRE(graft0->n_total() == 11);
-    REQUIRE(graft2->total_index() == 7);
+    REQUIRE(graft0->total_index() == 7); // jumps by 2 because it skips one for the fake root
+    REQUIRE(graft0->n_total() == 10);
+    REQUIRE(graft2->total_index() == 8);
     REQUIRE(graft2->n_total() == 9);
-    REQUIRE(graft2->children()[5]->total_index() == 13);
+    REQUIRE(graft2->children()[5]->total_index() == 14);
     REQUIRE(graft2->children()[5]->n_total() == 1);
-    REQUIRE(graft1->total_index() == 16);
+    REQUIRE(graft1->total_index() == 17);
     REQUIRE(graft1->n_total() == 1);
-    REQUIRE(tree.children()[1]->unique_children()[1]->total_index() == 17);
+    REQUIRE(tree.children()[1]->unique_children()[1]->total_index() == 18);
     REQUIRE(tree.children()[1]->unique_children()[1]->n_total() == 1);
-    REQUIRE(tree.children()[2]->total_index() == 18);
+    REQUIRE(tree.children()[2]->total_index() == 19);
     REQUIRE(tree.children()[2]->n_total() == 1);
-    REQUIRE(tree.children()[3]->total_index() == 19);
+    REQUIRE(tree.children()[3]->total_index() == 20);
     REQUIRE(tree.children()[3]->n_total() == 1);
-    REQUIRE(tree.children()[7]->total_index() == 23);
+    REQUIRE(tree.children()[7]->total_index() == 24);
     REQUIRE(tree.children()[7]->n_total() == 1);
 
     tree.write("test");
@@ -993,7 +1007,7 @@ TEST_CASE("Tree") {
     REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[1]->leaf_index() == 2);
     REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[1]->n_leaves() == 1);
     REQUIRE(graft_copy0->leaf_index() == 3);
-    REQUIRE(graft_copy0->n_leaves() == 10);
+    REQUIRE(graft_copy0->n_leaves() == 9);
     REQUIRE(graft_copy2->leaf_index() == 4);
     REQUIRE(graft_copy2->n_leaves() == 8);
     REQUIRE(graft_copy2->children()[5]->leaf_index() == 9);
@@ -1009,32 +1023,32 @@ TEST_CASE("Tree") {
     REQUIRE(tree_copy.children()[7]->leaf_index() == 19);
     REQUIRE(tree_copy.children()[7]->n_leaves() == 1);
     REQUIRE(tree_copy.total_index() == 0);
-    REQUIRE(tree_copy.n_total() == 24);
+    REQUIRE(tree_copy.n_total() == 25);
     REQUIRE(tree_copy.children()[0]->total_index() == 1);
     REQUIRE(tree_copy.children()[0]->n_total() == 1);
     REQUIRE(tree_copy.children()[1]->total_index() == 2);
-    REQUIRE(tree_copy.children()[1]->n_total() == 16);
+    REQUIRE(tree_copy.children()[1]->n_total() == 17);
     REQUIRE(tree_copy.children()[1]->unique_children()[0]->total_index() == 3);
-    REQUIRE(tree_copy.children()[1]->unique_children()[0]->n_total() == 14);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->n_total() == 15);
     REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[0]->total_index() == 4);
     REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[0]->n_total() == 1);
     REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[1]->total_index() == 5);
     REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[1]->n_total() == 1);
-    REQUIRE(graft_copy0->total_index() == 6);
-    REQUIRE(graft_copy0->n_total() == 11);
-    REQUIRE(graft_copy2->total_index() == 7);
+    REQUIRE(graft_copy0->total_index() == 7); // jumps by 2 because it skips one for the fake root
+    REQUIRE(graft_copy0->n_total() == 10);
+    REQUIRE(graft_copy2->total_index() == 8);
     REQUIRE(graft_copy2->n_total() == 9);
-    REQUIRE(graft_copy2->children()[5]->total_index() == 13);
+    REQUIRE(graft_copy2->children()[5]->total_index() == 14);
     REQUIRE(graft_copy2->children()[5]->n_total() == 1);
-    REQUIRE(graft_copy1->total_index() == 16);
+    REQUIRE(graft_copy1->total_index() == 17);
     REQUIRE(graft_copy1->n_total() == 1);
-    REQUIRE(tree_copy.children()[1]->unique_children()[1]->total_index() == 17);
+    REQUIRE(tree_copy.children()[1]->unique_children()[1]->total_index() == 18);
     REQUIRE(tree_copy.children()[1]->unique_children()[1]->n_total() == 1);
-    REQUIRE(tree_copy.children()[2]->total_index() == 18);
+    REQUIRE(tree_copy.children()[2]->total_index() == 19);
     REQUIRE(tree_copy.children()[2]->n_total() == 1);
-    REQUIRE(tree_copy.children()[3]->total_index() == 19);
+    REQUIRE(tree_copy.children()[3]->total_index() == 20);
     REQUIRE(tree_copy.children()[3]->n_total() == 1);
-    REQUIRE(tree_copy.children()[7]->total_index() == 23);
+    REQUIRE(tree_copy.children()[7]->total_index() == 24);
     REQUIRE(tree_copy.children()[7]->n_total() == 1);
   }
 }
