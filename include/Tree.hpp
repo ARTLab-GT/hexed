@@ -204,15 +204,23 @@ class Tree : public Mortal {
   void force_unrefine(); //!< \brief Deletes all child elements and descendents thereof. This element is now a leaf.
   //! \brief Adds a new tree outside the existing refinement heirarchy.
   //! \details A tree created this way and all its descendents are said to be "grafted".
-  //! By default, this tree will not have any neighbors, regardless of its ref level and coordinates.
-  //! `connect()` can be called to establish a neighbor connection with other trees.
+  //! The new tree will be automatically `connect()`ed to `this` in the direction `dir`
+  //! where tree 0 in the connection is `this` and tree 1 is the new tree.
+  //! The connection will be conformal even if `ref_level` is different from `this->anisotropic_refinement_level()`.
+  //! The new tree will not have neighbors on any faces other than `dir.i_face(1)` until `connect()` is called
+  //! to connect its other faces.
   //! Grafted trees can be refined, and their descendents will share their neighbor connections.
   //! For the purpose of indexing (see `leaf_index()`), a tree created with `graft()`
   //! is considered to be descended from the tree that `graft()` was called on.
-  //! Furthermore, it will only be assigned an index if you subsequently connect the grafted tree
-  //! to the tree you called `graft()` on.
-  //! Therefore, it is recommended to graft trees from a tree you intend to connect them to.
-  Tree* graft(Array<int> ref_level, Array<Int> coords);
+  Tree* graft(Connection_direction dir, Array<int> ref_level, Array<Int> coords);
+  //! \brief Grafts a new tree to the face determined by `i_face`.
+  //! \details The `Connection_direction` is Cartesian such that it connects to the `i_face`th face of `this`.
+  Tree* graft(int i_face, Array<int> ref_level, Array<Int> coords);
+  //! \brief Grafts a new tree with automatically-determined refinement level and coordinates.
+  //! The refinement level of the new tree is the same as `this` and its coordinates are offset by 1
+  //! in the direction of `i_face`.
+  //! The direction is determined by `i_face` as in `graft(int, Array<int>, Array<Int>)`.
+  Tree* graft(int i_face);
   void connect(std::array<std::vector<Tree*>, 2>, Connection_direction);
   void connect(std::array<Tree*, 2>, Connection_direction);
   //! \brief Deletes and disconnects all grafted trees, including their descendent. Can only be called on the root.
