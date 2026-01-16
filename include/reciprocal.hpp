@@ -26,7 +26,7 @@ class Reciprocal_ptr : public mutual::Single<T, U> {
   public:
   //! \brief constructs a `Reciprocal_ptr` and sets its `mine` to `data` (which can be null)
   Reciprocal_ptr(T* data) : mine(data) {}
-  operator bool() const {return get() != nullptr;} //!< \brief returns `true` iff `this` is not null
+  operator bool() const {return get() != nullptr;} //!< \brief Returns `true` iff `get()` is not null.
 
   #define ACCESS(CONST) \
     /*! \brief points to the `mine` of the `partner()` of `this` */ \

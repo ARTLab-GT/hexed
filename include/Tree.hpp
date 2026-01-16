@@ -321,7 +321,11 @@ class Tree : public Mortal {
   //! \details File extension (`.tree.h5`) is added automatically.
   void write(std::string file_name);
   //! \brief Calls `task` on every tree in index order.
-  void traverse(std::function<void(Tree&)> task);
+  //! \details If `include_fake` is `true`, this will include certain "fake trees"
+  //! which are automatically created to facilitate hanging-node graft connections
+  //! but are not assigned `total_index` values or accessible by neighbor-finding algorithms.
+  //! By default, these trees are skipped.
+  void traverse(std::function<void(Tree&)> task, bool include_fake = false);
 
   private:
   struct _Connection {
@@ -360,6 +364,7 @@ class Tree : public Mortal {
   inline int _n_vert() const {return math::pow(2, n_dim);}
   Tree* _find_parent(int i_face);
   void _update_inds();
+  bool _is_fake() const;
 
   Mat<> _orig;
   double _root_sz;
@@ -370,7 +375,8 @@ class Tree : public Mortal {
   Int _n_leaves;
   Int _n_total;
   Tree* _par;
-  Tree* _graft_par;
+  Reciprocal_ptr<Tree, Tree> _graft_par;
+  Reciprocal_list<Tree, Tree> _graft_children;
   std::vector<std::shared_ptr<Tree>> _children_storage;
   std::vector<std::unique_ptr<Tree>> _grafts;
   std::vector<std::unique_ptr<_Connection>> _connections;
