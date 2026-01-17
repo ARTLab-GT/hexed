@@ -910,10 +910,17 @@ TEST_CASE("Tree") {
     tree.connect({graft2, graft0}, {{0, 0}, {1, 0}});
     tree.connect({graft1, graft0}, {{2, 2}, {0, 1}});
     graft2->refine();
+    trees[0] = {graft2->children()[2], graft2->children()[3], graft2->children()[6], graft2->children()[7]};
+    trees[1] = {tree.children()[2], tree.children()[3], tree.children()[2], tree.children()[3]};
+    tree.connect(trees, {{1, 0}, {1, 0}, -1});
     tree.update_indices();
     REQUIRE(graft1->root(false) == &tree);
     REQUIRE(graft2->root(false) == &tree);
     REQUIRE(graft0->is_root());
+    REQUIRE(graft2->children()[2]->find_neighbor(3) == tree.children()[3]);
+    REQUIRE(graft2->children()[3]->find_neighbor(3) == tree.children()[3]);
+    REQUIRE(graft2->children()[6]->find_neighbor(3) == tree.children()[2]);
+    REQUIRE(graft2->children()[7]->find_neighbor(3) == tree.children()[2]);
     tree.visualize("default", "original_tree");
 
     REQUIRE(tree.leaf_index() == 0);
@@ -993,6 +1000,10 @@ TEST_CASE("Tree") {
     REQUIRE(graft_copy1->coordinates().equal(graft1->coordinates()));
     REQUIRE(graft_copy2->coordinates().equal(graft2->coordinates()));
     REQUIRE(graft_copy0->is_root());
+    REQUIRE(graft_copy2->children()[2]->find_neighbor(3) == tree_copy.children()[3]);
+    REQUIRE(graft_copy2->children()[3]->find_neighbor(3) == tree_copy.children()[3]);
+    REQUIRE(graft_copy2->children()[6]->find_neighbor(3) == tree_copy.children()[2]);
+    REQUIRE(graft_copy2->children()[7]->find_neighbor(3) == tree_copy.children()[2]);
 
     REQUIRE(tree_copy.leaf_index() == 0);
     REQUIRE(tree_copy.n_leaves() == 20);

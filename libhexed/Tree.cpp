@@ -3,7 +3,6 @@
 #include <hexed/Row_index.hpp>
 #include <hexed/Printer.hpp>
 #include <hexed/hdf5_utils.hpp>
-#include <hexed/vertex_inds.hpp>
 
 namespace hexed {
 
@@ -117,10 +116,7 @@ Tree::Tree(std::string file_name)
   update_indices();
 }
 
-Tree::~Tree() {
-  delete_grafts();
-  for (auto c : _face_connections) HEXED_ASSERT(!c, "Attempting to destroy a tree that is still connected.")
-}
+Tree::~Tree() {}
 
 Mat<> Tree::origin() const {return _orig;}
 int Tree::refinement_level() const {return _ref_level.extreme(0);}
@@ -261,8 +257,8 @@ void Tree::update_indices() {
 void Tree::traverse(std::function<void(Tree&)> task, bool include_fake) {
   if (!include_fake && _is_fake()) return;
   task(*this);
-  for (Tree* child : unique_children()) child->traverse(task);
-  for (Tree* child : _graft_children.theirs()) child->traverse(task);
+  for (Tree* child : unique_children()) child->traverse(task, include_fake);
+  for (Tree* child : _graft_children.theirs()) child->traverse(task, include_fake);
 }
 
 void Tree::_update_inds() {
@@ -339,12 +335,14 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
       fake_root->_children_storage.resize(_n_vert());
       for (Row_index ind(n_dim, 2, dir.i_dim[i_side]); ind; ++ind) {
         Tree* t = trees[i_side][ind.i_face_qpoint()];
-        HEXED_ASSERT(!t->_par, "Creating a fake parent for a tree that already has one is not yet supported.",
-                     assert::Not_implemented_error)
         std::shared_ptr<Tree> child;
-        for (Tree* p : t->_fake_parents) if (p) {
-          for (std::shared_ptr<Tree>& c : p->_children_storage) if (c.get() == t) child = c;
-          HEXED_ASSERT(child.use_count(), "Fake parent/child relationship is not reciprocal.")
+        if (t->_par) {
+          for (std::shared_ptr<Tree>& c : t->_par->_children_storage) if (c.get() == t) child = c;
+        } else {
+          for (Tree* p : t->_fake_parents) if (p) {
+            for (std::shared_ptr<Tree>& c : p->_children_storage) if (c.get() == t) child = c;
+            HEXED_ASSERT(child.use_count(), "Fake parent/child relationship is not reciprocal.")
+          }
         }
         // obtain a shared pointer to `t`
         // without creating any ownership conflicts with existing child or graft pointers
@@ -352,6 +350,7 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
           for (std::unique_ptr<Tree>& g : _grafts) if (g.get() == t) g.release();
           child.reset(t);
         }
+        HEXED_ASSERT(child, "Failed to obtain a shared pointer to `t`.")
         t->_fake_parents[dir.i_face(i_side)] = fake_root;
         // reroute graft parenthood through `fake_root`
         // assign the appropriate children of `fake_root` to point to `t`
@@ -471,12 +470,11 @@ void Tree::write(std::string file_name) {
   auto connection_dset = file.createDataSet("/connections", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
   for (int i_con = 0; i_con < (Int)_connections.size(); ++i_con) {
     auto& con = *_connections[i_con];
-    auto inds = vertex_inds(n_dim, con.direction);
     for (int i_side = 0; i_side < 2; ++i_side) {
-      for (int i = 0; i < _n_vert()/2; ++i) {
+      for (Row_index ind(n_dim, 2, con.direction.i_dim[i_side]); ind; ++ind) {
         Tree* tree = con.trees[i_side];
-        if (tree->_is_fake()) tree = con.trees[i_side]->_children_storage[inds[i_side][i]].get();
-        hdf5_utils::write(connection_dset, i_con, i_side*_n_vert()/2 + i, tree->total_index());
+        if (tree->_is_fake()) tree = tree->_children_storage[ind.i_qpoint(con.direction.face_sign[i_side])].get();
+        hdf5_utils::write(connection_dset, i_con, i_side*_n_vert()/2 + ind.i_face_qpoint(), tree->total_index());
       }
       hdf5_utils::write<Int>(connection_dset, i_con, i_side + _n_vert(), con.direction.i_dim[i_side]);
       hdf5_utils::write<Int>(connection_dset, i_con, i_side + _n_vert() + 2, con.direction.face_sign[i_side]);
