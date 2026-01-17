@@ -1158,7 +1158,7 @@ void Accessible_mesh::_fit_surface() {
     #pragma omp parallel for
     for (auto& vert : new_all_verts) {
       vert.remove_size_constraints();
-      vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
+      vert.wall_distance = (vert.point({}) - resize(surf_geom->nearest_point(vert.point({})).point(), 3)).norm();
     }
   }
   for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
@@ -1874,7 +1874,7 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
   _n_verts = verts.size();
   #pragma omp parallel for
   for (auto& vert : verts) {
-    vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
+    vert.wall_distance = (vert.point({}) - resize(surf_geom->nearest_point(vert.point({})).point(), 3)).norm();
   }
   ++_stopwatch["update"]["extrusion"].work_units_completed;
 }

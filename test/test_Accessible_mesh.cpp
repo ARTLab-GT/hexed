@@ -119,20 +119,19 @@ TEST_CASE("Tree meshing", "[.slow]") {
   }
 }
 
-#if 0
-TEST_CASE("mesh I/O", "[!mayfail]") {
+TEST_CASE("mesh I/O") {
   hexed::printers::info.printers.clear();
   hexed::Mat<3> correct_sum_vertices = hexed::Mat<3>::Zero();
   int correct_n_car_after = 0;
   int correct_n_def_after = 0;
   { // create a mesh and write it to a file
-    hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size}, .8, hexed::laminar);
+    hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size - 1}, .8, hexed::laminar);
     std::vector<std::shared_ptr<hexed::Flow_bc>> bcs;
     for (int i = 0; i < 4; ++i) bcs.emplace_back(new hexed::Copy);
     mesh.add_tree(bcs, hexed::Mat<2>{0.1, 0.2});
     mesh.update();
     mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] != elem.nominal_position()[1];});
-    mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), new hexed::Nonpenetration);
+    mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), std::make_shared<hexed::Nonpenetration>());
     mesh.write("io_test");
     // compute the sum of the vertex coordinates of all elements (counting each vertex once for each element using it)
     // to check vertex position
@@ -149,12 +148,14 @@ TEST_CASE("mesh I/O", "[!mayfail]") {
       if (elems[i_elem].get_is_deformed()) ++correct_n_def_after;
       else                                 ++correct_n_car_after;
     }
+    mesh.visualize("default", "io_test_orig");
   }
   { // read the above mesh from the file and check that it's the same
     std::vector<std::shared_ptr<hexed::Flow_bc>> extr_bcs;
     for (int i = 0; i < 4; ++i) extr_bcs.emplace_back(new hexed::Copy);
     hexed::Accessible_mesh mesh("io_test", extr_bcs, hexed::laminar,
-                                new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), new hexed::Nonpenetration);
+                                new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1),
+                                std::make_shared<hexed::Nonpenetration>());
     REQUIRE(mesh.root_size() == Catch::Approx(0.8));
     REQUIRE(mesh.cartesian().elements().size() == 6);
     REQUIRE(mesh.deformed().elements().size() == 5);
@@ -186,10 +187,9 @@ TEST_CASE("mesh I/O", "[!mayfail]") {
     mesh.valid().assert_valid();
     REQUIRE(n_car_after == correct_n_car_after);
     REQUIRE(n_def_after == correct_n_def_after);
-    mesh.visualize("default", "io_error");
+    mesh.visualize("default", "io_error_reconstructed");
   }
 }
-#endif
 
 TEST_CASE("masking") {
   hexed::Accessible_mesh mesh({2, 4, 2, 2}, 1., hexed::laminar);

@@ -61,18 +61,18 @@ std::pair<Int, double> Compound_edge::_global_index(double param) const {
 }
 
 Compound_geom::Compound_geom(std::vector<Surface_geom*> geoms)
-: components(geoms.begin(), geoms.end())
+: _components(geoms.begin(), geoms.end())
 {}
 
 Nearest_point<dyn> Compound_geom::nearest_point(Mat<> point, double max_distance, double distance_guess) {
   Nearest_point nearest(point, max_distance);
-  for (auto& comp : components) nearest.merge(comp->nearest_point(point, max_distance, distance_guess));
+  for (auto& comp : _components) nearest.merge(comp->nearest_point(point, max_distance, distance_guess));
   return nearest;
 }
 
 std::vector<double> Compound_geom::intersections(Mat<> point0, Mat<> point1, bool high_precision) {
   std::vector<double> inters;
-  for (auto& comp : components) {
+  for (auto& comp : _components) {
     auto comp_inters = comp->intersections(point0, point1, high_precision);
     inters.insert(inters.end(), comp_inters.begin(), comp_inters.end());
   }
@@ -81,34 +81,36 @@ std::vector<double> Compound_geom::intersections(Mat<> point0, Mat<> point1, boo
 
 next::Sequence<const Geom_edge&> Compound_geom::edges() {
   next::Sequence<const Geom_edge&> e;
-  for (auto& comp : components) e = e + comp->edges();
+  for (auto& comp : _components) e = e + comp->edges();
   return e;
 }
 
 next::Sequence<Mat<3>> Compound_geom::points() {
   next::Sequence<Mat<3>> p;
-  for (auto& comp : components) p = p + comp->points();
+  for (auto& comp : _components) p = p + comp->points();
   return p;
 }
 
 Hypersphere::Hypersphere(Mat<> center, double radius)
-: c{center}, r{radius}
+: _center{center}, _radius{radius}
 {}
 
 Nearest_point<dyn> Hypersphere::nearest_point(Mat<> point, double max_distance, double distance_guess) {
-  point = resize(point, c.size());
+  point = resize(point, _center.size());
   Nearest_point<dyn> nearest(point, max_distance);
-  nearest.merge(c + r*(point - c).normalized());
+  nearest.merge(_center + _radius*(point - _center).normalized());
   return nearest;
 }
 
 std::vector<double> Hypersphere::intersections(Mat<> point0, Mat<> point1, bool) {
-  Mat<> start = point0 - c;
+  point0 = resize(point0, _center.size());
+  point1 = resize(point1, _center.size());
+  Mat<> start = point0 - _center;
   Mat<> diff = point1 - point0;
   // a t^2 + b t + c = 0
   double a = diff.squaredNorm();
   double b = 2*diff.dot(start);
-  double c = start.squaredNorm() - r*r;
+  double c = start.squaredNorm() - _radius*_radius;
   double discr = b*b - 4*a*c;
   if (discr < 0) return {};
   else if (discr == 0) return {-b/2/a};
