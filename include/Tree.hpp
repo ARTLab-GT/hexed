@@ -281,6 +281,11 @@ class Tree : public Mortal {
   //! \brief Equivalent to `find_neighbors(Array<int>)` with `direction[i_face/2] == math::sign(i_face%2)`.
   std::vector<Tree*> find_neighbors(int i_face);
   Connection_neighbors find_connection_neighbors(int i_face);
+  //! \brief Finds a `Tree` instance with a specific total or leaf index.
+  //! \details If `leaf` is true, finds a tree with the specified leaf index.
+  //! Otherwise, finds a tree with the specified total index.
+  //! If there is not tree with the specified index descended from `this`, returns `nullptr`.
+  Tree* find_index(Int index, bool leaf = false);
   Array<int> needs_refine(std::function<bool(Tree*)> include);
   void visualize(std::string format, std::string name);
   //!\}

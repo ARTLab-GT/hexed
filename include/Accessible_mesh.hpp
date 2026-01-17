@@ -116,11 +116,6 @@ class Accessible_mesh : public Mesh {
    */
   Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Turbulence_model,
                   Surface_geom* = nullptr, std::shared_ptr<Flow_bc> surface_bc = {});
-  /*! \brief Reads mesh from a file created by `Mesh::write`.
-   * \details Acquires ownership of boundary condition pointers.
-   * This variant is not for tree meshing.
-   */
-  Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>>, Turbulence_model);
   inline double root_size() override {return root_sz;}
   inline Storage_params storage_params() {return params;}
   //! \returns a View_by_type containing only the Cartesian elements in the mesh

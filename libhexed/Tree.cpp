@@ -604,6 +604,22 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
   return neighbors;
 }
 
+Tree* Tree::find_index(Int index, bool leaf) {
+  Int i = leaf ? _leaf_index : _total_index;
+  Int n = leaf ? _n_leaves : _n_total;
+  if (index < i || index >= i + n) return nullptr;
+  if (index == i) return this;
+  for (Tree* c : unique_children()) {
+    Tree* result = c->find_index(index, leaf);
+    if (result) return result;
+  }
+  for (Tree* c : _graft_children.theirs()) {
+    Tree* result = c->find_index(index, leaf);
+    if (result) return result;
+  }
+  HEXED_THROW("corrupted index") throw;
+}
+
 Array<int> Tree::needs_refine(std::function<bool(Tree*)> include) {
   Array<int> needs({n_dim});
   needs = 0;

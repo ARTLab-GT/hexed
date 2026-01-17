@@ -979,6 +979,19 @@ TEST_CASE("Tree") {
     REQUIRE(tree.children()[3]->n_total() == 1);
     REQUIRE(tree.children()[7]->total_index() == 23);
     REQUIRE(tree.children()[7]->n_total() == 1);
+    REQUIRE(tree.find_index(0) == &tree);
+    REQUIRE(tree.find_index(5) == tree.children()[1]->unique_children()[0]->unique_children()[1]);
+    REQUIRE(tree.find_index(2) == tree.children()[1]);
+    REQUIRE(tree.children()[1]->find_index(5) == tree.children()[1]->unique_children()[0]->unique_children()[1]);
+    REQUIRE(tree.find_index(16) == graft1);
+    REQUIRE(tree.find_index(24) == nullptr);
+    REQUIRE(tree.children()[2]->find_index(5) == nullptr);
+    REQUIRE(tree.find_index(0, true) == &tree);
+    REQUIRE(tree.find_index(2, true) == tree.children()[1]->unique_children()[0]->unique_children()[1]);
+    REQUIRE(tree.children()[1]->find_index(2, true) == tree.children()[1]->unique_children()[0]->unique_children()[1]);
+    REQUIRE(tree.find_index(12, true) == graft1);
+    REQUIRE(tree.find_index(21, true) == nullptr);
+    REQUIRE(tree.children()[2]->find_index(2, true) == nullptr);
 
     tree.write("test");
     hexed::Tree tree_copy("test");
