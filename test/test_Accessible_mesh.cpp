@@ -132,7 +132,10 @@ TEST_CASE("mesh I/O") {
     mesh.update();
     mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] != elem.nominal_position()[1];});
     mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), std::make_shared<hexed::Nonpenetration>());
+    REQUIRE(mesh.cartesian().elements().size() == 6);
+    REQUIRE(mesh.deformed().elements().size() == 7);
     mesh.write("io_test");
+    mesh.visualize("default", "io_test_orig");
     // compute the sum of the vertex coordinates of all elements (counting each vertex once for each element using it)
     // to check vertex position
     auto& elems = mesh.elements();
@@ -148,7 +151,6 @@ TEST_CASE("mesh I/O") {
       if (elems[i_elem].get_is_deformed()) ++correct_n_def_after;
       else                                 ++correct_n_car_after;
     }
-    mesh.visualize("default", "io_test_orig");
   }
   { // read the above mesh from the file and check that it's the same
     std::vector<std::shared_ptr<hexed::Flow_bc>> extr_bcs;
@@ -156,9 +158,10 @@ TEST_CASE("mesh I/O") {
     hexed::Accessible_mesh mesh("io_test", extr_bcs, hexed::laminar,
                                 new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1),
                                 std::make_shared<hexed::Nonpenetration>());
+    mesh.visualize("default", "io_test_reconstructed");
     REQUIRE(mesh.root_size() == Catch::Approx(0.8));
     REQUIRE(mesh.cartesian().elements().size() == 6);
-    REQUIRE(mesh.deformed().elements().size() == 5);
+    REQUIRE(mesh.deformed().elements().size() == 7);
     auto& elems = mesh.elements();
     int rl1 = 0;
     int rl2 = 0;
@@ -187,7 +190,6 @@ TEST_CASE("mesh I/O") {
     mesh.valid().assert_valid();
     REQUIRE(n_car_after == correct_n_car_after);
     REQUIRE(n_def_after == correct_n_def_after);
-    mesh.visualize("default", "io_error_reconstructed");
   }
 }
 

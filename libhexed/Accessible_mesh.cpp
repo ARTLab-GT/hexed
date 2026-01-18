@@ -3012,9 +3012,9 @@ next::Sequence<Boundary_connection&> Accessible_mesh::boundary_connections() {
 
 Storage_params read_params(std::string file_name) {
   Storage_params params {
-    hdf5_utils::get_attr<int>(file_name + ".tree.h5", "n_dim"),
     hdf5_utils::get_attr<int>(file_name + ".mesh.h5", "n_stage"),
     hdf5_utils::get_attr<int>(file_name + ".mesh.h5", "n_var"),
+    hdf5_utils::get_attr<int>(file_name + ".tree.h5", "n_dim"),
     hdf5_utils::get_attr<int>(file_name + ".mesh.h5", "n_forcing"),
   };
   return params;
@@ -3056,7 +3056,16 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_
     surf_bc_sn = add_boundary_condition(surface_bc);
     surf_geom.reset(g.release());
   }
-  read_file(file_name);
+  H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
+  auto elem_dset = file.openDataSet("elements");
+  hsize_t dims[2];
+  elem_dset.getSpace().getSimpleExtentDims(dims);
+  HEXED_ASSERT(tree->n_dim == params.n_dim, "dimensionality mismatch")
+  for (Int i_elem = 0; i_elem < (Int)dims[0]; ++i_elem) {
+    Tree* t = tree->find_index(hdf5_utils::read<Int>(elem_dset, i_elem, 0));
+    HEXED_ASSERT(t, "Tree index not found.")
+    add_elem(hdf5_utils::read<Int>(elem_dset, i_elem, 1), *t, 0);
+  }
 }
 
 void write_polymesh_file(std::string dir_name, std::string name, std::string cls, int n_entries,
