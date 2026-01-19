@@ -563,7 +563,6 @@ void Accessible_mesh::_fit_surface() {
           np[i_dim] = 2*np[i_dim] + !i_sign;
           Int inside_sn = _add_element(rl, true, np, 1, next::Mesh_blocks::no_face, *elem.tree->graft(rl, np));
           Deformed_element& inside = def.elems.at(elem.refinement_level(), inside_sn);
-          inside.create_fake(_blocks);
           set_vertices(inside);
           inside.active_shape().is_new = false;
           inside.active_shape().for_matching = true;
@@ -571,7 +570,6 @@ void Accessible_mesh::_fit_surface() {
           np[i_dim] += math::sign(i_sign);
           Int surface_sn = _add_element(rl, true, np, 1, bf, *inside.tree->graft(rl, np));
           Deformed_element& surface = def.elems.at(elem.refinement_level(), surface_sn);
-          surface.create_fake(_blocks);
           set_vertices(surface);
           surface.active_shape().is_new = false;
           surface.active_shape().for_matching = true;
@@ -599,7 +597,6 @@ void Accessible_mesh::_fit_surface() {
                 Tree* t = inside.tree->graft(inside.tree->anisotropic_refinement_level(), np_match);
                 Int sn = _add_element(elem.refinement_level(), true, np_match, 1, bf, *t);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
-                match_elem.create_fake(_blocks);
                 set_vertices(match_elem);
                 match_elem.active_shape().is_new = true;
                 match_elem.active_shape().for_matching = true;
@@ -846,7 +843,6 @@ void Accessible_mesh::_fit_surface() {
         Int sn = _add_element(elem.refinement_level(), true, np, 1, i_face, *t);
         Deformed_element& new_elem = def.elems.at(elem.refinement_level(), sn);
         for (int j_face = 0; j_face < 2*params.n_dim; ++j_face) new_elem.face_record[j_face] = -1;
-        new_elem.create_fake(_blocks);
         new_elem.active_shape().extruded_direction = i_face;
         new_elem.active_shape().for_matching = elem.active_shape().for_matching;
         elem.face_record[i_face] = sn;
@@ -1415,7 +1411,10 @@ int Accessible_mesh::_add_element(Array<int> ref_level, bool is_deformed, Array<
   int sn = container(is_deformed).emplace(t, aniso_ref_level);
   Element& elem = element(ref_level.extreme(0), is_deformed, sn);
   elem.create_shape(_blocks, surface_face);
-  if (is_deformed) t.def_elem = &def.elems.at(ref_level.extreme(0), sn);
+  if (is_deformed) {
+    t.def_elem = &def.elems.at(ref_level.extreme(0), sn);
+    elem.create_fake(_blocks);
+  }
   return sn;
 }
 
@@ -1674,7 +1673,7 @@ void request_connection(Element& elem, int n_dim, int i_dim, bool i_sign, int j_
   record.push_back(2*i_dim + i_sign);
 }
 
-void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
+void Accessible_mesh::extrude(bool collapse, bool force) {
   if (!surf_geom) return;
   Stopwatch_tree::Starter sw_extrude(_stopwatch["update"]["extrusion"]);
   const int nd = params.n_dim;
@@ -1716,8 +1715,6 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
                           *t);
     Connection_direction dir {{face.i_dim, face.i_dim}, {!face.face_sign, bool(face.face_sign)}};
     auto& elem = def.elems.at(ref_level, sn);
-    if (face.elem.fake_shape()) elem.split_shape(face.elem, offset, 2*face.i_dim + face.face_sign);
-    else elem.create_fake(_blocks);
     elem.record = sn;
     elem.needs_snapping = !force;
     elem.fake_shape()->extruded_direction = 2*face.i_dim + face.face_sign;
@@ -1740,20 +1737,6 @@ void Accessible_mesh::extrude(bool collapse, double offset, bool force) {
         // record the faces that still need to be connected
         // at a vertex which is guaranteed to be shared with prospective neighbors
         if (!connected_boundary) request_connection(elem, nd, face.i_dim, face.face_sign, j_dim, face_sign);
-      }
-    }
-    if (offset > 0) {
-      double* state [] {face.elem.state(), elem.state()};
-      // interpolate data from original element to new ones
-      for (int i_elem : {1, 0}) { // iterate in reverse order since new states for both elements depend on element 0
-        Gauss_legendre basis(params.row_size); //! \todo apparently the mesh needs to know about the basis after all...
-        double width = 1 - i_elem + math::sign(i_elem)*offset;
-        Mat<dyn, dyn> interp = basis.interpolate(basis.nodes()*width + Mat<>::Constant(params.row_size, (i_elem == face.face_sign)*(1 - width)));
-        for (Row_index index(nd, params.row_size, face.i_dim); index; ++index) {
-          Eigen::Map<Mat<dyn, dyn>, 0, Eigen::Stride<dyn, dyn>> row_read (state[0     ] + index.i_qpoint(0), params.row_size, params.n_var_numeric(), Eigen::Stride<dyn, dyn>(params.n_qpoint(), index.stride));
-          Eigen::Map<Mat<dyn, dyn>, 0, Eigen::Stride<dyn, dyn>> row_write(state[i_elem] + index.i_qpoint(0), params.row_size, params.n_var_numeric(), Eigen::Stride<dyn, dyn>(params.n_qpoint(), index.stride));
-          row_write = interp*row_read;
-        }
       }
     }
   }
@@ -1903,29 +1886,25 @@ std::vector<Mesh::elem_handle> Accessible_mesh::elem_handles() {
   return handles;
 }
 
-Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t, int aniso_ref_level) {
+Element& Accessible_mesh::add_elem(bool is_deformed, Tree& t, int aniso_ref_level, int surface_face) {
   int sn = _add_element(t.anisotropic_refinement_level(), is_deformed, t.coordinates(), aniso_ref_level,
-                        next::Mesh_blocks::no_face, t);
+                        surface_face, t);
   auto& elem = element(t.refinement_level(), is_deformed, sn);
   elem.record = sn; // put the serial number in the record so it can be used for connections
   return elem;
 }
 
-void Accessible_mesh::create_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin) {
-  // take ownership of bcs (do this first to avoid memory leak)
-  std::vector<int> new_tree_bcs;
-  //! \todo this could, in theory, be a resource leak because these are never erased if an exception is thrown...
-  for (auto& fbc : extremal_bcs) new_tree_bcs.push_back(add_boundary_condition(fbc));
-  HEXED_ASSERT(int(extremal_bcs.size()) == 2*params.n_dim, "`extremal_bcs` has wrong number of elements");
-  HEXED_ASSERT(!tree, "each `Mesh` may only contain one tree");
-  // add the tree
-  tree_bcs = new_tree_bcs;
-  tree.reset(new Tree(params.n_dim, root_sz, origin));
-  tree->update_indices();
+void Accessible_mesh::_add_tree_bcs(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs) {
+  HEXED_ASSERT(int(extremal_bcs.size()) == 2*params.n_dim, "`extremal_bcs` has wrong number of elements.")
+  tree_bcs.clear();
+  for (auto& fbc : extremal_bcs) tree_bcs.push_back(add_boundary_condition(fbc));
 }
 
 void Accessible_mesh::add_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin) {
-  create_tree(extremal_bcs, origin);
+  _add_tree_bcs(extremal_bcs);
+  HEXED_ASSERT(!tree, "Each `Mesh` may only contain one tree.")
+  tree.reset(new Tree(params.n_dim, root_sz, origin));
+  tree->update_indices();
   auto& elem = add_elem(false, *tree, 0);
   int sn = elem.record;
   for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
@@ -3015,7 +2994,7 @@ Storage_params read_params(std::string file_name) {
     hdf5_utils::get_attr<int>(file_name + ".mesh.h5", "n_stage"),
     hdf5_utils::get_attr<int>(file_name + ".mesh.h5", "n_var"),
     hdf5_utils::get_attr<int>(file_name + ".tree.h5", "n_dim"),
-    hdf5_utils::get_attr<int>(file_name + ".mesh.h5", "n_forcing"),
+    hdf5_utils::get_attr<int>(file_name + ".mesh.h5", "row_size"),
   };
   return params;
 }
@@ -3027,15 +3006,43 @@ void Accessible_mesh::write(std::string name) {
   hdf5_utils::add_attr(file, "version_patch", config::version_patch);
   hdf5_utils::add_attr(file, "n_stage", params.n_stage);
   hdf5_utils::add_attr(file, "n_var", params.n_var);
-  hdf5_utils::add_attr(file, "n_forcing", params.n_forcing);
+  hdf5_utils::add_attr(file, "row_size", params.row_size);
+  file.createGroup("elements");
+  std::string names [2] {"cartesian", "deformed"};
   hsize_t dims[2];
-  dims[0] = elems.size();
-  dims[1] = 2;
-  auto elem_dset = file.createDataSet("elements", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
-  for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-    auto& elem = elems[i_elem];
-    hdf5_utils::write(elem_dset, i_elem, 0, elem.tree->total_index());
-    hdf5_utils::write<Int>(elem_dset, i_elem, 1, elem.get_is_deformed());
+  Int n_shape = 0;
+  for (bool is_def : {0, 1}) {
+    auto& elems = container(is_def).element_view();
+    dims[0] = elems.size();
+    dims[1] = 1 + is_def;
+    auto elem_dset = file.createDataSet("elements/" + names[is_def], hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
+    for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+      auto& elem = elems[i_elem];
+      hdf5_utils::write(elem_dset, i_elem, 0, elem.tree->total_index());
+      if (is_def) {
+        if (elem.fake_shape()) hdf5_utils::write<Int>(elem_dset, i_elem, 1, n_shape++);
+        else hdf5_utils::write<Int>(elem_dset, i_elem, 1, -1);
+      }
+    }
+  }
+  dims[0] = n_shape;
+  dims[1] = 6 + params.n_vertices()*3;
+  auto shape_dset = file.createDataSet("shapes", hdf5_utils::type<double>(), H5::DataSpace(2, dims));
+  for (Int i_elem = 0, i_shape = 0; i_elem < def.elems.element_view().size(); ++i_elem) {
+    auto& elem = def.elems.element_view()[i_elem];
+    if (elem.fake_shape()) {
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
+        hdf5_utils::write(shape_dset, i_shape, i_dim, elem.fake_shape()->nominal_position()(i_dim));
+        hdf5_utils::write(shape_dset, i_shape, 3 + i_dim, elem.fake_shape()->nominal_position()(i_dim));
+      }
+      for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+        Mat<3> pos = elem.fake_shape()->vertex(i_vert).point({});
+        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+          hdf5_utils::write(shape_dset, i_shape, 6 + i_vert*3 + i_dim, pos(i_dim));
+        }
+      }
+      ++i_shape;
+    }
   }
   tree->write(name);
 }
@@ -3046,10 +3053,12 @@ void Accessible_mesh::read_file(std::string file_name) {
 Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> extremal_bcs,
                                  Turbulence_model turb, Surface_geom* geometry, std::shared_ptr<Flow_bc> surface_bc)
 : Accessible_mesh(read_params(file_name), hdf5_utils::get_attr<double>(file_name + ".tree.h5", "root_size"), turb) {
-  // take ownership of these to avoid memory leaks in case of exception
+  // take ownership of this to avoid memory leaks in case of exception
   std::unique_ptr<Surface_geom> g(geometry);
   // create the tree
   tree = std::make_unique<Tree>(file_name);
+  _add_tree_bcs(extremal_bcs);
+  HEXED_ASSERT(tree->n_dim == params.n_dim, "dimensionality mismatch")
   HEXED_ASSERT(bool(surface_bc) == bool(g),
                "You must specify both surface geometry and surface boundary condition or neither.");
   if (surface_bc) {
@@ -3057,15 +3066,58 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_
     surf_geom.reset(g.release());
   }
   H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
-  auto elem_dset = file.openDataSet("elements");
   hsize_t dims[2];
-  elem_dset.getSpace().getSimpleExtentDims(dims);
-  HEXED_ASSERT(tree->n_dim == params.n_dim, "dimensionality mismatch")
-  for (Int i_elem = 0; i_elem < (Int)dims[0]; ++i_elem) {
-    Tree* t = tree->find_index(hdf5_utils::read<Int>(elem_dset, i_elem, 0));
-    HEXED_ASSERT(t, "Tree index not found.")
-    add_elem(hdf5_utils::read<Int>(elem_dset, i_elem, 1), *t, 0);
+  auto shape_dset = file.openDataSet("shapes");
+  shape_dset.getSpace().getSimpleExtentDims(dims);
+  std::vector<std::shared_ptr<next::Element_shape>> shapes;
+  for (Int i_shape = 0; i_shape < (Int)dims[0]; ++i_shape) {
+    Mat<3> nom_pos;
+    Mat<3> nom_shape;
+    for (int i_dim = 0; i_dim < 3; ++i_dim) {
+      nom_pos(i_dim) = hdf5_utils::read<double>(shape_dset, i_shape, i_dim);
+      nom_shape(i_dim) = hdf5_utils::read<double>(shape_dset, i_shape, 3 + i_dim);
+    }
+    shapes.push_back(std::make_shared<next::Element_shape>(_blocks.create_element(nom_pos, nom_shape)));
+    auto& shape = *shapes.back();
+    for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
+      Mat<3> vert_pos;
+      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        vert_pos(i_dim) = hdf5_utils::read<double>(shape_dset, i_shape, 6 + i_vert*3 + i_dim);
+      }
+      shape.vertex(i_vert).set_pos(vert_pos);
+    }
   }
+  std::string names [2] {"cartesian", "deformed"};
+  for (bool is_def : {0, 1}) {
+    auto elem_dset = file.openDataSet("elements/" + names[is_def]);
+    elem_dset.getSpace().getSimpleExtentDims(dims);
+    for (Int i_elem = 0; i_elem < (Int)dims[0]; ++i_elem) {
+      Tree* t = tree->find_index(hdf5_utils::read<Int>(elem_dset, i_elem, 0));
+      HEXED_ASSERT(t, "Tree index not found.")
+      Int sn = container(is_def).emplace(*t, 0);
+      Element& elem = element(t->refinement_level(), is_def, sn);
+      elem.create_shape(_blocks);
+      elem.record = 0;
+      if (is_def) {
+        t->def_elem = &def.elems.at(t->refinement_level(), sn);
+        Int fake_shape = hdf5_utils::read<Int>(elem_dset, i_elem, 1);
+        if (fake_shape >= 0) {
+          elem.glue_shape(shapes[fake_shape], {std::vector<double>(params.n_dim, 0.),
+                                               std::vector<double>(params.n_dim, 1.)});
+        }
+      }
+    }
+  }
+  connect_new<Element>(0);
+  connect_new<Deformed_element>(0);
+  purge();
+  connect_rest(surface_bc_sn());
+  auto all_verts = _blocks.verts();
+  #pragma omp parallel for
+  for (auto& vert : all_verts) {
+    vert.set_pos(vert.nominal_position());
+  }
+  _offset_vertices(0.2, false);
 }
 
 void write_polymesh_file(std::string dir_name, std::string name, std::string cls, int n_entries,

@@ -66,7 +66,7 @@ class Accessible_mesh : public Mesh {
                    int aniso_ref_level, int surface_face, Tree&);
   int _add_element(Array<int> ref_level, bool is_deformed, Array<Int> position,
                    int aniso_ref_level, int surface_face, Tree&);
-  Element& add_elem(bool is_deformed, Tree&, int aniso_ref_level);
+  Element& add_elem(bool is_deformed, Tree&, int aniso_ref_level, int surface_face = next::Mesh_blocks::no_face);
   bool intersects_surface(Tree*);
   bool is_surface(Tree*);
   // gets either `car` or `def`
@@ -80,7 +80,6 @@ class Accessible_mesh : public Mesh {
   void purge();
   void delete_bad_extrusions();
   void deform();
-  void create_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
   void read_file(std::string file_name);
 
   void _connect(std::array<std::vector<Element*>, 2> elems, Connection_direction dir, std::string context);
@@ -96,6 +95,7 @@ class Accessible_mesh : public Mesh {
                  std::function<void(next::Vertex&)> snap);
   void _fit_surface();
   void _optimize(int min_pow, int max_pow, bool check_snapping);
+  void _add_tree_bcs(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs);
 
   public:
   //! \brief how far must the center of an element be from the geometry relative to the nominal size
@@ -209,7 +209,7 @@ class Accessible_mesh : public Mesh {
   void assert_valid();
   //! convenience typedef for the Vector_view used to access Vertex objects
   //! \note test for this is in `test_Solver.cpp` so that the result can be visualized
-  void extrude(bool collapse = false, double offset = 0, bool force = false) override;
+  void extrude(bool collapse = false, bool force = false) override;
   void connect_rest(int bc_sn) override;
   std::vector<elem_handle> elem_handles() override;
   void write(std::string file_name) override;

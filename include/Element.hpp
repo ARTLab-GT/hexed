@@ -93,6 +93,7 @@ class Element : public Kernel_element, public Mortal {
   Array<Int> nominal_position();
   double wall_distance() const; //!< \brief The distance from the farthest vertex to the wall.
   int wall_dimension();
+  int boundary_face();
   bool has_wall();
   bool is_sharp(int i_dim);
   //! pointer to state data for `i_stage`th Runge-Kutta stage.
@@ -136,6 +137,7 @@ class Element : public Kernel_element, public Mortal {
   void create_fake(next::Mesh_blocks&);
   bool shared_fake() const;
   void split_shape(Element& split_from, double at, int from_face);
+  void glue_shape(std::shared_ptr<next::Element_shape>, std::array<std::vector<double>, 2> corners);
   void glue_shape(Element& glue_to, std::array<std::vector<double>, 2> corners);
   void destroy_shape();
   void destroy_fake();

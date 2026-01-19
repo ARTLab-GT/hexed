@@ -79,28 +79,12 @@ class Mesh {
    * in a well-conditioned fashion.
    * If `collapse == true` then the new elements will be collapsed in the extrusion direction,
    * such that they have zero volume and exist purely on the extruded face.
-   * If the mesh has already been extruded once and `offset` is specified,
-   * the interior vertices of the extruded element will then be moved some distance toward the
-   * interior neighbor depending on the value of `offset`, where
-   * `offset == 0` yields no motion and `offset == 1` moves them exactly to the neighbor.
-   * If the mesh has not been extruded, the vertices shall be moved in an unspecified manner
-   * (but maintaining a valid mesh state).
-   * Offsetting thus provides a rudimentary way of creating anisotropic wall layers.
    * If `force == false` (default) then in a tree mesh, only tree elements will be extruded from
    * (which is necessary because some of the extruded elements from the previous refinement sweep may have non-surface-facing
    * exposed faces).
    * If `force == true` then all exposed faces will be extruded from.
    */
-  virtual void extrude(bool collapse = false, double offset = 0, bool force = false) = 0;
-  //! \overload
-  inline void extrude(Layer_sequence layers) {
-    double height = 1;
-    for (int i_layer = layers.n_layers() - 1; i_layer > 0; --i_layer) {
-      double new_height = height - layers.spacing(i_layer);
-      extrude(true, new_height/height, true);
-      height = new_height;
-    }
-  }
+  virtual void extrude(bool collapse = false, bool force = false) = 0;
   //! \brief Does some work that has to happen after you manually add elements and/or connections.
   virtual void cleanup() = 0;
   //! \}

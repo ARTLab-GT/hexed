@@ -661,20 +661,6 @@ Case::Case(std::string input_script)
     return "";
   }));
 
-  _inter.variables->create("split_layers", new Namespace::Heisenberg<std::string>([this]() {
-    _solver().mesh().disconnect_boundary(_solver().mesh().surface_bc_sn());
-    auto sub = _inter.make_sub();
-    std::vector<double> split_points = Struct_expr(_vars("layer_split_points")).eval(sub);
-    double prev_split = 1.;
-    for (double split : split_points) {
-      _solver().mesh().extrude(true, split/prev_split, true);
-      prev_split = split;
-    }
-    _solver().mesh().connect_rest(_solver().mesh().surface_bc_sn());
-    _solver().calc_jacobian();
-    return "";
-  }));
-
   _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
     _solver().initialize(_vars("init_cond"));
     // implicit setup
