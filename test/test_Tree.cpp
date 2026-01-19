@@ -992,6 +992,7 @@ TEST_CASE("Tree") {
     REQUIRE(tree.find_index(12, true) == graft1);
     REQUIRE(tree.find_index(21, true) == nullptr);
     REQUIRE(tree.children()[2]->find_index(2, true) == nullptr);
+    tree.children()[2]->set_status(3);
 
     tree.write("test");
     hexed::Tree tree_copy("test");
@@ -1074,5 +1075,7 @@ TEST_CASE("Tree") {
     REQUIRE(tree_copy.children()[3]->n_total() == 1);
     REQUIRE(tree_copy.children()[7]->total_index() == 23);
     REQUIRE(tree_copy.children()[7]->n_total() == 1);
+    REQUIRE(tree_copy.children()[2]->get_status() == 3);
+    REQUIRE(tree_copy.children()[3]->get_status() == hexed::Tree::unprocessed);
   }
 }

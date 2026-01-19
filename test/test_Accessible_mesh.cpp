@@ -150,7 +150,8 @@ TEST_CASE("mesh I/O") {
     }
     // refine the mesh again and count the number of Cartesian and deformed elements
     // to make sure the recreated mesh behaves the same way
-    mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 2;});
+    mesh.update([](hexed::Element& elem){return elem.tree->center()(0) > .5;});
+    mesh.visualize("default", "io_test_refined_orig");
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       if (elems[i_elem].get_is_deformed()) ++correct_n_def_after;
       else                                 ++correct_n_car_after;
@@ -189,7 +190,8 @@ TEST_CASE("mesh I/O") {
     REQUIRE(sum_vertices(1) == Catch::Approx(correct_sum_vertices(1)));
     mesh.valid().assert_valid();
     // refine the mesh and check that it's the same as refining the original mesh
-    mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] > 2;});
+    mesh.update([](hexed::Element& elem){return elem.tree->center()(0) > .5;});
+    mesh.visualize("default", "io_test_refined_reconstructed");
     int n_car_after = 0;
     int n_def_after = 0;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {

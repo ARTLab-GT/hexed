@@ -80,6 +80,7 @@ Tree::Tree(std::string file_name)
         t._children_storage[i_child]->_total_index = child_inds[i_child];
       }
     }
+    t.set_status(hdf5_utils::read<Int>(child_dset, t._total_index, t._n_vert()));
   };
   traverse(task);
   auto graft_dset = file.openDataSet("/grafts");
@@ -438,7 +439,7 @@ void Tree::write(std::string file_name) {
   update_indices();
   hsize_t dims[2];
   dims[0] = n_total();
-  dims[1] = _n_vert();
+  dims[1] = _n_vert() + 1;
   auto child_dset = file.createDataSet("/children", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
   dims[0] = 0;
   traverse([&dims](Tree& t){dims[0] += t._graft_par;});
@@ -454,6 +455,7 @@ void Tree::write(std::string file_name) {
     for (int i_child = (Int)t._children_storage.size(); i_child < t._n_vert(); ++i_child) {
       hdf5_utils::write<Int>(child_dset, t.total_index(), i_child, -1);
     }
+    hdf5_utils::write<Int>(child_dset, t.total_index(), t._n_vert(), t.get_status());
     if (t._graft_par) {
       hdf5_utils::write(graft_dset, graft_row, 0, t.total_index());
       hdf5_utils::write(graft_dset, graft_row, 1, t._graft_par->total_index());
