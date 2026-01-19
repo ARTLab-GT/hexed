@@ -1149,6 +1149,7 @@ void Accessible_mesh::_fit_surface() {
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < elems.size(); ++i_elem) {
     elems[i_elem].active_shape().is_new = false;
+    elems[i_elem].remember_pos();
   }
   {
     auto new_all_verts = _blocks.verts();
@@ -2503,11 +2504,6 @@ Mesh::Adaptation_result Accessible_mesh::plan_adaptation(std::function<bool(Elem
 void Accessible_mesh::execute_adaptation() {
   Stopwatch_tree::Starter sw_update(_stopwatch["adapt"]);
   Gauss_legendre solver_basis(params.row_size);
-  {
-    auto verts = _blocks.verts();
-    #pragma omp parallel for
-    for (auto& vert : verts) vert.remember_pos();
-  }
   auto populate_elements = [this, &solver_basis](bool is_def, bool ref_unref, std::vector<bool> is_modified,
                                                  std::vector<Element*> orig_elems, std::vector<Tree*> new_leaves) {
     for (int i_leaf = 0; i_leaf < params.n_vertices(); ++i_leaf) {
@@ -3033,11 +3029,11 @@ void Accessible_mesh::write(std::string name) {
     if (elem.fake_shape()) {
       for (int i_dim = 0; i_dim < 3; ++i_dim) {
         hdf5_utils::write(shape_dset, i_shape, i_dim, elem.fake_shape()->nominal_position()(i_dim));
-        hdf5_utils::write(shape_dset, i_shape, 3 + i_dim, elem.fake_shape()->nominal_position()(i_dim));
+        hdf5_utils::write(shape_dset, i_shape, 3 + i_dim, elem.fake_shape()->nominal_shape()(i_dim));
       }
       for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
         Mat<3> pos = elem.fake_shape()->vertex(i_vert).point({});
-        for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+        for (int i_dim = 0; i_dim < 3; ++i_dim) {
           hdf5_utils::write(shape_dset, i_shape, 6 + i_vert*3 + i_dim, pos(i_dim));
         }
       }
@@ -3081,7 +3077,7 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_
     auto& shape = *shapes.back();
     for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
       Mat<3> vert_pos;
-      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      for (int i_dim = 0; i_dim < 3; ++i_dim) {
         vert_pos(i_dim) = hdf5_utils::read<double>(shape_dset, i_shape, 6 + i_vert*3 + i_dim);
       }
       shape.vertex(i_vert).set_pos(vert_pos);
@@ -3112,12 +3108,6 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_
   connect_new<Deformed_element>(0);
   purge();
   connect_rest(surface_bc_sn());
-  auto all_verts = _blocks.verts();
-  #pragma omp parallel for
-  for (auto& vert : all_verts) {
-    vert.set_pos(vert.nominal_position());
-  }
-  _offset_vertices(0.2, false);
 }
 
 void write_polymesh_file(std::string dir_name, std::string name, std::string cls, int n_entries,

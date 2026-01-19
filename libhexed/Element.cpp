@@ -252,7 +252,7 @@ bool Element::shared_fake() const {
   return _fake_shape.use_count() > 1;
 }
 
-void Element::_set_glued_pos() {
+void Element::remember_pos() {
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
     std::vector<double> coords(params.n_dim);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -280,14 +280,14 @@ void Element::split_shape(Element& split_from, double at, int from_face) {
     HEXED_ASSERT(split_corners[0][i_dim] < split_corners[1][i_dim], "Corner coordinates must be increasing.")
   }
   _shape->glue(*_fake_shape, split_corners);
-  _set_glued_pos();
-  split_from._set_glued_pos();
+  remember_pos();
+  split_from.remember_pos();
 }
 
 void Element::glue_shape(std::shared_ptr<next::Element_shape> shape, std::array<std::vector<double>, 2> glue_corners) {
   HEXED_ASSERT(_shape, "Must `create_shape` before `glue_shape`.")
   _shape->glue(*shape, glue_corners);
-  _set_glued_pos();
+  remember_pos();
 }
 
 void Element::glue_shape(Element& glue_to, std::array<std::vector<double>, 2> glue_corners) {
@@ -302,7 +302,7 @@ void Element::glue_shape(Element& glue_to, std::array<std::vector<double>, 2> gl
     }
   }
   _shape->glue(glue_to.active_shape(), glue_corners);
-  _set_glued_pos();
+  remember_pos();
 }
 
 void Element::destroy_shape() {

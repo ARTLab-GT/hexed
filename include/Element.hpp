@@ -47,7 +47,6 @@ class Element : public Kernel_element, public Mortal {
   std::shared_ptr<next::Element_shape> _fake_shape;
   std::vector<Face> _faces;
   Array<int> _refinement_data;
-  void _set_glued_pos();
   int _get_i_bf();
   friend Accessible_mesh; // necessary for `Accessible_mesh::set_mask`... need a better way to do this
 
@@ -147,6 +146,7 @@ class Element : public Kernel_element, public Mortal {
   inline next::Element_shape* fake_shape() {return _fake_shape.use_count() ? _fake_shape.get() : nullptr;}
   inline bool has_shape() const {return bool(_shape);}
   next::Element_shape& active_shape();
+  void remember_pos();
 
   double* state() override;
   double* residual_cache() override;

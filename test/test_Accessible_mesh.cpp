@@ -122,6 +122,7 @@ TEST_CASE("Tree meshing", "[.slow]") {
 TEST_CASE("mesh I/O") {
   hexed::printers::info.printers.clear();
   hexed::Mat<3> correct_sum_vertices = hexed::Mat<3>::Zero();
+  int correct_n_vertices = 0;
   int correct_n_car_after = 0;
   int correct_n_def_after = 0;
   { // create a mesh and write it to a file
@@ -142,6 +143,9 @@ TEST_CASE("mesh I/O") {
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       for (int i_vert = 0; i_vert < 4; ++i_vert) {
         correct_sum_vertices += elems[i_elem].shape().vertex(i_vert).point({});
+        REQUIRE_THAT(elems[i_elem].shape().vertex(i_vert).point({}), Catch::Matchers::RangeEquals(
+                     elems[i_elem].active_shape().vertex(i_vert).point({}), hexed::math::Approx_equal(0., 1e-8)));
+        ++correct_n_vertices;
       }
     }
     // refine the mesh again and count the number of Cartesian and deformed elements
@@ -166,14 +170,21 @@ TEST_CASE("mesh I/O") {
     int rl1 = 0;
     int rl2 = 0;
     hexed::Mat<3> sum_vertices = hexed::Mat<3>::Zero();
+    int n_vertices = 0;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       rl1 += elems[i_elem].refinement_level() == 1;
       rl2 += elems[i_elem].refinement_level() == 2;
       REQUIRE(elems[i_elem].tree);
-      for (int i_vert = 0; i_vert < 4; ++i_vert) sum_vertices += elems[i_elem].shape().vertex(i_vert).point({});
+      for (int i_vert = 0; i_vert < 4; ++i_vert) {
+        sum_vertices += elems[i_elem].shape().vertex(i_vert).point({});
+        REQUIRE_THAT(elems[i_elem].shape().vertex(i_vert).point({}), Catch::Matchers::RangeEquals(
+                     elems[i_elem].active_shape().vertex(i_vert).point({}), hexed::math::Approx_equal(0., 1e-8)));
+        ++n_vertices;
+      }
     }
     REQUIRE(rl1 == 2);
     REQUIRE(rl2 == 11);
+    REQUIRE(n_vertices == correct_n_vertices);
     REQUIRE(sum_vertices(0) == Catch::Approx(correct_sum_vertices(0)));
     REQUIRE(sum_vertices(1) == Catch::Approx(correct_sum_vertices(1)));
     mesh.valid().assert_valid();
