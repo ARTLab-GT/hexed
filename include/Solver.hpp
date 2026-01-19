@@ -148,8 +148,8 @@ class Solver {
    * You still have to `initialize` (even if you already did before reading the new mesh),
    * but you don't have to `calc_jacobian` unless you further modify the mesh.
    */
-  void read_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Surface_geom* = nullptr,
-                 std::shared_ptr<Flow_bc> surface_bc = {});
+  void read_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> extremal_bcs,
+                 std::shared_ptr<Surface_geom> = {}, std::shared_ptr<Flow_bc> surface_bc = {});
   //! \brief Reads flow state from file.
   //! \details Essentially a substitute for `initialize`.
   //! `.state.h5` will be appended to file name

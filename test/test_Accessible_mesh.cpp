@@ -4,6 +4,7 @@
 #include <hexed/Simplex_geom.hpp>
 #include <hexed/Gauss_legendre.hpp>
 #include <hexed/Printer.hpp>
+#include <hexed/brep.hpp>
 
 TEST_CASE("Tree meshing", "[.slow]") {
   hexed::Accessible_mesh mesh({1, 5, 3, hexed::config::max_row_size}, .7, hexed::laminar);
@@ -107,7 +108,8 @@ TEST_CASE("Tree meshing", "[.slow]") {
     triangles[1] << 2.1/8, 2.1/8, 2.1/8,
                     2.1/8, 2.1/8, 2.1/8,
                        0.,    0.,    .7;
-    mesh.set_surface(new hexed::Simplex_geom<3>(triangles), std::make_shared<hexed::Copy>(), hexed::Mat<3>{.6, .6, .6});
+    mesh.set_surface(std::make_shared<hexed::Simplex_geom<3>>(triangles), std::make_shared<hexed::Copy>(),
+                     hexed::Mat<3>{.6, .6, .6});
     // count number of non-extruded elements
     int count = 0;
     auto& elems = mesh.elements();
@@ -122,9 +124,12 @@ TEST_CASE("Tree meshing", "[.slow]") {
 TEST_CASE("mesh I/O") {
   hexed::printers::info.printers.clear();
   hexed::Mat<3> correct_sum_vertices = hexed::Mat<3>::Zero();
-  int correct_n_vertices = 0;
   int correct_n_car_after = 0;
   int correct_n_def_after = 0;
+  int row_size = hexed::config::max_row_size - 1;
+  hexed::Gauss_legendre basis(row_size);
+  hexed::Mat<> weights = hexed::math::pow_outer(basis.node_weights(), 2);
+  std::shared_ptr<hexed::Surface_geom> geom = std::make_shared<hexed::brep::Geom_2d>("../test_assets/arc.iges", 1024);
   { // create a mesh and write it to a file
     hexed::Accessible_mesh mesh({1, 4, 2, hexed::config::max_row_size - 1}, .8, hexed::laminar);
     std::vector<std::shared_ptr<hexed::Flow_bc>> bcs;
@@ -132,22 +137,29 @@ TEST_CASE("mesh I/O") {
     mesh.add_tree(bcs, hexed::Mat<2>{0.1, 0.2});
     mesh.update();
     mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] != elem.nominal_position()[1];});
-    mesh.set_surface(new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1), std::make_shared<hexed::Nonpenetration>());
+    mesh.set_surface(geom, std::make_shared<hexed::Nonpenetration>());
     REQUIRE(mesh.cartesian().elements().size() == 6);
     REQUIRE(mesh.deformed().elements().size() == 7);
     mesh.write("io_test");
     mesh.visualize("default", "io_test_orig");
     // compute the sum of the vertex coordinates of all elements (counting each vertex once for each element using it)
     // to check vertex position
+    // also check that the area of the mesh adds up to a .8 by .8 square
+    // with a quarter disk of radius .1 taken out of it.
+    double area = 0;
     auto& elems = mesh.elements();
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       for (int i_vert = 0; i_vert < 4; ++i_vert) {
         correct_sum_vertices += elems[i_elem].shape().vertex(i_vert).point({});
         REQUIRE_THAT(elems[i_elem].shape().vertex(i_vert).point({}), Catch::Matchers::RangeEquals(
                      elems[i_elem].active_shape().vertex(i_vert).point({}), hexed::math::Approx_equal(0., 1e-8)));
-        ++correct_n_vertices;
+      }
+      elems[i_elem].set_jacobian(basis);
+      for (int i_qpoint = 0; i_qpoint < mesh.storage_params().n_qpoint(); ++i_qpoint) {
+        area += elems[i_elem].jacobian_determinant(i_qpoint)*weights(i_qpoint)*elems[i_elem].nominal_volume();
       }
     }
+    REQUIRE(area == Catch::Approx(.8*.8 - hexed::constants::pi*.1*.1/4).margin(1e-5));
     // refine the mesh again and count the number of Cartesian and deformed elements
     // to make sure the recreated mesh behaves the same way
     mesh.update([](hexed::Element& elem){return elem.tree->center()(0) > .5;});
@@ -160,9 +172,7 @@ TEST_CASE("mesh I/O") {
   { // read the above mesh from the file and check that it's the same
     std::vector<std::shared_ptr<hexed::Flow_bc>> extr_bcs;
     for (int i = 0; i < 4; ++i) extr_bcs.emplace_back(new hexed::Copy);
-    hexed::Accessible_mesh mesh("io_test", extr_bcs, hexed::laminar,
-                                new hexed::Hypersphere(hexed::Mat<2>{.9, 0.2}, 0.1),
-                                std::make_shared<hexed::Nonpenetration>());
+    hexed::Accessible_mesh mesh("io_test", extr_bcs, hexed::laminar, geom, std::make_shared<hexed::Nonpenetration>());
     mesh.visualize("default", "io_test_reconstructed");
     REQUIRE(mesh.root_size() == Catch::Approx(0.8));
     REQUIRE(mesh.cartesian().elements().size() == 6);
@@ -171,7 +181,7 @@ TEST_CASE("mesh I/O") {
     int rl1 = 0;
     int rl2 = 0;
     hexed::Mat<3> sum_vertices = hexed::Mat<3>::Zero();
-    int n_vertices = 0;
+    double area = 0;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       rl1 += elems[i_elem].refinement_level() == 1;
       rl2 += elems[i_elem].refinement_level() == 2;
@@ -180,14 +190,17 @@ TEST_CASE("mesh I/O") {
         sum_vertices += elems[i_elem].shape().vertex(i_vert).point({});
         REQUIRE_THAT(elems[i_elem].shape().vertex(i_vert).point({}), Catch::Matchers::RangeEquals(
                      elems[i_elem].active_shape().vertex(i_vert).point({}), hexed::math::Approx_equal(0., 1e-8)));
-        ++n_vertices;
+      }
+      elems[i_elem].set_jacobian(basis);
+      for (int i_qpoint = 0; i_qpoint < mesh.storage_params().n_qpoint(); ++i_qpoint) {
+        area += elems[i_elem].jacobian_determinant(i_qpoint)*weights(i_qpoint)*elems[i_elem].nominal_volume();
       }
     }
     REQUIRE(rl1 == 2);
     REQUIRE(rl2 == 11);
-    REQUIRE(n_vertices == correct_n_vertices);
     REQUIRE(sum_vertices(0) == Catch::Approx(correct_sum_vertices(0)));
     REQUIRE(sum_vertices(1) == Catch::Approx(correct_sum_vertices(1)));
+    REQUIRE(area == Catch::Approx(.8*.8 - hexed::constants::pi*.1*.1/4).margin(1e-5));
     mesh.valid().assert_valid();
     // refine the mesh and check that it's the same as refining the original mesh
     mesh.update([](hexed::Element& elem){return elem.tree->center()(0) > .5;});

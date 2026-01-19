@@ -289,7 +289,7 @@ bool Accessible_mesh::_dijkstra(std::array<next::Vertex*, 2> start_end,
 }
 
 void Accessible_mesh::_fit_surface() {
-  if (!surf_geom) return;
+  if (!surf_geom.use_count()) return;
   Stopwatch_tree::Starter sw_fit(_stopwatch["update"]["fit surface"]);
   _blocks.edges_2d();
   _blocks.faces_3d();
@@ -1675,7 +1675,7 @@ void request_connection(Element& elem, int n_dim, int i_dim, bool i_sign, int j_
 }
 
 void Accessible_mesh::extrude(bool collapse, bool force) {
-  if (!surf_geom) return;
+  if (!surf_geom.use_count()) return;
   Stopwatch_tree::Starter sw_extrude(_stopwatch["update"]["extrusion"]);
   const int nd = params.n_dim;
   { // initialize vertex records to empty
@@ -1917,7 +1917,7 @@ void Accessible_mesh::add_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bc
 }
 
 bool Accessible_mesh::intersects_surface(Tree* t) {
-  if (!surf_geom) return false;
+  if (!surf_geom.use_count()) return false;
   Mat<> center = t->nominal_position() + t->nominal_size()/2*Mat<>::Ones(params.n_dim);
   return !surf_geom->nearest_point(center, buffer_dist*t->nominal_size()).empty();
 }
@@ -1926,12 +1926,12 @@ bool Accessible_mesh::is_surface(Tree* t) {
   return t->get_status() == 0;
 }
 
-void Accessible_mesh::set_surface(Surface_geom* geometry, std::shared_ptr<Flow_bc> surface_bc,
+void Accessible_mesh::set_surface(std::shared_ptr<Surface_geom> geometry, std::shared_ptr<Flow_bc> surface_bc,
                                   Eigen::VectorXd flood_fill_start) {
   printers::info("  Incorporating surface geometry...\n");
   // take ownership of the surface geometries (do this first to avoid memory leak)
   surf_bc_sn = add_boundary_condition(surface_bc);
-  surf_geom.reset(geometry);
+  surf_geom = geometry;
   if (!tree) return;
   // identify surface elements
   auto& elems = elements();
@@ -2162,7 +2162,7 @@ void Accessible_mesh::delete_bad_extrusions() {
           }
         }
         // delete elements with exposed faces, edges, or vertices that face away from the surface geometry
-        if (surf_geom) {
+        if (surf_geom.use_count()) {
           bool exp = false;
           for (int i_face = 0; i_face < 2*nd; ++i_face) exp = exp || exposed[i_face];
           if (exp) {
@@ -2659,7 +2659,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
   // determine uncertainty in surface fit
   #pragma omp parallel for
   for (Int i_elem = 0; i_elem < n_before; ++i_elem) elems[i_elem].active_shape().uncertainty = 0;
-  if (surf_geom) {
+  if (surf_geom.use_count()) {
     next::Sequence<next::Boundary_block&> sides = params.n_dim == 3
                                                   ? _blocks.faces_3d().cast<next::Boundary_block&>()
                                                   : _blocks.edges_2d().cast<next::Boundary_block&>();
@@ -2870,7 +2870,7 @@ bool Accessible_mesh::update(std::function<bool(Element&)> refine_criterion,
     ++_stopwatch["update"]["refinement"].work_units_completed;
   }
   extrude(true);
-  if (surf_geom) {
+  if (surf_geom.use_count()) {
     connect_rest(surf_bc_sn);
     _fit_surface();
     connect_rest(surf_bc_sn);
@@ -3047,19 +3047,18 @@ void Accessible_mesh::read_file(std::string file_name) {
 }
 
 Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> extremal_bcs,
-                                 Turbulence_model turb, Surface_geom* geometry, std::shared_ptr<Flow_bc> surface_bc)
+                                 Turbulence_model turb, std::shared_ptr<Surface_geom> geometry,
+                                 std::shared_ptr<Flow_bc> surface_bc)
 : Accessible_mesh(read_params(file_name), hdf5_utils::get_attr<double>(file_name + ".tree.h5", "root_size"), turb) {
-  // take ownership of this to avoid memory leaks in case of exception
-  std::unique_ptr<Surface_geom> g(geometry);
   // create the tree
   tree = std::make_unique<Tree>(file_name);
   _add_tree_bcs(extremal_bcs);
   HEXED_ASSERT(tree->n_dim == params.n_dim, "dimensionality mismatch")
-  HEXED_ASSERT(bool(surface_bc) == bool(g),
+  HEXED_ASSERT(bool(surface_bc) == bool(geometry.use_count()),
                "You must specify both surface geometry and surface boundary condition or neither.");
   if (surface_bc) {
     surf_bc_sn = add_boundary_condition(surface_bc);
-    surf_geom.reset(g.release());
+    surf_geom = geometry;
   }
   H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
   hsize_t dims[2];

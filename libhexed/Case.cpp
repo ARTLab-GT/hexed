@@ -113,7 +113,7 @@ std::vector<std::shared_ptr<Flow_bc>> Case::_make_extremal_bcs() {
   return bcs;
 }
 
-Surface_geom* Case::_make_geom() {
+std::shared_ptr<Surface_geom> Case::_make_geom() {
   int nd = _vari("n_dim");
   Int n_div_min = math::pow(Int(2), _vari("min_geom_subdiv_levels"));
   Int n_div_max = math::pow(Int(2), _vari("max_geom_subdiv_levels"));
@@ -163,8 +163,7 @@ Surface_geom* Case::_make_geom() {
       HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", ext.c_str()), assert::User_error);
     }
   }
-  return geoms.empty() ? nullptr : new Compound_geom(geoms);
-  return nullptr;
+  return geoms.empty() ? std::shared_ptr<Surface_geom>() : std::make_shared<Compound_geom>(geoms);
 }
 
 std::string Case::_assignment(std::string var_name) {
@@ -512,8 +511,8 @@ Case::Case(std::string input_script)
       }
     };
     refine_isotropic("init", "Initial", false, false);
-    Surface_geom* geom = _make_geom();
-    if (geom) {
+    auto geom = _make_geom();
+    if (geom.use_count()) {
       printers::info("  Fitting geometry...\n");
       _has_geom = true;
       _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc")),
@@ -708,8 +707,9 @@ Case::Case(std::string input_script)
 
   _inter.variables->create("read_mesh", new Namespace::Heisenberg<std::string>([this]() {
     Task_message(printers::info, "reading mesh");
-    Surface_geom* geom = _make_geom();
-    _solver().read_mesh(_vars("input_data"), _make_extremal_bcs(), geom, geom ? _make_bc(_vars("surface_bc")) : nullptr);
+    auto geom = _make_geom();
+    _solver().read_mesh(_vars("input_data"), _make_extremal_bcs(), geom,
+                        geom.use_count() ? _make_bc(_vars("surface_bc")) : nullptr);
     return "";
   }));
   _inter.variables->create("read_state", new Namespace::Heisenberg<std::string>([this]() {

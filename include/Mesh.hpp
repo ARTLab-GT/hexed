@@ -109,7 +109,7 @@ class Mesh {
    */
   virtual void add_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) = 0;
   /*! \brief Defines the surface geometry to be meshed as a boundary.
-   * \details Acquires ownership of the objects pointed to `geometry` and `surface_bc`.
+   * \details
    * The geometric surface represented by `geometry` is now a boundary of the domain
    * and its boundary condition is `surface_bc`.
    * The flood fill algorithm is then executed starting at `flood_fill_start`
@@ -121,7 +121,8 @@ class Mesh {
    * So, `Mesh::update` should be calling a few times before `Mesh::set_surfaces`.
    * Any surfaces defined by previous invokations of `set_surface` are forgotten.
    */
-  virtual void set_surface(Surface_geom* geometry, std::shared_ptr<Flow_bc> surface_bc, Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
+  virtual void set_surface(std::shared_ptr<Surface_geom> geometry, std::shared_ptr<Flow_bc> surface_bc,
+                           Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) = 0;
   //!< sets the `Element::unrefinement_locked` member of all elements
   virtual void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) = 0;
   /*! \brief Updates tree mesh based on user-supplied (un)refinement criteria.

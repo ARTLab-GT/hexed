@@ -28,7 +28,7 @@ class Accessible_mesh : public Mesh {
   std::vector<std::vector<Face_refinement>> _face_refs;
   std::vector<Boundary_connection> _bound_cons;
   int surf_bc_sn;
-  std::unique_ptr<Surface_geom> surf_geom;
+  std::shared_ptr<Surface_geom> surf_geom;
   std::array<std::vector<Mortal_ptr<Neighbor_connection>>, 3> _extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
   std::vector<int> tree_bcs;
@@ -115,7 +115,7 @@ class Accessible_mesh : public Mesh {
    * iff the original mesh had a surface geometry (else exception).
    */
   Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Turbulence_model,
-                  Surface_geom* = nullptr, std::shared_ptr<Flow_bc> surface_bc = {});
+                  std::shared_ptr<Surface_geom> = {}, std::shared_ptr<Flow_bc> surface_bc = {});
   inline double root_size() override {return root_sz;}
   inline Storage_params storage_params() {return params;}
   //! \returns a View_by_type containing only the Cartesian elements in the mesh
@@ -144,7 +144,7 @@ class Accessible_mesh : public Mesh {
   next::Sequence<next::Vertex&> shape_boundary_vertices() {return _blocks.boundary_verts();}
 
   void add_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
-  void set_surface(Surface_geom* geometry, std::shared_ptr<Flow_bc> surface_bc,
+  void set_surface(std::shared_ptr<Surface_geom> geometry, std::shared_ptr<Flow_bc> surface_bc,
                    Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
   void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always,
