@@ -3021,20 +3021,38 @@ void Accessible_mesh::write(std::string name) {
       }
     }
   }
+  file.createGroup("shapes");
   dims[0] = n_shape;
-  dims[1] = 6 + params.n_vertices()*3;
-  auto shape_dset = file.createDataSet("shapes", hdf5_utils::type<double>(), H5::DataSpace(2, dims));
+  dims[1] = 8 + params.n_vertices()*3;
+  auto order1_dset = file.createDataSet("shapes/order1", hdf5_utils::type<double>(), H5::DataSpace(2, dims));
+  dims[1] = 2;
+  auto bf_dset = file.createDataSet("shapes/boundary faces", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
+  dims[0] = params.n_dim == 3 ? _blocks.faces_3d().size() : _blocks.edges_2d().size();
+  dims[1] = 3*params.n_face_qpoint();
+  auto bb_dset = file.createDataSet("warping", hdf5_utils::type<double>(), H5::DataSpace(2, dims));
+  Int i_bb = 0;
   for (Int i_elem = 0, i_shape = 0; i_elem < def.elems.element_view().size(); ++i_elem) {
     auto& elem = def.elems.element_view()[i_elem];
     if (elem.fake_shape()) {
+      Int i_bf = elem.fake_shape()->boundary_face();
+      hdf5_utils::write(bf_dset, i_shape, 0, i_bf);
+      Int j_bb = -1;
+      if (i_bf != next::Mesh_blocks::no_face) {
+        j_bb = i_bb++;
+        Array<double> points = elem.fake_shape()->boundary_block()->points();
+        for (int i = 0; i < 3*params.n_face_qpoint(); ++i) {
+          hdf5_utils::write(bb_dset, j_bb, i, points[i]);
+        }
+      }
+      hdf5_utils::write(bf_dset, i_shape, 1, j_bb);
       for (int i_dim = 0; i_dim < 3; ++i_dim) {
-        hdf5_utils::write(shape_dset, i_shape, i_dim, elem.fake_shape()->nominal_position()(i_dim));
-        hdf5_utils::write(shape_dset, i_shape, 3 + i_dim, elem.fake_shape()->nominal_shape()(i_dim));
+        hdf5_utils::write(order1_dset, i_shape,     i_dim, elem.fake_shape()->nominal_position()(i_dim));
+        hdf5_utils::write(order1_dset, i_shape, 3 + i_dim, elem.fake_shape()->nominal_shape()(i_dim));
       }
       for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
         Mat<3> pos = elem.fake_shape()->vertex(i_vert).point({});
         for (int i_dim = 0; i_dim < 3; ++i_dim) {
-          hdf5_utils::write(shape_dset, i_shape, 6 + i_vert*3 + i_dim, pos(i_dim));
+          hdf5_utils::write(order1_dset, i_shape, 6 + i_vert*3 + i_dim, pos(i_dim));
         }
       }
       ++i_shape;
@@ -3062,24 +3080,38 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_
   }
   H5::H5File file(file_name + ".mesh.h5", H5F_ACC_RDONLY);
   hsize_t dims[2];
-  auto shape_dset = file.openDataSet("shapes");
-  shape_dset.getSpace().getSimpleExtentDims(dims);
+  auto order1_dset = file.openDataSet("shapes/order1");
+  auto bf_dset = file.openDataSet("shapes/boundary faces");
+  order1_dset.getSpace().getSimpleExtentDims(dims);
+  auto bb_dset = file.openDataSet("warping");
   std::vector<std::shared_ptr<next::Element_shape>> shapes;
   for (Int i_shape = 0; i_shape < (Int)dims[0]; ++i_shape) {
+    Int i_bf = hdf5_utils::read<Int>(bf_dset, i_shape, 0);
+    printers::info(str_cat(i_bf, "\n\n\n"));
     Mat<3> nom_pos;
     Mat<3> nom_shape;
     for (int i_dim = 0; i_dim < 3; ++i_dim) {
-      nom_pos(i_dim) = hdf5_utils::read<double>(shape_dset, i_shape, i_dim);
-      nom_shape(i_dim) = hdf5_utils::read<double>(shape_dset, i_shape, 3 + i_dim);
+      nom_pos(i_dim) = hdf5_utils::read<double>(order1_dset, i_shape, i_dim);
+      nom_shape(i_dim) = hdf5_utils::read<double>(order1_dset, i_shape, 3 + i_dim);
     }
-    shapes.push_back(std::make_shared<next::Element_shape>(_blocks.create_element(nom_pos, nom_shape)));
+    shapes.push_back(std::make_shared<next::Element_shape>(_blocks.create_element(nom_pos, nom_shape, i_bf)));
     auto& shape = *shapes.back();
     for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
       Mat<3> vert_pos;
       for (int i_dim = 0; i_dim < 3; ++i_dim) {
-        vert_pos(i_dim) = hdf5_utils::read<double>(shape_dset, i_shape, 6 + i_vert*3 + i_dim);
+        vert_pos(i_dim) = hdf5_utils::read<double>(order1_dset, i_shape, 6 + i_vert*3 + i_dim);
       }
       shape.vertex(i_vert).set_pos(vert_pos);
+    }
+    if (i_bf != next::Mesh_blocks::no_face) {
+      Int i_bb = hdf5_utils::read<Int>(bf_dset, i_shape, 1);
+      std::vector<Int> s(params.n_dim - 1, params.row_size);
+      s.insert(s.begin(), 3);
+      Array<double> points(s);
+      for (int i = 0; i < 3*params.n_face_qpoint(); ++i) {
+        points[i] = hdf5_utils::read<double>(bb_dset, i_bb, i);
+      }
+      shape.boundary_block()->set_points(points);
     }
   }
   std::string names [2] {"cartesian", "deformed"};

@@ -10,13 +10,14 @@ namespace hexed {
  */
 template <typename... format_args>
 std::string format_str(int max_chars, std::string fstring, format_args... args) {
-  std::vector<char> buffer(max_chars);
+  std::vector<char> buffer;
   int overflow;
+  max_chars = max_chars - max_chars/2;
   do {
-    overflow = snprintf(buffer.data(), max_chars, fstring.c_str(), args...);
-    if (overflow < 0) throw std::runtime_error("encoding error in `hexed::format_str`");
     max_chars *= 2;
     buffer.resize(max_chars);
+    overflow = snprintf(buffer.data(), max_chars, fstring.c_str(), args...);
+    if (overflow < 0) throw std::runtime_error("encoding error in `hexed::format_str`");
   } while (overflow >= max_chars);
   return std::string(buffer.data());
 }

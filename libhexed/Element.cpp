@@ -286,6 +286,7 @@ void Element::split_shape(Element& split_from, double at, int from_face) {
 
 void Element::glue_shape(std::shared_ptr<next::Element_shape> shape, std::array<std::vector<double>, 2> glue_corners) {
   HEXED_ASSERT(_shape, "Must `create_shape` before `glue_shape`.")
+  _fake_shape = shape;
   _shape->glue(*shape, glue_corners);
   remember_pos();
 }
