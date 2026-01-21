@@ -2636,7 +2636,8 @@ void Accessible_mesh::execute_adaptation() {
     auto verts = _blocks.verts();
     #pragma omp parallel for
     for (auto& vert : verts) {
-      vert.wall_distance = (vert.point({}) - surf_geom->nearest_point(vert.point({})).point()).norm();
+      vert.wall_distance = (resize(vert.point({}), params.n_dim)
+                            - surf_geom->nearest_point(vert.point({})).point()).norm();
     }
   }
   tree->update_indices();
@@ -3007,6 +3008,15 @@ void Accessible_mesh::write(std::string name) {
   std::string names [2] {"cartesian", "deformed"};
   hsize_t dims[2];
   Int n_shape = 0;
+  dims[0] = container(true).element_view().size();
+  dims[1] = 2*params.n_dim;
+  auto corner_dset = file.createDataSet("elements/glued corners", hdf5_utils::type<double>(), H5::DataSpace(2, dims));
+  auto& all_elems = elements();
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < all_elems.size(); ++i_elem) {
+    all_elems[i_elem].active_shape().record = -1;
+    all_elems[i_elem].active_shape().is_new = false;
+  }
   for (bool is_def : {0, 1}) {
     auto& elems = container(is_def).element_view();
     dims[0] = elems.size();
@@ -3016,8 +3026,21 @@ void Accessible_mesh::write(std::string name) {
       auto& elem = elems[i_elem];
       hdf5_utils::write(elem_dset, i_elem, 0, elem.tree->total_index());
       if (is_def) {
-        if (elem.fake_shape()) hdf5_utils::write<Int>(elem_dset, i_elem, 1, n_shape++);
-        else hdf5_utils::write<Int>(elem_dset, i_elem, 1, -1);
+        std::array<std::vector<double>, 2> corners;
+        if (elem.fake_shape()) {
+          if (elem.fake_shape()->record < 0) elem.fake_shape()->record = n_shape++;
+          hdf5_utils::write<Int>(elem_dset, i_elem, 1, elem.fake_shape()->record);
+          corners = elem.shape().glued_corners();
+        } else {
+          hdf5_utils::write<Int>(elem_dset, i_elem, 1, -1);
+          corners[0] = std::vector<double>(params.n_dim, 0.0);
+          corners[1] = std::vector<double>(params.n_dim, 0.0);
+        }
+        for (int corner_sign : {0, 1}) {
+          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+            hdf5_utils::write(corner_dset, i_elem, params.n_dim*corner_sign + i_dim, corners[corner_sign][i_dim]);
+          }
+        }
       }
     }
   }
@@ -3031,9 +3054,11 @@ void Accessible_mesh::write(std::string name) {
   dims[1] = 3*params.n_face_qpoint();
   auto bb_dset = file.createDataSet("warping", hdf5_utils::type<double>(), H5::DataSpace(2, dims));
   Int i_bb = 0;
-  for (Int i_elem = 0, i_shape = 0; i_elem < def.elems.element_view().size(); ++i_elem) {
+  for (Int i_elem = 0; i_elem < def.elems.element_view().size(); ++i_elem) {
     auto& elem = def.elems.element_view()[i_elem];
-    if (elem.fake_shape()) {
+    if (elem.fake_shape()) if (!elem.fake_shape()->is_new) {
+      Int i_shape = elem.fake_shape()->record;
+      elem.fake_shape()->is_new = true;
       Int i_bf = elem.fake_shape()->boundary_face();
       hdf5_utils::write(bf_dset, i_shape, 0, i_bf);
       Int j_bb = -1;
@@ -3055,10 +3080,14 @@ void Accessible_mesh::write(std::string name) {
           hdf5_utils::write(order1_dset, i_shape, 6 + i_vert*3 + i_dim, pos(i_dim));
         }
       }
-      ++i_shape;
     }
   }
   tree->write(name);
+  #pragma omp parallel for
+  for (Int i_elem = 0; i_elem < all_elems.size(); ++i_elem) {
+    all_elems[i_elem].active_shape().record = 0;
+    all_elems[i_elem].active_shape().is_new = false;
+  }
 }
 
 void Accessible_mesh::read_file(std::string file_name) {
@@ -3115,6 +3144,7 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_
     }
   }
   std::string names [2] {"cartesian", "deformed"};
+  auto corner_dset = file.openDataSet("elements/glued corners");
   for (bool is_def : {0, 1}) {
     auto elem_dset = file.openDataSet("elements/" + names[is_def]);
     elem_dset.getSpace().getSimpleExtentDims(dims);
@@ -3129,8 +3159,13 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_
         t->def_elem = &def.elems.at(t->refinement_level(), sn);
         Int fake_shape = hdf5_utils::read<Int>(elem_dset, i_elem, 1);
         if (fake_shape >= 0) {
-          elem.glue_shape(shapes[fake_shape], {std::vector<double>(params.n_dim, 0.),
-                                               std::vector<double>(params.n_dim, 1.)});
+          std::array<std::vector<double>, 2> corners;
+          for (int corner_sign : {0, 1}) {
+            for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+              corners[corner_sign].push_back(hdf5_utils::read<double>(corner_dset, i_elem, 2*corner_sign + i_dim));
+            }
+          }
+          elem.glue_shape(shapes[fake_shape], corners);
         }
       }
     }

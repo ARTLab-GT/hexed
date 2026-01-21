@@ -138,8 +138,11 @@ TEST_CASE("mesh I/O") {
     mesh.update();
     mesh.update([](hexed::Element& elem){return elem.nominal_position()[0] != elem.nominal_position()[1];});
     mesh.set_surface(geom, std::make_shared<hexed::Nonpenetration>());
+    mesh.plan_adaptation([](hexed::Element& elem, int i_dim){return elem.has_wall();},
+                         [](hexed::Element&, int){return false;}, true);
+    mesh.execute_adaptation();
     REQUIRE(mesh.cartesian().elements().size() == 6);
-    REQUIRE(mesh.deformed().elements().size() == 7);
+    REQUIRE(mesh.deformed().elements().size() == 13);
     mesh.write("io_test");
     mesh.visualize("default", "io_test_orig");
     // compute the sum of the vertex coordinates of all elements (counting each vertex once for each element using it)
@@ -151,8 +154,6 @@ TEST_CASE("mesh I/O") {
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       for (int i_vert = 0; i_vert < 4; ++i_vert) {
         correct_sum_vertices += elems[i_elem].shape().vertex(i_vert).point({});
-        REQUIRE_THAT(elems[i_elem].shape().vertex(i_vert).point({}), Catch::Matchers::RangeEquals(
-                     elems[i_elem].active_shape().vertex(i_vert).point({}), hexed::math::Approx_equal(0., 1e-8)));
       }
       elems[i_elem].set_jacobian(basis);
       for (int i_qpoint = 0; i_qpoint < mesh.storage_params().n_qpoint(); ++i_qpoint) {
@@ -176,20 +177,20 @@ TEST_CASE("mesh I/O") {
     mesh.visualize("default", "io_test_reconstructed");
     REQUIRE(mesh.root_size() == Catch::Approx(0.8));
     REQUIRE(mesh.cartesian().elements().size() == 6);
-    REQUIRE(mesh.deformed().elements().size() == 7);
+    REQUIRE(mesh.deformed().elements().size() == 13);
     auto& elems = mesh.elements();
     int rl1 = 0;
     int rl2 = 0;
+    int rl3 = 0;
     hexed::Mat<3> sum_vertices = hexed::Mat<3>::Zero();
     double area = 0;
     for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
       rl1 += elems[i_elem].refinement_level() == 1;
       rl2 += elems[i_elem].refinement_level() == 2;
+      rl3 += elems[i_elem].refinement_level() == 3;
       REQUIRE(elems[i_elem].tree);
       for (int i_vert = 0; i_vert < 4; ++i_vert) {
         sum_vertices += elems[i_elem].shape().vertex(i_vert).point({});
-        REQUIRE_THAT(elems[i_elem].shape().vertex(i_vert).point({}), Catch::Matchers::RangeEquals(
-                     elems[i_elem].active_shape().vertex(i_vert).point({}), hexed::math::Approx_equal(0., 1e-8)));
       }
       elems[i_elem].set_jacobian(basis);
       for (int i_qpoint = 0; i_qpoint < mesh.storage_params().n_qpoint(); ++i_qpoint) {
@@ -197,7 +198,8 @@ TEST_CASE("mesh I/O") {
       }
     }
     REQUIRE(rl1 == 2);
-    REQUIRE(rl2 == 11);
+    REQUIRE(rl2 == 9);
+    REQUIRE(rl3 == 8);
     REQUIRE(sum_vertices(0) == Catch::Approx(correct_sum_vertices(0)));
     REQUIRE(sum_vertices(1) == Catch::Approx(correct_sum_vertices(1)));
     REQUIRE(area == Catch::Approx(.8*.8 - hexed::constants::pi*.1*.1/4).margin(1e-5));

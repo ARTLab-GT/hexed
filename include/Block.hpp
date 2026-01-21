@@ -469,6 +469,7 @@ class Element_shape : public Block {
   int record;
   double uncertainty;
   Lock lock;
+  Int index;
 
   private:
   Element_shape(int nd, const Basis&);
