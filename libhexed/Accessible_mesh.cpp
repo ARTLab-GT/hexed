@@ -594,8 +594,8 @@ void Accessible_mesh::_fit_surface() {
               Int m = matched_to[i_edge_matched];
               if (m != -1) {
                 Array<Int> np_match = elem.nominal_position().copy();
-                Tree* t = inside.tree->graft(inside.tree->anisotropic_refinement_level(), np_match);
-                Int sn = _add_element(elem.refinement_level(), true, np_match, 1, bf, *t);
+                Tree* t = inside.tree->graft(elem.tree->anisotropic_refinement_level(), np_match);
+                Int sn = _add_element(t->anisotropic_refinement_level(), true, np_match, 1, bf, *t);
                 Deformed_element& match_elem = def.elems.at(elem.refinement_level(), sn);
                 set_vertices(match_elem);
                 match_elem.active_shape().is_new = true;
@@ -840,7 +840,7 @@ void Accessible_mesh::_fit_surface() {
           np[i_face/2] /= 2;
         }
         Tree* t = elem.tree->graft(elem.tree->anisotropic_refinement_level(), np);
-        Int sn = _add_element(elem.refinement_level(), true, np, 1, i_face, *t);
+        Int sn = _add_element(t->anisotropic_refinement_level(), true, np, 1, i_face, *t);
         Deformed_element& new_elem = def.elems.at(elem.refinement_level(), sn);
         for (int j_face = 0; j_face < 2*params.n_dim; ++j_face) new_elem.face_record[j_face] = -1;
         new_elem.active_shape().extruded_direction = i_face;
