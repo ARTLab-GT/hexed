@@ -198,12 +198,19 @@ class Array {
   }
 
   /*! \brief Assigns the values in `other` to `this`.
-   * \details `other` and `this` __must__ have the same shape.
+   * \details `other` and `this` must have the same shape.
    * Not allocations are performed and no new references are created.
    * You are simply assigning values to existing data.
    */
-  template <typename U> Array<T>& operator=(const Array<U>& other) {return *this = other.data();}
-  Array<T>& operator=(const Array<T>& other) {return *this = other.data();} //!< \overload
+  template <typename U> Array<T>& operator=(const Array<U>& other) {
+    for (Int i = 0; i < size(); ++i) (*this)[i] = other[i];
+    return *this;
+  }
+  //! \overload
+  Array<T>& operator=(const Array<T>& other) {
+    for (Int i = 0; i < size(); ++i) (*this)[i] = other[i];
+    return *this;
+  }
   //! \brief Sets all entries to the specified value.
   template <typename U>
   Array<T>& operator=(const U& value) {
