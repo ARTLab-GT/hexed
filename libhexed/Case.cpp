@@ -706,28 +706,35 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("read_mesh", new Namespace::Heisenberg<std::string>([this]() {
-    Task_message(printers::info, "reading mesh");
+    printers::info("Reading mesh...\n");
     auto geom = _make_geom();
     _solver().read_mesh(_vars("input_data"), _make_extremal_bcs(), geom,
                         geom.use_count() ? _make_bc(_vars("surface_bc")) : nullptr);
+    _solver().update_preti_iters();
+    _solver().print_preti_iters();
+    printers::info("done\n");
     return "";
   }));
   _inter.variables->create("read_state", new Namespace::Heisenberg<std::string>([this]() {
-    Task_message(printers::info, "reading state");
+    Task_message(printers::info, "Reading state...\n");
     _solver().read_state(_vars("input_data"));
+    printers::info("done\n");
     return "";
   }));
   _inter.variables->create("read_status", new Namespace::Heisenberg<std::string>([this]() {
-    Task_message(printers::info, "reading status");
+    printers::info("Reading status...\n");
     auto sub = _inter.make_sub();
     sub.exec("$read {" + _vars("input_data") + ".status.hil}");
+    printers::info("done\n");
     return "";
   }));
   _inter.variables->create("write_mesh", new Namespace::Heisenberg<std::string>([this]() {
     Task_message(printers::info, "writing mesh");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
     _solver().mesh().write(file_name);
-    force_symlink(_iteration_suffix() + ".mesh.h5", _vars("working_dir") + "latest.mesh.h5");
+    for (std::string suffix : {"mesh", "tree"}) {
+      force_symlink(_iteration_suffix() + "." + suffix + ".h5", _vars("working_dir") + "latest." + suffix + ".h5");
+    }
     return "";
   }));
   _inter.variables->create("write_state", new Namespace::Heisenberg<std::string>([this]() {

@@ -80,8 +80,6 @@ class Accessible_mesh : public Mesh {
   void purge();
   void delete_bad_extrusions();
   void deform();
-  void read_file(std::string file_name);
-
   void _connect(std::array<std::vector<Element*>, 2> elems, Connection_direction dir, std::string context);
   void _connect(std::array<Element*, 2>, Connection_direction, std::string context = "");
   void _connect(Element*, std::vector<Element*>, Connection_direction,

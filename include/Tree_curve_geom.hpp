@@ -15,6 +15,8 @@ class Tree_curve_geom : public Surface_geom {
   next::Sequence<Mat<3>> points() override;
 
   private:
+  Mat<3> _points_get(Int ind);
+  Int _points_size();
   Tree_curve _curve;
 };
 

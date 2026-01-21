@@ -3090,9 +3090,6 @@ void Accessible_mesh::write(std::string name) {
   }
 }
 
-void Accessible_mesh::read_file(std::string file_name) {
-}
-
 Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> extremal_bcs,
                                  Turbulence_model turb, std::shared_ptr<Surface_geom> geometry,
                                  std::shared_ptr<Flow_bc> surface_bc)
@@ -3116,7 +3113,6 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_
   std::vector<std::shared_ptr<next::Element_shape>> shapes;
   for (Int i_shape = 0; i_shape < (Int)dims[0]; ++i_shape) {
     Int i_bf = hdf5_utils::read<Int>(bf_dset, i_shape, 0);
-    printers::info(str_cat(i_bf, "\n\n\n"));
     Mat<3> nom_pos;
     Mat<3> nom_shape;
     for (int i_dim = 0; i_dim < 3; ++i_dim) {

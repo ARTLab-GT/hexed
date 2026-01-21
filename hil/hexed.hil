@@ -403,16 +403,17 @@ setup_io = {
     $$({case} + (input_data == {auto}))
 }
 
-restart = {
-    print {reading restart data...}
-    $setup_io
+read_restart = {
+    println {reading restart data...}
     $read(input_data + {.status.hil})
+    $setup_io
     create_solver
     read_mesh
     mesh_init = true
     read_state
     read_status
     println {done}
+    println({    Monitor window: } + monitor_window)
 }
 
 iterate = {
@@ -556,5 +557,10 @@ simulate = {
     $start
     mesh
     init_state
+    $run
+}
+
+restart = {
+    $read_restart
     $run
 }
