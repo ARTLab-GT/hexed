@@ -719,9 +719,9 @@ void Solver::update_art_visc_smoothness() {
     double has_shock = false;
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double l = wall_shock_width + wall_dist[i_qpoint]*shock_width_growth;
-      has_shock = has_shock || forcing[i_qpoint] > 1e-6*l*l;
+      has_shock = has_shock || forcing[i_qpoint] > 1e-8;
       double speed_sq = 2*state[(nd + 1)*nq + i_qpoint]/state[nd*nq + i_qpoint];
-      forcing[i_qpoint] = std::sqrt(forcing[i_qpoint]*std::abs(speed_sq));
+      forcing[i_qpoint] = l*std::sqrt(forcing[i_qpoint]*std::abs(speed_sq));
     }
     elements[i_elem].has_shock = has_shock;
     elements[i_elem].spread_shock = false;
@@ -775,7 +775,7 @@ void Solver::update_art_visc_smoothness() {
     double volume = math::pow(elements[i_elem].nominal_size(), nd);
     for (int i_qpoint = 0; i_qpoint < nq; ++i_qpoint) {
       double l = wall_shock_width + wall_dist[i_qpoint]*shock_width_growth;
-      double f = mult*l*forcing[nq + i_qpoint];
+      double f = mult*forcing[nq + i_qpoint];
       double new_av = l*us_max*f/(l*us_max + f);
       resid += math::pow(av[i_qpoint] - new_av, 2)*qpoint_weights(i_qpoint)*volume;
       av[i_qpoint] = new_av;
