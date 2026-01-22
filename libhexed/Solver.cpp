@@ -1465,12 +1465,9 @@ bool Solver::fix_nonphysical(double stability_ratio, int sub_iter) {
       printers::warn("Warning: ", true);
       printers::warn(str_cat("Nonphysical flow state detected (solver iteration ", status.iteration,
                              " sub-iteration ", sub_iter, ").\n", is_phys, "\n", "Attempting to fix...\n"));
-    }
-    printers::warn(format_str("    nonphysical iteration %i\n", iter));
-    if (status.iteration >= last_fix_vis_iter + 1000 && iter == 0) {
-      last_fix_vis_iter = status.iteration;
       visualize_field("default", str_cat(wd, "nonphysical", status.iteration, "_", sub_iter), vis_expr);
     }
+    printers::warn(format_str("    nonphysical iteration %i\n", iter));
     for (int inner = 0; inner < 100; ++inner, ++iter) {
       double dt = stability_ratio;
       Kernel_options opts {
