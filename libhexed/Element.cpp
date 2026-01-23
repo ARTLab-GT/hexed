@@ -133,12 +133,14 @@ int Element::_get_i_bf() {
   return _fake_shape->boundary_face();
 }
 
-bool Element::has_wall() {
-  if (!is_extruded()) return false;
+int Element::boundary_face() {
+  if (!is_extruded()) return -1;
   int i_bf = _get_i_bf();
-  if (i_bf < 0) return false;
-  return _shape->glued_to_face(i_bf);
+  if (i_bf >= 0) if (_shape->glued_to_face(i_bf)) return i_bf;
+  return -1;
 }
+
+bool Element::has_wall() {return boundary_face() >= 0;}
 
 bool Element::is_sharp(int i_dim) {
   if (!has_wall()) return false;
@@ -250,7 +252,7 @@ bool Element::shared_fake() const {
   return _fake_shape.use_count() > 1;
 }
 
-void Element::_set_glued_pos() {
+void Element::remember_pos() {
   for (int i_vert = 0; i_vert < params.n_vertices(); ++i_vert) {
     std::vector<double> coords(params.n_dim);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
@@ -278,24 +280,30 @@ void Element::split_shape(Element& split_from, double at, int from_face) {
     HEXED_ASSERT(split_corners[0][i_dim] < split_corners[1][i_dim], "Corner coordinates must be increasing.")
   }
   _shape->glue(*_fake_shape, split_corners);
-  _set_glued_pos();
-  split_from._set_glued_pos();
+  remember_pos();
+  split_from.remember_pos();
+}
+
+void Element::glue_shape(std::shared_ptr<next::Element_shape> shape, std::array<std::vector<double>, 2> glue_corners) {
+  HEXED_ASSERT(_shape, "Must `create_shape` before `glue_shape`.")
+  _fake_shape = shape;
+  _shape->glue(*shape, glue_corners);
+  remember_pos();
 }
 
 void Element::glue_shape(Element& glue_to, std::array<std::vector<double>, 2> glue_corners) {
   HEXED_ASSERT(_shape, "Must `create_shape` before `glue_shape`.")
-  if (glue_to.fake_shape()) {
-    _fake_shape = glue_to._fake_shape;
-    auto corners = glue_to.shape().glued_corners();
-    for (int i = 0; i < 2; ++i) {
-      for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-        double gc = glue_corners[i][i_dim];
-        glue_corners[i][i_dim] = (1. - gc)*corners[0][i_dim] + gc*corners[1][i_dim];
-      }
+  HEXED_ASSERT(glue_to._fake_shape, "Cannot glue to an element that does not have a fake shape.")
+  _fake_shape = glue_to._fake_shape;
+  auto corners = glue_to.shape().glued_corners();
+  for (int i = 0; i < 2; ++i) {
+    for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+      double gc = glue_corners[i][i_dim];
+      glue_corners[i][i_dim] = (1. - gc)*corners[0][i_dim] + gc*corners[1][i_dim];
     }
   }
   _shape->glue(glue_to.active_shape(), glue_corners);
-  _set_glued_pos();
+  remember_pos();
 }
 
 void Element::destroy_shape() {

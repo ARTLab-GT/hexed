@@ -609,6 +609,12 @@ void Edge::reset() {
   }
 }
 
+void Edge::set_points(Array<double> pts) {
+  _verts[0]->set_pos(pts.column(0).vector());
+  _verts[1]->set_pos(pts.column(row_size() - 1).vector());
+  for (int i = 1; i < row_size() - 1; ++i) _interior(i - 1) = pts.column(i);
+}
+
 const int Edge::no = -1;
 
 void Edge::glue(Edge& other, int half, bool reverse) {
@@ -727,6 +733,23 @@ void Surface_face::reset() {
   // compute least-squares solution
   Mat_rm<> soln = lhs_mat.fullPivHouseholderQr().solve(rhs_mat);
   _interior = soln.data();
+}
+
+void Surface_face::set_points(Array<double> pts) {
+  for (int i = 0; i < 2; ++i) {
+    for (int j = 0; j < 2; ++j) {
+      edge(i).vertex(j).set_pos(pts.column(j*(row_size() - 1)).column(i*(row_size() - 1)).vector());
+    }
+    for (int i_row = 1; i_row < row_size() - 1; ++i_row) {
+      edge(    i).interior()(i_row - 1) = pts.column(i_row).column(i*(row_size() - 1));
+      edge(2 + i).interior()(i_row - 1) = pts.column(i*(row_size() - 1)).column(i_row);
+    }
+  }
+  for (int i_row = 1; i_row < row_size() - 1; ++i_row) {
+    for (int j_row = 1; j_row < row_size() - 1; ++j_row) {
+      _interior(i_row - 1)(j_row - 1) = pts.column(j_row).column(i_row);
+    }
+  }
 }
 
 Mat<3> Element_shape::_vertex_point(const std::vector<double>& coords, Int recursion_depth) const {

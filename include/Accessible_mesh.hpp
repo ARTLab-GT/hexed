@@ -28,7 +28,7 @@ class Accessible_mesh : public Mesh {
   std::vector<std::vector<Face_refinement>> _face_refs;
   std::vector<Boundary_connection> _bound_cons;
   int surf_bc_sn;
-  std::unique_ptr<Surface_geom> surf_geom;
+  std::shared_ptr<Surface_geom> surf_geom;
   std::array<std::vector<Mortal_ptr<Neighbor_connection>>, 3> _extrude_cons;
   std::unique_ptr<Tree> tree; // could be null! don't forget to check
   std::vector<int> tree_bcs;
@@ -63,10 +63,10 @@ class Accessible_mesh : public Mesh {
   std::string _vis_return(std::string);
   Element_container& container(bool is_deformed);
   int _add_element(int ref_level, bool is_deformed, Array<Int> position,
-                   int aniso_ref_level = 0, int surface_face = next::Mesh_blocks::no_face, Tree* = nullptr);
+                   int aniso_ref_level, int surface_face, Tree&);
   int _add_element(Array<int> ref_level, bool is_deformed, Array<Int> position,
-                   int aniso_ref_level = 0, int surface_face = next::Mesh_blocks::no_face, Tree* = nullptr);
-  Element& add_elem(bool is_deformed, Tree&, int aniso_ref_level);
+                   int aniso_ref_level, int surface_face, Tree&);
+  Element& add_elem(bool is_deformed, Tree&, int aniso_ref_level, int surface_face = next::Mesh_blocks::no_face);
   bool intersects_surface(Tree*);
   bool is_surface(Tree*);
   // gets either `car` or `def`
@@ -80,9 +80,6 @@ class Accessible_mesh : public Mesh {
   void purge();
   void delete_bad_extrusions();
   void deform();
-  void create_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin = Mat<>::Zero(3));
-  void read_file(std::string file_name);
-
   void _connect(std::array<std::vector<Element*>, 2> elems, Connection_direction dir, std::string context);
   void _connect(std::array<Element*, 2>, Connection_direction, std::string context = "");
   void _connect(Element*, std::vector<Element*>, Connection_direction,
@@ -96,6 +93,7 @@ class Accessible_mesh : public Mesh {
                  std::function<void(next::Vertex&)> snap);
   void _fit_surface();
   void _optimize(int min_pow, int max_pow, bool check_snapping);
+  void _add_tree_bcs(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs);
 
   public:
   //! \brief how far must the center of an element be from the geometry relative to the nominal size
@@ -115,19 +113,13 @@ class Accessible_mesh : public Mesh {
    * iff the original mesh had a surface geometry (else exception).
    */
   Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Turbulence_model,
-                  Surface_geom* = nullptr, std::shared_ptr<Flow_bc> surface_bc = {});
-  /*! \brief Reads mesh from a file created by `Mesh::write`.
-   * \details Acquires ownership of boundary condition pointers.
-   * This variant is not for tree meshing.
-   */
-  Accessible_mesh(std::string file_name, std::vector<std::shared_ptr<Flow_bc>>, Turbulence_model);
+                  std::shared_ptr<Surface_geom> = {}, std::shared_ptr<Flow_bc> surface_bc = {});
   inline double root_size() override {return root_sz;}
   inline Storage_params storage_params() {return params;}
   //! \returns a View_by_type containing only the Cartesian elements in the mesh
   inline View_by_type<         Element>& cartesian() {return car;}
   //! \returns a View_by_type containing only the deformed elements in the mesh
   inline View_by_type<Deformed_element>&  deformed() {return def;}
-  int add_element(int ref_level, bool is_deformed, Array<Int> position) override;
   //! Access an element. If the parameters to not describe an existing element, throw an exception.
   Element& element(int ref_level, bool is_deformed, int serial_n);
   //! access all elements, both Cartesian and deformed
@@ -150,7 +142,7 @@ class Accessible_mesh : public Mesh {
   next::Sequence<next::Vertex&> shape_boundary_vertices() {return _blocks.boundary_verts();}
 
   void add_tree(std::vector<std::shared_ptr<Flow_bc>> extremal_bcs, Mat<> origin = Mat<>::Zero(3)) override;
-  void set_surface(Surface_geom* geometry, std::shared_ptr<Flow_bc> surface_bc,
+  void set_surface(std::shared_ptr<Surface_geom> geometry, std::shared_ptr<Flow_bc> surface_bc,
                    Eigen::VectorXd flood_fill_start = Eigen::VectorXd::Zero(3)) override;
   void set_unref_locks(std::function<bool(Element&)> lock_if = criteria::never) override;
   bool update(std::function<bool(Element&)> refine_criterion = criteria::always,
@@ -215,7 +207,7 @@ class Accessible_mesh : public Mesh {
   void assert_valid();
   //! convenience typedef for the Vector_view used to access Vertex objects
   //! \note test for this is in `test_Solver.cpp` so that the result can be visualized
-  void extrude(bool collapse = false, double offset = 0, bool force = false) override;
+  void extrude(bool collapse = false, bool force = false) override;
   void connect_rest(int bc_sn) override;
   std::vector<elem_handle> elem_handles() override;
   void write(std::string file_name) override;

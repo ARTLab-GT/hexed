@@ -292,6 +292,11 @@ class Boundary_block : public Block {
    * \attention The layout is transposed with respect to `Block::points`!
    */
   inline Array<double> interior() {return _interior();};
+  //! \brief Sets the interior, edge, and vertex points to `points`.
+  //! \details The `interior()`, as well as any connected `Edge`s and `Vertex`s will be modified.
+  //! After calling `set_points(p)`, `points()` and `p` should be equal.
+  //! The `points` provided as the argument must have the same shape as `points()`.
+  virtual void set_points(Array<double> points) = 0;
 
   bool snapping_problem;
 
@@ -327,6 +332,7 @@ class Edge : public Boundary_block {
   std::vector<int> element_coords(std::vector<int>) const override;
   std::vector<Vertex*> vertices() override;
   void reset() override; //!< \brief sets `interior()` to linear interpolation between vertices
+  void set_points(Array<double> points) override;
 
   /*! \brief Glues the edge to another edge (or half of it).
    * \details Once this is called, the `Block::interior()` becomes irrelevant,
@@ -388,6 +394,7 @@ class Surface_face : public Boundary_block {
    * is minimized in the \f$ L^2 \f$ norm.
    */
   void reset() override;
+  void set_points(Array<double> points) override;
 
   private:
   Mat<3> _point(const std::vector<int>&, Int recursion_depth = 0) const override;
@@ -462,6 +469,7 @@ class Element_shape : public Block {
   int record;
   double uncertainty;
   Lock lock;
+  Int index;
 
   private:
   Element_shape(int nd, const Basis&);

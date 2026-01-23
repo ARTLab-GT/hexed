@@ -3,6 +3,7 @@
 #include <hexed/config.hpp>
 #include <hexed/Equidistant.hpp>
 #include <hexed/Gauss_lobatto.hpp>
+#include <hexed/Printer.hpp>
 
 #define REQ_VEC_EQ(vec0, ...) \
   REQUIRE_THAT(vec0, Catch::Matchers::RangeEquals(__VA_ARGS__, hexed::math::Approx_equal()))
@@ -63,6 +64,18 @@ TEST_CASE("Block") {
       for (int row = 0; row < 4; ++row) {
         REQUIRE(points(i_dim)[row] == Catch::Approx(edge0.point(std::vector<int>{row})(i_dim)));
       }
+    }
+
+    SECTION("`Edge::set_points()`") {
+      hexed::next::Vertex vert2({.1, .1, .1}, 4);
+      hexed::next::Vertex vert3({.2, .2, .2}, 4);
+      hexed::next::Edge edge1(vert2, vert3, basis);
+      edge1.reset();
+      edge1.set_points(edge0.points());
+      REQUIRE_THAT(vert2.point({}), Catch::Matchers::RangeEquals(vert0.point({}), hexed::math::Approx_equal()));
+      REQUIRE_THAT(vert3.point({}), Catch::Matchers::RangeEquals(vert1.point({}), hexed::math::Approx_equal()));
+      REQUIRE_THAT(edge1.interior(), Catch::Matchers::RangeEquals(edge0.interior(), hexed::math::Approx_equal()));
+      REQUIRE_THAT(edge1.points(), Catch::Matchers::RangeEquals(edge0.points(), hexed::math::Approx_equal()));
     }
 
     SECTION("vertex `eat`ing") {
@@ -198,6 +211,22 @@ TEST_CASE("Block") {
     }
     face.reset();
     face.visualize("default", "vertex_interp_face1");
+    // test `set_points`
+    std::vector<hexed::next::Vertex> verts1;
+    verts1.emplace_back(hexed::Mat<3>::Zero(), 5);
+    verts1.emplace_back(hexed::Mat<3>::Zero(), 5);
+    verts1.emplace_back(hexed::Mat<3>::Zero(), 5);
+    verts1.emplace_back(hexed::Mat<3>::Zero(), 5);
+    hexed::next::Surface_face face1({&verts1[0], &verts1[1], &verts1[2], &verts1[3]}, basis5);
+    face1.set_points(face.points());
+    for (int i = 0; i < 4; ++i) {
+      REQUIRE_THAT(verts1[i].point({}),
+                   Catch::Matchers::RangeEquals(verts[i].point({}), hexed::math::Approx_equal(0., 1e-5)));
+      REQUIRE_THAT(face1.edge(i).interior(),
+                   Catch::Matchers::RangeEquals(face.edge(i).interior(), hexed::math::Approx_equal(0., 1e-5)));
+    }
+    REQUIRE_THAT(face1.interior(), Catch::Matchers::RangeEquals(face.interior(), hexed::math::Approx_equal(0., 1e-5)));
+    REQUIRE_THAT(face1.points(), Catch::Matchers::RangeEquals(face.points(), hexed::math::Approx_equal(0., 1e-5)));
   }
 
   SECTION("`Boundary_block`-`Element_shape` interaction") {

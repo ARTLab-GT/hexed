@@ -1,5 +1,6 @@
 n_dim = 3
 radius = .0635
+reference_length = radius
 mesh_extreme00 = -2.*radius
 mesh_extreme01 =  0.*radius
 mesh_extreme10 =  0.*radius
@@ -32,7 +33,6 @@ $set_shock
 $set_ramping
 print_freq = 10
 vis_freq = write_freq = 1000
-wall_av_coef = 1e-4
 monitor_vars = {heating_rate = heating_rate;}
 contour0 = {pos0 + 1e-8}
 contour1 = {pos1 - pos2}

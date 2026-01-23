@@ -77,13 +77,14 @@ class Surface_geom {
  * and the intersection set is the union of the intersection sets of the components.
  */
 class Compound_geom : public Surface_geom {
-  std::vector<std::unique_ptr<Surface_geom>> components;
   public:
   Compound_geom(std::vector<Surface_geom*>); //!< acquires ownership
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_precision = true) override;
   next::Sequence<const Geom_edge&> edges() override;
   next::Sequence<Mat<3>> points() override;
+  private:
+  std::vector<std::unique_ptr<Surface_geom>> _components;
 };
 
 /*! \brief Represents hypersphere in any dimensionality.
@@ -93,12 +94,13 @@ class Compound_geom : public Surface_geom {
  * or else behavior is undefined.
  */
 class Hypersphere : public Surface_geom {
-  Mat<> c;
-  double r;
   public:
   Hypersphere(Mat<> center, double radius);
   Nearest_point<dyn> nearest_point(Mat<> point, double max_distance = huge, double distance_guess = huge) override;
   std::vector<double> intersections(Mat<> point0, Mat<> point1, bool high_precision = true) override;
+  private:
+  Mat<> _center;
+  double _radius;
 };
 
 }

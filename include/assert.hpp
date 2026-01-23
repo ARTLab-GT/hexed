@@ -100,7 +100,7 @@ void throw_critical(const char* message) {
  * \note This macro expands to a block enclosed in `{}`, so it does not require a `;` after it.
  */
 #define HEXED_THROW(message, ...) { \
-  hexed::assert::throw_critical<__VA_ARGS__>(hexed::format_str(2000, \
+  hexed::assert::throw_critical<__VA_ARGS__>(hexed::format_str( \
     "%s\n" \
     "  At: line %d of `%s`\n" \
     "  In: %s", \
@@ -114,7 +114,7 @@ void throw_critical(const char* message) {
  */
 #define HEXED_ASSERT(expression, message, ...) { \
   if (!(expression)) { \
-    HEXED_THROW(hexed::format_str(2000, \
+    HEXED_THROW(hexed::format_str( \
       "%s\n" \
       "  Assertion `%s` failed in `%s`.", \
       std::string(message).c_str(), #expression, __FUNCTION__) \

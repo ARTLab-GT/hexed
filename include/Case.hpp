@@ -20,7 +20,7 @@ class Case {
   void _set_vector(std::string name, Mat<>);
   std::shared_ptr<Flow_bc> _make_bc(std::string name);
   std::vector<std::shared_ptr<Flow_bc>> _make_extremal_bcs();
-  Surface_geom* _make_geom(); // `nullptr` if no geometry
+  std::shared_ptr<Surface_geom> _make_geom(); // empty `shared_ptr` if no geometry
   std::string _iteration_suffix();
   std::string _input_data_file();
   void _visualize(std::string suffix);

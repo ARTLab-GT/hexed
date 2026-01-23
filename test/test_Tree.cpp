@@ -1,6 +1,7 @@
 #include <catch2/catch_all.hpp>
 #include <hexed/Tree.hpp>
 #include <hexed/vertex_inds.hpp>
+#include <hexed/Printer.hpp>
 #include "testing_utils.hpp"
 
 TEST_CASE("Tree") {
@@ -81,8 +82,9 @@ TEST_CASE("Tree") {
                                                                      }));
   REQUIRE_THAT(children[3]->children()[1]->find_neighbors(hexed::Array<int>::make(0, -1)),
                Catch::Matchers::RangeEquals(std::vector<hexed::Tree*>{children[3]->children()[0]->children()[1], children[3]->children()[0]->children()[3]}));
-  REQUIRE(tree2.count() == 13);
-  REQUIRE(children[3]->count() == 9);
+  tree2.update_indices();
+  REQUIRE(tree2.n_total() == 13);
+  REQUIRE(children[3]->n_total() == 9);
 
   // flood fill
   REQUIRE(children[0]->get_status() == hexed::Tree::unprocessed);
@@ -168,9 +170,7 @@ TEST_CASE("Tree") {
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.2, .7}) == tree.unique_children()[1]);
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.5, .21}) == child->unique_children()[0]);
     REQUIRE(tree.find_leaf(hexed::Mat<2>{.5, .54}) == child->unique_children()[1]);
-    SECTION("unrefinement") {
-      REQUIRE_THROWS(tree.unrefine(0));
-      REQUIRE_THROWS(child->unrefine(0));
+    SECTION("leaf unrefinement") {
       child->unrefine(1);
       REQUIRE(child->is_leaf());
       tree.unrefine(0);
@@ -178,6 +178,16 @@ TEST_CASE("Tree") {
       REQUIRE(children.size() == 2);
       REQUIRE_THAT(children[0]->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{0, 1}));
       REQUIRE_THAT(children[1]->coordinates(), Catch::Matchers::RangeEquals(std::vector<int>{0, 1}));
+    }
+    SECTION("non-leaf unrefinement") {
+      REQUIRE( tree.is_refined(0));
+      REQUIRE( tree.is_refined(1));
+      REQUIRE(!tree.is_refined(2));
+      tree.unrefine(0);
+      REQUIRE(!tree.is_refined(0));
+      REQUIRE( tree.is_refined(1));
+      REQUIRE(!tree.is_refined(2));
+      for (int i_child = 0; i_child < 2; ++i_child) REQUIRE(tree.unique_children()[i_child]->is_leaf());
     }
     SECTION("aniso collapsing") {
       uc[1]->refine(1);
@@ -487,10 +497,16 @@ TEST_CASE("Tree") {
     tree.delete_grafts(); // `graft0` and `graft1` now invalid
     tree.children()[1]->unrefine(0);
     REQUIRE(tree.children()[0]->find_neighbor(2) == nullptr);
-    graft0 = tree.graft(hexed::Array<int>::make(0, 1), hexed::Array<hexed::Int>::make(-1, 1));
+    graft0 = tree.children()[1]->graft(hexed::Array<int>::make(0, 1), hexed::Array<hexed::Int>::make(-1, 1));
+    REQUIRE( graft0->is_root(true));
+    REQUIRE(!graft0->is_root(false));
     REQUIRE_THAT(graft0->anisotropic_refinement_level(), Catch::Matchers::RangeEquals(std::vector<int>{0, 1}));
     tree.connect({tree.children()[1], graft0}, {{0, 1}, {0, 0}});
     graft0->refine();
+    REQUIRE(!graft0->children()[1]->is_root(true));
+    REQUIRE(!graft0->children()[1]->is_root(false));
+    REQUIRE(graft0->children()[1]->root() == graft0);
+    REQUIRE(graft0->children()[1]->root(false) == &tree);
     REQUIRE(tree.children()[1]->find_neighbor(0) == graft0->children()[0]);
     REQUIRE(graft0->children()[0]->find_neighbor(2) == tree.children()[1]);
     REQUIRE(graft0->children()[2]->find_neighbor(2) == tree.children()[1]);
@@ -829,5 +845,237 @@ TEST_CASE("Tree") {
         }
       }
     }
+  }
+
+  SECTION("indexing and writing") {
+    hexed::Tree tree(3, .6, hexed::Mat<3>{-.1, -.2, -.3});
+    tree.update_indices();
+    REQUIRE(tree.leaf_index() == 0);
+    REQUIRE(tree.n_leaves() == 1);
+    tree.refine();
+    tree.children()[1]->refine(1);
+    tree.children()[1]->unique_children()[0]->refine(2);
+    REQUIRE_THROWS(tree.unique_children()[0]->update_indices());
+    tree.update_indices();
+    REQUIRE(tree.leaf_index() == 0);
+    REQUIRE(tree.n_leaves() == 10);
+    REQUIRE(tree.children()[0]->leaf_index() == 0);
+    REQUIRE(tree.children()[0]->n_leaves() == 1);
+    REQUIRE(tree.children()[1]->leaf_index() == 1);
+    REQUIRE(tree.children()[1]->n_leaves() == 3);
+    REQUIRE(tree.children()[1]->unique_children()[0]->leaf_index() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->n_leaves() == 2);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->leaf_index() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->n_leaves() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->leaf_index() == 2);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->n_leaves() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[1]->leaf_index() == 3);
+    REQUIRE(tree.children()[1]->unique_children()[1]->n_leaves() == 1);
+    REQUIRE(tree.children()[2]->leaf_index() == 4);
+    REQUIRE(tree.children()[2]->n_leaves() == 1);
+    REQUIRE(tree.children()[3]->leaf_index() == 5);
+    REQUIRE(tree.children()[3]->n_leaves() == 1);
+    REQUIRE(tree.children()[7]->leaf_index() == 9);
+    REQUIRE(tree.children()[7]->n_leaves() == 1);
+    REQUIRE(tree.total_index() == 0);
+    REQUIRE(tree.n_total() == 13);
+    REQUIRE(tree.children()[0]->total_index() == 1);
+    REQUIRE(tree.children()[0]->n_total() == 1);
+    REQUIRE(tree.children()[1]->total_index() == 2);
+    REQUIRE(tree.children()[1]->n_total() == 5);
+    REQUIRE(tree.children()[1]->unique_children()[0]->total_index() == 3);
+    REQUIRE(tree.children()[1]->unique_children()[0]->n_total() == 3);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->total_index() == 4);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->n_total() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->total_index() == 5);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->n_total() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[1]->total_index() == 6);
+    REQUIRE(tree.children()[1]->unique_children()[1]->n_total() == 1);
+    REQUIRE(tree.children()[2]->total_index() == 7);
+    REQUIRE(tree.children()[2]->n_total() == 1);
+    REQUIRE(tree.children()[3]->total_index() == 8);
+    REQUIRE(tree.children()[3]->n_total() == 1);
+    REQUIRE(tree.children()[7]->total_index() == 12);
+    REQUIRE(tree.children()[7]->n_total() == 1);
+    hexed::Tree* graft0 = tree.children()[1]->unique_children()[0]->graft(hexed::Array<int>::make(1, 1, 2),
+                                                                          hexed::Array<hexed::Int>::make(-2, 0, 2));
+    hexed::Tree* graft1 = tree.children()[1]->unique_children()[0]->graft(hexed::Array<int>::make(1, 1, 2),
+                                                                          hexed::Array<hexed::Int>::make(-2, 0, 3));
+    hexed::Tree* graft2 = graft0->graft(hexed::Array<int>::make(1, 3, 1), hexed::Array<hexed::Int>::make(-4, 0, 1));
+    hexed::Tree* child = tree.children()[1]->unique_children()[0];
+    std::array<std::vector<hexed::Tree*>, 2> trees;
+    trees[0] = {graft0, graft1, graft0, graft1};
+    trees[1] = std::vector<hexed::Tree*>(4, child);
+    tree.connect(trees, {{0, 0}, {1, 0}});
+    tree.connect({graft2, graft0}, {{0, 0}, {1, 0}});
+    tree.connect({graft1, graft0}, {{2, 2}, {0, 1}});
+    graft2->refine();
+    trees[0] = {graft2->children()[2], graft2->children()[3], graft2->children()[6], graft2->children()[7]};
+    trees[1] = {tree.children()[2], tree.children()[3], tree.children()[2], tree.children()[3]};
+    tree.connect(trees, {{1, 0}, {1, 0}, -1});
+    tree.update_indices();
+    REQUIRE(graft1->root(false) == &tree);
+    REQUIRE(graft2->root(false) == &tree);
+    REQUIRE(graft0->is_root());
+    REQUIRE(graft2->children()[2]->find_neighbor(3) == tree.children()[3]);
+    REQUIRE(graft2->children()[3]->find_neighbor(3) == tree.children()[3]);
+    REQUIRE(graft2->children()[6]->find_neighbor(3) == tree.children()[2]);
+    REQUIRE(graft2->children()[7]->find_neighbor(3) == tree.children()[2]);
+    tree.visualize("default", "original_tree");
+
+    REQUIRE(tree.leaf_index() == 0);
+    REQUIRE(tree.n_leaves() == 20);
+    REQUIRE(tree.children()[0]->leaf_index() == 0);
+    REQUIRE(tree.children()[0]->n_leaves() == 1);
+    REQUIRE(tree.children()[1]->leaf_index() == 1);
+    REQUIRE(tree.children()[1]->n_leaves() == 13);
+    REQUIRE(tree.children()[1]->unique_children()[0]->leaf_index() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->n_leaves() == 12);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->leaf_index() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->n_leaves() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->leaf_index() == 2);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->n_leaves() == 1);
+    REQUIRE(graft0->leaf_index() == 3);
+    REQUIRE(graft0->n_leaves() == 9);
+    REQUIRE(graft2->leaf_index() == 4);
+    REQUIRE(graft2->n_leaves() == 8);
+    REQUIRE(graft2->children()[5]->leaf_index() == 9);
+    REQUIRE(graft2->children()[5]->n_leaves() == 1);
+    REQUIRE(graft1->leaf_index() == 12);
+    REQUIRE(graft1->n_leaves() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[1]->leaf_index() == 13);
+    REQUIRE(tree.children()[1]->unique_children()[1]->n_leaves() == 1);
+    REQUIRE(tree.children()[2]->leaf_index() == 14);
+    REQUIRE(tree.children()[2]->n_leaves() == 1);
+    REQUIRE(tree.children()[3]->leaf_index() == 15);
+    REQUIRE(tree.children()[3]->n_leaves() == 1);
+    REQUIRE(tree.children()[7]->leaf_index() == 19);
+    REQUIRE(tree.children()[7]->n_leaves() == 1);
+    REQUIRE(tree.total_index() == 0);
+    REQUIRE(tree.n_total() == 24);
+    REQUIRE(tree.children()[0]->total_index() == 1);
+    REQUIRE(tree.children()[0]->n_total() == 1);
+    REQUIRE(tree.children()[1]->total_index() == 2);
+    REQUIRE(tree.children()[1]->n_total() == 16);
+    REQUIRE(tree.children()[1]->unique_children()[0]->total_index() == 3);
+    REQUIRE(tree.children()[1]->unique_children()[0]->n_total() == 14);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->total_index() == 4);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[0]->n_total() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->total_index() == 5);
+    REQUIRE(tree.children()[1]->unique_children()[0]->unique_children()[1]->n_total() == 1);
+    REQUIRE(graft0->total_index() == 6);
+    REQUIRE(graft0->n_total() == 10);
+    REQUIRE(graft2->total_index() == 7);
+    REQUIRE(graft2->n_total() == 9);
+    REQUIRE(graft2->children()[5]->total_index() == 13);
+    REQUIRE(graft2->children()[5]->n_total() == 1);
+    REQUIRE(graft1->total_index() == 16);
+    REQUIRE(graft1->n_total() == 1);
+    REQUIRE(tree.children()[1]->unique_children()[1]->total_index() == 17);
+    REQUIRE(tree.children()[1]->unique_children()[1]->n_total() == 1);
+    REQUIRE(tree.children()[2]->total_index() == 18);
+    REQUIRE(tree.children()[2]->n_total() == 1);
+    REQUIRE(tree.children()[3]->total_index() == 19);
+    REQUIRE(tree.children()[3]->n_total() == 1);
+    REQUIRE(tree.children()[7]->total_index() == 23);
+    REQUIRE(tree.children()[7]->n_total() == 1);
+    REQUIRE(tree.find_index(0) == &tree);
+    REQUIRE(tree.find_index(5) == tree.children()[1]->unique_children()[0]->unique_children()[1]);
+    REQUIRE(tree.find_index(2) == tree.children()[1]);
+    REQUIRE(tree.children()[1]->find_index(5) == tree.children()[1]->unique_children()[0]->unique_children()[1]);
+    REQUIRE(tree.find_index(16) == graft1);
+    REQUIRE(tree.find_index(24) == nullptr);
+    REQUIRE(tree.children()[2]->find_index(5) == nullptr);
+    REQUIRE(tree.find_index(0, true) == &tree);
+    REQUIRE(tree.find_index(2, true) == tree.children()[1]->unique_children()[0]->unique_children()[1]);
+    REQUIRE(tree.children()[1]->find_index(2, true) == tree.children()[1]->unique_children()[0]->unique_children()[1]);
+    REQUIRE(tree.find_index(12, true) == graft1);
+    REQUIRE(tree.find_index(21, true) == nullptr);
+    REQUIRE(tree.children()[2]->find_index(2, true) == nullptr);
+    tree.children()[2]->set_status(3);
+
+    tree.write("test");
+    hexed::Tree tree_copy("test");
+    tree_copy.visualize("default", "reconstructed_tree");
+    REQUIRE(tree_copy.n_dim == 3);
+    REQUIRE(tree_copy.nominal_size() == Catch::Approx(.6));
+    REQUIRE_THAT(tree_copy.origin(), Catch::Matchers::RangeEquals(hexed::Mat<3>{-.1, -.2, -.3},
+                                                                  hexed::math::Approx_equal()));
+    hexed::Tree* graft_copy0 = tree_copy.children()[1]->unique_children()[0]->find_neighbor(0);
+    REQUIRE(graft_copy0);
+    hexed::Tree* graft_copy1 = graft_copy0->find_neighbor(5);
+    REQUIRE(graft_copy1);
+    hexed::Tree* graft_copy2 = graft_copy0->find_neighbor(0)->parent();
+    REQUIRE(graft_copy2);
+    REQUIRE(graft_copy0->anisotropic_refinement_level().equal(graft0->anisotropic_refinement_level()));
+    REQUIRE(graft_copy1->anisotropic_refinement_level().equal(graft1->anisotropic_refinement_level()));
+    REQUIRE(graft_copy2->anisotropic_refinement_level().equal(graft2->anisotropic_refinement_level()));
+    REQUIRE(graft_copy0->coordinates().equal(graft0->coordinates()));
+    REQUIRE(graft_copy1->coordinates().equal(graft1->coordinates()));
+    REQUIRE(graft_copy2->coordinates().equal(graft2->coordinates()));
+    REQUIRE(graft_copy0->is_root());
+    REQUIRE(graft_copy2->children()[2]->find_neighbor(3) == tree_copy.children()[3]);
+    REQUIRE(graft_copy2->children()[3]->find_neighbor(3) == tree_copy.children()[3]);
+    REQUIRE(graft_copy2->children()[6]->find_neighbor(3) == tree_copy.children()[2]);
+    REQUIRE(graft_copy2->children()[7]->find_neighbor(3) == tree_copy.children()[2]);
+
+    REQUIRE(tree_copy.leaf_index() == 0);
+    REQUIRE(tree_copy.n_leaves() == 20);
+    REQUIRE(tree_copy.children()[0]->leaf_index() == 0);
+    REQUIRE(tree_copy.children()[0]->n_leaves() == 1);
+    REQUIRE(tree_copy.children()[1]->leaf_index() == 1);
+    REQUIRE(tree_copy.children()[1]->n_leaves() == 13);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->leaf_index() == 1);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->n_leaves() == 12);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[0]->leaf_index() == 1);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[0]->n_leaves() == 1);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[1]->leaf_index() == 2);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[1]->n_leaves() == 1);
+    REQUIRE(graft_copy0->leaf_index() == 3);
+    REQUIRE(graft_copy0->n_leaves() == 9);
+    REQUIRE(graft_copy2->leaf_index() == 4);
+    REQUIRE(graft_copy2->n_leaves() == 8);
+    REQUIRE(graft_copy2->children()[5]->leaf_index() == 9);
+    REQUIRE(graft_copy2->children()[5]->n_leaves() == 1);
+    REQUIRE(graft_copy1->leaf_index() == 12);
+    REQUIRE(graft_copy1->n_leaves() == 1);
+    REQUIRE(tree_copy.children()[1]->unique_children()[1]->leaf_index() == 13);
+    REQUIRE(tree_copy.children()[1]->unique_children()[1]->n_leaves() == 1);
+    REQUIRE(tree_copy.children()[2]->leaf_index() == 14);
+    REQUIRE(tree_copy.children()[2]->n_leaves() == 1);
+    REQUIRE(tree_copy.children()[3]->leaf_index() == 15);
+    REQUIRE(tree_copy.children()[3]->n_leaves() == 1);
+    REQUIRE(tree_copy.children()[7]->leaf_index() == 19);
+    REQUIRE(tree_copy.children()[7]->n_leaves() == 1);
+    REQUIRE(tree_copy.total_index() == 0);
+    REQUIRE(tree_copy.n_total() == 24);
+    REQUIRE(tree_copy.children()[0]->total_index() == 1);
+    REQUIRE(tree_copy.children()[0]->n_total() == 1);
+    REQUIRE(tree_copy.children()[1]->total_index() == 2);
+    REQUIRE(tree_copy.children()[1]->n_total() == 16);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->total_index() == 3);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->n_total() == 14);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[0]->total_index() == 4);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[0]->n_total() == 1);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[1]->total_index() == 5);
+    REQUIRE(tree_copy.children()[1]->unique_children()[0]->unique_children()[1]->n_total() == 1);
+    REQUIRE(graft_copy0->total_index() == 6);
+    REQUIRE(graft_copy0->n_total() == 10);
+    REQUIRE(graft_copy2->total_index() == 7);
+    REQUIRE(graft_copy2->n_total() == 9);
+    REQUIRE(graft_copy2->children()[5]->total_index() == 13);
+    REQUIRE(graft_copy2->children()[5]->n_total() == 1);
+    REQUIRE(graft_copy1->total_index() == 16);
+    REQUIRE(graft_copy1->n_total() == 1);
+    REQUIRE(tree_copy.children()[1]->unique_children()[1]->total_index() == 17);
+    REQUIRE(tree_copy.children()[1]->unique_children()[1]->n_total() == 1);
+    REQUIRE(tree_copy.children()[2]->total_index() == 18);
+    REQUIRE(tree_copy.children()[2]->n_total() == 1);
+    REQUIRE(tree_copy.children()[3]->total_index() == 19);
+    REQUIRE(tree_copy.children()[3]->n_total() == 1);
+    REQUIRE(tree_copy.children()[7]->total_index() == 23);
+    REQUIRE(tree_copy.children()[7]->n_total() == 1);
+    REQUIRE(tree_copy.children()[2]->get_status() == 3);
+    REQUIRE(tree_copy.children()[3]->get_status() == hexed::Tree::unprocessed);
   }
 }

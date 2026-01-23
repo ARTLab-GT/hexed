@@ -113,7 +113,7 @@ std::vector<std::shared_ptr<Flow_bc>> Case::_make_extremal_bcs() {
   return bcs;
 }
 
-Surface_geom* Case::_make_geom() {
+std::shared_ptr<Surface_geom> Case::_make_geom() {
   int nd = _vari("n_dim");
   Int n_div_min = math::pow(Int(2), _vari("min_geom_subdiv_levels"));
   Int n_div_max = math::pow(Int(2), _vari("max_geom_subdiv_levels"));
@@ -163,8 +163,7 @@ Surface_geom* Case::_make_geom() {
       HEXED_ASSERT(false, format_str(1000, "file extension `%s` not recognized", ext.c_str()), assert::User_error);
     }
   }
-  return geoms.empty() ? nullptr : new Compound_geom(geoms);
-  return nullptr;
+  return geoms.empty() ? std::shared_ptr<Surface_geom>() : std::make_shared<Compound_geom>(geoms);
 }
 
 std::string Case::_assignment(std::string var_name) {
@@ -512,8 +511,8 @@ Case::Case(std::string input_script)
       }
     };
     refine_isotropic("init", "Initial", false, false);
-    Surface_geom* geom = _make_geom();
-    if (geom) {
+    auto geom = _make_geom();
+    if (geom.use_count()) {
       printers::info("  Fitting geometry...\n");
       _has_geom = true;
       _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc")),
@@ -661,20 +660,6 @@ Case::Case(std::string input_script)
     return "";
   }));
 
-  _inter.variables->create("split_layers", new Namespace::Heisenberg<std::string>([this]() {
-    _solver().mesh().disconnect_boundary(_solver().mesh().surface_bc_sn());
-    auto sub = _inter.make_sub();
-    std::vector<double> split_points = Struct_expr(_vars("layer_split_points")).eval(sub);
-    double prev_split = 1.;
-    for (double split : split_points) {
-      _solver().mesh().extrude(true, split/prev_split, true);
-      prev_split = split;
-    }
-    _solver().mesh().connect_rest(_solver().mesh().surface_bc_sn());
-    _solver().calc_jacobian();
-    return "";
-  }));
-
   _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
     _solver().initialize(_vars("init_cond"));
     // implicit setup
@@ -721,27 +706,35 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create("read_mesh", new Namespace::Heisenberg<std::string>([this]() {
-    Task_message(printers::info, "reading mesh");
-    Surface_geom* geom = _make_geom();
-    _solver().read_mesh(_vars("input_data"), _make_extremal_bcs(), geom, geom ? _make_bc(_vars("surface_bc")) : nullptr);
+    printers::info("Reading mesh...\n");
+    auto geom = _make_geom();
+    _solver().read_mesh(_vars("input_data"), _make_extremal_bcs(), geom,
+                        geom.use_count() ? _make_bc(_vars("surface_bc")) : nullptr);
+    _solver().update_preti_iters();
+    _solver().print_preti_iters();
+    printers::info("done\n");
     return "";
   }));
   _inter.variables->create("read_state", new Namespace::Heisenberg<std::string>([this]() {
-    Task_message(printers::info, "reading state");
+    Task_message(printers::info, "Reading state...\n");
     _solver().read_state(_vars("input_data"));
+    printers::info("done\n");
     return "";
   }));
   _inter.variables->create("read_status", new Namespace::Heisenberg<std::string>([this]() {
-    Task_message(printers::info, "reading status");
+    printers::info("Reading status...\n");
     auto sub = _inter.make_sub();
     sub.exec("$read {" + _vars("input_data") + ".status.hil}");
+    printers::info("done\n");
     return "";
   }));
   _inter.variables->create("write_mesh", new Namespace::Heisenberg<std::string>([this]() {
     Task_message(printers::info, "writing mesh");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
     _solver().mesh().write(file_name);
-    force_symlink(_iteration_suffix() + ".mesh.h5", _vars("working_dir") + "latest.mesh.h5");
+    for (std::string suffix : {"mesh", "tree"}) {
+      force_symlink(_iteration_suffix() + "." + suffix + ".h5", _vars("working_dir") + "latest." + suffix + ".h5");
+    }
     return "";
   }));
   _inter.variables->create("write_state", new Namespace::Heisenberg<std::string>([this]() {

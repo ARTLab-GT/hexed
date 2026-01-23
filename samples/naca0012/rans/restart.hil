@@ -1,0 +1,4 @@
+input_data = {hexed_out/latest}
+working_dir = {hexed_out_restart}
+$plot_history
+$restart

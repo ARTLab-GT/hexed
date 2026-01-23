@@ -2,6 +2,7 @@
 #include <hexed/Tree.hpp>
 #include <hexed/Row_index.hpp>
 #include <hexed/Printer.hpp>
+#include <hexed/hdf5_utils.hpp>
 
 namespace hexed {
 
@@ -27,8 +28,15 @@ Tree::Tree(int nd, double root_size, Mat<> origin)
 : n_dim{nd}
 , elem(this)
 , _root_sz{root_size}
-, _ref_level{Array<int>::make_uniform({nd}, 0)}, _coords{Array<Int>::make_uniform({nd}, 0)}
+, _ref_level{Array<int>::make_uniform({nd}, 0)}
+, _coords{Array<Int>::make_uniform({nd}, 0)}
+, _leaf_index{-1}
+, _total_index{-1}
+, _n_leaves{0}
+, _n_total{0}
 , _par{nullptr}
+, _graft_par{this}
+, _graft_children{this}
 , _children_storage()
 , _face_connections(2*n_dim, nullptr)
 , _fake_parents(2*n_dim, nullptr)
@@ -39,10 +47,77 @@ Tree::Tree(int nd, double root_size, Mat<> origin)
   _orig = origin(Eigen::seqN(0, n_dim));
 }
 
-Tree::~Tree() {
-  delete_grafts();
-  for (auto c : _face_connections) HEXED_ASSERT(!c, "Attempting to destroy a tree that is still connected.")
+Tree::Tree(std::string file_name)
+: Tree(
+    hdf5_utils::get_attr<int>(file_name + ".tree.h5", "n_dim"),
+    hdf5_utils::get_attr<double>(file_name + ".tree.h5", "root_size"),
+    Mat<3>{
+      hdf5_utils::get_attr<double>(file_name + ".tree.h5", "origin0"),
+      hdf5_utils::get_attr<double>(file_name + ".tree.h5", "origin1"),
+      hdf5_utils::get_attr<double>(file_name + ".tree.h5", "origin2"),
+    }
+  )
+{
+  H5::H5File file(file_name + ".tree.h5", H5F_ACC_RDONLY);
+  auto child_dset = file.openDataSet("/children");
+  hsize_t dims[2];
+  child_dset.getSpace().getSimpleExtentDims(dims);
+  std::vector<Tree*> addr_lookup(dims[0], nullptr);
+  _total_index = 0;
+  auto task = [&child_dset, &addr_lookup](Tree& t) {
+    std::vector<Int> child_inds(t._n_vert());
+    addr_lookup[t._total_index] = &t;
+    for (int i_child = 0; i_child < t._n_vert(); ++i_child) {
+      child_inds[i_child] = hdf5_utils::read<Int>(child_dset, t.total_index(), i_child);
+    }
+    std::vector<bool> ref_dims(t.n_dim);
+    for (int i_dim = 0; i_dim < t.n_dim; ++i_dim) {
+      ref_dims[i_dim] = child_inds[math::stride(t.n_dim, 2, i_dim)] != child_inds[0];
+    }
+    if (std::any_of(ref_dims.begin(), ref_dims.end(), [](bool b){return b;})) {
+      t.refine(ref_dims);
+      for (int i_child = 0; i_child < t._n_vert(); ++i_child) {
+        t._children_storage[i_child]->_total_index = child_inds[i_child];
+      }
+    }
+    t.set_status(hdf5_utils::read<Int>(child_dset, t._total_index, t._n_vert()));
+  };
+  traverse(task);
+  auto graft_dset = file.openDataSet("/grafts");
+  graft_dset.getSpace().getSimpleExtentDims(dims);
+  for (int i_graft = 0; i_graft < (Int)dims[0]; ++i_graft) {
+    Int child_index = hdf5_utils::read<Int>(graft_dset, i_graft, 0);
+    Int parent_index = hdf5_utils::read<Int>(graft_dset, i_graft, 1);
+    Array<int> ref_level({n_dim});
+    Array<Int> coords({n_dim});
+    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
+      ref_level[i_dim] = hdf5_utils::read<Int>(graft_dset, i_graft, 2 + i_dim);
+      coords[i_dim] = hdf5_utils::read<Int>(graft_dset, i_graft, 2 + n_dim + i_dim);
+    }
+    Tree* g = addr_lookup[parent_index]->graft(ref_level, coords);
+    g->_total_index = child_index;
+    g->traverse(task);
+  }
+  auto con_dset = file.openDataSet("/connections");
+  con_dset.getSpace().getSimpleExtentDims(dims);
+  for (int i_con = 0; i_con < (Int)dims[0]; ++i_con) {
+    std::array<std::vector<Tree*>, 2> trees;
+    Connection_direction dir;
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      for (int i = 0; i < _n_vert()/2; ++i) {
+        Int ind = hdf5_utils::read<Int>(con_dset, i_con, i + i_side*_n_vert()/2);
+        trees[i_side].push_back(addr_lookup[ind]);
+      }
+      dir.i_dim[i_side] = hdf5_utils::read<Int>(con_dset, i_con, _n_vert() + i_side);
+      dir.face_sign[i_side] = hdf5_utils::read<Int>(con_dset, i_con, _n_vert() + 2 + i_side);
+    }
+    dir.rotate = hdf5_utils::read<Int>(con_dset, i_con, _n_vert() + 4);
+    connect(trees, dir);
+  }
+  update_indices();
 }
+
+Tree::~Tree() {}
 
 Mat<> Tree::origin() const {return _orig;}
 int Tree::refinement_level() const {return _ref_level.extreme(0);}
@@ -76,7 +151,13 @@ Mat<> Tree::nominal_position() const {
 
 Mat<> Tree::center() const {return nominal_position() + .5*nominal_shape();}
 
+Int Tree::leaf_index() const {return _leaf_index;}
+Int Tree::total_index() const {return _total_index;}
+Int Tree::n_leaves() const {return _n_leaves;}
+Int Tree::n_total() const {return _n_total;}
+
 Tree* Tree::parent() {return _par;}
+Tree* Tree::graft_parent() {return _graft_par.get();}
 
 std::vector<Tree*> Tree::children() {
   std::vector<Tree*> c;
@@ -93,13 +174,13 @@ std::vector<Tree*> Tree::unique_children() {
   return c;
 }
 
-Tree* Tree::root() {
+Tree* Tree::root(bool graft) {
   Tree* r = this;
-  while (!r->is_root()) r = r->parent();
+  while (!r->is_root(graft)) r = r->graft_parent() ? r->graft_parent() : r->parent();
   return r;
 }
 
-bool Tree::is_root() {return !_par;}
+bool Tree::is_root(bool graft) {return !_par && (graft || !_graft_par);}
 bool Tree::is_graft() {return root()->_is_graft;}
 bool Tree::is_leaf() {return _children_storage.empty();}
 
@@ -151,24 +232,61 @@ std::vector<Tree*> Tree::unrefine(int i_dim) {
 void Tree::force_unrefine() {_children_storage.clear();}
 
 Tree* Tree::graft(Array<int> ref_level, Array<Int> coords) {
-  HEXED_ASSERT(is_root() && !is_graft(), "Can only graft to the root.")
   HEXED_ASSERT(coords.size() == n_dim, "`coords` has wrong number of entries.")
   HEXED_ASSERT(ref_level.size() == n_dim, "`ref_level` has wrong number of entries.")
-  _grafts.emplace_back(std::make_unique<Tree>(n_dim, _root_sz, _orig));
-  Tree* g = _grafts.back().get();
+  Tree* r = root(false);
+  r->_grafts.emplace_back(std::make_unique<Tree>(n_dim, _root_sz, _orig));
+  Tree* g = r->_grafts.back().get();
   g->_ref_level = ref_level.copy();
   g->_coords = coords.copy();
   g->_is_graft = true;
+  g->_graft_par.pair(_graft_children);
   return g;
 }
 
 void Tree::delete_grafts() {
-  for (auto& ptr : _grafts) if (ptr) {
-    ptr->_clear_connections();
-  }
-  _clear_connections();
+  traverse([](Tree& t){for (_Connection*& c : t._face_connections) c = nullptr;}, true);
   _grafts.clear();
   _connections.clear();
+}
+
+void Tree::update_indices() {
+  HEXED_ASSERT(is_root(false), "Can only call `update_indices()` on the global root.")
+  _update_inds();
+}
+
+void Tree::traverse(std::function<void(Tree&)> task, bool include_fake) {
+  if (!include_fake && _is_fake()) return;
+  task(*this);
+  for (Tree* child : unique_children()) child->traverse(task, include_fake);
+  for (Tree* child : _graft_children.theirs()) child->traverse(task, include_fake);
+}
+
+void Tree::_update_inds() {
+  if (_is_fake()) return;
+  Tree* p = _graft_par ? _graft_par.get() : _par;
+  if (p) {
+    _leaf_index = p->_leaf_index + p->_n_leaves;
+    _total_index = p->_total_index + p->_n_total;
+  } else {
+    _leaf_index = 0;
+    _total_index = 0;
+  }
+  _n_total = 1;
+  _n_leaves = is_leaf();
+  for (Tree* child : unique_children()) child->_update_inds();
+  for (Tree* child : _graft_children.theirs()) child->_update_inds();
+  if (p) {
+    p->_n_leaves += _n_leaves;
+    p->_n_total += _n_total;
+  }
+}
+
+bool Tree::_is_fake() const {
+  for (auto& child : _children_storage) {
+    for (int i_face = 0; i_face < 2*n_dim; ++i_face) if (child->_fake_parents[i_face] == this) return true;
+  }
+  return false;
 }
 
 void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction dir) {
@@ -218,12 +336,14 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
       fake_root->_children_storage.resize(_n_vert());
       for (Row_index ind(n_dim, 2, dir.i_dim[i_side]); ind; ++ind) {
         Tree* t = trees[i_side][ind.i_face_qpoint()];
-        HEXED_ASSERT(!t->_par, "Creating a fake parent for a tree that already has one is not yet supported.",
-                     assert::Not_implemented_error)
         std::shared_ptr<Tree> child;
-        for (Tree* p : t->_fake_parents) if (p) {
-          for (std::shared_ptr<Tree>& c : p->_children_storage) if (c.get() == t) child = c;
-          HEXED_ASSERT(child.use_count(), "Fake parent/child relationship is not reciprocal.")
+        if (t->_par) {
+          for (std::shared_ptr<Tree>& c : t->_par->_children_storage) if (c.get() == t) child = c;
+        } else {
+          for (Tree* p : t->_fake_parents) if (p) {
+            for (std::shared_ptr<Tree>& c : p->_children_storage) if (c.get() == t) child = c;
+            HEXED_ASSERT(child.use_count(), "Fake parent/child relationship is not reciprocal.")
+          }
         }
         // obtain a shared pointer to `t`
         // without creating any ownership conflicts with existing child or graft pointers
@@ -231,7 +351,9 @@ void Tree::connect(std::array<std::vector<Tree*>, 2> trees, Connection_direction
           for (std::unique_ptr<Tree>& g : _grafts) if (g.get() == t) g.release();
           child.reset(t);
         }
+        HEXED_ASSERT(child, "Failed to obtain a shared pointer to `t`.")
         t->_fake_parents[dir.i_face(i_side)] = fake_root;
+        // reroute graft parenthood through `fake_root`
         // assign the appropriate children of `fake_root` to point to `t`
         for (int i_row = 0; i_row < 2; ++i_row) fake_root->_children_storage[ind.i_qpoint(i_row)] = child;
       }
@@ -296,14 +418,71 @@ Tree* Tree::find_neighbor(Array<int> direction) {
   return _neighbor(direction).neighbor;
 }
 
+Tree* Tree::find_neighbor(int i_face) {
+  return find_neighbor(get_direction(i_face, n_dim));
+}
+
 Array<int> Tree::get_direction(int i_face, int n_dim) {
   Array<int> dir = Array<int>::make_uniform({n_dim}, 0);
   dir[i_face/2] = math::sign(i_face%2);
   return dir;
 }
 
-Tree* Tree::find_neighbor(int i_face) {
-  return find_neighbor(get_direction(i_face, n_dim));
+void Tree::write(std::string file_name) {
+  HEXED_ASSERT(is_root(false), "Can only write from the tree root.")
+  H5::H5File file(file_name + ".tree.h5", H5F_ACC_TRUNC);
+  hdf5_utils::add_attr(file, "n_dim", n_dim);
+  hdf5_utils::add_attr(file, "root_size", _root_sz);
+  for (int i_dim = 0; i_dim < 3; ++i_dim) {
+    hdf5_utils::add_attr(file, str_cat("origin", i_dim), i_dim < n_dim ? _orig(i_dim) : 0.);
+  }
+  update_indices();
+  hsize_t dims[2];
+  dims[0] = n_total();
+  dims[1] = _n_vert() + 1;
+  auto child_dset = file.createDataSet("/children", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
+  dims[0] = 0;
+  traverse([&dims](Tree& t){dims[0] += t._graft_par;});
+  dims[1] = 2 + 2*n_dim;
+  // The following `DataSet` contains the ref levels and coordinates of grafted `Tree`s
+  // in order of increasing `total_index`.
+  auto graft_dset = file.createDataSet("/grafts", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
+  Int graft_row = 0;
+  auto task = [&child_dset, &graft_dset, &graft_row](Tree& t) {
+    for (int i_child = 0; i_child < (Int)t._children_storage.size(); ++i_child) {
+      hdf5_utils::write(child_dset, t.total_index(), i_child, t._children_storage[i_child]->total_index());
+    }
+    for (int i_child = (Int)t._children_storage.size(); i_child < t._n_vert(); ++i_child) {
+      hdf5_utils::write<Int>(child_dset, t.total_index(), i_child, -1);
+    }
+    hdf5_utils::write<Int>(child_dset, t.total_index(), t._n_vert(), t.get_status());
+    if (t._graft_par) {
+      hdf5_utils::write(graft_dset, graft_row, 0, t.total_index());
+      hdf5_utils::write(graft_dset, graft_row, 1, t._graft_par->total_index());
+      for (int i_dim = 0; i_dim < t.n_dim; ++i_dim) {
+        hdf5_utils::write<Int>(graft_dset, graft_row, 2 + i_dim, t._ref_level[i_dim]);
+        hdf5_utils::write(graft_dset, graft_row, 2 + t.n_dim + i_dim, t._coords[i_dim]);
+      }
+      ++graft_row;
+    }
+  };
+  traverse(task);
+  dims[0] = _connections.size();
+  dims[1] = _n_vert() + 7;
+  auto connection_dset = file.createDataSet("/connections", hdf5_utils::type<Int>(), H5::DataSpace(2, dims));
+  for (int i_con = 0; i_con < (Int)_connections.size(); ++i_con) {
+    auto& con = *_connections[i_con];
+    for (int i_side = 0; i_side < 2; ++i_side) {
+      for (Row_index ind(n_dim, 2, con.direction.i_dim[i_side]); ind; ++ind) {
+        Tree* tree = con.trees[i_side];
+        if (tree->_is_fake()) tree = tree->_children_storage[ind.i_qpoint(con.direction.face_sign[i_side])].get();
+        hdf5_utils::write(connection_dset, i_con, i_side*_n_vert()/2 + ind.i_face_qpoint(), tree->total_index());
+      }
+      hdf5_utils::write<Int>(connection_dset, i_con, i_side + _n_vert(), con.direction.i_dim[i_side]);
+      hdf5_utils::write<Int>(connection_dset, i_con, i_side + _n_vert() + 2, con.direction.face_sign[i_side]);
+    }
+    hdf5_utils::write<Int>(connection_dset, i_con, _n_vert() + 4, con.direction.rotate);
+  }
 }
 
 // the return value can be 0, 1, or 2, indicating the following:
@@ -427,10 +606,20 @@ Tree::Connection_neighbors Tree::find_connection_neighbors(int i_face) {
   return neighbors;
 }
 
-int Tree::count() {
-  int total = 1;
-  for (auto& child : _children_storage) total += child->count(); //! \todo make this work for aniso
-  return total;
+Tree* Tree::find_index(Int index, bool leaf) {
+  Int i = leaf ? _leaf_index : _total_index;
+  Int n = leaf ? _n_leaves : _n_total;
+  if (index < i || index >= i + n) return nullptr;
+  if (index == i) return this;
+  for (Tree* c : unique_children()) {
+    Tree* result = c->find_index(index, leaf);
+    if (result) return result;
+  }
+  for (Tree* c : _graft_children.theirs()) {
+    Tree* result = c->find_index(index, leaf);
+    if (result) return result;
+  }
+  HEXED_THROW("corrupted index") throw;
 }
 
 Array<int> Tree::needs_refine(std::function<bool(Tree*)> include) {
@@ -464,8 +653,21 @@ Array<int> Tree::needs_refine(std::function<bool(Tree*)> include) {
 }
 
 void Tree::visualize(std::string format, std::string name) {
-  auto vis = Visualizer::create(format, n_dim, n_dim, name, {"tree_level"}, 0., Visualizer::block);
-  _visualize(*vis, 0);
+  auto vis = Visualizer::create(format, n_dim, n_dim, name, {}, 0., Visualizer::block);
+  auto task = [&vis](Tree& t) {
+    if (t._is_fake()) return;
+    std::vector<Int> shape(t.n_dim, 2);
+    shape.insert(shape.begin(), t.n_dim);
+    Array<double> pos(shape);
+    for (int i_point = 0; i_point < t._n_vert(); ++i_point) {
+      for (int i_dim = 0; i_dim < t.n_dim; ++i_dim) {
+        int rc = math::row_coordinate(t.n_dim, 2, i_dim, i_point);
+        pos(i_dim)[i_point] = t.nominal_position()[i_dim] + rc*t.nominal_shape()[i_dim];
+      }
+    }
+    vis->write_block(pos, Array<double>({}));
+  };
+  traverse(task);
 }
 
 int Tree::get_status() {
@@ -796,28 +998,6 @@ Tree::_Neighbor_result Tree::_neighbor(Array<int> dir_arg) {
   }
   if (!n) n = r->find_leaf(_ref_level, coords, bias);
   return {n, direction, trans, ref_level, search_coords};
-}
-
-void Tree::_clear_connections() {
-  for (_Connection*& c : _face_connections) c = nullptr;
-  for (Tree* t : unique_children()) t->_clear_connections();
-}
-
-void Tree::_visualize(Visualizer& vis, int tree_level) {
-  int nv = math::pow(2, n_dim);
-  std::vector<Int> shape(n_dim, 2);
-  shape.insert(shape.begin(), 1);
-  Array<double> data = Array<double>::make_uniform(shape, tree_level);
-  shape[0] = n_dim;
-  Array<double> pos(shape);
-  for (int i_point = 0; i_point < nv; ++i_point) {
-    for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
-      int rc = math::row_coordinate(n_dim, 2, i_dim, i_point);
-      pos(i_dim)[i_point] = nominal_position()[i_dim] + rc*nominal_shape()[i_dim];
-    }
-  }
-  vis.write_block(pos, data);
-  for (Tree* child : unique_children()) child->_visualize(vis, tree_level + 1);
 }
 
 }
