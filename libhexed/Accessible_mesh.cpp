@@ -3031,6 +3031,10 @@ void Accessible_mesh::write(std::string name) {
           if (elem.fake_shape()->record < 0) elem.fake_shape()->record = n_shape++;
           hdf5_utils::write<Int>(elem_dset, i_elem, 1, elem.fake_shape()->record);
           corners = elem.shape().glued_corners();
+          for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
+            HEXED_ASSERT(corners[0][i_dim] < corners[1][i_dim],
+                         str_cat("Corners must be increasing. Actual: ", corners[0][i_dim], ", ", corners[1][i_dim]))
+          }
         } else {
           hdf5_utils::write<Int>(elem_dset, i_elem, 1, -1);
           corners[0] = std::vector<double>(params.n_dim, 0.0);
@@ -3158,7 +3162,8 @@ Accessible_mesh::Accessible_mesh(std::string file_name, std::vector<std::shared_
           std::array<std::vector<double>, 2> corners;
           for (int corner_sign : {0, 1}) {
             for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) {
-              corners[corner_sign].push_back(hdf5_utils::read<double>(corner_dset, i_elem, 2*corner_sign + i_dim));
+              double c = hdf5_utils::read<double>(corner_dset, i_elem, params.n_dim*corner_sign + i_dim);
+              corners[corner_sign].push_back(c);
             }
           }
           elem.glue_shape(shapes[fake_shape], corners);
