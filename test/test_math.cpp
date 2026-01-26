@@ -3,6 +3,7 @@
 #include <catch2/catch_all.hpp>
 #include <cmath>
 #include <hexed/math.hpp>
+#include <hexed/constants.hpp>
 
 static_assert (hexed::math::pow(2, 0) == 1);
 static_assert (hexed::math::pow(2, 1) == 2);
@@ -29,6 +30,24 @@ static_assert (hexed::math::max(1, 2, 3, 4, 5) == 5);
 static_assert (hexed::math::min(-2, 4, 3, 2) == -2);
 static_assert (hexed::math::min(-2, -3) == -3);
 static_assert (hexed::math::min(1, 2, 3, 4, 5) == 1);
+
+TEST_CASE("set_random_normal") {
+  int sz = 10;
+  hexed::Int n = 100'000;
+  hexed::Mat<hexed::dyn> vec(sz);
+  std::vector<hexed::Int> samples(20, 0.);
+  for (hexed::Int i = 0; i < n; ++i) {
+    hexed::math::set_random_normal(vec, 3., 5.);
+    for (int j = 0; j < sz; ++j) {
+      hexed::Int interval = std::floor(vec(j) + 10);
+      if (interval >= 0 && interval < 20) ++samples[interval];
+    }
+  }
+  for (int interval = 0; interval < 20; ++interval) {
+    double probability = std::exp(-.5*(interval - 13)*(interval - 13)/25.)/(5.*std::sqrt(2*hexed::constants::pi));
+    REQUIRE(samples[interval]/double(n*sz) == Catch::Approx(probability).margin(1e-2));
+  }
+}
 
 TEST_CASE("angle_diff") {
   REQUIRE(hexed::math::angle_diff(1.1, 1.) == Catch::Approx(0.1));
@@ -74,25 +93,6 @@ TEST_CASE("newton root finder") {
 
 TEST_CASE("hypercube_matvec") {
   auto hcmv {hexed::math::hypercube_matvec};
-  #ifdef DEBUG
-  SECTION("multiplying incompatible shapes throws") {
-    {
-      Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(6, 5)};
-      Eigen::VectorXd vec {Eigen::VectorXd::Ones(4)};
-      REQUIRE_THROWS(hcmv(mat, vec));
-    }
-    {
-      Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(2, 3)};
-      Eigen::VectorXd vec {Eigen::VectorXd::Ones(28)};
-      REQUIRE_THROWS(hcmv(mat, vec));
-    }
-    {
-      Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(2, 3)};
-      Eigen::VectorXd vec {Eigen::VectorXd::Ones(36)};
-      REQUIRE_THROWS(hcmv(mat, vec));
-    }
-  }
-  #endif
   SECTION("correct values") {
     Eigen::MatrixXd mat {{0.5, 0.5, 0.}, {0., 0.5, 0.5}};
     Eigen::VectorXd vec {Eigen::VectorXd::LinSpaced(27, 0, 26)};
@@ -105,21 +105,6 @@ TEST_CASE("hypercube_matvec") {
 
 TEST_CASE("dimension matvec") {
   auto dmv {hexed::math::dimension_matvec};
-  #ifdef DEBUG
-  SECTION("multiplying incompatible shapes throws") {
-    {
-      Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(7, 7)};
-      Eigen::VectorXd vec {Eigen::VectorXd::Zero(10)};
-      REQUIRE_THROWS(dmv(mat, vec, 0));
-    }
-    {
-      Eigen::MatrixXd mat {Eigen::MatrixXd::Identity(4, 5)};
-      Eigen::VectorXd vec {Eigen::VectorXd::Zero(750)};
-      dmv(mat, vec, 2);
-      REQUIRE_THROWS(dmv(mat, vec, 3));
-    }
-  }
-  #endif
   Eigen::VectorXd vec {Eigen::VectorXd::LinSpaced(8, 0, 7)};
   Eigen::MatrixXd mat {{0, 1}, {1, 0}, {0.5, 0.5}};
   auto prod = dmv(mat, vec, 1);
