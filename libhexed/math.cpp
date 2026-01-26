@@ -2,6 +2,13 @@
 
 namespace hexed::math {
 
+std::random_device global_random_device;
+std::mt19937 global_random_generator(global_random_device());
+
+double random_normal(double mean, double std_dev) {
+  return std::normal_distribution(mean, std_dev)(global_random_generator);
+}
+
 double angle_diff(double angle0, double angle1) {
   double diff = angle0 - angle1;
   return diff - 2*M_PI*floor(diff/(2*M_PI));

@@ -2,17 +2,36 @@
 #define HEXED_MATH_HPP_
 
 #include <cmath>
+#include <random>
 #include "assert.hpp"
 #include "utils.hpp"
 
 //! \brief Miscellaneous mathematical functions that aren't in `std::math`
 namespace hexed::math {
 
+extern std::random_device global_random_device;
+extern std::mt19937 global_random_generator;
+
 //! \brief Specifies relative and absolute tolerances for comparing a value to truth data.
 struct Tolerance {
   double rel = 0.; //!< \brief %Tolerance relative to the magnitude of the truth value
   double abs = 0.; //!< \brief Absolute tolerance
 };
+
+double random_normal(double mean, double std_dev);
+
+//! \brief Sets the entries of the provided matrix-like object to random values with a normal distribution.
+//! The mean and standard deviation of the distribution are controlled by `mean` and `std_dev`, respectively.
+//! `T` must support the methods `.rows()`, `.cols()`, and `operator()(int row, int col)` (for entry access).
+template <typename T>
+void set_random_normal(T& mat, double mean, double std_dev) {
+  std::normal_distribution dist(mean, std_dev);
+  for (Int i = 0; i < mat.rows(); ++i) {
+    for (Int j = 0; j < mat.cols(); ++j) {
+      mat(i, j) = dist(global_random_generator);
+    }
+  }
+}
 
 /*! \brief Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.
  * \details
