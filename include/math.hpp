@@ -12,6 +12,14 @@ namespace hexed::math {
 extern std::random_device global_random_device;
 extern std::mt19937 global_random_generator;
 
+inline double limit_abs(double value, double limit) {
+  return std::isfinite(value) ? std::max(-limit, std::min(value, limit)) : 0.;
+}
+
+inline double smooth_limit_abs(double value, double limit) {
+  return std::isfinite(value) ? limit*std::tanh(value/limit) : 0.;
+}
+
 //! \brief Specifies relative and absolute tolerances for comparing a value to truth data.
 struct Tolerance {
   double rel = 0.; //!< \brief %Tolerance relative to the magnitude of the truth value
