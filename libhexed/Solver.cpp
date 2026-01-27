@@ -979,6 +979,16 @@ void Solver::update() {
   int inner = 0;
   double stke_amb = _namespace->get<double>("freestream_specific_turbulent_kinetic_energy");
   double std_amb = _namespace->get<double>("freestream_specific_turbulent_dissipation");
+  std::vector<double> normalization(params.n_var);
+  double mmtm = _namespace->get<double>("freestream_speed")*_namespace->get<double>("freestream_density");
+  for (int i_dim = 0; i_dim < params.n_dim; ++i_dim) normalization[i_dim] = 1e-2*mmtm;
+  normalization[params.n_dim] = 1e-2*_namespace->get<double>("freestream_density");
+  normalization[params.n_dim + 1] = 1e-2*_namespace->get<double>("freestream_energy");
+  if (turb == k_omega) {
+    normalization[params.n_dim + 2] = 1e-2*normalization[params.n_dim + 1];
+    normalization[params.n_dim + 3] = 0.1;
+  }
+  auto& elems = acc_mesh->elements();
   for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
     if (_namespace->get<int>("preti")) {
       _update_recursive(0, safety);
@@ -1013,6 +1023,16 @@ void Solver::update() {
               if (_time_scheme == dirk2) implicit_opts.time_step *= dirk2_gamma;
             }
             for (int i_sub = 0; i_sub < sub_iters; ++i_sub) {
+              if (_time_scheme == explicit_steady) {
+                #pragma omp parallel for
+                for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+                  Array<double> res_cache({2 + elems[i_elem].get_is_deformed() + n_extra_stage(_time_scheme),
+                                           params.n_var, params.n_qpoint()},
+                                          elems[i_elem].residual_cache());
+                  Array<double> state({params.n_var, params.n_qpoint()}, elems[i_elem].state());
+                  res_cache(1 + elems[i_elem].get_is_deformed()) = state;
+                }
+              }
               // compute inviscid update
               for (int i = 0; i < 2; ++i) {
                 Kernel_options opts {
@@ -1034,14 +1054,29 @@ void Solver::update() {
                   compute_euler(km, opts);
                 }
                 ++inner;
-                // note that function call must come first to ensure it is evaluated despite short-circuiting
-                bool f = fix_nonphysical(_namespace->get<double>("fix_nonphys_max_safety"), inner);
-                fixed = f || fixed;
-                if (f) break;
               }
+              if (_time_scheme == explicit_steady) {
+                #pragma omp parallel for
+                for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
+                  Array<double> res_cache({2 + n_extra_stage(_time_scheme), params.n_var, params.n_qpoint()},
+                                          elems[i_elem].residual_cache());
+                  Array<double> state({params.n_var, params.n_qpoint()}, elems[i_elem].state());
+                  for (int i_var = 0; i_var < params.n_var; ++i_var) {
+                    double n = normalization[i_var];
+                    for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
+                      double prev = res_cache(1 + elems[i_elem].get_is_deformed())(i_var)[i_qpoint];
+                      state(i_var)[i_qpoint] = prev + math::smooth_limit_abs(state(i_var)[i_qpoint] - prev, n);
+                    }
+                  }
+                }
+              }
+              // note that function call must come first to ensure it is evaluated despite short-circuiting
+              bool f = fix_nonphysical(_namespace->get<double>("fix_nonphys_max_safety"), inner);
+              fixed = f || fixed;
               stopwatch.work_units_completed += km.elems.size();
               stopwatch["cartesian"].work_units_completed += km.car_elems.size();
               stopwatch["deformed" ].work_units_completed += km.def_elems.size();
+              if (f) break;
             }
             // update status for reporting
             if (!is_implicit(_time_scheme)) {

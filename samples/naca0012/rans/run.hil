@@ -30,10 +30,7 @@ dyn_visc = 1.716e-5
 freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air*1.4*freestream_temperature)/freestream_mach
 
 surface_bc = {no_slip}
-diffusive_admissibility = false
-fix_therm_admis = true
 
-{iteration parameters}
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
 
 vis_field_vars = vis_field_vars + {

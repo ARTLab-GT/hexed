@@ -2,10 +2,11 @@ shell {python3 make_geom.py}
 
 {mesh setup}
 n_dim = 2
-mesh_extreme00 = -4.*.02
-mesh_extreme01 =  0.*.02
-mesh_extreme10 =  0.*.02
-mesh_extreme11 =  4.*.02
+reference_length = 0.02
+mesh_extreme00 = -4.*reference_length
+mesh_extreme01 =  0.*reference_length
+mesh_extreme10 =  0.*reference_length
+mesh_extreme11 =  4.*reference_length
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
 geom0 = {auto.csv}
@@ -22,22 +23,8 @@ monitor_vars = {heating_rate = heating_rate;}
 $set_shock
 $set_ramping
 print_freq = 10
-diffusive_admissibility = false
-art_visc_width = .001
-vis_field_vars = vis_field_vars + field_residual_expr + {spectral_uncertainty0 = spectral_uncertainty0; spectral_uncertainty1 = spectral_uncertainty1; spectral_uncertainty2 = spectral_uncertainty2; rms_residual = rms_residual;}
 vis_freq = write_freq = 1000
-done = {false}
-
-vis_art_visc_vars = true
-vis_field_vars = vis_field_vars + {
-    residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)
-    i_dim = wall_dimension + (wall_dimension < 0)
-    spectral_unref = $spectral_unref_criterion
-    flux_unref = $flux_unref_criterion
-    flux_uncertainty = flux_uncertainty
-    rms_flux = rms_flux
-    av_forcingA = av_forcing0
-}
+vis_field_vars = vis_field_vars + field_residual_expr
 
 $plot_history
 $simulate
