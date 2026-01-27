@@ -986,7 +986,7 @@ void Solver::update() {
   normalization[params.n_dim + 1] = 1e-2*_namespace->get<double>("freestream_energy");
   if (turb == k_omega) {
     normalization[params.n_dim + 2] = 1e-2*normalization[params.n_dim + 1];
-    normalization[params.n_dim + 3] = 0.1;
+    normalization[params.n_dim + 3] = 0.1*_namespace->get<double>("freestream_density");
   }
   auto& elems = acc_mesh->elements();
   for (int i_flow = 0; i_flow < _namespace->get<int>("flow_iters"); ++i_flow) {
