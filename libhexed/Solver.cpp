@@ -1026,11 +1026,10 @@ void Solver::update() {
               if (_time_scheme == explicit_steady) {
                 #pragma omp parallel for
                 for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-                  Array<double> res_cache({2 + elems[i_elem].get_is_deformed() + n_extra_stage(_time_scheme),
-                                           params.n_var, params.n_qpoint()},
-                                          elems[i_elem].residual_cache());
+                  Array<double> res_cache({params.n_var, params.n_qpoint()},
+                                          elems[i_elem].stage(2 + elems[i_elem].get_is_deformed()));
                   Array<double> state({params.n_var, params.n_qpoint()}, elems[i_elem].state());
-                  res_cache(1 + elems[i_elem].get_is_deformed()) = state;
+                  res_cache = state;
                 }
               }
               // compute inviscid update
@@ -1058,14 +1057,14 @@ void Solver::update() {
               if (_time_scheme == explicit_steady) {
                 #pragma omp parallel for
                 for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-                  Array<double> res_cache({2 + n_extra_stage(_time_scheme), params.n_var, params.n_qpoint()},
-                                          elems[i_elem].residual_cache());
+                  Array<double> res_cache({params.n_var, params.n_qpoint()},
+                                          elems[i_elem].stage(2 + elems[i_elem].get_is_deformed()));
                   Array<double> state({params.n_var, params.n_qpoint()}, elems[i_elem].state());
                   for (int i_var = 0; i_var < params.n_var; ++i_var) {
                     double n = normalization[i_var];
                     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-                      double prev = res_cache(1 + elems[i_elem].get_is_deformed())(i_var)[i_qpoint];
-                      state(i_var)[i_qpoint] = prev + math::smooth_limit_abs(state(i_var)[i_qpoint] - prev, n);
+                      double diff = math::smooth_limit_abs(state(i_var)[i_qpoint] - res_cache(i_var)[i_qpoint], n);
+                      state(i_var)[i_qpoint] = res_cache(i_var)[i_qpoint] + diff;
                     }
                   }
                 }

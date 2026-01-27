@@ -168,10 +168,8 @@ bool Element::is_sharp(int i_dim) {
 double* Element::stage(int i_stage) {
   if (i_stage == 0) {
     return state();
-  } else if (i_stage == 1) {
-    return residual_cache();
   } else {
-    return residual_cache() + (params.n_advection(params.row_size) + i_stage - 2)*params.n_qpoint();
+    return residual_cache() + i_stage*params.n_dof();
   }
 }
 

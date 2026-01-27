@@ -98,12 +98,13 @@ class Nonpenetration : public Flow_bc {
 class Thermal_bc {
   public:
   virtual ~Thermal_bc() = default;
-  //! \brief prescribes the total energy at the wall as a function of the current state
+  //! \brief Prescribes the total energy at the wall as a function of the current state.
+  //! \details `scalar_state` should include all the state variables from density onwards (skipping the momentum).
   //! \note might give you back the current energy if this is a Neumann BC
-  virtual double ghost_energy(Mat<> state) = 0;
+  virtual double ghost_energy(Mat<> scalar_state) = 0;
   //! \brief prescribes the wall heat flux as a function of the state and current heat flux
   //! \note might give you back the current heat flux if this is a Dirichlet BC
-  virtual double ghost_heat_flux(Mat<> state, double heat_flux) = 0;
+  virtual double ghost_heat_flux(Mat<> scalar_state, double heat_flux) = 0;
 };
 
 //! \brief prescribes the specific energy but doesn't touch the heat flux
@@ -112,7 +113,7 @@ class Prescribed_energy : public Thermal_bc {
   public:
   double energy_per_mass;
   inline Prescribed_energy(double e) : energy_per_mass{e} {}
-  inline double ghost_energy(Mat<> state) override {return energy_per_mass*state(state.size() - 2);}
+  inline double ghost_energy(Mat<> scalar_state) override {return energy_per_mass*scalar_state(0);}
   inline double ghost_heat_flux(Mat<>, double heat_flux) override {return heat_flux;}
 };
 
@@ -122,7 +123,7 @@ class Prescribed_heat_flux : public Thermal_bc {
   public:
   double heat_flux;
   Prescribed_heat_flux(double h = 0.) : heat_flux{h} {}
-  inline double ghost_energy(Mat<> state) override {return state(last);}
+  inline double ghost_energy(Mat<> scalar_state) override {return scalar_state(1);}
   inline double ghost_heat_flux(Mat<>, double) override {return heat_flux;}
 };
 
@@ -136,8 +137,8 @@ class Thermal_equilibrium : public Thermal_bc {
   double heat_transfer_coef = 0.;
   double temperature = 0.;
   double heat_rat = std::nan("");
-  inline double ghost_energy(Mat<> state) override {return state(last);}
-  double ghost_heat_flux(Mat<> state, double) override;
+  inline double ghost_energy(Mat<> scalar_state) override {return scalar_state(1);}
+  double ghost_heat_flux(Mat<> scalar_state, double) override;
 };
 
 /*! \brief No-slip wall boundary condition.

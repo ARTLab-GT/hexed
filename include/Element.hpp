@@ -95,7 +95,7 @@ class Element : public Kernel_element, public Mortal {
   int boundary_face();
   bool has_wall();
   bool is_sharp(int i_dim);
-  //! pointer to state data for `i_stage`th Runge-Kutta stage.
+  //! \brief Pointer to state data for `i_stage`th time integration stage
   double* stage(int i_stage); //!< layout: [i_var][i_qpoint]
   Array<double> flow_state(); //!< layout: [i_var][i_qpoint]
   Array<double> numeric_state(); //!< layout: [i_var][i_qpoint]
