@@ -1,8 +1,20 @@
-{utilities}
+{"Version of Hexed that you are currently running."}
 version = version_major + {.} + version_minor + {.} + version_patch
+{"
+Text of the license under which this copy of Hexed is distributed.
+So, to show the license, you can simply do `license` in an interactive session or `print license` in an input file.
+"}
 license = newline + read {LICENSE.txt}
 
+{"
+Ratio of specific heats, \f$\gamma = \frac{c_p}{c_v}\f$.
+\warning You may __not__ modify this value.
+Unfortunately, the value of 1.4 has been hardcoded in several places, so changing `heat_rat` in the input file
+will not result in a correct simulation with a different \f$\gamma\f$.
+\todo Enable CPG simulations with modified `heat_rat`.
+"}
 heat_rat = 1.4
+
 momentum_expr = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}
 density_expr = {density = density;}
 energy_expr = {energy = energy;}
@@ -252,7 +264,18 @@ adapt_residual_factor = .5
 residual_stagnation_tol = 1e-2
 adapt_if = {(iteration%adapt_freq == 0 & hexed_time_step_done)}
 monitor_criterion = {(iteration > min_prints*print_freq & monitors_converged & (!amr | (last_refine_iter > (1. - monitor_window)*iteration & last_refine_iter < iteration - 3*print_freq)))}
+
+
+{"
+Termination condition.
+This should be a macro that evaluates to an integer.
+It will be evaluated at each iteration, and the simulation will continue iff it evaluates to \ref false.
+As should be clear from the default value, you __must__ set this variable yourself.
+You can consider setting it based on the \ref iteration "iteration count", \ref normalized_residual "residual",
+and/or \ref monitor_vars "output variable history".
+"}
 done = {($monitor_criterion | iteration > max_iterations | flow_time > max_flow_time | wall_time > max_wall_time)}
+
 max_init_refine_iters = 100
 max_geom_refine_iters = 100
 max_final_refine_iters = 100
@@ -560,6 +583,20 @@ simulate = {
     $run
 }
 
+{"
+Reads the mesh, state, and \ref hil "HIL" variables from a previous simulation.
+File names without extensions are given by \ref input_data.
+This should be the method of choice for restarting a simulation.
+`restart` replaces \ref start, \ref mesh, and \ref init_state, but you still need to evaluate \ref run.
+You may need to modify some parameters between `restart` and `run` (probably \ref done).
+A typical input for a restart simulation would look something like:
+~~~{.unparsed}
+$restart
+done = {iteration >= 10^5}
+$run
+~~~
+\todo Update this.
+"}
 restart = {
     $read_restart
     $run
