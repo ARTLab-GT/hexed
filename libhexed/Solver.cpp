@@ -1517,7 +1517,6 @@ bool Solver::fix_nonphysical(double stability_ratio, int sub_iter) {
         false,
       };
       max_dt_fix_nonphysical(_kernel_mesh(), opts, dt, dt, true);
-      #if 1
       auto bc_cons {acc_mesh->boundary_connections()};
       #pragma omp parallel for
       for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -1525,11 +1524,6 @@ bool Solver::fix_nonphysical(double stability_ratio, int sub_iter) {
       }
       opts.dt = 1.;
       compute_fix_nonphysical(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
-      #else
-      apply_state_bcs();
-      opts.dt = 1.;
-      compute_fix_nonphysical(_kernel_mesh(), opts, [this](){apply_flux_bcs();});
-      #endif
     }
   }
   if (iter) printers::warn("done\n");
