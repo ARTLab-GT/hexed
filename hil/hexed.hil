@@ -1,3 +1,3 @@
 read {input_parameters.hil}
 read {output_parameters.hil}
-read {macros.hil}
+read {solver_macros.hil}

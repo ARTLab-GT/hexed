@@ -132,7 +132,7 @@ unary  | 0                | `-`           | integer, float | inverts sign
 ^      | ^                | `abs`         | integer, float | absolute value
 ^      | ^                | `read`        | string         | \anchor read operand is a file path; returns the file contents as a string
 ^      | ^                | `print`       | string         | prints to stdout (without adding a newline) and evaluates to the empty string
-^      | ^                | `println`     | string         | prints to stdout and then prints a newline (like the Python `print` function) and evaluates to the empty string
+^      | ^                | `println`     | string         | \anchor println prints to stdout and then prints a newline (like the Python `print` function) and evaluates to the empty string
 ^      | ^                | `shell`       | string         | executes the operand in the system shell and returns the return code (integer)
 ^      | ^                | `$`           | string         | \ref Macros "macro substitution"
 binary | 1                | `^`           | integer, float | raises left operand to power of right operand
