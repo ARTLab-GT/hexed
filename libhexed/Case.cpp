@@ -442,16 +442,15 @@ Case::Case(std::string input_script)
   "*/
   _inter.variables->create("create_solver", new Namespace::Heisenberg<std::string>([this]() {
     int n_dim = _vari("n_dim");
+    double domain_size = _vard("domain_size");
+    if (domain_size <= 0) domain_size = _vard("domain_size_ratio")*_vard("reference_length");
     // evaluate dimensions
     Mat<dyn, dyn> mesh_extremes(n_dim, 2);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       for (int sign = 0; sign < 2; ++sign) {
-        mesh_extremes(i_dim, sign) = _vard(format_str(50, "mesh_extreme%i%i", i_dim, sign));
+        mesh_extremes(i_dim, sign) = _vard(str_cat("domain_center", i_dim)) + math::sign(sign)*domain_size/2;
       }
     }
-    HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0,
-                 "all mesh dimensions must be positive!", assert::User_error)
-    double root_size = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
     // construct molecular transport models
     std::vector<std::string> transport_phenomena {"viscosity", "conductivity"};
     std::vector<Transport_model> transport_models;
@@ -474,7 +473,7 @@ Case::Case(std::string input_script)
     else {
       HEXED_THROW("`" + ts_str + "` is not a supported time integration scheme.") throw;
     }
-    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, ts, transport_models[0],
+    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), domain_size, ts, transport_models[0],
                                  transport_models[1], turb_model, _inter.variables));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_nonphysical(_vari("fix_nonphysical"));

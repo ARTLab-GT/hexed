@@ -46,6 +46,25 @@ which can also significantly affect performance and accuracy.
 "}
 steady = true
 
+{"\f$x_0\f$ coordinate of the center of the flow domain."}
+domain_center0 = 0.
+{"\f$x_1\f$ coordinate of the center of the flow domain."}
+domain_center1 = 0.
+{"\f$x_2\f$ coordinate of the center of the flow domain."}
+domain_center2 = 0.
+
+{"
+Size of the flow domain.
+The domain will be a square (2D) or cube (3D) centered at
+\ref domain_center0, \ref domain_center1, \ref domain_center2,
+with each side having length \ref domain_size (and the surface geometry cut out of it).
+If `domain_size` is negative (the default) then it will be automatically replaced
+with \ref domain_size_ratio times \ref reference_length.
+"}
+domain_size = -1.
+{"If the \ref domain_size is automatically determined, the ratio of \ref domain_size to \ref reference_length."}
+domain_size_ratio = 100.
+
 {"
 Maximum allowable safety factor on the
 [CFL condition](https://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition)
@@ -726,9 +745,8 @@ mesh_extreme_eps = 1e-6
 Location to start the flood fill algorithm when \ref mesh is evaluated.
 This is actually three variables, `flood_fill_start0`, `flood_fill_start1`, and `flood_fill_start2`,
 specifying the \f$ x_0 \f$, \f$ x_1 \f$, and \f$ x_2 \f$ coordinates, respectively.
-If any of the coordinates are not within the \ref mesh_extremeNN "mesh extremes" (which is the case by default),
+If any of the coordinates are not within the \ref domain_size "flow domain" (which is the case by default),
 the flood fill start location will effectively default to the minimum corner of the domain
-(`mesh_extreme00`, `mesh_extreme10`, `mesh_extreme20`)
 offset by a distance of \ref mesh_extreme_eps times the domain size.
 "}
 
@@ -850,7 +868,6 @@ while = {i_dim < 3}
 do = {
     mesh_code = {
         mesh_index = {} + i_dim + sign
-        $({mesh_extreme} + mesh_index) = 0. + sign
         $({extremal_bc} + mesh_index) = {characteristic}
         $({geom_vis_bound} + mesh_index) = 0. + sign
     }
