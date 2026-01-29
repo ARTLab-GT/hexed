@@ -17,6 +17,19 @@ Must be at lead 2 and at most `hexed::config::max_row_size`.
 "}
 row_size = 6
 
+{"\variable reference_length
+Length scale used for normalizing aerodynamic coefficients.
+You must always define this variable.
+Some internal calculations will also use this variable for hints about the length scale of the problem.
+For an airfoil, this is traditionally set equal to the chord.
+In 2D, this is also taken as the reference area for normalizing the lift and drag coefficients.
+"}
+
+{"\variable reference_area
+Area scale used for normalizing aerodynamic coefficients in 3D.
+In 2D, the \ref reference_length is used as the reference area, and you may __not__ define this variables.
+"}
+
 {"
 Number of levels to refine the mesh in \ref init_refinement before surface geometry is introduced.
 May be any non-negative integer, up to time and memory constraints.
@@ -47,8 +60,7 @@ it is strongly recommended that you keep this parameter less than 1
 and simply make your \ref max_time_step small enough to be the active constraint.
 \note For unsteady implicit simulations (\ref steady = \ref false, \ref implicit = \ref true),
 this parameter controls the _pseudotime_ step, not the real-time step.
-To control the real-time step, use \ref time_step_input.
-\note Not defined until \ref create_solver is evaluated.
+To control the real-time step, use \ref time_step.
 "}
 max_safety = 0.7
 
@@ -60,10 +72,16 @@ This parameter is only meaningful for global time stepping or implicit unsteady 
 If you intend for your time stepping to be CFL driven,
 simply keep this number large enough not to be the active constraint.
 \note For unsteady implicit simulations (\ref steady = \ref false, \ref implicit = \ref true),
-this parameter controls the __real-time step__.
-The only way to control the pseudotime step is to use \ref max_safety .
+this parameter controls the __pseudotime step__.
+To control the real time step, use \ref time_step.
 "}
 max_time_step = huge
+
+{"\variable time_step
+Real time step to use for unsteady implicit simulations (\ref steady = \ref false, \ref implicit = \ref true).
+In such simulations, you must set this to a positive value.
+For steady or explicit unsteady simulations, this parameter is ignored.
+"}
 
 {"
 Only relevant if \ref steady = \ref false.
@@ -74,7 +92,7 @@ For ill-conditioned meshes
 (in particular, meshes with very small or high-aspect-ration cells to resolve a high-Reynolds-number boundary layer),
 implicit will likely be more efficient due to the extremely small time steps
 required for stability by explicit global time stepping.
-For implicit time stepping, you must set \ref time_step_input yourself.
+For implicit time stepping, you must set \ref time_step yourself.
 According to linear stability analysis,
 all implicit schemes currently supported are unconditionally stable
 and you should be able to set the time step purely based on accuracy considerations.
@@ -117,7 +135,16 @@ The default value effectively renders this parameter irrelevant.
 "}
 max_ref_level = 1000
 
+{"
+General tolerance factor which is incorporated into nearly every numerical uncertainty tolerance in the code.
+The idea is that by parameterizing all of the tolerances by this one value,
+every source of numerical error should be O(`general_tolerance`).
+So, if you want to establish confidence that your simulation is accurate,
+all you need to do is reduce `general_tolerance` and evaluate how much the outputs change.
+However, much more testing is currently needed to validate that claim.
+"}
 general_tolerance = 1.
+
 hexed_tol_factor = 1.
 size_tolerance = {((hexed_tol_factor*general_tolerance)^(1./(row_size - 1)))}
 unadjusted_size_tolerance = {(general_tolerance^(1./(row_size - 1)))}
@@ -350,8 +377,10 @@ print_freq = 100
 {"AMR will be performed every `adapt_freq` iterations.
 Sometimes, only coarsening will be allowed; see \ref allow_refinement ."}
 adapt_freq = 10^3
-{"Every `shock_adapt_freq` iterations AMR will be performed only on elements that contain shocks.
-This helps maintain stability without allowing runaway refinement. \see \ref shock_refine_if "}
+{"
+Every `shock_adapt_freq` iterations AMR will be performed only on elements that contain shocks.
+This helps maintain stability without allowing runaway refinement. \see \ref shock_refine_if
+"}
 shock_adapt_freq = 100
 
 {"
@@ -360,7 +389,7 @@ If set to a positive integer,
 during the simulation, the surface roughness (aka \f$ k_s \f$) will be adaptively updated
 to be the (approximately) largest possible value that satisfies the criteria
 \f$ k_s^+ = k_s u_\tau/\nu \le \f$ \ref max_roughness_plus
-and \f$ k_s \le \f$ min(\ref max_roughness_absolute, \ref max_roughness_relative * \ref geom_length).
+and \f$ k_s \le \f$ min(\ref max_roughness_absolute, \ref max_roughness_relative * \ref reference_length).
 The former criterion is derived from Wilcox \cite wilcox_k_omega ,
 who recommends that \f$ k_s^+ \f$ be less than 5 for hydraulically smooth surfaces.
 In general, specifying small values for the various roughness constraints
@@ -394,7 +423,7 @@ This is only relevant when \ref turbulence_model is set to \f$ k\text{-}\omega \
 in which case it controls the boundary condition for \f$ \omega \f$:
 \f$ \omega_w = \frac{4 \times 10^4 \nu_w}{k_s} \f$ .
 If negative, `surface_roughness` will be automatically initialized
-to min(\ref max_roughness_absolute, \ref max_roughness_relative * \ref geom_length).
+to min(\ref max_roughness_absolute, \ref max_roughness_relative * \ref reference_length).
 If \ref update_roughness_freq is set (which it is by default),
 \ref surface_roughness will be automatically adjusted to keep the surface hydraulically smooth.
 \note Setting `surface_roughness` too small will require a smaller wall spacing to achieve mesh convergence,
@@ -411,7 +440,7 @@ The default value effectively does not constrain the surface roughness.
 max_roughness_absolute = huge
 
 {"
-Maximum allowable surface roughness height as a fraction of the \ref geom_length "geometry length"
+Maximum allowable surface roughness height as a fraction of the \ref reference_length "geometry length"
 when adaptive roughness is used (\ref update_roughness_freq > 0).
 The default value stipulates a very rough surface, but this is unlikely to be a problem,
 as the roughness is usually constrained by \ref max_roughness_plus.
@@ -469,10 +498,10 @@ Specifically, some points on the faces of surface elements are sampled,
 and `uncertainty` is set to their average distance from the true geometry surface
 (in the \f$ L_2 \f$ Gaussian quadrature norm).
 The default value of `geom_refine_if` will refine elements if their uncertainty is greater than the quantity
-\ref geom_rtol * \ref geom_length + \ref geom_atol ,
+\ref geom_rtol * \ref reference_length + \ref geom_atol ,
 unless their refinement level exceeds \ref max_ref_level or their nominal edge length is less than \ref min_elem_size.
 "}
-geom_refine_if = {(uncertainty > (geom_rtol*geom_length + geom_atol)*general_tolerance & ref_level < max_ref_level*$size_tolerance & nominal_size > min_elem_size*$size_tolerance)}
+geom_refine_if = {(uncertainty > (geom_rtol*reference_length + geom_atol)*general_tolerance & ref_level < max_ref_level*$size_tolerance & nominal_size > min_elem_size*$size_tolerance)}
 {"Coarsening criterion for geometry-based refinement."}
 geom_unrefine_if = {false}
 
@@ -501,13 +530,42 @@ Like \ref final_refine_if, this is also anisotropic.
 "}
 final_unrefine_if = {false}
 
-shock_refine_if = {(has_shock & $({mean_shape} + i_dim) > 1.5*(wall_shock_width + shock_width_growth*farthest_vert) & $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance)}
+{"The minimum ratio of the element size to the shock capturing width in \ref shock_refine_if "shock refinement"."}
+shock_refinement_floor = 1.5
+
+{"
+Mesh refinement criterion for shock refinement.
+For simulations with \ref capture_shocks = \ref true,
+this will be used to refine the mesh near shocks to improve stability.
+This criterion is much more aggressive than the usual uncertainty-based AMR,
+but it prevents runaway refinement by limiting the minimum element size
+to \ref shock_refinement_floor times the shock capturing width.
+"}
+shock_refine_if = {(has_shock & $({mean_shape} + i_dim) > shock_refinement_floor*(wall_shock_width + shock_width_growth*farthest_vert) & $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance)}
+{"Criterion for undoing shock refinement."}
 shock_unrefine_if = {(!has_shock)}
+
+{"
+Adaptive Mesh Refinement criterion.
+Attempts to refine elements where the numerical uncertainty exceeds specified thresholds.
+To adjust the behavior of AMR, you should consider changing the following parameters:
+- \ref general_tolerance
+- \ref spectral_tol
+- \ref flux_tol
+- \ref min_cell_reynolds
+"}
 adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*rms_flux)) & (viscosity_model == {} | $({mean_shape} + i_dim)*reynolds_per_length > 2*min_cell_reynolds*$size_tolerance))}
+
 spectral_unref_criterion = {($({spectral_uncertainty} + i_dim) < spectral_tol*general_tolerance*.5^(row_size - 1))}
 flux_unref_criterion = {(!(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*rms_flux*.5^(row_size - 2)))}
 shape_unref_criterion = {($({mean_shape} + i_dim)*reynolds_per_length < min_cell_reynolds*$unadjusted_size_tolerance)}
+{"
+Adaptive coarsening criterion.
+The default value is designed to coarsen elements
+if the resulting agglomerated element will not then satisfy \ref adapt_refine_if .
+"}
 adapt_unrefine_if = {((($spectral_unref_criterion & $flux_unref_criterion) | $shape_unref_criterion) & $({aniso_ref_level} + i_dim) > init_ref_level)}
+
 adapt_residual_factor = .5
 residual_stagnation_tol = 1e-2
 adapt_if = {(iteration%adapt_freq == 0 & hexed_time_step_done)}
@@ -582,7 +640,10 @@ For details on the algorithm to compute contours, see the source code for `hexed
 vis_xdmf = false
 {"If \ref true, write visualization files in Tecplot format (requires compilation with `use_tecio` set to `yes`)."}
 vis_tecplot = false
-{"If \ref true, write visualization files in CSV format. \warning For 2D and 3D data this can be very slow."}
+{"
+If \ref true, write visualization files in CSV format.
+\warning For 2D and 3D data this can be very slow.
+"}
 vis_csv = false
 
 {"\variable vis_default_format
@@ -649,14 +710,16 @@ monitor_vars = {}
 integrand_field = {}
 {"Expression defining the variables that \ref integrate_surface will integrate."}
 integrand_surface = {}
-{"\see \ref flood_fill_startN"}
+{"
+\see \ref flood_fill_startN
+"}
 mesh_extreme_eps = 1e-6
 
 {"\variable flood_fill_startN
 Location to start the flood fill algorithm when \ref add_geom is evaluated.
 This is actually three variables, `flood_fill_start0`, `flood_fill_start1`, and `flood_fill_start2`,
 specifying the \f$ x_0 \f$, \f$ x_1 \f$, and \f$ x_2 \f$ coordinates, respectively.
-If any of the coordinates are not within the \ref mesh_extreme "mesh extremes" (which is the case by default),
+If any of the coordinates are not within the \ref mesh_extremeNN "mesh extremes" (which is the case by default),
 the flood fill start location will effectively default to the minimum corner of the domain
 (`mesh_extreme00`, `mesh_extreme10`, `mesh_extreme20`)
 offset by a distance of \ref mesh_extreme_eps times the domain size.
@@ -678,7 +741,36 @@ The default value renders this parameter irrelevant.
 "}
 min_elem_size = 0.
 
+{"
+When performing numerical operations on the surface geometry,
+sometimes it is necessary to discretize curves/surfaces into polygonal/polyhedral segments.
+For low-precision applications, they will be divided into \f$ 2^\verb|min_geom_subdiv_levels| \f$
+uniformly-spaced segments along each dimension in parameter space.
+This requires \f$ O(2^{2*\verb|min_geom_subdiv_levels|}) \f$ memory (in 3D) but, in principle,
+only \f$ O(\verb|min_geom_subdiv_levels|) \f$ time thanks to tree-based search algorithms.
+`min_geom_subdiv_levels` should be high enough to capture every feature of the surface,
+but not necessarily to the level of accuracy that you demand in the final results.
+Any applications where error in the geometry calculations directly translates to error in the simulation results
+will use \ref max_geom_subdiv_levels .
+The default value gives 256 subdivisions,
+which is generally enough for any practical purpose while still being pretty fast.
+"}
 min_geom_subdiv_levels = 8
+
+{"
+Like \ref min_geom_subdiv_levels ,
+but used for high-precision applications that directly impact the accuracy of the simulation.
+The default value gives 32 768 subdivisions, which should be precise enough
+not to be a significant source of error in any reasonable simulation.
+Only curves will actually store this many data points,
+so the memory requirement is \f$ O(2^\verb|max_geom_subdiv_levels|) \f$
+(note the absence of the factor of 2 which appears in the memory requirement for \ref min_geom_subdiv_levels
+because of the necessity to store data for surfaces),
+which should not generally be a constraint on your simulations.
+Increasing `max_geom_subdiv_levels` will, however, significantly affect the amount of time required for meshing.
+If you choose to reduce it, keep in mind that high-order DG requires much more precision in the geometry
+than lower-order methods.
+"}
 max_geom_subdiv_levels = 15
 
 {"

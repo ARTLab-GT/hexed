@@ -502,10 +502,10 @@ class Mesh_blocks {
   //! \brief List of all vertices
   Sequence<Vertex&> verts();
   //! \brief Access the list of all vertices which are on the \ref surface_bc "surface boundary".
-  //! \brief Does not include vertices on the \ref extremal_bc "extremal boundaries".
+  //! \brief Does not include vertices on the \ref extremal_bcNN "extremal boundaries".
   Sequence<Vertex&> boundary_verts();
   //! \brief Access the list of all vertices which are __not__ on the \ref surface_bc "surface boundary".
-  //! \brief Includes vertices on the \ref extremal_bc "extremal boundaries".
+  //! \brief Includes vertices on the \ref extremal_bcNN "extremal boundaries".
   Sequence<Vertex&> interior_verts();
   //! \brief If 2D, obtains the list of surface edges.
   //! \details If not 2D, returns an empty sequence.

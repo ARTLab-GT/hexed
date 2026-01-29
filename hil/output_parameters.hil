@@ -50,3 +50,16 @@ There may be merit to trying to tweak the default viscosity and conductivity mod
 "}
 air_conductivity = {ref_value = air_cond_ref; ref_temperature = air_cond_ref_temp; offset = air_cond_offset;}
 
+{"\variable allow_refinement
+Created by the solver to indicate whether AMR sweeps are currently allowed to perform refinement.
+If \ref false, then they are only allowed to coarsen.
+This avoids a vicious cycle where transient noise in the flow field causes the mesh to be locally refined,
+which slows down convergence and increases the probability that the noise will persist on the next AMR sweep.
+This is determined automatically based on the residual history.
+"}
+
+{"The current iteration number."}
+iteration = 0
+
+{"Average of momentum, density, and energy residuals, each normalized by their value after the first iteration."}
+normalized_residual = 1.

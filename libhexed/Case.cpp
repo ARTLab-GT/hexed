@@ -315,9 +315,15 @@ Case::Case(std::string input_script)
       "`row_size` is not defined as an integer (did you define it as a different type?)"
     );
     HEXED_ASSERT(row_size >= 2 && row_size <= config::max_row_size,
-                 format_str(300, "`row_size` must be between 2 and %i", config::max_row_size), assert::User_error);
+                 str_cat("`row_size` must be between 2 and ", config::max_row_size), assert::User_error)
     _inter.variables->assign("n_var", n_dim + 2 + 2*(_vars("turbulence_model") == "k-omega"));
     _inter.variables->get<double, assert::User_error>("reference_length", "Must specify `reference_length`.");
+    if (n_dim == 3) {
+      _inter.variables->get<double, assert::User_error>("reference_area", "Must specify `reference_area`.");
+    } else {
+      HEXED_ASSERT(!_inter.variables->exists_recursive("reference_area"), "Cannot specify `reference_area` in 2D",
+                   assert::User_error)
+    }
     return "";
   }));
 
@@ -486,7 +492,6 @@ Case::Case(std::string input_script)
                          - _vard("min_surface_position" + to_string(i_dim));
         geom_len = std::max(geom_len, dim_len);
       }
-      _inter.variables->assign("geom_length", geom_len);
     };
     auto refine_isotropic = [&](std::string short_name, std::string long_name, bool bbox, bool newline) {
       std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};

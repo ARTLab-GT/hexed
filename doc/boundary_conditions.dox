@@ -2,7 +2,7 @@
 
 Any of the following boundary conditions can be applied to any boundary,
 regardless of whether it is one of the mesh extremes or a geometry surface.
-The desired boundary conditions can be selected with the solver parameters \ref surface_bc and \ref extremal_bc.
+The desired boundary conditions can be selected with the solver parameters \ref surface_bc and \ref extremal_bcNN.
 
 \section Freestream
 `{freestream}` \n

@@ -244,7 +244,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
   _namespace->assign_default("iteration", 0);
   _namespace->assign_default("pseudotime_iteration", 0);
   _namespace->assign_default("flow_time", 0.);
-  if (!is_implicit(_time_scheme)) _namespace->assign_default("time_step", 0.);
   _namespace->assign("time_stage", 0);
   _namespace->assign("n_time_stages", n_total_stage(_time_scheme));
   _namespace->assign_default("art_visc_residual", 0.);
