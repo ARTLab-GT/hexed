@@ -1,0 +1,784 @@
+{"
+Ratio of specific heats, \f$\gamma = \frac{c_p}{c_v}\f$.
+\warning You may __not__ modify this value.
+Unfortunately, the value of 1.4 has been hardcoded in several places, so changing `heat_rat` in the input file
+will not result in a correct simulation with a different \f$\gamma\f$.
+\todo Enable CPG simulations with modified `heat_rat`.
+"}
+heat_rat = 1.4
+
+{"\variable n_dim
+Number of dimensions.
+Must be at least 1 and at most 3.
+"}
+{"
+\ref basis_row_size "Row size" of polynomial basis.
+Must be at lead 2 and at most `hexed::config::max_row_size`.
+"}
+row_size = 6
+
+{"
+Number of levels to refine the mesh in \ref init_refinement before surface geometry is introduced.
+May be any non-negative integer, up to time and memory constraints.
+"}
+init_ref_level = 3
+
+{"
+If \ref true, only solves for steady state---the transient evolutions of the flowfield is not time accurate.
+This will utilize local time marching and other non-time-accurate tricks to accelerate convergence to steady state.
+If \ref false, the simulation will accurately capture unsteady behavior,
+but will probably take longer to reach steady state (potentially by orders of magnitude).
+For further control over the unsteady time marching scheme, see \ref implicit and \ref implicit_scheme,
+which can also significantly affect performance and accuracy.
+"}
+steady = true
+
+{"
+Maximum allowable safety factor on the
+[CFL condition](https://en.wikipedia.org/wiki/Courant%E2%80%93Friedrichs%E2%80%93Lewy_condition)
+for time step determination.
+The time step will be either this number times the estimated maximum stable time step or \ref max_time_step,
+whichever is smaller.
+This parameter is applicable to both local and global time stepping.
+If the safety factor is greater than 1 (and `max_time_step` is not an active constraint),
+the scheme will almost certainly be unstable.
+Thus even if you intend for your time integration not to be CFL-driven,
+it is strongly recommended that you keep this parameter less than 1
+and simply make your \ref max_time_step small enough to be the active constraint.
+\note For unsteady implicit simulations (\ref steady = \ref false, \ref implicit = \ref true),
+this parameter controls the _pseudotime_ step, not the real-time step.
+To control the real-time step, use \ref time_step_input.
+\note Not defined until \ref create_solver is evaluated.
+"}
+max_safety = 0.7
+
+{"
+Maximum allowable time step.
+The time step will be either this number or \ref max_safety times the estimated maximum stable time step,
+whichever is smaller.
+This parameter is only meaningful for global time stepping or implicit unsteady simulations (\ref steady = \ref false).
+If you intend for your time stepping to be CFL driven,
+simply keep this number large enough not to be the active constraint.
+\note For unsteady implicit simulations (\ref steady = \ref false, \ref implicit = \ref true),
+this parameter controls the __real-time step__.
+The only way to control the pseudotime step is to use \ref max_safety .
+"}
+max_time_step = huge
+
+{"
+Only relevant if \ref steady = \ref false.
+If `implicit` = \ref true, time marching will be performed using dual time stepping:
+an implicit temporal discretization is used and the implicit equations are solved by pseudotime iteration.
+Otherwise, explicit global time stepping will be used.
+For ill-conditioned meshes
+(in particular, meshes with very small or high-aspect-ration cells to resolve a high-Reynolds-number boundary layer),
+implicit will likely be more efficient due to the extremely small time steps
+required for stability by explicit global time stepping.
+For implicit time stepping, you must set \ref time_step_input yourself.
+According to linear stability analysis,
+all implicit schemes currently supported are unconditionally stable
+and you should be able to set the time step purely based on accuracy considerations.
+However, in practice, nonlinear stability problems may impose constraints on the time step.
+You must also set \ref time_step_done to determine the conditions on which to terminate the pseudotime iteration
+and advance to the next real-time step.
+You may also need to adjust \ref print_freq and \ref vis_freq.
+You can control what implicit temporal discretization is used with \ref implicit_scheme.
+"}
+implicit = true
+
+{"
+Determines the temporal discretization for unsteady implicit simulations
+(\ref steady = \ref false, \ref implicit = \ref true).
+Otherwise, does nothing.
+The supported options are (case-insensitive):
+- `{backward euler}` The ubiquitous [Backward Euler](https://en.wikipedia.org/wiki/Backward_Euler_method) method:
+  robust and dissipative, first-order-accurate in time.
+- `{crank-nicolson}` The [Crank-Nicolson](https://en.wikipedia.org/wiki/Crank%E2%80%93Nicolson_method) method:
+  less dissipative, second-order-accurate in time, can induce spurious oscillations in the initial transient behavior.
+- `{dirk2}` Implements the second-order-accurate, two-stage Diagonally-Implicit Runge-Kutta scheme
+  described in Ref. \cite kennedy_dirk, Section 4.1.2 (page 72).
+  Unlike Crank-Nicolson, this method is L-stable, and should exhibit somewhat less oscillation.
+  However, each time step requires solving two implicit stages (whereas backward Euler and C-N require only one)
+  which may increase the wall clock time for each step.
+"}
+implicit_scheme = {backward Euler}
+preti = false
+amr = true
+automate_adapt_schedule = true
+adapt_start_iter = 0
+refine_start_iter = 0
+adapt_stop_iter = huge_int
+next_refine_residual = 1e-3
+
+{"
+When performing geometry-based refinement with \ref geom_refine_if,
+elements will not be refined beyond this refinement level.
+The default value effectively renders this parameter irrelevant.
+"}
+max_ref_level = 1000
+
+general_tolerance = 1.
+hexed_tol_factor = 1.
+size_tolerance = {((hexed_tol_factor*general_tolerance)^(1./(row_size - 1)))}
+unadjusted_size_tolerance = {(general_tolerance^(1./(row_size - 1)))}
+max_n_elements = huge
+
+{"
+Geometry fit tolerance relative to geometry bounding box.
+When performing geometry-based refinement with \ref geom_refine_if,
+stipulates that elements need not be refined as long as the estimated maximum distance between the element surface
+and the true geometry surface is less than this fraction of the length of the diagonal of the geometry bounding box.
+Note that this tolerance adds to \ref geom_atol, so the least strict condition usually dominates.
+"}
+geom_rtol = 1e-7
+
+{"
+Geometry fit absolute tolerance.
+This is a dimensional quantity (in meters).
+When performing geometry-based refinement with \ref geom_refine_if,
+stipulates that elements need not be refined as long as the estimated maximum distance between the element surface
+and the true geometry surface is less than this value.
+Note that this tolerance adds to \ref geom_rtol, so the least strict condition usually dominates.
+"}
+geom_atol = 0.
+
+{"
+Tolerance on the spectral convergence of the element polynomials for AMR criteria.
+Elements will be refined along a given dimension if, for any flow variable,
+the magnitude of the highest-order polynomial mode exceeds `spectral_tol` multiplied by the difference between
+the maximum and minimum values of that variable in the entire flowfield.
+"}
+spectral_tol = 1e-3
+
+{"
+Tolerance on the flux convergence for AMR criteria.
+Extruded elements will be refined in the wall-normal direction if the jump in viscous momentum flux
+between neighboring elements exceeds `flux_tol` 
+multiplied by the RMS viscous wall-normal momentum flux in the extruded elements.
+"}
+flux_tol = 1e-3
+
+{"
+Convergence will not be declared if the estimated drift in any of the \ref monitor_vars
+over the last \ref monitor_window fraction of iterations (after filtering out noise)
+exceeds this value multiplied by the filtered value of that variable.
+"}
+trend_tol = 3e-3
+
+{"
+Convergence will not be declared if the estimated noise in any of the \ref monitor_vars
+over the last \ref monitor_window fraction of iterations (after correcting for any gradual trend) exceeds this value
+multiplied by the filtered value of that variable.
+"}
+noise_tol = 3e-2
+
+{"Maximum allowable wall spacing in the initial mesh (before any solver iterations or AMR)"}
+max_wall_spacing = huge
+{"Same as \ref max_wall_spacing, but expressed in terms of the element Reynolds number instead of absolute size."}
+max_wall_reynolds = 1e3
+{"Maximum size of any element that contacts a sharp edge of the geometry in the initial mesh
+(before any solver iterations or AMR)"}
+max_sharp_spacing = huge
+{"Same as \ref max_sharp_spacing, but expressed in terms of the element Reynolds number instead of absolute size."}
+max_sharp_reynolds = 1e4
+{"Minimum absolute shock capturing width at the wall."}
+wall_shock_width = 0.
+{"Minimum shock capturing width at the wall expressed as a Reynolds number."}
+min_wall_shock_width_reynolds = 1e3
+{"The shock capturing width will be equal to the wall shock width plus `shock_width_growth` times the wall distance."}
+shock_width_growth = 0.1
+{"For any refinement operation (including initial meshing and AMR),
+elements will not be refined if doing so would result in a cell Reynolds number below this value."}
+min_cell_reynolds = 0.1
+
+{"
+If \ref true, artificial viscosity determined in an elementwise fashion
+based on the work of Persson \cite persson_art_visc .
+This feature is provided purely for the purpose of comparing
+the discretization-independent artificial viscosity to conventional methods.
+It is not recommended for practical simulations with this solver.
+"}
+elementwise_art_visc = false
+
+{"
+If \ref elementwise_art_visc "elementwise artificial viscosity" is used, if this variable is \ref true,
+the artificial viscosity field will be regularized with PDE-based smoothing.
+Otherwise, it will be continuous and piecewise n-linear.
+"}
+elementwise_art_visc_pde = false
+
+{"
+If \ref elementwise_art_visc_pde "PDE-based" \ref elementwise_art_visc "elementwise artificial viscosity" is used,
+this controls the amount of diffusion used to smooth the artificial viscosity coefficient.
+"}
+elementwise_art_visc_diff_ratio = 5.
+
+{"
+Model to compute the dynamic viscosity.
+Options are the following:
+- `{}` (empty string): Inviscid.
+- Code setting the variable `const_value`:
+  Constant viscosity equal to `const_value`.
+  For example, `{const_value = 1.8e-5}` will set the viscosity to 1.8e-5 Pa s.
+- Code setting the variables `ref_value`, `ref_temperature`, and `offset`:
+  Sets the viscosity to [Sutherland's law](https://en.wikipedia.org/wiki/Viscosity#Chapman%E2%80%93Enskog_theory)
+  (a result of Chapman-Enskog theory)
+  with \f$ \mu_0 \f$ = `ref_value`, \f$ T_0 \f$ = `ref_temperature` and \f$ S \f$ = `offset`.
+  E.g. `{ref_value = 1.7e-5; ref_temperature = 273.; offset = 111.;}`.
+
+\note Setting `viscosity_model = {}` is not the same as setting it to `viscosity_model = {const_value = 0.}`.
+The former will solve the inviscid flow equations,
+whereas the latter will solve the viscous flow equations with a viscosity coefficient of 0
+(increasing the computational expense).
+\see \ref air_viscosity
+"}
+viscosity_model = {}
+
+{"
+Model to compute the thermal conductivity.
+The options are the same as \ref viscosity_model .
+\see \ref air_conductivity
+"}
+conductivity_model = {}
+
+{"
+Model for turbulence.
+If the flow is inviscid (\ref viscosity_model = `{}`), this parameter is ignored.
+Recognized values are:
+- `{}`: Solve the ordinary Navier-Stokes equations. No turbulence model is applied.
+- `{k-omega}`: Solve the RANS equations with \f$ k\text{-}\omega \f$ closure.
+  Specifically, this uses the
+  [Wilcox 2006](https://turbmodels.larc.nasa.gov/wilcox.html) \cite wilcox_k_omega formulation
+  written in terms of `turbulent_dissipation_bassi` \f$ = \tilde{\omega} = \log \omega \f$.
+"}
+turbulence_model = {}
+
+{"
+Turbulent Prandtl number (\f$ Pr_t \f$).
+Default value recommended by [LaRC](https://turbmodels.larc.nasa.gov/wilcox.html).
+"}
+turbulent_prandtl = .9
+
+{"
+Only applicable when \ref surface_bc = `{no_slip}`.
+Specifies thermal boundary condition.
+Default gives an adiabatic wall.
+Accepted values:
+- `{heat_flux = x}`: Prescribes the wall heat flux (out of the domain, into the wall) to be `x`.
+- `{temperature = x}`: Prescribes the temperature at the wall to be `x`.
+- `{internal_energy = x}`: Prescribes the internal energy at the wall to be `x`.
+  For now, since you're stuck in the CPG world,
+  this is equivalent to `{temperature = x*(heat_rat - 1)/specific_gas_air}`.
+- `{emissivity = x; conduction = y; temperature = z}`: \anchor thermal_equilibrium_bc
+  Specifies that the wall is in thermal equilibrium according to a simple 1D heat equation.
+  Specifically, sets the heat flux equal to the sum of the radiative cooling flux
+  and the thermal conduction through the wall.
+  The radiative cooling flux is determined by the
+  [Stefan-Boltzmann Law](https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law)
+  with the emissivity \f$ \sigma \f$ given by `emissivity`.
+  The conductive flux is determined by assuming that the wall has a small but finite thickness
+  and the temperature on the non-air side is known.
+  Specifically, it is equal to \f$ kL(T_w - T_p) \f$ where \f$ k \f$ is the thermal conductivity of the wall material,
+  \f$ L \f$ is the wall thickness, \f$ T_w \f$ is the current wall temperature,
+  and \f$ T_p \f$ is the prescribed temperature.
+  The product \f$ kL \f$ is equal to `conduction`
+  and the prescribed temperature \f$ T_p \f$ is `temperature`.
+  You don't have to specify all 3 parameters---they all default to 0.
+  You may specify `emissivity` __and/or__ you may specify the other parameters,
+  but if you specify either `conduction` or `temperature` you must specify both.
+  If your wall is highly conductive, you might need to reduce \ref heat_flux_coercion to maintain stability.
+"}
+thermal_bc = {heat_flux = 0.}
+
+{"
+Specifies surface boundary condition.
+It should be the name of a supported \ref boundary_conditions "Boundary condition type".
+If `{auto}`, surface boundary condition will be determined automatically depending on whether you define \ref viscosity_model .
+If you do (and set it to something other than `{}`), `surface_bc` will default to `{no_slip}`.
+If you do not, it will default to `{nonpenetration}`.
+"}
+surface_bc = {auto}
+
+{"\variable altitude
+If specified, the freestream thermodynamic state will be computed to match this altitude
+with the \ref hexed::standard_atmosphere "standard atmosphsere".
+\see \ref temperature_offset
+"}
+{"Applicable when \ref altitude is specified.
+Sets the temperature offset passed to `hexed::standard_atmosphere`."}
+temperature_offset = 0.
+{"Angle of attack (radian, as specified in \ref units)."}
+attack = 0.
+{"Sideslip angle (radian, as specified in \ref units)."}
+sideslip = 0.
+{"If set to a positive number, turns on artificial viscosity and sets the artificial viscosity coefficient
+to be uniformly equal to `art_visc_constant`."}
+art_visc_constant = -1.
+
+{"
+If \ref true, check for certain nonphysical values of state variables
+(non-positive density, negative energy, and any NaN or infinite values) after every time integration stage.
+If problems are found, it will run as many Laplacian smearing iterations as necessary to restore physical values.
+Results in a major robustness improvement and comes at a modest performance cost.
+"}
+fix_nonphysical = false
+
+{"
+Directory in which to write output files.
+Path can be relative or absolute.
+If the directory does not exist, it will be created.
+Any modifications to this variable must take place before the solver is initialized.
+"}
+working_dir = {hexed_out/}
+
+{"
+Where \ref read_restart and \ref restart will get data from.
+The file names from which to read the mesh, flow state, and status (HIL variables) will be obtained
+by appending `.mesh.h5`, `.state.h5`, and `.status.hil` respectively to the value of `input_data`.
+If you leave `input_data` as its default value, it will automatically be set to `working_dir + {/latest}`.
+So, if you change neither `input_data` nor \ref working_dir,
+the files will be `hexed_out/latest.mesh.h5`, `hexed_out/latest.state.h5`, and `hexed_out/latest.status.hil`.
+"}
+input_data = {auto}
+
+{"Visualization files will be written every `vis_freq` iterations."}
+vis_freq = 10^4
+{"Mesh and state files will be written every `vis_freq` iterations."}
+write_freq = 10^4
+{"Solver status will be printed to `stdout` every `print_freq` iterations."}
+print_freq = 100
+{"AMR will be performed every `adapt_freq` iterations.
+Sometimes, only coarsening will be allowed; see \ref allow_refinement ."}
+adapt_freq = 10^3
+{"Every `shock_adapt_freq` iterations AMR will be performed only on elements that contain shocks.
+This helps maintain stability without allowing runaway refinement. \see \ref shock_refine_if "}
+shock_adapt_freq = 100
+
+{"
+Frequency with which to update wall roughness for RANS simulations.
+If set to a positive integer,
+during the simulation, the surface roughness (aka \f$ k_s \f$) will be adaptively updated
+to be the (approximately) largest possible value that satisfies the criteria
+\f$ k_s^+ = k_s u_\tau/\nu \le \f$ \ref max_roughness_plus
+and \f$ k_s \le \f$ min(\ref max_roughness_absolute, \ref max_roughness_relative * \ref geom_length).
+The former criterion is derived from Wilcox \cite wilcox_k_omega ,
+who recommends that \f$ k_s^+ \f$ be less than 5 for hydraulically smooth surfaces.
+In general, specifying small values for the various roughness constraints
+will require a finer mesh to resolve the resulting \f$\omega\f$ profile,
+but specifying too large a value may introduce error relative to the smooth wall solution.
+If you actually want to simulate a rough wall,
+you should set `update_roughness_freq` to `-1` and set \ref surface_roughness to the desired roughness height.
+"}
+update_roughness_freq = 10^4
+
+{"The simulation will not terminate unless it has printed to the console at least `min_prints` times."}
+min_prints = 10
+
+{"
+For file names that include an iteration number,
+leading zeros will be added so that the number has at least `iter_width` digits.
+This ensures that they sort correctly.
+"}
+iter_width = 10
+
+{"Maximum number of solver iterations to run before terminating the simulation."}
+max_iterations = huge
+{"Maximum flow time to simulate before terminating the simulation."}
+max_flow_time = huge
+{"Maximum wall clock time to spend before terminating the simulation."}
+max_wall_time = huge
+
+{"
+Controls the (dimensional) surface roughness height \f$ k_s \f$.
+This is only relevant when \ref turbulence_model is set to \f$ k\text{-}\omega \f$,
+in which case it controls the boundary condition for \f$ \omega \f$:
+\f$ \omega_w = \frac{4 \times 10^4 \nu_w}{k_s} \f$ .
+If negative, `surface_roughness` will be automatically initialized
+to min(\ref max_roughness_absolute, \ref max_roughness_relative * \ref geom_length).
+If \ref update_roughness_freq is set (which it is by default),
+\ref surface_roughness will be automatically adjusted to keep the surface hydraulically smooth.
+\note Setting `surface_roughness` too small will require a smaller wall spacing to achieve mesh convergence,
+whereas setting it too large may produce unrealistic results.
+For that reason, allowing automatic adaptation is recommended.
+"}
+surface_roughness = -1.
+
+{"
+Maximum allowable absolute (dimensional) surface roughness height when adaptive roughness is used
+(\ref update_roughness_freq > 0).
+The default value effectively does not constrain the surface roughness.
+"}
+max_roughness_absolute = huge
+
+{"
+Maximum allowable surface roughness height as a fraction of the \ref geom_length "geometry length"
+when adaptive roughness is used (\ref update_roughness_freq > 0).
+The default value stipulates a very rough surface, but this is unlikely to be a problem,
+as the roughness is usually constrained by \ref max_roughness_plus.
+As long as \ref max_roughness_plus is set to a reasonable value,
+`max_roughness_relative` will generally only be an active constraint when the skin friction vanishes
+(which is important to avoid singularities at stagnation/separation points when \ref local_roughness = \ref true).
+"}
+max_roughness_relative = 1e-3
+
+{"
+The maximum allowable value of \f$ k_s^+ \f$ in adaptive determination of \ref surface_roughness .
+\see \ref update_roughness_freq
+"}
+max_roughness_plus = 4.
+
+{"
+If `local_roughness` == \ref true and \ref update_roughness_freq >= 0,
+then instead of setting one roughness value \f$ k_s \f$ for the entire surface
+to satisfy the roughness constraints everywhere,
+a unique value will be set at each surface quadrature point to satisfy the constraints locally.
+For smooth-wall simulations with widely varying skin friction (e.g., a flat plate),
+this may allow a significantly coarser mesh to be used in downstream regions without sacrificing accuracy.
+"}
+local_roughness = true
+
+{"
+Mesh refinement criterion for initial refinement, before any geometry is added.
+Should be an expression that can be evaluated for each mesh element
+in an environment that includes the variables assigned by `hexed::hil_properties::element()`.
+In this case, `uncertainty`, `wall_distance`, and `wall_dimension` have not been initialized and should be ignored.
+If this expression evaluates to \ref true (and \ref init_unrefine_if evaluates to \ref false),
+the element will be refined.
+Otherwise it will not.
+The default value will uniformly refine all elements to refinement level \ref init_ref_level.
+Refinement sweeps will be repeated iteratively until there is a refinement sweep that produces no change,
+or \ref max_init_refine_iters iterations have been executed, whichever comes first.
+"}
+init_refine_if = {(ref_level < init_ref_level)}
+{"
+Mesh unrefinement criterion.
+Behaves the same as \ref init_refine_if except that if this expression evaluates to \ref true
+(and \ref init_refine_if evaluates to \ref false),
+the element will be unrefined (subject to refinement level constraints).
+"}
+init_unrefine_if = {false}
+
+{"
+Mesh refinement criterion for geometry-based refinement, after the geometry is added.
+Each of these refinement sweeps will result in the extruded elements being regenerated
+and the vertex smoothing being performed again,
+so this is the most computationally expensive refinement phase.
+Works like \ref init_refine_if, except that `wall_distance`, `wall_dimension`, and `uncertainty` have now been defined.
+`uncertainty` is set to an estimate in the error of the polynomial fit to the geometry.
+Specifically, some points on the faces of surface elements are sampled,
+and `uncertainty` is set to their average distance from the true geometry surface
+(in the \f$ L_2 \f$ Gaussian quadrature norm).
+The default value of `geom_refine_if` will refine elements if their uncertainty is greater than the quantity
+\ref geom_rtol * \ref geom_length + \ref geom_atol ,
+unless their refinement level exceeds \ref max_ref_level or their nominal edge length is less than \ref min_elem_size.
+"}
+geom_refine_if = {(uncertainty > (geom_rtol*geom_length + geom_atol)*general_tolerance & ref_level < max_ref_level*$size_tolerance & nominal_size > min_elem_size*$size_tolerance)}
+{"Coarsening criterion for geometry-based refinement."}
+geom_unrefine_if = {false}
+
+{"
+Mesh refinement criterion for final refinement,
+after the geometry-based refinement (\ref geom_refine_if ) has already been performed.
+This will subdivide extruded elements, so no extrusion or vertex smoothing is performed.
+Unlike the initial refinement and geometry-based refinement, the final refinement phase is anisotropic.
+In addition to the variables provided by `hexed::hil_properties::element()`,
+you will also have a variable `i_dim` which tells you which
+dimension you are refining along.
+For non-extruded elements, `i_dim == 0` is the \f$x\f$ direction, `i_dim == 1` is \f$y\f$, etc.
+but for extruded elements, the axis alignment is arbitrary.
+`final_refine_if` will be evaluated once for each dimension,
+and if it evaluates to `true`, the element will be split in half along that dimension (in reference space).
+Thus if you set a value of `final_refine_if` that does not depend on `i_dim`, refinement will be isotropic.
+If you want to refine specifically in the wall-normal dimension,
+you can achieve this by comparing `i_dim` to `wall_dimension`.
+The default value of `final_refine_if` will refine the wall elements
+such that the wall spacing will satisfy the \ref max_wall_spacing and \ref max_wall_reynolds everywhere.
+"}
+final_refine_if = {(has_wall & ((i_dim == wall_dimension & (farthest_vert > max_wall_spacing | (viscosity_model != {} & farthest_vert*reynolds_per_length > max_wall_reynolds & 3*$({mean_shape} + i_dim)*reynolds_per_length > max_wall_reynolds))) | (($({sharp} + i_dim) & $({mean_shape} + i_dim) > max_sharp_spacing) | (viscosity_model != {} & $({sharp} + i_dim) & $({mean_shape} + i_dim)*reynolds_per_length > max_sharp_reynolds))))}
+{"
+Unrefinement criterion for final refinement.
+Like \ref final_refine_if, this is also anisotropic.
+"}
+final_unrefine_if = {false}
+
+shock_refine_if = {(has_shock & $({mean_shape} + i_dim) > 1.5*(wall_shock_width + shock_width_growth*farthest_vert) & $({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance)}
+shock_unrefine_if = {(!has_shock)}
+adapt_refine_if = {(($({spectral_uncertainty} + i_dim) > spectral_tol*hexed_tol_factor*general_tolerance | (has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*hexed_tol_factor*general_tolerance*rms_flux)) & (viscosity_model == {} | $({mean_shape} + i_dim)*reynolds_per_length > 2*min_cell_reynolds*$size_tolerance))}
+spectral_unref_criterion = {($({spectral_uncertainty} + i_dim) < spectral_tol*general_tolerance*.5^(row_size - 1))}
+flux_unref_criterion = {(!(has_wall & i_dim == wall_dimension & flux_uncertainty > flux_tol*general_tolerance*rms_flux*.5^(row_size - 2)))}
+shape_unref_criterion = {($({mean_shape} + i_dim)*reynolds_per_length < min_cell_reynolds*$unadjusted_size_tolerance)}
+adapt_unrefine_if = {((($spectral_unref_criterion & $flux_unref_criterion) | $shape_unref_criterion) & $({aniso_ref_level} + i_dim) > init_ref_level)}
+adapt_residual_factor = .5
+residual_stagnation_tol = 1e-2
+adapt_if = {(iteration%adapt_freq == 0 & hexed_time_step_done)}
+monitor_criterion = {(iteration > min_prints*print_freq & monitors_converged & (!amr | (last_refine_iter > (1. - monitor_window)*iteration & last_refine_iter < iteration - 3*print_freq)))}
+
+
+{"
+Termination condition.
+This should be a macro that evaluates to an integer.
+It will be evaluated at each iteration, and the simulation will continue iff it evaluates to \ref false.
+As should be clear from the default value, you __must__ set this variable yourself.
+You can consider setting it based on the \ref iteration "iteration count", \ref normalized_residual "residual",
+and/or \ref monitor_vars "output variable history".
+"}
+done = {($monitor_criterion | iteration > max_iterations | flow_time > max_flow_time | wall_time > max_wall_time)}
+
+{"Maximum number of initial refinement iterations to perform."}
+max_init_refine_iters = 100
+{"Maximum number of geometry-based refinement iterations to perform."}
+max_geom_refine_iters = 100
+{"Maximum number of final octree refinement iterations to perform after obtaining a good surface fit
+but before running any solver iterations."}
+max_final_refine_iters = 100
+
+shock_refine_iters = 10
+{"Whether to visualize surface data when \ref visualize is invoked."}
+vis_surface = true
+{"Whether to visualize field data when \ref visualize is invoked."}
+vis_field = true
+
+{"
+Whether to explicitly compute and visualize contours when \ref visualize is invoked.
+Normally, you would visualize contour plots by loading the field visualization in your plotting software of choice
+and using its contour plotting feature.
+However, Hexed can also compute isocontours on its own and write out files containing just the contour.
+This could be useful if your computation is I/O bound or if you want to streamline some postprocessing pipeline that uses isocontours.
+This can also be used to visualize slices, which are simply special cases of contours.
+To control what contours are visualized, use \ref contourN and to control the variables included in each contour file, use \ref vis_contour_vars.
+If you want to visualize contours _and_ field data, but contours more frequently than field, you can add to \ref iterate, E.g.
+~~~{.unparsed}
+vis_freq = 10^5
+iterate = iterate + {
+    case0 = {}
+    case1 = {
+        vis_field = false
+        print {visualizing contours...}
+        visualize
+        println {done}
+        vis_field = true
+    }
+    $$({case} + (iteration%10^3 == 0))
+}
+~~~
+"}
+vis_contour = true
+
+{"\variable contourN
+Defines contours to visualize if \ref vis_contour is \ref true.
+By default, none of these variables are defined.
+If you define any number of these variables (consecutively numbered and starting with 0),
+then each of them will define one isocontour to be computed.
+Each should be a string containing an expression
+(which will be evaluated directly after \ref vis_contour_vars in the same environment),
+and the resulting contour will be the locus of points where that expression evaluates to 0.
+So, for example, to visualize the sonic line/surface, you could do `contour0 = {mach - 1.}`,
+and to also visualize the slice at \f$ x_0 = 3 \f$, you could do `contour1 = {pos0 - 3.}`.
+Each of the contours will be written to a separate file.
+For details on the algorithm to compute contours, see the source code for `hexed::Vis_data::compute_contour`.
+"}
+
+{"If \ref true, write visualization files in XDMF format (requires compilation with \ref use_xdmf set to `yes`)."}
+vis_xdmf = false
+{"If \ref true, write visualization files in Tecplot format (requires compilation with `use_tecio` set to `yes`)."}
+vis_tecplot = false
+{"If \ref true, write visualization files in CSV format. \warning For 2D and 3D data this can be very slow."}
+vis_csv = false
+
+{"\variable vis_default_format
+The default format to visualize in.
+This will be `xdmf`, `tecplot`, or `csv`, in order of preference,
+depending on the values of \ref use_xdmf and \ref use_tecio.
+The corresponding `vis_FORMAT` variable will be set to \ref true by default.
+"}
+$({vis_} + vis_default_format) = true
+
+{"If \ref true , write an additional field visualization file
+containing the local time steps for convection and diffusion."}
+vis_lts_constraints = false
+
+{"If \ref true, write and additional visualization file containing the mesh edges."}
+vis_edges = true
+{"If \ref true, after loading any CAD geometry, write diagnostic visualization files that show the geometry as-loaded."}
+vis_geom = true
+
+{"
+If \ref vis_geom and `vis_geom_distance` are both \ref true,
+diagnostic visualization files will include a field with the distance from each point to the geometry surface
+in the block bounded by \ref geom_vis_bound .
+This will be substantially more expensive than the other visualization files (which are curves and surfaces)
+but is the most reliable way to diagnose whether the geometry was loaded correctly.
+"}
+vis_geom_distance = false
+
+{"\variable geom_vis_boundNN
+Bounding box within which to visualize distance from the surface.
+This is actually 6 variables describing each face of the bounding box, similar to \ref extremal_bcNN
+"}
+
+{"Expression defining the variables to include in the field visualization."}
+vis_field_vars = state_vars + wall_dist_expr + art_visc_expr + transport_expr
+{"Expression defining the variables to include in the contour visualization."}
+vis_contour_vars = vis_field_vars
+{"Expression defining the variables to include in the surface visualization."}
+vis_surface_vars = state_vars + transport_expr + visc_stress_expr + heat_flux_expr + pressure_coef_expr + skin_friction_coef_expr + bl_nondim_expr
+
+{"
+Each element will be visualized at sample points distributed in a uniformly-spaced structured block
+with `vis_n_sample` points on each edge.
+If you want, you can think of this as the visualization row size.
+For a high-quality visualization, this should generally be greater than the parameter \ref row_size .
+"}
+vis_n_sample = 10
+
+{"Expression defining the variables to print to the console every \ref print_freq iterations."}
+print_vars = {($iteration_expr)} + normalized_residual_expr + flow_time_expr + time_step_expr + {($monitor_vars)}
+
+{"The behavior of the \ref monitor_vars over the last `monitor_window` fraction of the iterations
+will be analyzed to determine convergence."}
+monitor_window = 0.2
+
+{"
+An expression defining variables to monitor the convergence history of.
+For additional details, see the implementation in `hexed::History_monitor`.
+\todo Explain this more fully.
+"}
+monitor_vars = {}
+
+{"Expression defining the variables that \ref integrate_field will integrate."}
+integrand_field = {}
+{"Expression defining the variables that \ref integrate_surface will integrate."}
+integrand_surface = {}
+{"\see \ref flood_fill_startN"}
+mesh_extreme_eps = 1e-6
+
+{"\variable flood_fill_startN
+Location to start the flood fill algorithm when \ref add_geom is evaluated.
+This is actually three variables, `flood_fill_start0`, `flood_fill_start1`, and `flood_fill_start2`,
+specifying the \f$ x_0 \f$, \f$ x_1 \f$, and \f$ x_2 \f$ coordinates, respectively.
+If any of the coordinates are not within the \ref mesh_extreme "mesh extremes" (which is the case by default),
+the flood fill start location will effectively default to the minimum corner of the domain
+(`mesh_extreme00`, `mesh_extreme10`, `mesh_extreme20`)
+offset by a distance of \ref mesh_extreme_eps times the domain size.
+"}
+
+{"
+When weakly applying heat flux boundary conditions,
+this determines how strongly the heat flux is coerced to match the prescribed value.
+If this number is too large, the simulation might be unstable,
+but if it too small the boundary condition might not be fully satisfied.
+The default value is adequate for almost all cases, but there are rare situations in which it might need to be reduced.
+"}
+heat_flux_coercion = 2.
+
+{"
+When performing geometry-based refinement with \ref geom_refine_if,
+elements will not be refined if their nominal edge length is less than this.
+The default value renders this parameter irrelevant.
+"}
+min_elem_size = 0.
+
+min_geom_subdiv_levels = 8
+max_geom_subdiv_levels = 15
+
+{"
+Number of subdivisions with which to discretize the geometry
+when writing diagnostic visualizations with \ref vis_geom .
+This is completely different from the number of subdivisions to use when actually generating the mesh,
+which is controlled by \ref min_geom_subdiv_levels and \ref max_geom_subdiv_levels .
+"}
+geom_vis_subdivisions = 100
+
+coincidence_tol_bbox = 1e-6
+coincidence_tol_abs = 0.
+coincidence_tol_subdiv = 1.
+tangency_tol_angle = 1*degree
+tangency_tol_subdiv = 10.
+initial_smoothing_iters = 10^4
+time_step_limit_threshold = 10.
+wall_dist_iters_initial = 100
+wall_dist_iters_update = 10
+n_cheby_wall_dist = 10
+n_wall_dist_inner_iters = 100
+freeze_pressure = false
+freestream_turbulence_intensity = 8.2e-4
+freestream_turbulence_length = -1.
+
+{"\variable extremal_bcNN
+\default {characteristic}
+Boundary conditions for boundaries at the mesh extremes.
+This is actually 6 variables, each of whose name ends in two integers.
+The first is the index of the coordinate axis which is normal to the boundary.
+The second is 0 if the boundary faces in the negative direction and 1 if it faces in the positive direction.
+Thus, the positive z boundary, for example, is governed by `extremal_bc21`
+and the negative y by `extremal_bc10`.
+\see \ref boundary_conditions
+"}
+
+{"
+Expression defining the initial condition.
+This expression must assign values to `momentum0`, `momentum1`, `momentum2`, `density`, and `energy`.
+It must also assign values to `turbulent_kinetic_energy` and `turbulent_dissipation_bassi`
+if \ref turbulence_model is `k-omega`.
+You may reference the variables `pos0`, `pos1`, `pos2`, and `wall_distance`
+as well as any scalar HIL variables.
+You may also compute and then reference other variables which are not any of the final outputs.
+Due to a quirk in the solver code (which is intended to increase performance using array operations),
+all of these expressions must reference either one of the position variables or one of the other state variables,
+even if they do not affect the numerical value (as seen in the `0*pos` terms below).
+"}
+init_cond =  {
+    momentum0 = freestream_density*freestream_velocity0 + 0*pos0
+    momentum1 = freestream_density*freestream_velocity1 + 0*pos0
+    momentum2 = freestream_density*freestream_velocity2 + 0*pos0
+    density = freestream_density + 0*pos0
+    energy = freestream_energy + 0*pos0
+    case0 = {}
+    case1 = {
+        turbulent_kinetic_energy = freestream_density*freestream_specific_turbulent_kinetic_energy
+        turbulent_dissipation_bassi = freestream_density*log(freestream_specific_turbulent_dissipation)
+    }
+    $$({case} + (turbulence_model == {k-omega}))
+}
+
+{"Expression defining the wall velocity at any \ref no_slip boundaries.
+This expression may reference `pos0`, `pos1`, `pos2`, `normal0`, `normal1`, and `normal2`."}
+wall_velocity = {velocity0 = 0.; velocity1 = 0.; velocity2 = 0.;}
+
+{array parameters}
+i_dim = 0
+while = {i_dim < 3}
+do = {
+    mesh_code = {
+        mesh_index = {} + i_dim + sign
+        $({mesh_extreme} + mesh_index) = 0. + sign
+        $({extremal_bc} + mesh_index) = {characteristic}
+        $({geom_vis_bound} + mesh_index) = 0. + sign
+    }
+    sign = 0; $mesh_code
+    sign = 1; $mesh_code
+    $({flood_fill_start} + i_dim) = huge
+    i_dim = i_dim + 1
+}
+$loop
+
+{"Number of sub-iterations to run in each nominal iteration
+to get an efficient balance between time spent on the flow and artificial viscosity equations."}
+shock_sub_iters = 12
+{"Number of Chebyshev-acceleration stages to use for the artificial viscosity diffusion equation.
+For computational efficiency, this should usually be comparable to \ref shock_sub_iters ."}
+n_cheby_av = 12
+{"If \ref true, shock-capturing with smoothness-based artificial viscosity will be enabled.
+This is a novel artificial viscosity scheme specific to Hexed.
+See \cite smith-pierce_solver2024 for details."}
+capture_shocks = false
+
+ramping_initial_safety = 1e-3
+ramping_final_safety = 0.7
+ramp_freq = 100
+ramp_factor = 2.
+final_shock_adapt_freq = 100
+ramp_if = {(iteration%ramp_freq == 0)}
+
+vortex_nondim_veloc = 0.3
+vortex_argmax_radius = 0.1

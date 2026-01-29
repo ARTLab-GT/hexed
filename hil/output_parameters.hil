@@ -1,0 +1,52 @@
+
+{"Version of Hexed that you are currently running."}
+version = version_major + {.} + version_minor + {.} + version_patch
+{"
+Text of the license under which this copy of Hexed is distributed.
+So, to show the license, you can simply do `license` in an interactive session or `print license` in an input file.
+"}
+license = newline + read {LICENSE.txt}
+
+{"`reference_value` used in \ref air_viscosity ."}
+air_visc_ref = 1.716e-5
+{"`reference_temperature` used in \ref air_viscosity ."}
+air_visc_ref_temp = 273.
+{"`offset` used in \ref air_viscosity ."}
+air_visc_offset = 111.
+{"reference value used in \ref air_conductivity ."}
+air_cond_ref = .0241
+{"`reference_temperature` used in \ref air_conductivity ."}
+air_cond_ref_temp = 273.
+{"`offset` used in \ref air_conductivity ."}
+air_cond_offset = 194.
+
+{"
+Best available Sutherland's Law approximation for the viscosity of air that I am aware of,
+which is from White \cite white_viscous (Table 1-2).
+To use it this model, set `viscosity_model = air_viscosity`.
+\see \ref viscosity_model
+"}
+air_viscosity = {ref_value = air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset;}
+
+{"
+Best available Sutherland's Law approximation for the thermal conductivity of air that I am aware of,
+which is from White \cite white_viscous (Table 1-3).
+To use it this model, set `conductivity_model = air_conductivity`.
+\see \ref conductivity_model
+
+\note Using \ref air_viscosity together with \ref air_conductivity results in a non-constant Prandtl number!
+Technically, this is correct---air does not have a constant Prandtl number---but
+for reasons I do not fully understand, most people use a constant Prandtl number in their transport models.
+To obtain a constant Prandtl number, you can do something like:
+```{.unparsed}
+conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
+```
+(this works for \f$ \gamma = 1.4 \f$ and \f$ Pr = .72 \f$).
+\todo Does this give the _correct_ Prandtl number variation?
+I just selected the most credible Sutherland models I could find for viscosity and conductivity independently,
+but I am not sure to what extent the difference reflects the true Prandtl number variation
+versus disagreement between different authors.
+There may be merit to trying to tweak the default viscosity and conductivity models to work better in combination.
+"}
+air_conductivity = {ref_value = air_cond_ref; ref_temperature = air_cond_ref_temp; offset = air_cond_offset;}
+

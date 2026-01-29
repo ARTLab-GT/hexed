@@ -1,26 +1,62 @@
 import sys
 
 assert len(sys.argv) == 3
-source = sys.argv[1]
-target = sys.argv[2]
+source_dir = sys.argv[1]
+target_dir = sys.argv[2]
 
-with open(source, "r") as input_file:
-    input_text = input_file.read();
-raw = input_text.split('{"')[1:]
-processed = {}
-for r in raw:
-    doc, rest = r.split('"}\n')
-    name, rest = rest.split(" =")[:2]
-    doc = f"__Default:__ `{rest.split('\n')[0].strip()}`\\n\n{doc}"
-    processed[name] = doc
-output_text = "/*! \\page parameters Solver Parameters\n"
-for name in sorted(processed.keys()):
-    output_text += f'''\n<div style="font-size: 150%; padding-bottom: 0.5em;"> __{name}__ </div>
+for fname in ["input_parameters", "output_parameters", "macros"]:
+    with open(f"{source_dir}/hil/{fname}.hil", "r") as input_file:
+        input_text = input_file.read();
+    raw = input_text.split('{"')[1:]
+    processed = {}
+    for r in raw:
+        try:
+            doc, rest = r.split('"}\n')
+        except Exception as e:
+            print(r)
+            raise e
+        if (doc.startswith(r"\variable")):
+            name = doc.split(" ")[1].split("\n")[0].strip()
+            doc = doc.split("\n")[1:]
+            if doc[0].startswith(r"\default"):
+                doc[0] = f"__Default:__ `{doc[0][9:]}`\\n"
+            else:
+                doc = ["__No default value.__\\n"] + doc
+            doc = "\n".join(doc)
+        else:
+            name = rest.split(" =")[0]
+            rest = " =".join(rest.split(" =")[1:]).strip()
+            if (rest.startswith("{\n")):
+                value = f"""<details>
+<summary>__Implementation__</summary>
+~~~{{.unparsed}}
+{rest.split('\n}')[0]}
+}}
+~~~
+</details>
+"""
+            else:
+                value = f"__Default:__ `{rest.split('\n')[0]}`\\n\n"
+            doc = value + doc
+        processed[name] = doc
+    output_text = f"/*! \\page {fname} {fname.replace('_', ' ').title()}\n\n"
+    for name in sorted(processed.keys()):
+        output_text += f'''\\anchor {name}
+<div style="font-size: 150%; padding-bottom: 0.5em;"> __{name}__ </div>
 <div style="margin: 0px">
-\\anchor {name}
 {processed[name]}
 </div>
-<hr>\n'''
-output_text += "*/\n"
-with open(target, "w") as output_file:
-    output_file.write(output_text)
+<hr>
+
+'''
+    output_text += "*/\n"
+    with open(f"{target_dir}/doc/{fname}.dox", "w") as output_file:
+        output_file.write(output_text)
+
+with open(f"{target_dir}/doc/parameters.dox", "w") as output_file:
+    output_file.write(r"""/*! \page parameters Solver Parameters
+\subpage input_parameters
+\subpage output_parameters
+\subpage macros
+*/
+""")

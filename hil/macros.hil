@@ -1,0 +1,449 @@
+
+{"
+Performs basic initialization that has to happen before you can do anything with the solver
+(but after you've defined your parameters).
+Behavior is roughly the following:
+-# creates working directory if it does not already exist
+-# copies the input file to the working directory for the user's future reference
+-# initializes automatically-determined parameters
+-# calls \ref create_solver
+"}
+start = {
+    $setup_io
+    case1 = {
+        case1 = {surface_bc = {nonpenetration}}
+        case0 = {surface_bc = {no_slip}}
+        $$({case} + (viscosity_model == {}))
+    }
+    $$({case} + (surface_bc == {auto}))
+    case0 = {}
+    case1 = {
+        i_dim = 0
+        while = {i_dim < n_dim}
+        do = {
+            $({flood_fill_start} + i_dim) = (1 - mesh_extreme_eps)*$({mesh_extreme} + i_dim + 0) + mesh_extreme_eps*$({mesh_extreme} + i_dim + 1)
+            i_dim = i_dim + 1
+        }
+        $loop
+    }
+    $$({case} + (flood_fill_start0 == huge))
+    compute_freestream
+    create_solver
+    init_residual_momentum = 0.
+    init_residual_density = 0.
+    init_residual_energy = 0.
+    init_init_unsteady_residual_momentum = 0.
+    init_init_unsteady_residual_density = 0.
+    init_init_unsteady_residual_energy = 0.
+    normalized_residual = 1.
+    prev_residual = 0.
+    hexed_next_flow_time = 0.
+    last_refine_iter = 0
+    allow_refinement = false
+    pseudotime_iteration = 0
+    rms_flux = 0.
+    n_diffusion_limited = 0
+    n_source_limited = 0
+    total_iteration = 0
+    case0 = {}
+    case1 = {
+        iteration_expr = iteration_expr + unsteady_iteration_expr
+        print_vars = print_vars + unsteady_residual_expr
+    }
+    $$({case} + (!steady & implicit))
+    println({    Monitor window: } + monitor_window)
+}
+
+{"
+Executes one iteration (called by \ref solve).
+Behavior is roughly the following:
+-# calls \ref update
+-# computes residuals
+-# prints history variables
+-# may writes mesh and state files, depending on \ref write_freq
+-# may write visualization files, depending on \ref vis_freq
+-# executes any commands in \ref runtime_cmd "runtime_cmd.hil" and empties the file
+
+If you wish for the solver to perform extra actions on every iteration, you can accomplish this by modifying `iterate`.
+For example, if you wanted to compute and print the total mass in the flowfield at every iteration, you could do:
+~~~{.unparsed}
+iterate = iterate + {
+    integrand_field = {density = density;}
+    integrate_field
+}
+print_vars = print_vars + {total_mass = integral_field_density;}
+~~~
+"}
+iterate = {
+    update
+    compute_residuals
+    $compute_force
+    $compute_heating
+    {compute initial residual for normalization}
+    case0 = {}
+    case1 = {
+        init_residual_momentum = residual_momentum
+        init_residual_density = residual_density
+        init_residual_energy = residual_energy
+    }
+    $$({case} + ((iteration == (steady | !implicit))))
+    case0 = {}
+    case1 = {
+        init_unsteady_residual_momentum = unsteady_residual_momentum
+        init_unsteady_residual_density = unsteady_residual_density
+        init_unsteady_residual_energy = unsteady_residual_energy
+        case0 = {}
+        case1 = {
+            init_init_unsteady_residual_momentum = unsteady_residual_momentum
+            init_init_unsteady_residual_density = unsteady_residual_density
+            init_init_unsteady_residual_energy = unsteady_residual_energy
+        }
+        $$({case} + (iteration == 0))
+    }
+    $$({case} + (pseudotime_iteration == 1 & !steady & implicit))
+    $normalized_residual_expr
+    println report
+    hexed_prev_except = except
+    except = {println exception}
+    $(read(working_dir + {runtime_cmd.hil}))
+    except = hexed_prev_except
+    shell({echo > } + working_dir + {runtime_cmd.hil})
+    hexed_done = (($done) != 0) | hexed_failed
+    case0 = {}
+    case1 = {
+        hexed_time_step_done = ($time_step_done) != 0
+        hexed_done = hexed_done & hexed_time_step_done & time_stage == n_time_stages - 1
+    }
+    $$({case} + (!steady & implicit))
+    case0 = {}
+    case1 = {
+        case0 = {}
+        case1 = {
+            case0 = {}
+            case1 = {
+                print {Updating surface roughness... }
+                update_roughness
+                println {done}
+            }
+            $$({case} + (update_roughness_freq > 0 & iteration%update_roughness_freq == 0 & hexed_time_step_done & turbulence_model == {k-omega}))
+            $adapt_iter
+            $write_iter
+            $vis_iter
+        }
+        $$({case} + (time_stage == n_time_stages - 1))
+        case0 = {}
+        case1 = {
+            next_time_stage
+        }
+        $$({case} + (!steady & implicit))
+    }
+    $$({case} + (hexed_time_step_done & !hexed_done))
+}
+
+{"
+Runs the solver.
+Assumes that the mesh has already been generated and the flow state initialized.
+If you want those steps to be done automatically as well, use \ref simulate instead.
+"}
+solve = {
+    case0 = {}
+    case1 = {compute_smooth_initial_condition}
+    $$({case} + !!smooth_initial_condition)
+    compute_residuals
+    $compute_force
+    $compute_heating
+    init_monitors
+    $write_init
+    $vis_init
+    $print_init
+    shell({echo > } + working_dir + {runtime_cmd.hil})
+    adapt_changed = true
+    hexed_time_step_done = true
+    hexed_done = false
+    while = {!hexed_done}
+    do = {$iterate}
+    $loop
+    $print_final
+    $write_final
+    $vis_final
+}
+
+{"
+Shows a real-time plot of the convergence history in a separate window with [Matplotlib](https://matplotlib.org/).
+Obviously, you should not do this if you are in a remote session with ssh.
+"}
+plot_history = {
+    shell({python3 -c "from hexedpy.utils import History_plot;History_plot('} + working_dir + {')" &})
+}
+
+{"
+Runs the simulation.
+If you call this after defining your input parameters, you don't need to call any other macros.
+You may wish to call \ref plot_history before calling `simulate`, but this is optional.
+"}
+simulate = {
+    $start
+    mesh
+    init_state
+    $run
+}
+
+{"
+Reads all restart data from a previous simulation (but does not automatically resume execution).
+This restart data includes the mesh, flow state, and the value of all user- and solver-defined \ref hil "HIL" variables.
+The variables `input_data` and `working_dir` are not read from the file---they will retain their current values.
+Before executing `$read_restart` you will most likely want to set \ref input_data.
+After executing `$read_restart`, you will most likely want to modify some parameters
+and then either call `$solve` to resume execution or `visualize`.
+"}
+read_restart = {
+    println {reading restart data...}
+    $read(input_data + {.status.hil})
+    $setup_io
+    create_solver
+    read_mesh
+    hexed_mesh_init = true
+    read_state
+    read_status
+    println {done}
+    println({    Monitor window: } + monitor_window)
+}
+
+{"
+Reads all restart data from a previous simulation and resumes execution.
+Usually it is advisable to set \ref input_data  and \ref working_dir before calling `$read_restart`,
+(Otherwise it will stay the same as in the simulation you are restarting.)
+If you want to modify any other simulation parameters before resuming execution,
+you will need to use \ref read_restart instead.
+An example input file for restarting a simulation might look like this:
+~~~{.unparsed}
+input_data = {hexed_out/latest}
+working_dir = {hexed_out_restart}
+$restart
+~~~
+"}
+restart = {
+    $read_restart
+    $solve
+}
+
+write_init = {write_mesh}
+write_final = {write_mesh; write_state; write_status}
+vis_init = {visualize}
+vis_final = {visualize}
+print_init = {println header}
+print_final = {
+    case0 = {println{simulation complete}}
+    case1 = {print_type = {error}; println{simulation failed}}
+    print_emph = true; $$({case} + hexed_failed)
+    println({wall clock time = } + wall_time + {s = } + wall_time/minute + {min = } + wall_time/hour + {hr})
+    println {}
+    println {performance summary:}
+    println performance_report
+}
+
+{"
+Termination condition for the pseudotime iteration.
+This should be a macro that evaluates to an integer.
+It will be evaluated at each pseudotime iteration and iff it evaluates to \ref true,
+the simulation it will move on to the next real-time step.
+As should be clear from the default value,
+you __must__ set this variable yourself if \ref steady = \ref false and \ref implicit = \ref true.
+\todo Document options based on history monitors and determine a reasonable default value.
+"}
+time_step_done = {((unsteady_residual_momentum + unsteady_residual_density + unsteady_residual_energy)/3 < .1*(init_unsteady_residual_momentum + init_unsteady_residual_density + init_unsteady_residual_energy)/3)}
+
+hexed_mesh_init = false
+hexed_failed = false
+
+{"Call this macro (usually from \ref runtime_cmd "runtime_cmd.hil") to gracefully terminate the simulation."}
+terminate = {
+    print_emph = true
+    print_type = {error}
+    println {User commanded termination.}
+    hexed_failed = true
+}
+
+write_iter = {
+    case0 = {}
+    case1 = {
+        write_mesh
+        write_state
+        write_status
+    }
+    $$({case} + (iteration%write_freq == 0 & hexed_time_step_done))
+}
+
+vis_iter = {
+    case0 = {}
+    case1 = {visualize}
+    $$({case} + (iteration%vis_freq == 0 & hexed_time_step_done))
+}
+
+adapt_iter = {
+    case0 = {}
+    case1 = {adapt}
+    $$({case} + (amr & ($adapt_if)))
+    case0 = {}
+    case1 = {adapt_shock}
+    $$({case} + (capture_shocks & iteration > print_freq & iteration%shock_adapt_freq < print_freq))
+}
+
+setup_io = {
+    case0 = {}
+    case1 = {working_dir = working_dir + {/}}
+    $$({case} + (working_dir#(#working_dir - 1) != {/}))
+    shell({if [ ! -d } + working_dir + { ]; then mkdir } + working_dir + {; fi})
+    setup_output
+    case1 = {shell({cp } + input_script + { } + working_dir)}
+    $$({case} + (#input_script != 0))
+    case1 = {input_data = working_dir + {latest}}
+    $$({case} + (input_data == {auto}))
+}
+
+set_shock = {
+    capture_shocks = true
+    fix_nonphysical = true
+    flow_iters = shock_sub_iters
+    av_advect_iters = ceil(shock_sub_iters/5.)
+    print_vars = print_vars + art_visc_residual_expr
+}
+
+hexed_ramped = false
+set_ramping = {
+    max_safety = ramping_initial_safety
+    shock_adapt_freq = round(final_shock_adapt_freq*ramping_final_safety/max_safety)
+    iterate = iterate + {
+        case0 = {}
+        case1 = {
+            max_safety = max_safety*ramp_factor
+            shock_adapt_freq = round(final_shock_adapt_freq*ramping_final_safety/max_safety)
+            case1 = {
+                max_safety = ramping_final_safety
+                shock_adapt_freq = final_shock_adapt_freq
+                hexed_ramped = true
+                print {Time step ramping complete. }
+            }
+            $$({case} + (max_safety >= ramping_final_safety))
+            println({Increasing `max_safety` to } + max_safety)
+        }
+        $$({case} + (!hexed_ramped & ($ramp_if) != 0))
+    }
+}
+
+vortex_gaussian = {(vortex_nondim_veloc*exp((1. - ((pos0 - freestream0/freestream2*flow_time)^2 + (pos1 - freestream1/freestream2*flow_time)^2)/vortex_argmax_radius^2)/2.))}
+vortex_scalar = {(1 - (heat_rat - 1.)/2*$vortex_gaussian^2)}
+vortex_momentum0 = {((freestream0/freestream2 - pos1/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed_expr)*$vortex_mass)}
+vortex_momentum1 = {((freestream1/freestream2 + pos0/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed_expr)*$vortex_mass)}
+vortex_mass = {(freestream2*$vortex_scalar^(1./(heat_rat - 1.)))}
+vortex_energy = {($freestream_spec_int_ener*$vortex_scalar*$vortex_mass + 0.5*($vortex_momentum0^2 + $vortex_momentum1^2)/$vortex_mass)}
+vortex = {
+    momentum0 = $vortex_momentum0
+    momentum1 = $vortex_momentum1
+    density = $vortex_mass
+    energy = $vortex_energy
+}
+
+momentum_expr = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}
+density_expr = {density = density;}
+energy_expr = {energy = energy;}
+residual_momentum_expr = {residual_momentum0 = (momentum0 - prev_momentum0)/tss; residual_momentum1 = (momentum1 - prev_momentum1)/tss; residual_momentum2 = (momentum2 - prev_momentum2)/tss;}
+residual_density_expr = {residual_density = (density - prev_density)/tss;}
+residual_energy_expr = {residual_energy = (energy - prev_energy)/tss;}
+residual_expr = residual_momentum_expr + residual_density_expr + residual_energy_expr
+field_residual_expr = {
+    residual_momentum0 = residual_momentum0
+    residual_momentum1 = residual_momentum1
+    residual_momentum2 = residual_momentum2
+    residual_density = residual_density
+    residual_energy = residual_energy
+}
+velocity_expr = {velocity0 = momentum0/density; velocity1 = momentum1/density; velocity2 = momentum2/density;}
+speed_expr = {speed = sqrt(velocity0^2 + velocity1^2 + velocity2^2);}
+pressure_expr = {pressure = (heat_rat - 1)*(energy - 0.5*density*speed^2);}
+temperature_expr = {temperature = pressure/(density*specific_gas_air);}
+mach_expr = {mach = speed/sqrt(heat_rat*pressure/density);}
+wall_dist_expr = {wall_distance = wall_distance;}
+art_visc_expr = {bulk_art_visc = bulk_art_visc;}
+{define arbitrary default transport parameters so that `transport_expr` doesn't break in inviscid flows}
+offset = 0.
+ref_temperature = 1.
+ref_value = 1.
+const_value = 0.
+transport_expr = {
+    $viscosity_model
+    dynamic_viscosity = const_value + ref_value*(temperature/ref_temperature)^1.5*(ref_temperature + offset)/(temperature + offset)
+    $conductivity_model
+    thermal_conductivity = const_value + ref_value*(temperature/ref_temperature)^1.5*(ref_temperature + offset)/(temperature + offset)
+    case0 = {}
+    case1 = {
+        specific_turbulent_kinetic_energy = turbulent_kinetic_energy/density
+        turbulent_dissipation_bassi = turbulent_dissipation_bassi
+        specific_turbulent_dissipation = exp(turbulent_dissipation_bassi/density)
+    }
+    $$({case} + (turbulence_model == {k-omega}))
+}
+visc_stress_expr = {visc_stress0 = visc_stress0; visc_stress1 = visc_stress1; visc_stress2 = visc_stress2;}
+stress_expr = {stress0 = -pressure*normal0 + visc_stress0; stress1 = -pressure*normal1 + visc_stress1; stress2 = -pressure*normal2 + visc_stress2;}
+heat_flux_expr = {heat_flux = heat_flux;}
+iteration_expr = {iteration = iteration;}
+unsteady_iteration_expr = {time_stage = time_stage; pseudotime_iteration = pseudotime_iteration; total_iteration = total_iteration;}
+art_visc_residual_expr = {art_visc_residual = art_visc_residual;}
+normalized_residual_expr = {normalized_residual = (residual_momentum/init_residual_momentum + residual_density/init_residual_density + residual_energy/init_residual_energy)/3}
+unsteady_residual_expr = {unsteady_residual = (unsteady_residual_momentum/init_init_unsteady_residual_momentum + unsteady_residual_density/init_init_unsteady_residual_density + unsteady_residual_energy/init_init_unsteady_residual_energy)/3;}
+flow_time_expr = {flow_time = flow_time;}
+time_step_expr = {time_step = time_step;}
+fix_iters_expr = {fix_iters = fix_iters;}
+skin_friction_coef_expr = {skin_friction_coef = sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/(.5*freestream_density*freestream_speed^2);}
+pressure_coef_expr = {pressure_coef = (pressure - freestream_pressure)/(.5*freestream_density*freestream_speed^2);}
+bl_nondim_expr = {
+    wall_spacing = wall_spacing
+    friction_velocity = sqrt(sqrt(visc_stress0^2 + visc_stress1^2 + visc_stress2^2)/density)
+    y_plus = wall_spacing*friction_velocity*density/dynamic_viscosity
+    roughness_plus = roughness_height*friction_velocity*density/dynamic_viscosity
+}
+state_vars = momentum_expr + density_expr + energy_expr + velocity_expr + speed_expr + pressure_expr + temperature_expr + mach_expr
+compute_force = {
+    integrand_surface = velocity_expr + speed_expr + pressure_expr + stress_expr
+    integrate_surface
+    force0 = integral_surface_stress0
+    force1 = integral_surface_stress1
+    force2 = integral_surface_stress2
+    drag = force0*freestream_direction0 + force1*freestream_direction1 + force2*freestream_direction2
+    lift = 0.
+    side_force = 0.
+    case1 = {}
+    case2 = {lift = force1*freestream_direction0 - force0*freestream_direction1}
+    case3 = {
+        horiz_norm = (freestream_direction0^2 + freestream_direction1^2)^.5
+        lift = force2*horiz_norm - (force0*freestream_direction0 + force1*freestream_direction1)/horiz_norm*freestream_direction2
+        side_force = (force1*freestream_direction0 - force0*freestream_direction1)/horiz_norm
+    }
+    $$({case} + n_dim)
+    drag_coef = drag/(0.5*freestream_density*freestream_speed^2)
+    lift_coef = lift/(0.5*freestream_density*freestream_speed^2)
+    side_force_coef = side_force/(0.5*freestream_density*freestream_speed^2)
+}
+
+freestream_spec_int_ener = {(freestream3/freestream2 - 0.5*(freestream0^2 + freestream1^2)/freestream2^2)}
+freestream_sound_speed_expr = {((heat_rat*(heat_rat - 1)*$freestream_spec_int_ener)^0.5)}
+force_coef_expr = {lift_coef = lift_coef; drag_coef = drag_coef;}
+heating_rate_expr = {heating_rate = heating_rate;}
+
+{"Print a report on the aerodynamic forces."}
+print_force = {
+    $compute_force
+    println({drag: } + drag + { N})
+    println({lift: } + lift + { N})
+    println({side force: } + side_force + { N})
+    println({drag coefficient: } + drag_coef)
+    println({lift coefficient: } + lift_coef)
+    println({side force coefficient: } + side_force_coef)
+}
+
+{"Compute the total heat flux into the surface."}
+compute_heating = {
+    integrand_surface = heat_flux_expr
+    integrate_surface
+    heating_rate = integral_surface_heat_flux
+}

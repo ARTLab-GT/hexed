@@ -163,10 +163,12 @@ class Hexed(bu.C_project):
             self.builder.copy(self.sdir + "doc/", self.bdir + "doc/", ignore=not_dox).do
             self[bu.Configure](self.sdir + "doc/config.in", self.bdir + "doc/config").do
             self[bu.Python_script](
-                self.bdir + "doc/parameters.dox",
+                bu.all_([self.bdir + "doc/parameters.dox", self.bdir + "doc/input_parameters.dox",
+                         self.bdir + "doc/output_parameters.dox", self.bdir + "doc/macros.dox"]),
                 self.sdir + "python/hexedpy/_document_parameters.py",
-                args=[self.sdir + "hil/hexed.hil", self.bdir + "doc/parameters.dox"],
-                extra_depends=[self.sdir + "hil/hexed.hil"],
+                args=[self.sdir, self.bdir],
+                extra_depends=[self.sdir + "hil/input_parameters.hil", self.sdir + "hil/output_parameters.hil",
+                               self.sdir + "hil/macros.hil"],
             ).do
             self.builder.mkdir(self.bdir + "doc/html")
             self.builder.copy(

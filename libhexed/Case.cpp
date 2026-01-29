@@ -543,7 +543,7 @@ Case::Case(std::string input_script)
       _visualize("_final_ref_sweep" + to_string(i_ref));
       if (!result.changed) break;
     }
-    _inter.variables->assign("mesh_init", 1);
+    _inter.variables->assign("hexed_mesh_init", 1);
     printers::info("  geometry bounding box: \n");
     for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
       printers::info("   ");
@@ -672,22 +672,6 @@ Case::Case(std::string input_script)
       _inter.variables->assign("flow_time", _vard("flow_time") + _vard("time_step"));
       _inter.variables->assign("hexed_next_flow_time", _vard("flow_time") + _vard("time_step"));
     }
-    return "";
-  }));
-
-  _inter.variables->create("compute_smooth_initial_condition", new Namespace::Heisenberg<std::string>([this]() {
-    Int iters = _vari("initial_smoothing_iters");
-    _solver().smooth_init_cond(iters);
-    #if 0
-    double width = _vard("art_visc_width");
-    if (width > 0 && !_vari("elementwise_art_visc")) {
-      printers::info("Initializing artificial viscosity field...");
-      Int av_iters = std::max<Int>(1, iters/std::max(_vari("av_advect_iters"), _vari("av_diff_iters")));
-      for (Int iter = 0; iter < av_iters; ++iter) {
-        _solver().update_art_visc_smoothness(width);
-      }
-    }
-    #endif
     return "";
   }));
 
@@ -842,7 +826,7 @@ Case::Case(std::string input_script)
   }));
 
   _inter.variables->create<std::string>("update", new Namespace::Heisenberg<std::string>([this]() {
-    HEXED_ASSERT(_vari("mesh_init"), "attempt to update flow when mesh has not been created", assert::User_error);
+    HEXED_ASSERT(_vari("hexed_mesh_init"), "attempt to update flow when mesh has not been created", assert::User_error);
     _inter.variables->assign("total_smear_iters", 0);
     bool avw = _vari("capture_shocks");
     bool avc = _vard("art_visc_constant") > 0;

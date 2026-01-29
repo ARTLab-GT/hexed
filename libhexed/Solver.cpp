@@ -216,7 +216,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
 , _time_scheme{time_scheme}
 , _iter{0}
 {
-  _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
   _namespace->assign_default("fix_nonphys_max_safety", .2); // staility ratio for fixing nonphysical state
   _namespace->assign_default("av_diff_ratio", .3); // ratio of diffusion time to advection width
@@ -241,8 +240,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
   _namespace->assign_default("bl_iters", 1);
   _namespace->assign_default("fix_iters", 0);
   _namespace->assign_default("use_filter", 0); // whether to use modal filter acceleration
-  _namespace->assign_default("elementwise_art_visc", 0);
-  _namespace->assign_default("elementwise_art_visc_diff_ratio", 5.);
   _namespace->assign_default<std::string>("working_dir", ".");
   _namespace->assign_default("iteration", 0);
   _namespace->assign_default("pseudotime_iteration", 0);
