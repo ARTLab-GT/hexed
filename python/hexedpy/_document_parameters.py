@@ -4,6 +4,19 @@ assert len(sys.argv) == 3
 source_dir = sys.argv[1]
 target_dir = sys.argv[2]
 
+def get_text(processed):
+    text = ""
+    for name in sorted(processed.keys()):
+        text += f'''\\anchor {name}
+<div style="font-size: 150%; padding-bottom: 0.5em;"> __{name}__ </div>
+<div style="margin: 0px">
+{processed[name]}
+</div>
+<hr>
+
+'''
+    return text
+
 for fname in ["input_parameters", "output_parameters", "macros"]:
     with open(f"{source_dir}/hil/{fname}.hil", "r") as input_file:
         input_text = input_file.read();
@@ -39,18 +52,23 @@ for fname in ["input_parameters", "output_parameters", "macros"]:
                 value = f"__Default:__ `{rest.split('\n')[0]}`\\n\n"
             doc = value + doc
         processed[name] = doc
-    output_text = f"/*! \\page {fname} {fname.replace('_', ' ').title()}\n\n"
-    for name in sorted(processed.keys()):
-        output_text += f'''\\anchor {name}
-<div style="font-size: 150%; padding-bottom: 0.5em;"> __{name}__ </div>
-<div style="margin: 0px">
-{processed[name]}
-</div>
-<hr>
-
-'''
-    output_text += "*/\n"
+    output_text = f"/*! \\page {fname} {fname.replace('_', ' ').title()}\n\n" + get_text(processed) + "*/\n"
     with open(f"{target_dir}/doc/{fname}.dox", "w") as output_file:
+        output_file.write(output_text)
+
+with open(f"{source_dir}/libhexed/Case.cpp", "r") as input_file:
+    input_text = input_file.read();
+    processed = {}
+    for command in input_text.split('/*"')[1:]:
+        doc, rest = command.split('"*/')
+        try:
+            name = rest.split('create("')[1].split('"')[0]
+        except Exception as e:
+            print(rest)
+            raise e
+        processed[name] = doc.replace("  * ", "")
+    output_text = "/*! \\page command_variables Command Variables\n\n" + get_text(processed) + "*/\n"
+    with open(f"{target_dir}/doc/command_variables.dox", "w") as output_file:
         output_file.write(output_text)
 
 with open(f"{target_dir}/doc/parameters.dox", "w") as output_file:
@@ -58,5 +76,6 @@ with open(f"{target_dir}/doc/parameters.dox", "w") as output_file:
 \subpage input_parameters
 \subpage output_parameters
 \subpage macros
+\subpage command_variables
 */
 """)

@@ -164,11 +164,11 @@ class Hexed(bu.C_project):
             self[bu.Configure](self.sdir + "doc/config.in", self.bdir + "doc/config").do
             self[bu.Python_script](
                 bu.all_([self.bdir + "doc/parameters.dox", self.bdir + "doc/input_parameters.dox",
-                         self.bdir + "doc/output_parameters.dox", self.bdir + "doc/macros.dox"]),
+                         self.bdir + "doc/output_parameters.dox", self.bdir + "doc/macros.dox", self.bdir + "doc/command_variables.dox"]),
                 self.sdir + "python/hexedpy/_document_parameters.py",
                 args=[self.sdir, self.bdir],
                 extra_depends=[self.sdir + "hil/input_parameters.hil", self.sdir + "hil/output_parameters.hil",
-                               self.sdir + "hil/macros.hil"],
+                               self.sdir + "hil/macros.hil", self.sdir + "libhexed/Case.cpp"],
             ).do
             self.builder.mkdir(self.bdir + "doc/html")
             self.builder.copy(

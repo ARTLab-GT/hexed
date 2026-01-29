@@ -38,7 +38,7 @@ class Iges_parser {
 
   /*! \brief Constructs a parser and reads a file.
    * \details `file_name` must be a path, absolute or relative, to an IGES file
-   * with an \ref add_geom "appropriate extension".
+   * with an \ref mesh "appropriate extension".
    */
   Iges_parser(std::string file_name);
 

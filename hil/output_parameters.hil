@@ -63,3 +63,10 @@ iteration = 0
 
 {"Average of momentum, density, and energy residuals, each normalized by their value after the first iteration."}
 normalized_residual = 1.
+
+{"Euclidean norm of residuals of the momentum equations."}
+residual_momentum = 0.
+{"Residual of the continuity equation."}
+residual_density = 0.
+{"Residual of the energy equation."}
+residual_energy = 0.

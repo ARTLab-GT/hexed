@@ -436,6 +436,10 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  /*"
+   * Creates a `hexed::Solver` object.
+   * Mesh contains a single element and the flow is uninitialized.
+  "*/
   _inter.variables->create("create_solver", new Namespace::Heisenberg<std::string>([this]() {
     int n_dim = _vari("n_dim");
     // evaluate dimensions
@@ -477,6 +481,29 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  /*"
+   * Creates the mesh, performs initial refinement, and incorporates the surface geometry.
+   * You can define 0 or more string variables named `geom0`, `geom1`, `geom2`, ... containing paths to geometry definition files.
+   * Paths can be absolute or relative to execution directory (not \ref working_dir).
+   * Geometry variable numbers must start at 0 and be consecutive.
+   * E.g., if you define `geom0 = leading.txt`, `geom1 = main.txt`, `geom3 = trailing.txt`, then `geom3` will be ignored.
+   * If these geometries split the domain into disjoint regions,
+   * then the region containing the \ref flood_fill_startN "flood fill start" shall be meshed.
+   * Geometry file format is inferred from the file extension, which is case-insensitive.
+   * The following extension/format combinations are supported:
+   * - `.csv`: Comma Separated Value format (2D only).
+   *   A comma-delimited table with at least 2 columns, which are interpreted as \f$ x_0 \f$ and \f$ x_1 \f$ coordinates of the nodes of a polygonal curve,
+   *   in \ref units "standard units".
+   *   Curve is treated as open---if you are trying to model a closed shape, simply make the first point (approximately) equal to the last.
+   * - `.igs`, `.iges`: [IGES](https://en.wikipedia.org/wiki/IGES) CAD
+   *   [format](https://filemonger.com/specs/igs/devdept.com/version6.pdf) (2D or 3D).
+   *   For 2D simulations, the model curves/edges will be extracted. All curves must (approximately) lie in the \f$ (x_0, x_1) \f$ plane,
+   *   and any deviation from said plane will be a source of numerical error.
+   *   For 3D simulations, the model surfaces will be used.
+   *   Units are read from the file and converted.
+   *   Files must be in ASCII format (there is also a binary format, although this is less common).
+   *   Both GNU/Linux and Windows line endings are accepted.
+  "*/
   _inter.variables->create("mesh", new Namespace::Heisenberg<std::string>([this]() {
     printers::info("Meshing...\n");
     auto compute_bbox = [&]() {
@@ -665,6 +692,7 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  /*" Initializes the state to \ref init_cond "*/
   _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
     _solver().initialize(_vars("init_cond"));
     // implicit setup
@@ -694,6 +722,11 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  /*"
+   * Reads the mesh from a Hexed mesh file (which you can create using \ref write_mesh).
+   * This can be used in place of \ref mesh, but you will still have to call \ref init_state or \ref read_state to initialize the flow state.
+   * The file name of the mesh file given by \ref input_data with `.mesh.h5` appended.
+  "*/
   _inter.variables->create("read_mesh", new Namespace::Heisenberg<std::string>([this]() {
     printers::info("Reading mesh...\n");
     auto geom = _make_geom();
@@ -704,12 +737,28 @@ Case::Case(std::string input_script)
     printers::info("done\n");
     return "";
   }));
+
+  /*"
+   * Reads the flow state from a file created with the \ref write_state command.
+   * The file name is given by \ref input_data with `.state.h5` appended.
+   * The state file __must__ have been created for the exact same mesh,
+   * meaning that if the state file was not created during the same simulation you're currently running,
+   * you need to first use \ref read_mesh to get the mesh.
+   * Two meshes that look the same might not actually be the same for a variety of reasons.
+   * For example, if elements were refined in a different order, then you cannot use the same state files,
+   * even if the mesh is geometrically identical.
+   * So, just play it safe and read the mesh first.
+   * This command can be used instead of \ref init_state.
+   * `read_mesh` and `read_state` together can be used to restart a previous simulation from where it left off.
+  "*/
   _inter.variables->create("read_state", new Namespace::Heisenberg<std::string>([this]() {
     Task_message(printers::info, "Reading state...\n");
     _solver().read_state(_vars("input_data"));
     printers::info("done\n");
     return "";
   }));
+
+  /*" Reads HIL variables from a file created with the \ref write_status command. "*/
   _inter.variables->create("read_status", new Namespace::Heisenberg<std::string>([this]() {
     printers::info("Reading status...\n");
     auto sub = _inter.make_sub();
@@ -717,6 +766,13 @@ Case::Case(std::string input_script)
     printers::info("done\n");
     return "";
   }));
+
+  /*"
+   * Writes the mesh to a file in the Hexed mesh format,
+   * which can then be used again in a future simulation using \ref read_mesh, or, in theory, imported into another program.
+   * The file name will be `iterXXXXXXXXXX.mesh.h5` in the working directory, where the `X`s are replaced with the current iteration number.
+   * Also creates a symlink `latest.mesh.h5` pointing to this file for convenience.
+  "*/
   _inter.variables->create("write_mesh", new Namespace::Heisenberg<std::string>([this]() {
     Task_message(printers::info, "writing mesh");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
@@ -726,6 +782,12 @@ Case::Case(std::string input_script)
     }
     return "";
   }));
+
+  /*"
+   * Writes the flow state to a file which can then be used in a future simulation using \ref read_state.
+   * The file name will be `iterXXXXXXXXXX.state.h5` in the working directory, where the `X`s are replaced with the current iteration number.
+   * Also creates a symlink `latest.state.h5` pointing to this file for convenience.
+  "*/
   _inter.variables->create("write_state", new Namespace::Heisenberg<std::string>([this]() {
     Task_message(printers::info, "writing state");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
@@ -733,6 +795,12 @@ Case::Case(std::string input_script)
     force_symlink(_iteration_suffix() + ".state.h5", _vars("working_dir") + "latest.state.h5");
     return "";
   }));
+
+  /*"
+   * Writes the flow state to a file which can then be used in a future simulation using \ref read_state.
+   * The file name will be `iterXXXXXXXXXX.state.h5` in the working directory, where the `X`s are replaced with the current iteration number.
+   * Also creates a symlink `latest.state.h5` pointing to this file for convenience.
+  "*/
   _inter.variables->create("write_status", new Namespace::Heisenberg<std::string>([this]() {
     Task_message(printers::info, "writing status");
     std::ofstream status_file(_vars("working_dir") + _iteration_suffix() + ".status.hil");
@@ -748,6 +816,7 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  /*" Writes visualization files. "*/
   _inter.variables->create("visualize", new Namespace::Heisenberg<std::string>([this]() {
     _visualize("_" + _iteration_suffix());
     printers::info("Current wall clock time: " + to_string(_vard("wall_time")) + "\n");
@@ -780,7 +849,12 @@ Case::Case(std::string input_script)
     return header;
   }));
 
-  _inter.variables->create<std::string>("compute_residuals", new Namespace::Heisenberg<std::string>([this]() {
+  /*"
+   * Evaluates the residuals and assigns them to float variables
+   * \ref residual_momentum, \ref residual_density, \ref residual_energy.
+   * Also updates the spectral uncertainty in each element.
+  "*/
+  _inter.variables->create("compute_residuals", new Namespace::Heisenberg<std::string>([this]() {
     int nd = _solver().storage_params().n_dim;
     Physical_residual phys_resid;
     auto compute_res = [&](bool unsteady_implicit, std::string prefix) {
@@ -798,7 +872,7 @@ Case::Case(std::string input_script)
     return "";
   }));
 
-  _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
+  _inter.variables->create("report", new Namespace::Heisenberg<std::string>([this]() {
     std::string report = "";
     auto sub = _inter.make_sub();
     sub.exec(_vars("print_vars"));
@@ -830,7 +904,18 @@ Case::Case(std::string input_script)
     return converged;
   }));
 
-  _inter.variables->create<std::string>("update", new Namespace::Heisenberg<std::string>([this]() {
+  /*"
+   * Executes \ref print_freq solver iterations and returns an empty string.
+   * Each "solver iteration" consists of:
+   * -# Calling `hexed::Solver::set_art_visc_constant`, if applicable.
+   * -# Calling `hexed::Solver::update_art_visc_smoothness`, if applicable.
+   *    This will itself update the artificial viscosity advection equations \ref av_advect_iters times
+   *    and the diffusion equations \ref av_diff_iters times.
+   * -# Calling `hexed::Solver::update`.
+   *    This will itself update the flow equations \ref flow_iters times
+   *    (where \ref flow_iters defaults to 1 for simulations without shock-capturing).
+  "*/
+  _inter.variables->create("update", new Namespace::Heisenberg<std::string>([this]() {
     HEXED_ASSERT(_vari("hexed_mesh_init"), "attempt to update flow when mesh has not been created", assert::User_error);
     _inter.variables->assign("total_smear_iters", 0);
     bool avw = _vari("capture_shocks");
@@ -888,11 +973,25 @@ Case::Case(std::string input_script)
     _solver().bounds_surface(_vars("bounds_surface_vars"), _solver().mesh().surface_bc_sn(), _vari("vis_n_sample"));
     return "";
   }));
-  _inter.variables->create<std::string>("integrate_field", new Namespace::Heisenberg<std::string>([this]() {
+
+  /*"
+   * Computes integrals of the variables in \ref integrand_field over the domain
+   * by the native quadrature rule of the numerical scheme.
+   * The integrals of the variables are assigned to float variables named
+   * `integral_field_VAR` where `VAR` is the name of the variable.
+  "*/
+  _inter.variables->create("integrate_field", new Namespace::Heisenberg<std::string>([this]() {
     _solver().integrate_field(_vars("integrand_field"));
     return "";
   }));
-  _inter.variables->create<std::string>("integrate_surface", new Namespace::Heisenberg<std::string>([this]() {
+
+  /*"
+   * Computes integrals of the variables in \ref integrand_surface over the geometry surface
+   * by the native quadrature rule of the numerical scheme.
+   * The integrals of the variables are assigned to float variables
+   * named `integral_surface_var` where `var` is the name of the variable.
+  "*/
+  _inter.variables->create("integrate_surface", new Namespace::Heisenberg<std::string>([this]() {
     _solver().integrate_surface(_vars("integrand_surface"), _solver().mesh().surface_bc_sn());
     return "";
   }));

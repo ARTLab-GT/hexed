@@ -31,7 +31,7 @@ In 2D, the \ref reference_length is used as the reference area, and you may __no
 "}
 
 {"
-Number of levels to refine the mesh in \ref init_refinement before surface geometry is introduced.
+Number of levels to refine the mesh in the initial refinement sweeps before surface geometry is introduced.
 May be any non-negative integer, up to time and memory constraints.
 "}
 init_ref_level = 3
@@ -63,6 +63,13 @@ this parameter controls the _pseudotime_ step, not the real-time step.
 To control the real-time step, use \ref time_step.
 "}
 max_safety = 0.7
+
+{"Number of times to update the artificial viscosity advection equation for each nominal solver iteration."}
+av_advect_iters = 1
+{"Number of times to update the artificial viscosity diffusion equation for each nominal solver iteration."}
+av_diff_iters = 1
+{"Number of times to update the real flow equations for each nominal solver iteration."}
+flow_iters = 1
 
 {"
 Maximum allowable time step.
@@ -666,7 +673,7 @@ vis_geom = true
 {"
 If \ref vis_geom and `vis_geom_distance` are both \ref true,
 diagnostic visualization files will include a field with the distance from each point to the geometry surface
-in the block bounded by \ref geom_vis_bound .
+in the block bounded by \ref geom_vis_boundNN .
 This will be substantially more expensive than the other visualization files (which are curves and surfaces)
 but is the most reliable way to diagnose whether the geometry was loaded correctly.
 "}
@@ -716,7 +723,7 @@ integrand_surface = {}
 mesh_extreme_eps = 1e-6
 
 {"\variable flood_fill_startN
-Location to start the flood fill algorithm when \ref add_geom is evaluated.
+Location to start the flood fill algorithm when \ref mesh is evaluated.
 This is actually three variables, `flood_fill_start0`, `flood_fill_start1`, and `flood_fill_start2`,
 specifying the \f$ x_0 \f$, \f$ x_1 \f$, and \f$ x_2 \f$ coordinates, respectively.
 If any of the coordinates are not within the \ref mesh_extremeNN "mesh extremes" (which is the case by default),
