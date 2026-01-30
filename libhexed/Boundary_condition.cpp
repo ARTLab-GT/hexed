@@ -252,8 +252,8 @@ No_slip::No_slip(std::shared_ptr<Thermal_bc> thermal, double heat_rat, Transport
 , _heat_rat{heat_rat}
 {}
 
-double Thermal_equilibrium::ghost_heat_flux(Mat<> state, double) {
-  double temp = state(last)*(heat_rat - 1)/state(state.size() - 2)/constants::specific_gas_air;
+double Thermal_equilibrium::ghost_heat_flux(Mat<> scalar_state, double) {
+  double temp = scalar_state(1)*(heat_rat - 1)/(scalar_state(0)*constants::specific_gas_air);
   double radiative_flux = emissivity*constants::stefan_boltzmann*math::pow(temp, 4);
   double conductive_flux = heat_transfer_coef*(temp - temperature);
   return radiative_flux + conductive_flux;
@@ -279,10 +279,10 @@ void No_slip::apply_state(Boundary_connection& con) {
     Mat<> state(params.n_dim + 2); // yes, this should be ignoring turbulence variables
     for (int i_var = 0; i_var < params.n_dim + 2; ++i_var) state(i_var) = inside_state(i_var)[i_qpoint];
     double kin_ener = .5*state(Eigen::seqN(0, nd)).squaredNorm()/state(nd);
-    double internal_energy = state(last) - kin_ener;
-    double ghost_energy = _thermal->ghost_energy(state);
-    if (ghost_energy > internal_energy) ghost_energy += ghost_energy - internal_energy;
-    else ghost_energy *= ghost_energy/internal_energy;
+    state(nd + 1) -= kin_ener;
+    double ghost_energy = _thermal->ghost_energy(state(Eigen::seqN(nd, params.n_var - nd)));
+    if (ghost_energy > state(nd + 1)) ghost_energy += ghost_energy - state(nd + 1);
+    else ghost_energy *= ghost_energy/state(nd + 1);
     ghost_state(nd + 1)[i_qpoint] = ghost_energy + kin_ener;
   }
   if (_turb == k_omega) {
@@ -312,7 +312,6 @@ void No_slip::apply_flux(Boundary_connection& con) {
   Array<double> inside_state = con.inside().flow_state()(1);
   Array<double> normal = con.normal();
   Array<double> state_cache = con.state_cache();
-  Array<double> presc = con.prescribed_data();
   // set momentum and mass flux (pretty straightforward)
   ghost_state(0, params.n_dim) = inside_state(0, params.n_dim);
   ghost_state(params.n_dim) = -inside_state(params.n_dim);
@@ -326,8 +325,10 @@ void No_slip::apply_flux(Boundary_connection& con) {
     int flux_sign = 2*con.inside().sign() - 1;
     Mat<> state(params.n_var);
     for (int i_var = 0; i_var < params.n_var; ++i_var) state(i_var) = state_cache(i_var)[i_qpoint];
+    state(params.n_dim + 1) -= state(Eigen::seqN(0, params.n_dim)).squaredNorm()/(2.*state(params.n_dim));
     double inside_ener = inside_state(params.n_dim + 1)[i_qpoint];
-    double ghost_heat = _thermal->ghost_heat_flux(state, inside_ener*flux_sign/nrml);
+    double ghost_heat = _thermal->ghost_heat_flux(state(Eigen::seqN(params.n_dim, params.n_var - params.n_dim)),
+                                                  inside_ener*flux_sign/nrml);
     ghost_state(params.n_dim + 1)[i_qpoint] = _coercion*(nrml*flux_sign*ghost_heat - inside_ener) + inside_ener;
   }
   // set turbulence variables

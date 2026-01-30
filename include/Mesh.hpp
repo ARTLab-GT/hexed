@@ -87,7 +87,6 @@ class Mesh {
   virtual void extrude(bool collapse = false, bool force = false) = 0;
   //! \brief Does some work that has to happen after you manually add elements and/or connections.
   virtual void cleanup() = 0;
-  //! \}
 
   //! \name Automated tree meshing
   //! \{

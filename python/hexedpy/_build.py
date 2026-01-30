@@ -162,6 +162,14 @@ class Hexed(bu.C_project):
                 return not (f.endswith(".dox") or f.endswith(".tag") or f.endswith(".doxytags") or os.path.isdir(f))
             self.builder.copy(self.sdir + "doc/", self.bdir + "doc/", ignore=not_dox).do
             self[bu.Configure](self.sdir + "doc/config.in", self.bdir + "doc/config").do
+            self[bu.Python_script](
+                bu.all_([self.bdir + "doc/parameters.dox", self.bdir + "doc/input_parameters.dox",
+                         self.bdir + "doc/output_parameters.dox", self.bdir + "doc/solver_macros.dox", self.bdir + "doc/command_variables.dox"]),
+                self.sdir + "python/hexedpy/_document_parameters.py",
+                args=[self.sdir, self.bdir],
+                extra_depends=[self.sdir + "hil/input_parameters.hil", self.sdir + "hil/output_parameters.hil",
+                               self.sdir + "hil/solver_macros.hil", self.sdir + "libhexed/Case.cpp"],
+            ).do
             self.builder.mkdir(self.bdir + "doc/html")
             self.builder.copy(
                 self.sdir + "doc/",

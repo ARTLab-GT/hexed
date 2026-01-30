@@ -1,27 +1,20 @@
 n_dim = 2
-mesh_extreme00 = -10.
-mesh_extreme10 = -10.
-mesh_extreme01 =  10.
-mesh_extreme11 =  10.
-amr = true
+reference_length = 1.
 geom0 = {geom.csv}
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
 min_elem_size = .01
 
-{freestream definition. Note that not all of the variables below are parameters considered by the solver. Some are simply user-defined variables.}
 freestream_temperature = zero_celsius
 freestream_speed = 60 ;{approx mach 0.2}
 freestream_direction0 = 0.8
 freestream_direction1 = 0.6
 target_thickness = .01
-target_reynolds = (5/target_thickness)^2
-freestream_density = target_reynolds*1.8e-5/freestream_speed
+reynolds = (5/target_thickness)^2
 monitor_vars = {drag_coef = drag_coef;}
 
 $plot_history
 $simulate
-$print_force
 vis_csv = true
 vis_xdmf = false
 vis_field = false

@@ -1,0 +1,79 @@
+
+{"Version of Hexed that you are currently running."}
+version = version_major + {.} + version_minor + {.} + version_patch
+{"
+Text of the license under which this copy of Hexed is distributed.
+So, to show the license, you can simply do `license` in an interactive session or `print license` in an input file.
+"}
+license = newline + read {LICENSE.txt}
+
+{"`reference_value` used in \ref air_viscosity ."}
+air_visc_ref = 1.716e-5
+{"`reference_temperature` used in \ref air_viscosity ."}
+air_visc_ref_temp = 273.
+{"`offset` used in \ref air_viscosity ."}
+air_visc_offset = 111.
+{"reference value used in \ref air_conductivity ."}
+air_cond_ref = .0241
+{"`reference_temperature` used in \ref air_conductivity ."}
+air_cond_ref_temp = 273.
+{"`offset` used in \ref air_conductivity ."}
+air_cond_offset = 194.
+
+{"
+Best available Sutherland's Law approximation for the viscosity of air that I am aware of,
+which is from White \cite white_viscous (Table 1-2).
+To use it this model, set `viscosity_model = air_viscosity`.
+\see \ref viscosity_model
+"}
+air_viscosity = {ref_value = air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset;}
+
+{"
+Best available Sutherland's Law approximation for the thermal conductivity of air that I am aware of,
+which is from White \cite white_viscous (Table 1-3).
+To use it this model, set `conductivity_model = air_conductivity`.
+\see \ref conductivity_model
+
+\note Using \ref air_viscosity together with \ref air_conductivity results in a non-constant Prandtl number!
+Technically, this is correct---air does not have a constant Prandtl number---but
+for reasons I do not fully understand, most people use a constant Prandtl number in their transport models.
+To obtain a constant Prandtl number, use \ref air_const_prandtl_conductivity instead of `air_conductivity`.
+\todo Does this give the _correct_ Prandtl number variation?
+I just selected the most credible Sutherland models I could find for viscosity and conductivity independently,
+but I am not sure to what extent the difference reflects the true Prandtl number variation
+versus disagreement between different authors.
+There may be merit to trying to tweak the default viscosity and conductivity models to work better in combination.
+"}
+air_conductivity = {ref_value = air_cond_ref; ref_temperature = air_cond_ref_temp; offset = air_cond_offset;}
+{"
+\ref conductivity_model that gives a constant Prandtl number if \ref air_viscosity is used for \ref viscosity_model.
+The value of the constant prandtl number is given by \ref const_prandtl.
+If you don't care about having a constant Prandtl number, use \ref air_conductivity instead.
+"}
+air_const_prandtl_conductivity = {ref_value = heat_rat/(heat_rat - 1.)*specific_gas_air/const_prandtl*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
+{"Prandtl number to use in \ref air_const_prandtl_conductivity."}
+const_prandtl = .72
+
+{"\variable allow_refinement
+Created by the solver to indicate whether AMR sweeps are currently allowed to perform refinement.
+If \ref false, then they are only allowed to coarsen.
+This avoids a vicious cycle where transient noise in the flow field causes the mesh to be locally refined,
+which slows down convergence and increases the probability that the noise will persist on the next AMR sweep.
+This is determined automatically based on the residual history.
+"}
+
+{"The current iteration number."}
+iteration = 0
+
+{"Average of momentum, density, and energy residuals, each normalized by their value after the first iteration."}
+normalized_residual = 1.
+
+{"Euclidean norm of residuals of the momentum equations."}
+residual_momentum = 0.
+{"Residual of the continuity equation."}
+residual_density = 0.
+{"Residual of the energy equation."}
+residual_energy = 0.
+
+{"Will be set to \ref true if some surface geometry is loaded."}
+has_geometry = false

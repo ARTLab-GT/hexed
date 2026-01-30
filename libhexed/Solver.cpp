@@ -216,7 +216,6 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
 , _time_scheme{time_scheme}
 , _iter{0}
 {
-  _namespace->assign_default("max_safety", .7); // maximum allowed safety factor for time stepping
   _namespace->assign_default("max_time_step", huge); // maximum allowed time step
   _namespace->assign_default("fix_nonphys_max_safety", .2); // staility ratio for fixing nonphysical state
   _namespace->assign_default("av_diff_ratio", .3); // ratio of diffusion time to advection width
@@ -233,21 +232,13 @@ Solver::Solver(int n_dim, int row_size, double root_mesh_size, Time_scheme time_
   _namespace->assign_default("n_cheby_av", 1);
   _namespace->assign_default("cheby_safety", .9); // safety factor to apply to Chebyshev-acceleration
   _namespace->assign_default("bl_multirate", 0);
-  // number of advection iterations to run each time `update_art_visc_smoothness` is called
-  _namespace->assign_default("av_advect_iters", 1);
-  // number of diffusion iterations to run each time `update_art_visc_smoothness` is called
-  _namespace->assign_default("av_diff_iters", 1);
-  _namespace->assign_default("flow_iters", 1);
   _namespace->assign_default("bl_iters", 1);
   _namespace->assign_default("fix_iters", 0);
   _namespace->assign_default("use_filter", 0); // whether to use modal filter acceleration
-  _namespace->assign_default("elementwise_art_visc", 0);
-  _namespace->assign_default("elementwise_art_visc_diff_ratio", 5.);
   _namespace->assign_default<std::string>("working_dir", ".");
   _namespace->assign_default("iteration", 0);
   _namespace->assign_default("pseudotime_iteration", 0);
   _namespace->assign_default("flow_time", 0.);
-  if (!is_implicit(_time_scheme)) _namespace->assign_default("time_step", 0.);
   _namespace->assign("time_stage", 0);
   _namespace->assign("n_time_stages", n_total_stage(_time_scheme));
   _namespace->assign_default("art_visc_residual", 0.);
@@ -808,18 +799,18 @@ void Solver::_init_stage_storage(int stage) {
     Array<double> res_cache({n_res_cache, n_var, nq}, elem.residual_cache());
     Array<double> tss({nq}, elem.time_step_scale());
     if (_time_scheme == backward_euler) {
-      res_cache(n_res_cache - 1) = state/time_step;
+      res_cache(1 + elem.get_is_deformed()) = state/time_step;
     } else if (_time_scheme == crank_nicolson) {
       for (int i_var = 0; i_var < n_var; ++i_var) {
-        res_cache(n_res_cache - 1)(i_var) = res_cache(0)(i_var)/tss + state(i_var)/(.5*time_step);
+        res_cache(1 + elem.get_is_deformed())(i_var) = res_cache(0)(i_var)/tss + state(i_var)/(.5*time_step);
       }
     } else if (_time_scheme == dirk2) {
       if (stage) {
         for (int i_var = 0; i_var < n_var; ++i_var) {
-          res_cache(n_res_cache - 1)(i_var) += res_cache(0)(i_var)/tss*(1 - dirk2_gamma)/dirk2_gamma;
+          res_cache(1 + elem.get_is_deformed())(i_var) += res_cache(0)(i_var)/tss*(1 - dirk2_gamma)/dirk2_gamma;
         }
       } else {
-        res_cache(n_res_cache - 1) = state/(dirk2_gamma*time_step);
+        res_cache(1 + elem.get_is_deformed()) = state/(dirk2_gamma*time_step);
       }
     }
   }
@@ -973,7 +964,7 @@ void Solver::_update_recursive(int preti_level, double safety) {
 }
 
 void Solver::update() {
-  stopwatch.stopwatch.start(); // ready or not the clock is countin'
+  stopwatch.stopwatch.start();
   double safety = _namespace->get<double>("max_safety");
   double cheby_safety = _namespace->get<double>("cheby_safety");
   int inner = 0;
@@ -1026,11 +1017,10 @@ void Solver::update() {
               if (_time_scheme == explicit_steady) {
                 #pragma omp parallel for
                 for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-                  Array<double> res_cache({2 + elems[i_elem].get_is_deformed() + n_extra_stage(_time_scheme),
-                                           params.n_var, params.n_qpoint()},
-                                          elems[i_elem].residual_cache());
+                  Array<double> res_cache({params.n_var, params.n_qpoint()},
+                                          elems[i_elem].stage(2 + elems[i_elem].get_is_deformed()));
                   Array<double> state({params.n_var, params.n_qpoint()}, elems[i_elem].state());
-                  res_cache(1 + elems[i_elem].get_is_deformed()) = state;
+                  res_cache = state;
                 }
               }
               // compute inviscid update
@@ -1058,14 +1048,14 @@ void Solver::update() {
               if (_time_scheme == explicit_steady) {
                 #pragma omp parallel for
                 for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
-                  Array<double> res_cache({2 + n_extra_stage(_time_scheme), params.n_var, params.n_qpoint()},
-                                          elems[i_elem].residual_cache());
+                  Array<double> res_cache({params.n_var, params.n_qpoint()},
+                                          elems[i_elem].stage(2 + elems[i_elem].get_is_deformed()));
                   Array<double> state({params.n_var, params.n_qpoint()}, elems[i_elem].state());
                   for (int i_var = 0; i_var < params.n_var; ++i_var) {
                     double n = normalization[i_var];
                     for (int i_qpoint = 0; i_qpoint < params.n_qpoint(); ++i_qpoint) {
-                      double prev = res_cache(1 + elems[i_elem].get_is_deformed())(i_var)[i_qpoint];
-                      state(i_var)[i_qpoint] = prev + math::smooth_limit_abs(state(i_var)[i_qpoint] - prev, n);
+                      double diff = math::smooth_limit_abs(state(i_var)[i_qpoint] - res_cache(i_var)[i_qpoint], n);
+                      state(i_var)[i_qpoint] = res_cache(i_var)[i_qpoint] + diff;
                     }
                   }
                 }
@@ -1500,7 +1490,9 @@ bool Solver::fix_nonphysical(double stability_ratio, int sub_iter) {
       printers::warn("Warning: ", true);
       printers::warn(str_cat("Nonphysical flow state detected (solver iteration ", status.iteration,
                              " sub-iteration ", sub_iter, ").\n", is_phys, "\n", "Attempting to fix...\n"));
-      visualize_field("default", str_cat(wd, "nonphysical", status.iteration, "_", sub_iter), vis_expr);
+      if (_namespace->get<int>("vis_field")) {
+        visualize_field("default", str_cat(wd, "nonphysical", status.iteration, "_", sub_iter), vis_expr);
+      }
     }
     printers::warn(format_str("    nonphysical iteration %i\n", iter));
     for (int inner = 0; inner < 100; ++inner, ++iter) {
@@ -1515,7 +1507,6 @@ bool Solver::fix_nonphysical(double stability_ratio, int sub_iter) {
         false,
       };
       max_dt_fix_nonphysical(_kernel_mesh(), opts, dt, dt, true);
-      #if 1
       auto bc_cons {acc_mesh->boundary_connections()};
       #pragma omp parallel for
       for (int i_con = 0; i_con < bc_cons.size(); ++i_con) {
@@ -1523,11 +1514,6 @@ bool Solver::fix_nonphysical(double stability_ratio, int sub_iter) {
       }
       opts.dt = 1.;
       compute_fix_nonphysical(_kernel_mesh(), opts, [this](){apply_fta_flux_bcs();});
-      #else
-      apply_state_bcs();
-      opts.dt = 1.;
-      compute_fix_nonphysical(_kernel_mesh(), opts, [this](){apply_flux_bcs();});
-      #endif
     }
   }
   if (iter) printers::warn("done\n");

@@ -1,43 +1,21 @@
 n_dim = 2
-row_size = 6
-mesh_extreme00 = -80.
-mesh_extreme10 = -80.
-mesh_extreme01 =  80.
-mesh_extreme11 =  80.
-extremal_bc00 = {freestream}
-extremal_bc10 = {freestream}
-extremal_bc01 = {freestream}
-extremal_bc11 = {freestream}
 reference_length = 1.
 geom0 = {rae2822_fitted.csv}
-
-$set_shock
-$set_ramping
-vis_freq = 10^3
-adapt_freq = 10^3
-update_roughness_freq = 10^3
-print_freq = 10
 
 viscosity_model = air_viscosity
 conductivity_model = air_conductivity
 turbulence_model = {k-omega}
-
 freestream_temperature = zero_celsius
 freestream_mach = 0.729
 attack = 2.31*degree
-target_reynolds = 6.5e6
-dyn_visc = 1.716e-5
-freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air*1.4*freestream_temperature)/freestream_mach
+reynolds = 6.5e6
 
+capture_shocks = true
+vis_freq = 10^3
+adapt_freq = 10^3
+update_roughness_freq = 10^3
+print_freq = 10
 monitor_vars = {lift_coef = lift_coef; drag_coef = drag_coef;}
-vis_art_visc_vars = true
-vis_field_vars = vis_field_vars + {
-    debug_var0 = debug_var0
-    av_forcingA = av_forcing0
-    av_forcingB = av_forcing1
-    has_shock = has_shock
-}
-preti = false
 
 $plot_history
 $simulate

@@ -1,42 +1,35 @@
 n_dim = 3
-radius = .0635
-reference_length = radius
-mesh_extreme00 = -2.*radius
-mesh_extreme01 =  0.*radius
-mesh_extreme10 =  0.*radius
-mesh_extreme11 =  2.*radius
-mesh_extreme20 =  0.*radius
-mesh_extreme21 =  2.*radius
+reference_length = .0635
+reference_area = pi*reference_length^2
+domain_size = 2*reference_length
+domain_center0 = -reference_length
+domain_center1 =  reference_length
+domain_center2 =  reference_length
+flood_fill_start0 = -1.7*reference_length
+flood_fill_start1 =  1.7*reference_length
+flood_fill_start2 =  1.7*reference_length
 extremal_bc20 = {nonpenetration}
 extremal_bc10 = {nonpenetration}
 extremal_bc01 = {pressure_outflow}
-flood_fill_start0 = -1.7*radius
-flood_fill_start1 =  1.7*radius
-flood_fill_start2 =  1.7*radius
 geom0 = {quarter.iges}
 max_sharp_reynolds = huge
 max_geom_refine_iters = 0
 
 freestream_temperature = 136.1*rankine
 viscosity_model = air_viscosity
-conductivity_model = {ref_value = 1.4/0.4*specific_gas_air/.72*air_visc_ref; ref_temperature = air_visc_ref_temp; offset = air_visc_offset}
+conductivity_model = air_const_prandtl_conductivity
 freestream_mach = 5.
-{compute density required to achieve desired reynolds number}
-target_reynolds = 1.8875e6
-temperature = freestream_temperature
-$transport_expr
-freestream_density = target_reynolds*dynamic_viscosity/(sqrt(specific_gas_air*1.4*freestream_temperature)*freestream_mach*2*radius)
+reynolds = 1.8875e6
 wall_temperature = 1.308*freestream_temperature
 thermal_bc = {temperature = wall_temperature}
 
-$set_shock
-$set_ramping
+capture_shocks = true
 print_freq = 10
 vis_freq = write_freq = 1000
 monitor_vars = {heating_rate = heating_rate;}
 contour0 = {pos0 + 1e-8}
 contour1 = {pos1 - pos2}
-contour2 = {pos0^2 + pos1^2 + pos2^2 - radius^2 - 1e-8}
+contour2 = {wall_distance - 1e-4}
 vis_field = false
 
 $plot_history

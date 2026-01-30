@@ -1,65 +1,20 @@
-{
-Subsonic NACA 0012 Example Problem: Input file in Hexed Interface Language format.
-To run this file, use the command `hexecute run.hil` in this directory.
-This file specifies the geometry, freestream conditions, and other user-defined input parameters.
-Note: strings are enclosed in `{}`, and strings which are not assigned to anything are used as comments.
-}
-
-{domain and mesh parameters}
 n_dim = 2
-mesh_extreme00 = -160.
-mesh_extreme10 = -160.
-mesh_extreme01 =  160.
-mesh_extreme11 =  160.
 reference_length = 1.
-
-viscosity_model = air_viscosity
-conductivity_model = air_conductivity
-turbulence_model = {k-omega}
-
 {generate geometry with external script}
 shell {python3 ../make_geom.py}
 geom0 = {auto.csv}
 
-{freestream conditions}
+viscosity_model = air_viscosity
+conductivity_model = air_conductivity
+turbulence_model = {k-omega}
 freestream_temperature = zero_celsius
 freestream_mach = .15
 attack = 10*degree
-target_reynolds = 6e6
-dyn_visc = 1.716e-5
-freestream_density = target_reynolds*dyn_visc/sqrt(specific_gas_air*1.4*freestream_temperature)/freestream_mach
+reynolds = 6e6
 
 surface_bc = {no_slip}
-
 monitor_vars = {drag_coef = drag_coef; lift_coef = lift_coef;}
-
-vis_field_vars = vis_field_vars + {
-    debug_var0 = debug_var0
-    residual_mmtm = sqrt(residual_momentum0^2 + residual_momentum1^2 + residual_momentum2^2)
-    mask = mask
-}
-vis_surface_vars = vis_surface_vars + {
-    roughness_height = roughness_height
-    roughness_plus = roughness_plus
-    wall_dimension = wall_dimension
-    nominal_spacing = $({nominal_shape} + wall_dimension)
-}
-vis_lts_constraints = true
-
-adapt_freq = adapt_freq*20
-vis_freq = write_freq = adapt_freq
 preti = true
 
 $plot_history
 $simulate
-
-integrand_surface = visc_stress_expr
-integrate_surface
-force0 = integral_surface_visc_stress0
-force1 = integral_surface_visc_stress1
-force2 = integral_surface_visc_stress2
-
-v_drag = force0*freestream_direction0 + force1*freestream_direction1 + force2*freestream_direction2
-v_drag_coeff = v_drag/(0.5*freestream_density*freestream_speed^2)
-println({Viscous drag coef: } + v_drag_coeff)
-println({Pressure drag coef: } + (drag_coef - v_drag_coeff))

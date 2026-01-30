@@ -1,20 +1,18 @@
 n_dim = 3
 row_size = 5
-mesh_extreme00 = -.1
-mesh_extreme01 = .5
-mesh_extreme10 = 0.
-mesh_extreme11 = .6
-mesh_extreme20 = -.3
-mesh_extreme21 = .3
+reference_length = .381
+reference_area = 1.
+domain_center0 = 0.2
+domain_center1 = 0.3
+domain_center2 = 0.
+domain_size = .6
+
 altitude = 0.
 freestream_speed = 0.
-max_deflection = 1e-4
+
 geom0 = {wing_store.IGS}
-geometry_uncertainty = 3e-2
 max_ref_level = 11
-max_refinement_iters = 10
-$set_geometry_refinement
-n_smooth = 20
+max_geom_refine_iters = 10
 
 $start
 $mesh

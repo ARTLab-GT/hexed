@@ -16,7 +16,8 @@ __hex__  (_verb_)
 1. to cast a hex
 
 Anyone who has spent a substantial amount of time working with computational fluid dynamics (CFD)
-can attest that it is decidedly arcane and sometimes tends toward evil (in the [programming sense](https://isocpp.org/wiki/faq/big-picture#defn-evil) of the word).
+can attest that it is decidedly arcane and sometimes tends toward evil
+(in the [programming sense](https://isocpp.org/wiki/faq/big-picture#defn-evil) of the word).
 As its name suggests, Hexed scarcely presumes to change that.
 What it *does* aim to provide is a more accurate and automated solver, making your workflow faster and less subjective.
 Specifically, it addresses the following problems with conventional CFD:
@@ -38,10 +39,12 @@ Support for turbulent flows, adaptive meshing, and massively parallel execution 
 \subsection citing Citing and Usage Guidelines
 Hexed is open source under terms specified in the [license](https://github.com/ARTLab-GT/hexed/blob/v0.1.1/LICENSE.txt).
 This is Version 0, the prototype.
-You are encouraged to study and experiment with it, but it is missing some important features and probably riddled with bugs,
+You are encouraged to study and experiment with it,
+but it is missing some important features and probably riddled with bugs,
 and future versions may include substantial changes to the source code and user interface.
 We hope to release a stable and more feature-complete Version 1 in the next year or two.
-As a personal (non-legally-binding) request, if you modify or improve this code, please share your work and credit our original version.
+As a personal (non-legally-binding) request,
+if you modify or improve this code, please share your work and credit our original version.
 If you use Hexed in any academic research, please cite one or both of the following publications:
 
 Ref. \cite smith-pierce_mesh2024 :
@@ -60,12 +63,14 @@ _AIAA SCITECH 2024 Forum_, 2024. <https://doi.org/10.2514/6.2024-2176>.
 This code is developed and maintained by Micaiah Smith-Pierce.
 I am a PhD student of Professor Stephen Ruffin at the Aerothermodynamics Research and Technology Laboratory (ARTLab),
 of the Georgia Tech School of Aerospace Engineering.
-If you have any questions or feedback, you can reach me at <micaiah@gatech.edu> or on [GitHub](https://github.com/micaiah-sp).
+If you have any questions or feedback,
+you can reach me at <micaiah@gatech.edu> or on [GitHub](https://github.com/micaiah-sp).
 
 _Generated on \today for Hexed \proj_version._
 
 \page guide User/Developer Guide
-This pages below provide high-level information about Hexed, including instructions for how to use it and explanations of the concepts behind it.
+This pages below provide high-level information about Hexed,
+including instructions for how to use it and explanations of the concepts behind it.
 The rest of the pages (<a href="namespaces.html">Namespaces</a>, <a href="classes.html">Classes</a>, etc)
 serve as reference material on the API once you already know what you're doing.
 

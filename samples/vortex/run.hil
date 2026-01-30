@@ -1,22 +1,30 @@
 n_dim = 2
+reference_length = 1.
+domain_size = 2.
+init_ref_level = 4
+
 altitude = 0.
 freestream_speed = 100.
-init_ref_level = 4
-init_cond = vortex
-mesh_extreme00 = -1.
-mesh_extreme10 = -1.
-mesh_extreme01 =  1.
-mesh_extreme11 =  1.
+
+vortex_gaussian = {(vortex_nondim_veloc*exp((1. - ((pos0 - freestream0/freestream2*flow_time)^2 + (pos1 - freestream1/freestream2*flow_time)^2)/vortex_argmax_radius^2)/2.))}
+vortex_scalar = {(1 - (heat_rat - 1.)/2*$vortex_gaussian^2)}
+vortex_momentum0 = {((freestream0/freestream2 - pos1/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed_expr)*$vortex_mass)}
+vortex_momentum1 = {((freestream1/freestream2 + pos0/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed_expr)*$vortex_mass)}
+vortex_mass = {(freestream2*$vortex_scalar^(1./(heat_rat - 1.)))}
+vortex_energy = {($freestream_spec_int_ener*$vortex_scalar*$vortex_mass + 0.5*($vortex_momentum0^2 + $vortex_momentum1^2)/$vortex_mass)}
+init_cond = {
+    momentum0 = $vortex_momentum0
+    momentum1 = $vortex_momentum1
+    density = $vortex_mass
+    energy = $vortex_energy
+}
 done = {flow_time >= 5.999e-3}
 time_step_done = {pseudotime_iteration > 400}
 time_step = 1e-3/4
-implicit_scheme = {backward euler}
-implicit_scheme = {crank-nicolson}
 implicit_scheme = {dirk2}
-print_freq = 10
-vis_freq = 100
+vis_freq = 1
 steady = false
-implicit = true
+amr = false
 
 $simulate
 integrand_field = {errsq = (density - $vortex_mass)^2}

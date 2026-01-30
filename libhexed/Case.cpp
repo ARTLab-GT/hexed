@@ -315,9 +315,15 @@ Case::Case(std::string input_script)
       "`row_size` is not defined as an integer (did you define it as a different type?)"
     );
     HEXED_ASSERT(row_size >= 2 && row_size <= config::max_row_size,
-                 format_str(300, "`row_size` must be between 2 and %i", config::max_row_size), assert::User_error);
+                 str_cat("`row_size` must be between 2 and ", config::max_row_size), assert::User_error)
     _inter.variables->assign("n_var", n_dim + 2 + 2*(_vars("turbulence_model") == "k-omega"));
     _inter.variables->get<double, assert::User_error>("reference_length", "Must specify `reference_length`.");
+    if (n_dim == 3) {
+      _inter.variables->get<double, assert::User_error>("reference_area", "Must specify `reference_area`.");
+    } else {
+      HEXED_ASSERT(!_inter.variables->exists_recursive("reference_area"), "Cannot specify `reference_area` in 2D",
+                   assert::User_error)
+    }
     return "";
   }));
 
@@ -328,31 +334,47 @@ Case::Case(std::string input_script)
     if (_inter.variables->lookup<double>("freestream0")) {
       freestream = _get_vector("freestream", n_dim + 2);
     } else {
-      if (_inter.variables->lookup<double>("altitude")) {
-        HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_temperature"),
-                     "cannot specify both altitude and temperature (consider `temperature_offset`)",
-                     assert::User_error)
-        auto dens_pres = standard_atmosphere(_vard("altitude"), _vard("temperature_offset"));
-        _inter.variables->assign<double>("freestream_density", dens_pres[0]);
-        _inter.variables->assign<double>("freestream_pressure", dens_pres[1]);
-      }
-      HEXED_ASSERT(  _inter.variables->lookup<double>("freestream_density").has_value()
-                   + _inter.variables->lookup<double>("freestream_pressure").has_value()
-                   + _inter.variables->lookup<double>("freestream_temperature").has_value() == 2,
-                   "exactly two of freestream density, pressure, and temperature must be specified",
-                   assert::User_error)
-      if (_inter.variables->lookup<double>("freestream_density")) {
-        freestream(n_dim) = _vard("freestream_density");
-        if (_inter.variables->lookup<double>("freestream_pressure")) {
-          _inter.variables->assign<double>("freestream_temperature",
-            _vard("freestream_pressure")/(constants::specific_gas_air*_vard("freestream_density")));
-        } else {
-          _inter.variables->assign<double>("freestream_pressure",
-            _vard("freestream_density")*constants::specific_gas_air*_vard("freestream_temperature"));
-        }
+      bool reynolds_specified;
+      if (_inter.variables->lookup<double>("reynolds").has_value()) {
+        reynolds_specified = true;
+        HEXED_ASSERT(_inter.variables->lookup<double>("freestream_temperature"),
+                     "Must specify `freestream_temperature` if `reynolds` is specified.", assert::User_error)
+        HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_pressure"),
+                     "Cannot specify both Reynolds number and pressure.", assert::User_error)
+        HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_density"),
+                     "Cannot specify both Reynolds number and density.", assert::User_error)
       } else {
-        _inter.variables->assign<double>("freestream_density",
-          _vard("freestream_pressure")/(constants::specific_gas_air*_vard("freestream_temperature")));
+        reynolds_specified = false;
+        if (_inter.variables->lookup<double>("altitude")) {
+          HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_temperature"),
+                       "Cannot specify both altitude and temperature (consider `temperature_offset`)",
+                       assert::User_error)
+          HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_pressure"),
+                       "Cannot specify both altitude and pressure.", assert::User_error)
+          HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_density"),
+                       "Cannot specify both altitude and density.", assert::User_error)
+          auto dens_pres = standard_atmosphere(_vard("altitude"), _vard("temperature_offset"));
+          _inter.variables->assign<double>("freestream_density", dens_pres[0]);
+          _inter.variables->assign<double>("freestream_pressure", dens_pres[1]);
+        }
+        HEXED_ASSERT(  _inter.variables->lookup<double>("freestream_density").has_value()
+                     + _inter.variables->lookup<double>("freestream_pressure").has_value()
+                     + _inter.variables->lookup<double>("freestream_temperature").has_value() == 2,
+                     "exactly two of freestream density, pressure, and temperature must be specified",
+                     assert::User_error)
+        if (_inter.variables->lookup<double>("freestream_density")) {
+          freestream(n_dim) = _vard("freestream_density");
+          if (_inter.variables->lookup<double>("freestream_pressure")) {
+            _inter.variables->assign<double>("freestream_temperature",
+              _vard("freestream_pressure")/(constants::specific_gas_air*_vard("freestream_density")));
+          } else {
+            _inter.variables->assign<double>("freestream_pressure",
+              _vard("freestream_density")*constants::specific_gas_air*_vard("freestream_temperature"));
+          }
+        } else {
+          _inter.variables->assign<double>("freestream_density",
+            _vard("freestream_pressure")/(constants::specific_gas_air*_vard("freestream_temperature")));
+        }
       }
       HEXED_ASSERT(  _inter.variables->lookup<double>("freestream_velocity0").has_value()
                    + _inter.variables->lookup<double>("freestream_speed").has_value()
@@ -368,9 +390,11 @@ Case::Case(std::string input_script)
         double fss = std::sqrt(heat_rat*constants::specific_gas_air*_vard("freestream_temperature"));
         _inter.variables->assign<double>("freestream_sound_speed", fss);
         if (_inter.variables->lookup<double>("freestream_speed")) {
-          _inter.variables->assign<double>("freestream_mach", _vard("freestream_speed")/_vard("freestream_sound_speed"));
+          _inter.variables->assign<double>("freestream_mach", _vard("freestream_speed")
+                                                              /_vard("freestream_sound_speed"));
         } else {
-          _inter.variables->assign<double>("freestream_speed", _vard("freestream_mach")*_vard("freestream_sound_speed"));
+          _inter.variables->assign<double>("freestream_speed", _vard("freestream_mach")
+                                                               *_vard("freestream_sound_speed"));
         }
         if (_inter.variables->lookup<double>("freestream_direction0")) {
           direction = _get_vector("freestream_direction", n_dim).normalized();
@@ -390,14 +414,20 @@ Case::Case(std::string input_script)
           _inter.variables->assign("freestream_velocity" + std::to_string(i_dim), 0.);
         }
       }
-      _set_vector("freestream_direction", full_direction);
-      double density = _vard("freestream_density");
-      double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*density*veloc.squaredNorm();
-      _inter.variables->assign("freestream_energy", ener);
       double dyn_visc = _transport_model("viscosity").coefficient(std::sqrt(_vard("freestream_temperature")));
       _inter.variables->assign("freestream_dynamic_viscosity", dyn_visc);
       double therm_cond = _transport_model("conductivity").coefficient(std::sqrt(_vard("freestream_temperature")));
       _inter.variables->assign("freestream_thermal_conductivity", therm_cond);
+      if (reynolds_specified) {
+        _inter.variables->assign("freestream_density", _vard("reynolds")*_vard("freestream_dynamic_viscosity")
+                                                       /(_vard("reference_length")*_vard("freestream_speed")));
+        _inter.variables->assign("freestream_pressure", _vard("freestream_density")*constants::specific_gas_air
+                                                        *_vard("freestream_temperature"));
+      }
+      _set_vector("freestream_direction", full_direction);
+      double density = _vard("freestream_density");
+      double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*density*veloc.squaredNorm();
+      _inter.variables->assign("freestream_energy", ener);
       freestream(Eigen::seqN(0, n_dim)) = density*veloc;
       freestream(n_dim) = density;
       freestream(n_dim + 1) = ener;
@@ -430,18 +460,21 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  /*"
+   * Creates a `hexed::Solver` object.
+   * Mesh contains a single element and the flow is uninitialized.
+  "*/
   _inter.variables->create("create_solver", new Namespace::Heisenberg<std::string>([this]() {
     int n_dim = _vari("n_dim");
+    double domain_size = _vard("domain_size");
+    if (domain_size <= 0) domain_size = _vard("domain_size_ratio")*_vard("reference_length");
     // evaluate dimensions
     Mat<dyn, dyn> mesh_extremes(n_dim, 2);
     for (int i_dim = 0; i_dim < n_dim; ++i_dim) {
       for (int sign = 0; sign < 2; ++sign) {
-        mesh_extremes(i_dim, sign) = _vard(format_str(50, "mesh_extreme%i%i", i_dim, sign));
+        mesh_extremes(i_dim, sign) = _vard(str_cat("domain_center", i_dim)) + math::sign(sign)*domain_size/2;
       }
     }
-    HEXED_ASSERT((mesh_extremes(all, 1) - mesh_extremes(all, 0)).minCoeff() > 0,
-                 "all mesh dimensions must be positive!", assert::User_error)
-    double root_size = (mesh_extremes(all, 1) - mesh_extremes(all, 0)).maxCoeff();
     // construct molecular transport models
     std::vector<std::string> transport_phenomena {"viscosity", "conductivity"};
     std::vector<Transport_model> transport_models;
@@ -464,30 +497,38 @@ Case::Case(std::string input_script)
     else {
       HEXED_THROW("`" + ts_str + "` is not a supported time integration scheme.") throw;
     }
-    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), root_size, ts, transport_models[0],
+    _solver_ptr.reset(new Solver(n_dim, _vari("row_size"), domain_size, ts, transport_models[0],
                                  transport_models[1], turb_model, _inter.variables));
     _solver().mesh().add_tree(_make_extremal_bcs(), mesh_extremes(all, 0));
     _solver().set_fix_nonphysical(_vari("fix_nonphysical"));
     return "";
   }));
 
+  /*"
+   * Creates the mesh, performs initial refinement, and incorporates the surface geometry.
+   * You can define 0 or more string variables named `geom0`, `geom1`, `geom2`, ... containing paths to geometry definition files.
+   * Paths can be absolute or relative to execution directory (not \ref working_dir).
+   * Geometry variable numbers must start at 0 and be consecutive.
+   * E.g., if you define `geom0 = leading.txt`, `geom1 = main.txt`, `geom3 = trailing.txt`, then `geom3` will be ignored.
+   * If these geometries split the domain into disjoint regions,
+   * then the region containing the \ref flood_fill_startN "flood fill start" shall be meshed.
+   * Geometry file format is inferred from the file extension, which is case-insensitive.
+   * The following extension/format combinations are supported:
+   * - `.csv`: Comma Separated Value format (2D only).
+   *   A comma-delimited table with at least 2 columns, which are interpreted as \f$ x_0 \f$ and \f$ x_1 \f$ coordinates of the nodes of a polygonal curve,
+   *   in \ref units "standard units".
+   *   Curve is treated as open---if you are trying to model a closed shape, simply make the first point (approximately) equal to the last.
+   * - `.igs`, `.iges`: [IGES](https://en.wikipedia.org/wiki/IGES) CAD
+   *   [format](https://filemonger.com/specs/igs/devdept.com/version6.pdf) (2D or 3D).
+   *   For 2D simulations, the model curves/edges will be extracted. All curves must (approximately) lie in the \f$ (x_0, x_1) \f$ plane,
+   *   and any deviation from said plane will be a source of numerical error.
+   *   For 3D simulations, the model surfaces will be used.
+   *   Units are read from the file and converted.
+   *   Files must be in ASCII format (there is also a binary format, although this is less common).
+   *   Both GNU/Linux and Windows line endings are accepted.
+  "*/
   _inter.variables->create("mesh", new Namespace::Heisenberg<std::string>([this]() {
     printers::info("Meshing...\n");
-    auto compute_bbox = [&]() {
-      _solver().bounds_surface("position0 = pos0; position1 = pos1; position2 = pos2;", 2*_vari("n_dim"), 20);
-      double geom_len = 0;
-      for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
-        std::vector<std::string> minmax {"min", "max"};
-        for (int sign : {0, 1}) {
-          _inter.variables->assign("geom_bbox" + to_string(i_dim) + to_string(sign),
-                                   _vard(minmax[sign] + "_surface_position" + to_string(i_dim)));
-        }
-        double dim_len =   _vard("max_surface_position" + to_string(i_dim))
-                         - _vard("min_surface_position" + to_string(i_dim));
-        geom_len = std::max(geom_len, dim_len);
-      }
-      _inter.variables->assign("geom_length", geom_len);
-    };
     auto refine_isotropic = [&](std::string short_name, std::string long_name, bool bbox, bool newline) {
       std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
       std::vector<std::function<bool(Element&)>> crits;
@@ -503,7 +544,6 @@ Case::Case(std::string input_script)
         printers::info("  " + long_name + " refinement sweep " + to_string(i_ref) + "..." + (newline ? "\n" : " "));
         changed = _solver().mesh().update(crits[0], crits[1]);
         _solver().calc_jacobian();
-        if (bbox) compute_bbox();
         printers::info((newline ? "  " : "") + std::string("done. Mesh has ")
                        + to_string(_solver().mesh().n_elements()) + " elements." + (newline ? "\n  " : " "));
         _inter.variables->assign("flow_time", double(i_ref));
@@ -514,20 +554,20 @@ Case::Case(std::string input_script)
     auto geom = _make_geom();
     if (geom.use_count()) {
       printers::info("  Fitting geometry...\n");
-      _has_geom = true;
+      _inter.variables->assign("has_geometry", 1);
       _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc")),
                                    _get_vector("flood_fill_start", _vari("n_dim")));
       _solver().calc_jacobian();
-      compute_bbox();
-        printers::info("  done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements.\n  ");
+      printers::info("  done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements.\n  ");
       _inter.variables->assign("flow_time", 0.);
       _visualize("_init_geometry_fit");
     }
     refine_isotropic("geom", "Geometry", true, true);
     _inter.variables->assign("flow_time", 0.);
-    for (int i_split = 0; i_split < _vari("init_layer_splits"); ++i_split) _inter.make_sub().exec("split_layers");
-    _solver().init_wall_dist();
-    _solver().update_wall_dist(_vari("wall_dist_iters_initial"));
+    if (_vari("capture_shocks")) {
+      _solver().init_wall_dist();
+      _solver().update_wall_dist(_vari("wall_dist_iters_initial"));
+    }
     for (int i_ref = 0; i_ref < _vari("max_final_refine_iters"); ++i_ref) {
       printers::info("  Final refinement sweep " + to_string(i_ref) + "... ");
       std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
@@ -536,22 +576,14 @@ Case::Case(std::string input_script)
                                                      _ref_crit("final_unrefine_if"), true);
       if (result.changed) _solver().mesh().execute_adaptation();
       _solver().calc_jacobian();
-      _solver().update_wall_dist(_vari("wall_dist_iters_update"));
+      if (_vari("capture_shocks")) _solver().update_wall_dist(_vari("wall_dist_iters_update"));
       printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ("
                      + to_string(result.n_refine) + " new " + to_string(result.n_coarsen) + " lost)");
       _inter.variables->assign("flow_time", double(i_ref));
       _visualize("_final_ref_sweep" + to_string(i_ref));
       if (!result.changed) break;
     }
-    _inter.variables->assign("mesh_init", 1);
-    printers::info("  geometry bounding box: \n");
-    for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
-      printers::info("   ");
-      for (int sign : {0, 1}) {
-        printers::info(" " + to_string(_vard("geom_bbox" + to_string(i_dim) + to_string(sign))));
-      }
-      printers::info("\n");
-    }
+    _inter.variables->assign("hexed_mesh_init", 1);
     printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.\n", true);
     _solver().update_preti_iters();
     _solver().print_preti_iters();
@@ -621,7 +653,7 @@ Case::Case(std::string input_script)
       _solver().mesh().execute_adaptation();
     }
     _solver().calc_jacobian();
-    _solver().update_wall_dist(_vari("wall_dist_iters_update"));
+    if (_vari("capture_shocks")) _solver().update_wall_dist(_vari("wall_dist_iters_update"));
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().compute_residual(false);
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
@@ -660,34 +692,19 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  /*" Initializes the state to \ref init_cond "*/
   _inter.variables->create("init_state", new Namespace::Heisenberg<std::string>([this]() {
     _solver().initialize(_vars("init_cond"));
     // implicit setup
     bool implicit = !_vari("steady") && _vari("implicit");
     if (implicit) {
       HEXED_ASSERT(_inter.variables->lookup<double>("time_step"),
-                   "unsteady implicit time marching requires you to set `time_step` to a floating-point value.",
+                   "Unsteady implicit time marching requires you to set `time_step` to a floating-point value.",
                    assert::User_error)
       HEXED_ASSERT(_vard("time_step") >= 0, "`time_step` must be nonnegative.", assert::User_error)
       _inter.variables->assign("flow_time", _vard("flow_time") + _vard("time_step"));
       _inter.variables->assign("hexed_next_flow_time", _vard("flow_time") + _vard("time_step"));
     }
-    return "";
-  }));
-
-  _inter.variables->create("compute_smooth_initial_condition", new Namespace::Heisenberg<std::string>([this]() {
-    Int iters = _vari("initial_smoothing_iters");
-    _solver().smooth_init_cond(iters);
-    #if 0
-    double width = _vard("art_visc_width");
-    if (width > 0 && !_vari("elementwise_art_visc")) {
-      printers::info("Initializing artificial viscosity field...");
-      Int av_iters = std::max<Int>(1, iters/std::max(_vari("av_advect_iters"), _vari("av_diff_iters")));
-      for (Int iter = 0; iter < av_iters; ++iter) {
-        _solver().update_art_visc_smoothness(width);
-      }
-    }
-    #endif
     return "";
   }));
 
@@ -705,6 +722,11 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  /*"
+   * Reads the mesh from a Hexed mesh file (which you can create using \ref write_mesh).
+   * This can be used in place of \ref mesh, but you will still have to call \ref init_state or \ref read_state to initialize the flow state.
+   * The file name of the mesh file given by \ref input_data with `.mesh.h5` appended.
+  "*/
   _inter.variables->create("read_mesh", new Namespace::Heisenberg<std::string>([this]() {
     printers::info("Reading mesh...\n");
     auto geom = _make_geom();
@@ -715,12 +737,28 @@ Case::Case(std::string input_script)
     printers::info("done\n");
     return "";
   }));
+
+  /*"
+   * Reads the flow state from a file created with the \ref write_state command.
+   * The file name is given by \ref input_data with `.state.h5` appended.
+   * The state file __must__ have been created for the exact same mesh,
+   * meaning that if the state file was not created during the same simulation you're currently running,
+   * you need to first use \ref read_mesh to get the mesh.
+   * Two meshes that look the same might not actually be the same for a variety of reasons.
+   * For example, if elements were refined in a different order, then you cannot use the same state files,
+   * even if the mesh is geometrically identical.
+   * So, just play it safe and read the mesh first.
+   * This command can be used instead of \ref init_state.
+   * `read_mesh` and `read_state` together can be used to restart a previous simulation from where it left off.
+  "*/
   _inter.variables->create("read_state", new Namespace::Heisenberg<std::string>([this]() {
     Task_message(printers::info, "Reading state...\n");
     _solver().read_state(_vars("input_data"));
     printers::info("done\n");
     return "";
   }));
+
+  /*" Reads HIL variables from a file created with the \ref write_status command. "*/
   _inter.variables->create("read_status", new Namespace::Heisenberg<std::string>([this]() {
     printers::info("Reading status...\n");
     auto sub = _inter.make_sub();
@@ -728,6 +766,13 @@ Case::Case(std::string input_script)
     printers::info("done\n");
     return "";
   }));
+
+  /*"
+   * Writes the mesh to a file in the Hexed mesh format,
+   * which can then be used again in a future simulation using \ref read_mesh, or, in theory, imported into another program.
+   * The file name will be `iterXXXXXXXXXX.mesh.h5` in the working directory, where the `X`s are replaced with the current iteration number.
+   * Also creates a symlink `latest.mesh.h5` pointing to this file for convenience.
+  "*/
   _inter.variables->create("write_mesh", new Namespace::Heisenberg<std::string>([this]() {
     Task_message(printers::info, "writing mesh");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
@@ -737,6 +782,12 @@ Case::Case(std::string input_script)
     }
     return "";
   }));
+
+  /*"
+   * Writes the flow state to a file which can then be used in a future simulation using \ref read_state.
+   * The file name will be `iterXXXXXXXXXX.state.h5` in the working directory, where the `X`s are replaced with the current iteration number.
+   * Also creates a symlink `latest.state.h5` pointing to this file for convenience.
+  "*/
   _inter.variables->create("write_state", new Namespace::Heisenberg<std::string>([this]() {
     Task_message(printers::info, "writing state");
     std::string file_name = _vars("working_dir") + _iteration_suffix();
@@ -744,6 +795,12 @@ Case::Case(std::string input_script)
     force_symlink(_iteration_suffix() + ".state.h5", _vars("working_dir") + "latest.state.h5");
     return "";
   }));
+
+  /*"
+   * Writes the flow state to a file which can then be used in a future simulation using \ref read_state.
+   * The file name will be `iterXXXXXXXXXX.state.h5` in the working directory, where the `X`s are replaced with the current iteration number.
+   * Also creates a symlink `latest.state.h5` pointing to this file for convenience.
+  "*/
   _inter.variables->create("write_status", new Namespace::Heisenberg<std::string>([this]() {
     Task_message(printers::info, "writing status");
     std::ofstream status_file(_vars("working_dir") + _iteration_suffix() + ".status.hil");
@@ -759,6 +816,7 @@ Case::Case(std::string input_script)
     return "";
   }));
 
+  /*" Writes visualization files. "*/
   _inter.variables->create("visualize", new Namespace::Heisenberg<std::string>([this]() {
     _visualize("_" + _iteration_suffix());
     printers::info("Current wall clock time: " + to_string(_vard("wall_time")) + "\n");
@@ -791,7 +849,12 @@ Case::Case(std::string input_script)
     return header;
   }));
 
-  _inter.variables->create<std::string>("compute_residuals", new Namespace::Heisenberg<std::string>([this]() {
+  /*"
+   * Evaluates the residuals and assigns them to float variables
+   * \ref residual_momentum, \ref residual_density, \ref residual_energy.
+   * Also updates the spectral uncertainty in each element.
+  "*/
+  _inter.variables->create("compute_residuals", new Namespace::Heisenberg<std::string>([this]() {
     int nd = _solver().storage_params().n_dim;
     Physical_residual phys_resid;
     auto compute_res = [&](bool unsteady_implicit, std::string prefix) {
@@ -809,7 +872,7 @@ Case::Case(std::string input_script)
     return "";
   }));
 
-  _inter.variables->create<std::string>("report", new Namespace::Heisenberg<std::string>([this]() {
+  _inter.variables->create("report", new Namespace::Heisenberg<std::string>([this]() {
     std::string report = "";
     auto sub = _inter.make_sub();
     sub.exec(_vars("print_vars"));
@@ -841,8 +904,19 @@ Case::Case(std::string input_script)
     return converged;
   }));
 
-  _inter.variables->create<std::string>("update", new Namespace::Heisenberg<std::string>([this]() {
-    HEXED_ASSERT(_vari("mesh_init"), "attempt to update flow when mesh has not been created", assert::User_error);
+  /*"
+   * Executes \ref print_freq solver iterations and returns an empty string.
+   * Each "solver iteration" consists of:
+   * -# Calling `hexed::Solver::set_art_visc_constant`, if applicable.
+   * -# Calling `hexed::Solver::update_art_visc_smoothness`, if applicable.
+   *    This will itself update the artificial viscosity advection equations \ref av_advect_iters times
+   *    and the diffusion equations \ref av_diff_iters times.
+   * -# Calling `hexed::Solver::update`.
+   *    This will itself update the flow equations \ref flow_iters times
+   *    (where \ref flow_iters defaults to 1 for simulations without shock-capturing).
+  "*/
+  _inter.variables->create("update", new Namespace::Heisenberg<std::string>([this]() {
+    HEXED_ASSERT(_vari("hexed_mesh_init"), "attempt to update flow when mesh has not been created", assert::User_error);
     _inter.variables->assign("total_smear_iters", 0);
     bool avw = _vari("capture_shocks");
     bool avc = _vard("art_visc_constant") > 0;
@@ -899,11 +973,25 @@ Case::Case(std::string input_script)
     _solver().bounds_surface(_vars("bounds_surface_vars"), _solver().mesh().surface_bc_sn(), _vari("vis_n_sample"));
     return "";
   }));
-  _inter.variables->create<std::string>("integrate_field", new Namespace::Heisenberg<std::string>([this]() {
+
+  /*"
+   * Computes integrals of the variables in \ref integrand_field over the domain
+   * by the native quadrature rule of the numerical scheme.
+   * The integrals of the variables are assigned to float variables named
+   * `integral_field_VAR` where `VAR` is the name of the variable.
+  "*/
+  _inter.variables->create("integrate_field", new Namespace::Heisenberg<std::string>([this]() {
     _solver().integrate_field(_vars("integrand_field"));
     return "";
   }));
-  _inter.variables->create<std::string>("integrate_surface", new Namespace::Heisenberg<std::string>([this]() {
+
+  /*"
+   * Computes integrals of the variables in \ref integrand_surface over the geometry surface
+   * by the native quadrature rule of the numerical scheme.
+   * The integrals of the variables are assigned to float variables
+   * named `integral_surface_var` where `var` is the name of the variable.
+  "*/
+  _inter.variables->create("integrate_surface", new Namespace::Heisenberg<std::string>([this]() {
     _solver().integrate_surface(_vars("integrand_surface"), _solver().mesh().surface_bc_sn());
     return "";
   }));
