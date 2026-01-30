@@ -17,11 +17,14 @@ start = {
     }
     $$({case} + (surface_bc == {auto}))
     case0 = {}
+    case1 = {domain_size = domain_size_ratio*reference_length}
+    $$({case} + (domain_size <= 0.))
+    case0 = {}
     case1 = {
         i_dim = 0
         while = {i_dim < n_dim}
         do = {
-            $({flood_fill_start} + i_dim) = (1 - mesh_extreme_eps)*$({mesh_extreme} + i_dim + 0) + mesh_extreme_eps*$({mesh_extreme} + i_dim + 1)
+            $({flood_fill_start} + i_dim) = $({domain_center} + i_dim) + (mesh_extreme_eps - .5)*domain_size
             i_dim = i_dim + 1
         }
         $loop
@@ -145,9 +148,6 @@ Assumes that the mesh has already been generated and the flow state initialized.
 If you want those steps to be done automatically as well, use \ref simulate instead.
 "}
 solve = {
-    case0 = {}
-    case1 = {compute_smooth_initial_condition}
-    $$({case} + !!smooth_initial_condition)
     compute_residuals
     $compute_force
     $compute_heating
@@ -184,7 +184,7 @@ simulate = {
     $start
     mesh
     init_state
-    $run
+    $solve
 }
 
 {"
@@ -421,7 +421,7 @@ compute_force = {
     $$({case} + n_dim)
     hexed_reference_area2 = {reference_length}
     hexed_reference_area3 = {reference_area}
-    hexed_normalization = 0.5*freestream_density*freestream_speed^2*$({hexed_reference_area} + n_dim)
+    hexed_normalization = 0.5*freestream_density*freestream_speed^2*$$({hexed_reference_area} + n_dim)
     drag_coef = drag/hexed_normalization
     lift_coef = lift/hexed_normalization
     side_force_coef = side_force/hexed_normalization

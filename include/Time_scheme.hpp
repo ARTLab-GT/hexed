@@ -14,7 +14,7 @@ constexpr bool is_implicit(Time_scheme ts) {return ts != explicit_steady && ts !
 
 constexpr int n_extra_stage(Time_scheme ts) {
   if (ts == explicit_unsteady) return 0;
-  else return 1;
+  else return 2;
 }
 
 constexpr int n_total_stage(Time_scheme ts) {

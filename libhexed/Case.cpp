@@ -505,20 +505,6 @@ Case::Case(std::string input_script)
   "*/
   _inter.variables->create("mesh", new Namespace::Heisenberg<std::string>([this]() {
     printers::info("Meshing...\n");
-    auto compute_bbox = [&]() {
-      _solver().bounds_surface("position0 = pos0; position1 = pos1; position2 = pos2;", 2*_vari("n_dim"), 20);
-      double geom_len = 0;
-      for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
-        std::vector<std::string> minmax {"min", "max"};
-        for (int sign : {0, 1}) {
-          _inter.variables->assign("geom_bbox" + to_string(i_dim) + to_string(sign),
-                                   _vard(minmax[sign] + "_surface_position" + to_string(i_dim)));
-        }
-        double dim_len =   _vard("max_surface_position" + to_string(i_dim))
-                         - _vard("min_surface_position" + to_string(i_dim));
-        geom_len = std::max(geom_len, dim_len);
-      }
-    };
     auto refine_isotropic = [&](std::string short_name, std::string long_name, bool bbox, bool newline) {
       std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
       std::vector<std::function<bool(Element&)>> crits;
@@ -534,7 +520,6 @@ Case::Case(std::string input_script)
         printers::info("  " + long_name + " refinement sweep " + to_string(i_ref) + "..." + (newline ? "\n" : " "));
         changed = _solver().mesh().update(crits[0], crits[1]);
         _solver().calc_jacobian();
-        if (bbox) compute_bbox();
         printers::info((newline ? "  " : "") + std::string("done. Mesh has ")
                        + to_string(_solver().mesh().n_elements()) + " elements." + (newline ? "\n  " : " "));
         _inter.variables->assign("flow_time", double(i_ref));
@@ -549,16 +534,16 @@ Case::Case(std::string input_script)
       _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc")),
                                    _get_vector("flood_fill_start", _vari("n_dim")));
       _solver().calc_jacobian();
-      compute_bbox();
-        printers::info("  done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements.\n  ");
+      printers::info("  done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements.\n  ");
       _inter.variables->assign("flow_time", 0.);
       _visualize("_init_geometry_fit");
     }
     refine_isotropic("geom", "Geometry", true, true);
     _inter.variables->assign("flow_time", 0.);
-    for (int i_split = 0; i_split < _vari("init_layer_splits"); ++i_split) _inter.make_sub().exec("split_layers");
-    _solver().init_wall_dist();
-    _solver().update_wall_dist(_vari("wall_dist_iters_initial"));
+    if (_vari("capture_shocks")) {
+      _solver().init_wall_dist();
+      _solver().update_wall_dist(_vari("wall_dist_iters_initial"));
+    }
     for (int i_ref = 0; i_ref < _vari("max_final_refine_iters"); ++i_ref) {
       printers::info("  Final refinement sweep " + to_string(i_ref) + "... ");
       std::vector<std::string> crit_names {"_refine_if", "_unrefine_if"};
@@ -567,7 +552,7 @@ Case::Case(std::string input_script)
                                                      _ref_crit("final_unrefine_if"), true);
       if (result.changed) _solver().mesh().execute_adaptation();
       _solver().calc_jacobian();
-      _solver().update_wall_dist(_vari("wall_dist_iters_update"));
+      if (_vari("capture_shocks")) _solver().update_wall_dist(_vari("wall_dist_iters_update"));
       printers::info("done. Mesh has " + to_string(_solver().mesh().n_elements()) + " elements. ("
                      + to_string(result.n_refine) + " new " + to_string(result.n_coarsen) + " lost)");
       _inter.variables->assign("flow_time", double(i_ref));
@@ -575,14 +560,6 @@ Case::Case(std::string input_script)
       if (!result.changed) break;
     }
     _inter.variables->assign("hexed_mesh_init", 1);
-    printers::info("  geometry bounding box: \n");
-    for (int i_dim = 0; i_dim < _vari("n_dim"); ++i_dim) {
-      printers::info("   ");
-      for (int sign : {0, 1}) {
-        printers::info(" " + to_string(_vard("geom_bbox" + to_string(i_dim) + to_string(sign))));
-      }
-      printers::info("\n");
-    }
     printers::info("Meshing complete with " + to_string(_solver().mesh().n_elements()) + " elements.\n", true);
     _solver().update_preti_iters();
     _solver().print_preti_iters();
@@ -652,7 +629,7 @@ Case::Case(std::string input_script)
       _solver().mesh().execute_adaptation();
     }
     _solver().calc_jacobian();
-    _solver().update_wall_dist(_vari("wall_dist_iters_update"));
+    if (_vari("capture_shocks")) _solver().update_wall_dist(_vari("wall_dist_iters_update"));
     _inter.variables->assign<int>("adapt_changed", result.changed);
     _solver().compute_residual(false);
     printers::info(" done. Mesh now has " + to_string(_solver().mesh().n_elements()) + " elements.\n");
@@ -698,7 +675,7 @@ Case::Case(std::string input_script)
     bool implicit = !_vari("steady") && _vari("implicit");
     if (implicit) {
       HEXED_ASSERT(_inter.variables->lookup<double>("time_step"),
-                   "unsteady implicit time marching requires you to set `time_step` to a floating-point value.",
+                   "Unsteady implicit time marching requires you to set `time_step` to a floating-point value.",
                    assert::User_error)
       HEXED_ASSERT(_vard("time_step") >= 0, "`time_step` must be nonnegative.", assert::User_error)
       _inter.variables->assign("flow_time", _vard("flow_time") + _vard("time_step"));

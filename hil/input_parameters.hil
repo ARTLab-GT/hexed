@@ -719,7 +719,7 @@ For a high-quality visualization, this should generally be greater than the para
 vis_n_sample = 10
 
 {"Expression defining the variables to print to the console every \ref print_freq iterations."}
-print_vars = {($iteration_expr)} + normalized_residual_expr + flow_time_expr + time_step_expr + {($monitor_vars)}
+print_vars = {($iteration_expr)} + normalized_residual_expr + {($monitor_vars)}
 
 {"The behavior of the \ref monitor_vars over the last `monitor_window` fraction of the iterations
 will be analyzed to determine convergence."}
