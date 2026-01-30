@@ -334,31 +334,47 @@ Case::Case(std::string input_script)
     if (_inter.variables->lookup<double>("freestream0")) {
       freestream = _get_vector("freestream", n_dim + 2);
     } else {
-      if (_inter.variables->lookup<double>("altitude")) {
-        HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_temperature"),
-                     "cannot specify both altitude and temperature (consider `temperature_offset`)",
-                     assert::User_error)
-        auto dens_pres = standard_atmosphere(_vard("altitude"), _vard("temperature_offset"));
-        _inter.variables->assign<double>("freestream_density", dens_pres[0]);
-        _inter.variables->assign<double>("freestream_pressure", dens_pres[1]);
-      }
-      HEXED_ASSERT(  _inter.variables->lookup<double>("freestream_density").has_value()
-                   + _inter.variables->lookup<double>("freestream_pressure").has_value()
-                   + _inter.variables->lookup<double>("freestream_temperature").has_value() == 2,
-                   "exactly two of freestream density, pressure, and temperature must be specified",
-                   assert::User_error)
-      if (_inter.variables->lookup<double>("freestream_density")) {
-        freestream(n_dim) = _vard("freestream_density");
-        if (_inter.variables->lookup<double>("freestream_pressure")) {
-          _inter.variables->assign<double>("freestream_temperature",
-            _vard("freestream_pressure")/(constants::specific_gas_air*_vard("freestream_density")));
-        } else {
-          _inter.variables->assign<double>("freestream_pressure",
-            _vard("freestream_density")*constants::specific_gas_air*_vard("freestream_temperature"));
-        }
+      bool reynolds_specified;
+      if (_inter.variables->lookup<double>("reynolds").has_value()) {
+        reynolds_specified = true;
+        HEXED_ASSERT(_inter.variables->lookup<double>("freestream_temperature"),
+                     "Must specify `freestream_temperature` if `reynolds` is specified.", assert::User_error)
+        HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_pressure"),
+                     "Cannot specify both Reynolds number and pressure.", assert::User_error)
+        HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_density"),
+                     "Cannot specify both Reynolds number and density.", assert::User_error)
       } else {
-        _inter.variables->assign<double>("freestream_density",
-          _vard("freestream_pressure")/(constants::specific_gas_air*_vard("freestream_temperature")));
+        reynolds_specified = false;
+        if (_inter.variables->lookup<double>("altitude")) {
+          HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_temperature"),
+                       "Cannot specify both altitude and temperature (consider `temperature_offset`)",
+                       assert::User_error)
+          HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_pressure"),
+                       "Cannot specify both altitude and pressure.", assert::User_error)
+          HEXED_ASSERT(!_inter.variables->lookup<double>("freestream_density"),
+                       "Cannot specify both altitude and density.", assert::User_error)
+          auto dens_pres = standard_atmosphere(_vard("altitude"), _vard("temperature_offset"));
+          _inter.variables->assign<double>("freestream_density", dens_pres[0]);
+          _inter.variables->assign<double>("freestream_pressure", dens_pres[1]);
+        }
+        HEXED_ASSERT(  _inter.variables->lookup<double>("freestream_density").has_value()
+                     + _inter.variables->lookup<double>("freestream_pressure").has_value()
+                     + _inter.variables->lookup<double>("freestream_temperature").has_value() == 2,
+                     "exactly two of freestream density, pressure, and temperature must be specified",
+                     assert::User_error)
+        if (_inter.variables->lookup<double>("freestream_density")) {
+          freestream(n_dim) = _vard("freestream_density");
+          if (_inter.variables->lookup<double>("freestream_pressure")) {
+            _inter.variables->assign<double>("freestream_temperature",
+              _vard("freestream_pressure")/(constants::specific_gas_air*_vard("freestream_density")));
+          } else {
+            _inter.variables->assign<double>("freestream_pressure",
+              _vard("freestream_density")*constants::specific_gas_air*_vard("freestream_temperature"));
+          }
+        } else {
+          _inter.variables->assign<double>("freestream_density",
+            _vard("freestream_pressure")/(constants::specific_gas_air*_vard("freestream_temperature")));
+        }
       }
       HEXED_ASSERT(  _inter.variables->lookup<double>("freestream_velocity0").has_value()
                    + _inter.variables->lookup<double>("freestream_speed").has_value()
@@ -374,9 +390,11 @@ Case::Case(std::string input_script)
         double fss = std::sqrt(heat_rat*constants::specific_gas_air*_vard("freestream_temperature"));
         _inter.variables->assign<double>("freestream_sound_speed", fss);
         if (_inter.variables->lookup<double>("freestream_speed")) {
-          _inter.variables->assign<double>("freestream_mach", _vard("freestream_speed")/_vard("freestream_sound_speed"));
+          _inter.variables->assign<double>("freestream_mach", _vard("freestream_speed")
+                                                              /_vard("freestream_sound_speed"));
         } else {
-          _inter.variables->assign<double>("freestream_speed", _vard("freestream_mach")*_vard("freestream_sound_speed"));
+          _inter.variables->assign<double>("freestream_speed", _vard("freestream_mach")
+                                                               *_vard("freestream_sound_speed"));
         }
         if (_inter.variables->lookup<double>("freestream_direction0")) {
           direction = _get_vector("freestream_direction", n_dim).normalized();
@@ -396,14 +414,20 @@ Case::Case(std::string input_script)
           _inter.variables->assign("freestream_velocity" + std::to_string(i_dim), 0.);
         }
       }
-      _set_vector("freestream_direction", full_direction);
-      double density = _vard("freestream_density");
-      double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*density*veloc.squaredNorm();
-      _inter.variables->assign("freestream_energy", ener);
       double dyn_visc = _transport_model("viscosity").coefficient(std::sqrt(_vard("freestream_temperature")));
       _inter.variables->assign("freestream_dynamic_viscosity", dyn_visc);
       double therm_cond = _transport_model("conductivity").coefficient(std::sqrt(_vard("freestream_temperature")));
       _inter.variables->assign("freestream_thermal_conductivity", therm_cond);
+      if (reynolds_specified) {
+        _inter.variables->assign("freestream_density", _vard("reynolds")*_vard("freestream_dynamic_viscosity")
+                                                       /(_vard("reference_length")*_vard("freestream_speed")));
+        _inter.variables->assign("freestream_pressure", _vard("freestream_density")*constants::specific_gas_air
+                                                        *_vard("freestream_temperature"));
+      }
+      _set_vector("freestream_direction", full_direction);
+      double density = _vard("freestream_density");
+      double ener = _vard("freestream_pressure")/(heat_rat - 1) + .5*density*veloc.squaredNorm();
+      _inter.variables->assign("freestream_energy", ener);
       freestream(Eigen::seqN(0, n_dim)) = density*veloc;
       freestream(n_dim) = density;
       freestream(n_dim + 1) = ener;
