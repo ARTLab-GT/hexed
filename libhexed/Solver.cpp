@@ -1046,7 +1046,6 @@ void Solver::update() {
                 ++inner;
               }
               if (_time_scheme == explicit_steady) {
-                #if 0
                 #pragma omp parallel for
                 for (int i_elem = 0; i_elem < elems.size(); ++i_elem) {
                   Array<double> res_cache({params.n_var, params.n_qpoint()},
@@ -1060,7 +1059,6 @@ void Solver::update() {
                     }
                   }
                 }
-                #endif
               }
               // note that function call must come first to ensure it is evaluated despite short-circuiting
               bool f = fix_nonphysical(_namespace->get<double>("fix_nonphys_max_safety"), inner);

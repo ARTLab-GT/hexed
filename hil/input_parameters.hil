@@ -374,7 +374,7 @@ If \ref true, check for certain nonphysical values of state variables
 If problems are found, it will run as many Laplacian smearing iterations as necessary to restore physical values.
 Results in a major robustness improvement and comes at a modest performance cost.
 "}
-fix_nonphysical = false
+fix_nonphysical = true
 
 {"
 Directory in which to write output files.

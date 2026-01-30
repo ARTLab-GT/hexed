@@ -29,6 +29,8 @@ These are all variables that the solver will assign to.
 If you want any information beyond what the solver typically prints to the console,
 you can observe these output parameters,
 by \ref println "printing" them to the screen or using them in other calculations.
+There are also some, such as \ref air_viscosity,
+which are simply predefined constants that may be useful in your input files.
 """, "solver_macros": r"""
 These are builtin \ref Macros which you can execute with the `$` operator.
 Some of these, like \ref plot_history and \ref simulate , are intended for you to use directly.

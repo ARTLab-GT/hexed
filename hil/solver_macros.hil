@@ -30,6 +30,9 @@ start = {
         $loop
     }
     $$({case} + (flood_fill_start0 == huge))
+    case0 = {}
+    case1 = {$set_shock; $set_ramping}
+    $$({case} + capture_shocks)
     compute_freestream
     create_solver
     init_residual_momentum = 0.
