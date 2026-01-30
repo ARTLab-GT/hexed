@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -142,7 +142,7 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a0f367174053fdbb5cd8eec333926df73"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><div class="compoundTemplParams">template&lt;typename reference_t, typename storage_t = reference_t, reference_t(*)(storage_t &amp;) convert = &amp;trivial_convert&lt;reference_t, storage_t&gt;, template&lt; typename &gt; typename sequence_template = std::vector&gt;<br />
+<div class="textblock"><div class="compoundTemplParams">template&lt;typename reference_t, typename storage_t = reference_t, reference_t(*)(storage_t &amp;) convert = &amp;trivial_convert&lt;reference_t, storage_t&gt;, template&lt; typename &gt; typename sequence_template = reduced_vector&gt;<br />
 class hexed::Vector_view&lt; reference_t, storage_t, convert, sequence_template &gt;</div><p>Provides a view of an existing container (e.g., <code>std::vector</code>) as a <code><a class="el" href="classhexed_1_1Sequence.html" title="An interface for general sequence-type containers.">Sequence</a></code>. </p>
 <p><code><a class="el" href="classhexed_1_1Vector__view.html" title="Provides a view of an existing container (e.g., std::vector) as a Sequence.">Vector_view</a></code> also allows the vector elements to be viewed as a different type than they are stored as with a user-supplied conversion function (again, useful if you don't to provide access to only some aspects of the underlying data). </p><dl class="section note"><dt>Note</dt><dd>if write acces is desired, <code>reference_t</code> should be a reference type. </dd></dl>
 </div><h2 class="groupheader">Member Function Documentation</h2>
@@ -152,7 +152,7 @@ class hexed::Vector_view&lt; reference_t, storage_t, convert, sequence_template 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename reference_t , typename storage_t  = reference_t, reference_t(*)(storage_t &amp;) convert = &amp;trivial_convert&lt;reference_t, storage_t&gt;, template&lt; typename &gt; typename sequence_template = std::vector&gt; </div>
+template&lt;typename reference_t , typename storage_t  = reference_t, reference_t(*)(storage_t &amp;) convert = &amp;trivial_convert&lt;reference_t, storage_t&gt;, template&lt; typename &gt; typename sequence_template = reduced_vector&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
@@ -181,7 +181,7 @@ template&lt;typename reference_t , typename storage_t  = reference_t, reference_
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename reference_t , typename storage_t  = reference_t, reference_t(*)(storage_t &amp;) convert = &amp;trivial_convert&lt;reference_t, storage_t&gt;, template&lt; typename &gt; typename sequence_template = std::vector&gt; </div>
+template&lt;typename reference_t , typename storage_t  = reference_t, reference_t(*)(storage_t &amp;) convert = &amp;trivial_convert&lt;reference_t, storage_t&gt;, template&lt; typename &gt; typename sequence_template = reduced_vector&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">

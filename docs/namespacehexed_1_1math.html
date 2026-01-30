@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -112,7 +112,8 @@ $(function(){initNavTree('namespacehexed_1_1math.html',''); initResizable(true);
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
-<a href="#func-members">Functions</a>  </div>
+<a href="#func-members">Functions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">hexed::math Namespace Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -128,31 +129,74 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhexed_1_1math_1_1Ball.html">Ball</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">minimal representation of an <code>n_dim</code>-dimensional ball  <a href="structhexed_1_1math_1_1Ball.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhexed_1_1math_1_1Objective__finite__diff.html">Objective_finite_diff</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Estimates the derivatives of an optimization objective function by finite difference.  <a href="structhexed_1_1math_1_1Objective__finite__diff.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhexed_1_1math_1_1Root__options.html">Root_options</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">provides a convenient way to pass options to root-finding algorithms  <a href="structhexed_1_1math_1_1Root__options.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhexed_1_1math_1_1Tolerance.html">Tolerance</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specifies relative and absolute tolerances for comparing a value to truth data.  <a href="structhexed_1_1math_1_1Tolerance.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a9697a12d100ec1d5dbe79d6eae56a895" id="r_a9697a12d100ec1d5dbe79d6eae56a895"><td class="memItemLeft" align="right" valign="top"><a id="a9697a12d100ec1d5dbe79d6eae56a895" name="a9697a12d100ec1d5dbe79d6eae56a895"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>limit_abs</b> (double value, double limit)</td></tr>
+<tr class="separator:a9697a12d100ec1d5dbe79d6eae56a895"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e65a4e614e10fdc038aebd058b9f67f" id="r_a6e65a4e614e10fdc038aebd058b9f67f"><td class="memItemLeft" align="right" valign="top"><a id="a6e65a4e614e10fdc038aebd058b9f67f" name="a6e65a4e614e10fdc038aebd058b9f67f"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>smooth_limit_abs</b> (double value, double limit)</td></tr>
+<tr class="separator:a6e65a4e614e10fdc038aebd058b9f67f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abaa8e1a17ff1325dc2a4eb146d46e276" id="r_abaa8e1a17ff1325dc2a4eb146d46e276"><td class="memItemLeft" align="right" valign="top"><a id="abaa8e1a17ff1325dc2a4eb146d46e276" name="abaa8e1a17ff1325dc2a4eb146d46e276"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>random_normal</b> (double mean, double std_dev)</td></tr>
+<tr class="separator:abaa8e1a17ff1325dc2a4eb146d46e276"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7b206fad58ec8e88f9c59dabc2814f96" id="r_a7b206fad58ec8e88f9c59dabc2814f96"><td class="memTemplParams" colspan="2"><a id="a7b206fad58ec8e88f9c59dabc2814f96" name="a7b206fad58ec8e88f9c59dabc2814f96"></a>
+template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a7b206fad58ec8e88f9c59dabc2814f96"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>set_random_normal</b> (T &amp;mat, double mean, double std_dev)</td></tr>
+<tr class="memdesc:a7b206fad58ec8e88f9c59dabc2814f96"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the entries of the provided matrix-like object to random values with a normal distribution. The mean and standard deviation of the distribution are controlled by <code>mean</code> and <code>std_dev</code>, respectively. <code>T</code> must support the methods <code>.rows()</code>, <code>.cols()</code>, and <code>operator()(int row, int col)</code> (for entry access). <br /></td></tr>
+<tr class="separator:a7b206fad58ec8e88f9c59dabc2814f96"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a841a924102372fe68edc21dd924d3e02" id="r_a841a924102372fe68edc21dd924d3e02"><td class="memTemplParams" colspan="2">template&lt;typename number_t &gt; </td></tr>
 <tr class="memitem:a841a924102372fe68edc21dd924d3e02"><td class="memTemplItemLeft" align="right" valign="top">constexpr number_t&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a841a924102372fe68edc21dd924d3e02">pow</a> (number_t base, int exponent)</td></tr>
 <tr class="memdesc:a841a924102372fe68edc21dd924d3e02"><td class="mdescLeft">&#160;</td><td class="mdescRight">Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.  <br /></td></tr>
 <tr class="separator:a841a924102372fe68edc21dd924d3e02"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa22c33a8526443106a5fb9755fd74f3e" id="r_aa22c33a8526443106a5fb9755fd74f3e"><td class="memItemLeft" align="right" valign="top">constexpr int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa22c33a8526443106a5fb9755fd74f3e">log</a> (int base, int arg)</td></tr>
-<tr class="memdesc:aa22c33a8526443106a5fb9755fd74f3e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Integer logarithm.  <br /></td></tr>
-<tr class="separator:aa22c33a8526443106a5fb9755fd74f3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0b7847abc220f7e700c21594eceba864" id="r_a0b7847abc220f7e700c21594eceba864"><td class="memItemLeft" align="right" valign="top">constexpr <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0b7847abc220f7e700c21594eceba864">log</a> (<a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> base, <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> arg)</td></tr>
+<tr class="memdesc:a0b7847abc220f7e700c21594eceba864"><td class="mdescLeft">&#160;</td><td class="mdescRight">Integer logarithm.  <br /></td></tr>
+<tr class="separator:a0b7847abc220f7e700c21594eceba864"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a52c7013a706090aa44e10122917fa1d8" id="r_a52c7013a706090aa44e10122917fa1d8"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a52c7013a706090aa44e10122917fa1d8"><td class="memTemplItemLeft" align="right" valign="top">constexpr T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a52c7013a706090aa44e10122917fa1d8">mod</a> (T i, T j)</td></tr>
+<tr class="memdesc:a52c7013a706090aa44e10122917fa1d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Modulo operator.  <br /></td></tr>
+<tr class="separator:a52c7013a706090aa44e10122917fa1d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d2ab632affd40cc8be2f518908173a5" id="r_a8d2ab632affd40cc8be2f518908173a5"><td class="memTemplParams" colspan="2"><a id="a8d2ab632affd40cc8be2f518908173a5" name="a8d2ab632affd40cc8be2f518908173a5"></a>
+template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a8d2ab632affd40cc8be2f518908173a5"><td class="memTemplItemLeft" align="right" valign="top">constexpr T&#160;</td><td class="memTemplItemRight" valign="bottom"><b>extreme</b> (bool minmax, T arg)</td></tr>
+<tr class="separator:a8d2ab632affd40cc8be2f518908173a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a267d07f2dd39abdd81f45d567249f001" id="r_a267d07f2dd39abdd81f45d567249f001"><td class="memTemplParams" colspan="2">template&lt;typename T , typename... arg_ts&gt; </td></tr>
+<tr class="memitem:a267d07f2dd39abdd81f45d567249f001"><td class="memTemplItemLeft" align="right" valign="top">constexpr T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a267d07f2dd39abdd81f45d567249f001">extreme</a> (bool minmax, T arg, arg_ts... args)</td></tr>
+<tr class="memdesc:a267d07f2dd39abdd81f45d567249f001"><td class="mdescLeft">&#160;</td><td class="mdescRight">if <code>minmax</code> is true, returns the maximum of remaining arguments, else the minimum  <br /></td></tr>
+<tr class="separator:a267d07f2dd39abdd81f45d567249f001"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abf6282b96dedf7230bed26df5cd20a0d" id="r_abf6282b96dedf7230bed26df5cd20a0d"><td class="memTemplParams" colspan="2">template&lt;typename T , typename... arg_ts&gt; </td></tr>
+<tr class="memitem:abf6282b96dedf7230bed26df5cd20a0d"><td class="memTemplItemLeft" align="right" valign="top">constexpr T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#abf6282b96dedf7230bed26df5cd20a0d">max</a> (T arg, arg_ts... args)</td></tr>
+<tr class="memdesc:abf6282b96dedf7230bed26df5cd20a0d"><td class="mdescLeft">&#160;</td><td class="mdescRight">returns the maximum of all arguments  <br /></td></tr>
+<tr class="separator:abf6282b96dedf7230bed26df5cd20a0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa9816eb85df7b61b099fd78a3510ca10" id="r_aa9816eb85df7b61b099fd78a3510ca10"><td class="memTemplParams" colspan="2">template&lt;typename T , typename... arg_ts&gt; </td></tr>
+<tr class="memitem:aa9816eb85df7b61b099fd78a3510ca10"><td class="memTemplItemLeft" align="right" valign="top">constexpr T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aa9816eb85df7b61b099fd78a3510ca10">min</a> (T arg, arg_ts... args)</td></tr>
+<tr class="memdesc:aa9816eb85df7b61b099fd78a3510ca10"><td class="mdescLeft">&#160;</td><td class="mdescRight">returns the minimum of all arguments  <br /></td></tr>
+<tr class="separator:aa9816eb85df7b61b099fd78a3510ca10"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0cf1f9dee834e4293708192a939f2482" id="r_a0cf1f9dee834e4293708192a939f2482"><td class="memItemLeft" align="right" valign="top"><a id="a0cf1f9dee834e4293708192a939f2482" name="a0cf1f9dee834e4293708192a939f2482"></a>
 constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>sign</b> (bool condition)</td></tr>
 <tr class="memdesc:a0cf1f9dee834e4293708192a939f2482"><td class="mdescLeft">&#160;</td><td class="mdescRight">returns 1 if <code>condition</code> is true, otherwise -1 <br /></td></tr>
 <tr class="separator:a0cf1f9dee834e4293708192a939f2482"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a809296c0317a57071e35813db50959f7" id="r_a809296c0317a57071e35813db50959f7"><td class="memItemLeft" align="right" valign="top"><a id="a809296c0317a57071e35813db50959f7" name="a809296c0317a57071e35813db50959f7"></a>
-Eigen::VectorXi&#160;</td><td class="memItemRight" valign="bottom"><b>direction</b> (int n_dim, int i_dim, bool is_positive)</td></tr>
-<tr class="memdesc:a809296c0317a57071e35813db50959f7"><td class="mdescLeft">&#160;</td><td class="mdescRight">the unit vector describing the direction from the center of an <code>n_dim</code>-dimensional Cartesian element to the face described by <code>i_dim</code> and <code>sign</code> <br /></td></tr>
-<tr class="separator:a809296c0317a57071e35813db50959f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab71ed172f6f016f04a01e7345c40e0f9" id="r_ab71ed172f6f016f04a01e7345c40e0f9"><td class="memItemLeft" align="right" valign="top"><a id="ab71ed172f6f016f04a01e7345c40e0f9" name="ab71ed172f6f016f04a01e7345c40e0f9"></a>
-Eigen::VectorXi&#160;</td><td class="memItemRight" valign="bottom"><b>direction</b> (int n_dim, int i_face)</td></tr>
-<tr class="memdesc:ab71ed172f6f016f04a01e7345c40e0f9"><td class="mdescLeft">&#160;</td><td class="mdescRight">the unit vector describing the direction from the center of an <code>n_dim</code>-dimensional Cartesian element to the <code>i_face</code>th face <br /></td></tr>
-<tr class="separator:ab71ed172f6f016f04a01e7345c40e0f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a278a5458265f4a3f7fc8fb5d64c0b4bc" id="r_a278a5458265f4a3f7fc8fb5d64c0b4bc"><td class="memItemLeft" align="right" valign="top"><a id="a278a5458265f4a3f7fc8fb5d64c0b4bc" name="a278a5458265f4a3f7fc8fb5d64c0b4bc"></a>
+constexpr <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><b>stride</b> (int n_dim, <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> row_size, int i_dim)</td></tr>
+<tr class="separator:a278a5458265f4a3f7fc8fb5d64c0b4bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0a29a8241610453c6c02c820b3156d3e" id="r_a0a29a8241610453c6c02c820b3156d3e"><td class="memItemLeft" align="right" valign="top"><a id="a0a29a8241610453c6c02c820b3156d3e" name="a0a29a8241610453c6c02c820b3156d3e"></a>
+constexpr <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><b>row_coordinate</b> (int n_dim, <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> row_size, int i_dim, <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> index)</td></tr>
+<tr class="memdesc:a0a29a8241610453c6c02c820b3156d3e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds the <code>i_dim</code>th array index of a point with flat index <code>index</code> in an <code>n_dim</code> dimensional array of <code>row_size</code> on each side. <br /></td></tr>
+<tr class="separator:a0a29a8241610453c6c02c820b3156d3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6b6dd19cb43fc873b09b722ee7a013b2" id="r_a6b6dd19cb43fc873b09b722ee7a013b2"><td class="memItemLeft" align="right" valign="top"><a id="a6b6dd19cb43fc873b09b722ee7a013b2" name="a6b6dd19cb43fc873b09b722ee7a013b2"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>angle_diff</b> (double angle0, double angle1)</td></tr>
+<tr class="memdesc:a6b6dd19cb43fc873b09b722ee7a013b2"><td class="mdescLeft">&#160;</td><td class="mdescRight">returns <code>angle0 - angle1</code>, where the difference is in \( [0, 2\pi) \) <br /></td></tr>
+<tr class="separator:a6b6dd19cb43fc873b09b722ee7a013b2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2ba0a7bea6c28705e6ab177bb53c3877" id="r_a2ba0a7bea6c28705e6ab177bb53c3877"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2ba0a7bea6c28705e6ab177bb53c3877">broyden</a> (std::function&lt; double(double)&gt; error, double init_guess, <a class="el" href="structhexed_1_1math_1_1Root__options.html">Root_options</a> opts, double init_diff=1e-3)</td></tr>
 <tr class="memdesc:a2ba0a7bea6c28705e6ab177bb53c3877"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds a root of a scalar function with <a href="https://en.wikipedia.org/wiki/Broyden%27s_method">Broyden's method</a>.  <br /></td></tr>
 <tr class="separator:a2ba0a7bea6c28705e6ab177bb53c3877"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -186,19 +230,14 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>stretched_ind</b> (int
 <tr class="memitem:ae73b97c8d3b263c117c7d2a1e2f8e2fb"><td class="memTemplItemLeft" align="right" valign="top">double&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ae73b97c8d3b263c117c7d2a1e2f8e2fb">interp</a> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; <a class="el" href="#a841a924102372fe68edc21dd924d3e02">pow</a>(2, n_dim)&gt; values, <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; n_dim &gt; coords)</td></tr>
 <tr class="memdesc:ae73b97c8d3b263c117c7d2a1e2f8e2fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">\(n\)-linear interpolation of <code>values</code>.  <br /></td></tr>
 <tr class="separator:ae73b97c8d3b263c117c7d2a1e2f8e2fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5ea97671d9cd0d528756b358ef6d0fda" id="r_a5ea97671d9cd0d528756b358ef6d0fda"><td class="memItemLeft" align="right" valign="top"><a id="a5ea97671d9cd0d528756b358ef6d0fda" name="a5ea97671d9cd0d528756b358ef6d0fda"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>interp</b> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; values, <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; coords)</td></tr>
+<tr class="memdesc:a5ea97671d9cd0d528756b358ef6d0fda"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a5ea97671d9cd0d528756b358ef6d0fda"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af16de794dd3a25bfc072c97d490ed2d8" id="r_af16de794dd3a25bfc072c97d490ed2d8"><td class="memTemplParams" colspan="2">template&lt;typename vec_t &gt; </td></tr>
 <tr class="memitem:af16de794dd3a25bfc072c97d490ed2d8"><td class="memTemplItemLeft" align="right" valign="top">vec_t&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#af16de794dd3a25bfc072c97d490ed2d8">proj_to_segment</a> (std::array&lt; vec_t, 2 &gt; endpoints, vec_t target)</td></tr>
+<tr class="memdesc:af16de794dd3a25bfc072c97d490ed2d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds the nearest point to <code>target</code> on the line segment defined by <code>endpoints</code>.  <br /></td></tr>
 <tr class="separator:af16de794dd3a25bfc072c97d490ed2d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a87c821fbc50ed9c599ed57f21ba47fe2" id="r_a87c821fbc50ed9c599ed57f21ba47fe2"><td class="memTemplParams" colspan="2"><a id="a87c821fbc50ed9c599ed57f21ba47fe2" name="a87c821fbc50ed9c599ed57f21ba47fe2"></a>
-template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a87c821fbc50ed9c599ed57f21ba47fe2"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><b>to_mat</b> (T begin, T end)</td></tr>
-<tr class="memdesc:a87c821fbc50ed9c599ed57f21ba47fe2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an <code>Eigen::VectorXd</code> from iterators <code>begin()</code> and <code>end()</code> to arithmetic types. <br /></td></tr>
-<tr class="separator:a87c821fbc50ed9c599ed57f21ba47fe2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acb1291dc0d9913aa56296df84ff9969d" id="r_acb1291dc0d9913aa56296df84ff9969d"><td class="memTemplParams" colspan="2"><a id="acb1291dc0d9913aa56296df84ff9969d" name="acb1291dc0d9913aa56296df84ff9969d"></a>
-template&lt;typename T &gt; </td></tr>
-<tr class="memitem:acb1291dc0d9913aa56296df84ff9969d"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><b>to_mat</b> (const T &amp;range)</td></tr>
-<tr class="memdesc:acb1291dc0d9913aa56296df84ff9969d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an <code>Eigen::VectorXd</code> from any object supporting <code>begin()</code> and <code>end()</code> members. <br /></td></tr>
-<tr class="separator:acb1291dc0d9913aa56296df84ff9969d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af0f6208be1d549d15ee614056e916214" id="r_af0f6208be1d549d15ee614056e916214"><td class="memTemplParams" colspan="2">template&lt;int n_dim, int n_point&gt; </td></tr>
 <tr class="memitem:af0f6208be1d549d15ee614056e916214"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="structhexed_1_1math_1_1Ball.html">Ball</a>&lt; n_dim &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#af0f6208be1d549d15ee614056e916214">bounding_ball</a> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; n_dim, n_point &gt; points)</td></tr>
 <tr class="memdesc:af0f6208be1d549d15ee614056e916214"><td class="mdescLeft">&#160;</td><td class="mdescRight">computes a bounding ball of the convex hull of a set of points  <br /></td></tr>
@@ -213,6 +252,18 @@ template&lt;int n_dim&gt; </td></tr>
 <tr class="separator:a81f8bcb9e8396f60c01ca532eeb30826"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4577ab973af36ffe9e7d96f7a4c5e4e1" id="r_a4577ab973af36ffe9e7d96f7a4c5e4e1"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4577ab973af36ffe9e7d96f7a4c5e4e1">correct_values</a> (std::vector&lt; double &gt; estimates, std::vector&lt; double &gt; exacts, double tol=<a class="el" href="namespacehexed.html#a06682de47504c676a52137c7636470a1">huge</a>)</td></tr>
 <tr class="separator:a4577ab973af36ffe9e7d96f7a4c5e4e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afb5add46b34c4bb22181fdc778b14eed" id="r_afb5add46b34c4bb22181fdc778b14eed"><td class="memItemLeft" align="right" valign="top"><a id="afb5add46b34c4bb22181fdc778b14eed" name="afb5add46b34c4bb22181fdc778b14eed"></a>
+std::mt19937&#160;</td><td class="memItemRight" valign="bottom"><b>global_random_generator</b> (global_random_device())</td></tr>
+<tr class="separator:afb5add46b34c4bb22181fdc778b14eed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:a3d3064a9ba391955f7adb7287bf9f646" id="r_a3d3064a9ba391955f7adb7287bf9f646"><td class="memItemLeft" align="right" valign="top"><a id="a3d3064a9ba391955f7adb7287bf9f646" name="a3d3064a9ba391955f7adb7287bf9f646"></a>
+std::random_device&#160;</td><td class="memItemRight" valign="bottom"><b>global_random_device</b></td></tr>
+<tr class="separator:a3d3064a9ba391955f7adb7287bf9f646"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aac1df546dfea461b0197fc01c5aaf615" id="r_aac1df546dfea461b0197fc01c5aaf615"><td class="memItemLeft" align="right" valign="top"><a id="aac1df546dfea461b0197fc01c5aaf615" name="aac1df546dfea461b0197fc01c5aaf615"></a>
+std::mt19937&#160;</td><td class="memItemRight" valign="bottom"><b>global_random_generator</b></td></tr>
+<tr class="separator:aac1df546dfea461b0197fc01c5aaf615"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Miscellaneous mathematical functions that aren't in <code>std::math</code> </p>
@@ -402,6 +453,45 @@ template&lt;int n_dim, int n_point&gt; </div>
 
 </div>
 </div>
+<a id="a267d07f2dd39abdd81f45d567249f001" name="a267d07f2dd39abdd81f45d567249f001"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a267d07f2dd39abdd81f45d567249f001">&#9670;&#160;</a></span>extreme()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T , typename... arg_ts&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">T hexed::math::extreme </td>
+          <td>(</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>minmax</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">T</td>          <td class="paramname"><span class="paramname"><em>arg</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">arg_ts...</td>          <td class="paramname"><span class="paramname"><em>args</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>if <code>minmax</code> is true, returns the maximum of remaining arguments, else the minimum </p>
+<dl class="section warning"><dt>Warning</dt><dd>always returns the type of the first argument, regardless of type conversion rules </dd></dl>
+
+</div>
+</div>
 <a id="a3371a6107241fd2908252ebcfeb02225" name="a3371a6107241fd2908252ebcfeb02225"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a3371a6107241fd2908252ebcfeb02225">&#9670;&#160;</a></span>hypercube_matvec()</h2>
 
@@ -458,8 +548,8 @@ template&lt;int n_dim&gt; </div>
 
 </div>
 </div>
-<a id="aa22c33a8526443106a5fb9755fd74f3e" name="aa22c33a8526443106a5fb9755fd74f3e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa22c33a8526443106a5fb9755fd74f3e">&#9670;&#160;</a></span>log()</h2>
+<a id="a0b7847abc220f7e700c21594eceba864" name="a0b7847abc220f7e700c21594eceba864"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0b7847abc220f7e700c21594eceba864">&#9670;&#160;</a></span>log()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -468,14 +558,14 @@ template&lt;int n_dim&gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">int hexed::math::log </td>
+          <td class="memname"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> hexed::math::log </td>
           <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>base</em></span>, </td>
+          <td class="paramtype"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a></td>          <td class="paramname"><span class="paramname"><em>base</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>arg</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a></td>          <td class="paramname"><span class="paramname"><em>arg</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -487,6 +577,108 @@ template&lt;int n_dim&gt; </div>
 
 <p>Integer logarithm. </p>
 <p>If <code>base</code> &lt; 2, returns -1 to indicate failure. Otherwise, if <code>arg</code> &lt; 1, returns 0. In the usual case where neither of the above are true, returns \(\lceil\log_{\mathtt{base}}(\mathtt{arg})\rceil\). </p>
+
+</div>
+</div>
+<a id="abf6282b96dedf7230bed26df5cd20a0d" name="abf6282b96dedf7230bed26df5cd20a0d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abf6282b96dedf7230bed26df5cd20a0d">&#9670;&#160;</a></span>max()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T , typename... arg_ts&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">T hexed::math::max </td>
+          <td>(</td>
+          <td class="paramtype">T</td>          <td class="paramname"><span class="paramname"><em>arg</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">arg_ts...</td>          <td class="paramname"><span class="paramname"><em>args</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>returns the maximum of all arguments </p>
+<dl class="section warning"><dt>Warning</dt><dd>always returns the type of the first argument, regardless of type conversion rules </dd></dl>
+
+</div>
+</div>
+<a id="aa9816eb85df7b61b099fd78a3510ca10" name="aa9816eb85df7b61b099fd78a3510ca10"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa9816eb85df7b61b099fd78a3510ca10">&#9670;&#160;</a></span>min()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T , typename... arg_ts&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">T hexed::math::min </td>
+          <td>(</td>
+          <td class="paramtype">T</td>          <td class="paramname"><span class="paramname"><em>arg</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">arg_ts...</td>          <td class="paramname"><span class="paramname"><em>args</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>returns the minimum of all arguments </p>
+<dl class="section warning"><dt>Warning</dt><dd>always returns the type of the first argument, regardless of type conversion rules </dd></dl>
+
+</div>
+</div>
+<a id="a52c7013a706090aa44e10122917fa1d8" name="a52c7013a706090aa44e10122917fa1d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a52c7013a706090aa44e10122917fa1d8">&#9670;&#160;</a></span>mod()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">T hexed::math::mod </td>
+          <td>(</td>
+          <td class="paramtype">T</td>          <td class="paramname"><span class="paramname"><em>i</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">T</td>          <td class="paramname"><span class="paramname"><em>j</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Modulo operator. </p>
+<p>Similar to the remainder operator (ij) but returns a nonnegative result even when <code>i</code> is negative. </p>
 
 </div>
 </div>
@@ -635,7 +827,9 @@ template&lt;typename vec_t &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Finds the nearest point to <code>target</code> on the line segment defined by <code>endpoints</code>. Works for 2D or 3D. </p>
+
+<p>Finds the nearest point to <code>target</code> on the line segment defined by <code>endpoints</code>. </p>
+<p>Works for 2D or 3D. </p>
 
 </div>
 </div>

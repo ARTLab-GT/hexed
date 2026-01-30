@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -124,36 +124,18 @@ $(function(){initNavTree('structhexed_1_1Vis__data_1_1Contour.html',''); initRes
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:af1a658c73b5acc630b9021eae314ef91" id="r_af1a658c73b5acc630b9021eae314ef91"><td class="memItemLeft" align="right" valign="top">Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af1a658c73b5acc630b9021eae314ef91">vert_ref_coords</a></td></tr>
-<tr class="separator:af1a658c73b5acc630b9021eae314ef91"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a591f47b27c5e3f518ce7eaae3cdba15c" id="r_a591f47b27c5e3f518ce7eaae3cdba15c"><td class="memItemLeft" align="right" valign="top"><a id="a591f47b27c5e3f518ce7eaae3cdba15c" name="a591f47b27c5e3f518ce7eaae3cdba15c"></a>
-Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><b>normals</b></td></tr>
-<tr class="memdesc:a591f47b27c5e3f518ce7eaae3cdba15c"><td class="mdescLeft">&#160;</td><td class="mdescRight">unit normal vectors to the contour surface in physical space (not reference) located at vertices. layout: [n_vertex][n_dim] <br /></td></tr>
-<tr class="separator:a591f47b27c5e3f518ce7eaae3cdba15c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2145d13b623efddf4b501b9882bb001e" id="r_a2145d13b623efddf4b501b9882bb001e"><td class="memItemLeft" align="right" valign="top"><a id="a2145d13b623efddf4b501b9882bb001e" name="a2145d13b623efddf4b501b9882bb001e"></a>
-Eigen::MatrixXi&#160;</td><td class="memItemRight" valign="bottom"><b>elem_vert_inds</b></td></tr>
-<tr class="memdesc:a2145d13b623efddf4b501b9882bb001e"><td class="mdescLeft">&#160;</td><td class="mdescRight">indices of contour elements (line segments/quads). layout: [i_element][<a class="el" href="namespacehexed_1_1math.html#a841a924102372fe68edc21dd924d3e02" title="Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.">math::pow</a>(2, n_dim - 1)] <br /></td></tr>
-<tr class="separator:a2145d13b623efddf4b501b9882bb001e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d9b1863d1a76bec6e12789d6298bd05" id="r_a5d9b1863d1a76bec6e12789d6298bd05"><td class="memItemLeft" align="right" valign="top"><a id="a5d9b1863d1a76bec6e12789d6298bd05" name="a5d9b1863d1a76bec6e12789d6298bd05"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>vert_ref_coords</b></td></tr>
+<tr class="memdesc:a5d9b1863d1a76bec6e12789d6298bd05"><td class="mdescLeft">&#160;</td><td class="mdescRight">coordinates of contour vertices in reference coordinates. layout: [n_dim][n_vertex] <br /></td></tr>
+<tr class="separator:a5d9b1863d1a76bec6e12789d6298bd05"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0aa094cf23f74927b239e05b87dc0b75" id="r_a0aa094cf23f74927b239e05b87dc0b75"><td class="memItemLeft" align="right" valign="top"><a id="a0aa094cf23f74927b239e05b87dc0b75" name="a0aa094cf23f74927b239e05b87dc0b75"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>elem_vert_inds</b></td></tr>
+<tr class="memdesc:a0aa094cf23f74927b239e05b87dc0b75"><td class="mdescLeft">&#160;</td><td class="mdescRight">indices of contour elements (line segments/quads). layout: [i_element][<a class="el" href="namespacehexed_1_1math.html#a841a924102372fe68edc21dd924d3e02" title="Raises an arbitrary arithmetic type to an integer (not necessarily positive) power.">math::pow</a>(2, n_dim - 1)] <br /></td></tr>
+<tr class="separator:a0aa094cf23f74927b239e05b87dc0b75"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>stores data representing a contour line/surface </p>
-</div><h2 class="groupheader">Member Data Documentation</h2>
-<a id="af1a658c73b5acc630b9021eae314ef91" name="af1a658c73b5acc630b9021eae314ef91"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af1a658c73b5acc630b9021eae314ef91">&#9670;&#160;</a></span>vert_ref_coords</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">Eigen::MatrixXd hexed::Vis_data::Contour::vert_ref_coords</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<p>coordinates of contour vertices in reference coordinates. layout: [n_vertex][n_dim] </p>
-
-</div>
-</div>
-<hr/>The documentation for this struct was generated from the following file:<ul>
+</div><hr/>The documentation for this struct was generated from the following file:<ul>
 <li>/home/micaiah/Desktop/hexed/include/<b>Vis_data.hpp</b></li>
 </ul>
 </div><!-- contents -->

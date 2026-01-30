@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -131,20 +131,29 @@ Public Member Functions</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
+<tr class="memitem:a17a1a2f7606d9a8514049c77a410b399" id="r_a17a1a2f7606d9a8514049c77a410b399"><td class="memItemLeft" align="right" valign="top"><a id="a17a1a2f7606d9a8514049c77a410b399" name="a17a1a2f7606d9a8514049c77a410b399"></a>
+<a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><b>desired_iters</b> = 0</td></tr>
+<tr class="separator:a17a1a2f7606d9a8514049c77a410b399"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1c2edc413034c580cf18bb1f839391d4" id="r_a1c2edc413034c580cf18bb1f839391d4"><td class="memItemLeft" align="right" valign="top"><a id="a1c2edc413034c580cf18bb1f839391d4" name="a1c2edc413034c580cf18bb1f839391d4"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>repeat</b> = false</td></tr>
+<tr class="separator:a1c2edc413034c580cf18bb1f839391d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a24f9057167b1f28d345ee7f26e11987e" id="r_a24f9057167b1f28d345ee7f26e11987e"><td class="memItemLeft" align="right" valign="top"><a id="a24f9057167b1f28d345ee7f26e11987e" name="a24f9057167b1f28d345ee7f26e11987e"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>max_residual</b> = 0</td></tr>
+<tr class="separator:a24f9057167b1f28d345ee7f26e11987e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a897251e6271be0a43f8572c61f6903cf" id="r_a897251e6271be0a43f8572c61f6903cf"><td class="memItemLeft" align="right" valign="top"><a id="a897251e6271be0a43f8572c61f6903cf" name="a897251e6271be0a43f8572c61f6903cf"></a>
 <a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>&#160;</td><td class="memItemRight" valign="bottom"><b>kernel_mesh</b></td></tr>
 <tr class="separator:a897251e6271be0a43f8572c61f6903cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:accb7b35292380407171b1d162c60fe7d" id="r_accb7b35292380407171b1d162c60fe7d"><td class="memItemLeft" align="right" valign="top"><a id="accb7b35292380407171b1d162c60fe7d" name="accb7b35292380407171b1d162c60fe7d"></a>
-<a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp; &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>bound_cons</b></td></tr>
-<tr class="separator:accb7b35292380407171b1d162c60fe7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a033ae4f65fe6ca990e4ebd81ee38b799" id="r_a033ae4f65fe6ca990e4ebd81ee38b799"><td class="memItemLeft" align="right" valign="top"><a id="a033ae4f65fe6ca990e4ebd81ee38b799" name="a033ae4f65fe6ca990e4ebd81ee38b799"></a>
+std::vector&lt; <a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>bound_cons</b></td></tr>
+<tr class="separator:a033ae4f65fe6ca990e4ebd81ee38b799"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Creates a mask that allows kernel operations to be performed on a subset of the elements. </p>
 <p>Supply a function that returns <code>true</code> for elements that should be operated on. The masked mesh is described by two objects:</p><ul>
 <li>a <code><a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a></code> which includes all the elements where the mask is <code>true</code> and all the connections and refined faces where the mask is <code>true</code> for at least one of the participating elements</li>
-<li>a <code><a class="el" href="classhexed_1_1Sequence.html" title="An interface for general sequence-type containers.">Sequence</a></code> of <code><a class="el" href="classhexed_1_1Boundary__connection.html" title="A Boundary_face that also provides details about the connection for the neighbor flux computation and...">Boundary_connection</a></code>s which includes all boundary connections for whose element the mask is <code>true</code></li>
+<li>a <code><a class="el" href="classhexed_1_1Sequence.html" title="An interface for general sequence-type containers.">Sequence</a></code> of <code><a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a></code>s which includes all boundary connections for whose element the mask is <code>true</code></li>
 </ul>
-<p>The members <code><a class="el" href="classhexed_1_1Accessible__mesh.html#a8bf6b1a1ce4c48f1006b4c88a4411639" title="access all elements, both Cartesian and deformed">elements()</a></code>, <code><a class="el" href="classhexed_1_1Accessible__mesh.html#ab1699a3f5ad1e6a668a71bca9e413956">element_connections()</a></code>, etc. will not be affected. This feature has some quirks. The first mask you create will include all elements, regardless of what mask function you supply. After that, each mask will be a subset of all previous masks, again regardless of the mask function. Calling <code><a class="el" href="classhexed_1_1Accessible__mesh.html#a68f78aad7d868dd3b8612b6e05b543e1" title="Resets effective number of masks created to 0 and invalidates existing masks.">reset_masks()</a></code> invalidates all previous masks and makes it as if you had not yet created any masks (so now your first one will include all elements, etc.). Modifying the mesh invalidates all existing masks but does <b>not</b> perform a reset. After modifying the mesh, you should call <code><a class="el" href="classhexed_1_1Accessible__mesh.html#a68f78aad7d868dd3b8612b6e05b543e1" title="Resets effective number of masks created to 0 and invalidates existing masks.">reset_masks()</a></code> before making any new masks. </p><dl class="todo"><dt><b><a class="el" href="todo.html#_todo000001">Todo</a></b></dt><dd>Make this more intuitive and less error-prone. </dd></dl>
+<p>The members <code><a class="el" href="classhexed_1_1Accessible__mesh.html#a8bf6b1a1ce4c48f1006b4c88a4411639" title="access all elements, both Cartesian and deformed">elements()</a></code>, <code>element_connections()</code>, etc. will not be affected. This feature has some quirks. The first mask you create will include all elements, regardless of what mask function you supply. After that, each mask will be a subset of all previous masks, again regardless of the mask function. Calling <code><a class="el" href="classhexed_1_1Accessible__mesh.html#a68f78aad7d868dd3b8612b6e05b543e1" title="Resets effective number of masks created to 0 and invalidates existing masks.">reset_masks()</a></code> invalidates all previous masks and makes it as if you had not yet created any masks (so now your first one will include all elements, etc.). Modifying the mesh invalidates all existing masks but does <b>not</b> perform a reset. After modifying the mesh, you should call <code><a class="el" href="classhexed_1_1Accessible__mesh.html#a68f78aad7d868dd3b8612b6e05b543e1" title="Resets effective number of masks created to 0 and invalidates existing masks.">reset_masks()</a></code> before making any new masks. </p><dl class="todo"><dt><b><a class="el" href="todo.html#_todo000001">Todo</a></b></dt><dd>Make this more intuitive and less error-prone. </dd></dl>
 </div><hr/>The documentation for this class was generated from the following files:<ul>
 <li>/home/micaiah/Desktop/hexed/include/<b>Accessible_mesh.hpp</b></li>
 <li>/home/micaiah/Desktop/hexed/libhexed/<b>Accessible_mesh.cpp</b></li>

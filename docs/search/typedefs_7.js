@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['qf_5fconcat_0',['Qf_concat',['../namespacehexed.html#ad444d317f9e486e08dc50773c56ed134',1,'hexed']]]
+  ['reference_5ft_0',['Reference_t',['../classhexed_1_1next_1_1Sequence.html#a778c09caa1acede951d3c681723dc0f5',1,'hexed::next::Sequence']]]
 ];

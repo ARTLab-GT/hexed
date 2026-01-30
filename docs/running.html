@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -115,32 +115,10 @@ $(function(){initNavTree('running.html',''); initResizable(true); });
 <div class="contents">
 <div class="textblock"><p><a class="anchor" id="hexecute"></a>Technically, Hexed is really two things. It is a C++ library, and it is an executable program. If you want to extend the functionality of Hexed or use it as a backend and develop your own UI, you should link with the C++ library <code>libhexed.so</code> and you will have access to everything in the namespace <a class="el" href="namespacehexed.html">hexed</a> However, for most use cases, the executable should be sufficient. To distinguish it from the library and namespace, the command to <em>execute hexed</em> is <code>hexecute</code> (sorry for my terrible sense of humor). It supports a text-based interface in the <a class="el" href="hil.html">Hexed Interface Language</a>.</p>
 <p>To run a typical simulation, you should create a script and run it with something like <code>hexecute your-script.hil</code>. A script should generally including the items below, in order. Note that some of the commands you include are <a class="el" href="hil.html#Macros">Macros</a>, which have to be invoked with <code>$</code>, whereas others are <a class="el" href="hil.html#heisenberg">Heisenberg variables</a> for which you do not use <code>$</code>.</p><ol type="1">
-<li>define <a class="el" href="parameters.html#important_inputs">basic input parameters</a></li>
-<li><code>$start</code></li>
-<li><code>$mesh</code></li>
-<li><code>init_state</code></li>
-<li><code>$run</code></li>
-</ol>
-<p>Or if you're feeling lazy:</p><ol type="1">
-<li>define <a class="el" href="parameters.html#important_inputs">basic input parameters</a></li>
+<li>define <a class="el" href="input_parameters.html">input parameters</a></li>
 <li><code>$simulate</code></li>
 </ol>
-<p>If you just want to generate a mesh for a different solver, then you can do:</p><ol type="1">
-<li>define input parameters<ul>
-<li>If you're not running iterations, you don't have to define <a class="el" href="parameters.html#done">done</a>, but you do still have to define freestream conditions, even though their value is irrelevant.</li>
-</ul>
-</li>
-<li><code>$start</code></li>
-<li><code>$mesh</code></li>
-<li><code>write_mesh</code> or <code>export_polymesh</code></li>
-<li>If you want to be able to directly visualize the mesh for debugging, you can add:<ol type="a">
-<li><code>init_state</code></li>
-<li><code>visualize</code></li>
-</ol>
-</li>
-</ol>
-<p>A good example of a meshing-only case is the <a href="https://github.com/ARTLab-GT/hexed/tree/main/samples/multielement_airfoil">multi-element airfoil</a> case. We currently do not have the physics necessary to obtain realistic results for this case, so we only generate the mesh.</p>
-<p>A good example of a basic simulation is the oblique shock case located in <a href="https://github.com/ARTLab-GT/hexed/tree/main/samples/oblique_shock">samples/oblique_shock</a>. In this directory, you should see two files&mdash;<code>run.hil</code> is the input script (name and extension are arbitrary), and <code>geom.csv</code> is a CSV file containing coordinates for a wedge geometry (see <a class="el" href="parameters.html#add_geom">add_geom</a> for more information). To run this case, just type <code>hexecute run.hil</code>. You should see text output that looks something like: </p><div class="fragment"><div class="line">Commencing simulation with Hexed version 0.3.0 (commit 978f29b66b5253dabde3dbaf300687ad518dfc2a) at 2024-08-01 05:38:17 UTC (1722490697 Unix Time).</div>
+<p>A good example of a basic simulation is the oblique shock case located in <a href="https://github.com/ARTLab-GT/hexed/tree/main/samples/oblique_shock">samples/oblique_shock</a>. In this directory, you should see two files&mdash;<code>run.hil</code> is the input script (name and extension are arbitrary), and <code>geom.csv</code> is a CSV file containing coordinates for a wedge geometry (see <a class="el" href="command_variables.html#mesh">mesh</a> for more information). To run this case, just type <code>hexecute run.hil</code>. You should see text output that looks something like: </p><div class="fragment"><div class="line">Commencing simulation with Hexed version 0.3.0 (commit 978f29b66b5253dabde3dbaf300687ad518dfc2a) at 2024-08-01 05:38:17 UTC (1722490697 Unix Time).</div>
 <div class="line">meshing...</div>
 <div class="line">    geometry-based refinement sweep 0... done</div>
 <div class="line">meshing complete with 953 elements</div>
@@ -165,7 +143,7 @@ $(function(){initNavTree('running.html',''); initResizable(true); });
 <div class="line">visualizing... done</div>
 <div class="line">           1100,      7.78303221e-03,  1.32000000e+04,  1.00000000e+00,    1.73218054e-04</div>
 <div class="line">           1200,      4.91702287e-03,  1.44000000e+04,  1.00000000e+00,    1.32606350e-04</div>
-</div><!-- fragment --><p> ... etc. The <code>iteration</code> column tells you what iteration you're on (note that it doesn't print output on every iteration) and the <code>normalized_residual</code> column tells you the \( L^2 \) norm residual of the Navier-Stokes equations, normalized by the value after the first iteration. The <code>art_visc_residual</code> gives you a measure of the residual of the auxiliary PDEs used to determine the artificial viscosity coefficient. It will not appear if you run a simulation without artificial viscosity. If both of these residuals vanish, the simulation has reached iterative convergence. The <code>flow_time</code> and <code>time_step</code> variables are meaningless in this case because local time stepping is used, but for a simulation with global time stepping their meaning should be self-explanatory. As soon as you start the solver, a directory called <code>hexed_out</code> will be created. In this directory will be a copy of the input file as well as a file <code>output.txt</code> with a copy of the command line output. Also, each time you see <code>visualizing...done</code> in the command line output, the solver will have written a new set of <code>.h5</code> and <code>.xmf</code> files to this directory. You can view these files in ParaView by opening the <code>.xmf</code> (not <code>.h5</code>) files and selecting "XDMF Reader T" as the reader. Each time you see <code>writing mesh/state data...done</code>, the solver will have written a new set of mesh and state files that you can use to restart the simulation from where you left off with <a class="el" href="parameters.html#read_mesh">read_mesh</a> and <a class="el" href="parameters.html#read_state">read_state</a>. Unlike many solvers, Hexed saves new mesh and state data files every time instead of overwriting old ones. In my experience, worrying about overwriting important restart files can be a bit of a headache, and avoiding that problem is worth a little extra disk space. Finally, the <code>hexed_out</code> directory will also contain an empty <code>runtime_cmd.hil</code><a class="anchor" id="runtime_cmd"></a>. Every time the solver prints output, it will execute the contents of this file as <a class="el" href="hil.html">HIL</a> code and then overwrite it again with an empty file. Thus by writing HIL code to this file you can control the solver while it is running. I frequently use this to change the <a class="el" href="parameters.html#done">termination condition</a> or the <a class="el" href="parameters.html#max_safety">CFL constraint</a>.</p>
+</div><!-- fragment --><p> ... etc. The <code>iteration</code> column tells you what iteration you're on (note that it doesn't print output on every iteration) and the <code>normalized_residual</code> column tells you the \( L^2 \) norm residual of the Navier-Stokes equations, normalized by the value after the first iteration. The <code>art_visc_residual</code> gives you a measure of the residual of the auxiliary PDEs used to determine the artificial viscosity coefficient. It will not appear if you run a simulation without artificial viscosity. If both of these residuals vanish, the simulation has reached iterative convergence. The <code>flow_time</code> and <code>time_step</code> variables are meaningless in this case because local time stepping is used, but for a simulation with global time stepping their meaning should be self-explanatory. As soon as you start the solver, a directory called <code>hexed_out</code> will be created. In this directory will be a copy of the input file as well as a file <code>output.txt</code> with a copy of the command line output. Also, each time you see <code>visualizing...done</code> in the command line output, the solver will have written a new set of <code>.h5</code> and <code>.xmf</code> files to this directory. You can view these files in ParaView by opening the <code>.xmf</code> (not <code>.h5</code>) files and selecting "XDMF Reader T" as the reader. Each time you see <code>writing mesh/state data...done</code>, the solver will have written a new set of mesh and state files that you can use to restart the simulation from where you left off with <a class="el" href="command_variables.html#read_mesh">read_mesh</a> and <a class="el" href="command_variables.html#read_state">read_state</a>. Unlike many solvers, Hexed saves new mesh and state data files every time instead of overwriting old ones. In my experience, worrying about overwriting important restart files can be a bit of a headache, and avoiding that problem is worth a little extra disk space. Finally, the <code>hexed_out</code> directory will also contain an empty <code>runtime_cmd.hil</code><a class="anchor" id="runtime_cmd"></a>. Every time the solver prints output, it will execute the contents of this file as <a class="el" href="hil.html">HIL</a> code and then overwrite it again with an empty file. Thus by writing HIL code to this file you can control the solver while it is running. I frequently use this to change the <a class="el" href="input_parameters.html#done">termination condition</a> or the <a class="el" href="input_parameters.html#max_safety">CFL constraint</a>.</p>
 <p>When the simulation is completed, you should see something like: </p><div class="fragment"><div class="line">           2100,      8.18880490e-05,  2.52000000e+04,  1.00000000e+00,    3.52859250e-06</div>
 <div class="line">simulation complete</div>
 <div class="line">wall clock time = 52.5361s = 0.875602min = 0.0145934hr</div>
@@ -226,7 +204,7 @@ $(function(){initNavTree('running.html',''); initResizable(true); });
 <div class="line">writing state... done</div>
 <div class="line">writing status... done</div>
 <div class="line">visualizing... done</div>
-</div><!-- fragment --><p> <code>simulation complete</code> tells you that the user-specified termination condition was met (in this case, a bound on <code>normalized_residual</code>; see <a class="el" href="parameters.html#done">done</a>). Below, you will see the elapsed time for which the simulation was running as well as some data on the kernel performance. Thus, you have completed a successful simulation. See the other sample cases for examples of more complex usage. </p>
+</div><!-- fragment --><p> <code>simulation complete</code> tells you that the user-specified termination condition was met (in this case, a bound on <a class="el" href="output_parameters.html#normalized_residual">normalized_residual</a> ; see <a class="el" href="input_parameters.html#done">done</a>). Below, you will see the elapsed time for which the simulation was running as well as some data on the kernel performance. Thus, you have completed a successful simulation. See the other sample cases for examples of more complex usage. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->

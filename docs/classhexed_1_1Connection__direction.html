@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -113,19 +113,16 @@ $(function(){initNavTree('classhexed_1_1Connection__direction.html',''); initRes
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="#related">Related Symbols</a> &#124;
 <a href="classhexed_1_1Connection__direction-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">hexed::Connection_direction Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="dynheader">
-Inheritance diagram for hexed::Connection_direction:</div>
-<div class="dyncontent">
- <div class="center">
-  <img src="classhexed_1_1Connection__direction.png" usemap="#hexed::Connection_5Fdirection_map" alt=""/>
-  <map id="hexed::Connection_5Fdirection_map" name="hexed::Connection_5Fdirection_map">
-<area href="classhexed_1_1Con__dir_3_01Deformed__element_01_4.html" alt="hexed::Con_dir&lt; Deformed_element &gt;" shape="rect" coords="0,56,226,80"/>
-  </map>
-</div></div>
+
+<p>Describes the direction in which to faces are connected.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;Kernel_connection.hpp&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -133,22 +130,48 @@ Public Member Functions</h2></td></tr>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>i_face</b> (int i_side) const</td></tr>
 <tr class="separator:ac5d182652345d862c9766794b7619554"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a50d8dc9fdf3413a9e10f1115e6cfa158" id="r_a50d8dc9fdf3413a9e10f1115e6cfa158"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a50d8dc9fdf3413a9e10f1115e6cfa158">flip_normal</a> (int i_side) const</td></tr>
+<tr class="memdesc:a50d8dc9fdf3413a9e10f1115e6cfa158"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns <code>true</code> if the normal of face <code>i_side</code> must be inverted to obey the sign convention.  <br /></td></tr>
 <tr class="separator:a50d8dc9fdf3413a9e10f1115e6cfa158"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad0d571a8120230d35e03e2b3de4a4720" id="r_ad0d571a8120230d35e03e2b3de4a4720"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad0d571a8120230d35e03e2b3de4a4720">flip_tangential</a> () const</td></tr>
+<tr class="memitem:ad0d571a8120230d35e03e2b3de4a4720" id="r_ad0d571a8120230d35e03e2b3de4a4720"><td class="memItemLeft" align="right" valign="top"><a id="ad0d571a8120230d35e03e2b3de4a4720" name="ad0d571a8120230d35e03e2b3de4a4720"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>flip_tangential</b> () const</td></tr>
+<tr class="memdesc:ad0d571a8120230d35e03e2b3de4a4720"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns <code>true</code> if the indices of axis 0 of face 1 must be reversed to match the indexing of face 0. <br /></td></tr>
 <tr class="separator:ad0d571a8120230d35e03e2b3de4a4720"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad9f9eea73663bdc4d62bdf50c1fd874e" id="r_ad9f9eea73663bdc4d62bdf50c1fd874e"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad9f9eea73663bdc4d62bdf50c1fd874e">transpose</a> () const</td></tr>
+<tr class="memdesc:ad9f9eea73663bdc4d62bdf50c1fd874e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns <code>true</code> if the rows and columns of face 1 must be transposed to match the indexing of face 0.  <br /></td></tr>
 <tr class="separator:ad9f9eea73663bdc4d62bdf50c1fd874e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a2aa864a02bdd976b44ece0b1880d2452" id="r_a2aa864a02bdd976b44ece0b1880d2452"><td class="memItemLeft" align="right" valign="top"><a id="a2aa864a02bdd976b44ece0b1880d2452" name="a2aa864a02bdd976b44ece0b1880d2452"></a>
 std::array&lt; int, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>i_dim</b></td></tr>
+<tr class="memdesc:a2aa864a02bdd976b44ece0b1880d2452"><td class="mdescLeft">&#160;</td><td class="mdescRight">The normal axis of each face in reference coordinates. <br /></td></tr>
 <tr class="separator:a2aa864a02bdd976b44ece0b1880d2452"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afce2465c6183a35984dad1e5521bf94c" id="r_afce2465c6183a35984dad1e5521bf94c"><td class="memItemLeft" align="right" valign="top"><a id="afce2465c6183a35984dad1e5521bf94c" name="afce2465c6183a35984dad1e5521bf94c"></a>
 std::array&lt; bool, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>face_sign</b></td></tr>
+<tr class="memdesc:afce2465c6183a35984dad1e5521bf94c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The sign of the nonzero component of the normal vector of each face in reference coordinates. <br /></td></tr>
 <tr class="separator:afce2465c6183a35984dad1e5521bf94c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af478b72a86e935530c2786fe3dfb21f9" id="r_af478b72a86e935530c2786fe3dfb21f9"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af478b72a86e935530c2786fe3dfb21f9">rotate</a> = 0</td></tr>
+<tr class="memdesc:af478b72a86e935530c2786fe3dfb21f9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Indicates whether the coordinates need to be rotated to make the quadrature points match.  <br /></td></tr>
+<tr class="separator:af478b72a86e935530c2786fe3dfb21f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="related" name="related"></a>
+Related Symbols</h2></td></tr>
+<tr><td class="ititle" colspan="2"><p>(Note that these are not member symbols.) </p>
+</td></tr>
+<tr class="memitem:a32812afaa05fc91a83e40f23dc7577cf" id="r_a32812afaa05fc91a83e40f23dc7577cf"><td class="memItemLeft" align="right" valign="top"><a id="a32812afaa05fc91a83e40f23dc7577cf" name="a32812afaa05fc91a83e40f23dc7577cf"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator==</b> (<a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a> dir0, <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a> dir1)</td></tr>
+<tr class="separator:a32812afaa05fc91a83e40f23dc7577cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a11965546c1b3fed787fa1c487e8d7508" id="r_a11965546c1b3fed787fa1c487e8d7508"><td class="memItemLeft" align="right" valign="top"><a id="a11965546c1b3fed787fa1c487e8d7508" name="a11965546c1b3fed787fa1c487e8d7508"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_string</b> (<a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a>)</td></tr>
+<tr class="separator:a11965546c1b3fed787fa1c487e8d7508"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acb1408aeb04871f138cdb2d9d6c05f7c" id="r_acb1408aeb04871f138cdb2d9d6c05f7c"><td class="memItemLeft" align="right" valign="top"><a id="acb1408aeb04871f138cdb2d9d6c05f7c" name="acb1408aeb04871f138cdb2d9d6c05f7c"></a>
+std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator&lt;&lt;</b> (std::ostream &amp;, <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a>)</td></tr>
+<tr class="separator:acb1408aeb04871f138cdb2d9d6c05f7c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<h2 class="groupheader">Member Function Documentation</h2>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>Describes the direction in which to faces are connected. </p>
+<p>In other words, it describes the relative orientation of the connected faces in reference coordinates so that a consistent mapping between their quadrature points and normals can be established. </p>
+</div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a50d8dc9fdf3413a9e10f1115e6cfa158" name="a50d8dc9fdf3413a9e10f1115e6cfa158"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a50d8dc9fdf3413a9e10f1115e6cfa158">&#9670;&#160;</a></span>flip_normal()</h2>
 
@@ -171,34 +194,9 @@ std::array&lt; bool, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Answers the question: Is it necessary to flip the normal of element <code>i_side</code> so that it points from element 0 into element 1? </p>
 
-</div>
-</div>
-<a id="ad0d571a8120230d35e03e2b3de4a4720" name="ad0d571a8120230d35e03e2b3de4a4720"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad0d571a8120230d35e03e2b3de4a4720">&#9670;&#160;</a></span>flip_tangential()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool hexed::Connection_direction::flip_tangential </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Answers the question: Is it neccesary to flip axis <code>face_index(0).i_dim</code> of element 1 to match the coordinate systems? </p>
-<p>if you're swapping two axes, you have to flip one of them to make a valid rotation. If you're not flipping a normal (or flipping both of them) then you have to flip a tangential</p>
+<p>Returns <code>true</code> if the normal of face <code>i_side</code> must be inverted to obey the sign convention. </p>
+<p>The sign convention is for the normal to point from the element on side 0 into that on side 1. </p>
 
 </div>
 </div>
@@ -224,7 +222,27 @@ std::array&lt; bool, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Answers the question: Is it necessary to transpose the rows/columns of the face quadrature points of element 1 to match element 0? Only applicable to 3D, where some face combinations can create a row vs column major mismatch. If 2D, always returns <code>false</code>. </p>
+
+<p>Returns <code>true</code> if the rows and columns of face 1 must be transposed to match the indexing of face 0. </p>
+<p>In 2D, this is always <code>false</code>. </p>
+
+</div>
+</div>
+<h2 class="groupheader">Member Data Documentation</h2>
+<a id="af478b72a86e935530c2786fe3dfb21f9" name="af478b72a86e935530c2786fe3dfb21f9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af478b72a86e935530c2786fe3dfb21f9">&#9670;&#160;</a></span>rotate</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int hexed::Connection_direction::rotate = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Indicates whether the coordinates need to be rotated to make the quadrature points match. </p>
+<p>Specifically, int indicates that face 1 is rotated by <code>rotate</code> 90 \(\degree\) increments about the shared normal relative to face 0. So, when permuting quadrature points or vertices, after all other transformations have been performed, <code>rotate</code> 90 \(\degree\) rotations will be performed on face 1 <b>in a negative sense (i.e. clockwise)</b> to undo the specified rotation. </p>
 
 </div>
 </div>

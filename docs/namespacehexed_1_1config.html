@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -110,31 +110,32 @@ $(function(){initNavTree('namespacehexed_1_1config.html',''); initResizable(true
 </div>
 
 <div class="header">
+  <div class="summary">
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">hexed::config Namespace Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p><a class="el" href="classhexed_1_1Namespace.html">Namespace</a> for options configured at build time. See <a class="el" href="hexed__config_8hpp_8in.html">hexed_config.hpp.in</a>.  
+<p><a class="el" href="classhexed_1_1Namespace.html">Namespace</a> for options configured at build time.  
 <a href="#details">More...</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr><td colspan="2"><div class="groupHeader">CMake options</div></td></tr>
-<tr class="memitem:a2f9eed96e0ed74deac85b11c6fa34f96" id="r_a2f9eed96e0ed74deac85b11c6fa34f96"><td class="memItemLeft" align="right" valign="top">const std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f9eed96e0ed74deac85b11c6fa34f96">commit</a> = &quot;{[info['commit']]}&quot;</td></tr>
-<tr class="memdesc:a2f9eed96e0ed74deac85b11c6fa34f96"><td class="mdescLeft">&#160;</td><td class="mdescRight">commit hash of the source this code was compiled from  <br /></td></tr>
-<tr class="separator:a2f9eed96e0ed74deac85b11c6fa34f96"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abda22e63a54a50b1186928edb74ec91a" id="r_abda22e63a54a50b1186928edb74ec91a"><td class="memItemLeft" align="right" valign="top"><a id="abda22e63a54a50b1186928edb74ec91a" name="abda22e63a54a50b1186928edb74ec91a"></a>
-constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>version_major</b> = {[info[&quot;version_major&quot;]]}</td></tr>
-<tr class="memdesc:abda22e63a54a50b1186928edb74ec91a"><td class="mdescLeft">&#160;</td><td class="mdescRight">this is Hexed version <a class="el" href="parameters.html#version_major">version_major</a> .<a class="el" href="parameters.html#version_minor">version_minor</a> .<a class="el" href="parameters.html#version_patch">version_patch</a> <br /></td></tr>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>version_major</b> = {[options[&quot;version_major&quot;]]}</td></tr>
+<tr class="memdesc:abda22e63a54a50b1186928edb74ec91a"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is Hexed version <a class="el" href="#abda22e63a54a50b1186928edb74ec91a">version_major</a> .<a class="el" href="#a19a5e341c708d727f1f6ec8f38ce5f4d">version_minor</a> .<a class="el" href="#a721feb1d85d3ee6695cc2c56919fcd56">version_patch</a> . <br /></td></tr>
 <tr class="separator:abda22e63a54a50b1186928edb74ec91a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a19a5e341c708d727f1f6ec8f38ce5f4d" id="r_a19a5e341c708d727f1f6ec8f38ce5f4d"><td class="memItemLeft" align="right" valign="top"><a id="a19a5e341c708d727f1f6ec8f38ce5f4d" name="a19a5e341c708d727f1f6ec8f38ce5f4d"></a>
-constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>version_minor</b> = {[info[&quot;version_minor&quot;]]}</td></tr>
-<tr class="memdesc:a19a5e341c708d727f1f6ec8f38ce5f4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">this is Hexed version <a class="el" href="parameters.html#version_major">version_major</a> .<a class="el" href="parameters.html#version_minor">version_minor</a> .<a class="el" href="parameters.html#version_patch">version_patch</a> <br /></td></tr>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>version_minor</b> = {[options[&quot;version_minor&quot;]]}</td></tr>
+<tr class="memdesc:a19a5e341c708d727f1f6ec8f38ce5f4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is Hexed version <a class="el" href="#abda22e63a54a50b1186928edb74ec91a">version_major</a> .<a class="el" href="#a19a5e341c708d727f1f6ec8f38ce5f4d">version_minor</a> .<a class="el" href="#a721feb1d85d3ee6695cc2c56919fcd56">version_patch</a> . <br /></td></tr>
 <tr class="separator:a19a5e341c708d727f1f6ec8f38ce5f4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a721feb1d85d3ee6695cc2c56919fcd56" id="r_a721feb1d85d3ee6695cc2c56919fcd56"><td class="memItemLeft" align="right" valign="top"><a id="a721feb1d85d3ee6695cc2c56919fcd56" name="a721feb1d85d3ee6695cc2c56919fcd56"></a>
-constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>version_patch</b> = {[info[&quot;version_patch&quot;]]}</td></tr>
-<tr class="memdesc:a721feb1d85d3ee6695cc2c56919fcd56"><td class="mdescLeft">&#160;</td><td class="mdescRight">this is Hexed version <a class="el" href="parameters.html#version_major">version_major</a> .<a class="el" href="parameters.html#version_minor">version_minor</a> .<a class="el" href="parameters.html#version_patch">version_patch</a> <br /></td></tr>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>version_patch</b> = {[options[&quot;version_patch&quot;]]}</td></tr>
+<tr class="memdesc:a721feb1d85d3ee6695cc2c56919fcd56"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is Hexed version <a class="el" href="#abda22e63a54a50b1186928edb74ec91a">version_major</a> .<a class="el" href="#a19a5e341c708d727f1f6ec8f38ce5f4d">version_minor</a> .<a class="el" href="#a721feb1d85d3ee6695cc2c56919fcd56">version_patch</a> . <br /></td></tr>
 <tr class="separator:a721feb1d85d3ee6695cc2c56919fcd56"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f9eed96e0ed74deac85b11c6fa34f96" id="r_a2f9eed96e0ed74deac85b11c6fa34f96"><td class="memItemLeft" align="right" valign="top">const std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f9eed96e0ed74deac85b11c6fa34f96">commit</a> = &quot;{[options['commit']]}&quot;</td></tr>
+<tr class="memdesc:a2f9eed96e0ed74deac85b11c6fa34f96"><td class="mdescLeft">&#160;</td><td class="mdescRight">commit hash of the source this code was compiled from  <br /></td></tr>
+<tr class="separator:a2f9eed96e0ed74deac85b11c6fa34f96"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae2b5f6cd69b37a5ec8d33f6361f0025b" id="r_ae2b5f6cd69b37a5ec8d33f6361f0025b"><td class="memItemLeft" align="right" valign="top"><a id="ae2b5f6cd69b37a5ec8d33f6361f0025b" name="ae2b5f6cd69b37a5ec8d33f6361f0025b"></a>
 constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>max_row_size</b> = {[options[&quot;max_row_size&quot;]]}</td></tr>
 <tr class="memdesc:ae2b5f6cd69b37a5ec8d33f6361f0025b"><td class="mdescLeft">&#160;</td><td class="mdescRight">maximum <a class="el" href="conventions.html#basis_row_size">row size</a> that a <code><a class="el" href="classhexed_1_1Basis.html" title="Represents a basis of Lagrange polynomials.">Basis</a></code> is allowed to have <br /></td></tr>
@@ -143,10 +144,12 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>max_row_size
 constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>n_threads</b> = {[options[&quot;n_threads&quot;]]}</td></tr>
 <tr class="memdesc:af06476846edadcd4a104b9e0b7194a2a"><td class="mdescLeft">&#160;</td><td class="mdescRight">number of threads with which to execute parallel regions <br /></td></tr>
 <tr class="separator:af06476846edadcd4a104b9e0b7194a2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae91cef35db9ed79ed45e30d67525a83f" id="r_ae91cef35db9ed79ed45e30d67525a83f"><td class="memItemLeft" align="right" valign="top"><a id="ae91cef35db9ed79ed45e30d67525a83f" name="ae91cef35db9ed79ed45e30d67525a83f"></a>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>debug_variables</b> = 1</td></tr>
+<tr class="separator:ae91cef35db9ed79ed45e30d67525a83f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p><a class="el" href="classhexed_1_1Namespace.html">Namespace</a> for options configured at build time. See <a class="el" href="hexed__config_8hpp_8in.html">hexed_config.hpp.in</a>. </p>
-<p>Namespace for options configured by CMake. See <a class="el" href="hexed__config_8hpp_8in.html">hexed_config.hpp.in</a>. </p>
+<div class="textblock"><p><a class="el" href="classhexed_1_1Namespace.html">Namespace</a> for options configured at build time. </p>
 </div><h2 class="groupheader">Variable Documentation</h2>
 <a id="a2f9eed96e0ed74deac85b11c6fa34f96" name="a2f9eed96e0ed74deac85b11c6fa34f96"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2f9eed96e0ed74deac85b11c6fa34f96">&#9670;&#160;</a></span>commit</h2>
@@ -155,7 +158,7 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>n_threads</b
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const std::string hexed::config::commit = &quot;{[info['commit']]}&quot;</td>
+          <td class="memname">const std::string hexed::config::commit = &quot;{[options['commit']]}&quot;</td>
         </tr>
       </table>
 </div><div class="memdoc">

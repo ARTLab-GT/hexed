@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -124,16 +124,25 @@ $(function(){initNavTree('namespacehexed_1_1assert.html',''); initResizable(true
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1assert_1_1Exception.html">Exception</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1assert_1_1Internal__error.html">Internal_error</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Indicates that a situation has been encountered which should not be possible, regardless of user input.  <a href="classhexed_1_1assert_1_1Internal__error.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1assert_1_1Not__implemented__error.html">Not_implemented_error</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Indicates that the user invoked functionality which should be implemented in the future but isn't yet.  <a href="classhexed_1_1assert_1_1Not__implemented__error.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1assert_1_1Numerical__exception.html">Numerical_exception</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">represents a fatal problem in the numerics of the code (such as nonphysical values)  <a href="classhexed_1_1assert_1_1Numerical__exception.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents a fatal problem in the numerics of the code (such as nonphysical values)  <a href="classhexed_1_1assert_1_1Numerical__exception.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1assert_1_1Overflow__error.html">Overflow_error</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Indicates an exception caused by some kind of fixed-size resource has been exhausted.  <a href="classhexed_1_1assert_1_1Overflow__error.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1assert_1_1User__error.html">User_error</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">represents an exception which clearly results from a mistake made by the user  <a href="classhexed_1_1assert_1_1User__error.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents an exception which clearly results from a mistake made by the user.  <a href="classhexed_1_1assert_1_1User__error.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:aa23d7bbd8fa3e9845ed2fee56ef54db0" id="r_aa23d7bbd8fa3e9845ed2fee56ef54db0"><td class="memTemplParams" colspan="2">template&lt;typename except_t  = std::runtime_error&gt; </td></tr>
+<tr class="memitem:aa23d7bbd8fa3e9845ed2fee56ef54db0" id="r_aa23d7bbd8fa3e9845ed2fee56ef54db0"><td class="memTemplParams" colspan="2">template&lt;typename except_t  = Internal_error&gt; </td></tr>
 <tr class="memitem:aa23d7bbd8fa3e9845ed2fee56ef54db0"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aa23d7bbd8fa3e9845ed2fee56ef54db0">throw_critical</a> (const char *message)</td></tr>
 <tr class="separator:aa23d7bbd8fa3e9845ed2fee56ef54db0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -146,7 +155,7 @@ Functions</h2></td></tr>
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;typename except_t  = std::runtime_error&gt; </div>
+template&lt;typename except_t  = Internal_error&gt; </div>
       <table class="memname">
         <tr>
           <td class="memname">void hexed::assert::throw_critical </td>

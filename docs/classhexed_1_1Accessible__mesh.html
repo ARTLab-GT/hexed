@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -112,10 +112,8 @@ $(function(){initNavTree('classhexed_1_1Accessible__mesh.html',''); initResizabl
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
-<a href="#pub-types">Public Types</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
-<a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="classhexed_1_1Accessible__mesh-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">hexed::Accessible_mesh Class Reference</div></div>
 </div><!--header-->
@@ -141,23 +139,13 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a mask that allows kernel operations to be performed on a subset of the elements.  <a href="classhexed_1_1Accessible__mesh_1_1Masked__mesh.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
-Public Types</h2></td></tr>
-<tr class="memitem:a1ab0f54ca7133f206e142033ef03af5e" id="r_a1ab0f54ca7133f206e142033ef03af5e"><td class="memItemLeft" align="right" valign="top"><a id="a1ab0f54ca7133f206e142033ef03af5e" name="a1ab0f54ca7133f206e142033ef03af5e"></a>
-typedef <a class="el" href="classhexed_1_1Vector__view.html">Vector_view</a>&lt; <a class="el" href="classhexed_1_1Vertex.html">Vertex</a> &amp;, <a class="el" href="classhexed_1_1Vertex_1_1Non__transferable__ptr.html">Vertex::Non_transferable_ptr</a>, &amp;ptr_convert&lt; <a class="el" href="classhexed_1_1Vertex.html">Vertex</a> &amp;, <a class="el" href="classhexed_1_1Vertex_1_1Non__transferable__ptr.html">Vertex::Non_transferable_ptr</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>vertex_view</b></td></tr>
-<tr class="memdesc:a1ab0f54ca7133f206e142033ef03af5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">convenience typedef for the <a class="el" href="classhexed_1_1Vector__view.html" title="Provides a view of an existing container (e.g., std::vector) as a Sequence.">Vector_view</a> used to access <a class="el" href="classhexed_1_1Vertex.html" title="Represents a vertex in a deformed grid.">Vertex</a> objects <br /></td></tr>
-<tr class="separator:a1ab0f54ca7133f206e142033ef03af5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ac8dcff19a5d2d6b368022c1e345726c7" id="r_ac8dcff19a5d2d6b368022c1e345726c7"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac8dcff19a5d2d6b368022c1e345726c7">Accessible_mesh</a> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a> params, double <a class="el" href="#aae6e7b4d0bb2d83c76310d3d7d46cd75">root_size</a>)</td></tr>
-<tr class="separator:ac8dcff19a5d2d6b368022c1e345726c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a33d554232b4e98166c8a2b4f41091c60" id="r_a33d554232b4e98166c8a2b4f41091c60"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a33d554232b4e98166c8a2b4f41091c60">Accessible_mesh</a> (std::string file_name, std::vector&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> * &gt; extremal_bcs, <a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> *=nullptr, <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> *surface_bc=nullptr)</td></tr>
-<tr class="memdesc:a33d554232b4e98166c8a2b4f41091c60"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads mesh from a file created by <code>Mesh::write</code>.  <br /></td></tr>
-<tr class="separator:a33d554232b4e98166c8a2b4f41091c60"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9467a193c906de5f428848aaacc0d3e5" id="r_a9467a193c906de5f428848aaacc0d3e5"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9467a193c906de5f428848aaacc0d3e5">Accessible_mesh</a> (std::string file_name, std::vector&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> * &gt;, std::vector&lt; <a class="el" href="classhexed_1_1Mesh__bc.html">Mesh_bc</a> * &gt;)</td></tr>
-<tr class="memdesc:a9467a193c906de5f428848aaacc0d3e5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads mesh from a file created by <code>Mesh::write</code>.  <br /></td></tr>
-<tr class="separator:a9467a193c906de5f428848aaacc0d3e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa7b364df06862770693188a3a38f4694" id="r_aa7b364df06862770693188a3a38f4694"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa7b364df06862770693188a3a38f4694">Accessible_mesh</a> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a> params, double <a class="el" href="#aae6e7b4d0bb2d83c76310d3d7d46cd75">root_size</a>, Turbulence_model turb)</td></tr>
+<tr class="separator:aa7b364df06862770693188a3a38f4694"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3be64224e04ef70ebd5df3cae1ef11d2" id="r_a3be64224e04ef70ebd5df3cae1ef11d2"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3be64224e04ef70ebd5df3cae1ef11d2">Accessible_mesh</a> (std::string file_name, std::vector&lt; std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt; &gt; extremal_bcs, Turbulence_model, std::shared_ptr&lt; <a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> &gt;={}, std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt; surface_bc={})</td></tr>
+<tr class="memdesc:a3be64224e04ef70ebd5df3cae1ef11d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads mesh from a file created by <code>Mesh::write</code>.  <br /></td></tr>
+<tr class="separator:a3be64224e04ef70ebd5df3cae1ef11d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aae6e7b4d0bb2d83c76310d3d7d46cd75" id="r_aae6e7b4d0bb2d83c76310d3d7d46cd75"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aae6e7b4d0bb2d83c76310d3d7d46cd75">root_size</a> () override</td></tr>
 <tr class="separator:aae6e7b4d0bb2d83c76310d3d7d46cd75"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4a64e099967dbdf237ea399a5365812c" id="r_a4a64e099967dbdf237ea399a5365812c"><td class="memItemLeft" align="right" valign="top"><a id="a4a64e099967dbdf237ea399a5365812c" name="a4a64e099967dbdf237ea399a5365812c"></a>
@@ -167,8 +155,6 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a338512463bff5116ef610b8bfcd45fdb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac3bd307092d5d56a15e07cb744827116" id="r_ac3bd307092d5d56a15e07cb744827116"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1View__by__type.html">View_by_type</a>&lt; <a class="el" href="classhexed_1_1Deformed__element.html">Deformed_element</a> &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac3bd307092d5d56a15e07cb744827116">deformed</a> ()</td></tr>
 <tr class="separator:ac3bd307092d5d56a15e07cb744827116"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3effbd55bbf2c058f389d3ac8eb64fa9" id="r_a3effbd55bbf2c058f389d3ac8eb64fa9"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3effbd55bbf2c058f389d3ac8eb64fa9">add_element</a> (int ref_level, bool is_deformed, std::vector&lt; int &gt; position) override</td></tr>
-<tr class="separator:a3effbd55bbf2c058f389d3ac8eb64fa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6390156bbfbca027484f61e76faeb61e" id="r_a6390156bbfbca027484f61e76faeb61e"><td class="memItemLeft" align="right" valign="top"><a id="a6390156bbfbca027484f61e76faeb61e" name="a6390156bbfbca027484f61e76faeb61e"></a>
 <a class="el" href="classhexed_1_1Element.html">Element</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>element</b> (int ref_level, bool is_deformed, int serial_n)</td></tr>
 <tr class="memdesc:a6390156bbfbca027484f61e76faeb61e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Access an element. If the parameters to not describe an existing element, throw an exception. <br /></td></tr>
@@ -180,48 +166,52 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a2ecc7d442c2622770fd12948b6fc402f" id="r_a2ecc7d442c2622770fd12948b6fc402f"><td class="memItemLeft" align="right" valign="top"><a id="a2ecc7d442c2622770fd12948b6fc402f" name="a2ecc7d442c2622770fd12948b6fc402f"></a>
 <a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Kernel__element.html">Kernel_element</a> &amp; &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>kernel_elements</b> ()</td></tr>
 <tr class="separator:a2ecc7d442c2622770fd12948b6fc402f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a85439beaa6ec6be4644fe16eff7c31a9" id="r_a85439beaa6ec6be4644fe16eff7c31a9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a85439beaa6ec6be4644fe16eff7c31a9">connect_cartesian</a> (int ref_level, std::array&lt; int, 2 &gt; serial_n, <a class="el" href="classhexed_1_1Con__dir.html">Con_dir</a>&lt; <a class="el" href="classhexed_1_1Element.html">Element</a> &gt; dir, std::array&lt; bool, 2 &gt; is_deformed={false, false}) override</td></tr>
-<tr class="separator:a85439beaa6ec6be4644fe16eff7c31a9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad943521772329fef40d8e0611204e4b4" id="r_ad943521772329fef40d8e0611204e4b4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad943521772329fef40d8e0611204e4b4">connect_deformed</a> (int ref_level, std::array&lt; int, 2 &gt; serial_n, <a class="el" href="classhexed_1_1Con__dir.html">Con_dir</a>&lt; <a class="el" href="classhexed_1_1Deformed__element.html">Deformed_element</a> &gt; direction) override</td></tr>
-<tr class="memdesc:ad943521772329fef40d8e0611204e4b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specify that two elements are connected via a deformed face. Requires both elements to be deformed.  <br /></td></tr>
-<tr class="separator:ad943521772329fef40d8e0611204e4b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7e4a24c118927a27e206ed8cbc30ec4d" id="r_a7e4a24c118927a27e206ed8cbc30ec4d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7e4a24c118927a27e206ed8cbc30ec4d">connect_hanging</a> (int coarse_ref_level, int coarse_serial, std::vector&lt; int &gt; fine_serial, <a class="el" href="classhexed_1_1Con__dir.html">Con_dir</a>&lt; <a class="el" href="classhexed_1_1Deformed__element.html">Deformed_element</a> &gt;, bool coarse_deformed=false, std::vector&lt; bool &gt; fine_deformed={false, false, false, false}, std::array&lt; bool, 2 &gt; stretch={false, false}) override</td></tr>
-<tr class="separator:a7e4a24c118927a27e206ed8cbc30ec4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab1699a3f5ad1e6a668a71bca9e413956" id="r_ab1699a3f5ad1e6a668a71bca9e413956"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Element__connection.html">Element_connection</a> &amp; &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab1699a3f5ad1e6a668a71bca9e413956">element_connections</a> ()</td></tr>
-<tr class="separator:ab1699a3f5ad1e6a668a71bca9e413956"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6ea3d96d4fd9dcb85e205f005c58bcdd" id="r_a6ea3d96d4fd9dcb85e205f005c58bcdd"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6ea3d96d4fd9dcb85e205f005c58bcdd">add_boundary_condition</a> (<a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> *, <a class="el" href="classhexed_1_1Mesh__bc.html">Mesh_bc</a> *) override</td></tr>
-<tr class="memdesc:a6ea3d96d4fd9dcb85e205f005c58bcdd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Acquires owenership of <code>*flow_bc</code> and <code>*mesh_bc</code> and constructs a <code><a class="el" href="classhexed_1_1Boundary__condition.html">Boundary_condition</a></code> from them.  <br /></td></tr>
-<tr class="separator:a6ea3d96d4fd9dcb85e205f005c58bcdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afc87bb841d80af3862fac169703b12b0" id="r_afc87bb841d80af3862fac169703b12b0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afc87bb841d80af3862fac169703b12b0">connect_boundary</a> (int ref_level, bool is_deformed, int element_serial_n, int i_dim, int face_sign, int bc_serial_n) override</td></tr>
-<tr class="memdesc:afc87bb841d80af3862fac169703b12b0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Connect a face of an element to a boundary condition.  <br /></td></tr>
-<tr class="separator:afc87bb841d80af3862fac169703b12b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29d04ad7e85076e8943e651bde0b0d40" id="r_a29d04ad7e85076e8943e651bde0b0d40"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29d04ad7e85076e8943e651bde0b0d40">connect_cartesian</a> (int ref_level, std::array&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>, 2 &gt; serial_n, <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a> dir, std::array&lt; bool, 2 &gt; is_deformed={false, false}) override</td></tr>
+<tr class="separator:a29d04ad7e85076e8943e651bde0b0d40"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6d64c2f0d7fbdaf66dbb17e08b009b28" id="r_a6d64c2f0d7fbdaf66dbb17e08b009b28"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6d64c2f0d7fbdaf66dbb17e08b009b28">connect_deformed</a> (int ref_level, std::array&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>, 2 &gt; serial_n, <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a> direction) override</td></tr>
+<tr class="memdesc:a6d64c2f0d7fbdaf66dbb17e08b009b28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Specify that two elements are connected via a deformed face. Requires both elements to be deformed.  <br /></td></tr>
+<tr class="separator:a6d64c2f0d7fbdaf66dbb17e08b009b28"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9fadb1abe6bbf2c0eb2a465ed861cc44" id="r_a9fadb1abe6bbf2c0eb2a465ed861cc44"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9fadb1abe6bbf2c0eb2a465ed861cc44">connect_hanging</a> (int coarse_ref_level, <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> coarse_serial, std::vector&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt; fine_serial, <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a>, bool coarse_deformed=false, std::vector&lt; bool &gt; fine_deformed={false, false, false, false}, std::array&lt; bool, 2 &gt; stretch={false, false}) override</td></tr>
+<tr class="separator:a9fadb1abe6bbf2c0eb2a465ed861cc44"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a40e18665821decca1676113c65c99e23" id="r_a40e18665821decca1676113c65c99e23"><td class="memItemLeft" align="right" valign="top"><a id="a40e18665821decca1676113c65c99e23" name="a40e18665821decca1676113c65c99e23"></a>
+<a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="classhexed_1_1Neighbor__connection.html">Neighbor_connection</a> &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>neighbor_connections</b> (bool is_deformed)</td></tr>
+<tr class="separator:a40e18665821decca1676113c65c99e23"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a847097983ebc6e545478d08fee15b834" id="r_a847097983ebc6e545478d08fee15b834"><td class="memItemLeft" align="right" valign="top"><a id="a847097983ebc6e545478d08fee15b834" name="a847097983ebc6e545478d08fee15b834"></a>
+<a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; std::vector&lt; <a class="el" href="classhexed_1_1Face__refinement.html">Face_refinement</a> &gt; &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>face_refinements</b> ()</td></tr>
+<tr class="separator:a847097983ebc6e545478d08fee15b834"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad7ccc5850ec0b4b74621c491fce44ade" id="r_ad7ccc5850ec0b4b74621c491fce44ade"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad7ccc5850ec0b4b74621c491fce44ade">add_boundary_condition</a> (std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt;) override</td></tr>
+<tr class="memdesc:ad7ccc5850ec0b4b74621c491fce44ade"><td class="mdescLeft">&#160;</td><td class="mdescRight">Acquires owenership of <code>*flow_bc</code> and adds it as a boundary condition. Returns a serial number which uniquely identifies the new boundary condition among this <code><a class="el" href="classhexed_1_1Mesh.html">Mesh</a></code>'s boundary conditions. It is recommended to use this with <code>new</code>, like the constructor for <code>std::unique_ptr</code>.  <br /></td></tr>
+<tr class="separator:ad7ccc5850ec0b4b74621c491fce44ade"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a54692bb063dd090cc2652361b07654cd" id="r_a54692bb063dd090cc2652361b07654cd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a54692bb063dd090cc2652361b07654cd">connect_boundary</a> (int ref_level, bool is_deformed, <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> element_serial_n, int i_dim, int face_sign, int bc_serial_n) override</td></tr>
+<tr class="separator:a54692bb063dd090cc2652361b07654cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad80ead80a6bd76fa30b95e5e55152f93" id="r_ad80ead80a6bd76fa30b95e5e55152f93"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad80ead80a6bd76fa30b95e5e55152f93">disconnect_boundary</a> (int bc_sn) override</td></tr>
 <tr class="memdesc:ad80ead80a6bd76fa30b95e5e55152f93"><td class="mdescLeft">&#160;</td><td class="mdescRight">delete all boundary connections involving a certain boundary condition  <br /></td></tr>
 <tr class="separator:ad80ead80a6bd76fa30b95e5e55152f93"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9cf033c481081295a52ba9fc355b547c" id="r_a9cf033c481081295a52ba9fc355b547c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9cf033c481081295a52ba9fc355b547c">cleanup</a> () override</td></tr>
 <tr class="memdesc:a9cf033c481081295a52ba9fc355b547c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Does some work that has to happen after you manually add elements and/or connections.  <br /></td></tr>
 <tr class="separator:a9cf033c481081295a52ba9fc355b547c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a35b061d00acf3595b6c1ba9aaf257f36" id="r_a35b061d00acf3595b6c1ba9aaf257f36"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a35b061d00acf3595b6c1ba9aaf257f36">add_tree</a> (std::vector&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> * &gt; extremal_bcs, <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; origin=<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;::Zero(3)) override</td></tr>
-<tr class="memdesc:a35b061d00acf3595b6c1ba9aaf257f36"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initializes meshing with bin/quad/<a href="https://en.wikipedia.org/wiki/Octree">octree</a> topology.  <br /></td></tr>
-<tr class="separator:a35b061d00acf3595b6c1ba9aaf257f36"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8bbb6de6ed43d840d5fc0e742a94997c" id="r_a8bbb6de6ed43d840d5fc0e742a94997c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8bbb6de6ed43d840d5fc0e742a94997c">set_surface</a> (<a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> *geometry, <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> *surface_bc, Eigen::VectorXd flood_fill_start=Eigen::VectorXd::Zero(3)) override</td></tr>
-<tr class="memdesc:a8bbb6de6ed43d840d5fc0e742a94997c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Defines the surface geometry to be meshed as a boundary.  <br /></td></tr>
-<tr class="separator:a8bbb6de6ed43d840d5fc0e742a94997c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6461c7d8035c613389b6f9572e1c34a1" id="r_a6461c7d8035c613389b6f9572e1c34a1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6461c7d8035c613389b6f9572e1c34a1">relax_and_match</a> (int n_relax=0, double factor=.9) override</td></tr>
-<tr class="separator:a6461c7d8035c613389b6f9572e1c34a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae42ebb4e64cb357e2f50cd29819652dd" id="r_ae42ebb4e64cb357e2f50cd29819652dd"><td class="memItemLeft" align="right" valign="top"><a id="ae42ebb4e64cb357e2f50cd29819652dd" name="ae42ebb4e64cb357e2f50cd29819652dd"></a>
+<a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="classhexed_1_1next_1_1Vertex.html">next::Vertex</a> &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>shape_vertices</b> ()</td></tr>
+<tr class="separator:ae42ebb4e64cb357e2f50cd29819652dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5ab0aadc2784f369d5e230336e7ec445" id="r_a5ab0aadc2784f369d5e230336e7ec445"><td class="memItemLeft" align="right" valign="top"><a id="a5ab0aadc2784f369d5e230336e7ec445" name="a5ab0aadc2784f369d5e230336e7ec445"></a>
+<a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="classhexed_1_1next_1_1Vertex.html">next::Vertex</a> &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>shape_boundary_vertices</b> ()</td></tr>
+<tr class="separator:a5ab0aadc2784f369d5e230336e7ec445"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d406d23b22a55c264a003bed57605c1" id="r_a9d406d23b22a55c264a003bed57605c1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9d406d23b22a55c264a003bed57605c1">add_tree</a> (std::vector&lt; std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt; &gt; extremal_bcs, <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; origin=<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;::Zero(3)) override</td></tr>
+<tr class="memdesc:a9d406d23b22a55c264a003bed57605c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initializes meshing with bin/quad/<a href="https://en.wikipedia.org/wiki/Octree">octree</a> topology.  <br /></td></tr>
+<tr class="separator:a9d406d23b22a55c264a003bed57605c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af78e4bad41951f321831ec2db3eaface" id="r_af78e4bad41951f321831ec2db3eaface"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af78e4bad41951f321831ec2db3eaface">set_surface</a> (std::shared_ptr&lt; <a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> &gt; geometry, std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt; surface_bc, Eigen::VectorXd flood_fill_start=Eigen::VectorXd::Zero(3)) override</td></tr>
+<tr class="memdesc:af78e4bad41951f321831ec2db3eaface"><td class="mdescLeft">&#160;</td><td class="mdescRight">Defines the surface geometry to be meshed as a boundary.  <br /></td></tr>
+<tr class="separator:af78e4bad41951f321831ec2db3eaface"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4fd23370c8d348e57bc09cb97153ca8c" id="r_a4fd23370c8d348e57bc09cb97153ca8c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4fd23370c8d348e57bc09cb97153ca8c">set_unref_locks</a> (std::function&lt; bool(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;)&gt; lock_if=<a class="el" href="namespacehexed_1_1criteria.html#acf972478516de191c744fb288460c0f4">criteria::never</a>) override</td></tr>
 <tr class="separator:a4fd23370c8d348e57bc09cb97153ca8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af0468319f657ad8aa9732c42eead1091" id="r_af0468319f657ad8aa9732c42eead1091"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af0468319f657ad8aa9732c42eead1091">update</a> (std::function&lt; bool(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;)&gt; refine_criterion=<a class="el" href="namespacehexed_1_1criteria.html#a86ceaaf056ff2cec5d7ebb2c32f3d4cd">criteria::always</a>, std::function&lt; bool(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;)&gt; unrefine_criterion=<a class="el" href="namespacehexed_1_1criteria.html#acf972478516de191c744fb288460c0f4">criteria::never</a>) override</td></tr>
 <tr class="memdesc:af0468319f657ad8aa9732c42eead1091"><td class="mdescLeft">&#160;</td><td class="mdescRight">Updates tree mesh based on user-supplied (un)refinement criteria.  <br /></td></tr>
 <tr class="separator:af0468319f657ad8aa9732c42eead1091"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a113f9237fe66ca1798d4cd265616cc3c" id="r_a113f9237fe66ca1798d4cd265616cc3c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a113f9237fe66ca1798d4cd265616cc3c">set_all_smooth</a> () override</td></tr>
-<tr class="memdesc:a113f9237fe66ca1798d4cd265616cc3c"><td class="mdescLeft">&#160;</td><td class="mdescRight">sets <code>need_smooth</code> to <code>true</code> for all vertices to perform global relaxation  <br /></td></tr>
-<tr class="separator:a113f9237fe66ca1798d4cd265616cc3c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4fe952d543dc73dfe1ae683428abf4fd" id="r_a4fe952d543dc73dfe1ae683428abf4fd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4fe952d543dc73dfe1ae683428abf4fd">relax</a> (double factor=0.9) override</td></tr>
-<tr class="memdesc:a4fe952d543dc73dfe1ae683428abf4fd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Relax the vertices to improve mesh quality.  <br /></td></tr>
-<tr class="separator:a4fe952d543dc73dfe1ae683428abf4fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1fa33cbfb14976dc645ecf1b20fa6b56" id="r_a1fa33cbfb14976dc645ecf1b20fa6b56"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhexed_1_1Mesh_1_1Adaptation__result.html">Adaptation_result</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1fa33cbfb14976dc645ecf1b20fa6b56">plan_adaptation</a> (std::function&lt; bool(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;, int)&gt; refine_criterion, std::function&lt; bool(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;, int)&gt; unrefine_criterion, bool set_floor) override</td></tr>
+<tr class="separator:a1fa33cbfb14976dc645ecf1b20fa6b56"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a442f16d22efca9c8cc2cc6f9b8a45a11" id="r_a442f16d22efca9c8cc2cc6f9b8a45a11"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a442f16d22efca9c8cc2cc6f9b8a45a11">execute_adaptation</a> () override</td></tr>
+<tr class="separator:a442f16d22efca9c8cc2cc6f9b8a45a11"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6b183489199fb7c8b402a835f42bfdc5" id="r_a6b183489199fb7c8b402a835f42bfdc5"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6b183489199fb7c8b402a835f42bfdc5">surface_bc_sn</a> () override</td></tr>
-<tr class="memdesc:a6b183489199fb7c8b402a835f42bfdc5"><td class="mdescLeft">&#160;</td><td class="mdescRight">what is the serial number of the geometry surface BC?  <br /></td></tr>
 <tr class="separator:a6b183489199fb7c8b402a835f42bfdc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4b1a52bf79ab8f2953a0eb832b1d9846" id="r_a4b1a52bf79ab8f2953a0eb832b1d9846"><td class="memItemLeft" align="right" valign="top"><a id="a4b1a52bf79ab8f2953a0eb832b1d9846" name="a4b1a52bf79ab8f2953a0eb832b1d9846"></a>
 <a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>surface_geometry</b> ()</td></tr>
@@ -229,44 +219,46 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a68f78aad7d868dd3b8612b6e05b543e1" id="r_a68f78aad7d868dd3b8612b6e05b543e1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a68f78aad7d868dd3b8612b6e05b543e1">reset_masks</a> ()</td></tr>
 <tr class="memdesc:a68f78aad7d868dd3b8612b6e05b543e1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Resets effective number of masks created to 0 and invalidates existing masks.  <br /></td></tr>
 <tr class="separator:a68f78aad7d868dd3b8612b6e05b543e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6a900ac2dcef03babe8f7d697c91d6cb" id="r_a6a900ac2dcef03babe8f7d697c91d6cb"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classhexed_1_1Accessible__mesh_1_1Masked__mesh.html">Masked_mesh</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6a900ac2dcef03babe8f7d697c91d6cb">preti_masks</a> (const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;)</td></tr>
-<tr class="memdesc:a6a900ac2dcef03babe8f7d697c91d6cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Experimental feature. Ignore for now.  <br /></td></tr>
-<tr class="separator:a6a900ac2dcef03babe8f7d697c91d6cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a042a0fffe5621e0633f1f8026350fe37" id="r_a042a0fffe5621e0633f1f8026350fe37"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Vector__view.html">Vector_view</a>&lt; <a class="el" href="classhexed_1_1Boundary__condition.html">Boundary_condition</a> &amp;, <a class="el" href="classhexed_1_1Boundary__condition.html">Boundary_condition</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a042a0fffe5621e0633f1f8026350fe37">boundary_conditions</a> ()</td></tr>
-<tr class="separator:a042a0fffe5621e0633f1f8026350fe37"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9f58d8469a50166f184c0ee443b53a2b" id="r_a9f58d8469a50166f184c0ee443b53a2b"><td class="memItemLeft" align="right" valign="top"><a id="a9f58d8469a50166f184c0ee443b53a2b" name="a9f58d8469a50166f184c0ee443b53a2b"></a>
-<a class="el" href="classhexed_1_1Boundary__condition.html">Boundary_condition</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>boundary_condition</b> (int bc_sn)</td></tr>
-<tr class="memdesc:a9f58d8469a50166f184c0ee443b53a2b"><td class="mdescLeft">&#160;</td><td class="mdescRight">get a boundary condition owned by this mesh by its serial number <br /></td></tr>
-<tr class="separator:a9f58d8469a50166f184c0ee443b53a2b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa064262321789ffa45cf99ef0c2d71a4" id="r_aa064262321789ffa45cf99ef0c2d71a4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp; &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa064262321789ffa45cf99ef0c2d71a4">boundary_connections</a> ()</td></tr>
-<tr class="separator:aa064262321789ffa45cf99ef0c2d71a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a77c55154cfd613cbdb05b6ac4d083b54" id="r_a77c55154cfd613cbdb05b6ac4d083b54"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Refined__face.html">Refined_face</a> &amp; &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a77c55154cfd613cbdb05b6ac4d083b54">refined_faces</a> ()</td></tr>
-<tr class="separator:a77c55154cfd613cbdb05b6ac4d083b54"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0dc9fe456ba4824ac5001e145575df4b" id="r_a0dc9fe456ba4824ac5001e145575df4b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Hanging__vertex__matcher.html">Hanging_vertex_matcher</a> &amp; &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0dc9fe456ba4824ac5001e145575df4b">hanging_vertex_matchers</a> ()</td></tr>
-<tr class="separator:a0dc9fe456ba4824ac5001e145575df4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adaf20ae9f728cd5ec190a59adebe047e" id="r_adaf20ae9f728cd5ec190a59adebe047e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classhexed_1_1Accessible__mesh_1_1Masked__mesh.html">Masked_mesh</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adaf20ae9f728cd5ec190a59adebe047e">preti_masks</a> (const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;, bool iso)</td></tr>
+<tr class="memdesc:adaf20ae9f728cd5ec190a59adebe047e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Experimental feature. Ignore for now.  <br /></td></tr>
+<tr class="separator:adaf20ae9f728cd5ec190a59adebe047e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6ec01c1a5352126c585406fd83aeed01" id="r_a6ec01c1a5352126c585406fd83aeed01"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6ec01c1a5352126c585406fd83aeed01">boundary_conditions</a> ()</td></tr>
+<tr class="separator:a6ec01c1a5352126c585406fd83aeed01"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a708efefd8a7eeca980c792b3a329c5bf" id="r_a708efefd8a7eeca980c792b3a329c5bf"><td class="memItemLeft" align="right" valign="top"><a id="a708efefd8a7eeca980c792b3a329c5bf" name="a708efefd8a7eeca980c792b3a329c5bf"></a>
+<a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>boundary_condition</b> (int bc_sn)</td></tr>
+<tr class="memdesc:a708efefd8a7eeca980c792b3a329c5bf"><td class="mdescLeft">&#160;</td><td class="mdescRight">get a boundary condition owned by this mesh by its serial number <br /></td></tr>
+<tr class="separator:a708efefd8a7eeca980c792b3a329c5bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2c69b96e1ced552c418f56b1d1291cb1" id="r_a2c69b96e1ced552c418f56b1d1291cb1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2c69b96e1ced552c418f56b1d1291cb1">boundary_connections</a> ()</td></tr>
+<tr class="separator:a2c69b96e1ced552c418f56b1d1291cb1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac503d1e3749acd1e0cf81a7bd88f16dc" id="r_ac503d1e3749acd1e0cf81a7bd88f16dc"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac503d1e3749acd1e0cf81a7bd88f16dc">n_elements</a> () override</td></tr>
 <tr class="memdesc:ac503d1e3749acd1e0cf81a7bd88f16dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">number of elements currently in the mesh  <br /></td></tr>
 <tr class="separator:ac503d1e3749acd1e0cf81a7bd88f16dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac3180165c91e00a1f3b193dab13a3651" id="r_ac3180165c91e00a1f3b193dab13a3651"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Mesh_1_1Connection__validity.html">Connection_validity</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac3180165c91e00a1f3b193dab13a3651">valid</a> () override</td></tr>
 <tr class="memdesc:ac3180165c91e00a1f3b193dab13a3651"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a <code>Connection_validity</code> object describing whether the mesh connectivity is valid.  <br /></td></tr>
 <tr class="separator:ac3180165c91e00a1f3b193dab13a3651"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad52e0ad3fee57fd7523d551c0d5cd4ff" id="r_ad52e0ad3fee57fd7523d551c0d5cd4ff"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#a1ab0f54ca7133f206e142033ef03af5e">vertex_view</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad52e0ad3fee57fd7523d551c0d5cd4ff">vertices</a> ()</td></tr>
-<tr class="separator:ad52e0ad3fee57fd7523d551c0d5cd4ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a472153bc396bbbc2ae6b50818dc87615" id="r_a472153bc396bbbc2ae6b50818dc87615"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a472153bc396bbbc2ae6b50818dc87615">extrude</a> (bool collapse=false, double offset=0, bool force=false) override</td></tr>
-<tr class="separator:a472153bc396bbbc2ae6b50818dc87615"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab7192cc67767f855b7bfcac7389a26d5" id="r_ab7192cc67767f855b7bfcac7389a26d5"><td class="memItemLeft" align="right" valign="top"><a id="ab7192cc67767f855b7bfcac7389a26d5" name="ab7192cc67767f855b7bfcac7389a26d5"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>assert_valid</b> ()</td></tr>
+<tr class="memdesc:ab7192cc67767f855b7bfcac7389a26d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">if any invalid mesh connections are found, throws an exception with a diagnostic visualization <br /></td></tr>
+<tr class="separator:ab7192cc67767f855b7bfcac7389a26d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad5d40c43f603c8db39489d442bf6a484" id="r_ad5d40c43f603c8db39489d442bf6a484"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad5d40c43f603c8db39489d442bf6a484">extrude</a> (bool collapse=false, bool force=false) override</td></tr>
+<tr class="separator:ad5d40c43f603c8db39489d442bf6a484"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9f2cf35e2e029c9a2918a5dec6e7ae28" id="r_a9f2cf35e2e029c9a2918a5dec6e7ae28"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9f2cf35e2e029c9a2918a5dec6e7ae28">connect_rest</a> (int bc_sn) override</td></tr>
 <tr class="memdesc:a9f2cf35e2e029c9a2918a5dec6e7ae28"><td class="mdescLeft">&#160;</td><td class="mdescRight">connects all yet-unconnected faces to a boundary condition specified by serial number  <br /></td></tr>
 <tr class="separator:a9f2cf35e2e029c9a2918a5dec6e7ae28"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afe3611a801b0fe441cd8a9e2494aae00" id="r_afe3611a801b0fe441cd8a9e2494aae00"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="structhexed_1_1Mesh_1_1elem__handle.html">elem_handle</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afe3611a801b0fe441cd8a9e2494aae00">elem_handles</a> () override</td></tr>
 <tr class="memdesc:afe3611a801b0fe441cd8a9e2494aae00"><td class="mdescLeft">&#160;</td><td class="mdescRight">get handles for all elements currently in the mesh, in no particular order (mostly for testing/debugging)  <br /></td></tr>
 <tr class="separator:afe3611a801b0fe441cd8a9e2494aae00"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa0a221e476106d7175c8168dd4b89bbe" id="r_aa0a221e476106d7175c8168dd4b89bbe"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Vector__view.html">Vector_view</a>&lt; <a class="el" href="classhexed_1_1Element__connection.html">Element_connection</a> &amp;, <a class="el" href="classhexed_1_1Element__face__connection.html">Element_face_connection</a>&lt; <a class="el" href="classhexed_1_1Deformed__element.html">Deformed_element</a> &gt; *, ptr_convert&lt; <a class="el" href="classhexed_1_1Element__connection.html">Element_connection</a> &amp;, <a class="el" href="classhexed_1_1Element__face__connection.html">Element_face_connection</a>&lt; <a class="el" href="classhexed_1_1Deformed__element.html">Deformed_element</a> &gt; * &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa0a221e476106d7175c8168dd4b89bbe">extruded_connections</a> ()</td></tr>
-<tr class="separator:aa0a221e476106d7175c8168dd4b89bbe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a476d557c89322ab03fd1d2005c3a9404" id="r_a476d557c89322ab03fd1d2005c3a9404"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a476d557c89322ab03fd1d2005c3a9404">write</a> (std::string file_name) override</td></tr>
 <tr class="separator:a476d557c89322ab03fd1d2005c3a9404"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af34404cb79aa9ee7dc0b91f6586b087d" id="r_af34404cb79aa9ee7dc0b91f6586b087d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af34404cb79aa9ee7dc0b91f6586b087d">export_polymesh</a> (std::string dir_name) override</td></tr>
 <tr class="memdesc:af34404cb79aa9ee7dc0b91f6586b087d"><td class="mdescLeft">&#160;</td><td class="mdescRight">write the mesh in the OpenFOAM PolyMesh format  <br /></td></tr>
 <tr class="separator:af34404cb79aa9ee7dc0b91f6586b087d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa97c312fbd5c461b686d540207a5b17f" id="r_aa97c312fbd5c461b686d540207a5b17f"><td class="memItemLeft" align="right" valign="top"><a id="aa97c312fbd5c461b686d540207a5b17f" name="aa97c312fbd5c461b686d540207a5b17f"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>visualize_deformed</b> (std::string format, std::string file_name, double time=0)</td></tr>
+<tr class="separator:aa97c312fbd5c461b686d540207a5b17f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6399bb9f744254b444114beee0082875" id="r_a6399bb9f744254b444114beee0082875"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6399bb9f744254b444114beee0082875">visualize</a> (std::string format, std::string file_name, double time=0) override</td></tr>
+<tr class="memdesc:a6399bb9f744254b444114beee0082875"><td class="mdescLeft">&#160;</td><td class="mdescRight">visualize the mesh  <br /></td></tr>
+<tr class="separator:a6399bb9f744254b444114beee0082875"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac1f566cc514b0d26dab1201c3f47d937" id="r_ac1f566cc514b0d26dab1201c3f47d937"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="classhexed_1_1Stopwatch__tree.html">Stopwatch_tree</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac1f566cc514b0d26dab1201c3f47d937">stopwatch_tree</a> () const override</td></tr>
 <tr class="memdesc:ac1f566cc514b0d26dab1201c3f47d937"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain performance data.  <br /></td></tr>
 <tr class="separator:ac1f566cc514b0d26dab1201c3f47d937"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -278,31 +270,24 @@ template&lt;&gt; </td></tr>
 template&lt;&gt; </td></tr>
 <tr class="memitem:a3b4f8311e92cf8af972ac8e2bd1e8dff"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Mesh__by__type.html">Mesh_by_type</a>&lt; <a class="el" href="classhexed_1_1Deformed__element.html">Deformed_element</a> &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>mbt</b> ()</td></tr>
 <tr class="separator:a3b4f8311e92cf8af972ac8e2bd1e8dff"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="inherit_header pub_methods_classhexed_1_1Mesh"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1Mesh')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1Mesh.html">hexed::Mesh</a></td></tr>
-<tr class="memitem:a125f26f5c68c35eb6ed8bb22a3431741 inherit pub_methods_classhexed_1_1Mesh" id="r_a125f26f5c68c35eb6ed8bb22a3431741"><td class="memItemLeft" align="right" valign="top">
-void&#160;</td><td class="memItemRight" valign="bottom"><b>extrude</b> (<a class="el" href="classhexed_1_1Layer__sequence.html">Layer_sequence</a> layers)</td></tr>
-<tr class="memdesc:a125f26f5c68c35eb6ed8bb22a3431741 inherit pub_methods_classhexed_1_1Mesh"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
-<tr class="separator:a125f26f5c68c35eb6ed8bb22a3431741 inherit pub_methods_classhexed_1_1Mesh"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr><td colspan="2"><div class="groupHeader">Automated tree meshing</div></td></tr>
+<tr><td colspan="2"><div class="groupHeader">observers</div></td></tr>
+<tr><td colspan="2"><div class="groupHeader">I/O</div></td></tr>
+<tr><td colspan="2"><div class="groupText"><p>write this mesh to a file to be reused in another simulation </p>
+</div></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:af5f1a31a672de8ae002f4f4f279f094a" id="r_af5f1a31a672de8ae002f4f4f279f094a"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af5f1a31a672de8ae002f4f4f279f094a">buffer_dist</a></td></tr>
 <tr class="memdesc:af5f1a31a672de8ae002f4f4f279f094a"><td class="mdescLeft">&#160;</td><td class="mdescRight">how far must the center of an element be from the geometry relative to the nominal size  <br /></td></tr>
 <tr class="separator:af5f1a31a672de8ae002f4f4f279f094a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
-Protected Member Functions</h2></td></tr>
-<tr class="memitem:a8f54fd3eb4b5083167473dcf0021d26e" id="r_a8f54fd3eb4b5083167473dcf0021d26e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8f54fd3eb4b5083167473dcf0021d26e">reset_verts</a> () override</td></tr>
-<tr class="separator:a8f54fd3eb4b5083167473dcf0021d26e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad8d19c815847ab1d9fa815f09f889f17" id="r_ad8d19c815847ab1d9fa815f09f889f17"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad8d19c815847ab1d9fa815f09f889f17">restore_verts</a> () override</td></tr>
-<tr class="separator:ad8d19c815847ab1d9fa815f09f889f17"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A mesh that supports access to the actual elements with the numerical data they contain. </p>
 <p>This level of access is required by the numerical scheme but should be hidden from the library user, who should not be concerned with numerical details. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="ac8dcff19a5d2d6b368022c1e345726c7" name="ac8dcff19a5d2d6b368022c1e345726c7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac8dcff19a5d2d6b368022c1e345726c7">&#9670;&#160;</a></span>Accessible_mesh() <span class="overload">[1/3]</span></h2>
+<a id="aa7b364df06862770693188a3a38f4694" name="aa7b364df06862770693188a3a38f4694"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa7b364df06862770693188a3a38f4694">&#9670;&#160;</a></span>Accessible_mesh() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -315,7 +300,12 @@ Protected Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>root_size</em></span>&#160;)</td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>root_size</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Turbulence_model</td>          <td class="paramname"><span class="paramname"><em>turb</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -323,14 +313,15 @@ Protected Member Functions</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">params</td><td>parameters specifying what data is stored in each <a class="el" href="classhexed_1_1Element.html" title="Stores data associated with one mesh element.">Element</a> (row size, number of dimensions, etc.) </td></tr>
     <tr><td class="paramname">root_size</td><td>defines the <a class="el" href="#aae6e7b4d0bb2d83c76310d3d7d46cd75">root_size</a> of the mesh. </td></tr>
+    <tr><td class="paramname">turb</td><td>defines the turbulence model that will be used by the solver, which is relevant because it determines the amound of memory that must be allocated for each element. </td></tr>
   </table>
   </dd>
 </dl>
 
 </div>
 </div>
-<a id="a33d554232b4e98166c8a2b4f41091c60" name="a33d554232b4e98166c8a2b4f41091c60"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a33d554232b4e98166c8a2b4f41091c60">&#9670;&#160;</a></span>Accessible_mesh() <span class="overload">[2/3]</span></h2>
+<a id="a3be64224e04ef70ebd5df3cae1ef11d2" name="a3be64224e04ef70ebd5df3cae1ef11d2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3be64224e04ef70ebd5df3cae1ef11d2">&#9670;&#160;</a></span>Accessible_mesh() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -343,17 +334,22 @@ Protected Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::vector&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> * &gt;</td>          <td class="paramname"><span class="paramname"><em>extremal_bcs</em></span>, </td>
+          <td class="paramtype">std::vector&lt; std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>extremal_bcs</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> *</td>          <td class="paramname"><span class="paramname"><em>geometry</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>, </td>
+          <td class="paramtype">Turbulence_model</td>          <td class="paramname"><span class="paramname"><em>turb</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> *</td>          <td class="paramname"><span class="paramname"><em>surface_bc</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>&#160;)</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>geometry</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>surface_bc</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -363,38 +359,9 @@ Protected Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a9467a193c906de5f428848aaacc0d3e5" name="a9467a193c906de5f428848aaacc0d3e5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9467a193c906de5f428848aaacc0d3e5">&#9670;&#160;</a></span>Accessible_mesh() <span class="overload">[3/3]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">hexed::Accessible_mesh::Accessible_mesh </td>
-          <td>(</td>
-          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>file_name</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> * &gt;</td>          <td class="paramname"><span class="paramname"><em>flow_bcs</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; <a class="el" href="classhexed_1_1Mesh__bc.html">Mesh_bc</a> * &gt;</td>          <td class="paramname"><span class="paramname"><em>mesh_bcs</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Reads mesh from a file created by <code>Mesh::write</code>. </p>
-<p>Acquires ownership of boundary condition pointers. This variant is not for tree meshing. </p>
-
-</div>
-</div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a6ea3d96d4fd9dcb85e205f005c58bcdd" name="a6ea3d96d4fd9dcb85e205f005c58bcdd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6ea3d96d4fd9dcb85e205f005c58bcdd">&#9670;&#160;</a></span>add_boundary_condition()</h2>
+<a id="ad7ccc5850ec0b4b74621c491fce44ade" name="ad7ccc5850ec0b4b74621c491fce44ade"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad7ccc5850ec0b4b74621c491fce44ade">&#9670;&#160;</a></span>add_boundary_condition()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -405,12 +372,8 @@ Protected Member Functions</h2></td></tr>
         <tr>
           <td class="memname">int hexed::Accessible_mesh::add_boundary_condition </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> *</td>          <td class="paramname"><span class="paramname"><em>flow_bc</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>flow_bc</em></span></td><td>)</td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Mesh__bc.html">Mesh_bc</a> *</td>          <td class="paramname"><span class="paramname"><em>mesh_bc</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -420,52 +383,14 @@ Protected Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Acquires owenership of <code>*flow_bc</code> and <code>*mesh_bc</code> and constructs a <code><a class="el" href="classhexed_1_1Boundary__condition.html">Boundary_condition</a></code> from them. </p>
-<p>Returns a serial number which uniquely identifies the new boundary condition among this <code><a class="el" href="classhexed_1_1Mesh.html">Mesh</a></code>'s boundary conditions. It is recommended to use this with <code>new</code>, like the constructor for <code>std::unique_ptr</code>. </p>
+<p>Acquires owenership of <code>*flow_bc</code> and adds it as a boundary condition. Returns a serial number which uniquely identifies the new boundary condition among this <code><a class="el" href="classhexed_1_1Mesh.html">Mesh</a></code>'s boundary conditions. It is recommended to use this with <code>new</code>, like the constructor for <code>std::unique_ptr</code>. </p>
 
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a26aaf2fbbc6d8faa4ac4d494a72a0c53">hexed::Mesh</a>.</p>
-
-</div>
-</div>
-<a id="a3effbd55bbf2c058f389d3ac8eb64fa9" name="a3effbd55bbf2c058f389d3ac8eb64fa9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3effbd55bbf2c058f389d3ac8eb64fa9">&#9670;&#160;</a></span>add_element()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">int hexed::Accessible_mesh::add_element </td>
-          <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>ref_level</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>is_deformed</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; int &gt;</td>          <td class="paramname"><span class="paramname"><em>position</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>Add an element at specified nominal position and serial number which uniquely identifies it among elements of this mesh with the same refinement level and deformedness. </p>
-
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a8fd53d5f29f47e9a826f977324cea4a6">hexed::Mesh</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a9dd7463335632453401aa0fdd1adc272">hexed::Mesh</a>.</p>
 
 </div>
 </div>
-<a id="a35b061d00acf3595b6c1ba9aaf257f36" name="a35b061d00acf3595b6c1ba9aaf257f36"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a35b061d00acf3595b6c1ba9aaf257f36">&#9670;&#160;</a></span>add_tree()</h2>
+<a id="a9d406d23b22a55c264a003bed57605c1" name="a9d406d23b22a55c264a003bed57605c1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9d406d23b22a55c264a003bed57605c1">&#9670;&#160;</a></span>add_tree()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -476,7 +401,7 @@ Protected Member Functions</h2></td></tr>
         <tr>
           <td class="memname">void hexed::Accessible_mesh::add_tree </td>
           <td>(</td>
-          <td class="paramtype">std::vector&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> * &gt;</td>          <td class="paramname"><span class="paramname"><em>extremal_bcs</em></span>, </td>
+          <td class="paramtype">std::vector&lt; std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>extremal_bcs</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -494,63 +419,47 @@ Protected Member Functions</h2></td></tr>
 <p>Initializes meshing with bin/quad/<a href="https://en.wikipedia.org/wiki/Octree">octree</a> topology. </p>
 <p>Creates a tree initialized with one element with ref level 0. Technically, free-form elements can also be created in the same mesh, but they will not be connected to the tree. Only one tree can be created. Connections and boundary conditions are set automatically for tree elements, so tree meshes should always automatically be valid unless you explicitly invalidate it with <code><a class="el" href="classhexed_1_1Mesh.html#a6777399f709f4e04937aad4d0812dbd0" title="delete all boundary connections involving a certain boundary condition">Mesh::disconnect_boundary</a></code>. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">extremal_bcs</td><td><a class="el" href="classhexed_1_1Boundary.html">Boundary</a> conditions to apply to elements with exposed faces at the extremal boundaries of the tree. Takes ownership of objects that the vector entries point to. It must contain exactly <code>2*n_dim</code> entries. E.g. <code>extremal_bcs[0]</code> is the boundary condition to apply to the minimum \(x_0\) face, <code>extremal_bcs[1]</code> is the BC for the maximum \(x_0\) face, <code>extremal_bcs[2]</code> is for minimum \(x_1\). </td></tr>
+    <tr><td class="paramname">extremal_bcs</td><td>Boundary conditions to apply to elements with exposed faces at the extremal boundaries of the tree. Takes ownership of objects that the vector entries point to. It must contain exactly <code>2*n_dim</code> entries. E.g. <code>extremal_bcs[0]</code> is the boundary condition to apply to the minimum \(x_0\) face, <code>extremal_bcs[1]</code> is the BC for the maximum \(x_0\) face, <code>extremal_bcs[2]</code> is for minimum \(x_1\). </td></tr>
     <tr><td class="paramname">origin</td><td>The minimal corner of the tree root will be located at <code>origin</code>. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a3dcaa709d3c08d62e01b2015b9ce071b">hexed::Mesh</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Mesh.html#ac603395e85887aa09a4b73ebfabd7942">hexed::Mesh</a>.</p>
 
 </div>
 </div>
-<a id="a042a0fffe5621e0633f1f8026350fe37" name="a042a0fffe5621e0633f1f8026350fe37"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a042a0fffe5621e0633f1f8026350fe37">&#9670;&#160;</a></span>boundary_conditions()</h2>
+<a id="a6ec01c1a5352126c585406fd83aeed01" name="a6ec01c1a5352126c585406fd83aeed01"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6ec01c1a5352126c585406fd83aeed01">&#9670;&#160;</a></span>boundary_conditions()</h2>
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classhexed_1_1Vector__view.html">Vector_view</a>&lt; <a class="el" href="classhexed_1_1Boundary__condition.html">Boundary_condition</a> &amp;, <a class="el" href="classhexed_1_1Boundary__condition.html">Boundary_condition</a> &gt; hexed::Accessible_mesh::boundary_conditions </td>
+          <td class="memname"><a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &amp; &gt; hexed::Accessible_mesh::boundary_conditions </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 <dl class="section return"><dt>Returns</dt><dd>a view of all Bounday_condition objects owned by this mesh </dd></dl>
 
 </div>
 </div>
-<a id="aa064262321789ffa45cf99ef0c2d71a4" name="aa064262321789ffa45cf99ef0c2d71a4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa064262321789ffa45cf99ef0c2d71a4">&#9670;&#160;</a></span>boundary_connections()</h2>
+<a id="a2c69b96e1ced552c418f56b1d1291cb1" name="a2c69b96e1ced552c418f56b1d1291cb1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2c69b96e1ced552c418f56b1d1291cb1">&#9670;&#160;</a></span>boundary_connections()</h2>
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp; &gt; &amp; hexed::Accessible_mesh::boundary_connections </td>
+          <td class="memname"><a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp; &gt; hexed::Accessible_mesh::boundary_connections </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 <dl class="section return"><dt>Returns</dt><dd>a view of all connections between an element and a boundary condition </dd></dl>
 
@@ -611,8 +520,8 @@ Protected Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="afc87bb841d80af3862fac169703b12b0" name="afc87bb841d80af3862fac169703b12b0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afc87bb841d80af3862fac169703b12b0">&#9670;&#160;</a></span>connect_boundary()</h2>
+<a id="a54692bb063dd090cc2652361b07654cd" name="a54692bb063dd090cc2652361b07654cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a54692bb063dd090cc2652361b07654cd">&#9670;&#160;</a></span>connect_boundary()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -633,7 +542,7 @@ Protected Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>element_serial_n</em></span>, </td>
+          <td class="paramtype"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a></td>          <td class="paramname"><span class="paramname"><em>element_serial_n</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -657,16 +566,14 @@ Protected Member Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
+<p>Connect a face of an element to a boundary condition. This BC will now be applied to that face. <code>i_dim</code> and <code>face_sign</code> are used to identify which face of the element is participating in the boundary condition. </p>
 
-<p>Connect a face of an element to a boundary condition. </p>
-<p>This BC will now be applied to that face. <code>i_dim</code> and <code>face_sign</code> are used to identify which face of the element is participating in the boundary condition. </p>
-
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html#ae3c8266c6f822f81660f3fb516635316">hexed::Mesh</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Mesh.html#aa13177cb7719f44347ca445da58ec94e">hexed::Mesh</a>.</p>
 
 </div>
 </div>
-<a id="a85439beaa6ec6be4644fe16eff7c31a9" name="a85439beaa6ec6be4644fe16eff7c31a9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a85439beaa6ec6be4644fe16eff7c31a9">&#9670;&#160;</a></span>connect_cartesian()</h2>
+<a id="a29d04ad7e85076e8943e651bde0b0d40" name="a29d04ad7e85076e8943e651bde0b0d40"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29d04ad7e85076e8943e651bde0b0d40">&#9670;&#160;</a></span>connect_cartesian()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -682,12 +589,12 @@ Protected Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::array&lt; int, 2 &gt;</td>          <td class="paramname"><span class="paramname"><em>serial_n</em></span>, </td>
+          <td class="paramtype">std::array&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>, 2 &gt;</td>          <td class="paramname"><span class="paramname"><em>serial_n</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Con__dir.html">Con_dir</a>&lt; <a class="el" href="classhexed_1_1Element.html">Element</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>dir</em></span>, </td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a></td>          <td class="paramname"><span class="paramname"><em>dir</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -703,12 +610,12 @@ Protected Member Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Specify that two elements are connected via a Cartesian face. Note: although the interface is stipulated to be Cartesian, the elements themselves can be deformed </p>
 
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a3096fabc8a2771e3b735d66277fe3707">hexed::Mesh</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a2cce60eb8f8ccafd1db5d76fc03630ed">hexed::Mesh</a>.</p>
 
 </div>
 </div>
-<a id="ad943521772329fef40d8e0611204e4b4" name="ad943521772329fef40d8e0611204e4b4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad943521772329fef40d8e0611204e4b4">&#9670;&#160;</a></span>connect_deformed()</h2>
+<a id="a6d64c2f0d7fbdaf66dbb17e08b009b28" name="a6d64c2f0d7fbdaf66dbb17e08b009b28"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6d64c2f0d7fbdaf66dbb17e08b009b28">&#9670;&#160;</a></span>connect_deformed()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -724,12 +631,12 @@ Protected Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::array&lt; int, 2 &gt;</td>          <td class="paramname"><span class="paramname"><em>serial_n</em></span>, </td>
+          <td class="paramtype">std::array&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>, 2 &gt;</td>          <td class="paramname"><span class="paramname"><em>serial_n</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Con__dir.html">Con_dir</a>&lt; <a class="el" href="classhexed_1_1Deformed__element.html">Deformed_element</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>direction</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a></td>          <td class="paramname"><span class="paramname"><em>direction</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -741,12 +648,12 @@ Protected Member Functions</h2></td></tr>
 
 <p>Specify that two elements are connected via a deformed face. Requires both elements to be deformed. </p>
 
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html#ab5dd2149c6d68bb6a1b564454a675c39">hexed::Mesh</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a652e935503c71e5dbcfe7e38723dd1d2">hexed::Mesh</a>.</p>
 
 </div>
 </div>
-<a id="a7e4a24c118927a27e206ed8cbc30ec4d" name="a7e4a24c118927a27e206ed8cbc30ec4d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7e4a24c118927a27e206ed8cbc30ec4d">&#9670;&#160;</a></span>connect_hanging()</h2>
+<a id="a9fadb1abe6bbf2c0eb2a465ed861cc44" name="a9fadb1abe6bbf2c0eb2a465ed861cc44"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9fadb1abe6bbf2c0eb2a465ed861cc44">&#9670;&#160;</a></span>connect_hanging()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -762,17 +669,17 @@ Protected Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>coarse_serial</em></span>, </td>
+          <td class="paramtype"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a></td>          <td class="paramname"><span class="paramname"><em>coarse_serial</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::vector&lt; int &gt;</td>          <td class="paramname"><span class="paramname"><em>fine_serial</em></span>, </td>
+          <td class="paramtype">std::vector&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>fine_serial</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Con__dir.html">Con_dir</a>&lt; <a class="el" href="classhexed_1_1Deformed__element.html">Deformed_element</a> &gt;</td>          <td class="paramname"><span class="paramname"><em></em></span>, </td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a></td>          <td class="paramname"><span class="paramname"><em></em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -796,9 +703,9 @@ Protected Member Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>specify that an element of refinement level <code>coarse_ref_level</code> is connected to some elements of refinement level <code>coarse_ref_level + 1</code>. Coarse element comes first in <code><a class="el" href="classhexed_1_1Con__dir.html">Con_dir</a></code>. <code>coarse_deformed</code> and <code>fine_deformed</code> specify whether the elements are Cartesian or deformed. If any of the elements are Cartesian, the entire face is assumed to be Cartesian. In this case, all the vertices must occupy their nominal positions and the <code><a class="el" href="classhexed_1_1Con__dir.html">Con_dir</a></code> must be appropriate for a Cartesian connection. If these requirements are not satisfied, the invocation is incorrect. The number of fine elements can be any power of 2 (with a maximum of 2^(<code>n_dim - 1</code>)). In order to match the faces when less than the maximum number of elements is used, <code>stretch</code> specifies along which dimensions the fine elements are to be stretched to match the coarse. Only the first <code>n_dim - 1</code> elements of <code>stretch</code> are meaningful. The rest are ignored. </p>
+<p>specify that an element of refinement level <code>coarse_ref_level</code> is connected to some elements of refinement level <code>coarse_ref_level + 1</code>. Coarse element comes first in <code><a class="el" href="classhexed_1_1Connection__direction.html" title="Describes the direction in which to faces are connected.">Connection_direction</a></code>. <code>coarse_deformed</code> and <code>fine_deformed</code> specify whether the elements are Cartesian or deformed. If any of the elements are Cartesian, the entire face is assumed to be Cartesian. In this case, all the vertices must occupy their nominal positions and the <code><a class="el" href="classhexed_1_1Connection__direction.html" title="Describes the direction in which to faces are connected.">Connection_direction</a></code> must be appropriate for a Cartesian connection. If these requirements are not satisfied, the invocation is incorrect. The number of fine elements can be any power of 2 (with a maximum of 2^(<code>n_dim - 1</code>)). In order to match the faces when less than the maximum number of elements is used, <code>stretch</code> specifies along which dimensions the fine elements are to be stretched to match the coarse. Only the first <code>n_dim - 1</code> elements of <code>stretch</code> are meaningful. The rest are ignored. </p>
 
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a6a742b360e5885827d2c07d0f2d82e0f">hexed::Mesh</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a34403a55a5878d8411364ef6f8170dd2">hexed::Mesh</a>.</p>
 
 </div>
 </div>
@@ -915,8 +822,8 @@ Protected Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="ab1699a3f5ad1e6a668a71bca9e413956" name="ab1699a3f5ad1e6a668a71bca9e413956"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab1699a3f5ad1e6a668a71bca9e413956">&#9670;&#160;</a></span>element_connections()</h2>
+<a id="a442f16d22efca9c8cc2cc6f9b8a45a11" name="a442f16d22efca9c8cc2cc6f9b8a45a11"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a442f16d22efca9c8cc2cc6f9b8a45a11">&#9670;&#160;</a></span>execute_adaptation()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -925,7 +832,7 @@ Protected Member Functions</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Element__connection.html">Element_connection</a> &amp; &gt; &amp; hexed::Accessible_mesh::element_connections </td>
+          <td class="memname">void hexed::Accessible_mesh::execute_adaptation </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
@@ -933,11 +840,12 @@ Protected Member Functions</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd>a view of all connections between elements, including one connection for every fine element in hanging node connections. </dd></dl>
+
+<p>Implements <a class="el" href="classhexed_1_1Mesh.html">hexed::Mesh</a>.</p>
 
 </div>
 </div>
@@ -970,8 +878,8 @@ Protected Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a472153bc396bbbc2ae6b50818dc87615" name="a472153bc396bbbc2ae6b50818dc87615"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a472153bc396bbbc2ae6b50818dc87615">&#9670;&#160;</a></span>extrude()</h2>
+<a id="ad5d40c43f603c8db39489d442bf6a484" name="ad5d40c43f603c8db39489d442bf6a484"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad5d40c43f603c8db39489d442bf6a484">&#9670;&#160;</a></span>extrude()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -987,11 +895,6 @@ Protected Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>offset</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
           <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>force</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
         </tr>
       </table>
@@ -1001,67 +904,9 @@ Protected Member Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-<p>Extrudes a layer of elements from unconnected faces:</p><ol type="1">
-<li>Extrudes one deformed element from every unconnected face of every deformed element.</li>
-<li>Connects the new elements to the faces they were generated from.</li>
-<li>Connects the new elements to each other to maintain the connectivity of the faces they were generated from.</li>
-<li>If the parent elements have any boundary connections, those are also applied to the corresponding faces of the extruded elements. When this is complete, the number of unconnected faces (of deformed elements) remains unchanged, but the unconnected faces now belong to new, extruded elements which can be snapped to surface geometry in a well-conditioned fashion. If <code>collapse == true</code> then the new elements will be collapsed in the extrusion direction, such that they have zero volume and exist purely on the extruded face. If the mesh has already been extruded once and <code>offset</code> is specified, the interior vertices of the extruded element will then be moved some distance toward the interior neighbor depending on the value of <code>offset</code>, where <code>offset == 0</code> yields no motion and <code>offset == 1</code> moves them exactly to the neighbor. If the mesh has not been extruded, the vertices shall be moved in an unspecified manner (but maintaining a valid mesh state). Offsetting thus provides a rudimentary way of creating anisotropic wall layers. If <code>force == false</code> (default) then in a tree mesh, only tree elements will be extruded from (which is necessary because some of the extruded elements from the previous refinement sweep may have non-surface-facing exposed faces). If <code>force == true</code> then all exposed faces will be extruded from. </li>
-</ol>
-<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000006">Todo</a></b></dt><dd>apparently the mesh needs to know about the basis after all... </dd></dl>
+<p>convenience typedef for the <a class="el" href="classhexed_1_1Vector__view.html" title="Provides a view of an existing container (e.g., std::vector) as a Sequence.">Vector_view</a> used to access Vertex objects </p><dl class="section note"><dt>Note</dt><dd>test for this is in <code>test_Solver.cpp</code> so that the result can be visualized </dd></dl>
 
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a370e64cb387b9e5d64d0faff056a10f2">hexed::Mesh</a>.</p>
-
-</div>
-</div>
-<a id="aa0a221e476106d7175c8168dd4b89bbe" name="aa0a221e476106d7175c8168dd4b89bbe"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa0a221e476106d7175c8168dd4b89bbe">&#9670;&#160;</a></span>extruded_connections()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="classhexed_1_1Vector__view.html">Vector_view</a>&lt; <a class="el" href="classhexed_1_1Element__connection.html">Element_connection</a> &amp;, <a class="el" href="classhexed_1_1Element__face__connection.html">Element_face_connection</a>&lt; <a class="el" href="classhexed_1_1Deformed__element.html">Deformed_element</a> &gt; *, ptr_convert&lt; <a class="el" href="classhexed_1_1Element__connection.html">Element_connection</a> &amp;, <a class="el" href="classhexed_1_1Element__face__connection.html">Element_face_connection</a>&lt; <a class="el" href="classhexed_1_1Deformed__element.html">Deformed_element</a> &gt; * &gt; &gt; hexed::Accessible_mesh::extruded_connections </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd>a view of all <a class="el" href="classhexed_1_1Element__connection.html">Element_connection</a> between extruded elements and the elemens they were extruded from </dd></dl>
-
-</div>
-</div>
-<a id="a0dc9fe456ba4824ac5001e145575df4b" name="a0dc9fe456ba4824ac5001e145575df4b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0dc9fe456ba4824ac5001e145575df4b">&#9670;&#160;</a></span>hanging_vertex_matchers()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Hanging__vertex__matcher.html">Hanging_vertex_matcher</a> &amp; &gt; &amp; hexed::Accessible_mesh::hanging_vertex_matchers </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd>a view of all <a class="el" href="classhexed_1_1Hanging__vertex__matcher.html">Hanging_vertex_matcher</a> objects owned by this mesh (there will be one for every hanging node connection) </dd></dl>
+<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a86cfb6dbab9370cd6bb0d2bf9575723a">hexed::Mesh</a>.</p>
 
 </div>
 </div>
@@ -1094,28 +939,8 @@ Protected Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a6a900ac2dcef03babe8f7d697c91d6cb" name="a6a900ac2dcef03babe8f7d697c91d6cb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6a900ac2dcef03babe8f7d697c91d6cb">&#9670;&#160;</a></span>preti_masks()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classhexed_1_1Accessible__mesh_1_1Masked__mesh.html">Accessible_mesh::Masked_mesh</a> &gt; &gt; hexed::Accessible_mesh::preti_masks </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>basis</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Experimental feature. Ignore for now. </p>
-<p>Has to do with an experimental performance-enhancing feature where anisotropic elements are updated more frequently than isotropic ones. Not ready for production use, although it was the motivation for the <code><a class="el" href="classhexed_1_1Accessible__mesh_1_1Masked__mesh.html" title="Creates a mask that allows kernel operations to be performed on a subset of the elements.">Masked_mesh</a></code> feature. </p>
-
-</div>
-</div>
-<a id="a77c55154cfd613cbdb05b6ac4d083b54" name="a77c55154cfd613cbdb05b6ac4d083b54"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a77c55154cfd613cbdb05b6ac4d083b54">&#9670;&#160;</a></span>refined_faces()</h2>
+<a id="a1fa33cbfb14976dc645ecf1b20fa6b56" name="a1fa33cbfb14976dc645ecf1b20fa6b56"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1fa33cbfb14976dc645ecf1b20fa6b56">&#9670;&#160;</a></span>plan_adaptation()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1124,75 +949,19 @@ Protected Member Functions</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Refined__face.html">Refined_face</a> &amp; &gt; &amp; hexed::Accessible_mesh::refined_faces </td>
+          <td class="memname"><a class="el" href="structhexed_1_1Mesh_1_1Adaptation__result.html">Mesh::Adaptation_result</a> hexed::Accessible_mesh::plan_adaptation </td>
           <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd>a view of all <a class="el" href="classhexed_1_1Refined__face.html">Refined_face</a> objects owned by this mesh (there will be one for every hanging node connection) </dd></dl>
-
-</div>
-</div>
-<a id="a4fe952d543dc73dfe1ae683428abf4fd" name="a4fe952d543dc73dfe1ae683428abf4fd"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4fe952d543dc73dfe1ae683428abf4fd">&#9670;&#160;</a></span>relax()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void hexed::Accessible_mesh::relax </td>
-          <td>(</td>
-          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>factor</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.9</span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Relax the vertices to improve mesh quality. </p>
-<p>By default, relaxation is performed incrementally&mdash;only vertices of elements that are new in the most recent <code><a class="el" href="#af0468319f657ad8aa9732c42eead1091" title="Updates tree mesh based on user-supplied (un)refinement criteria.">update()</a></code> cycle are smoothed. To smooth all, call <code><a class="el" href="#a113f9237fe66ca1798d4cd265616cc3c" title="sets need_smooth to true for all vertices to perform global relaxation">set_all_smooth()</a></code>. </p><dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">factor</td><td>A larger number yields more change in the mesh. 0 =&gt; no update, 1 =&gt; "full" update, &gt; 1 allowed but suspect </td></tr>
-  </table>
-  </dd>
-</dl>
-
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html#aa4accd9af409be6e7401ba9849c724a3">hexed::Mesh</a>.</p>
-
-</div>
-</div>
-<a id="a6461c7d8035c613389b6f9572e1c34a1" name="a6461c7d8035c613389b6f9572e1c34a1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6461c7d8035c613389b6f9572e1c34a1">&#9670;&#160;</a></span>relax_and_match()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void hexed::Accessible_mesh::relax_and_match </td>
-          <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>n_relax</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>, </td>
+          <td class="paramtype">std::function&lt; bool(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;, int)&gt;</td>          <td class="paramname"><span class="paramname"><em>refine_criterion</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>factor</em></span><span class="paramdefsep"> = </span><span class="paramdefval">.9</span>&#160;)</td>
+          <td class="paramtype">std::function&lt; bool(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;, int)&gt;</td>          <td class="paramname"><span class="paramname"><em>unrefine_criterion</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>set_floor</em></span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -1203,6 +972,30 @@ Protected Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Implements <a class="el" href="classhexed_1_1Mesh.html">hexed::Mesh</a>.</p>
+
+</div>
+</div>
+<a id="adaf20ae9f728cd5ec190a59adebe047e" name="adaf20ae9f728cd5ec190a59adebe047e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adaf20ae9f728cd5ec190a59adebe047e">&#9670;&#160;</a></span>preti_masks()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; std::unique_ptr&lt; <a class="el" href="classhexed_1_1Accessible__mesh_1_1Masked__mesh.html">Accessible_mesh::Masked_mesh</a> &gt; &gt; hexed::Accessible_mesh::preti_masks </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>basis</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>iso</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Experimental feature. Ignore for now. </p>
+<p>Has to do with an experimental performance-enhancing feature where anisotropic elements are updated more frequently than isotropic ones. Not ready for production use, although it was the motivation for the <code><a class="el" href="classhexed_1_1Accessible__mesh_1_1Masked__mesh.html" title="Creates a mask that allows kernel operations to be performed on a subset of the elements.">Masked_mesh</a></code> feature. </p>
 
 </div>
 </div>
@@ -1223,60 +1016,6 @@ Protected Member Functions</h2></td></tr>
 
 <p>Resets effective number of masks created to 0 and invalidates existing masks. </p>
 <dl class="section see"><dt>See also</dt><dd><code><a class="el" href="classhexed_1_1Accessible__mesh_1_1Masked__mesh.html" title="Creates a mask that allows kernel operations to be performed on a subset of the elements.">Masked_mesh</a></code> </dd></dl>
-
-</div>
-</div>
-<a id="a8f54fd3eb4b5083167473dcf0021d26e" name="a8f54fd3eb4b5083167473dcf0021d26e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8f54fd3eb4b5083167473dcf0021d26e">&#9670;&#160;</a></span>reset_verts()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void hexed::Accessible_mesh::reset_verts </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html">hexed::Mesh</a>.</p>
-
-</div>
-</div>
-<a id="ad8d19c815847ab1d9fa815f09f889f17" name="ad8d19c815847ab1d9fa815f09f889f17"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad8d19c815847ab1d9fa815f09f889f17">&#9670;&#160;</a></span>restore_verts()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void hexed::Accessible_mesh::restore_verts </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html">hexed::Mesh</a>.</p>
 
 </div>
 </div>
@@ -1308,38 +1047,8 @@ Protected Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a113f9237fe66ca1798d4cd265616cc3c" name="a113f9237fe66ca1798d4cd265616cc3c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a113f9237fe66ca1798d4cd265616cc3c">&#9670;&#160;</a></span>set_all_smooth()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void hexed::Accessible_mesh::set_all_smooth </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>sets <code>need_smooth</code> to <code>true</code> for all vertices to perform global relaxation </p>
-<p>(only effective until the next <code><a class="el" href="#af0468319f657ad8aa9732c42eead1091" title="Updates tree mesh based on user-supplied (un)refinement criteria.">update()</a></code> cycle) </p>
-
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a0c2306ebd341ff18ecc6b9b003b74bb2">hexed::Mesh</a>.</p>
-
-</div>
-</div>
-<a id="a8bbb6de6ed43d840d5fc0e742a94997c" name="a8bbb6de6ed43d840d5fc0e742a94997c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8bbb6de6ed43d840d5fc0e742a94997c">&#9670;&#160;</a></span>set_surface()</h2>
+<a id="af78e4bad41951f321831ec2db3eaface" name="af78e4bad41951f321831ec2db3eaface"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af78e4bad41951f321831ec2db3eaface">&#9670;&#160;</a></span>set_surface()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1350,12 +1059,12 @@ Protected Member Functions</h2></td></tr>
         <tr>
           <td class="memname">void hexed::Accessible_mesh::set_surface </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> *</td>          <td class="paramname"><span class="paramname"><em>geometry</em></span>, </td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>geometry</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> *</td>          <td class="paramname"><span class="paramname"><em>surface_bc</em></span>, </td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>surface_bc</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1371,9 +1080,9 @@ Protected Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Defines the surface geometry to be meshed as a boundary. </p>
-<p>Acquires ownership of the objects pointed to <code>geometry</code> and <code>surface_bc</code>. The geometric surface represented by <code>geometry</code> is now a boundary of the domain and its boundary condition is <code>surface_bc</code>. The flood fill algorithm is then executed starting at <code>flood_fill_start</code> to determine which elements are in the domain and extrusion is executed to create a suitably body-fitted mesh. <code>flood_fill_start</code> must have at least <code>n_dim</code> entries and extra entries are ignored. If the mesh is excessively coarse, there may be no elements in the domain as they are all too close to the surfaces. So, <code><a class="el" href="classhexed_1_1Mesh.html#aee55ffd3b0dff849f5f7f315fe76b450" title="Updates tree mesh based on user-supplied (un)refinement criteria.">Mesh::update</a></code> should be calling a few times before <code>Mesh::set_surfaces</code>. Any surfaces defined by previous invokations of <code>set_surface</code> are forgotten. sets the <code><a class="el" href="classhexed_1_1Element.html#a3d44aa7a67b705b7f5132fb2664c9dfc" title="if this is set to true, Mesh_interface::update() won&#39;t unrefine it">Element::unrefinement_locked</a></code> member of all elements </p>
+<p>The geometric surface represented by <code>geometry</code> is now a boundary of the domain and its boundary condition is <code>surface_bc</code>. The flood fill algorithm is then executed starting at <code>flood_fill_start</code> to determine which elements are in the domain and extrusion is executed to create a suitably body-fitted mesh. <code>flood_fill_start</code> must have at least <code>n_dim</code> entries and extra entries are ignored. If the mesh is excessively coarse, there may be no elements in the domain as they are all too close to the surfaces. So, <code><a class="el" href="classhexed_1_1Mesh.html#aee55ffd3b0dff849f5f7f315fe76b450" title="Updates tree mesh based on user-supplied (un)refinement criteria.">Mesh::update</a></code> should be calling a few times before <code>Mesh::set_surfaces</code>. Any surfaces defined by previous invokations of <code>set_surface</code> are forgotten. sets the <code><a class="el" href="classhexed_1_1Element.html#a3d44aa7a67b705b7f5132fb2664c9dfc" title="if this is set to true, Mesh_interface::update() won&#39;t unrefine it">Element::unrefinement_locked</a></code> member of all elements </p>
 
-<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a5b62dd6ec4bbedaba0901bf7e6235118">hexed::Mesh</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a14da8e29c7a2a8a5d13d0c739cc699f1">hexed::Mesh</a>.</p>
 
 </div>
 </div>
@@ -1455,7 +1164,6 @@ Protected Member Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
-
 <p>what is the serial number of the geometry surface BC? </p>
 
 <p>Implements <a class="el" href="classhexed_1_1Mesh.html#aca2d99625f2882f76c9af3c9f1617682">hexed::Mesh</a>.</p>
@@ -1522,28 +1230,49 @@ Protected Member Functions</h2></td></tr>
 <p>Returns a <code>Connection_validity</code> object describing whether the mesh connectivity is valid. </p>
 <p>Suggested uses:</p><ul>
 <li><code>if (mesh.valid()) {\\...do something that requires a valid mesh}</code></li>
-<li><code>mesh.valid().assert_valid();</code> </li>
+<li><code>mesh.valid().<a class="el" href="#ab7192cc67767f855b7bfcac7389a26d5" title="if any invalid mesh connections are found, throws an exception with a diagnostic visualization">assert_valid()</a>;</code> </li>
 </ul>
 
 <p>Implements <a class="el" href="classhexed_1_1Mesh.html#a2dee7ff404064623d050a665c0668a1f">hexed::Mesh</a>.</p>
 
 </div>
 </div>
-<a id="ad52e0ad3fee57fd7523d551c0d5cd4ff" name="ad52e0ad3fee57fd7523d551c0d5cd4ff"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad52e0ad3fee57fd7523d551c0d5cd4ff">&#9670;&#160;</a></span>vertices()</h2>
+<a id="a6399bb9f744254b444114beee0082875" name="a6399bb9f744254b444114beee0082875"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6399bb9f744254b444114beee0082875">&#9670;&#160;</a></span>visualize()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="#a1ab0f54ca7133f206e142033ef03af5e">Accessible_mesh::vertex_view</a> hexed::Accessible_mesh::vertices </td>
+          <td class="memname">void hexed::Accessible_mesh::visualize </td>
           <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>format</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>file_name</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>time</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
-<dl class="section return"><dt>Returns</dt><dd>a view of all <a class="el" href="classhexed_1_1Vertex.html" title="Represents a vertex in a deformed grid.">Vertex</a> objects used by elements in this mesh. Each vertex will appear exactly once, even if it is shared by multiple elements. </dd></dl>
+
+<p>visualize the mesh </p>
+<p>For debugging. For actual simulations, use <code><a class="el" href="classhexed_1_1Solver.html#a10216e3a782c8473459d1c51cd6f1fa7" title="write a visualization file describing the entire flow field (but not identifying surfaces)">Solver::visualize_field</a></code>. </p>
+
+<p>Implements <a class="el" href="classhexed_1_1Mesh.html#a5ca77b5a9be4a3c5c8c2e778b99a5bd9">hexed::Mesh</a>.</p>
 
 </div>
 </div>

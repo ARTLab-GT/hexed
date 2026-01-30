@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -112,33 +112,126 @@ $(function(){initNavTree('classhexed_1_1Lock.html',''); initResizable(true); });
 <div class="header">
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
+<a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="classhexed_1_1Lock-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">hexed::Lock Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>wrapper for <a href="https://www.openmp.org/spec-html/5.0/openmpse31.html">OpenMP lock routines</a>.  
+<p>wrapper for <a href="https://www.openmp.org/spec-html/5.0/openmpse31.html">OpenMP <b>nested</b> lock routines</a>.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;Lock.hpp&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Lock_1_1Acquire.html">Acquire</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">acquires the lock when constructed and releases when destroyed  <a href="classhexed_1_1Lock_1_1Acquire.html#details">More...</a><br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Lock_1_1Set.html">Set</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">sets the lock when constructed and unsets when destroyed  <a href="classhexed_1_1Lock_1_1Set.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
+Public Member Functions</h2></td></tr>
+<tr class="memitem:a91fc854bc9a85edfc3bd957869e3289f" id="r_a91fc854bc9a85edfc3bd957869e3289f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a91fc854bc9a85edfc3bd957869e3289f">Lock</a> (const <a class="el" href="classhexed_1_1Lock.html">Lock</a> &amp;)</td></tr>
+<tr class="separator:a91fc854bc9a85edfc3bd957869e3289f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adf578eb7fb476db4054a2dbad4d4c9f5" id="r_adf578eb7fb476db4054a2dbad4d4c9f5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adf578eb7fb476db4054a2dbad4d4c9f5">operator=</a> (const <a class="el" href="classhexed_1_1Lock.html">Lock</a> &amp;)</td></tr>
+<tr class="separator:adf578eb7fb476db4054a2dbad4d4c9f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad420859d27be9d5efe169bf7a348e428" id="r_ad420859d27be9d5efe169bf7a348e428"><td class="memItemLeft" align="right" valign="top">std::optional&lt; <a class="el" href="classhexed_1_1Lock_1_1Set.html">Set</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad420859d27be9d5efe169bf7a348e428">test</a> ()</td></tr>
+<tr class="memdesc:ad420859d27be9d5efe169bf7a348e428"><td class="mdescLeft">&#160;</td><td class="mdescRight">If the lock is available, set it and return a <code><a class="el" href="classhexed_1_1Lock_1_1Set.html" title="sets the lock when constructed and unsets when destroyed">Set</a></code> object. Otherwise, return empty <code>std::optional</code>.  <br /></td></tr>
+<tr class="separator:ad420859d27be9d5efe169bf7a348e428"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1aa90d76199c8c7c87d38fbbb7133c16" id="r_a1aa90d76199c8c7c87d38fbbb7133c16"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1aa90d76199c8c7c87d38fbbb7133c16">is_set</a> ()</td></tr>
+<tr class="memdesc:a1aa90d76199c8c7c87d38fbbb7133c16"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns <code>true</code> if the lock is currently set, but leaves it in the same state.  <br /></td></tr>
+<tr class="separator:a1aa90d76199c8c7c87d38fbbb7133c16"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>wrapper for <a href="https://www.openmp.org/spec-html/5.0/openmpse31.html">OpenMP lock routines</a>. </p>
-<p>This class can be used to prevent data races by OpenMP threads. It contains an OpenMP lock variable. To acquire (aka set) the lock, construct an <code><a class="el" href="classhexed_1_1Lock_1_1Acquire.html" title="acquires the lock when constructed and releases when destroyed">Acquire</a></code> object from it. When the <code><a class="el" href="classhexed_1_1Lock_1_1Acquire.html" title="acquires the lock when constructed and releases when destroyed">Acquire</a></code> object is destroyed, the lock will be released (unset). If Hexed is not compiled with OpenMP, this class does nothing. Use like this: </p><div class="fragment"><div class="line"><a class="code hl_class" href="classhexed_1_1Lock.html">Lock</a> l;</div>
+<div class="textblock"><p>wrapper for <a href="https://www.openmp.org/spec-html/5.0/openmpse31.html">OpenMP <b>nested</b> lock routines</a>. </p>
+<p>This class can be used to prevent data races by OpenMP threads. It contains an OpenMP lock variable. To set the lock, construct a <code><a class="el" href="classhexed_1_1Lock_1_1Set.html" title="sets the lock when constructed and unsets when destroyed">Set</a></code> object from it. When the <code><a class="el" href="classhexed_1_1Lock_1_1Set.html" title="sets the lock when constructed and unsets when destroyed">Set</a></code> object is destroyed, the lock will be unset. If Hexed is not compiled with OpenMP, this class does nothing. Use like this: </p><div class="fragment"><div class="line"><a class="code hl_class" href="classhexed_1_1Lock.html">Lock</a> l;</div>
 <div class="line"><span class="preprocessor">#pragma omp parallel for</span></div>
 <div class="line"><span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; N; ++i) {</div>
-<div class="line">  <a class="code hl_class" href="classhexed_1_1Lock_1_1Acquire.html">Lock::Acquire</a> a(l); <span class="comment">// acquires lock</span></div>
+<div class="line">  <a class="code hl_class" href="classhexed_1_1Lock_1_1Set.html">Lock::Set</a> s(l); <span class="comment">// sets lock</span></div>
 <div class="line">  <span class="comment">// only one thread at a time can execute any statements here</span></div>
-<div class="line">} <span class="comment">// lock is released because `a` is destroyed</span></div>
-<div class="ttc" id="aclasshexed_1_1Lock_1_1Acquire_html"><div class="ttname"><a href="classhexed_1_1Lock_1_1Acquire.html">hexed::Lock::Acquire</a></div><div class="ttdoc">acquires the lock when constructed and releases when destroyed</div><div class="ttdef"><b>Definition</b> Lock.hpp:31</div></div>
-<div class="ttc" id="aclasshexed_1_1Lock_html"><div class="ttname"><a href="classhexed_1_1Lock.html">hexed::Lock</a></div><div class="ttdoc">wrapper for OpenMP lock routines.</div><div class="ttdef"><b>Definition</b> Lock.hpp:25</div></div>
-</div><!-- fragment --> </div><hr/>The documentation for this class was generated from the following files:<ul>
+<div class="line">} <span class="comment">// lock is released because `s` is destroyed</span></div>
+<div class="ttc" id="aclasshexed_1_1Lock_1_1Set_html"><div class="ttname"><a href="classhexed_1_1Lock_1_1Set.html">hexed::Lock::Set</a></div><div class="ttdoc">sets the lock when constructed and unsets when destroyed</div><div class="ttdef"><b>Definition</b> Lock.hpp:37</div></div>
+<div class="ttc" id="aclasshexed_1_1Lock_html"><div class="ttname"><a href="classhexed_1_1Lock.html">hexed::Lock</a></div><div class="ttdoc">wrapper for OpenMP nested lock routines.</div><div class="ttdef"><b>Definition</b> Lock.hpp:31</div></div>
+</div><!-- fragment --> <dl class="section warning"><dt>Warning</dt><dd>The copy constructor and assignment operator (<code><a class="el" href="classhexed_1_1Lock.html" title="wrapper for OpenMP nested lock routines.">Lock</a>(const <a class="el" href="classhexed_1_1Lock.html" title="wrapper for OpenMP nested lock routines.">Lock</a>&amp;)</code> and <code><a class="el" href="#adf578eb7fb476db4054a2dbad4d4c9f5">Lock::operator=</a>(const <a class="el" href="classhexed_1_1Lock.html" title="wrapper for OpenMP nested lock routines.">Lock</a>&amp;)</code>) are not thread-safe! You may not copy a <code><a class="el" href="classhexed_1_1Lock.html" title="wrapper for OpenMP nested lock routines.">Lock</a></code> that is currently owned by another thread. </dd></dl>
+</div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
+<a id="a91fc854bc9a85edfc3bd957869e3289f" name="a91fc854bc9a85edfc3bd957869e3289f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a91fc854bc9a85edfc3bd957869e3289f">&#9670;&#160;</a></span>Lock()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">hexed::Lock::Lock </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classhexed_1_1Lock.html">Lock</a> &amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000006">Todo</a></b></dt><dd>make this thread safe! </dd></dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Function Documentation</h2>
+<a id="a1aa90d76199c8c7c87d38fbbb7133c16" name="a1aa90d76199c8c7c87d38fbbb7133c16"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1aa90d76199c8c7c87d38fbbb7133c16">&#9670;&#160;</a></span>is_set()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool hexed::Lock::is_set </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Returns <code>true</code> if the lock is currently set, but leaves it in the same state. </p>
+<p>Effectively equivalent to <code>bool set; {set = lock.test().has_value();}</code>. </p>
+
+</div>
+</div>
+<a id="adf578eb7fb476db4054a2dbad4d4c9f5" name="adf578eb7fb476db4054a2dbad4d4c9f5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adf578eb7fb476db4054a2dbad4d4c9f5">&#9670;&#160;</a></span>operator=()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void hexed::Lock::operator= </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classhexed_1_1Lock.html">Lock</a> &amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000007">Todo</a></b></dt><dd>make this thread safe! </dd></dl>
+
+</div>
+</div>
+<a id="ad420859d27be9d5efe169bf7a348e428" name="ad420859d27be9d5efe169bf7a348e428"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad420859d27be9d5efe169bf7a348e428">&#9670;&#160;</a></span>test()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::optional&lt; <a class="el" href="classhexed_1_1Lock_1_1Set.html">Lock::Set</a> &gt; hexed::Lock::test </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>If the lock is available, set it and return a <code><a class="el" href="classhexed_1_1Lock_1_1Set.html" title="sets the lock when constructed and unsets when destroyed">Set</a></code> object. Otherwise, return empty <code>std::optional</code>. </p>
+<dl class="section note"><dt>Note</dt><dd>Doesn't block if the lock isn't available. </dd></dl>
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following files:<ul>
 <li>/home/micaiah/Desktop/hexed/include/<b>Lock.hpp</b></li>
 <li>/home/micaiah/Desktop/hexed/libhexed/<b>Lock.cpp</b></li>
 </ul>

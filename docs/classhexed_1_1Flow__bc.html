@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -117,7 +117,7 @@ $(function(){initNavTree('classhexed_1_1Flow__bc.html',''); initResizable(true);
 </div><!--header-->
 <div class="contents">
 
-<p>Abstract class representing an arbitrary flow boundary condition (as opposed to a mesh BC).  
+<p>Abstract class representing an arbitrary flow boundary condition.  
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;Boundary_condition.hpp&gt;</code></p>
@@ -127,45 +127,53 @@ Inheritance diagram for hexed::Flow_bc:</div>
  <div class="center">
   <img src="classhexed_1_1Flow__bc.png" usemap="#hexed::Flow_5Fbc_map" alt=""/>
   <map id="hexed::Flow_5Fbc_map" name="hexed::Flow_5Fbc_map">
-<area href="classhexed_1_1Cache__bc.html" alt="hexed::Cache_bc" shape="rect" coords="172,56,334,80"/>
-<area href="classhexed_1_1Copy.html" alt="hexed::Copy" shape="rect" coords="172,112,334,136"/>
+<area href="classhexed_1_1Copy.html" title="Mostly used for testing, but you can maybe get away with it for supersonic outlets." alt="hexed::Copy" shape="rect" coords="172,56,334,80"/>
+<area href="classhexed_1_1Expression__bc.html" title="Sets the boundary condition explicitly based on a HIL expression." alt="hexed::Expression_bc" shape="rect" coords="172,112,334,136"/>
 <area href="classhexed_1_1Freestream.html" title="Sets the ghost state to the provided freestream state." alt="hexed::Freestream" shape="rect" coords="172,168,334,192"/>
-<area href="classhexed_1_1Function__bc.html" title="Like Freestream, but sets state to the value of an arbitrary Surface_func instead of a constant." alt="hexed::Function_bc" shape="rect" coords="172,224,334,248"/>
-<area href="classhexed_1_1No__slip.html" title="No-slip wall boundary condition." alt="hexed::No_slip" shape="rect" coords="172,280,334,304"/>
-<area href="classhexed_1_1Nonpenetration.html" title="Copies the inside state and flips the sign of the surface-normal velocity." alt="hexed::Nonpenetration" shape="rect" coords="172,336,334,360"/>
-<area href="classhexed_1_1Outflow.html" title="for supersonic outlets" alt="hexed::Outflow" shape="rect" coords="172,392,334,416"/>
-<area href="classhexed_1_1Pressure__outflow.html" title="sets pressure on outflow boundaries" alt="hexed::Pressure_outflow" shape="rect" coords="172,448,334,472"/>
-<area href="classhexed_1_1Riemann__invariants.html" title="A freestream boundary condition that sets only the ingoing characteristics." alt="hexed::Riemann_invariants" shape="rect" coords="172,504,334,528"/>
+<area href="classhexed_1_1No__slip.html" title="No-slip wall boundary condition." alt="hexed::No_slip" shape="rect" coords="172,224,334,248"/>
+<area href="classhexed_1_1Nonpenetration.html" title="Copies the inside state and flips the sign of the surface-normal velocity." alt="hexed::Nonpenetration" shape="rect" coords="172,280,334,304"/>
+<area href="classhexed_1_1Outflow.html" title="for supersonic outlets" alt="hexed::Outflow" shape="rect" coords="172,336,334,360"/>
+<area href="classhexed_1_1Pressure__outflow.html" title="sets pressure on outflow boundaries" alt="hexed::Pressure_outflow" shape="rect" coords="172,392,334,416"/>
+<area href="classhexed_1_1Riemann__invariants.html" title="A freestream boundary condition that sets only the ingoing characteristics." alt="hexed::Riemann_invariants" shape="rect" coords="172,448,334,472"/>
   </map>
 </div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a2f17d4320e8ae4e6f71885dd4e75e943" id="r_a2f17d4320e8ae4e6f71885dd4e75e943"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2f17d4320e8ae4e6f71885dd4e75e943">apply_state</a> (<a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;)=0</td></tr>
-<tr class="memdesc:a2f17d4320e8ae4e6f71885dd4e75e943"><td class="mdescLeft">&#160;</td><td class="mdescRight">applies boundary condition to state variables (Dirichlet BCs)  <br /></td></tr>
-<tr class="separator:a2f17d4320e8ae4e6f71885dd4e75e943"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a68e4790fa7d3df8cbf55aa97a9901626" id="r_a68e4790fa7d3df8cbf55aa97a9901626"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a68e4790fa7d3df8cbf55aa97a9901626">apply_flux</a> (<a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;)=0</td></tr>
-<tr class="memdesc:a68e4790fa7d3df8cbf55aa97a9901626"><td class="mdescLeft">&#160;</td><td class="mdescRight">applies boundary condition to viscous fluxes (if applicable)  <br /></td></tr>
-<tr class="separator:a68e4790fa7d3df8cbf55aa97a9901626"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af3f5c3b44449c8e4081b3f46ee321f00" id="r_af3f5c3b44449c8e4081b3f46ee321f00"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af3f5c3b44449c8e4081b3f46ee321f00">apply_advection</a> (<a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;)</td></tr>
-<tr class="memdesc:af3f5c3b44449c8e4081b3f46ee321f00"><td class="mdescLeft">&#160;</td><td class="mdescRight">applies boundary condition to linear advection equation used to compute nonsmoothness indicator  <br /></td></tr>
-<tr class="separator:af3f5c3b44449c8e4081b3f46ee321f00"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7ad8a4a6d3980c1a21033e2f64efcb2a" id="r_a7ad8a4a6d3980c1a21033e2f64efcb2a"><td class="memItemLeft" align="right" valign="top"><a id="a7ad8a4a6d3980c1a21033e2f64efcb2a" name="a7ad8a4a6d3980c1a21033e2f64efcb2a"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>apply_diffusion</b> (<a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;)</td></tr>
-<tr class="separator:a7ad8a4a6d3980c1a21033e2f64efcb2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a515db5ab1b86f27b3e5b56384c59350a" id="r_a515db5ab1b86f27b3e5b56384c59350a"><td class="memItemLeft" align="right" valign="top"><a id="a515db5ab1b86f27b3e5b56384c59350a" name="a515db5ab1b86f27b3e5b56384c59350a"></a>
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>flux_diffusion</b> (<a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;)</td></tr>
-<tr class="separator:a515db5ab1b86f27b3e5b56384c59350a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4f0dd5fe86b6e94c179b0203b16e5db1" id="r_a4f0dd5fe86b6e94c179b0203b16e5db1"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4f0dd5fe86b6e94c179b0203b16e5db1">init_cache</a> (<a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;)</td></tr>
-<tr class="memdesc:a4f0dd5fe86b6e94c179b0203b16e5db1"><td class="mdescLeft">&#160;</td><td class="mdescRight">initialize <code><a class="el" href="classhexed_1_1Boundary__face.html#a7fd7247d3a437adc4d74256a06e0f1a7" title="can be used to record the state for state-dependent flux boundary conditions">Boundary_face::state_cache</a></code> at beginning of simulation (used by <code><a class="el" href="classhexed_1_1Cache__bc.html">Cache_bc</a></code>)  <br /></td></tr>
-<tr class="separator:a4f0dd5fe86b6e94c179b0203b16e5db1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adb30e7ff9487331d37cea3bb741c102f" id="r_adb30e7ff9487331d37cea3bb741c102f"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adb30e7ff9487331d37cea3bb741c102f">apply_state</a> (<a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;)=0</td></tr>
+<tr class="memdesc:adb30e7ff9487331d37cea3bb741c102f"><td class="mdescLeft">&#160;</td><td class="mdescRight">applies boundary condition to state variables (Dirichlet BCs)  <br /></td></tr>
+<tr class="separator:adb30e7ff9487331d37cea3bb741c102f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0122dfa1cae52c937dd9c736173da26d" id="r_a0122dfa1cae52c937dd9c736173da26d"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0122dfa1cae52c937dd9c736173da26d">apply_flux</a> (<a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;)=0</td></tr>
+<tr class="memdesc:a0122dfa1cae52c937dd9c736173da26d"><td class="mdescLeft">&#160;</td><td class="mdescRight">applies boundary condition to viscous fluxes (if applicable)  <br /></td></tr>
+<tr class="separator:a0122dfa1cae52c937dd9c736173da26d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4c4776f4378e9379b62bbbec1aeed05e" id="r_a4c4776f4378e9379b62bbbec1aeed05e"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4c4776f4378e9379b62bbbec1aeed05e">apply_advection</a> (<a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;)</td></tr>
+<tr class="memdesc:a4c4776f4378e9379b62bbbec1aeed05e"><td class="mdescLeft">&#160;</td><td class="mdescRight">applies boundary condition to linear advection equation used to compute nonsmoothness indicator  <br /></td></tr>
+<tr class="separator:a4c4776f4378e9379b62bbbec1aeed05e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a18ddcd2a69fb3a0bb8333f782a9e6015" id="r_a18ddcd2a69fb3a0bb8333f782a9e6015"><td class="memItemLeft" align="right" valign="top"><a id="a18ddcd2a69fb3a0bb8333f782a9e6015" name="a18ddcd2a69fb3a0bb8333f782a9e6015"></a>
+virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>apply_diffusion</b> (<a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;)</td></tr>
+<tr class="separator:a18ddcd2a69fb3a0bb8333f782a9e6015"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aebc9a4bb87fa08d00366a634336ce90b" id="r_aebc9a4bb87fa08d00366a634336ce90b"><td class="memItemLeft" align="right" valign="top"><a id="aebc9a4bb87fa08d00366a634336ce90b" name="aebc9a4bb87fa08d00366a634336ce90b"></a>
+virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>flux_diffusion</b> (<a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;)</td></tr>
+<tr class="separator:aebc9a4bb87fa08d00366a634336ce90b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad854ab28f138370789bc640fce4e639f" id="r_ad854ab28f138370789bc640fce4e639f"><td class="memItemLeft" align="right" valign="top"><a id="ad854ab28f138370789bc640fce4e639f" name="ad854ab28f138370789bc640fce4e639f"></a>
+virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>init_cache</b> (<a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;)</td></tr>
+<tr class="separator:ad854ab28f138370789bc640fce4e639f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7b3b3adb62cf0f767a8a8a8e9065379c" id="r_a7b3b3adb62cf0f767a8a8a8e9065379c"><td class="memItemLeft" align="right" valign="top"><a id="a7b3b3adb62cf0f767a8a8a8e9065379c" name="a7b3b3adb62cf0f767a8a8a8e9065379c"></a>
+virtual int&#160;</td><td class="memItemRight" valign="bottom"><b>n_prescribed</b> (int n_dim) const</td></tr>
+<tr class="separator:a7b3b3adb62cf0f767a8a8a8e9065379c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ed55859db5e7084d7177cf0db481a4c" id="r_a1ed55859db5e7084d7177cf0db481a4c"><td class="memItemLeft" align="right" valign="top"><a id="a1ed55859db5e7084d7177cf0db481a4c" name="a1ed55859db5e7084d7177cf0db481a4c"></a>
+virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>set_prescribed</b> (<a class="el" href="classhexed_1_1Interpreter.html">Interpreter</a> &amp;, <a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;)</td></tr>
+<tr class="separator:a1ed55859db5e7084d7177cf0db481a4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3bc5a40080258a1ed5bff19884e3e180" id="r_a3bc5a40080258a1ed5bff19884e3e180"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3bc5a40080258a1ed5bff19884e3e180">smooth</a> () const =0</td></tr>
+<tr class="memdesc:a3bc5a40080258a1ed5bff19884e3e180"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns <code>false</code> if this BC tends to cause the flow not to be smooth.  <br /></td></tr>
+<tr class="separator:a3bc5a40080258a1ed5bff19884e3e180"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Abstract class representing an arbitrary flow boundary condition (as opposed to a mesh BC). </p>
+<div class="textblock"><p>Abstract class representing an arbitrary flow boundary condition. </p>
 <p>That is, something that computes a ghost state given an state on the boundary (inside state), a face size, and a Jacobian. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="af3f5c3b44449c8e4081b3f46ee321f00" name="af3f5c3b44449c8e4081b3f46ee321f00"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af3f5c3b44449c8e4081b3f46ee321f00">&#9670;&#160;</a></span>apply_advection()</h2>
+<a id="a4c4776f4378e9379b62bbbec1aeed05e" name="a4c4776f4378e9379b62bbbec1aeed05e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4c4776f4378e9379b62bbbec1aeed05e">&#9670;&#160;</a></span>apply_advection()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -176,7 +184,7 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>flux_diffusio
         <tr>
           <td class="memname">void hexed::Flow_bc::apply_advection </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>bf</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>con</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -189,12 +197,12 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>flux_diffusio
 
 <p>applies boundary condition to linear advection equation used to compute nonsmoothness indicator </p>
 
-<p>Reimplemented in <a class="el" href="classhexed_1_1Copy.html#a18970c63cfd841d35b3dd0d1ec5cad46">hexed::Copy</a>, <a class="el" href="classhexed_1_1No__slip.html#a86b31938c7ce70bf8152ba225987dc09">hexed::No_slip</a>, and <a class="el" href="classhexed_1_1Nonpenetration.html#adad4c6dcf13656d36fd320f522bb0d04">hexed::Nonpenetration</a>.</p>
+<p>Reimplemented in <a class="el" href="classhexed_1_1Copy.html#abba3fa237d7836c0b6248277c528069b">hexed::Copy</a>, <a class="el" href="classhexed_1_1No__slip.html#a27822820d12d0a3511c7f7c7d338f74c">hexed::No_slip</a>, and <a class="el" href="classhexed_1_1Nonpenetration.html#a8b85ddd94c792c7c5634eb8e86470172">hexed::Nonpenetration</a>.</p>
 
 </div>
 </div>
-<a id="a68e4790fa7d3df8cbf55aa97a9901626" name="a68e4790fa7d3df8cbf55aa97a9901626"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a68e4790fa7d3df8cbf55aa97a9901626">&#9670;&#160;</a></span>apply_flux()</h2>
+<a id="a0122dfa1cae52c937dd9c736173da26d" name="a0122dfa1cae52c937dd9c736173da26d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0122dfa1cae52c937dd9c736173da26d">&#9670;&#160;</a></span>apply_flux()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -205,7 +213,7 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>flux_diffusio
         <tr>
           <td class="memname">virtual void hexed::Flow_bc::apply_flux </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -218,12 +226,12 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>flux_diffusio
 
 <p>applies boundary condition to viscous fluxes (if applicable) </p>
 
-<p>Implemented in <a class="el" href="classhexed_1_1Cache__bc.html#a1a80139112879f9856ad173952ad3bf3">hexed::Cache_bc</a>, <a class="el" href="classhexed_1_1Copy.html#aad9965c01b8d8a5757de64efdd31a669">hexed::Copy</a>, <a class="el" href="classhexed_1_1Freestream.html#a91e10e09a87c664c88aaf429bc2396ee">hexed::Freestream</a>, <a class="el" href="classhexed_1_1Function__bc.html#a3c6cbfa5872d4d797f99db5e9e6effe9">hexed::Function_bc</a>, <a class="el" href="classhexed_1_1No__slip.html#a7a8221f2d699ee955d741714f3c5413f">hexed::No_slip</a>, <a class="el" href="classhexed_1_1Nonpenetration.html#a58a0ce3d0df4cca3173664999b3cc434">hexed::Nonpenetration</a>, <a class="el" href="classhexed_1_1Outflow.html#a0d650df03dff70472944681456a22344">hexed::Outflow</a>, <a class="el" href="classhexed_1_1Pressure__outflow.html#a6f091b55bd799cce91df0a49f80dd614">hexed::Pressure_outflow</a>, and <a class="el" href="classhexed_1_1Riemann__invariants.html#ad5353550a4709838cf881c5b6116ca2c">hexed::Riemann_invariants</a>.</p>
+<p>Implemented in <a class="el" href="classhexed_1_1Copy.html#aaeb27d20a36af6c622a7861552454471">hexed::Copy</a>, <a class="el" href="classhexed_1_1Expression__bc.html#ab9599a6b0fa2be436de94885615b28f3">hexed::Expression_bc</a>, <a class="el" href="classhexed_1_1Freestream.html#ae29403b15c903c25d15197f95bc65e44">hexed::Freestream</a>, <a class="el" href="classhexed_1_1No__slip.html#acf0825f93d93432435469338598e8def">hexed::No_slip</a>, <a class="el" href="classhexed_1_1Nonpenetration.html#a679eebdf27003203a8a0daaf9393e22c">hexed::Nonpenetration</a>, <a class="el" href="classhexed_1_1Outflow.html#af84766de5b6ca000380c727e280c72f7">hexed::Outflow</a>, <a class="el" href="classhexed_1_1Pressure__outflow.html#a776543428cb4332a7c00434b9f26a5c4">hexed::Pressure_outflow</a>, and <a class="el" href="classhexed_1_1Riemann__invariants.html#aadc23659404b4cb268e85c22e2c22f37">hexed::Riemann_invariants</a>.</p>
 
 </div>
 </div>
-<a id="a2f17d4320e8ae4e6f71885dd4e75e943" name="a2f17d4320e8ae4e6f71885dd4e75e943"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2f17d4320e8ae4e6f71885dd4e75e943">&#9670;&#160;</a></span>apply_state()</h2>
+<a id="adb30e7ff9487331d37cea3bb741c102f" name="adb30e7ff9487331d37cea3bb741c102f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adb30e7ff9487331d37cea3bb741c102f">&#9670;&#160;</a></span>apply_state()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -234,7 +242,7 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>flux_diffusio
         <tr>
           <td class="memname">virtual void hexed::Flow_bc::apply_state </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -248,12 +256,12 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>flux_diffusio
 <p>applies boundary condition to state variables (Dirichlet BCs) </p>
 <p>writes to the first <code>n_var()*size()</code> entries of <code>ghost_state()</code> (called on the provided <code><a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a></code>.) </p>
 
-<p>Implemented in <a class="el" href="classhexed_1_1Cache__bc.html#aac56053bd9fc6f6e2e5bd2734ef18e68">hexed::Cache_bc</a>, <a class="el" href="classhexed_1_1Copy.html#a94e3b237509811c9809ff3fc8597a37e">hexed::Copy</a>, <a class="el" href="classhexed_1_1Freestream.html#a9511d23de473c3ac8744aac402ad5554">hexed::Freestream</a>, <a class="el" href="classhexed_1_1Function__bc.html#a041b9f35ff48ce2c0d206b8c6951f268">hexed::Function_bc</a>, <a class="el" href="classhexed_1_1No__slip.html#ae2cf8a2b7ead08296ab545fe2ae0c0dc">hexed::No_slip</a>, <a class="el" href="classhexed_1_1Nonpenetration.html#ae22baf2feee7c67f92778ccaa5b1cad8">hexed::Nonpenetration</a>, <a class="el" href="classhexed_1_1Outflow.html#ae1723347a45ace2c1725780b7be726a8">hexed::Outflow</a>, <a class="el" href="classhexed_1_1Pressure__outflow.html#a96372f9a56b2b8e77e2b98293aea1ecd">hexed::Pressure_outflow</a>, and <a class="el" href="classhexed_1_1Riemann__invariants.html#aa5c5c7bc7c2f3fa48ade1c0abc960201">hexed::Riemann_invariants</a>.</p>
+<p>Implemented in <a class="el" href="classhexed_1_1Copy.html#a653b1d084ca186afc59161b9e4d39c26">hexed::Copy</a>, <a class="el" href="classhexed_1_1Expression__bc.html#a77c9fa58cc5dab2a9105e37f79cb48a3">hexed::Expression_bc</a>, <a class="el" href="classhexed_1_1Freestream.html#ad88de6be617250f6c4d584be1a3a86a5">hexed::Freestream</a>, <a class="el" href="classhexed_1_1No__slip.html#aec33f24a8ba2a15c6b476ccf717aa318">hexed::No_slip</a>, <a class="el" href="classhexed_1_1Nonpenetration.html#ab745a2218bc16b740747a701f507c87a">hexed::Nonpenetration</a>, <a class="el" href="classhexed_1_1Outflow.html#aea2441818088f0b75687c82c11f0ce64">hexed::Outflow</a>, <a class="el" href="classhexed_1_1Pressure__outflow.html#a7a896e7ace8a61488a18f7501e6342a3">hexed::Pressure_outflow</a>, and <a class="el" href="classhexed_1_1Riemann__invariants.html#aec39f6d6382123e3b65ec29bcac2020b">hexed::Riemann_invariants</a>.</p>
 
 </div>
 </div>
-<a id="a4f0dd5fe86b6e94c179b0203b16e5db1" name="a4f0dd5fe86b6e94c179b0203b16e5db1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4f0dd5fe86b6e94c179b0203b16e5db1">&#9670;&#160;</a></span>init_cache()</h2>
+<a id="a3bc5a40080258a1ed5bff19884e3e180" name="a3bc5a40080258a1ed5bff19884e3e180"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3bc5a40080258a1ed5bff19884e3e180">&#9670;&#160;</a></span>smooth()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -262,22 +270,23 @@ virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>flux_diffusio
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">virtual void hexed::Flow_bc::init_cache </td>
+          <td class="memname">virtual bool hexed::Flow_bc::smooth </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p>initialize <code><a class="el" href="classhexed_1_1Boundary__face.html#a7fd7247d3a437adc4d74256a06e0f1a7" title="can be used to record the state for state-dependent flux boundary conditions">Boundary_face::state_cache</a></code> at beginning of simulation (used by <code><a class="el" href="classhexed_1_1Cache__bc.html">Cache_bc</a></code>) </p>
+<p>Returns <code>false</code> if this BC tends to cause the flow not to be smooth. </p>
+<p>Farfield BCs should be expected to cause non-smoothness, especially if they are over-constrained, whereas wall boundary conditions should not. When performing AMR, cells on non-smooth boundaries will receive special treatment to avoid excessive refinement. So, when in doubt, have new boundary conditions return <code>true</code> so that they can be refined. </p>
 
-<p>Reimplemented in <a class="el" href="classhexed_1_1Cache__bc.html#ab5da516e4a45a8371b90f301fc9cf4b1">hexed::Cache_bc</a>.</p>
+<p>Implemented in <a class="el" href="classhexed_1_1Copy.html#a0943ecc6b4ebaeb7dce6a61d75f857d5">hexed::Copy</a>, <a class="el" href="classhexed_1_1Expression__bc.html#ab179bac89abbe9845ff7d9d298572076">hexed::Expression_bc</a>, <a class="el" href="classhexed_1_1Freestream.html#aac713bcef10b13bffa6478be4abde92c">hexed::Freestream</a>, <a class="el" href="classhexed_1_1No__slip.html#a7b5bad7b07dfea3b7c85f31b9359469b">hexed::No_slip</a>, <a class="el" href="classhexed_1_1Nonpenetration.html#a6ba830bc7a6fdeb0c1542c0d9d387791">hexed::Nonpenetration</a>, <a class="el" href="classhexed_1_1Outflow.html#a376dee81371c795614c9478096b8b7dd">hexed::Outflow</a>, <a class="el" href="classhexed_1_1Pressure__outflow.html#a2f20e5e93a5e7662351f9e59dd49ff77">hexed::Pressure_outflow</a>, and <a class="el" href="classhexed_1_1Riemann__invariants.html#a6aa9448bf6dcc29ab18c1c0d0915f41e">hexed::Riemann_invariants</a>.</p>
 
 </div>
 </div>

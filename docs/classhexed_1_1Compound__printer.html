@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -134,8 +134,11 @@ Inheritance diagram for hexed::Compound_printer:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a777b402e361bd475d850979a48541acf" id="r_a777b402e361bd475d850979a48541acf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a777b402e361bd475d850979a48541acf">operator()</a> (std::string message, bool emph=false) override</td></tr>
-<tr class="separator:a777b402e361bd475d850979a48541acf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afe8b752ebe29354c92eaff72acac47bb" id="r_afe8b752ebe29354c92eaff72acac47bb"><td class="memItemLeft" align="right" valign="top"><a id="afe8b752ebe29354c92eaff72acac47bb" name="afe8b752ebe29354c92eaff72acac47bb"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>Compound_printer</b> (std::vector&lt; std::shared_ptr&lt; <a class="el" href="classhexed_1_1Printer.html">Printer</a> &gt; &gt;)</td></tr>
+<tr class="separator:afe8b752ebe29354c92eaff72acac47bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae9c7863c973bc3479e2bed4f1bd48d9b" id="r_ae9c7863c973bc3479e2bed4f1bd48d9b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae9c7863c973bc3479e2bed4f1bd48d9b">operator()</a> (std::string message, bool emph=false, bool replace=false) override</td></tr>
+<tr class="separator:ae9c7863c973bc3479e2bed4f1bd48d9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -148,8 +151,8 @@ std::vector&lt; std::shared_ptr&lt; <a class="el" href="classhexed_1_1Printer.ht
 <div class="textblock"><p><code><a class="el" href="classhexed_1_1Printer.html" title="abstract base class for handling different variations of printing things for user">Printer</a></code> which is just a combination of other printers. </p>
 <p>Anything you tell it to print will be forwarded to all of <code><a class="el" href="#a67f0e933fd11af8a38d06f0a9489f165" title="list of printers—feel free to modify">Compound_printer::printers</a></code> </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a777b402e361bd475d850979a48541acf" name="a777b402e361bd475d850979a48541acf"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a777b402e361bd475d850979a48541acf">&#9670;&#160;</a></span>operator()()</h2>
+<a id="ae9c7863c973bc3479e2bed4f1bd48d9b" name="ae9c7863c973bc3479e2bed4f1bd48d9b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae9c7863c973bc3479e2bed4f1bd48d9b">&#9670;&#160;</a></span>operator()()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -165,29 +168,36 @@ std::vector&lt; std::shared_ptr&lt; <a class="el" href="classhexed_1_1Printer.ht
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>emph</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>emph</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>replace</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">message</td><td>what you want to print </td></tr>
-    <tr><td class="paramname">emph</td><td>if <code>true</code>, some form of emphasis formatting will be used, if possible </td></tr>
+    <tr><td class="paramname">emph</td><td>If <code>true</code>, some form of emphasis formatting will be used, if possible. </td></tr>
+    <tr><td class="paramname">replace</td><td>If <code>true</code>, <code>message</code> will <em>replace</em> the current line of text on the screen, rather than be appended to it. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p>Implements <a class="el" href="classhexed_1_1Printer.html#ae9befe87d7d9544dc412a138d6ca0156">hexed::Printer</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Printer.html#a043545a69d22c2694f1ef41a7c169e6f">hexed::Printer</a>.</p>
 
 </div>
 </div>
-<hr/>The documentation for this class was generated from the following file:<ul>
+<hr/>The documentation for this class was generated from the following files:<ul>
 <li>/home/micaiah/Desktop/hexed/include/<b>Printer.hpp</b></li>
+<li>/home/micaiah/Desktop/hexed/libhexed/<b>Printer.cpp</b></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

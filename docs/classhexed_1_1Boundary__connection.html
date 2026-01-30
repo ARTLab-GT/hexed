@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -113,98 +113,120 @@ $(function(){initNavTree('classhexed_1_1Boundary__connection.html',''); initResi
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="classhexed_1_1Boundary__connection-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">hexed::Boundary_connection Class Reference<span class="mlabels"><span class="mlabel">abstract</span></span></div></div>
+  <div class="headertitle"><div class="title">hexed::Boundary_connection Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
-
-<p>A <code><a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a></code> that also provides details about the connection for the neighbor flux computation and requests for a particular <code><a class="el" href="classhexed_1_1Boundary__condition.html">Boundary_condition</a></code> to be applied to it.  
- <a href="#details">More...</a></p>
-
-<p><code>#include &lt;connection.hpp&gt;</code></p>
 <div class="dynheader">
 Inheritance diagram for hexed::Boundary_connection:</div>
 <div class="dyncontent">
  <div class="center">
   <img src="classhexed_1_1Boundary__connection.png" usemap="#hexed::Boundary_5Fconnection_map" alt=""/>
   <map id="hexed::Boundary_5Fconnection_map" name="hexed::Boundary_5Fconnection_map">
-<area href="classhexed_1_1Boundary__face.html" alt="hexed::Boundary_face" shape="rect" coords="0,112,279,136"/>
-<area href="classhexed_1_1Face__connection_3_01Deformed__element_01_4.html" alt="hexed::Face_connection&lt; Deformed_element &gt;" shape="rect" coords="289,112,568,136"/>
-<area href="classhexed_1_1Kernel__connection.html" title="Represents a connection between elements as the kernel sees it." alt="hexed::Kernel_connection" shape="rect" coords="289,56,568,80"/>
-<area href="classhexed_1_1Connection.html" alt="hexed::Connection" shape="rect" coords="289,0,568,24"/>
-<area href="classhexed_1_1Typed__bound__connection.html" alt="hexed::Typed_bound_connection&lt; element_t &gt;" shape="rect" coords="144,224,423,248"/>
+<area href="classhexed_1_1Mortal.html" title="represents an object that could die at any moment" alt="hexed::Mortal" shape="rect" coords="0,112,219,136"/>
+<area href="classhexed_1_1mutual_1_1Multiple.html" alt="hexed::mutual::Multiple&lt; void, void &gt;" shape="rect" coords="0,56,219,80"/>
+<area href="classhexed_1_1mutual_1_1Base.html" alt="hexed::mutual::Base&lt; void, void &gt;" shape="rect" coords="0,0,219,24"/>
   </map>
 </div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:aa761c04fcaca7669de94b7f29b8b5614" id="r_aa761c04fcaca7669de94b7f29b8b5614"><td class="memItemLeft" align="right" valign="top"><a id="aa761c04fcaca7669de94b7f29b8b5614" name="aa761c04fcaca7669de94b7f29b8b5614"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>Boundary_connection</b> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a> params)</td></tr>
-<tr class="separator:aa761c04fcaca7669de94b7f29b8b5614"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6a062339357bcbd52253950e177e93a0" id="r_a6a062339357bcbd52253950e177e93a0"><td class="memItemLeft" align="right" valign="top"><a id="a6a062339357bcbd52253950e177e93a0" name="a6a062339357bcbd52253950e177e93a0"></a>
-virtual <a class="el" href="classhexed_1_1Element.html">Element</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>element</b> ()=0</td></tr>
-<tr class="separator:a6a062339357bcbd52253950e177e93a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a95c1c2049abcfb31a6abbd019fe64e17" id="r_a95c1c2049abcfb31a6abbd019fe64e17"><td class="memItemLeft" align="right" valign="top"><a id="a95c1c2049abcfb31a6abbd019fe64e17" name="a95c1c2049abcfb31a6abbd019fe64e17"></a>
-virtual int&#160;</td><td class="memItemRight" valign="bottom"><b>bound_cond_serial_n</b> ()=0</td></tr>
-<tr class="separator:a95c1c2049abcfb31a6abbd019fe64e17"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="inherit_header pub_methods_classhexed_1_1Boundary__face"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1Boundary__face')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1Boundary__face.html">hexed::Boundary_face</a></td></tr>
-<tr class="memitem:aea2ae64747f03d418ccf3dd339c0ca2f inherit pub_methods_classhexed_1_1Boundary__face" id="r_aea2ae64747f03d418ccf3dd339c0ca2f"><td class="memItemLeft" align="right" valign="top">
-virtual <a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a>&#160;</td><td class="memItemRight" valign="bottom"><b>storage_params</b> ()=0</td></tr>
-<tr class="separator:aea2ae64747f03d418ccf3dd339c0ca2f inherit pub_methods_classhexed_1_1Boundary__face"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afdc81cc96460b0f1632d87671550c867 inherit pub_methods_classhexed_1_1Boundary__face" id="r_afdc81cc96460b0f1632d87671550c867"><td class="memItemLeft" align="right" valign="top">
-virtual double *&#160;</td><td class="memItemRight" valign="bottom"><b>ghost_face</b> (bool is_ldg)=0</td></tr>
-<tr class="separator:afdc81cc96460b0f1632d87671550c867 inherit pub_methods_classhexed_1_1Boundary__face"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae2d75f42b4851d86a03345d200aab3d8 inherit pub_methods_classhexed_1_1Boundary__face" id="r_ae2d75f42b4851d86a03345d200aab3d8"><td class="memItemLeft" align="right" valign="top">
-virtual double *&#160;</td><td class="memItemRight" valign="bottom"><b>inside_face</b> (bool is_ldg)=0</td></tr>
-<tr class="separator:ae2d75f42b4851d86a03345d200aab3d8 inherit pub_methods_classhexed_1_1Boundary__face"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4c1121de86186812d3e47d4f65feaeba inherit pub_methods_classhexed_1_1Boundary__face" id="r_a4c1121de86186812d3e47d4f65feaeba"><td class="memItemLeft" align="right" valign="top">
-virtual int&#160;</td><td class="memItemRight" valign="bottom"><b>i_dim</b> ()=0</td></tr>
-<tr class="separator:a4c1121de86186812d3e47d4f65feaeba inherit pub_methods_classhexed_1_1Boundary__face"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a427b530e71b2517564817377401f2018 inherit pub_methods_classhexed_1_1Boundary__face" id="r_a427b530e71b2517564817377401f2018"><td class="memItemLeft" align="right" valign="top">
-virtual bool&#160;</td><td class="memItemRight" valign="bottom"><b>inside_face_sign</b> ()=0</td></tr>
-<tr class="separator:a427b530e71b2517564817377401f2018 inherit pub_methods_classhexed_1_1Boundary__face"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a72bb71a5ff66509de04da9eb3f069d2c inherit pub_methods_classhexed_1_1Boundary__face" id="r_a72bb71a5ff66509de04da9eb3f069d2c"><td class="memItemLeft" align="right" valign="top">virtual double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Boundary__face.html#a72bb71a5ff66509de04da9eb3f069d2c">surface_normal</a> ()=0</td></tr>
-<tr class="separator:a72bb71a5ff66509de04da9eb3f069d2c inherit pub_methods_classhexed_1_1Boundary__face"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3ebe4de3e7d8872b9dd488cef4cb6ef6 inherit pub_methods_classhexed_1_1Boundary__face" id="r_a3ebe4de3e7d8872b9dd488cef4cb6ef6"><td class="memItemLeft" align="right" valign="top">
-virtual double *&#160;</td><td class="memItemRight" valign="bottom"><b>surface_position</b> ()=0</td></tr>
-<tr class="separator:a3ebe4de3e7d8872b9dd488cef4cb6ef6 inherit pub_methods_classhexed_1_1Boundary__face"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7fd7247d3a437adc4d74256a06e0f1a7 inherit pub_methods_classhexed_1_1Boundary__face" id="r_a7fd7247d3a437adc4d74256a06e0f1a7"><td class="memItemLeft" align="right" valign="top">virtual double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Boundary__face.html#a7fd7247d3a437adc4d74256a06e0f1a7">state_cache</a> ()=0</td></tr>
-<tr class="memdesc:a7fd7247d3a437adc4d74256a06e0f1a7 inherit pub_methods_classhexed_1_1Boundary__face"><td class="mdescLeft">&#160;</td><td class="mdescRight">can be used to record the state for state-dependent flux boundary conditions  <br /></td></tr>
-<tr class="separator:a7fd7247d3a437adc4d74256a06e0f1a7 inherit pub_methods_classhexed_1_1Boundary__face"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a89b0a40527b89790fc1b2480309655e5 inherit pub_methods_classhexed_1_1Boundary__face" id="r_a89b0a40527b89790fc1b2480309655e5"><td class="memItemLeft" align="right" valign="top">virtual double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Boundary__face.html#a89b0a40527b89790fc1b2480309655e5">flux_cache</a> ()=0</td></tr>
-<tr class="memdesc:a89b0a40527b89790fc1b2480309655e5 inherit pub_methods_classhexed_1_1Boundary__face"><td class="mdescLeft">&#160;</td><td class="mdescRight">is used to record the flux for surface visualization/integrals  <br /></td></tr>
-<tr class="separator:a89b0a40527b89790fc1b2480309655e5 inherit pub_methods_classhexed_1_1Boundary__face"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="inherit_header pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1Face__connection_3_01Deformed__element_01_4.html">hexed::Face_connection&lt; Deformed_element &gt;</a></td></tr>
-<tr class="memitem:aa248ecbda3bb680f84d017fef4eae7af inherit pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4" id="r_aa248ecbda3bb680f84d017fef4eae7af"><td class="memItemLeft" align="right" valign="top">
-&#160;</td><td class="memItemRight" valign="bottom"><b>Face_connection</b> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a> params)</td></tr>
-<tr class="separator:aa248ecbda3bb680f84d017fef4eae7af inherit pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa8dee5a6b74518c6be45a780a52bd607 inherit pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4" id="r_aa8dee5a6b74518c6be45a780a52bd607"><td class="memItemLeft" align="right" valign="top">
-virtual <a class="el" href="classhexed_1_1Con__dir.html">Con_dir</a>&lt; <a class="el" href="classhexed_1_1Deformed__element.html">Deformed_element</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>direction</b> ()=0</td></tr>
-<tr class="separator:aa8dee5a6b74518c6be45a780a52bd607 inherit pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9e0dd2ef11eb49691a707b14cb8a48fc inherit pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4" id="r_a9e0dd2ef11eb49691a707b14cb8a48fc"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Face__connection_3_01Deformed__element_01_4.html#a9e0dd2ef11eb49691a707b14cb8a48fc">state</a> (int i_side, bool is_ldg) override</td></tr>
-<tr class="memdesc:a9e0dd2ef11eb49691a707b14cb8a48fc inherit pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4"><td class="mdescLeft">&#160;</td><td class="mdescRight">state data for one side and for either the extrapolated state or the LDG storage  <br /></td></tr>
-<tr class="separator:a9e0dd2ef11eb49691a707b14cb8a48fc inherit pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a167c4b525b23ccef45fb53ad50cd3714 inherit pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4" id="r_a167c4b525b23ccef45fb53ad50cd3714"><td class="memItemLeft" align="right" valign="top">
-double *&#160;</td><td class="memItemRight" valign="bottom"><b>normal</b> (int i_side)</td></tr>
-<tr class="separator:a167c4b525b23ccef45fb53ad50cd3714 inherit pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2e4ecc68169c29238149aca0cfa370b7 inherit pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4" id="r_a2e4ecc68169c29238149aca0cfa370b7"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Face__connection_3_01Deformed__element_01_4.html#a2e4ecc68169c29238149aca0cfa370b7">normal</a> () override</td></tr>
-<tr class="memdesc:a2e4ecc68169c29238149aca0cfa370b7 inherit pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4"><td class="mdescLeft">&#160;</td><td class="mdescRight">area-weighted face normal vector. layout: [i_dim][i_face_qpoint]  <br /></td></tr>
-<tr class="separator:a2e4ecc68169c29238149aca0cfa370b7 inherit pub_methods_classhexed_1_1Face__connection_3_01Deformed__element_01_4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="inherit_header pub_methods_classhexed_1_1Kernel__connection"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1Kernel__connection')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1Kernel__connection.html">hexed::Kernel_connection</a></td></tr>
-<tr class="memitem:ad6057cf93c9a50933f3729d42fb8058d inherit pub_methods_classhexed_1_1Kernel__connection" id="r_ad6057cf93c9a50933f3729d42fb8058d"><td class="memItemLeft" align="right" valign="top">virtual int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Kernel__connection.html#ad6057cf93c9a50933f3729d42fb8058d">mask</a> (int i_side)=0</td></tr>
-<tr class="memdesc:ad6057cf93c9a50933f3729d42fb8058d inherit pub_methods_classhexed_1_1Kernel__connection"><td class="mdescLeft">&#160;</td><td class="mdescRight">whether the element on side <code>i_side</code> is included in mesh masking  <br /></td></tr>
-<tr class="separator:ad6057cf93c9a50933f3729d42fb8058d inherit pub_methods_classhexed_1_1Kernel__connection"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a656df4a43e4d08ca4c7238c88eb903fd inherit pub_methods_classhexed_1_1Kernel__connection" id="r_a656df4a43e4d08ca4c7238c88eb903fd"><td class="memItemLeft" align="right" valign="top">
-int&#160;</td><td class="memItemRight" valign="bottom"><b>mask</b> ()</td></tr>
-<tr class="separator:a656df4a43e4d08ca4c7238c88eb903fd inherit pub_methods_classhexed_1_1Kernel__connection"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="inherit_header pub_methods_classhexed_1_1Connection"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1Connection')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1Connection.html">hexed::Connection</a></td></tr>
-<tr class="memitem:a28fbd70f57efc4b868f87c13af9b7b29 inherit pub_methods_classhexed_1_1Connection" id="r_a28fbd70f57efc4b868f87c13af9b7b29"><td class="memItemLeft" align="right" valign="top">
-virtual <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a>&#160;</td><td class="memItemRight" valign="bottom"><b>get_direction</b> ()=0</td></tr>
-<tr class="separator:a28fbd70f57efc4b868f87c13af9b7b29 inherit pub_methods_classhexed_1_1Connection"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab9fede7116abce242ea557b8918dffdf" id="r_ab9fede7116abce242ea557b8918dffdf"><td class="memItemLeft" align="right" valign="top"><a id="ab9fede7116abce242ea557b8918dffdf" name="ab9fede7116abce242ea557b8918dffdf"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>Boundary_connection</b> (<a class="el" href="classhexed_1_1Face.html">Face</a> &amp;inside, int boundary_condition, int n_prescribed)</td></tr>
+<tr class="separator:ab9fede7116abce242ea557b8918dffdf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad08cdfcff69c297198c5432009fdb4ec" id="r_ad08cdfcff69c297198c5432009fdb4ec"><td class="memItemLeft" align="right" valign="top"><a id="ad08cdfcff69c297198c5432009fdb4ec" name="ad08cdfcff69c297198c5432009fdb4ec"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>boundary_condition</b> () const</td></tr>
+<tr class="separator:ad08cdfcff69c297198c5432009fdb4ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7690070ae492af16faa2020cb9fbb4dd" id="r_a7690070ae492af16faa2020cb9fbb4dd"><td class="memItemLeft" align="right" valign="top"><a id="a7690070ae492af16faa2020cb9fbb4dd" name="a7690070ae492af16faa2020cb9fbb4dd"></a>
+<a class="el" href="classhexed_1_1Neighbor__connection.html">Neighbor_connection</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>neighbor_connection</b> ()</td></tr>
+<tr class="separator:a7690070ae492af16faa2020cb9fbb4dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0af4727fdea699f0ba86e98d40138254" id="r_a0af4727fdea699f0ba86e98d40138254"><td class="memItemLeft" align="right" valign="top"><a id="a0af4727fdea699f0ba86e98d40138254" name="a0af4727fdea699f0ba86e98d40138254"></a>
+<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a>&#160;</td><td class="memItemRight" valign="bottom"><b>storage_params</b> ()</td></tr>
+<tr class="separator:a0af4727fdea699f0ba86e98d40138254"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a955babe622d1e3bdfb7555ebce21554f" id="r_a955babe622d1e3bdfb7555ebce21554f"><td class="memItemLeft" align="right" valign="top"><a id="a955babe622d1e3bdfb7555ebce21554f" name="a955babe622d1e3bdfb7555ebce21554f"></a>
+const <a class="el" href="classhexed_1_1Face.html">Face</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>inside</b> () const</td></tr>
+<tr class="separator:a955babe622d1e3bdfb7555ebce21554f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acd15a991f905569d74c8c5659b969f7a" id="r_acd15a991f905569d74c8c5659b969f7a"><td class="memItemLeft" align="right" valign="top"><a id="acd15a991f905569d74c8c5659b969f7a" name="acd15a991f905569d74c8c5659b969f7a"></a>
+<a class="el" href="classhexed_1_1Face.html">Face</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>inside</b> ()</td></tr>
+<tr class="separator:acd15a991f905569d74c8c5659b969f7a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a07dcf3e532b7c45cc201d6af816b3e15" id="r_a07dcf3e532b7c45cc201d6af816b3e15"><td class="memItemLeft" align="right" valign="top"><a id="a07dcf3e532b7c45cc201d6af816b3e15" name="a07dcf3e532b7c45cc201d6af816b3e15"></a>
+<a class="el" href="classhexed_1_1Face.html">Face</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>ghost</b> ()</td></tr>
+<tr class="separator:a07dcf3e532b7c45cc201d6af816b3e15"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4a286afbcb510976773f8b1c9f0043a4" id="r_a4a286afbcb510976773f8b1c9f0043a4"><td class="memItemLeft" align="right" valign="top"><a id="a4a286afbcb510976773f8b1c9f0043a4" name="a4a286afbcb510976773f8b1c9f0043a4"></a>
+const <a class="el" href="classhexed_1_1Face.html">Face</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>ghost</b> () const</td></tr>
+<tr class="separator:a4a286afbcb510976773f8b1c9f0043a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a87a60968b1a827b670f4254c227064fe" id="r_a87a60968b1a827b670f4254c227064fe"><td class="memItemLeft" align="right" valign="top"><a id="a87a60968b1a827b670f4254c227064fe" name="a87a60968b1a827b670f4254c227064fe"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>normal</b> ()</td></tr>
+<tr class="separator:a87a60968b1a827b670f4254c227064fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a334c7592075fdb5da096162077c952ba" id="r_a334c7592075fdb5da096162077c952ba"><td class="memItemLeft" align="right" valign="top"><a id="a334c7592075fdb5da096162077c952ba" name="a334c7592075fdb5da096162077c952ba"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>position</b> ()</td></tr>
+<tr class="separator:a334c7592075fdb5da096162077c952ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acd792f14852cade0310940c24ed94986" id="r_acd792f14852cade0310940c24ed94986"><td class="memItemLeft" align="right" valign="top"><a id="acd792f14852cade0310940c24ed94986" name="acd792f14852cade0310940c24ed94986"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>state_cache</b> ()</td></tr>
+<tr class="separator:acd792f14852cade0310940c24ed94986"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7f079cc00a1e5cb98acf5b6b80b82742" id="r_a7f079cc00a1e5cb98acf5b6b80b82742"><td class="memItemLeft" align="right" valign="top"><a id="a7f079cc00a1e5cb98acf5b6b80b82742" name="a7f079cc00a1e5cb98acf5b6b80b82742"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>flux_cache</b> ()</td></tr>
+<tr class="separator:a7f079cc00a1e5cb98acf5b6b80b82742"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac9c33ef52aab032c96060cbe660cb19e" id="r_ac9c33ef52aab032c96060cbe660cb19e"><td class="memItemLeft" align="right" valign="top"><a id="ac9c33ef52aab032c96060cbe660cb19e" name="ac9c33ef52aab032c96060cbe660cb19e"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>prescribed_data</b> ()</td></tr>
+<tr class="separator:ac9c33ef52aab032c96060cbe660cb19e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_methods_classhexed_1_1mutual_1_1Multiple"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1mutual_1_1Multiple')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">hexed::mutual::Multiple&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:ac5709169f0c82d616972cdfc1e9ea726 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_ac5709169f0c82d616972cdfc1e9ea726"><td class="memItemLeft" align="right" valign="top">
+&#160;</td><td class="memItemRight" valign="bottom"><b>Multiple</b> (const <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;)=delete</td></tr>
+<tr class="separator:ac5709169f0c82d616972cdfc1e9ea726 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae7b87ca4d9447502837fe6e84932e905 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_ae7b87ca4d9447502837fe6e84932e905"><td class="memItemLeft" align="right" valign="top">
+&#160;</td><td class="memItemRight" valign="bottom"><b>Multiple</b> (<a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;&amp;that)</td></tr>
+<tr class="memdesc:ae7b87ca4d9447502837fe6e84932e905 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="mdescLeft">&#160;</td><td class="mdescRight">steals all of <code>that</code>'s partners, leaving <code>that</code> unconnected <br /></td></tr>
+<tr class="separator:ae7b87ca4d9447502837fe6e84932e905 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8e5b792c6fb2683c8a61dae4b6cc5789 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_a8e5b792c6fb2683c8a61dae4b6cc5789"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;)=delete</td></tr>
+<tr class="separator:a8e5b792c6fb2683c8a61dae4b6cc5789 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a74659e42b69d3f5368acbb6a61bb89c3 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_a74659e42b69d3f5368acbb6a61bb89c3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1mutual_1_1Multiple.html#a74659e42b69d3f5368acbb6a61bb89c3">operator=</a> (<a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;&amp;that)</td></tr>
+<tr class="memdesc:a74659e42b69d3f5368acbb6a61bb89c3 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="mdescLeft">&#160;</td><td class="mdescRight">steals all of <code>that</code>'s partners, leaving <code>that</code> unconnected  <br /></td></tr>
+<tr class="separator:a74659e42b69d3f5368acbb6a61bb89c3 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a230649ea636b1b0752747c3221612530 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_a230649ea636b1b0752747c3221612530"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>partners</b> ()</td></tr>
+<tr class="memdesc:a230649ea636b1b0752747c3221612530 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="mdescLeft">&#160;</td><td class="mdescRight">provides access to the list of partners <br /></td></tr>
+<tr class="separator:a230649ea636b1b0752747c3221612530 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29572e0aa91e2dc245516805ba8196e4 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_a29572e0aa91e2dc245516805ba8196e4"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; const <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>partners</b> () const</td></tr>
+<tr class="memdesc:a29572e0aa91e2dc245516805ba8196e4 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="mdescLeft">&#160;</td><td class="mdescRight">provides access to the list of partners <br /></td></tr>
+<tr class="separator:a29572e0aa91e2dc245516805ba8196e4 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:aeeed0b817fca1e67a790bbb8047a1cf2 inherit pub_methods_classhexed_1_1mutual_1_1Base" id="r_aeeed0b817fca1e67a790bbb8047a1cf2"><td class="memItemLeft" align="right" valign="top">
+virtual void *&#160;</td><td class="memItemRight" valign="bottom"><b>_mine</b> ()</td></tr>
+<tr class="separator:aeeed0b817fca1e67a790bbb8047a1cf2 inherit pub_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pub_methods_classhexed_1_1mutual_1_1Base" id="r_a8ea607c1db97e907d1eb3a13bc4c83a2"><td class="memItemLeft" align="right" valign="top">
+virtual const void *&#160;</td><td class="memItemRight" valign="bottom"><b>_mine</b> () const</td></tr>
+<tr class="memdesc:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pub_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pub_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
+Additional Inherited Members</h2></td></tr>
+<tr class="inherit_header pro_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_af879b15e305c3ba3b4541c3a34c2838b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1mutual_1_1Base.html#af879b15e305c3ba3b4541c3a34c2838b">_connect</a> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">may be overridden by derived classes to provide partners to data of some arbitrary type <code>T</code>  <br /></td></tr>
+<tr class="separator:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_a73cb219a6412d415c02c1d7500f730eb"><td class="memItemLeft" align="right" valign="top">
+void&#160;</td><td class="memItemRight" valign="bottom"><b>_disconnect</b> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">mutually disconnects <code>this</code> and <code>that</code> by calling both of their <code><a class="el" href="classhexed_1_1mutual_1_1Base.html#a26dde95d6491766fbc6e7f64aa7a5562">_unset()</a></code> member functions <br /></td></tr>
+<tr class="separator:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_static_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_static_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Static Protected Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base" id="r_a5f740c8da15c53af10fefaf493d4127f"><td class="memItemLeft" align="right" valign="top">
+static void *&#160;</td><td class="memItemRight" valign="bottom"><b>_yours</b> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">Accesses the <code>_mine()</code> of <code>that</code> <br /></td></tr>
+<tr class="separator:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base" id="r_a751975e7405f0ca09b12b459d052b78c"><td class="memItemLeft" align="right" valign="top">
+static const void *&#160;</td><td class="memItemRight" valign="bottom"><b>_yours</b> (const <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_attribs_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_attribs_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Protected Attributes inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:ada381fb91093abc2366bd321d7679e90 inherit pro_attribs_classhexed_1_1mutual_1_1Base" id="r_ada381fb91093abc2366bd321d7679e90"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1Lock.html">Lock</a>&#160;</td><td class="memItemRight" valign="bottom"><b>_lock</b></td></tr>
+<tr class="separator:ada381fb91093abc2366bd321d7679e90 inherit pro_attribs_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>A <code><a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a></code> that also provides details about the connection for the neighbor flux computation and requests for a particular <code><a class="el" href="classhexed_1_1Boundary__condition.html">Boundary_condition</a></code> to be applied to it. </p>
-</div><hr/>The documentation for this class was generated from the following file:<ul>
-<li>/home/micaiah/Desktop/hexed/include/<b>connection.hpp</b></li>
+<hr/>The documentation for this class was generated from the following files:<ul>
+<li>/home/micaiah/Desktop/hexed/include/<b>Boundary_connection.hpp</b></li>
+<li>/home/micaiah/Desktop/hexed/libhexed/<b>Boundary_connection.cpp</b></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

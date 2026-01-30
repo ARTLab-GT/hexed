@@ -5,5 +5,5 @@ var classhexed_1_1Visualizer =
       [ "simplex", "classhexed_1_1Visualizer.html#aa805255774e18ff55ae64616c961e881ae43f0826f8cd6080f498ad37fb6c6978", null ]
     ] ],
     [ "write_block", "classhexed_1_1Visualizer.html#a864722a1c5536b945b8df155f8bf2df6", null ],
-    [ "write_unstruct", "classhexed_1_1Visualizer.html#aade29c76130cb915e1e0f4ca332ff1c7", null ]
+    [ "write_unstruct", "classhexed_1_1Visualizer.html#a2a17b97d34fd6cb4691c467ad1add636", null ]
 ];

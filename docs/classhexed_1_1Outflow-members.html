@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -116,13 +116,16 @@ $(function(){initNavTree('classhexed_1_1Outflow.html',''); initResizable(true); 
 
 <p>This is the complete list of members for <a class="el" href="classhexed_1_1Outflow.html">hexed::Outflow</a>, including all inherited members.</p>
 <table class="directory">
-  <tr class="even"><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html#af3f5c3b44449c8e4081b3f46ee321f00">apply_advection</a>(Boundary_face &amp;)</td><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
-  <tr bgcolor="#f0f0f0" class="odd"><td class="entry"><b>apply_diffusion</b>(Boundary_face &amp;) (defined in <a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a>)</td><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
-  <tr class="even"><td class="entry"><a class="el" href="classhexed_1_1Outflow.html#a0d650df03dff70472944681456a22344">apply_flux</a>(Boundary_face &amp;)</td><td class="entry"><a class="el" href="classhexed_1_1Outflow.html">hexed::Outflow</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
-  <tr class="odd"><td class="entry"><a class="el" href="classhexed_1_1Outflow.html#ae1723347a45ace2c1725780b7be726a8">apply_state</a>(Boundary_face &amp;)</td><td class="entry"><a class="el" href="classhexed_1_1Outflow.html">hexed::Outflow</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
-  <tr bgcolor="#f0f0f0" class="even"><td class="entry"><b>flux_diffusion</b>(Boundary_face &amp;) (defined in <a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a>)</td><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
-  <tr class="odd"><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html#a4f0dd5fe86b6e94c179b0203b16e5db1">init_cache</a>(Boundary_face &amp;)</td><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a></td><td class="entry"><span class="mlabel">inline</span><span class="mlabel">virtual</span></td></tr>
-  <tr bgcolor="#f0f0f0" class="even"><td class="entry"><b>~Flow_bc</b>()=default (defined in <a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a>)</td><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
+  <tr class="even"><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html#a4c4776f4378e9379b62bbbec1aeed05e">apply_advection</a>(Boundary_connection &amp;)</td><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
+  <tr bgcolor="#f0f0f0" class="odd"><td class="entry"><b>apply_diffusion</b>(Boundary_connection &amp;) (defined in <a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a>)</td><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
+  <tr class="even"><td class="entry"><a class="el" href="classhexed_1_1Outflow.html#af84766de5b6ca000380c727e280c72f7">apply_flux</a>(Boundary_connection &amp;) override</td><td class="entry"><a class="el" href="classhexed_1_1Outflow.html">hexed::Outflow</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
+  <tr class="odd"><td class="entry"><a class="el" href="classhexed_1_1Outflow.html#aea2441818088f0b75687c82c11f0ce64">apply_state</a>(Boundary_connection &amp;) override</td><td class="entry"><a class="el" href="classhexed_1_1Outflow.html">hexed::Outflow</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
+  <tr bgcolor="#f0f0f0" class="even"><td class="entry"><b>flux_diffusion</b>(Boundary_connection &amp;) (defined in <a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a>)</td><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
+  <tr bgcolor="#f0f0f0" class="odd"><td class="entry"><b>init_cache</b>(Boundary_connection &amp;) (defined in <a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a>)</td><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
+  <tr bgcolor="#f0f0f0" class="even"><td class="entry"><b>n_prescribed</b>(int n_dim) const (defined in <a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a>)</td><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a></td><td class="entry"><span class="mlabel">inline</span><span class="mlabel">virtual</span></td></tr>
+  <tr bgcolor="#f0f0f0" class="odd"><td class="entry"><b>set_prescribed</b>(Interpreter &amp;, Boundary_connection &amp;) (defined in <a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a>)</td><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a></td><td class="entry"><span class="mlabel">inline</span><span class="mlabel">virtual</span></td></tr>
+  <tr class="even"><td class="entry"><a class="el" href="classhexed_1_1Outflow.html#a376dee81371c795614c9478096b8b7dd">smooth</a>() const override</td><td class="entry"><a class="el" href="classhexed_1_1Outflow.html">hexed::Outflow</a></td><td class="entry"><span class="mlabel">inline</span><span class="mlabel">virtual</span></td></tr>
+  <tr bgcolor="#f0f0f0" class="odd"><td class="entry"><b>~Flow_bc</b>()=default (defined in <a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a>)</td><td class="entry"><a class="el" href="classhexed_1_1Flow__bc.html">hexed::Flow_bc</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
 </table></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

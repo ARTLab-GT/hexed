@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -121,21 +121,31 @@ $(function(){initNavTree('assert_8hpp.html',''); initResizable(true); });
 
 <p>utilities for custom assertions  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &lt;stdexcept&gt;</code><br />
+<div class="textblock"><code>#include &quot;config.hpp&quot;</code><br />
+<code>#include &lt;stdexcept&gt;</code><br />
 <code>#include &lt;vector&gt;</code><br />
 <code>#include &lt;string&gt;</code><br />
 <code>#include &lt;omp.h&gt;</code><br />
-<code>#include &quot;config.hpp&quot;</code><br />
+<code>#include &quot;format_str.hpp&quot;</code><br />
 </div><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1assert_1_1Exception.html">hexed::assert::Exception</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1assert_1_1Numerical__exception.html">hexed::assert::Numerical_exception</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">represents a fatal problem in the numerics of the code (such as nonphysical values)  <a href="classhexed_1_1assert_1_1Numerical__exception.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents a fatal problem in the numerics of the code (such as nonphysical values)  <a href="classhexed_1_1assert_1_1Numerical__exception.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1assert_1_1User__error.html">hexed::assert::User_error</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">represents an exception which clearly results from a mistake made by the user  <a href="classhexed_1_1assert_1_1User__error.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents an exception which clearly results from a mistake made by the user.  <a href="classhexed_1_1assert_1_1User__error.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1assert_1_1Not__implemented__error.html">hexed::assert::Not_implemented_error</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Indicates that the user invoked functionality which should be implemented in the future but isn't yet.  <a href="classhexed_1_1assert_1_1Not__implemented__error.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1assert_1_1Internal__error.html">hexed::assert::Internal_error</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Indicates that a situation has been encountered which should not be possible, regardless of user input.  <a href="classhexed_1_1assert_1_1Internal__error.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1assert_1_1Overflow__error.html">hexed::assert::Overflow_error</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Indicates an exception caused by some kind of fixed-size resource has been exhausted.  <a href="classhexed_1_1assert_1_1Overflow__error.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
@@ -158,11 +168,7 @@ Macros</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a44c8627cdb4f4aa234f6fb30b48080f8" id="r_a44c8627cdb4f4aa234f6fb30b48080f8"><td class="memTemplParams" colspan="2">template&lt;typename... format_args&gt; </td></tr>
-<tr class="memitem:a44c8627cdb4f4aa234f6fb30b48080f8"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacehexed.html#a44c8627cdb4f4aa234f6fb30b48080f8">hexed::format_str</a> (int max_chars, std::string fstring, format_args... args)</td></tr>
-<tr class="memdesc:a44c8627cdb4f4aa234f6fb30b48080f8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard string formatting.  <br /></td></tr>
-<tr class="separator:a44c8627cdb4f4aa234f6fb30b48080f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa23d7bbd8fa3e9845ed2fee56ef54db0" id="r_aa23d7bbd8fa3e9845ed2fee56ef54db0"><td class="memTemplParams" colspan="2">template&lt;typename except_t  = std::runtime_error&gt; </td></tr>
+<tr class="memitem:aa23d7bbd8fa3e9845ed2fee56ef54db0" id="r_aa23d7bbd8fa3e9845ed2fee56ef54db0"><td class="memTemplParams" colspan="2">template&lt;typename except_t  = Internal_error&gt; </td></tr>
 <tr class="memitem:aa23d7bbd8fa3e9845ed2fee56ef54db0"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1assert.html#aa23d7bbd8fa3e9845ed2fee56ef54db0">hexed::assert::throw_critical</a> (const char *message)</td></tr>
 <tr class="separator:aa23d7bbd8fa3e9845ed2fee56ef54db0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -194,17 +200,18 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">  { \</div>
 <div class="line">  if (!(expression)) { \</div>
-<div class="line">    HEXED_THROW(format_str(1000, \</div>
+<div class="line">    HEXED_THROW(<a class="code hl_function" href="namespacehexed.html#a44c8627cdb4f4aa234f6fb30b48080f8">hexed::format_str</a>( \</div>
 <div class="line">      <span class="stringliteral">&quot;%s\n&quot;</span> \</div>
-<div class="line">      <span class="stringliteral">&quot;  Assertion `%s` failed in `%s`.\n&quot;</span>, \</div>
+<div class="line">      <span class="stringliteral">&quot;  Assertion `%s` failed in `%s`.&quot;</span>, \</div>
 <div class="line">      std::string(message).c_str(), #expression, __FUNCTION__) \</div>
 <div class="line">      __VA_OPT__(,) __VA_ARGS__ \</div>
 <div class="line">    ); \</div>
 <div class="line">  } \</div>
 <div class="line">}</div>
+<div class="ttc" id="anamespacehexed_html_a44c8627cdb4f4aa234f6fb30b48080f8"><div class="ttname"><a href="namespacehexed.html#a44c8627cdb4f4aa234f6fb30b48080f8">hexed::format_str</a></div><div class="ttdeci">std::string format_str(int max_chars, std::string fstring, format_args... args)</div><div class="ttdoc">Standard string formatting.</div><div class="ttdef"><b>Definition</b> format_str.hpp:12</div></div>
 </div><!-- fragment -->
 <p>Assert something with an informative error message. </p>
-<p>If <code>expression</code> is false, throws an exception with <code>HEXED_THROW</code>. <code>message</code> and an optional third argument are passed to <code>HEXED_THROW</code>. </p>
+<p>If <code>expression</code> is false, throws an exception with <code>HEXED_THROW</code>. <code>message</code> and an optional third argument are passed to <code>HEXED_THROW</code>. </p><dl class="section note"><dt>Note</dt><dd>This macro expands to a block enclosed in <code>{}</code>, so it does not require a <code>;</code> after it. </dd></dl>
 
 </div>
 </div>
@@ -227,7 +234,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">  { \</div>
-<div class="line">  assert::throw_critical&lt;__VA_ARGS__&gt;(format_str(1000, \</div>
+<div class="line">  hexed::assert::throw_critical&lt;__VA_ARGS__&gt;(<a class="code hl_function" href="namespacehexed.html#a44c8627cdb4f4aa234f6fb30b48080f8">hexed::format_str</a>( \</div>
 <div class="line">    <span class="stringliteral">&quot;%s\n&quot;</span> \</div>
 <div class="line">    <span class="stringliteral">&quot;  At: line %d of `%s`\n&quot;</span> \</div>
 <div class="line">    <span class="stringliteral">&quot;  In: %s&quot;</span>, \</div>
@@ -235,7 +242,7 @@ Functions</h2></td></tr>
 <div class="line">}</div>
 </div><!-- fragment -->
 <p>Throws an exception with an informative error message. </p>
-<p>Throws an exception with a message that includes <code>message</code> plus some additional info for debugging. Works inside single-threaded regions as well as OpenMP parallel regions. If desired, supply the type of exception as the third argument. Exception type must be constructible from a string. Defaults to <code>std::runtime_error</code>. </p>
+<p>Throws an exception with a message that includes <code>message</code> plus some additional info for debugging. Works inside single-threaded regions as well as OpenMP parallel regions. If desired, supply the type of exception as the third argument. Exception type must be constructible from a string. Defaults to <code>std::runtime_error</code>. </p><dl class="section note"><dt>Note</dt><dd>This macro expands to a block enclosed in <code>{}</code>, so it does not require a <code>;</code> after it. </dd></dl>
 
 </div>
 </div>

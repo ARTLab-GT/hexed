@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -134,15 +134,15 @@ Inheritance diagram for hexed::Printer:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ae9befe87d7d9544dc412a138d6ca0156" id="r_ae9befe87d7d9544dc412a138d6ca0156"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae9befe87d7d9544dc412a138d6ca0156">operator()</a> (std::string message, bool emph=false)=0</td></tr>
-<tr class="separator:ae9befe87d7d9544dc412a138d6ca0156"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a043545a69d22c2694f1ef41a7c169e6f" id="r_a043545a69d22c2694f1ef41a7c169e6f"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a043545a69d22c2694f1ef41a7c169e6f">operator()</a> (std::string message, bool emph=false, bool replace=false)=0</td></tr>
+<tr class="separator:a043545a69d22c2694f1ef41a7c169e6f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>abstract base class for handling different variations of printing things for user </p>
 <p>basically a slightly higher-level version of output streams </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="ae9befe87d7d9544dc412a138d6ca0156" name="ae9befe87d7d9544dc412a138d6ca0156"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae9befe87d7d9544dc412a138d6ca0156">&#9670;&#160;</a></span>operator()()</h2>
+<a id="a043545a69d22c2694f1ef41a7c169e6f" name="a043545a69d22c2694f1ef41a7c169e6f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a043545a69d22c2694f1ef41a7c169e6f">&#9670;&#160;</a></span>operator()()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -158,7 +158,12 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>emph</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>emph</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>replace</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -170,12 +175,13 @@ Public Member Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">message</td><td>what you want to print </td></tr>
-    <tr><td class="paramname">emph</td><td>if <code>true</code>, some form of emphasis formatting will be used, if possible </td></tr>
+    <tr><td class="paramname">emph</td><td>If <code>true</code>, some form of emphasis formatting will be used, if possible. </td></tr>
+    <tr><td class="paramname">replace</td><td>If <code>true</code>, <code>message</code> will <em>replace</em> the current line of text on the screen, rather than be appended to it. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p>Implemented in <a class="el" href="classhexed_1_1Compound__printer.html#a777b402e361bd475d850979a48541acf">hexed::Compound_printer</a>, and <a class="el" href="classhexed_1_1Stream__printer.html#a5ce88a8ee3b52c2f8aabe4b9377d5e41">hexed::Stream_printer</a>.</p>
+<p>Implemented in <a class="el" href="classhexed_1_1Compound__printer.html#ae9c7863c973bc3479e2bed4f1bd48d9b">hexed::Compound_printer</a>, and <a class="el" href="classhexed_1_1Stream__printer.html#a0ea6f65805cc44cf7db63a5d7db36d9b">hexed::Stream_printer</a>.</p>
 
 </div>
 </div>

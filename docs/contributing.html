@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.11.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>hexed: Contributing guidelines</title>
+<title>hexed: Contributing Guidelines</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -110,12 +110,12 @@ $(function(){initNavTree('contributing.html',''); initResizable(true); });
 </div>
 
 <div><div class="header">
-  <div class="headertitle"><div class="title">Contributing guidelines</div></div>
+  <div class="headertitle"><div class="title">Contributing Guidelines</div></div>
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><p>When contributing to Hexed, please adhere to these guidelines. Some are standard practice in software development, which I feel the need to specify since people contributing to Hexed may not be software engineers by training. Others are meant to standardize what is otherwise a matter of personal preference.</p>
 <h1><a class="anchor" id="contrib_general"></a>
-General procedures</h1>
+General Procedures</h1>
 <p>Please do <b>not</b> commit or push to the <code>main</code> branch. The standard workflow should be the following:</p><ol type="1">
 <li>Create a new branch.</li>
 <li>Implement changes.</li>
@@ -123,7 +123,7 @@ General procedures</h1>
 </ol>
 <p>After reviewing the pull request, the maintainer will merge it and delete the branch. You are encouraged to create as many new branches as you like, for any reason, even if they are just experiments you don't intend to merge. However, if you are completely done with a branch, please delete it. You are also encouraged to push frequently (at least once per work day)&mdash;productivity is maximized when everyone can see the latest version of everything. Finally, development should be test-driven as much as possible, granted the inherent difficulty of testing a computational physics solver.</p>
 <h1><a class="anchor" id="contrib_pull"></a>
-Pull requests</h1>
+Pull Requests</h1>
 <p>A pull request will not be merged until it meets the following requirements:</p><ul>
 <li>No merge conflicts.</li>
 <li>Must compile and run both in <code>Release</code> and in <code>Debug</code> mode with sanitizers.</li>
@@ -131,22 +131,37 @@ Pull requests</h1>
 <li>No compiler warnings.</li>
 </ul>
 <h1><a class="anchor" id="contrib_style"></a>
-Code style</h1>
+Code Style</h1>
 <p>Please adhere to the following style conventions whenever possible.</p>
 <h2><a class="anchor" id="file_formatting"></a>
-File formatting</h2>
+File Formatting</h2>
 <ul>
 <li>File names must not contain whitespace or other characters that have meaning in shell commands.</li>
+<li>Lines shall be no longer than 120 characters.</li>
 <li>Prefer underscores (<code>_</code>) to hyphens (<code>-</code>) or camel case as word separators in file names.</li>
 <li>Source files must not contain the tab character. C++ code should be indented with 2 spaces and Python code should be indented with 4 spaces.</li>
 <li>There should be no trailing spaces at the ends of lines.</li>
 <li>Use blank lines sparingly.</li>
 </ul>
+<h3><a class="anchor" id="brace_style"></a>
+Brace Style</h3>
+<p>All C++ code shall use <a href="https://en.wikipedia.org/wiki/Indentation_style#One_True_Brace">One True Brace Style</a>, a derivative of <a href="https://en.wikipedia.org/wiki/Indentation_style#K&amp;R">K&amp;R</a>, with a few additional stipulations. Specifically:</p><ul>
+<li>Every multi-statement block has its opening brace on the same line as its control clause, including function, class, and namespace declarations.</li>
+<li>Every closing brace is placed on a new line with the same indentation level as the opening control clause.</li>
+<li>A single-statement block must be <b>either</b> enclosed in braces <b>or</b> placed on the same line as its control clause. This ensures that inserting another line later cannot inadvertently cause control flow to disagree with indentation.</li>
+<li>A closing brace of an <code>if</code> block is placed on the same line as an accompanying <code>else</code> clause, and a closing brace of a <code>do</code> block is placed on the same line as the accompanying <code>while</code> clause.</li>
+</ul>
+<h3><a class="anchor" id="class_style"></a>
+Class Style</h3>
+<ul>
+<li>Private members shall begin with a single underscore (<code>_</code>).</li>
+<li><code>public</code>, <code>protected</code>, and <code>private</code> are indented to the same level as the class body.</li>
+</ul>
 <h2><a class="anchor" id="Names"></a>
 Names</h2>
 <p>(of variables, functions, namespaces, classes, macros, etc. Anything in the code.)</p><ul>
 <li>Should contain words, abbreviations, and/or numbers separated by underscores (not camelCase, and not multiplewordswithoutspaces).</li>
-<li>Names of classes should begin with a capital letter. Otherwise, all letters should be lowercase.</li>
+<li>Names of classes should begin with a capital letter and macros should be all-capital. Otherwise, all letters should be lowercase.</li>
 <li>A name should be a description of the variable it refers to. It should not reference mathematical symbols or the sound of words. For example, resist the temptation to use <code>x</code> to refer to horizontal position. Acceptable alternatives might be <code>coord0</code>, or <code>position</code>.</li>
 <li>Maintain conventions in <a class="el" href="conventions.html">Notation and conventions</a>.</li>
 <li>When practical, avoid overly long names. Abbreviations are encouraged, especially in a local scope where there are fewer opportunities to confuse similar names.</li>
@@ -159,8 +174,8 @@ Names</h2>
 <h2><a class="anchor" id="Exceptions"></a>
 Exceptions</h2>
 <p>If the code encounters a fatal problem, it should throw an exception (using the constructs of whatever language it is currently in) with a helpful error message. The message should identify <em>what</em> exactly was found to be wrong so that someone capable of understanding the problem has a clue <em>where</em> to start trying to figure out <em>why</em>. In the interest of performance, some functions in the <a class="el" href="namespacehexed.html">C++ API</a> may produce segmentation faults, memory leaks, or undefined behavior upon incorrect usage. However, the <a class="el" href="running.html#hexecute">executable</a> should catch incorrect usage and throw a useful exception. If an end user makes a mistake and obtains a segfault instead of an exception, I consider that a bug. Some common things I would like to avoid in this code are:</p><ul>
-<li>Don't just say something vague like "something went wrong" "the operation could not be completed" or give a numeric error code that the user then has to look up to get any information. I'm thinking of the error messages commonly encountered in a <a href="https://www.ioccc.org/1993/cmills.hint">certain operating system</a> whose name ironically evokes transparency. Error messages should be as specific as possible.</li>
-<li>Don't presume to guess exactly why the problem occurred or give verbose suggestions about how to fix it. Exceptions generally occur because you <em>failed</em> to anticipate what actually happened, so your speculations are probably a waste of space at best and actively misleading at worst. Just say what the exact, concrete problem was. For example, if the code encounters a nonphysical state, don't say something like "The solver is unstable. Try reducing `max_safety` and verifying the boundary conditions are correct." Instead, say something like "nonpositive density encountered in flux computation".</li>
+<li>Don't say something vague like "something went wrong", "the operation could not be completed", or give a numeric error code that the user then has to look up to get any information. I'm thinking of the error messages commonly encountered in a <a href="https://www.ioccc.org/1993/cmills.hint">certain operating system</a> whose name ironically evokes transparency. Error messages should be as specific as possible.</li>
+<li>Don't presume to guess exactly why the problem occurred or give verbose suggestions about how to fix it. Exceptions generally occur because you <em>failed</em> to anticipate what actually happened, so your speculations likely unhelpful and potentially misleading. Just say what the exact, concrete problem was. For example, if the code encounters a nonphysical state, don't say something like "The solver is unstable. Try reducing `max_safety` and verifying the boundary conditions are correct." Instead, say something like "nonpositive density encountered in flux computation".</li>
 </ul>
 <p>Hexed provides the <a class="el" href="assert_8hpp.html#a0241cc0d9e41a02387efa41db018d78d">HEXED_ASSERT</a> macro to facilitate generating exceptions with detailed information about where the error occurred in the code.</p>
 <dl class="section see"><dt>See also</dt><dd><a class="el" href="error_types.html">Error Types</a></dd></dl>

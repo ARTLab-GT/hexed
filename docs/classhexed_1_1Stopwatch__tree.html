@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -111,6 +111,7 @@ $(function(){initNavTree('classhexed_1_1Stopwatch__tree.html',''); initResizable
 
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classhexed_1_1Stopwatch__tree-members.html">List of all members</a>  </div>
@@ -123,6 +124,11 @@ $(function(){initNavTree('classhexed_1_1Stopwatch__tree.html',''); initResizable
 
 <p><code>#include &lt;Stopwatch_tree.hpp&gt;</code></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Stopwatch__tree_1_1Starter.html">Starter</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:ad150c2185bfd857291639eb3ef85c2d3" id="r_ad150c2185bfd857291639eb3ef85c2d3"><td class="memItemLeft" align="right" valign="top"><a id="ad150c2185bfd857291639eb3ef85c2d3" name="ad150c2185bfd857291639eb3ef85c2d3"></a>
@@ -145,8 +151,6 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:af081e6fef8e876d3f4e54b62d4f6699f" id="r_af081e6fef8e876d3f4e54b62d4f6699f"><td class="memItemLeft" align="right" valign="top"><a id="af081e6fef8e876d3f4e54b62d4f6699f" name="af081e6fef8e876d3f4e54b62d4f6699f"></a>
 <a class="el" href="classhexed_1_1Stopwatch.html">Stopwatch</a>&#160;</td><td class="memItemRight" valign="bottom"><b>stopwatch</b></td></tr>
 <tr class="separator:af081e6fef8e876d3f4e54b62d4f6699f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aef5150786cf17a576335e1e8f366d84a" id="r_aef5150786cf17a576335e1e8f366d84a"><td class="memItemLeft" align="right" valign="top">std::map&lt; std::string, <a class="el" href="classhexed_1_1Stopwatch__tree.html">Stopwatch_tree</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aef5150786cf17a576335e1e8f366d84a">children</a></td></tr>
-<tr class="separator:aef5150786cf17a576335e1e8f366d84a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abef77dcbcc442368df221b5493470939" id="r_abef77dcbcc442368df221b5493470939"><td class="memItemLeft" align="right" valign="top"><a id="abef77dcbcc442368df221b5493470939" name="abef77dcbcc442368df221b5493470939"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>work_units_completed</b> = 0</td></tr>
 <tr class="separator:abef77dcbcc442368df221b5493470939"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -179,22 +183,6 @@ std::string&#160;</td><td class="memItemRight" valign="bottom"><b>work_unit_name
 
 <p>Adds a child with specified name and <code>work_unit_name</code>. </p>
 <p>Child must not already exist. Returns a reference to the constructed child. </p>
-
-</div>
-</div>
-<h2 class="groupheader">Member Data Documentation</h2>
-<a id="aef5150786cf17a576335e1e8f366d84a" name="aef5150786cf17a576335e1e8f366d84a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aef5150786cf17a576335e1e8f366d84a">&#9670;&#160;</a></span>children</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::map&lt;std::string, <a class="el" href="classhexed_1_1Stopwatch__tree.html">Stopwatch_tree</a>&gt; hexed::Stopwatch_tree::children</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000001">Deprecated</a></b></dt><dd>Direct access to <code>children</code> is deprecated. Prefer insertion with <code><a class="el" href="#a17bd7c1153175603e9a937da532f4589" title="Adds a child with specified name and work_unit_name.">Stopwatch_tree::emplace</a></code> and access with <code><a class="el" href="#a954d6199bb5786d103b1a31aa0fbba53" title="shortcut to access the child named name">Stopwatch_tree::operator[]</a></code>. </dd></dl>
 
 </div>
 </div>

@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -110,6 +110,8 @@ $(function(){initNavTree('namespacehexed_1_1constants.html',''); initResizable(t
 </div>
 
 <div class="header">
+  <div class="summary">
+<a href="#namespaces">Namespaces</a>  </div>
   <div class="headertitle"><div class="title">hexed::constants Namespace Reference</div></div>
 </div><!--header-->
 <div class="contents">
@@ -117,6 +119,15 @@ $(function(){initNavTree('namespacehexed_1_1constants.html',''); initResizable(t
 <p>Mathematical and physical constants.  
 <a href="#details">More...</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="namespaces" name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1constants_1_1imperial.html">imperial</a></td></tr>
+<tr class="memdesc:namespacehexed_1_1constants_1_1imperial"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a href="https://en.wikipedia.org/wiki/Imperial_units#Volume">Imperial volume measurements</a> <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1constants_1_1us__customary.html">us_customary</a></td></tr>
+<tr class="memdesc:namespacehexed_1_1constants_1_1us__customary"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a href="https://en.wikipedia.org/wiki/United_States_customary_units#Volume">US customary volume measurements</a> <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
 <tr><td colspan="2"><div class="groupHeader">mathematical constants</div></td></tr>
@@ -182,7 +193,8 @@ const double&#160;</td><td class="memItemRight" valign="bottom"><b>stefan_boltzm
 <tr class="memdesc:a4826a398b358197434ab5d82b5d20027"><td class="mdescLeft">&#160;</td><td class="mdescRight">\( \sigma \) <br /></td></tr>
 <tr class="separator:a4826a398b358197434ab5d82b5d20027"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader">unit definitions</div></td></tr>
-<tr><td colspan="2"><div class="groupText"><p>Conversion factors from various units to standard SI units. Since hexed works <a class="el" href="conventions.html#units">exclusively in SI units</a>, these are the values of each of these units in [m, kg, s, K]. E.g. If you have a wing with a chord of 3 feet, then you should tell hexed it's chord is <code>3*foot</code>. If hexed told you your drag force is 10 (implying newtons) and your (ill advised) chief engineer wants it in pounds, the number they're looking for is <code>10/pound_force</code> (note that <code>pound_force != pound_mass</code>). All quantities here are numerically exact according to some form of official standard. </p>
+<tr><td colspan="2"><div class="groupText"><p>Conversion factors from various units to standard SI units.</p>
+<p>Since hexed works <a class="el" href="conventions.html#units">exclusively in SI units</a>, these are the values of each of these units in [m, kg, s, K]. E.g. If you have a wing with a chord of 3 feet, then you should tell hexed it's chord is <code>3*foot</code>. If hexed told you your drag force is 10 (implying newtons) and your (ill advised) chief engineer wants it in pounds, the number they're looking for is <code>10/pound_force</code> (note that <code>pound_force != pound_mass</code>). All quantities here are numerically exact according to some form of official standard. </p>
 </div></td></tr>
 <tr class="memitem:afbdba9a11538f466343a400943e5912c" id="r_afbdba9a11538f466343a400943e5912c"><td class="memItemLeft" align="right" valign="top"><a id="afbdba9a11538f466343a400943e5912c" name="afbdba9a11538f466343a400943e5912c"></a>
 const double&#160;</td><td class="memItemRight" valign="bottom"><b>meter</b> = 1</td></tr>
@@ -200,6 +212,128 @@ const double&#160;</td><td class="memItemRight" valign="bottom"><b>second</b> = 
 const double&#160;</td><td class="memItemRight" valign="bottom"><b>kelvin</b> = 1</td></tr>
 <tr class="memdesc:abb2aab0adc8f7dc595804993a2913142"><td class="mdescLeft">&#160;</td><td class="mdescRight">K. <br /></td></tr>
 <tr class="separator:abb2aab0adc8f7dc595804993a2913142"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aff15b05c4ae7c9fc8b37a78a6b3164f2" id="r_aff15b05c4ae7c9fc8b37a78a6b3164f2"><td class="memItemLeft" align="right" valign="top">const double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aff15b05c4ae7c9fc8b37a78a6b3164f2">radian</a> = 1</td></tr>
+<tr class="separator:aff15b05c4ae7c9fc8b37a78a6b3164f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9ec971a1cdb6cc88acca7dfb195497a5" id="r_a9ec971a1cdb6cc88acca7dfb195497a5"><td class="memItemLeft" align="right" valign="top"><a id="a9ec971a1cdb6cc88acca7dfb195497a5" name="a9ec971a1cdb6cc88acca7dfb195497a5"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>pascal</b> = 1</td></tr>
+<tr class="memdesc:a9ec971a1cdb6cc88acca7dfb195497a5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pa. <br /></td></tr>
+<tr class="separator:a9ec971a1cdb6cc88acca7dfb195497a5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a01658ef63a53506f7477f89f0e9bada4" id="r_a01658ef63a53506f7477f89f0e9bada4"><td class="memItemLeft" align="right" valign="top"><a id="a01658ef63a53506f7477f89f0e9bada4" name="a01658ef63a53506f7477f89f0e9bada4"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>newton</b> = 1</td></tr>
+<tr class="memdesc:a01658ef63a53506f7477f89f0e9bada4"><td class="mdescLeft">&#160;</td><td class="mdescRight">N. <br /></td></tr>
+<tr class="separator:a01658ef63a53506f7477f89f0e9bada4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace7252ff3cee83e5ae3fcedfad9e395b" id="r_ace7252ff3cee83e5ae3fcedfad9e395b"><td class="memItemLeft" align="right" valign="top"><a id="ace7252ff3cee83e5ae3fcedfad9e395b" name="ace7252ff3cee83e5ae3fcedfad9e395b"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>deci</b> = 1e-1</td></tr>
+<tr class="memdesc:ace7252ff3cee83e5ae3fcedfad9e395b"><td class="mdescLeft">&#160;</td><td class="mdescRight">d <br /></td></tr>
+<tr class="separator:ace7252ff3cee83e5ae3fcedfad9e395b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4bc1027b2a8ad3aa6c0e809b64a5249f" id="r_a4bc1027b2a8ad3aa6c0e809b64a5249f"><td class="memItemLeft" align="right" valign="top"><a id="a4bc1027b2a8ad3aa6c0e809b64a5249f" name="a4bc1027b2a8ad3aa6c0e809b64a5249f"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>centi</b> = 1e-2</td></tr>
+<tr class="memdesc:a4bc1027b2a8ad3aa6c0e809b64a5249f"><td class="mdescLeft">&#160;</td><td class="mdescRight">c <br /></td></tr>
+<tr class="separator:a4bc1027b2a8ad3aa6c0e809b64a5249f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6a0a7aa48a99befaf95ab52b05ed5684" id="r_a6a0a7aa48a99befaf95ab52b05ed5684"><td class="memItemLeft" align="right" valign="top"><a id="a6a0a7aa48a99befaf95ab52b05ed5684" name="a6a0a7aa48a99befaf95ab52b05ed5684"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>milli</b> = 1e-3</td></tr>
+<tr class="memdesc:a6a0a7aa48a99befaf95ab52b05ed5684"><td class="mdescLeft">&#160;</td><td class="mdescRight">m <br /></td></tr>
+<tr class="separator:a6a0a7aa48a99befaf95ab52b05ed5684"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7b8b1c1816138bc50954997461c1bb20" id="r_a7b8b1c1816138bc50954997461c1bb20"><td class="memItemLeft" align="right" valign="top"><a id="a7b8b1c1816138bc50954997461c1bb20" name="a7b8b1c1816138bc50954997461c1bb20"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>micro</b> = 1e-6</td></tr>
+<tr class="memdesc:a7b8b1c1816138bc50954997461c1bb20"><td class="mdescLeft">&#160;</td><td class="mdescRight">\( \mu \) <br /></td></tr>
+<tr class="separator:a7b8b1c1816138bc50954997461c1bb20"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd24d23388cbf7437ec88698d1eb97ab" id="r_afd24d23388cbf7437ec88698d1eb97ab"><td class="memItemLeft" align="right" valign="top"><a id="afd24d23388cbf7437ec88698d1eb97ab" name="afd24d23388cbf7437ec88698d1eb97ab"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>nano</b> = 1e-9</td></tr>
+<tr class="memdesc:afd24d23388cbf7437ec88698d1eb97ab"><td class="mdescLeft">&#160;</td><td class="mdescRight">n <br /></td></tr>
+<tr class="separator:afd24d23388cbf7437ec88698d1eb97ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a45e3e49ba657f052b7ecf6a2957e2e07" id="r_a45e3e49ba657f052b7ecf6a2957e2e07"><td class="memItemLeft" align="right" valign="top"><a id="a45e3e49ba657f052b7ecf6a2957e2e07" name="a45e3e49ba657f052b7ecf6a2957e2e07"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>pico</b> = 1e-12</td></tr>
+<tr class="memdesc:a45e3e49ba657f052b7ecf6a2957e2e07"><td class="mdescLeft">&#160;</td><td class="mdescRight">p <br /></td></tr>
+<tr class="separator:a45e3e49ba657f052b7ecf6a2957e2e07"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a41dc61dd67095e2e111e29e9a8082b8a" id="r_a41dc61dd67095e2e111e29e9a8082b8a"><td class="memItemLeft" align="right" valign="top"><a id="a41dc61dd67095e2e111e29e9a8082b8a" name="a41dc61dd67095e2e111e29e9a8082b8a"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>femto</b> = 1e-15</td></tr>
+<tr class="memdesc:a41dc61dd67095e2e111e29e9a8082b8a"><td class="mdescLeft">&#160;</td><td class="mdescRight">f <br /></td></tr>
+<tr class="separator:a41dc61dd67095e2e111e29e9a8082b8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a03972960cb5e4c1aca308d76ead71009" id="r_a03972960cb5e4c1aca308d76ead71009"><td class="memItemLeft" align="right" valign="top"><a id="a03972960cb5e4c1aca308d76ead71009" name="a03972960cb5e4c1aca308d76ead71009"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>atto</b> = 1e-18</td></tr>
+<tr class="memdesc:a03972960cb5e4c1aca308d76ead71009"><td class="mdescLeft">&#160;</td><td class="mdescRight">a <br /></td></tr>
+<tr class="separator:a03972960cb5e4c1aca308d76ead71009"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9203739d7a951ab7219085f3362dc575" id="r_a9203739d7a951ab7219085f3362dc575"><td class="memItemLeft" align="right" valign="top"><a id="a9203739d7a951ab7219085f3362dc575" name="a9203739d7a951ab7219085f3362dc575"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>zepto</b> = 1e-21</td></tr>
+<tr class="memdesc:a9203739d7a951ab7219085f3362dc575"><td class="mdescLeft">&#160;</td><td class="mdescRight">z <br /></td></tr>
+<tr class="separator:a9203739d7a951ab7219085f3362dc575"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abfe5d5ba025a46895028ade3ca096cb5" id="r_abfe5d5ba025a46895028ade3ca096cb5"><td class="memItemLeft" align="right" valign="top"><a id="abfe5d5ba025a46895028ade3ca096cb5" name="abfe5d5ba025a46895028ade3ca096cb5"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>yocto</b> = 1e-24</td></tr>
+<tr class="memdesc:abfe5d5ba025a46895028ade3ca096cb5"><td class="mdescLeft">&#160;</td><td class="mdescRight">y <br /></td></tr>
+<tr class="separator:abfe5d5ba025a46895028ade3ca096cb5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad3e1db9325fa6226cb0d629296cd7891" id="r_ad3e1db9325fa6226cb0d629296cd7891"><td class="memItemLeft" align="right" valign="top"><a id="ad3e1db9325fa6226cb0d629296cd7891" name="ad3e1db9325fa6226cb0d629296cd7891"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>ronto</b> = 1e-27</td></tr>
+<tr class="memdesc:ad3e1db9325fa6226cb0d629296cd7891"><td class="mdescLeft">&#160;</td><td class="mdescRight">r <br /></td></tr>
+<tr class="separator:ad3e1db9325fa6226cb0d629296cd7891"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae76bf6719e6ed76035575407c09623d2" id="r_ae76bf6719e6ed76035575407c09623d2"><td class="memItemLeft" align="right" valign="top"><a id="ae76bf6719e6ed76035575407c09623d2" name="ae76bf6719e6ed76035575407c09623d2"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>quecto</b> = 1e-30</td></tr>
+<tr class="memdesc:ae76bf6719e6ed76035575407c09623d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">q <br /></td></tr>
+<tr class="separator:ae76bf6719e6ed76035575407c09623d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad3332d485c58179f6457c3be6752d88d" id="r_ad3332d485c58179f6457c3be6752d88d"><td class="memItemLeft" align="right" valign="top"><a id="ad3332d485c58179f6457c3be6752d88d" name="ad3332d485c58179f6457c3be6752d88d"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>deka</b> = 1e1</td></tr>
+<tr class="memdesc:ad3332d485c58179f6457c3be6752d88d"><td class="mdescLeft">&#160;</td><td class="mdescRight">da <br /></td></tr>
+<tr class="separator:ad3332d485c58179f6457c3be6752d88d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac58e3247659d4af08d1ccd652fe97b1e" id="r_ac58e3247659d4af08d1ccd652fe97b1e"><td class="memItemLeft" align="right" valign="top"><a id="ac58e3247659d4af08d1ccd652fe97b1e" name="ac58e3247659d4af08d1ccd652fe97b1e"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>hecto</b> = 1e2</td></tr>
+<tr class="memdesc:ac58e3247659d4af08d1ccd652fe97b1e"><td class="mdescLeft">&#160;</td><td class="mdescRight">h <br /></td></tr>
+<tr class="separator:ac58e3247659d4af08d1ccd652fe97b1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad6baa1b6704fe3457f38f01bd4da977" id="r_aad6baa1b6704fe3457f38f01bd4da977"><td class="memItemLeft" align="right" valign="top"><a id="aad6baa1b6704fe3457f38f01bd4da977" name="aad6baa1b6704fe3457f38f01bd4da977"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>kilo</b> = 1e3</td></tr>
+<tr class="memdesc:aad6baa1b6704fe3457f38f01bd4da977"><td class="mdescLeft">&#160;</td><td class="mdescRight">k <br /></td></tr>
+<tr class="separator:aad6baa1b6704fe3457f38f01bd4da977"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a18f1eab74c7b78cfa88416d04099578e" id="r_a18f1eab74c7b78cfa88416d04099578e"><td class="memItemLeft" align="right" valign="top"><a id="a18f1eab74c7b78cfa88416d04099578e" name="a18f1eab74c7b78cfa88416d04099578e"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>mega</b> = 1e6</td></tr>
+<tr class="memdesc:a18f1eab74c7b78cfa88416d04099578e"><td class="mdescLeft">&#160;</td><td class="mdescRight">M. <br /></td></tr>
+<tr class="separator:a18f1eab74c7b78cfa88416d04099578e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a47210ef1636a020ecdf61412efc3b20f" id="r_a47210ef1636a020ecdf61412efc3b20f"><td class="memItemLeft" align="right" valign="top"><a id="a47210ef1636a020ecdf61412efc3b20f" name="a47210ef1636a020ecdf61412efc3b20f"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>giga</b> = 1e9</td></tr>
+<tr class="memdesc:a47210ef1636a020ecdf61412efc3b20f"><td class="mdescLeft">&#160;</td><td class="mdescRight">G. <br /></td></tr>
+<tr class="separator:a47210ef1636a020ecdf61412efc3b20f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af18bfdd57c597a12c701a4583a3e9c91" id="r_af18bfdd57c597a12c701a4583a3e9c91"><td class="memItemLeft" align="right" valign="top"><a id="af18bfdd57c597a12c701a4583a3e9c91" name="af18bfdd57c597a12c701a4583a3e9c91"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>tera</b> = 1e12</td></tr>
+<tr class="memdesc:af18bfdd57c597a12c701a4583a3e9c91"><td class="mdescLeft">&#160;</td><td class="mdescRight">T. <br /></td></tr>
+<tr class="separator:af18bfdd57c597a12c701a4583a3e9c91"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a450104ffd4c699aa08602d138c93af18" id="r_a450104ffd4c699aa08602d138c93af18"><td class="memItemLeft" align="right" valign="top"><a id="a450104ffd4c699aa08602d138c93af18" name="a450104ffd4c699aa08602d138c93af18"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>peta</b> = 1e15</td></tr>
+<tr class="memdesc:a450104ffd4c699aa08602d138c93af18"><td class="mdescLeft">&#160;</td><td class="mdescRight">P. <br /></td></tr>
+<tr class="separator:a450104ffd4c699aa08602d138c93af18"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a740b126bd884cd6de418e9b1231118b8" id="r_a740b126bd884cd6de418e9b1231118b8"><td class="memItemLeft" align="right" valign="top"><a id="a740b126bd884cd6de418e9b1231118b8" name="a740b126bd884cd6de418e9b1231118b8"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>exa</b> = 1e18</td></tr>
+<tr class="memdesc:a740b126bd884cd6de418e9b1231118b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">E. <br /></td></tr>
+<tr class="separator:a740b126bd884cd6de418e9b1231118b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a07d1127f5acb6da5a449f5540e750845" id="r_a07d1127f5acb6da5a449f5540e750845"><td class="memItemLeft" align="right" valign="top"><a id="a07d1127f5acb6da5a449f5540e750845" name="a07d1127f5acb6da5a449f5540e750845"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>zeta</b> = 1e21</td></tr>
+<tr class="memdesc:a07d1127f5acb6da5a449f5540e750845"><td class="mdescLeft">&#160;</td><td class="mdescRight">Z. <br /></td></tr>
+<tr class="separator:a07d1127f5acb6da5a449f5540e750845"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa9dbcd60cd5610b420080938adfe5546" id="r_aa9dbcd60cd5610b420080938adfe5546"><td class="memItemLeft" align="right" valign="top"><a id="aa9dbcd60cd5610b420080938adfe5546" name="aa9dbcd60cd5610b420080938adfe5546"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>yotta</b> = 1e24</td></tr>
+<tr class="memdesc:aa9dbcd60cd5610b420080938adfe5546"><td class="mdescLeft">&#160;</td><td class="mdescRight">Y. <br /></td></tr>
+<tr class="separator:aa9dbcd60cd5610b420080938adfe5546"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d6cf9056dcadc7b714bcb085cd95008" id="r_a9d6cf9056dcadc7b714bcb085cd95008"><td class="memItemLeft" align="right" valign="top"><a id="a9d6cf9056dcadc7b714bcb085cd95008" name="a9d6cf9056dcadc7b714bcb085cd95008"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>ronna</b> = 1e27</td></tr>
+<tr class="memdesc:a9d6cf9056dcadc7b714bcb085cd95008"><td class="mdescLeft">&#160;</td><td class="mdescRight">R. <br /></td></tr>
+<tr class="separator:a9d6cf9056dcadc7b714bcb085cd95008"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7953f70a9f46a21e913419cf726ca5e3" id="r_a7953f70a9f46a21e913419cf726ca5e3"><td class="memItemLeft" align="right" valign="top"><a id="a7953f70a9f46a21e913419cf726ca5e3" name="a7953f70a9f46a21e913419cf726ca5e3"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>quetta</b> = 1e30</td></tr>
+<tr class="memdesc:a7953f70a9f46a21e913419cf726ca5e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Q. <br /></td></tr>
+<tr class="separator:a7953f70a9f46a21e913419cf726ca5e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a98b02cc083e1cca611fed6e89f0bfa35" id="r_a98b02cc083e1cca611fed6e89f0bfa35"><td class="memItemLeft" align="right" valign="top"><a id="a98b02cc083e1cca611fed6e89f0bfa35" name="a98b02cc083e1cca611fed6e89f0bfa35"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>gram</b> = 1e-3</td></tr>
+<tr class="memdesc:a98b02cc083e1cca611fed6e89f0bfa35"><td class="mdescLeft">&#160;</td><td class="mdescRight">g <br /></td></tr>
+<tr class="separator:a98b02cc083e1cca611fed6e89f0bfa35"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a14e69373bbd8a0909c6d001f837dc4d6" id="r_a14e69373bbd8a0909c6d001f837dc4d6"><td class="memItemLeft" align="right" valign="top"><a id="a14e69373bbd8a0909c6d001f837dc4d6" name="a14e69373bbd8a0909c6d001f837dc4d6"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>liter</b> = 1e-3</td></tr>
+<tr class="memdesc:a14e69373bbd8a0909c6d001f837dc4d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">L. <br /></td></tr>
+<tr class="separator:a14e69373bbd8a0909c6d001f837dc4d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6fc4fde7f5665905c7b10eb8fe9cd0e0" id="r_a6fc4fde7f5665905c7b10eb8fe9cd0e0"><td class="memItemLeft" align="right" valign="top"><a id="a6fc4fde7f5665905c7b10eb8fe9cd0e0" name="a6fc4fde7f5665905c7b10eb8fe9cd0e0"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>angstrom</b> = 1e-10</td></tr>
+<tr class="memdesc:a6fc4fde7f5665905c7b10eb8fe9cd0e0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Angstrom. <br /></td></tr>
+<tr class="separator:a6fc4fde7f5665905c7b10eb8fe9cd0e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a06839d0ef1c25fc762562d5191ee2f6b" id="r_a06839d0ef1c25fc762562d5191ee2f6b"><td class="memItemLeft" align="right" valign="top"><a id="a06839d0ef1c25fc762562d5191ee2f6b" name="a06839d0ef1c25fc762562d5191ee2f6b"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>tonne</b> = 1e3</td></tr>
+<tr class="memdesc:a06839d0ef1c25fc762562d5191ee2f6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">aka "metric ton" <br /></td></tr>
+<tr class="separator:a06839d0ef1c25fc762562d5191ee2f6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ace50097262a509cb20b95c713c3faebf" id="r_ace50097262a509cb20b95c713c3faebf"><td class="memItemLeft" align="right" valign="top"><a id="ace50097262a509cb20b95c713c3faebf" name="ace50097262a509cb20b95c713c3faebf"></a>
 const double&#160;</td><td class="memItemRight" valign="bottom"><b>std_grav</b> = 9.80665</td></tr>
 <tr class="memdesc:ace50097262a509cb20b95c713c3faebf"><td class="mdescLeft">&#160;</td><td class="mdescRight">\( g_0 \) <a href="https://en.wikipedia.org/wiki/Standard_gravity">standard gravity</a> <br /></td></tr>
@@ -253,8 +387,12 @@ const double&#160;</td><td class="memItemRight" valign="bottom"><b>knot</b> = <a
 <tr class="separator:aade7284bdeb220dbb20de5c9ac18a181"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a50c9e3f7fadb98979fa538c6467f57a4" id="r_a50c9e3f7fadb98979fa538c6467f57a4"><td class="memItemLeft" align="right" valign="top"><a id="a50c9e3f7fadb98979fa538c6467f57a4" name="a50c9e3f7fadb98979fa538c6467f57a4"></a>
 const double&#160;</td><td class="memItemRight" valign="bottom"><b>zero_celsius</b> = 273.15</td></tr>
-<tr class="memdesc:a50c9e3f7fadb98979fa538c6467f57a4"><td class="mdescLeft">&#160;</td><td class="mdescRight">0 \( ^{\circ} \) <a href="https://en.wikipedia.org/wiki/Celsius">C</a> (not technically a unit but still important) <br /></td></tr>
+<tr class="memdesc:a50c9e3f7fadb98979fa538c6467f57a4"><td class="mdescLeft">&#160;</td><td class="mdescRight">0 \(^{\circ}\) <a href="https://en.wikipedia.org/wiki/Celsius">C</a> (not technically a unit but still important) <br /></td></tr>
 <tr class="separator:a50c9e3f7fadb98979fa538c6467f57a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a102268a8213f7ce7e3f49168ef7925d7" id="r_a102268a8213f7ce7e3f49168ef7925d7"><td class="memItemLeft" align="right" valign="top"><a id="a102268a8213f7ce7e3f49168ef7925d7" name="a102268a8213f7ce7e3f49168ef7925d7"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>zero_fahrenheit</b> = <a class="el" href="#a50c9e3f7fadb98979fa538c6467f57a4">zero_celsius</a> - 32*<a class="el" href="#a170ca5afe0ecf4f05244031bd510ff8d">rankine</a></td></tr>
+<tr class="memdesc:a102268a8213f7ce7e3f49168ef7925d7"><td class="mdescLeft">&#160;</td><td class="mdescRight">0 \(^{\circ}\) <a href="https://en.wikipedia.org/wiki/Fahrenheit">F</a> (not technically a unit but still important) <br /></td></tr>
+<tr class="separator:a102268a8213f7ce7e3f49168ef7925d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a872af32314275c026955a69598ca0ba9" id="r_a872af32314275c026955a69598ca0ba9"><td class="memItemLeft" align="right" valign="top"><a id="a872af32314275c026955a69598ca0ba9" name="a872af32314275c026955a69598ca0ba9"></a>
 const double&#160;</td><td class="memItemRight" valign="bottom"><b>atmosphere</b> = 101325</td></tr>
 <tr class="memdesc:a872af32314275c026955a69598ca0ba9"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a href="https://en.wikipedia.org/wiki/Standard_atmosphere_(unit)">atm</a> <br /></td></tr>
@@ -267,24 +405,38 @@ const double&#160;</td><td class="memItemRight" valign="bottom"><b>calorie</b> =
 const double&#160;</td><td class="memItemRight" valign="bottom"><b>btu</b> = <a class="el" href="#a07b348b0de6a929498dd6b3b02f83855">calorie</a>*<a class="el" href="#a170ca5afe0ecf4f05244031bd510ff8d">rankine</a>*<a class="el" href="#a206a24a9dd534d686e4bd373413b6b01">pound_mass</a>/1e-3</td></tr>
 <tr class="memdesc:a5326bd670bbc4620f8c594717de1bb4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">British Thermal Unit obtained by converting the calorimetric definition of calorie to imperial units. <br /></td></tr>
 <tr class="separator:a5326bd670bbc4620f8c594717de1bb4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aee9dd0469b264f142ec2904cc381c8ef" id="r_aee9dd0469b264f142ec2904cc381c8ef"><td class="memItemLeft" align="right" valign="top"><a id="aee9dd0469b264f142ec2904cc381c8ef" name="aee9dd0469b264f142ec2904cc381c8ef"></a>
-const double&#160;</td><td class="memItemRight" valign="bottom"><b>gallon</b> = 4.54609e-3</td></tr>
-<tr class="memdesc:aee9dd0469b264f142ec2904cc381c8ef"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a href="https://en.wikipedia.org/wiki/Gallon#Imperial_gallon">Imperial gallon</a> <br /></td></tr>
-<tr class="separator:aee9dd0469b264f142ec2904cc381c8ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8d1244b5129dda1945596f58886eb054" id="r_a8d1244b5129dda1945596f58886eb054"><td class="memItemLeft" align="right" valign="top"><a id="a8d1244b5129dda1945596f58886eb054" name="a8d1244b5129dda1945596f58886eb054"></a>
-const double&#160;</td><td class="memItemRight" valign="bottom"><b>fluid_ounce</b> = <a class="el" href="#aee9dd0469b264f142ec2904cc381c8ef">gallon</a>/160.</td></tr>
-<tr class="memdesc:a8d1244b5129dda1945596f58886eb054"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a href="https://en.wikipedia.org/wiki/Imperial_units#Volume">Imperial fluid ounce</a> <br /></td></tr>
-<tr class="separator:a8d1244b5129dda1945596f58886eb054"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a499799d369283a671199cafbbbfdd5" id="r_a8a499799d369283a671199cafbbbfdd5"><td class="memItemLeft" align="right" valign="top"><a id="a8a499799d369283a671199cafbbbfdd5" name="a8a499799d369283a671199cafbbbfdd5"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>bar</b> = 1e5</td></tr>
+<tr class="memdesc:a8a499799d369283a671199cafbbbfdd5"><td class="mdescLeft">&#160;</td><td class="mdescRight">deprecated unit of pressure <br /></td></tr>
+<tr class="separator:a8a499799d369283a671199cafbbbfdd5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae6e2aafde7203bb0785af39f7a759548" id="r_ae6e2aafde7203bb0785af39f7a759548"><td class="memItemLeft" align="right" valign="top"><a id="ae6e2aafde7203bb0785af39f7a759548" name="ae6e2aafde7203bb0785af39f7a759548"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>mmhg</b> = 133.322387415</td></tr>
+<tr class="memdesc:ae6e2aafde7203bb0785af39f7a759548"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a href="https://en.wikipedia.org/wiki/Millimetre_of_mercury">millimiter of mercury</a> <br /></td></tr>
+<tr class="separator:ae6e2aafde7203bb0785af39f7a759548"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a25057b42d181264cb5f8b477efd2ecc7" id="r_a25057b42d181264cb5f8b477efd2ecc7"><td class="memItemLeft" align="right" valign="top"><a id="a25057b42d181264cb5f8b477efd2ecc7" name="a25057b42d181264cb5f8b477efd2ecc7"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>torr</b> = <a class="el" href="#a872af32314275c026955a69598ca0ba9">atmosphere</a>/760</td></tr>
+<tr class="memdesc:a25057b42d181264cb5f8b477efd2ecc7"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a href="https://en.wikipedia.org/wiki/Torr">Torr</a> <br /></td></tr>
+<tr class="separator:a25057b42d181264cb5f8b477efd2ecc7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a914a0f91c1fa8d04e98849b456beb092" id="r_a914a0f91c1fa8d04e98849b456beb092"><td class="memItemLeft" align="right" valign="top"><a id="a914a0f91c1fa8d04e98849b456beb092" name="a914a0f91c1fa8d04e98849b456beb092"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>astronomical_unit</b> = 149597870700.</td></tr>
+<tr class="memdesc:a914a0f91c1fa8d04e98849b456beb092"><td class="mdescLeft">&#160;</td><td class="mdescRight">au <br /></td></tr>
+<tr class="separator:a914a0f91c1fa8d04e98849b456beb092"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4f25133674e0179da1227c3f037c8b67" id="r_a4f25133674e0179da1227c3f037c8b67"><td class="memItemLeft" align="right" valign="top"><a id="a4f25133674e0179da1227c3f037c8b67" name="a4f25133674e0179da1227c3f037c8b67"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>short_ton</b> = 2000*<a class="el" href="#a206a24a9dd534d686e4bd373413b6b01">pound_mass</a></td></tr>
+<tr class="memdesc:a4f25133674e0179da1227c3f037c8b67"><td class="mdescLeft">&#160;</td><td class="mdescRight">(imperial) short ton <br /></td></tr>
+<tr class="separator:a4f25133674e0179da1227c3f037c8b67"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5403674026ef01bee39d0e9a774fe67d" id="r_a5403674026ef01bee39d0e9a774fe67d"><td class="memItemLeft" align="right" valign="top"><a id="a5403674026ef01bee39d0e9a774fe67d" name="a5403674026ef01bee39d0e9a774fe67d"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>long_ton</b> = 2240*<a class="el" href="#a206a24a9dd534d686e4bd373413b6b01">pound_mass</a></td></tr>
+<tr class="memdesc:a5403674026ef01bee39d0e9a774fe67d"><td class="mdescLeft">&#160;</td><td class="mdescRight">(imperial) long ton <br /></td></tr>
+<tr class="separator:a5403674026ef01bee39d0e9a774fe67d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Mathematical and physical constants. </p>
-<p>Ports <code><a class="el" href="namespacehexed_1_1constants.html" title="Mathematical and physical constants.">hexed.constants</a></code> into Python.</p>
 <p>Definition of mathematical and physical constants, including unit conversions, as <code>const</code> global variables. </p><dl class="section note"><dt>Note</dt><dd><ul>
 <li>Whenever I say here something is "exact", I really mean it is exact up to the <a href="https://docs.python.org/3/tutorial/floatingpoint.html">inherent limitations</a> of floating-point representations.</li>
-<li>the doc descriptions with the mathematical symbols for the variables are mostly just so the variables can be linked to in Doxygen but maybe they will be useful to someone...</li>
+<li>the doc descriptions with the mathematical symbols for the variables are mostly just so the variables can be linked to in Doxygen but maybe they will be useful to someone... </li>
 </ul>
 </dd></dl>
-<dl class="section see"><dt>See also</dt><dd><code>constants.hpp</code> </dd></dl>
 </div><h2 class="groupheader">Variable Documentation</h2>
 <a id="aa6779d60b37344c42b02b46ff40bfe3c" name="aa6779d60b37344c42b02b46ff40bfe3c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa6779d60b37344c42b02b46ff40bfe3c">&#9670;&#160;</a></span>pi</h2>
@@ -300,6 +452,21 @@ const double&#160;</td><td class="memItemRight" valign="bottom"><b>fluid_ounce</
 
 <p>\( \pi \) </p>
 <p>Obviously a computed value, not a definition, but should be exact to machine epsilon. As we all know, the numeric value of this is 3. </p>
+
+</div>
+</div>
+<a id="aff15b05c4ae7c9fc8b37a78a6b3164f2" name="aff15b05c4ae7c9fc8b37a78a6b3164f2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aff15b05c4ae7c9fc8b37a78a6b3164f2">&#9670;&#160;</a></span>radian</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const double hexed::constants::radian = 1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Dimensionless unit, which I would argue is not a unit at all, but it's here anyway. </p>
 
 </div>
 </div>

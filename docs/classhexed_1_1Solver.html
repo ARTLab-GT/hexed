@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -124,8 +124,17 @@ $(function(){initNavTree('classhexed_1_1Solver.html',''); initResizable(true); }
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a0e8bb5b01be34169b9e68ab411763428" id="r_a0e8bb5b01be34169b9e68ab411763428"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0e8bb5b01be34169b9e68ab411763428">Solver</a> (int n_dim, int row_size, double root_mesh_size, bool local_time_stepping=false, <a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a> viscosity_model=<a class="el" href="namespacehexed.html#adfc99352c3a0cc7f6e721448c6a8d3da">inviscid</a>, <a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a> thermal_conductivity_model=<a class="el" href="namespacehexed.html#adfc99352c3a0cc7f6e721448c6a8d3da">inviscid</a>, std::shared_ptr&lt; <a class="el" href="classhexed_1_1Namespace.html">Namespace</a> &gt; space=std::make_shared&lt; <a class="el" href="classhexed_1_1Namespace.html">Namespace</a> &gt;(), std::shared_ptr&lt; <a class="el" href="structhexed_1_1Printer__set.html">Printer_set</a> &gt; printer=std::make_shared&lt; <a class="el" href="structhexed_1_1Printer__set.html">Printer_set</a> &gt;(), bool implicit=false)</td></tr>
-<tr class="separator:a0e8bb5b01be34169b9e68ab411763428"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a68e919955c34c3b9b30a1b459b387154" id="r_a68e919955c34c3b9b30a1b459b387154"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a68e919955c34c3b9b30a1b459b387154">Solver</a> (int n_dim, int row_size, double root_mesh_size, <a class="el" href="namespacehexed.html#a319dcbb20086384328b0baf464ffa28f">Time_scheme</a> time_scheme, <a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a> viscosity_model=<a class="el" href="namespacehexed.html#adfc99352c3a0cc7f6e721448c6a8d3da">inviscid</a>, <a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a> thermal_conductivity_model=<a class="el" href="namespacehexed.html#adfc99352c3a0cc7f6e721448c6a8d3da">inviscid</a>, Turbulence_model turbulence_model=laminar, std::shared_ptr&lt; <a class="el" href="classhexed_1_1Namespace.html">Namespace</a> &gt; space=std::make_shared&lt; <a class="el" href="classhexed_1_1Namespace.html">Namespace</a> &gt;())</td></tr>
+<tr class="separator:a68e919955c34c3b9b30a1b459b387154"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d7013dbc3131d3028d05fc89a2d1b33" id="r_a9d7013dbc3131d3028d05fc89a2d1b33"><td class="memItemLeft" align="right" valign="top"><a id="a9d7013dbc3131d3028d05fc89a2d1b33" name="a9d7013dbc3131d3028d05fc89a2d1b33"></a>
+<a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a>&#160;</td><td class="memItemRight" valign="bottom"><b>viscosity_model</b> () const</td></tr>
+<tr class="separator:a9d7013dbc3131d3028d05fc89a2d1b33"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a070051f1d6e42a5ee391cbcede122aeb" id="r_a070051f1d6e42a5ee391cbcede122aeb"><td class="memItemLeft" align="right" valign="top"><a id="a070051f1d6e42a5ee391cbcede122aeb" name="a070051f1d6e42a5ee391cbcede122aeb"></a>
+<a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a>&#160;</td><td class="memItemRight" valign="bottom"><b>conductivity_model</b> () const</td></tr>
+<tr class="separator:a070051f1d6e42a5ee391cbcede122aeb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a163ef8efebfbc9133ce540cf0d22279b" id="r_a163ef8efebfbc9133ce540cf0d22279b"><td class="memItemLeft" align="right" valign="top"><a id="a163ef8efebfbc9133ce540cf0d22279b" name="a163ef8efebfbc9133ce540cf0d22279b"></a>
+Turbulence_model&#160;</td><td class="memItemRight" valign="bottom"><b>turbulence_model</b> () const</td></tr>
+<tr class="separator:a163ef8efebfbc9133ce540cf0d22279b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader">setup</div></td></tr>
 <tr class="memitem:a6d3b809cb4f1562099f62fb7ad503f81" id="r_a6d3b809cb4f1562099f62fb7ad503f81"><td class="memItemLeft" align="right" valign="top"><a id="a6d3b809cb4f1562099f62fb7ad503f81" name="a6d3b809cb4f1562099f62fb7ad503f81"></a>
 <a class="el" href="classhexed_1_1Namespace.html">Namespace</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>nspace</b> ()</td></tr>
@@ -133,26 +142,27 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab105c8a279cc945de54857632424aca7" id="r_ab105c8a279cc945de54857632424aca7"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Mesh.html">Mesh</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab105c8a279cc945de54857632424aca7">mesh</a> ()</td></tr>
 <tr class="memdesc:ab105c8a279cc945de54857632424aca7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reference to the namespace which can be used to edit user-defined parameters.  <br /></td></tr>
 <tr class="separator:ab105c8a279cc945de54857632424aca7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa57eee18f37e1da2e272b3d90a0dc18d" id="r_aa57eee18f37e1da2e272b3d90a0dc18d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa57eee18f37e1da2e272b3d90a0dc18d">read_mesh</a> (std::string file_name, std::vector&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> * &gt; extremal_bcs, <a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> *=nullptr, <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> *surface_bc=nullptr)</td></tr>
-<tr class="memdesc:aa57eee18f37e1da2e272b3d90a0dc18d"><td class="mdescLeft">&#160;</td><td class="mdescRight">reads mesh from file  <br /></td></tr>
-<tr class="separator:aa57eee18f37e1da2e272b3d90a0dc18d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0c0aeb7dc4dee7ed660ca90f0e5cf4be" id="r_a0c0aeb7dc4dee7ed660ca90f0e5cf4be"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0c0aeb7dc4dee7ed660ca90f0e5cf4be">read_mesh</a> (std::string file_name, std::vector&lt; std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt; &gt; extremal_bcs, std::shared_ptr&lt; <a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> &gt;={}, std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt; surface_bc={})</td></tr>
+<tr class="memdesc:a0c0aeb7dc4dee7ed660ca90f0e5cf4be"><td class="mdescLeft">&#160;</td><td class="mdescRight">reads mesh from file  <br /></td></tr>
+<tr class="separator:a0c0aeb7dc4dee7ed660ca90f0e5cf4be"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6cfecc9e5d83d6aaf051cbf5f0eaae50" id="r_a6cfecc9e5d83d6aaf051cbf5f0eaae50"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6cfecc9e5d83d6aaf051cbf5f0eaae50">read_state</a> (std::string file_name)</td></tr>
 <tr class="memdesc:a6cfecc9e5d83d6aaf051cbf5f0eaae50"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads flow state from file.  <br /></td></tr>
 <tr class="separator:a6cfecc9e5d83d6aaf051cbf5f0eaae50"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af90a17cdca662f54ebcb95eae57cca11" id="r_af90a17cdca662f54ebcb95eae57cca11"><td class="memItemLeft" align="right" valign="top"><a id="af90a17cdca662f54ebcb95eae57cca11" name="af90a17cdca662f54ebcb95eae57cca11"></a>
 <a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a>&#160;</td><td class="memItemRight" valign="bottom"><b>storage_params</b> ()</td></tr>
 <tr class="separator:af90a17cdca662f54ebcb95eae57cca11"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad5555e64f39378aa5184742803e94848" id="r_ad5555e64f39378aa5184742803e94848"><td class="memItemLeft" align="right" valign="top"><a id="ad5555e64f39378aa5184742803e94848" name="ad5555e64f39378aa5184742803e94848"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>snap_faces</b> ()</td></tr>
-<tr class="memdesc:ad5555e64f39378aa5184742803e94848"><td class="mdescLeft">&#160;</td><td class="mdescRight">warps the boundary elements such that the element faces coincide with the boundary at their quadrature points. <br /></td></tr>
-<tr class="separator:ad5555e64f39378aa5184742803e94848"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac4739390b8368d46790f68514e379e41" id="r_ac4739390b8368d46790f68514e379e41"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac4739390b8368d46790f68514e379e41">calc_jacobian</a> (bool <a class="el" href="#ad5555e64f39378aa5184742803e94848">snap_faces</a>=true)</td></tr>
-<tr class="memdesc:ac4739390b8368d46790f68514e379e41"><td class="mdescLeft">&#160;</td><td class="mdescRight">compute the Jacobian of all elements based on the current position of the vertices and value of any face warping.  <br /></td></tr>
-<tr class="separator:ac4739390b8368d46790f68514e379e41"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8aa9fd49c2aed6a7dc3080ea09751154" id="r_a8aa9fd49c2aed6a7dc3080ea09751154"><td class="memItemLeft" align="right" valign="top"><a id="a8aa9fd49c2aed6a7dc3080ea09751154" name="a8aa9fd49c2aed6a7dc3080ea09751154"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>initialize</b> (const <a class="el" href="classhexed_1_1Spacetime__func.html">Spacetime_func</a> &amp;)</td></tr>
-<tr class="memdesc:a8aa9fd49c2aed6a7dc3080ea09751154"><td class="mdescLeft">&#160;</td><td class="mdescRight">set the flow state <br /></td></tr>
-<tr class="separator:a8aa9fd49c2aed6a7dc3080ea09751154"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abecca0e37da8f1a26c7c656a064cbf83" id="r_abecca0e37da8f1a26c7c656a064cbf83"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abecca0e37da8f1a26c7c656a064cbf83">calc_jacobian</a> ()</td></tr>
+<tr class="memdesc:abecca0e37da8f1a26c7c656a064cbf83"><td class="mdescLeft">&#160;</td><td class="mdescRight">compute the Jacobian of all elements based on the current position of the vertices and value of any face warping.  <br /></td></tr>
+<tr class="separator:abecca0e37da8f1a26c7c656a064cbf83"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7f136cc805959cc3c937796f264d3da9" id="r_a7f136cc805959cc3c937796f264d3da9"><td class="memItemLeft" align="right" valign="top"><a id="a7f136cc805959cc3c937796f264d3da9" name="a7f136cc805959cc3c937796f264d3da9"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>init_wall_dist</b> ()</td></tr>
+<tr class="separator:a7f136cc805959cc3c937796f264d3da9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a130e8927cf3cf71c637f45795cd13f12" id="r_a130e8927cf3cf71c637f45795cd13f12"><td class="memItemLeft" align="right" valign="top"><a id="a130e8927cf3cf71c637f45795cd13f12" name="a130e8927cf3cf71c637f45795cd13f12"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>update_wall_dist</b> (<a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> n_iter)</td></tr>
+<tr class="separator:a130e8927cf3cf71c637f45795cd13f12"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4657977fe826f772a11bbe395ab3b6bc" id="r_a4657977fe826f772a11bbe395ab3b6bc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4657977fe826f772a11bbe395ab3b6bc">initialize</a> (std::string expression)</td></tr>
+<tr class="memdesc:a4657977fe826f772a11bbe395ab3b6bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">set the flow state from an HIL expression  <br /></td></tr>
+<tr class="separator:a4657977fe826f772a11bbe395ab3b6bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a68eb1d5ba8a4734029e1cb00139468f2" id="r_a68eb1d5ba8a4734029e1cb00139468f2"><td class="memItemLeft" align="right" valign="top"><a id="a68eb1d5ba8a4734029e1cb00139468f2" name="a68eb1d5ba8a4734029e1cb00139468f2"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>using_art_visc</b> ()</td></tr>
 <tr class="memdesc:a68eb1d5ba8a4734029e1cb00139468f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">returns <code>true</code> if artificial viscosity is currently turned on <br /></td></tr>
@@ -168,46 +178,57 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_art_visc_constant
 <tr class="memitem:aadf2b549560adebfc4cbdfd9aee72dc0" id="r_aadf2b549560adebfc4cbdfd9aee72dc0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aadf2b549560adebfc4cbdfd9aee72dc0">set_art_visc_row_size</a> (int)</td></tr>
 <tr class="memdesc:aadf2b549560adebfc4cbdfd9aee72dc0"><td class="mdescLeft">&#160;</td><td class="mdescRight">modify the polynomial order of smoothness-based artificial viscosity  <br /></td></tr>
 <tr class="separator:aadf2b549560adebfc4cbdfd9aee72dc0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab96f1c9ba8f10a3d723d49c7f0c61983" id="r_ab96f1c9ba8f10a3d723d49c7f0c61983"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab96f1c9ba8f10a3d723d49c7f0c61983">set_fix_admissibility</a> (bool)</td></tr>
-<tr class="memdesc:ab96f1c9ba8f10a3d723d49c7f0c61983"><td class="mdescLeft">&#160;</td><td class="mdescRight">turns on/off the thermodynamic admissibility-preserving scheme  <br /></td></tr>
-<tr class="separator:ab96f1c9ba8f10a3d723d49c7f0c61983"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac98ebdf32b24119591d3d2ee5d3188bc" id="r_ac98ebdf32b24119591d3d2ee5d3188bc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac98ebdf32b24119591d3d2ee5d3188bc">set_fix_nonphysical</a> (bool)</td></tr>
+<tr class="memdesc:ac98ebdf32b24119591d3d2ee5d3188bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">turns on/off the nonphysical-state-fixing scheme  <br /></td></tr>
+<tr class="separator:ac98ebdf32b24119591d3d2ee5d3188bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab0c6c110ccb0854c196759b3aca149f8" id="r_ab0c6c110ccb0854c196759b3aca149f8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab0c6c110ccb0854c196759b3aca149f8">set_uncertainty</a> (const <a class="el" href="classhexed_1_1Element__func.html">Element_func</a> &amp;func)</td></tr>
 <tr class="memdesc:ab0c6c110ccb0854c196759b3aca149f8"><td class="mdescLeft">&#160;</td><td class="mdescRight">set <code><a class="el" href="classhexed_1_1Element.html#ad9e510917cc62bf7956c51a251d819fc" title="Pointer to state data at faces. Must be populated by user.">Element::uncertainty</a></code> for each element according to <code>func</code>.  <br /></td></tr>
 <tr class="separator:ab0c6c110ccb0854c196759b3aca149f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abb8f87fc816a88735f3aad6b45aa9765" id="r_abb8f87fc816a88735f3aad6b45aa9765"><td class="memItemLeft" align="right" valign="top"><a id="abb8f87fc816a88735f3aad6b45aa9765" name="abb8f87fc816a88735f3aad6b45aa9765"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>set_uncertainty</b> (double)</td></tr>
+<tr class="memdesc:abb8f87fc816a88735f3aad6b45aa9765"><td class="mdescLeft">&#160;</td><td class="mdescRight">set <code><a class="el" href="classhexed_1_1Element.html#ad9e510917cc62bf7956c51a251d819fc" title="Pointer to state data at faces. Must be populated by user.">Element::uncertainty</a></code> to a uniform constant <br /></td></tr>
+<tr class="separator:abb8f87fc816a88735f3aad6b45aa9765"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adef508ded435c692dc0165ef546b3fe1" id="r_adef508ded435c692dc0165ef546b3fe1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adef508ded435c692dc0165ef546b3fe1">set_uncert_surface_rep</a> (int bc_sn)</td></tr>
 <tr class="memdesc:adef508ded435c692dc0165ef546b3fe1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set uncertainty metric based on surface representation quality.  <br /></td></tr>
 <tr class="separator:adef508ded435c692dc0165ef546b3fe1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaed72189cecdbb2fc8363ac78414c8b4" id="r_aaed72189cecdbb2fc8363ac78414c8b4"><td class="memItemLeft" align="right" valign="top"><a id="aaed72189cecdbb2fc8363ac78414c8b4" name="aaed72189cecdbb2fc8363ac78414c8b4"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>synch_extruded_uncert</b> ()</td></tr>
-<tr class="memdesc:aaed72189cecdbb2fc8363ac78414c8b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">set uncertainty of each element to be at least the maximum uncertainty of any elements extruded from it <br /></td></tr>
-<tr class="separator:aaed72189cecdbb2fc8363ac78414c8b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader">time marching</div></td></tr>
+<tr class="memitem:ae260fbe9c8e0f325fb86eb57a14c8752" id="r_ae260fbe9c8e0f325fb86eb57a14c8752"><td class="memItemLeft" align="right" valign="top"><a id="ae260fbe9c8e0f325fb86eb57a14c8752" name="ae260fbe9c8e0f325fb86eb57a14c8752"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>smooth_init_cond</b> (<a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> n_iter)</td></tr>
+<tr class="separator:ae260fbe9c8e0f325fb86eb57a14c8752"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad1b1d8ad6985b4c658724e840c2574f5" id="r_ad1b1d8ad6985b4c658724e840c2574f5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad1b1d8ad6985b4c658724e840c2574f5">update</a> ()</td></tr>
 <tr class="separator:ad1b1d8ad6985b4c658724e840c2574f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a322a721a3a7b02ceb31828f8a99bcabb" id="r_a322a721a3a7b02ceb31828f8a99bcabb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a322a721a3a7b02ceb31828f8a99bcabb">update_implicit</a> ()</td></tr>
-<tr class="memdesc:a322a721a3a7b02ceb31828f8a99bcabb"><td class="mdescLeft">&#160;</td><td class="mdescRight">(experimental) performs an implicit time step  <br /></td></tr>
-<tr class="separator:a322a721a3a7b02ceb31828f8a99bcabb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a30814bd93442571d86da6238fd23011b" id="r_a30814bd93442571d86da6238fd23011b"><td class="memItemLeft" align="right" valign="top"><a id="a30814bd93442571d86da6238fd23011b" name="a30814bd93442571d86da6238fd23011b"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_residual</b> ()</td></tr>
-<tr class="separator:a30814bd93442571d86da6238fd23011b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acc33d4434b30bc20c239e8bb2512f186" id="r_acc33d4434b30bc20c239e8bb2512f186"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acc33d4434b30bc20c239e8bb2512f186">next_time_stage</a> ()</td></tr>
+<tr class="memdesc:acc33d4434b30bc20c239e8bb2512f186"><td class="mdescLeft">&#160;</td><td class="mdescRight">Switch to the next implicit unsteady time integration stage.  <br /></td></tr>
+<tr class="separator:acc33d4434b30bc20c239e8bb2512f186"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3633aa5b663dc76ba395ecaf79f5dec3" id="r_a3633aa5b663dc76ba395ecaf79f5dec3"><td class="memItemLeft" align="right" valign="top"><a id="a3633aa5b663dc76ba395ecaf79f5dec3" name="a3633aa5b663dc76ba395ecaf79f5dec3"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_residual</b> (bool unsteady_implicit)</td></tr>
+<tr class="separator:a3633aa5b663dc76ba395ecaf79f5dec3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a13cbdd10a02baaec96d44c93a6083983" id="r_a13cbdd10a02baaec96d44c93a6083983"><td class="memItemLeft" align="right" valign="top"><a id="a13cbdd10a02baaec96d44c93a6083983" name="a13cbdd10a02baaec96d44c93a6083983"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>update_preti_iters</b> ()</td></tr>
+<tr class="separator:a13cbdd10a02baaec96d44c93a6083983"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a341bd2cc8918969c6f71a6b47cb958e1" id="r_a341bd2cc8918969c6f71a6b47cb958e1"><td class="memItemLeft" align="right" valign="top"><a id="a341bd2cc8918969c6f71a6b47cb958e1" name="a341bd2cc8918969c6f71a6b47cb958e1"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>print_preti_iters</b> ()</td></tr>
+<tr class="separator:a341bd2cc8918969c6f71a6b47cb958e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a08f53355866f8d9d8694243f0df3cb17" id="r_a08f53355866f8d9d8694243f0df3cb17"><td class="memItemLeft" align="right" valign="top"><a id="a08f53355866f8d9d8694243f0df3cb17" name="a08f53355866f8d9d8694243f0df3cb17"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_spectral_uncertainty</b> ()</td></tr>
+<tr class="separator:a08f53355866f8d9d8694243f0df3cb17"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a571511865db90cc9172294b7ae11b22c" id="r_a571511865db90cc9172294b7ae11b22c"><td class="memItemLeft" align="right" valign="top"><a id="a571511865db90cc9172294b7ae11b22c" name="a571511865db90cc9172294b7ae11b22c"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>update_bound_conds</b> ()</td></tr>
+<tr class="separator:a571511865db90cc9172294b7ae11b22c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9fcd35e19f33037f98dac80e0dd4dce4" id="r_a9fcd35e19f33037f98dac80e0dd4dce4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9fcd35e19f33037f98dac80e0dd4dce4">compute_lts_constraints</a> ()</td></tr>
 <tr class="memdesc:a9fcd35e19f33037f98dac80e0dd4dce4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the minimum ratio between the local diffusive and convective time steps.  <br /></td></tr>
 <tr class="separator:a9fcd35e19f33037f98dac80e0dd4dce4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a14ba8f9152948f15c94b34edae72f3ad" id="r_a14ba8f9152948f15c94b34edae72f3ad"><td class="memItemLeft" align="right" valign="top"><a id="a14ba8f9152948f15c94b34edae72f3ad" name="a14ba8f9152948f15c94b34edae72f3ad"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_admissible</b> ()</td></tr>
-<tr class="memdesc:a14ba8f9152948f15c94b34edae72f3ad"><td class="mdescLeft">&#160;</td><td class="mdescRight">check whether flowfield is admissible (e.g. density and energy are positive) <br /></td></tr>
-<tr class="separator:a14ba8f9152948f15c94b34edae72f3ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a25f39d1d1312635e9629dfe934804879" id="r_a25f39d1d1312635e9629dfe934804879"><td class="memItemLeft" align="right" valign="top"><a id="a25f39d1d1312635e9629dfe934804879" name="a25f39d1d1312635e9629dfe934804879"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>update_art_visc_smoothness</b> (double advect_length)</td></tr>
-<tr class="memdesc:a25f39d1d1312635e9629dfe934804879"><td class="mdescLeft">&#160;</td><td class="mdescRight">updates the aritificial viscosity coefficient based on smoothness of the flow variables <br /></td></tr>
-<tr class="separator:a25f39d1d1312635e9629dfe934804879"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afde7bd219de7b01ba5297373f281222c" id="r_afde7bd219de7b01ba5297373f281222c"><td class="memItemLeft" align="right" valign="top"><a id="afde7bd219de7b01ba5297373f281222c" name="afde7bd219de7b01ba5297373f281222c"></a>
+<a class="el" href="classhexed_1_1Is__physical__result.html">Is_physical_result</a>&#160;</td><td class="memItemRight" valign="bottom"><b>is_physical</b> ()</td></tr>
+<tr class="memdesc:afde7bd219de7b01ba5297373f281222c"><td class="mdescLeft">&#160;</td><td class="mdescRight">check whether flowfield is physically admissible (e.g. density and energy are positive) <br /></td></tr>
+<tr class="separator:afde7bd219de7b01ba5297373f281222c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae78d8498a7542c7209c3c17bb866365c" id="r_ae78d8498a7542c7209c3c17bb866365c"><td class="memItemLeft" align="right" valign="top"><a id="ae78d8498a7542c7209c3c17bb866365c" name="ae78d8498a7542c7209c3c17bb866365c"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>update_art_visc_smoothness</b> ()</td></tr>
+<tr class="memdesc:ae78d8498a7542c7209c3c17bb866365c"><td class="mdescLeft">&#160;</td><td class="mdescRight">updates the aritificial viscosity coefficient based on smoothness of the flow variables <br /></td></tr>
+<tr class="separator:ae78d8498a7542c7209c3c17bb866365c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adb1c3a1d0feded2eed22613b309d4a36" id="r_adb1c3a1d0feded2eed22613b309d4a36"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adb1c3a1d0feded2eed22613b309d4a36">update_art_visc_elwise</a> (double width, bool pde_based=false)</td></tr>
 <tr class="memdesc:adb1c3a1d0feded2eed22613b309d4a36"><td class="mdescLeft">&#160;</td><td class="mdescRight">(experimental) sets artificial viscosity based on elementwise smoothness  <br /></td></tr>
 <tr class="separator:adb1c3a1d0feded2eed22613b309d4a36"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a94354a21cf357c3e8769d47bc064dc65" id="r_a94354a21cf357c3e8769d47bc064dc65"><td class="memItemLeft" align="right" valign="top"><a id="a94354a21cf357c3e8769d47bc064dc65" name="a94354a21cf357c3e8769d47bc064dc65"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>set_art_visc_admis</b> ()</td></tr>
-<tr class="memdesc:a94354a21cf357c3e8769d47bc064dc65"><td class="mdescLeft">&#160;</td><td class="mdescRight">set the Laplacian artificial viscosity to a minimal value that will encourage thermodynamic admissibility <br /></td></tr>
-<tr class="separator:a94354a21cf357c3e8769d47bc064dc65"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acea45eceb14b28e267f6a6e41398b972" id="r_acea45eceb14b28e267f6a6e41398b972"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Iteration__status.html">Iteration_status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acea45eceb14b28e267f6a6e41398b972">iteration_status</a> ()</td></tr>
 <tr class="memdesc:acea45eceb14b28e267f6a6e41398b972"><td class="mdescLeft">&#160;</td><td class="mdescRight">an object providing all available information about the status of the time marching iteration.  <br /></td></tr>
 <tr class="separator:acea45eceb14b28e267f6a6e41398b972"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -222,6 +243,10 @@ std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><
 <tr class="separator:a8d4e90f6b0dc3bb6698cfcae0d7520b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a68904736b8fc4109d54c79c55d6ecb30" id="r_a68904736b8fc4109d54c79c55d6ecb30"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a68904736b8fc4109d54c79c55d6ecb30">sample</a> (int ref_level, bool is_deformed, int serial_n, const <a class="el" href="classhexed_1_1Element__func.html">Element_func</a> &amp;)</td></tr>
 <tr class="separator:a68904736b8fc4109d54c79c55d6ecb30"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad316060322355e578f297627844eee28" id="r_ad316060322355e578f297627844eee28"><td class="memItemLeft" align="right" valign="top"><a id="ad316060322355e578f297627844eee28" name="ad316060322355e578f297627844eee28"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>bounds_surface</b> (std::string expression, int bc_sn, int n_sample)</td></tr>
+<tr class="memdesc:ad316060322355e578f297627844eee28"><td class="mdescLeft">&#160;</td><td class="mdescRight">compute bounds of an expression over a boundary surface <br /></td></tr>
+<tr class="separator:ad316060322355e578f297627844eee28"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af9720e91d63ca5329bf6f734af1df3b9" id="r_af9720e91d63ca5329bf6f734af1df3b9"><td class="memItemLeft" align="right" valign="top"><a id="af9720e91d63ca5329bf6f734af1df3b9" name="af9720e91d63ca5329bf6f734af1df3b9"></a>
 const <a class="el" href="classhexed_1_1Stopwatch__tree.html">Stopwatch_tree</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>stopwatch_tree</b> ()</td></tr>
 <tr class="memdesc:af9720e91d63ca5329bf6f734af1df3b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">obtain performance data <br /></td></tr>
@@ -230,27 +255,23 @@ const <a class="el" href="classhexed_1_1Stopwatch__tree.html">Stopwatch_tree</a>
 std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>integral_field</b> (const <a class="el" href="classhexed_1_1Qpoint__func.html">Qpoint_func</a> &amp;integrand)</td></tr>
 <tr class="memdesc:aa0dffa9daa037351f998431fb64e8751"><td class="mdescLeft">&#160;</td><td class="mdescRight">compute an integral over the entire flow field at the current time <br /></td></tr>
 <tr class="separator:aa0dffa9daa037351f998431fb64e8751"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac7f0c6619ca15591d4247efe75428162" id="r_ac7f0c6619ca15591d4247efe75428162"><td class="memItemLeft" align="right" valign="top"><a id="ac7f0c6619ca15591d4247efe75428162" name="ac7f0c6619ca15591d4247efe75428162"></a>
-std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>integral_surface</b> (const <a class="el" href="classhexed_1_1Boundary__func.html">Boundary_func</a> &amp;integrand, int bc_sn)</td></tr>
-<tr class="memdesc:ac7f0c6619ca15591d4247efe75428162"><td class="mdescLeft">&#160;</td><td class="mdescRight">compute an integral over all surfaces where a particular boundary condition has been enforced <br /></td></tr>
-<tr class="separator:ac7f0c6619ca15591d4247efe75428162"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a298f1a3dbe9e8feff9967533364e18c6" id="r_a298f1a3dbe9e8feff9967533364e18c6"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::array&lt; double, 2 &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a298f1a3dbe9e8feff9967533364e18c6">bounds_field</a> (const <a class="el" href="classhexed_1_1Qpoint__func.html">Qpoint_func</a> &amp;, int n_sample=20)</td></tr>
-<tr class="memdesc:a298f1a3dbe9e8feff9967533364e18c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">compute the min and max of variables over entire flow field.  <br /></td></tr>
-<tr class="separator:a298f1a3dbe9e8feff9967533364e18c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac2fc1715451ddcdde240d203303055d5" id="r_ac2fc1715451ddcdde240d203303055d5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac2fc1715451ddcdde240d203303055d5">visualize_field</a> (std::string format, std::string name, const <a class="el" href="classhexed_1_1Qpoint__func.html">Qpoint_func</a> &amp;output_variables, int n_sample=10, bool wireframe=false)</td></tr>
-<tr class="memdesc:ac2fc1715451ddcdde240d203303055d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">write a visualization file describing the entire flow field (but not identifying surfaces)  <br /></td></tr>
-<tr class="separator:ac2fc1715451ddcdde240d203303055d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a352e80e4b97bb93d4e36f6ee3b83dc85" id="r_a352e80e4b97bb93d4e36f6ee3b83dc85"><td class="memItemLeft" align="right" valign="top"><a id="a352e80e4b97bb93d4e36f6ee3b83dc85" name="a352e80e4b97bb93d4e36f6ee3b83dc85"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>visualize_surface</b> (std::string format, std::string name, int bc_sn, const <a class="el" href="classhexed_1_1Boundary__func.html">Boundary_func</a> &amp;, int n_sample=10, bool wireframe=false)</td></tr>
-<tr class="memdesc:a352e80e4b97bb93d4e36f6ee3b83dc85"><td class="mdescLeft">&#160;</td><td class="mdescRight">write a visualization file describing all surfaces where a particular boundary condition has been enforced. <br /></td></tr>
-<tr class="separator:a352e80e4b97bb93d4e36f6ee3b83dc85"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae302b31e706b1842a7b6b43ece83c3d7" id="r_ae302b31e706b1842a7b6b43ece83c3d7"><td class="memItemLeft" align="right" valign="top"><a id="ae302b31e706b1842a7b6b43ece83c3d7" name="ae302b31e706b1842a7b6b43ece83c3d7"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>visualize_contour</b> (std::string format, std::string name, const <a class="el" href="classhexed_1_1Qpoint__func.html">Qpoint_func</a> &amp;contour_by, const <a class="el" href="classhexed_1_1Qpoint__func.html">Qpoint_func</a> &amp;output_variables, int n_sample=10)</td></tr>
-<tr class="separator:ae302b31e706b1842a7b6b43ece83c3d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a44611b4ef716956a0c97d7cce07627ca" id="r_a44611b4ef716956a0c97d7cce07627ca"><td class="memItemLeft" align="right" valign="top"><a id="a44611b4ef716956a0c97d7cce07627ca" name="a44611b4ef716956a0c97d7cce07627ca"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (std::string format, std::string name, int bc_sn, const <a class="el" href="classhexed_1_1Boundary__func.html">Boundary_func</a> &amp;func=<a class="el" href="classhexed_1_1Uncertainty.html">Uncertainty</a>())</td></tr>
-<tr class="memdesc:a44611b4ef716956a0c97d7cce07627ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">visualize the Cartesian surface which theoretically exists after element deletion but before any vertex snapping <br /></td></tr>
-<tr class="separator:a44611b4ef716956a0c97d7cce07627ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a17a11914712509a81bb6afffc723a27b" id="r_a17a11914712509a81bb6afffc723a27b"><td class="memItemLeft" align="right" valign="top"><a id="a17a11914712509a81bb6afffc723a27b" name="a17a11914712509a81bb6afffc723a27b"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>integrate_field</b> (std::string expression)</td></tr>
+<tr class="separator:a17a11914712509a81bb6afffc723a27b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0e234d134ff0b34ba739579ea292c976" id="r_a0e234d134ff0b34ba739579ea292c976"><td class="memItemLeft" align="right" valign="top"><a id="a0e234d134ff0b34ba739579ea292c976" name="a0e234d134ff0b34ba739579ea292c976"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>integrate_surface</b> (std::string expression, int bc_sn)</td></tr>
+<tr class="memdesc:a0e234d134ff0b34ba739579ea292c976"><td class="mdescLeft">&#160;</td><td class="mdescRight">compute an integral over all surfaces where a particular boundary condition has been enforced <br /></td></tr>
+<tr class="separator:a0e234d134ff0b34ba739579ea292c976"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a10216e3a782c8473459d1c51cd6f1fa7" id="r_a10216e3a782c8473459d1c51cd6f1fa7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a10216e3a782c8473459d1c51cd6f1fa7">visualize_field</a> (std::string format, std::string name, std::string expression, int n_sample=10, bool wireframe=false)</td></tr>
+<tr class="memdesc:a10216e3a782c8473459d1c51cd6f1fa7"><td class="mdescLeft">&#160;</td><td class="mdescRight">write a visualization file describing the entire flow field (but not identifying surfaces)  <br /></td></tr>
+<tr class="separator:a10216e3a782c8473459d1c51cd6f1fa7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab2d40314dffed18406f8971254ca972e" id="r_ab2d40314dffed18406f8971254ca972e"><td class="memItemLeft" align="right" valign="top"><a id="ab2d40314dffed18406f8971254ca972e" name="ab2d40314dffed18406f8971254ca972e"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>visualize_surface</b> (std::string format, std::string name, int bc_sn, std::string expression, int n_sample=10, bool wireframe=false)</td></tr>
+<tr class="memdesc:ab2d40314dffed18406f8971254ca972e"><td class="mdescLeft">&#160;</td><td class="mdescRight">write a visualization file describing all surfaces where a particular boundary condition has been enforced. <br /></td></tr>
+<tr class="separator:ab2d40314dffed18406f8971254ca972e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1965f98147b152b5d3559754139b90bf" id="r_a1965f98147b152b5d3559754139b90bf"><td class="memItemLeft" align="right" valign="top"><a id="a1965f98147b152b5d3559754139b90bf" name="a1965f98147b152b5d3559754139b90bf"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>visualize_contour</b> (std::string format, std::string name, std::string contour_expression, std::string vis_expression, double const_tol=1e-10, int n_sample=10)</td></tr>
+<tr class="separator:a1965f98147b152b5d3559754139b90bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5bf69424e67d4dc41532bd83eb4eefab" id="r_a5bf69424e67d4dc41532bd83eb4eefab"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5bf69424e67d4dc41532bd83eb4eefab">vis_lts_constraints</a> (std::string format, std::string name, int n_sample=10)</td></tr>
 <tr class="memdesc:a5bf69424e67d4dc41532bd83eb4eefab"><td class="mdescLeft">&#160;</td><td class="mdescRight">visualize the local time step constraints imposed by convection and diffusion, respectively  <br /></td></tr>
 <tr class="separator:a5bf69424e67d4dc41532bd83eb4eefab"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -267,14 +288,14 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
 <p>If you want to run a simulation with hexed through the C++ API, your workflow should be roughly the following:</p><ol type="1">
 <li>construct a <code><a class="el" href="classhexed_1_1Solver.html" title="The main class that basically runs everything.">Solver</a></code> object</li>
 <li>interact with the <code><a class="el" href="#ab105c8a279cc945de54857632424aca7" title="Reference to the namespace which can be used to edit user-defined parameters.">mesh()</a></code> object to build the mesh topology and/or snap vertices</li>
-<li>call <code><a class="el" href="#ac4739390b8368d46790f68514e379e41" title="compute the Jacobian of all elements based on the current position of the vertices and value of any f...">calc_jacobian()</a></code> to initialize internal parameters based on the mesh</li>
-<li>call <code><a class="el" href="#a8aa9fd49c2aed6a7dc3080ea09751154" title="set the flow state">initialize()</a></code> to initialize the flow state</li>
+<li>call <code><a class="el" href="#abecca0e37da8f1a26c7c656a064cbf83" title="compute the Jacobian of all elements based on the current position of the vertices and value of any f...">calc_jacobian()</a></code> to initialize internal parameters based on the mesh</li>
+<li>call <code><a class="el" href="#a4657977fe826f772a11bbe395ab3b6bc" title="set the flow state from an HIL expression">initialize()</a></code> to initialize the flow state</li>
 <li>call <code><a class="el" href="#ad1b1d8ad6985b4c658724e840c2574f5">update()</a></code> repeatedly to progress the simulation</li>
 <li>call the some of the functions in output section to get the data you want from the simulation </li>
 </ol>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a0e8bb5b01be34169b9e68ab411763428" name="a0e8bb5b01be34169b9e68ab411763428"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0e8bb5b01be34169b9e68ab411763428">&#9670;&#160;</a></span>Solver()</h2>
+<a id="a68e919955c34c3b9b30a1b459b387154" name="a68e919955c34c3b9b30a1b459b387154"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a68e919955c34c3b9b30a1b459b387154">&#9670;&#160;</a></span>Solver()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -297,7 +318,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>local_time_stepping</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>, </td>
+          <td class="paramtype"><a class="el" href="namespacehexed.html#a319dcbb20086384328b0baf464ffa28f">Time_scheme</a></td>          <td class="paramname"><span class="paramname"><em>time_scheme</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -312,17 +333,12 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="classhexed_1_1Namespace.html">Namespace</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>space</em></span><span class="paramdefsep"> = </span><span class="paramdefval">std::make_shared&lt;<a class="el" href="classhexed_1_1Namespace.html">Namespace</a>&gt;()</span>, </td>
+          <td class="paramtype">Turbulence_model</td>          <td class="paramname"><span class="paramname"><em>turbulence_model</em></span><span class="paramdefsep"> = </span><span class="paramdefval">laminar</span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="structhexed_1_1Printer__set.html">Printer_set</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>printer</em></span><span class="paramdefsep"> = </span><span class="paramdefval">std::make_shared&lt;<a class="el" href="structhexed_1_1Printer__set.html">Printer_set</a>&gt;()</span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>implicit</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="classhexed_1_1Namespace.html">Namespace</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>space</em></span><span class="paramdefsep"> = </span><span class="paramdefval">std::make_shared&lt;<a class="el" href="classhexed_1_1Namespace.html">Namespace</a>&gt;()</span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -331,12 +347,11 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
     <tr><td class="paramname">n_dim</td><td>number of dimensions </td></tr>
     <tr><td class="paramname">row_size</td><td>row size of the basis (see <a class="el" href="conventions.html#Terminology">Terminology</a>) </td></tr>
     <tr><td class="paramname">root_mesh_size</td><td>sets the value of <code>Mesh::root_mesh_size()</code> </td></tr>
-    <tr><td class="paramname">local_time_stepping</td><td>whether to use local or global time stepping </td></tr>
+    <tr><td class="paramname">time_scheme</td><td>what numerical scheme to use for time integration </td></tr>
     <tr><td class="paramname">viscosity_model</td><td>determines whether the flow has viscosity (natural, not artificial) and if so, how it depends on temperature </td></tr>
     <tr><td class="paramname">thermal_conductivity_model</td><td>determines whether the flow has thermal conductivity and if so, how it depends on temperature </td></tr>
-    <tr><td class="paramname">space</td><td><code><a class="el" href="classhexed_1_1Namespace.html">Namespace</a></code> containing any user-defined parameters affecting the behavior of the solver. If no namespace is provided, a new blank namespace is creqated. Any optional parameters which are not found in the namespace shall be created with their default values. </td></tr>
-    <tr><td class="paramname">printer</td><td>what to do with any information the solver wants to print for the user to see </td></tr>
-    <tr><td class="paramname">implicit</td><td>if <code>true</code>, allocate storage for solving with an implicit method (experimental feature&mdash;not ready for production use)</td></tr>
+    <tr><td class="paramname">turbulence_model</td><td>How and if to model turbulence. </td></tr>
+    <tr><td class="paramname">space</td><td><code><a class="el" href="classhexed_1_1Namespace.html">Namespace</a></code> containing any user-defined parameters affecting the behavior of the solver. If no namespace is provided, a new blank namespace is creqated. Any optional parameters which are not found in the namespace shall be created with their default values.</td></tr>
   </table>
   </dd>
 </dl>
@@ -345,32 +360,8 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a298f1a3dbe9e8feff9967533364e18c6" name="a298f1a3dbe9e8feff9967533364e18c6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a298f1a3dbe9e8feff9967533364e18c6">&#9670;&#160;</a></span>bounds_field()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; std::array&lt; double, 2 &gt; &gt; hexed::Solver::bounds_field </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="classhexed_1_1Qpoint__func.html">Qpoint_func</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>func</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>n_sample</em></span><span class="paramdefsep"> = </span><span class="paramdefval">20</span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>compute the min and max of variables over entire flow field. </p>
-<p>Layout: <code>{{var0_min, var0_max}, {var1_min, var1_max}, ...}</code>. Bounds are approximated by uniformly sampling a block <code>n_sample</code>-on-a-side in each element. </p>
-
-</div>
-</div>
-<a id="ac4739390b8368d46790f68514e379e41" name="ac4739390b8368d46790f68514e379e41"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac4739390b8368d46790f68514e379e41">&#9670;&#160;</a></span>calc_jacobian()</h2>
+<a id="abecca0e37da8f1a26c7c656a064cbf83" name="abecca0e37da8f1a26c7c656a064cbf83"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abecca0e37da8f1a26c7c656a064cbf83">&#9670;&#160;</a></span>calc_jacobian()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -378,19 +369,14 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
         <tr>
           <td class="memname">void hexed::Solver::calc_jacobian </td>
           <td>(</td>
-          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>snap_faces</em></span><span class="paramdefsep"> = </span><span class="paramdefval">true</span></td><td>)</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>compute the Jacobian of all elements based on the current position of the vertices and value of any face warping. </p>
-<p><a class="el" href="classhexed_1_1Mesh.html">Mesh</a> topology must be valid (no duplicate or missing connections) before calling this function. </p><dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">snap_faces</td><td>if <code>true</code>, this function will go ahead and perform face snapping for you </td></tr>
-  </table>
-  </dd>
-</dl>
+<p><a class="el" href="classhexed_1_1Mesh.html">Mesh</a> topology must be valid (no duplicate or missing connections) before calling this function. </p>
 
 </div>
 </div>
@@ -414,6 +400,26 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
 
 </div>
 </div>
+<a id="a4657977fe826f772a11bbe395ab3b6bc" name="a4657977fe826f772a11bbe395ab3b6bc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4657977fe826f772a11bbe395ab3b6bc">&#9670;&#160;</a></span>initialize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void hexed::Solver::initialize </td>
+          <td>(</td>
+          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>expression</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>set the flow state from an HIL expression </p>
+<p><code>espression</code> must set the variables <code>momentum0</code>, ..., <code>momentum[n_dim - 1]</code>, <code>density</code>, <code>energy</code> </p>
+
+</div>
+</div>
 <a id="acea45eceb14b28e267f6a6e41398b972" name="acea45eceb14b28e267f6a6e41398b972"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acea45eceb14b28e267f6a6e41398b972">&#9670;&#160;</a></span>iteration_status()</h2>
 
@@ -430,7 +436,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
 </div><div class="memdoc">
 
 <p>an object providing all available information about the status of the time marching iteration. </p>
-<p>The <code><a class="el" href="classhexed_1_1Iteration__status.html#ad99f044b551ea80b1ed04aac71b07cf8" title="Unix epoch time that set_time was called.">Iteration_status::start_time</a></code> member will refer to when the <code><a class="el" href="classhexed_1_1Solver.html" title="The main class that basically runs everything.">Solver</a></code> object was created (specifically at the start of the <code><a class="el" href="#a0e8bb5b01be34169b9e68ab411763428">Solver::Solver</a></code> body). </p>
+<p>The <code><a class="el" href="classhexed_1_1Iteration__status.html#ad99f044b551ea80b1ed04aac71b07cf8" title="Unix epoch time that set_time was called.">Iteration_status::start_time</a></code> member will refer to when the <code><a class="el" href="classhexed_1_1Solver.html" title="The main class that basically runs everything.">Solver</a></code> object was created (specifically at the start of the <code><a class="el" href="#a68e919955c34c3b9b30a1b459b387154">Solver::Solver</a></code> body). </p>
 
 </div>
 </div>
@@ -455,8 +461,28 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
 
 </div>
 </div>
-<a id="aa57eee18f37e1da2e272b3d90a0dc18d" name="aa57eee18f37e1da2e272b3d90a0dc18d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa57eee18f37e1da2e272b3d90a0dc18d">&#9670;&#160;</a></span>read_mesh()</h2>
+<a id="acc33d4434b30bc20c239e8bb2512f186" name="acc33d4434b30bc20c239e8bb2512f186"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acc33d4434b30bc20c239e8bb2512f186">&#9670;&#160;</a></span>next_time_stage()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int hexed::Solver::next_time_stage </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Switch to the next implicit unsteady time integration stage. </p>
+<dl class="section return"><dt>Returns</dt><dd>An integer index identifying which time integration stage you are now on. If it is 0, that means you have advanced to the next time step. </dd></dl>
+
+</div>
+</div>
+<a id="a0c0aeb7dc4dee7ed660ca90f0e5cf4be" name="a0c0aeb7dc4dee7ed660ca90f0e5cf4be"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0c0aeb7dc4dee7ed660ca90f0e5cf4be">&#9670;&#160;</a></span>read_mesh()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -469,17 +495,17 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::vector&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> * &gt;</td>          <td class="paramname"><span class="paramname"><em>extremal_bcs</em></span>, </td>
+          <td class="paramtype">std::vector&lt; std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt; &gt;</td>          <td class="paramname"><span class="paramname"><em>extremal_bcs</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> *</td>          <td class="paramname"><span class="paramname"><em>geom</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>, </td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>geom</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> *</td>          <td class="paramname"><span class="paramname"><em>surface_bc</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span>&#160;)</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>surface_bc</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -579,14 +605,14 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
 
 </div>
 </div>
-<a id="ab96f1c9ba8f10a3d723d49c7f0c61983" name="ab96f1c9ba8f10a3d723d49c7f0c61983"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab96f1c9ba8f10a3d723d49c7f0c61983">&#9670;&#160;</a></span>set_fix_admissibility()</h2>
+<a id="ac98ebdf32b24119591d3d2ee5d3188bc" name="ac98ebdf32b24119591d3d2ee5d3188bc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac98ebdf32b24119591d3d2ee5d3188bc">&#9670;&#160;</a></span>set_fix_nonphysical()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void hexed::Solver::set_fix_admissibility </td>
+          <td class="memname">void hexed::Solver::set_fix_nonphysical </td>
           <td>(</td>
           <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>value</em></span></td><td>)</td>
           <td></td>
@@ -594,7 +620,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
       </table>
 </div><div class="memdoc">
 
-<p>turns on/off the thermodynamic admissibility-preserving scheme </p>
+<p>turns on/off the nonphysical-state-fixing scheme </p>
 <p>increases robustness at some computational overhead </p>
 
 </div>
@@ -677,27 +703,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
 </div><div class="memdoc">
 
 <p>(experimental) sets artificial viscosity based on elementwise smoothness </p>
-<p>Based on the work of Persson et al. on artificial viscosity with elementwise smoothness indicators. Implemented primarily for evaluating the difference between grid-independent artificial viscosity and conventional methods. </p><dl class="section warning"><dt>Warning</dt><dd>Not recommended for use in practice. Use <code><a class="el" href="#a25f39d1d1312635e9629dfe934804879" title="updates the aritificial viscosity coefficient based on smoothness of the flow variables">Solver::update_art_visc_smoothness</a></code>, which was developed to supplant this type of approach. </dd></dl>
-
-</div>
-</div>
-<a id="a322a721a3a7b02ceb31828f8a99bcabb" name="a322a721a3a7b02ceb31828f8a99bcabb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a322a721a3a7b02ceb31828f8a99bcabb">&#9670;&#160;</a></span>update_implicit()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void hexed::Solver::update_implicit </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>(experimental) performs an implicit time step </p>
-<dl class="section warning"><dt>Warning</dt><dd>Experimental! Interesting for reasearch, not effective in practice (yet, anyway). </dd></dl>
+<p>Based on the work of Persson et al. on artificial viscosity with elementwise smoothness indicators. Implemented primarily for evaluating the difference between grid-independent artificial viscosity and conventional methods. </p><dl class="section warning"><dt>Warning</dt><dd>Not recommended for use in practice. Use <code><a class="el" href="#ae78d8498a7542c7209c3c17bb866365c" title="updates the aritificial viscosity coefficient based on smoothness of the flow variables">Solver::update_art_visc_smoothness</a></code>, which was developed to supplant this type of approach. </dd></dl>
 
 </div>
 </div>
@@ -730,8 +736,8 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
 
 </div>
 </div>
-<a id="ac2fc1715451ddcdde240d203303055d5" name="ac2fc1715451ddcdde240d203303055d5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac2fc1715451ddcdde240d203303055d5">&#9670;&#160;</a></span>visualize_field()</h2>
+<a id="a10216e3a782c8473459d1c51cd6f1fa7" name="a10216e3a782c8473459d1c51cd6f1fa7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a10216e3a782c8473459d1c51cd6f1fa7">&#9670;&#160;</a></span>visualize_field()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -749,7 +755,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="classhexed_1_1Qpoint__func.html">Qpoint_func</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>output_variables</em></span>, </td>
+          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>expression</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -769,7 +775,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
   <table class="params">
     <tr><td class="paramname">format</td><td>Which format to write the visualization file in. Accepted values are <code>"xdmf"</code> and <code>"tecplot"</code> </td></tr>
     <tr><td class="paramname">name</td><td>name of file to write (not including extension) </td></tr>
-    <tr><td class="paramname">output_variables</td><td>what variables to write </td></tr>
+    <tr><td class="paramname">expression</td><td>HIL expression specifying variables to visualize. Each variable assigned to in <code>expression</code> will be visualized. </td></tr>
     <tr><td class="paramname">n_sample</td><td>each element will contain an <code>n_sample</code> by <code>n_sample</code> array of uniformly-spaced sample points </td></tr>
     <tr><td class="paramname">wireframe</td><td>if <code>true</code>, visualize the mesh edges as a wireframe instead of the filled surface/solid </td></tr>
   </table>
@@ -801,7 +807,6 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>vis_cart_surf</b> (st
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>/home/micaiah/Desktop/hexed/include/<b>Solver.hpp</b></li>
 <li>/home/micaiah/Desktop/hexed/libhexed/<b>Solver.cpp</b></li>
-<li>/home/micaiah/Desktop/hexed/libhexed/<b>Solver_snap_faces.cpp</b></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -129,9 +129,11 @@ Inheritance diagram for hexed::Surface_geom:</div>
   <map id="hexed::Surface_5Fgeom_map" name="hexed::Surface_5Fgeom_map">
 <area href="classhexed_1_1Compound__geom.html" title="Combines multiple Surface_geoms into one." alt="hexed::Compound_geom" shape="rect" coords="0,56,189,80"/>
 <area href="classhexed_1_1Hypersphere.html" title="Represents hypersphere in any dimensionality." alt="hexed::Hypersphere" shape="rect" coords="199,56,388,80"/>
-<area href="classhexed_1_1Occt_1_1Geom.html" title="A Surface_geom that interacts with a CAD object directly." alt="hexed::Occt::Geom" shape="rect" coords="398,56,587,80"/>
-<area href="classhexed_1_1Simplex__geom__nd.html" title="Abstract base class for Simplex_geom exposing the dimensionality-independent functionality." alt="hexed::Simplex_geom_nd" shape="rect" coords="597,56,786,80"/>
-<area href="classhexed_1_1Simplex__geom.html" title="Represents discrete geometry composed of simplices." alt="hexed::Simplex_geom&lt; n_dim &gt;" shape="rect" coords="597,112,786,136"/>
+<area href="classhexed_1_1Simplex__geom__nd.html" title="Abstract base class for Simplex_geom exposing the dimensionality-independent functionality." alt="hexed::Simplex_geom_nd" shape="rect" coords="398,56,587,80"/>
+<area href="classhexed_1_1Tree__curve__geom.html" alt="hexed::Tree_curve_geom" shape="rect" coords="597,56,786,80"/>
+<area href="classhexed_1_1brep_1_1Geom__2d.html" title="a Surface_geom consisting of a set of Parametric&lt;1&gt; curves" alt="hexed::brep::Geom_2d" shape="rect" coords="796,56,985,80"/>
+<area href="classhexed_1_1brep_1_1Geom__3d.html" title="a Surface_geom consisting of a set of 3D Trimmed_surfaces" alt="hexed::brep::Geom_3d" shape="rect" coords="995,56,1184,80"/>
+<area href="classhexed_1_1Simplex__geom.html" title="Represents discrete geometry composed of simplices." alt="hexed::Simplex_geom&lt; n_dim &gt;" shape="rect" coords="398,112,587,136"/>
   </map>
 </div></div>
 <table class="memberdecls">
@@ -140,16 +142,52 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac5fce4db8860381c8ddf56e92abf82e4" id="r_ac5fce4db8860381c8ddf56e92abf82e4"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="classhexed_1_1Nearest__point.html">Nearest_point</a>&lt; <a class="el" href="namespacehexed.html#a264a08e8f62dd1618e4678b01e00bdf5">dyn</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac5fce4db8860381c8ddf56e92abf82e4">nearest_point</a> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; point, double max_distance=<a class="el" href="namespacehexed.html#a06682de47504c676a52137c7636470a1">huge</a>, double distance_guess=<a class="el" href="namespacehexed.html#a06682de47504c676a52137c7636470a1">huge</a>)=0</td></tr>
 <tr class="memdesc:ac5fce4db8860381c8ddf56e92abf82e4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the point on the surface which is nearest to <code>point</code> within <code>max_distance</code>.  <br /></td></tr>
 <tr class="separator:ac5fce4db8860381c8ddf56e92abf82e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a38ec14ffea92f0b1c1e3cf3a3597ffb8" id="r_a38ec14ffea92f0b1c1e3cf3a3597ffb8"><td class="memItemLeft" align="right" valign="top">virtual std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a38ec14ffea92f0b1c1e3cf3a3597ffb8">intersections</a> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; point0, <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; point1)=0</td></tr>
-<tr class="memdesc:a38ec14ffea92f0b1c1e3cf3a3597ffb8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the set of intersection points between a line and the surface.  <br /></td></tr>
-<tr class="separator:a38ec14ffea92f0b1c1e3cf3a3597ffb8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a44b6389734d87965f2fe76f02a822dc7" id="r_a44b6389734d87965f2fe76f02a822dc7"><td class="memItemLeft" align="right" valign="top">virtual std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a44b6389734d87965f2fe76f02a822dc7">intersections</a> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; point0, <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; point1, bool high_precision=true)=0</td></tr>
+<tr class="memdesc:a44b6389734d87965f2fe76f02a822dc7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the set of intersection points between a line and the surface.  <br /></td></tr>
+<tr class="separator:a44b6389734d87965f2fe76f02a822dc7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7e9c150ba52e044a4c95f85b304ba976" id="r_a7e9c150ba52e044a4c95f85b304ba976"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; const <a class="el" href="classhexed_1_1Geom__edge.html">Geom_edge</a> &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7e9c150ba52e044a4c95f85b304ba976">edges</a> ()</td></tr>
+<tr class="memdesc:a7e9c150ba52e044a4c95f85b304ba976"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a list of any geometry edges that require mesh edges to be snapped to them.  <br /></td></tr>
+<tr class="separator:a7e9c150ba52e044a4c95f85b304ba976"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a382e3ee523ab9307f2ad48ec23c89ef8" id="r_a382e3ee523ab9307f2ad48ec23c89ef8"><td class="memItemLeft" align="right" valign="top"><a id="a382e3ee523ab9307f2ad48ec23c89ef8" name="a382e3ee523ab9307f2ad48ec23c89ef8"></a>
+virtual <a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; 3 &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>points</b> ()</td></tr>
+<tr class="separator:a382e3ee523ab9307f2ad48ec23c89ef8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Represents a surface geometry implicitly for meshing. </p>
-<p>Abstract class which represents geometry by supporting the operations <code><a class="el" href="#ac5fce4db8860381c8ddf56e92abf82e4" title="Computes the point on the surface which is nearest to point within max_distance.">Surface_geom::nearest_point</a></code> and <code><a class="el" href="#a38ec14ffea92f0b1c1e3cf3a3597ffb8" title="Computes the set of intersection points between a line and the surface.">Surface_geom::intersections</a></code>. Either of these operations fully defines the surface geometry and each could, in theory, be defined in terms of the other. However, in practice they are defined separately so that derived classes can implement each in the most efficient and robust way possible. It is the responsibility of the derived class to ensure that they are mutually consistent. The derived class may impose dimensionality restrictions on the arguments. Implementations must be thread-safe. </p>
+<p>Abstract class which represents geometry by supporting the operations <code><a class="el" href="#ac5fce4db8860381c8ddf56e92abf82e4" title="Computes the point on the surface which is nearest to point within max_distance.">Surface_geom::nearest_point</a></code> and <code><a class="el" href="#a44b6389734d87965f2fe76f02a822dc7" title="Computes the set of intersection points between a line and the surface.">Surface_geom::intersections</a></code>. Either of these operations fully defines the surface geometry and each could, in theory, be defined in terms of the other. However, in practice they are defined separately so that derived classes can implement each in the most efficient and robust way possible. It is the responsibility of the derived class to ensure that they are mutually consistent. The derived class may impose dimensionality restrictions on the arguments. Implementations must be thread-safe. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a38ec14ffea92f0b1c1e3cf3a3597ffb8" name="a38ec14ffea92f0b1c1e3cf3a3597ffb8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a38ec14ffea92f0b1c1e3cf3a3597ffb8">&#9670;&#160;</a></span>intersections()</h2>
+<a id="a7e9c150ba52e044a4c95f85b304ba976" name="a7e9c150ba52e044a4c95f85b304ba976"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7e9c150ba52e044a4c95f85b304ba976">&#9670;&#160;</a></span>edges()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual <a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; const <a class="el" href="classhexed_1_1Geom__edge.html">Geom_edge</a> &amp; &gt; hexed::Surface_geom::edges </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns a list of any geometry edges that require mesh edges to be snapped to them. </p>
+<p>Only used in 3D. Default implementation returns an empty sequence, but derived classes may override. </p>
+
+<p>Reimplemented in <a class="el" href="classhexed_1_1brep_1_1Geom__3d.html#a97c7cab259af9d179f1a4f1076018b2e">hexed::brep::Geom_3d</a>, and <a class="el" href="classhexed_1_1Compound__geom.html#a2a6d31c75429ee339bd416cacc229cf9">hexed::Compound_geom</a>.</p>
+
+</div>
+</div>
+<a id="a44b6389734d87965f2fe76f02a822dc7" name="a44b6389734d87965f2fe76f02a822dc7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a44b6389734d87965f2fe76f02a822dc7">&#9670;&#160;</a></span>intersections()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -165,7 +203,12 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;</td>          <td class="paramname"><span class="paramname"><em>point1</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;</td>          <td class="paramname"><span class="paramname"><em>point1</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>high_precision</em></span><span class="paramdefsep"> = </span><span class="paramdefval">true</span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -176,9 +219,9 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Computes the set of intersection points between a line and the surface. </p>
-<p>The line is defined parametrically to be the set of points \( [\text{point0}] + t [\text{point1}] \) for all \( t \in \mathbb{R} \). Returns the (potentially empty) set of \( t \) values where the line intersects the surface. </p>
+<p>The line is defined parametrically to be the set of points \( [\text{point0}] + t [\text{point1}] \) for all \( t \in \mathbb{R} \). Returns the (potentially empty) set of \( t \) values where the line intersects the surface. </p><dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000001">Deprecated</a></b></dt><dd>Newer methods should be based purely on nearest point projections. </dd></dl>
 
-<p>Implemented in <a class="el" href="classhexed_1_1Compound__geom.html#ab93eee9323238e75ad0b98c580607c8a">hexed::Compound_geom</a>, <a class="el" href="classhexed_1_1Hypersphere.html#a300db3b1fc0b540b79f38c5f5d121e83">hexed::Hypersphere</a>, <a class="el" href="classhexed_1_1Occt_1_1Geom.html#aa754fd6fc699451907d38f70088be30c">hexed::Occt::Geom</a>, and <a class="el" href="classhexed_1_1Simplex__geom.html#a19b84b40fe2b4e7b7cd72c44534b76fe">hexed::Simplex_geom&lt; n_dim &gt;</a>.</p>
+<p>Implemented in <a class="el" href="classhexed_1_1brep_1_1Geom__2d.html#afd8e503db3f2f92cddca146992eafcc9">hexed::brep::Geom_2d</a>, <a class="el" href="classhexed_1_1brep_1_1Geom__3d.html#a85d21dcadce27682f1c5298bcd35e996">hexed::brep::Geom_3d</a>, <a class="el" href="classhexed_1_1Compound__geom.html#a817a36f19b1e5abf8a9560314e8d2d0b">hexed::Compound_geom</a>, <a class="el" href="classhexed_1_1Hypersphere.html#aff4b3751f46c28423db557302bc917d2">hexed::Hypersphere</a>, <a class="el" href="classhexed_1_1Simplex__geom.html#afdc2904fa89d671dd314ce5001bf805f">hexed::Simplex_geom&lt; n_dim &gt;</a>, and <a class="el" href="classhexed_1_1Tree__curve__geom.html#acdedf106d70f0b9c4e784f8ef7cd25ff">hexed::Tree_curve_geom</a>.</p>
 
 </div>
 </div>
@@ -224,7 +267,7 @@ Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p>Implemented in <a class="el" href="classhexed_1_1Compound__geom.html#abe53fe4716ff44af00db9c037b66404f">hexed::Compound_geom</a>, <a class="el" href="classhexed_1_1Hypersphere.html#ad948961542e6099c2a58dd32f4516208">hexed::Hypersphere</a>, <a class="el" href="classhexed_1_1Occt_1_1Geom.html#a9481d56ce7e0aac025134f84fda2790f">hexed::Occt::Geom</a>, and <a class="el" href="classhexed_1_1Simplex__geom.html#afc51af107841af18b49bb948f6475a30">hexed::Simplex_geom&lt; n_dim &gt;</a>.</p>
+<p>Implemented in <a class="el" href="classhexed_1_1brep_1_1Geom__2d.html#a8c78d1ca40f6d8519821fa523877fbff">hexed::brep::Geom_2d</a>, <a class="el" href="classhexed_1_1brep_1_1Geom__3d.html#a114ef75edab1f6eb1cbc96b98d415c5d">hexed::brep::Geom_3d</a>, <a class="el" href="classhexed_1_1Compound__geom.html#abe53fe4716ff44af00db9c037b66404f">hexed::Compound_geom</a>, <a class="el" href="classhexed_1_1Hypersphere.html#ad948961542e6099c2a58dd32f4516208">hexed::Hypersphere</a>, <a class="el" href="classhexed_1_1Simplex__geom.html#afc51af107841af18b49bb948f6475a30">hexed::Simplex_geom&lt; n_dim &gt;</a>, and <a class="el" href="classhexed_1_1Tree__curve__geom.html#a0872d573fd3edc699358b7b66bfe73ee">hexed::Tree_curve_geom</a>.</p>
 
 </div>
 </div>

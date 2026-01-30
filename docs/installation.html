@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -113,8 +113,7 @@ $(function(){initNavTree('installation.html',''); initResizable(true); });
   <div class="headertitle"><div class="title">Installation</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><dl class="section attention"><dt>Attention</dt><dd>Although the Hexed source code is published under the very permissive <a href="https://github.com/ARTLab-GT/hexed/blob/main/LICENSE.txt">MIT License</a>, compiled binaries may be linked with OpenCASCADE, causing them to be bound by the <a href="https://dev.opencascade.org/resources/licensing">LGPL License</a>. If you redistribute compiled binaries, you must observe the terms of this license.</dd></dl>
-<h1><a class="anchor" id="install_prereqs"></a>
+<div class="textblock"><h1><a class="anchor" id="install_prereqs"></a>
 Prerequisites</h1>
 <h2><a class="anchor" id="install_prereq_os"></a>
 OS</h2>
@@ -125,6 +124,7 @@ Python/pip</h2>
 </div><!-- fragment --><p> If you don't have root permissions, you can also <a href="https://docs.python.org/3/using/unix.html">build Python from source</a>. Also, if this is your first time installing Python packages, you should create a virtual environment (this has always been recommended, but in Ubuntu 24.04 it is now mandatory). You can create and activate a virtual environment with the following commands: </p><div class="fragment"><div class="line">python3 -m venv my_venv</div>
 <div class="line">source my_venv/bin/activate</div>
 </div><!-- fragment --><p> You will have to repeat the <code>source my_venv/bin/activate</code> command every time you open a new terminal, or else you won't be able to use your <code>hexed</code> installation. See <a href="https://docs.python.org/3/tutorial/venv.html">this tutorial</a> for more information about Python packages and virtual environments.</p>
+<dl class="section warning"><dt>Warning</dt><dd>Do not create a virtual environment within the Hexed source directory. This will break the build script, most likely with a Python max recursion depth error. Yes, it really ought to be able to handle or at least diagnose that, but it currently cannot.</dd></dl>
 <p>Currently, Hexed is installed via a Python package, which includes both a Python library of helper functions and the binaries for the Hexed solver. This could be construed as an abuse of the Python packaging system, but to make the installation as straightforward as possible, I wanted a packaging system that:</p><ul>
 <li>nearly everyone already has</li>
 <li>can install executables and libraries in the user tree, since not everyone has root permissions on their own machine</li>
@@ -134,11 +134,13 @@ Python/pip</h2>
 Install from Python package (the easy way)</h1>
 <p>The easiest way to install Hexed is via the <a href="https://test.pypi.org/project/hexedpy/">Python package</a> with <a href="https://packaging.python.org/en/latest/key_projects/#pip">pip</a>: </p><div class="fragment"><div class="line">python3 -m pip install --index-url https://test.pypi.org/simple/ hexedpy</div>
 </div><!-- fragment --> <dl class="section note"><dt>Note</dt><dd>You can't just do <code>pip install hexedpy</code> because, for now, Hexed is only on the <a href="https://test.pypi.org/">TestPyPI</a>, not the <a href="https://pypi.org/">real PyPI</a>.</dd></dl>
-<p>Once you do this, you can run Hexed with the command <a class="el" href="running.html#hexecute">hexecute</a>. You will also have access to the <a class="el" href="namespacehexedpy.html">hexedpy</a> Python module. Unfortunately, due to licensing considerations, this package does not include OpenCASCADE, so you will not be able to import geometry in <a class="el" href="parameters.html#add_geom">CAD file formats</a>. For that, you need to build Hexed from source, as explained below.</p>
+<p>Once you do this, you can run Hexed with the command <a class="el" href="running.html#hexecute">hexecute</a>. You will also be able to use the <a class="el" href="namespacehexedpy.html">hexedpy</a> module in Python. At this time, the pre-compiled Python package is neither as optimized or as portable as the source code, so if you have the time, it is generally recommended to compile from source instead, as described below.</p>
 <h1><a class="anchor" id="install_source"></a>
 Building from source (the harder way)</h1>
-<p>For optimal performance, if you want to modify the source code, or if you need OpenCASCADE support, you will need to build Hexed from source. Even when you do so, Hexed is still installed as a Python wheel, so you will still need pip as explained in <a class="el" href="#install_prereqs">Prerequisites</a>. You will also need some basic development tools including <a href="https://git-scm.com/">git</a>, <a href="https://gcc.gnu.org/">GCC</a>, and <a href="https://www.gnu.org/software/make/">Make</a>. Again, if you're reading this, you probably already have these, but if you don't, you can install them (on Ubuntu) with </p><div class="fragment"><div class="line">sudo apt install build-essential git</div>
-</div><!-- fragment --><p>Once you have these basic prerequisites, all you have to do is: </p><div class="fragment"><div class="line">git clone https://github.com/ARTLab-GT/hexed.git</div>
+<p>For optimal performance, or if you want to modify the source code, you will need to build Hexed from source. Even when you do so, Hexed is still installed as a Python wheel, so you will still need pip as explained in <a class="el" href="#install_prereqs">Prerequisites</a>. You will also need some basic development tools including <a href="https://git-scm.com/">git</a>, <a href="https://gcc.gnu.org/">GCC</a>, and <a href="https://www.gnu.org/software/make/">Make</a>. Again, if you're reading this, you probably already have these, but if you don't, you can install them (on Ubuntu) with </p><div class="fragment"><div class="line">sudo apt install build-essential git</div>
+</div><!-- fragment --><p> Hexed also supports <a href="https://clang.llvm.org/">Clang</a>, in which you will need to install it, along with <a href="https://openmp.llvm.org/">LLVM OpenMP</a> runtime: </p><div class="fragment"><div class="line">sudo apt install clang libomp-dev</div>
+</div><!-- fragment --> <dl class="section see"><dt>See also</dt><dd><a class="el" href="#compiler">compiler</a> for the corresponding build option.</dd></dl>
+<p>Once you have these basic prerequisites, all you have to do is: </p><div class="fragment"><div class="line">git clone https://github.com/ARTLab-GT/hexed.git</div>
 <div class="line">cd hexed</div>
 <div class="line">git checkout latest_release</div>
 <div class="line">python3 build.py</div>
@@ -146,15 +148,16 @@ Building from source (the harder way)</h1>
 <p>Notes:</p><ul>
 <li>This may take a while, especially the first time (repeat builds should be much faster). If you want to speed it up, see the <a class="el" href="#n_build_procs">n_build_procs</a> option.</li>
 <li>It will automatically download and build any dependencies you don't already have. See <a class="el" href="#auto_dependencies">Automatically-installed dependencies</a> below for more information.</li>
-<li>If you make changes to the source code, it you <em>should</em> be able to just rerun <code>build.py</code> and it should do a pretty good job of rebuilding/reinstalling the files that were affected by the change. However, occasionally, a repeat build might break. If you encounter inexplicable problems on repeat builds, try deleting the <code>build</code> directory and then rebuilding.</li>
+<li>If you make changes to the source code, it you <em>should</em> be able to just rerun <code>build.py</code> and it should do a pretty good job of rebuilding/reinstalling the files that were affected by the change. However, occasionally, a repeat build might break. If you encounter otherwise inexplicable problems on repeat builds, try deleting the <code>build</code> directory and then rebuilding.</li>
 </ul>
 <h2><a class="anchor" id="build_options"></a>
 Build options</h2>
-<p>The build script (<code>build.py</code>) accepts some command line arguments. All arguments except <code>--build_dir</code> are cached in files in the build directory. If you rerun the build, it will remember the values of any previous options you passed until you explicitly override them (by passing the option again with a different value) or delete the build directory. Every option takes the form <code>--option_name=value</code>. The whole option (including <code>value</code>) must be a valid shell token, so if <code>value</code> contains spaces you must escape them or quote it (e.g., <code>--some_option="some value"</code>). Any unrecognized option names are simply ignored, so watch carefully for typos.</p>
-<p>The options are listed below. Any options which expect a path can accept an absolute path or a path relative to your current working directory (<code>.</code>). Any options which expect a Boolean value can accept any of the following values, all of which are case insensitive (although otherwise options are case sensitive):</p><ul>
+<p>The build script (<code>build.py</code>) accepts some command line arguments. All arguments except <code>--build_dir</code> are cached in files in the build directory. If you rerun the build, it will remember the values of any previous options you passed until you explicitly override them (by passing the option again with a different value) or delete the build directory. Every option takes the form <code>--option_name=value</code>. The whole option (including <code>value</code>) must be a valid shell token, so if <code>value</code> contains spaces you must escape them or quote it (e.g., <code>--some_option="some value"</code>). Any unrecognized option names are simply ignored, so watch carefully for typos. Any options which expect a path can accept an absolute path or a path relative to your current working directory (<code>.</code>). Any options which expect a Boolean value can accept any of the following values, all of which are case insensitive (although otherwise options are case sensitive):</p><ul>
 <li><code>0</code>, <code>false</code>, <code>no</code>, <code>off</code>, <code>n</code>, <code>f</code> all translate to False.</li>
 <li><code>1</code>, <code>true</code>, <code>yes</code>, <code>on</code>, <code>y</code>, <code>t</code> all translate to True.</li>
 </ul>
+<p>The options are listed below. My typical build command is: </p><div class="fragment"><div class="line">python3 build.py --n_build_procs=16 --build_docs=y --run_tests=y</div>
+</div><!-- fragment --><p> (That is when I'm building in a new build directory&mdash;on repeat builds I simply do <code>python3 build.py</code>.) That said, that my laptop has 16 cores and 32GB of RAM. Depending on your hardware, you might consider a more moderate <a class="el" href="#n_build_procs">n_build_procs</a> .</p>
 <h3><a class="anchor" id="source_dir"></a>
 source_dir</h3>
 <p><b>Expects:</b> path <br  />
@@ -169,7 +172,17 @@ Directory in which compiled binaries will be placed. This is also where cached o
 n_build_procs</h3>
 <p><b>Expects:</b> Positive integer <br  />
 <b>Default:</b> 1 <br  />
-When compiling, use up to this many parallel processes. This can significantly speed up the build, but it also uses more memory. You can easily max out your RAM this way, so use caution. As a rule of thumb, I usually use 1 process for every 2 GB of RAM available.</p>
+When compiling, use up to this many parallel processes. This can significantly speed up the build, but it also uses more memory. You can easily max out your RAM this way, so use caution. As a rule of thumb, I usually use 1 process for every 2 GB of RAM available or 1 process per CPU core, whichever is lower.</p>
+<h3><a class="anchor" id="venv"></a>
+venv</h3>
+<p><b>Expects:</b> Boolean <br  />
+<b>Default:</b> True <br  />
+If true, all python packages needed for the build process will be installed in an automatically-created virtual environment in the build directory. If false they will be installed in your current Python environment (not recommended).</p>
+<h3><a class="anchor" id="compiler"></a>
+compiler</h3>
+<p><b>Expects:</b> <code>gcc</code> or <code>clang</code> <br  />
+<b>Default:</b> <code>gcc</code> <br  />
+Which compiler family to use. The vast majority of development and testing has been performed with GCC, so <code>gcc</code> is recommended.</p>
 <h3><a class="anchor" id="verbose"></a>
 verbose</h3>
 <p><b>Expects:</b> Boolean <br  />
@@ -197,7 +210,7 @@ If True, before installing any dependencies, the build script will first search 
 internet</h3>
 <p><b>Expects:</b> Boolean <br  />
 <b>Default:</b> True <br  />
-If False, the build script will avoid internet usage to install dependencies. As a result, if some dependencies are not available, the build process will fail instead of downloading them. This option is generally only appropriate for repeat builds, where time may be wasted in unnecessary internet access.</p>
+If False, the build script will avoid internet usage to install dependencies. As a result, if some dependencies are not available, the build process will fail instead of downloading them. This option is generally only appropriate for repeat builds, where time may be wasted in unnecessary internet access. Even still, the difference in build time is usually modest.</p>
 <h3><a class="anchor" id="build_mode"></a>
 build_mode</h3>
 <p><b>Expects:</b> <code>release</code> or <code>debug</code> <br  />
@@ -207,7 +220,7 @@ If <code>release</code>, compile flags will be chosen to provide the best possib
 max_row_size</h3>
 <p><b>Expects:</b> Integer \( \ge \) 2 <br  />
 <b>Default:</b> 8 <br  />
-Maximum <a class="el" href="conventions.html#basis_row_size">row size</a> for simulations. The larger this number, the longer the code will take to compile (although usually most of the time is taken by compiling <a class="el" href="#use_occt">OCCT</a>). However, attempts to use a row size larger than Hexed was compiled for will result in a runtime exception.</p>
+Maximum <a class="el" href="conventions.html#basis_row_size">row size</a> for simulations. The larger this number, the longer the code will take to compile. However, attempts to use a row size larger than Hexed was compiled for will result in a runtime exception.</p>
 <h3><a class="anchor" id="threaded"></a>
 threaded</h3>
 <p><b>Expects:</b> Boolean <br  />
@@ -233,11 +246,6 @@ use_tecio</h3>
 <p><b>Expects:</b> Boolean <br  />
 <b>Default:</b> False <br  />
 If true, compile with Tecplot's TecIO library to enable writing visualization files in <code>.szplt</code> format. This requires TecIO to already be installed on your system&mdash;it won't install it automatically.</p>
-<h3><a class="anchor" id="use_occt"></a>
-use_occt</h3>
-<p><b>Expects:</b> Boolean <br  />
-<b>Default:</b> True <br  />
-If true, compile with the OpenCASCADE library to enable reading geometry from <a class="el" href="parameters.html#add_geom">CAD files</a>. The LGPL license will apply to the compiled binaries iff this is option is true.</p>
 <h3><a class="anchor" id="build_tests"></a>
 build_tests</h3>
 <p><b>Expects:</b> Boolean <br  />
@@ -296,7 +304,6 @@ Automatically-installed dependencies</h2>
 <li><a href="https://eigen.tuxfamily.org/index.php?title=Main_Page">Eigen 3.4.0</a></li>
 <li><a href="https://www.hdfgroup.org/solutions/hdf5/">HDF5 1.14.4.3</a></li>
 <li><a href="https://www.xdmf.org/index.php/Main_Page">XDMF</a></li>
-<li><a href="https://dev.opencascade.org/doc/overview/html/">OpenCASCADE 7.8.0</a></li>
 <li><a href="https://github.com/catchorg/Catch2?tab=readme-ov-file">Catch2 3.6.0</a></li>
 </ul>
 <p>Dependencies of the dependencies are not listed but are also installed automatically. The build script will also automatically obtain dependencies of the build process itself, including <a href="https://www.doxygen.nl/download.html">Doxygen</a> and some Python packages. </p>

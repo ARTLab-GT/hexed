@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -113,7 +113,7 @@ $(function(){initNavTree('boundary_conditions.html',''); initResizable(true); })
   <div class="headertitle"><div class="title">Boundary Conditions</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>Any of the following boundary conditions can be applied to any boundary, regardless of whether it is one of the mesh extremes or a geometry surface. The desired boundary conditions can be selected with the solver parameters <a class="el" href="parameters.html#surface_bc">surface_bc</a> and <a class="el" href="parameters.html#extremal_bc">extremal_bc00, extremal_bc01, extremal_bc10, extremal_bc11, extremal_bc20, extremal_bc21</a>.</p>
+<div class="textblock"><p>Any of the following boundary conditions can be applied to any boundary, regardless of whether it is one of the mesh extremes or a geometry surface. The desired boundary conditions can be selected with the solver parameters <a class="el" href="input_parameters.html#surface_bc">surface_bc</a> and <a class="el" href="input_parameters.html#extremal_bcNN">extremal_bcNN</a>.</p>
 <h1><a class="anchor" id="Freestream"></a>
 Freestream</h1>
 <p><code>{freestream}</code> <br  />
@@ -121,11 +121,11 @@ Sets the boundary state equal to the freestream state. For viscous flows, none o
 <h1><a class="anchor" id="Characteristic"></a>
 Characteristic</h1>
 <p><code>{characteristic}</code> <br  />
-The most generally applicable farfield boundary condition. Sometimes referred to as "Riemann Invariants" boundary condition. In a nutshell, it sets the state as close to the freestream state as possible without overdefining the boundary condition. It decomposes both the flow state and the freestream into the characteristics of the locally linearized Euler equations, and then recombines into a single state vector using the outgoing characteristics from the flow state and the incoming characteristics from the freestream. For viscous flows, the transport fluxes of the outgoing characterstics are set to zero and those of the incoming characteristics are unmodified. This BC is well-posed regardless of the flow direction and Mach number. Thus it can be used for farfield boundaries that aren't actually very far away and outflow boundaries that ingest a wake or boundary layer. The drawback is that it is not very robust and will sometimes cause a crash in hypersonic flows. A more robust alternative is <a class="el" href="#pressure_outflow">Pressure Outflow</a>.</p>
+The most generally applicable farfield boundary condition. Sometimes referred to as "Riemann Invariants" boundary condition. In a nutshell, it sets the state as close to the freestream state as possible without overdefining the boundary condition. It decomposes both the flow state and the freestream into the characteristics of the locally linearised Euler equations, and then recombines into a single state vector using the outgoing characteristics from the flow state and the incoming characteristics from the freestream. For viscous flows, the transport fluxes of the outgoing characteristics are set to zero and those of the incoming characteristics are unmodified. This BC is well-posed regardless of the flow direction and Mach number. Thus it can be used for farfield boundaries that aren't actually very far away and outflow boundaries that ingest a wake or boundary layer. The drawback is that it is not very robust and will sometimes cause a crash in hypersonic flows. A more robust alternative is <a class="el" href="#pressure_outflow">Pressure Outflow</a>.</p>
 <h1><a class="anchor" id="pressure_outflow"></a>
 Pressure Outflow</h1>
 <p><code>{pressure_outflow}</code> <br  />
-An outflow boundary condition that balances robustness and generality. For supersonic outflow, the flow state is simply left alone. For subsonic outflow, the pressure is set equal to the freestream pressure. For inflow, this boundary condition is invalid (it is not numerically stable, let alone well-posed). For viscous flows, all of the transport fluxes are set to zero. This technically makes it ill-posed (specifically, overdefined) for subsonic outflow, and is an artifiact of pure laziness, since you can usually get away with it. In the future, I intend to set the appropriate number of transport fluxes to make this boundary condition well-posed.</p>
+An outflow boundary condition that balances robustness and generality. For supersonic outflow, the flow state is simply left alone. For subsonic outflow, the pressure is set equal to the freestream pressure. For inflow, this boundary condition is invalid (it is not numerically stable, let alone well-posed). For viscous flows, all of the transport fluxes are set to zero. This technically makes it ill-posed (specifically, overdefined) for subsonic outflow, and is an artifact of pure laziness, since you can usually get away with it. In the future, I intend to set the appropriate number of transport fluxes to make this boundary condition well-posed.</p>
 <h1><a class="anchor" id="outflow"></a>
 Outflow</h1>
 <p><code>{outflow}</code> <br  />
@@ -137,7 +137,22 @@ A slip wall boundary condition. The normal component of the momentum is set to z
 <h1><a class="anchor" id="no_slip"></a>
 No Slip</h1>
 <p><code>{no_slip}</code> <br  />
-A no-slip wall boundary condition. The entire momentum vector is set to zero, and the density is unmodified. The transport flux of the momentum is unmodified, and that of the density is set to zero (although it should be zero to begin with). Depending on the value of <a class="el" href="parameters.html#thermal_bc">thermal_bc</a>, either the energy or the transport flux of energy will be prescribed, and the other will be unmodified. This boundary condition is only valid for wall boundaries in viscous flows. Some users may be tempted to use this for walls in inviscid flows because they can get away with it in a finite volume solver, but this is not acceptable. Due to the Local Lax-Friedrichs interface flux and the dispersive nature of numerical errors in high-order DG schemes, attempting to use this in an inviscid flow will result in severe spurious oscillations. </p>
+A no-slip wall boundary condition. The entire momentum vector is set to zero, and the density is unmodified. The transport flux of the momentum is unmodified, and that of the density is set to zero (although it should be zero to begin with). Depending on the value of <a class="el" href="input_parameters.html#thermal_bc">thermal_bc</a>, either the energy or the transport flux of energy will be prescribed, and the other will be unmodified. This boundary condition is only valid for wall boundaries in viscous flows. Some users may be tempted to use this for walls in inviscid flows because they can get away with it in a finite volume solver, but this is not acceptable. Due to the Local Lax-Friedrichs interface flux and the dispersive nature of numerical errors in high-order DG schemes, attempting to use this in an inviscid flow will result in severe spurious oscillations.</p>
+<h1><a class="anchor" id="expression"></a>
+Expression</h1>
+<p><code>{expression}</code> <br  />
+Sets the state variables explicitly via a user-defined expression. This is a highly advanced boundary condition that allows very precise control but requires detailed knowledge of the solver. My intention is that most users should never need it. If you set this condition for any of the boundaries, you must also define the following variable:</p><ul>
+<li><code>bc_state</code>: A macro that sets variables <code>ghost_state0</code>, <code>ghost_state1</code>, <code>ghost_state2</code>, ... These are the <a class="el" href="conventions.html#state_vector">conserved state variables</a>. Your expressions may reference the following predefined variables:<ul>
+<li><code>pos0</code>, <code>pos1</code>, ...: The position vector.</li>
+<li><code>normal0</code>, <code>normal1</code>, ...: The boundary normal vector such that taking the dot product of a flux in physical space gives you the flux in reference space. You will most likely want to ignore this.</li>
+<li><code>state0</code>, <code>state1</code>, ...: The conserved state vector before enforcing the boundary conditions.</li>
+</ul>
+</li>
+</ul>
+<p>You may also define the following:</p><ul>
+<li><code>bc_flux</code>: A macro that sets variables <code>ghost_flux0</code>, <code>ghost_flux1</code>, <code>ghost_flux2</code>, ... These are the <em>viscous</em> fluxes of the conserved variables in reference space (due to molecular, turbulent, and artificial viscosity). You can reference the same predefined variables as <code>bc_state</code> in addition to <code>flux0</code>, <code>flux</code>, ..., which define the viscous fluxes before applying the boundary condition. If you wish not to constrain the flux for a given variable, you can set the ghost flux equal to the flux. If you wish to constrain the viscous flux to 0, you can set the ghost flux equal to the negative of the inside flux. Attempting to set any other flux boundary condition should be undertaken with extreme caution, as the definition of the reference flux can be counter-intuitive. <code>bc_flux</code> defaults to setting no constraints on the flux, so if you fully constrain the state vector then you need not modify <code>bc_flux</code>.</li>
+</ul>
+<p>For convenience, your expressions may assign additional variables (in addition to <code>ghost_state</code> and <code>ghost_flux</code>) and reference global variables defined in your input script. You must judiciously choose the number of state and flux constraints to enforce to ensure your problem is well-posed, although in practice I have found that over-constrained boundary conditions are usually numerically stable as long as the constraints can all be approximately satisfied. This BC may also be slower than others. Good luck. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->

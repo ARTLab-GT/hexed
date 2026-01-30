@@ -1,21 +1,22 @@
 var searchData=
 [
-  ['eigen_0',['Eigen',['../classhexedpy_1_1build__utils_1_1Eigen.html',1,'hexedpy::build_utils']]],
-  ['elem_5faverage_1',['Elem_average',['../classhexed_1_1Elem__average.html',1,'hexed']]],
-  ['elem_5fhandle_2',['elem_handle',['../structhexed_1_1Mesh_1_1elem__handle.html',1,'hexed::Mesh']]],
-  ['elem_5fl2_3',['Elem_l2',['../classhexed_1_1Elem__l2.html',1,'hexed']]],
-  ['elem_5fnonsmooth_4',['Elem_nonsmooth',['../classhexed_1_1Elem__nonsmooth.html',1,'hexed']]],
-  ['element_5',['Element',['../classhexed_1_1Element.html',1,'hexed']]],
-  ['element_5fconnection_6',['Element_connection',['../classhexed_1_1Element__connection.html',1,'hexed']]],
-  ['element_5fcontainer_7',['Element_container',['../classhexed_1_1Element__container.html',1,'hexed']]],
-  ['element_5fface_5fconnection_8',['Element_face_connection',['../classhexed_1_1Element__face__connection.html',1,'hexed']]],
+  ['edge_0',['Edge',['../classhexed_1_1next_1_1Edge.html',1,'hexed::next']]],
+  ['eigen_1',['Eigen',['../classhexedpy_1_1build__utils_1_1Eigen.html',1,'hexedpy::build_utils']]],
+  ['eikonal_2',['Eikonal',['../classhexed_1_1Eikonal.html',1,'hexed']]],
+  ['elem_5faverage_3',['Elem_average',['../classhexed_1_1Elem__average.html',1,'hexed']]],
+  ['elem_5fhandle_4',['elem_handle',['../structhexed_1_1Mesh_1_1elem__handle.html',1,'hexed::Mesh']]],
+  ['elem_5fl2_5',['Elem_l2',['../classhexed_1_1Elem__l2.html',1,'hexed']]],
+  ['elem_5fnonsmooth_6',['Elem_nonsmooth',['../classhexed_1_1Elem__nonsmooth.html',1,'hexed']]],
+  ['element_7',['Element',['../classhexed_1_1Element.html',1,'hexed']]],
+  ['element_5fcontainer_8',['Element_container',['../classhexed_1_1Element__container.html',1,'hexed']]],
   ['element_5ffunc_9',['Element_func',['../classhexed_1_1Element__func.html',1,'hexed']]],
   ['element_5finfo_10',['Element_info',['../classhexed_1_1Element__info.html',1,'hexed']]],
-  ['element_5fnew_11',['Element_new',['../classhexed_1_1Element__new.html',1,'hexed']]],
+  ['element_5fshape_11',['Element_shape',['../classhexed_1_1next_1_1Element__shape.html',1,'hexed::next']]],
   ['empty_5ffunc_12',['Empty_func',['../classhexed_1_1Empty__func.html',1,'hexed']]],
   ['equiangle_5fskewness_13',['Equiangle_skewness',['../classhexed_1_1Equiangle__skewness.html',1,'hexed']]],
   ['equidistant_14',['Equidistant',['../classhexed_1_1Equidistant.html',1,'hexed']]],
   ['error_5ffunc_15',['Error_func',['../classhexed_1_1Error__func.html',1,'hexed']]],
   ['exception_16',['Exception',['../classhexed_1_1assert_1_1Exception.html',1,'hexed::assert']]],
-  ['extract_17',['Extract',['../classhexedpy_1_1build__utils_1_1Extract.html',1,'hexedpy::build_utils']]]
+  ['expression_5fbc_17',['Expression_bc',['../classhexed_1_1Expression__bc.html',1,'hexed']]],
+  ['extract_18',['Extract',['../classhexedpy_1_1build__utils_1_1Extract.html',1,'hexedpy::build_utils']]]
 ];

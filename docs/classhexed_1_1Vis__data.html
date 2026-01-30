@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -118,6 +118,9 @@ $(function(){initNavTree('classhexed_1_1Vis__data.html',''); initResizable(true)
 </div><!--header-->
 <div class="contents">
 
+<p>Computes data to be visualized for a single element.  
+ <a href="#details">More...</a></p>
+
 <p><code>#include &lt;Vis_data.hpp&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
@@ -128,33 +131,27 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ab08c6bd713283597eeb95a45cef8feef" id="r_ab08c6bd713283597eeb95a45cef8feef"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab08c6bd713283597eeb95a45cef8feef">Vis_data</a> (<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;elem, const <a class="el" href="classhexed_1_1Qpoint__func.html">Qpoint_func</a> &amp;func, const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;basis, double time=0.)</td></tr>
-<tr class="separator:ab08c6bd713283597eeb95a45cef8feef"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6e5a6532cd26f433ecf02ae494dfabe7" id="r_a6e5a6532cd26f433ecf02ae494dfabe7"><td class="memItemLeft" align="right" valign="top">Eigen::VectorXd&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6e5a6532cd26f433ecf02ae494dfabe7">edges</a> (int n_sample=21)</td></tr>
-<tr class="memdesc:a6e5a6532cd26f433ecf02ae494dfabe7"><td class="mdescLeft">&#160;</td><td class="mdescRight">interpolate function to <code>n_sample + 1</code> uniformly spaced points along element edges  <br /></td></tr>
-<tr class="separator:a6e5a6532cd26f433ecf02ae494dfabe7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab5dd1f38535935cc4a7019d0bc42f6cc" id="r_ab5dd1f38535935cc4a7019d0bc42f6cc"><td class="memItemLeft" align="right" valign="top">Eigen::VectorXd&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab5dd1f38535935cc4a7019d0bc42f6cc">interior</a> (int n_sample=21)</td></tr>
-<tr class="memdesc:ab5dd1f38535935cc4a7019d0bc42f6cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">interpolate function to a uniformly-spaced block of sample points <code>n_sample</code> on a side  <br /></td></tr>
-<tr class="separator:ab5dd1f38535935cc4a7019d0bc42f6cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9f2b3579195de30e599fbc6a0c0dbfe7" id="r_a9f2b3579195de30e599fbc6a0c0dbfe7"><td class="memItemLeft" align="right" valign="top"><a id="a9f2b3579195de30e599fbc6a0c0dbfe7" name="a9f2b3579195de30e599fbc6a0c0dbfe7"></a>
-Eigen::VectorXd&#160;</td><td class="memItemRight" valign="bottom"><b>face</b> (int i_dim, bool is_positive, int n_sample=21)</td></tr>
-<tr class="memdesc:a9f2b3579195de30e599fbc6a0c0dbfe7"><td class="mdescLeft">&#160;</td><td class="mdescRight">interpolate function to a uniformly-spaced block of sample points on a specified face <br /></td></tr>
-<tr class="separator:a9f2b3579195de30e599fbc6a0c0dbfe7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a95419b3b2c9a5c730c1c82905661a850" id="r_a95419b3b2c9a5c730c1c82905661a850"><td class="memItemLeft" align="right" valign="top">const Eigen::VectorXd &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a95419b3b2c9a5c730c1c82905661a850">qpoints</a> ()</td></tr>
-<tr class="memdesc:a95419b3b2c9a5c730c1c82905661a850"><td class="mdescLeft">&#160;</td><td class="mdescRight">return function evaluated at quadrature points.  <br /></td></tr>
-<tr class="separator:a95419b3b2c9a5c730c1c82905661a850"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad517fe3a2a9f6e929123be604c03843a" id="r_ad517fe3a2a9f6e929123be604c03843a"><td class="memItemLeft" align="right" valign="top">Eigen::MatrixXd&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad517fe3a2a9f6e929123be604c03843a">sample</a> (Eigen::MatrixXd ref_coords)</td></tr>
-<tr class="memdesc:ad517fe3a2a9f6e929123be604c03843a"><td class="mdescLeft">&#160;</td><td class="mdescRight">sample the function at a set of points given in reference coordinates  <br /></td></tr>
-<tr class="separator:ad517fe3a2a9f6e929123be604c03843a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adc31a92e99567c9266a93a4b473ff7e3" id="r_adc31a92e99567c9266a93a4b473ff7e3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhexed_1_1Vis__data_1_1Contour.html">Contour</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adc31a92e99567c9266a93a4b473ff7e3">compute_contour</a> (double value, int n_div=10, int n_newton=4, double tol=1e-3)</td></tr>
-<tr class="memdesc:adc31a92e99567c9266a93a4b473ff7e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">compute a contour line/surface where the <code>i_var</code>th variable is equal to <code>value</code>  <br /></td></tr>
-<tr class="separator:adc31a92e99567c9266a93a4b473ff7e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8c535e02de8d9e234e53bc048de70e30" id="r_a8c535e02de8d9e234e53bc048de70e30"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c535e02de8d9e234e53bc048de70e30">Vis_data</a> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; qpoint_data, const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;basis)</td></tr>
+<tr class="separator:a8c535e02de8d9e234e53bc048de70e30"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2161ebf7da92d8c5ede690ae33f0bb38" id="r_a2161ebf7da92d8c5ede690ae33f0bb38"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2161ebf7da92d8c5ede690ae33f0bb38">sample</a> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; coords) const</td></tr>
+<tr class="memdesc:a2161ebf7da92d8c5ede690ae33f0bb38"><td class="mdescLeft">&#160;</td><td class="mdescRight">Samples the quadrature point data at a set of arbitrary reference coordinates.  <br /></td></tr>
+<tr class="separator:a2161ebf7da92d8c5ede690ae33f0bb38"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add49e0e6b00dca8fca2d3222ada0d0b1" id="r_add49e0e6b00dca8fca2d3222ada0d0b1"><td class="memItemLeft" align="right" valign="top"><a id="add49e0e6b00dca8fca2d3222ada0d0b1" name="add49e0e6b00dca8fca2d3222ada0d0b1"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>interior</b> (<a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> n_sample) const</td></tr>
+<tr class="separator:add49e0e6b00dca8fca2d3222ada0d0b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af5c08b2c655e958176511b2cfdc26db2" id="r_af5c08b2c655e958176511b2cfdc26db2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af5c08b2c655e958176511b2cfdc26db2">edges</a> (<a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> n_sample) const</td></tr>
+<tr class="memdesc:af5c08b2c655e958176511b2cfdc26db2"><td class="mdescLeft">&#160;</td><td class="mdescRight">interpolate function to <code>n_sample + 1</code> uniformly spaced points along element edges  <br /></td></tr>
+<tr class="separator:af5c08b2c655e958176511b2cfdc26db2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1cf01d54928340185f75462c118d3c30" id="r_a1cf01d54928340185f75462c118d3c30"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structhexed_1_1Vis__data_1_1Contour.html">Contour</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1cf01d54928340185f75462c118d3c30">compute_contour</a> (int i_var, double value, <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> n_div, int n_newton=4, double tol=1e-3)</td></tr>
+<tr class="memdesc:a1cf01d54928340185f75462c118d3c30"><td class="mdescLeft">&#160;</td><td class="mdescRight">compute a contour line/surface where the <code>i_var</code>th variable is equal to <code>value</code>  <br /></td></tr>
+<tr class="separator:a1cf01d54928340185f75462c118d3c30"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Computes data to be visualized for a single element (e.g. edge positions, non-conserved variables, values at uniformly-spaced sample points) without knowing anything about the choice of visualization software. </p>
+<div class="textblock"><p>Computes data to be visualized for a single element. </p>
+<p>(e.g. edge positions, non-conserved variables, values at uniformly-spaced sample points) without knowing anything about the choice of visualization software. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="ab08c6bd713283597eeb95a45cef8feef" name="ab08c6bd713283597eeb95a45cef8feef"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab08c6bd713283597eeb95a45cef8feef">&#9670;&#160;</a></span>Vis_data()</h2>
+<a id="a8c535e02de8d9e234e53bc048de70e30" name="a8c535e02de8d9e234e53bc048de70e30"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8c535e02de8d9e234e53bc048de70e30">&#9670;&#160;</a></span>Vis_data()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -162,31 +159,19 @@ Eigen::VectorXd&#160;</td><td class="memItemRight" valign="bottom"><b>face</b> (
         <tr>
           <td class="memname">hexed::Vis_data::Vis_data </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Element.html">Element</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>elem</em></span>, </td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;</td>          <td class="paramname"><span class="paramname"><em>qpoint_data</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const <a class="el" href="classhexed_1_1Qpoint__func.html">Qpoint_func</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>func</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>basis</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>time</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.</span>&#160;)</td>
+          <td class="paramtype">const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>basis</em></span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">elem</td><td><a class="el" href="classhexed_1_1Element.html" title="Stores data associated with one mesh element.">Element</a> for which visualization is to be performed </td></tr>
-    <tr><td class="paramname">func</td><td>Computes variables to be visualized </td></tr>
+    <tr><td class="paramname">qpoint_data</td><td>Data to be visualized, at the quadrature points. </td></tr>
     <tr><td class="paramname">basis</td><td><a class="el" href="classhexed_1_1Basis.html" title="Represents a basis of Lagrange polynomials.">Basis</a> with which to perform interp/extrapolation </td></tr>
-    <tr><td class="paramname">time</td><td>Flow time used to compute output variables </td></tr>
   </table>
   </dd>
 </dl>
@@ -194,8 +179,8 @@ Eigen::VectorXd&#160;</td><td class="memItemRight" valign="bottom"><b>face</b> (
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="adc31a92e99567c9266a93a4b473ff7e3" name="adc31a92e99567c9266a93a4b473ff7e3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adc31a92e99567c9266a93a4b473ff7e3">&#9670;&#160;</a></span>compute_contour()</h2>
+<a id="a1cf01d54928340185f75462c118d3c30" name="a1cf01d54928340185f75462c118d3c30"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1cf01d54928340185f75462c118d3c30">&#9670;&#160;</a></span>compute_contour()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -203,12 +188,17 @@ Eigen::VectorXd&#160;</td><td class="memItemRight" valign="bottom"><b>face</b> (
         <tr>
           <td class="memname"><a class="el" href="structhexed_1_1Vis__data_1_1Contour.html">Vis_data::Contour</a> hexed::Vis_data::compute_contour </td>
           <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>i_var</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>value</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>n_div</em></span><span class="paramdefsep"> = </span><span class="paramdefval">10</span>, </td>
+          <td class="paramtype"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a></td>          <td class="paramname"><span class="paramname"><em>n_div</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -228,17 +218,17 @@ Eigen::VectorXd&#160;</td><td class="memItemRight" valign="bottom"><b>face</b> (
 
 </div>
 </div>
-<a id="a6e5a6532cd26f433ecf02ae494dfabe7" name="a6e5a6532cd26f433ecf02ae494dfabe7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6e5a6532cd26f433ecf02ae494dfabe7">&#9670;&#160;</a></span>edges()</h2>
+<a id="af5c08b2c655e958176511b2cfdc26db2" name="af5c08b2c655e958176511b2cfdc26db2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af5c08b2c655e958176511b2cfdc26db2">&#9670;&#160;</a></span>edges()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">Eigen::VectorXd hexed::Vis_data::edges </td>
+          <td class="memname"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; hexed::Vis_data::edges </td>
           <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>n_sample</em></span><span class="paramdefsep"> = </span><span class="paramdefval">21</span></td><td>)</td>
-          <td></td>
+          <td class="paramtype"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a></td>          <td class="paramname"><span class="paramname"><em>n_sample</em></span></td><td>)</td>
+          <td> const</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -248,77 +238,29 @@ Eigen::VectorXd&#160;</td><td class="memItemRight" valign="bottom"><b>face</b> (
 
 </div>
 </div>
-<a id="ab5dd1f38535935cc4a7019d0bc42f6cc" name="ab5dd1f38535935cc4a7019d0bc42f6cc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab5dd1f38535935cc4a7019d0bc42f6cc">&#9670;&#160;</a></span>interior()</h2>
+<a id="a2161ebf7da92d8c5ede690ae33f0bb38" name="a2161ebf7da92d8c5ede690ae33f0bb38"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2161ebf7da92d8c5ede690ae33f0bb38">&#9670;&#160;</a></span>sample()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">Eigen::VectorXd hexed::Vis_data::interior </td>
+          <td class="memname"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; hexed::Vis_data::sample </td>
           <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>n_sample</em></span><span class="paramdefsep"> = </span><span class="paramdefval">21</span></td><td>)</td>
-          <td></td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;</td>          <td class="paramname"><span class="paramname"><em>coords</em></span></td><td>)</td>
+          <td> const</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>interpolate function to a uniformly-spaced block of sample points <code>n_sample</code> on a side </p>
-<p>layout: [n_var][n_sample]([n_sample]([n_sample])) </p>
-
-</div>
-</div>
-<a id="a95419b3b2c9a5c730c1c82905661a850" name="a95419b3b2c9a5c730c1c82905661a850"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a95419b3b2c9a5c730c1c82905661a850">&#9670;&#160;</a></span>qpoints()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">const Eigen::VectorXd &amp; hexed::Vis_data::qpoints </td>
-          <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>return function evaluated at quadrature points. </p>
-<p>layout: [n_var][n_qpoint] </p>
-
-</div>
-</div>
-<a id="ad517fe3a2a9f6e929123be604c03843a" name="ad517fe3a2a9f6e929123be604c03843a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad517fe3a2a9f6e929123be604c03843a">&#9670;&#160;</a></span>sample()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">Eigen::MatrixXd hexed::Vis_data::sample </td>
-          <td>(</td>
-          <td class="paramtype">Eigen::MatrixXd</td>          <td class="paramname"><span class="paramname"><em>ref_coords</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>sample the function at a set of points given in reference coordinates </p>
+<p>Samples the quadrature point data at a set of arbitrary reference coordinates. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">ref_coords</td><td>reference coordinates of sample points. layout: [n_sample][n_dim] </td></tr>
+    <tr><td class="paramname">coords</td><td><a class="el" href="classhexed_1_1Array.html" title="Represents a dynamic-sized multidimensional array.">Array</a> of reference coordinates to sample at. Layout: [n_dim][n_sample_point] </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>values of visualization variables at sample points. layout: [n_sample][n_var] </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><a class="el" href="classhexed_1_1Array.html" title="Represents a dynamic-sized multidimensional array.">Array</a> of data sampled at the specified points. Layout: [n_var][n_sample_point] </dd></dl>
 
 </div>
 </div>

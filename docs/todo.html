@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -114,24 +114,46 @@ $(function(){initNavTree('todo.html',''); initResizable(true); });
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><dl class="reflist">
-<dt>Member <a class="el" href="classhexed_1_1Accessible__mesh.html#a472153bc396bbbc2ae6b50818dc87615">hexed::Accessible_mesh::extrude</a>  (bool collapse=false, double offset=0, bool force=false) override</dt>
-<dd><a class="anchor" id="_todo000006"></a>apparently the mesh needs to know about the basis after all...  </dd>
 <dt>Class <a class="el" href="classhexed_1_1Accessible__mesh_1_1Masked__mesh.html">hexed::Accessible_mesh::Masked_mesh</a>  </dt>
 <dd><a class="anchor" id="_todo000001"></a>Make this more intuitive and less error-prone.  </dd>
+<dt>Member <a class="el" href="classhexed_1_1brep_1_1Trimmed__surface.html#a123da20c88ab151935279b660ac4996b">hexed::brep::Trimmed_surface::Trimmed_surface</a>  (<a class="el" href="classhexed_1_1brep_1_1Parametric.html">Parametric&lt; 2 &gt;</a> *surface, std::vector&lt; Composite_curve &gt; &amp;&amp;curves, std::vector&lt; bool &gt; is_model_space, Int n_div_min, Int n_div_max)</dt>
+<dd><a class="anchor" id="_todo000002"></a>Implement another constructor that accepts curves in parameter space.  </dd>
 <dt>Member <a class="el" href="classhexed_1_1Complete__element__container.html#a549cf6f236532f760b98a5322ed7ab2c">hexed::Complete_element_container&lt; element_t &gt;::write_sns</a>  ()</dt>
 <dd><a class="anchor" id="_todo000003"></a>elements really just need to know their serial number  </dd>
 <dt>Member <a class="el" href="classhexed_1_1Kernel__element.html#adf6c1daec8e4aa01ef8c39861dbafdaf">hexed::Kernel_element::vertex_time_step_scale</a>  (int i_vertex)=0</dt>
-<dd><a class="anchor" id="_todo000004"></a>the kernel should not need this  </dd>
-<dt>Member <a class="el" href="classhexed_1_1pde_1_1Navier__stokes_1_1Pde_1_1Characteristics.html#a25a93c596dc21521342d3c46ae42d576">hexed::pde::Navier_stokes&lt; visc &gt;::Pde&lt; n_dim, row_size &gt;::Characteristics::decomp</a>  (Mat&lt; n_var &gt; state)</dt>
-<dd><a class="anchor" id="_todo000005"></a>shouldn't this have a <code>0.5*</code>?  </dd>
-<dt>Member <a class="el" href="classhexed_1_1Pressure__outflow.html#a6f091b55bd799cce91df0a49f80dd614">hexed::Pressure_outflow::apply_flux</a>  (<a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;) override</dt>
-<dd><a class="anchor" id="_todo000008"></a>make this formally well-posed  </dd>
+<dd><a class="anchor" id="_todo000005"></a>the kernel should not need this  </dd>
+<dt>Member <a class="el" href="classhexed_1_1Lock.html#a91fc854bc9a85edfc3bd957869e3289f">hexed::Lock::Lock</a>  (const <a class="el" href="classhexed_1_1Lock.html" title="wrapper for OpenMP nested lock routines.">Lock</a> &amp;)</dt>
+<dd><a class="anchor" id="_todo000006"></a>make this thread safe!  </dd>
+<dt>Member <a class="el" href="classhexed_1_1Lock.html#adf578eb7fb476db4054a2dbad4d4c9f5">hexed::Lock::operator=</a>  (const <a class="el" href="classhexed_1_1Lock.html" title="wrapper for OpenMP nested lock routines.">Lock</a> &amp;)</dt>
+<dd><a class="anchor" id="_todo000007"></a>make this thread safe!  </dd>
+<dt>Member <a class="el" href="classhexed_1_1Navier__stokes_1_1Pde_1_1Characteristics.html#af7826096200fabcb6ff9723204b0d22f">hexed::Navier_stokes&lt; visc, turb &gt;::Pde&lt; n_dim, row_size &gt;::Characteristics::decomp</a>  (Mat&lt; dyn &gt; state)</dt>
+<dd><a class="anchor" id="_todo000008"></a>shouldn't this have a <code>0.5*</code>?  </dd>
+<dt>Member <a class="el" href="classhexed_1_1Pressure__outflow.html#a776543428cb4332a7c00434b9f26a5c4">hexed::Pressure_outflow::apply_flux</a>  (<a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;) override</dt>
+<dd><a class="anchor" id="_todo000011"></a>make this formally well-posed  </dd>
 <dt>Member <a class="el" href="classhexed_1_1Pressure__stress.html#add01efe104626d80db95bd4e0a51c506">hexed::Pressure_stress::operator()</a>  (std::vector&lt; double &gt; pos, double time, std::vector&lt; double &gt; state, std::vector&lt; double &gt; outward_normal) const override</dt>
-<dd><a class="anchor" id="_todo000009"></a>use correct heat_rat  </dd>
-<dt>Member <a class="el" href="classhexed_1_1Refined__connection.html#a65213b1e7960f87b606ddbf70c72b2a3">hexed::Refined_connection&lt; element_t &gt;::refined_face</a>  </dt>
-<dd><a class="anchor" id="_todo000002"></a>this should be const and/or private, but i have bigger problems rn  </dd>
+<dd><a class="anchor" id="_todo000012"></a>use correct heat_rat  </dd>
+<dt>Member <a class="el" href="classhexed_1_1Tree.html#a453f6fbe408f0fe1348b0baa6bbb3f09">hexed::Tree::find_neighbor</a>  (<a class="el" href="classhexed_1_1Array.html">Array&lt; int &gt;</a> direction)</dt>
+<dd><a class="anchor" id="_todo000009"></a>document behavior for grafted connections  </dd>
+<dt>Member <a class="el" href="classhexed_1_1Tree__curve.html#a836dbb598ebaa65716fe71600ea3c9e3">hexed::Tree_curve::interp_point</a>  (double interp_index) const</dt>
+<dd><a class="anchor" id="_todo000014"></a>test this  </dd>
+<dt>Member <a class="el" href="namespacehexed_1_1vis__variables.html#a7448aca84289f2791c50931f8ec75981">hexed::vis_variables::element</a>  (<a class="el" href="classhexed_1_1Namespace.html">Namespace</a> &amp;, <a class="el" href="classhexed_1_1Element.html" title="Stores data associated with one mesh element.">Element</a> &amp;elem)</dt>
+<dd><a class="anchor" id="_todo000010"></a>Residual contributions from each variable need to be normalized. Right now it might as well be the energy residual.<ul>
+<li><code>diffusion_limited</code>: 1 if the time step constraint imposed by diffusion is stricter than the time step constraint imposed by convection at any of the quadrature points, and 0 otherwise.</li>
+<li><code>source_limited</code>: 1 if the time step constraint imposed by source_terms is stricter than the time step constraint imposed by convection and diffusion combined at any of the quadrature points, and 0 otherwise. </li>
+</ul>
+</dd>
 <dt>Namespace <a class="el" href="namespacehexedpy_1_1build__utils.html">hexedpy.build_utils</a>  </dt>
-<dd><a class="anchor" id="_todo000010"></a>more documentation is needed here. </dd>
+<dd><a class="anchor" id="_todo000015"></a>more documentation is needed here.  </dd>
+<dt>Page <a class="el" href="input_parameters.html">Input Parameters</a>  </dt>
+<dd><p class="startdd"><a class="anchor" id="_todo000016"></a>Enable CPG simulations with modified <code>heat_rat</code>.</p>
+<p class="enddd"><a class="anchor" id="_todo000017"></a>Explain this more fully. </p>
+</dd>
+<dt>Page <a class="el" href="mesh_io.html">Mesh I/O</a>  </dt>
+<dd><a class="anchor" id="_todo000018"></a>Update this page. </dd>
+<dt>Page <a class="el" href="output_parameters.html">Output Parameters</a>  </dt>
+<dd><a class="anchor" id="_todo000019"></a>Does this give the <em>correct</em> Prandtl number variation? I just selected the most credible Sutherland models I could find for viscosity and conductivity independently, but I am not sure to what extent the difference reflects the true Prandtl number variation versus disagreement between different authors. There may be merit to trying to tweak the default viscosity and conductivity models to work better in combination. </dd>
+<dt>Page <a class="el" href="solver_macros.html">Solver Macros</a>  </dt>
+<dd><a class="anchor" id="_todo000020"></a>Document options based on history monitors and determine a reasonable default value.</dd>
 </dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->

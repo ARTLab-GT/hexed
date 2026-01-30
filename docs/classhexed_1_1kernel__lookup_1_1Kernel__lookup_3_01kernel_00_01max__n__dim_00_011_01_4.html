@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -116,6 +116,11 @@ $(function(){initNavTree('classhexed_1_1kernel__lookup_1_1Kernel__lookup_3_01ker
   <div class="headertitle"><div class="title">hexed::kernel_lookup::Kernel_lookup&lt; kernel, max_n_dim, 1 &gt; Class Template Reference</div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>specialization to make the recursion wrap around to <code><a class="el" href="namespacehexed_1_1config.html#ae2b5f6cd69b37a5ec8d33f6361f0025b" title="maximum row size that a Basis is allowed to have">config::max_row_size</a></code> of one less dimension  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;kernel_factory.hpp&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -124,7 +129,10 @@ template&lt;typename... constructor_args&gt; </td></tr>
 <tr class="memitem:a959160506b14a4a8f8c5890784734741"><td class="memTemplItemLeft" align="right" valign="top">ptr_t&lt; kernel &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>get</b> (int n_dim, int row_size, constructor_args &amp;&amp;... args)</td></tr>
 <tr class="separator:a959160506b14a4a8f8c5890784734741"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<hr/>The documentation for this class was generated from the following file:<ul>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><div class="compoundTemplParams">template&lt;template&lt; int, int &gt; typename kernel, int max_n_dim&gt;<br />
+class hexed::kernel_lookup::Kernel_lookup&lt; kernel, max_n_dim, 1 &gt;</div><p>specialization to make the recursion wrap around to <code><a class="el" href="namespacehexed_1_1config.html#ae2b5f6cd69b37a5ec8d33f6361f0025b" title="maximum row size that a Basis is allowed to have">config::max_row_size</a></code> of one less dimension </p>
+</div><hr/>The documentation for this class was generated from the following file:<ul>
 <li>/home/micaiah/Desktop/hexed/include/<b>kernel_factory.hpp</b></li>
 </ul>
 </div><!-- contents -->

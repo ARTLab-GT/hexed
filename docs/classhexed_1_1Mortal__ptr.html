@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -139,10 +139,17 @@ Public Member Functions</h2></td></tr>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Mortal_ptr</b> (T *data=nullptr)</td></tr>
 <tr class="memdesc:a2a2c2d0a94aa64e654bd416acb770050"><td class="mdescLeft">&#160;</td><td class="mdescRight">constructs a <code><a class="el" href="classhexed_1_1Mortal__ptr.html" title="a pointer to a Mortal object that will be updated if the object is destroyed or moved.">Mortal_ptr</a></code> that points to <code>data</code> <br /></td></tr>
 <tr class="separator:a2a2c2d0a94aa64e654bd416acb770050"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abb147789f4a89fa72664899f42850c00" id="r_abb147789f4a89fa72664899f42850c00"><td class="memItemLeft" align="right" valign="top"><a id="abb147789f4a89fa72664899f42850c00" name="abb147789f4a89fa72664899f42850c00"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>set</b> (T *data=nullptr)</td></tr>
-<tr class="memdesc:abb147789f4a89fa72664899f42850c00"><td class="mdescLeft">&#160;</td><td class="mdescRight">constructs a <code><a class="el" href="classhexed_1_1Mortal__ptr.html" title="a pointer to a Mortal object that will be updated if the object is destroyed or moved.">Mortal_ptr</a></code> that points to <code>data</code> <br /></td></tr>
+<tr class="memitem:abb147789f4a89fa72664899f42850c00" id="r_abb147789f4a89fa72664899f42850c00"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abb147789f4a89fa72664899f42850c00">set</a> (T *data=nullptr)</td></tr>
+<tr class="memdesc:abb147789f4a89fa72664899f42850c00"><td class="mdescLeft">&#160;</td><td class="mdescRight">sets <code>this</code> to point to <code>data</code>  <br /></td></tr>
 <tr class="separator:abb147789f4a89fa72664899f42850c00"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad08334e99fe3de9d958a6f5df518b10d" id="r_ad08334e99fe3de9d958a6f5df518b10d"><td class="memItemLeft" align="right" valign="top"><a id="ad08334e99fe3de9d958a6f5df518b10d" name="ad08334e99fe3de9d958a6f5df518b10d"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator==</b> (const T *that) const</td></tr>
+<tr class="memdesc:ad08334e99fe3de9d958a6f5df518b10d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks whether <code>this</code> points to the same object as <code>that</code>. <br /></td></tr>
+<tr class="separator:ad08334e99fe3de9d958a6f5df518b10d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2395c8958765e893ce0c257030cd1de2" id="r_a2395c8958765e893ce0c257030cd1de2"><td class="memItemLeft" align="right" valign="top"><a id="a2395c8958765e893ce0c257030cd1de2" name="a2395c8958765e893ce0c257030cd1de2"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator==</b> (const <a class="el" href="classhexed_1_1Mortal__ptr.html">Mortal_ptr</a>&lt; T &gt; &amp;that) const</td></tr>
+<tr class="memdesc:a2395c8958765e893ce0c257030cd1de2"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a2395c8958765e893ce0c257030cd1de2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9e31f36e9f0fdc6c92c2797037995ca2" id="r_a9e31f36e9f0fdc6c92c2797037995ca2"><td class="memItemLeft" align="right" valign="top">T *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9e31f36e9f0fdc6c92c2797037995ca2">get</a> ()</td></tr>
 <tr class="memdesc:a9e31f36e9f0fdc6c92c2797037995ca2"><td class="mdescLeft">&#160;</td><td class="mdescRight">obtains the raw address of the variable <code>this</code> points to  <br /></td></tr>
 <tr class="separator:a9e31f36e9f0fdc6c92c2797037995ca2"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -214,22 +221,20 @@ const <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, 
 <tr class="memdesc:afe35c9004787a3a136c1930bba3c4ba1 inherit pro_methods_classhexed_1_1mutual_1_1Single"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
 <tr class="separator:afe35c9004787a3a136c1930bba3c4ba1 inherit pro_methods_classhexed_1_1mutual_1_1Single"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pro_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
-<tr class="memitem:aeeed0b817fca1e67a790bbb8047a1cf2 inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_aeeed0b817fca1e67a790bbb8047a1cf2"><td class="memItemLeft" align="right" valign="top">
-virtual void *&#160;</td><td class="memItemRight" valign="bottom"><b>_mine</b> ()</td></tr>
-<tr class="memdesc:aeeed0b817fca1e67a790bbb8047a1cf2 inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">may be overridden by derrived classes to provide partners to data of some arbitrary type <code>T</code> <br /></td></tr>
-<tr class="separator:aeeed0b817fca1e67a790bbb8047a1cf2 inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_a8ea607c1db97e907d1eb3a13bc4c83a2"><td class="memItemLeft" align="right" valign="top">
-virtual const void *&#160;</td><td class="memItemRight" valign="bottom"><b>_mine</b> () const</td></tr>
-<tr class="memdesc:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
-<tr class="separator:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_af879b15e305c3ba3b4541c3a34c2838b"><td class="memItemLeft" align="right" valign="top">
-void&#160;</td><td class="memItemRight" valign="bottom"><b>_connect</b> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
-<tr class="memdesc:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">mutually connects <code>this</code> and <code>that</code> by calling both of their <code><a class="el" href="classhexed_1_1mutual_1_1Base.html#a805af8ae927a4e2f4e6eb216936e8dab">_set()</a></code> member functions <br /></td></tr>
+<tr class="memitem:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_af879b15e305c3ba3b4541c3a34c2838b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1mutual_1_1Base.html#af879b15e305c3ba3b4541c3a34c2838b">_connect</a> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">may be overridden by derived classes to provide partners to data of some arbitrary type <code>T</code>  <br /></td></tr>
 <tr class="separator:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_a73cb219a6412d415c02c1d7500f730eb"><td class="memItemLeft" align="right" valign="top">
 void&#160;</td><td class="memItemRight" valign="bottom"><b>_disconnect</b> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
 <tr class="memdesc:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">mutually disconnects <code>this</code> and <code>that</code> by calling both of their <code><a class="el" href="classhexed_1_1mutual_1_1Base.html#a26dde95d6491766fbc6e7f64aa7a5562">_unset()</a></code> member functions <br /></td></tr>
 <tr class="separator:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aeeed0b817fca1e67a790bbb8047a1cf2 inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_aeeed0b817fca1e67a790bbb8047a1cf2"><td class="memItemLeft" align="right" valign="top">
+virtual void *&#160;</td><td class="memItemRight" valign="bottom"><b>_mine</b> ()</td></tr>
+<tr class="separator:aeeed0b817fca1e67a790bbb8047a1cf2 inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_a8ea607c1db97e907d1eb3a13bc4c83a2"><td class="memItemLeft" align="right" valign="top">
+virtual const void *&#160;</td><td class="memItemRight" valign="bottom"><b>_mine</b> () const</td></tr>
+<tr class="memdesc:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pro_methods_classhexed_1_1Pointer"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_methods_classhexed_1_1Pointer')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classhexed_1_1Pointer.html">hexed::Pointer&lt; T &gt;</a></td></tr>
 <tr class="memitem:a1c3c67d97db5a1b99e3e67e25269f82e inherit pro_methods_classhexed_1_1Pointer" id="r_a1c3c67d97db5a1b99e3e67e25269f82e"><td class="memItemLeft" align="right" valign="top">
 &#160;</td><td class="memItemRight" valign="bottom"><b>operator bool</b> () const</td></tr>
@@ -256,12 +261,16 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>_disconnect</b> (<a c
 <tr class="inherit_header pro_static_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_static_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Static Protected Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
 <tr class="memitem:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base" id="r_a5f740c8da15c53af10fefaf493d4127f"><td class="memItemLeft" align="right" valign="top">
 static void *&#160;</td><td class="memItemRight" valign="bottom"><b>_yours</b> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
-<tr class="memdesc:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">Accesses the <code><a class="el" href="classhexed_1_1mutual_1_1Base.html#aeeed0b817fca1e67a790bbb8047a1cf2">_mine()</a></code> of <code>that</code> <br /></td></tr>
+<tr class="memdesc:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">Accesses the <code>_mine()</code> of <code>that</code> <br /></td></tr>
 <tr class="separator:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base" id="r_a751975e7405f0ca09b12b459d052b78c"><td class="memItemLeft" align="right" valign="top">
 static const void *&#160;</td><td class="memItemRight" valign="bottom"><b>_yours</b> (const <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
 <tr class="memdesc:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
 <tr class="separator:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_attribs_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_attribs_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Protected Attributes inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:ada381fb91093abc2366bd321d7679e90 inherit pro_attribs_classhexed_1_1mutual_1_1Base" id="r_ada381fb91093abc2366bd321d7679e90"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1Lock.html">Lock</a>&#160;</td><td class="memItemRight" valign="bottom"><b>_lock</b></td></tr>
+<tr class="separator:ada381fb91093abc2366bd321d7679e90 inherit pro_attribs_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename T&gt;<br />
@@ -327,6 +336,36 @@ template&lt;typename T &gt; </div>
 <p>This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. </p>
 
 <p>Implements <a class="el" href="classhexed_1_1Pointer.html#abddff3ed1be79fbfa199a9fad1f036ab">hexed::Pointer&lt; T &gt;</a>.</p>
+
+</div>
+</div>
+<a id="abb147789f4a89fa72664899f42850c00" name="abb147789f4a89fa72664899f42850c00"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abb147789f4a89fa72664899f42850c00">&#9670;&#160;</a></span>set()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classhexed_1_1Mortal__ptr.html">hexed::Mortal_ptr</a>&lt; T &gt;::set </td>
+          <td>(</td>
+          <td class="paramtype">T *</td>          <td class="paramname"><span class="paramname"><em>data</em></span><span class="paramdefsep"> = </span><span class="paramdefval">nullptr</span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>sets <code>this</code> to point to <code>data</code> </p>
+<p>If <code>this</code> is already pointing to something, it will be unpaired. </p>
 
 </div>
 </div>

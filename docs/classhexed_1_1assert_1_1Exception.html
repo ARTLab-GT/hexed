@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -113,7 +113,7 @@ $(function(){initNavTree('classhexed_1_1assert_1_1Exception.html',''); initResiz
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="classhexed_1_1assert_1_1Exception-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">hexed::assert::Exception Class Reference</div></div>
+  <div class="headertitle"><div class="title">hexed::assert::Exception Class Reference<span class="mlabels"><span class="mlabel">abstract</span></span></div></div>
 </div><!--header-->
 <div class="contents">
 <div class="dynheader">
@@ -124,16 +124,25 @@ Inheritance diagram for hexed::assert::Exception:</div>
   <map id="hexed::assert::Exception_map" name="hexed::assert::Exception_map">
 <area href="classhexed_1_1Hil__exception.html" alt="hexed::Hil_exception" shape="rect" coords="0,112,259,136"/>
 <area href="classhexed_1_1Interpreter_1_1Hil__unhandled__exception.html" alt="hexed::Interpreter::Hil_unhandled_exception" shape="rect" coords="269,112,528,136"/>
-<area href="classhexed_1_1assert_1_1Numerical__exception.html" title="represents a fatal problem in the numerics of the code (such as nonphysical values)" alt="hexed::assert::Numerical_exception" shape="rect" coords="538,112,797,136"/>
-<area href="classhexed_1_1assert_1_1User__error.html" title="represents an exception which clearly results from a mistake made by the user" alt="hexed::assert::User_error" shape="rect" coords="807,112,1066,136"/>
+<area href="classhexed_1_1assert_1_1Internal__error.html" title="Indicates that a situation has been encountered which should not be possible, regardless of user inpu..." alt="hexed::assert::Internal_error" shape="rect" coords="538,112,797,136"/>
+<area href="classhexed_1_1assert_1_1Not__implemented__error.html" title="Indicates that the user invoked functionality which should be implemented in the future but isn&#39;t yet..." alt="hexed::assert::Not_implemented_error" shape="rect" coords="807,112,1066,136"/>
+<area href="classhexed_1_1assert_1_1Numerical__exception.html" title="Represents a fatal problem in the numerics of the code (such as nonphysical values)" alt="hexed::assert::Numerical_exception" shape="rect" coords="1076,112,1335,136"/>
+<area href="classhexed_1_1assert_1_1User__error.html" title="Represents an exception which clearly results from a mistake made by the user." alt="hexed::assert::User_error" shape="rect" coords="1345,112,1604,136"/>
+<area href="classhexed_1_1assert_1_1Overflow__error.html" title="Indicates an exception caused by some kind of fixed-size resource has been exhausted." alt="hexed::assert::Overflow_error" shape="rect" coords="538,168,797,192"/>
   </map>
 </div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:afc9b333cdb87273d7016d6db9496b1e9" id="r_afc9b333cdb87273d7016d6db9496b1e9"><td class="memItemLeft" align="right" valign="top"><a id="afc9b333cdb87273d7016d6db9496b1e9" name="afc9b333cdb87273d7016d6db9496b1e9"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>Exception</b> (std::string message)</td></tr>
-<tr class="separator:afc9b333cdb87273d7016d6db9496b1e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad714ce86924feed5bb4bb824559688d3" id="r_ad714ce86924feed5bb4bb824559688d3"><td class="memItemLeft" align="right" valign="top"><a id="ad714ce86924feed5bb4bb824559688d3" name="ad714ce86924feed5bb4bb824559688d3"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>Exception</b> (std::string m)</td></tr>
+<tr class="separator:ad714ce86924feed5bb4bb824559688d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af8e55cc05f5a1ec9f12840fe99dfa865" id="r_af8e55cc05f5a1ec9f12840fe99dfa865"><td class="memItemLeft" align="right" valign="top"><a id="af8e55cc05f5a1ec9f12840fe99dfa865" name="af8e55cc05f5a1ec9f12840fe99dfa865"></a>
+virtual std::string&#160;</td><td class="memItemRight" valign="bottom"><b>name</b> () const =0</td></tr>
+<tr class="separator:af8e55cc05f5a1ec9f12840fe99dfa865"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7aea428bdd2ff87969d35833a4e2bfc0" id="r_a7aea428bdd2ff87969d35833a4e2bfc0"><td class="memItemLeft" align="right" valign="top"><a id="a7aea428bdd2ff87969d35833a4e2bfc0" name="a7aea428bdd2ff87969d35833a4e2bfc0"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>message</b> () const</td></tr>
+<tr class="separator:a7aea428bdd2ff87969d35833a4e2bfc0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a61237ab2f08eac4cda529c6c7709686f" id="r_a61237ab2f08eac4cda529c6c7709686f"><td class="memItemLeft" align="right" valign="top"><a id="a61237ab2f08eac4cda529c6c7709686f" name="a61237ab2f08eac4cda529c6c7709686f"></a>
 const char *&#160;</td><td class="memItemRight" valign="bottom"><b>what</b> () const noexcept override</td></tr>
 <tr class="separator:a61237ab2f08eac4cda529c6c7709686f"><td class="memSeparator" colspan="2">&#160;</td></tr>

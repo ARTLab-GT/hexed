@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -147,14 +147,13 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>dist_squared</b> ()
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>empty</b> () const</td></tr>
 <tr class="memdesc:a1970167f17eb444a7373250a9f768039"><td class="mdescLeft">&#160;</td><td class="mdescRight">if <code>true</code>, <code><a class="el" href="#a31037c9b5ff9e19835effa998f080932" title="Current best estimate for nearest point.">point()</a></code> won't work <br /></td></tr>
 <tr class="separator:a1970167f17eb444a7373250a9f768039"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa58760382c297c0188e3f95a61accc54" id="r_aa58760382c297c0188e3f95a61accc54"><td class="memItemLeft" align="right" valign="top"><a id="aa58760382c297c0188e3f95a61accc54" name="aa58760382c297c0188e3f95a61accc54"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>merge</b> (<a class="el" href="classhexed_1_1Nearest__point.html">Nearest_point</a> other)</td></tr>
-<tr class="memdesc:aa58760382c297c0188e3f95a61accc54"><td class="mdescLeft">&#160;</td><td class="mdescRight">sets <code>*this</code> to the nearest of <code>*this</code> and <code>other</code> <br /></td></tr>
-<tr class="separator:aa58760382c297c0188e3f95a61accc54"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad8820e802c8b304c675d99483218efe5" id="r_ad8820e802c8b304c675d99483218efe5"><td class="memItemLeft" align="right" valign="top"><a id="ad8820e802c8b304c675d99483218efe5" name="ad8820e802c8b304c675d99483218efe5"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>merge</b> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; n_dim &gt; new_pnt)</td></tr>
-<tr class="memdesc:ad8820e802c8b304c675d99483218efe5"><td class="mdescLeft">&#160;</td><td class="mdescRight">updates <code>*this</code> to point to <code>new_pnt</code> if <code>new_pnt</code> is closer <br /></td></tr>
-<tr class="separator:ad8820e802c8b304c675d99483218efe5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4457952db14f28c53567f23029f7258f" id="r_a4457952db14f28c53567f23029f7258f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4457952db14f28c53567f23029f7258f">merge</a> (<a class="el" href="classhexed_1_1Nearest__point.html">Nearest_point</a> other)</td></tr>
+<tr class="memdesc:a4457952db14f28c53567f23029f7258f"><td class="mdescLeft">&#160;</td><td class="mdescRight">sets <code>*this</code> to the nearest of <code>*this</code> and <code>other</code>  <br /></td></tr>
+<tr class="separator:a4457952db14f28c53567f23029f7258f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2269e66ce1776bac9436030219f2667a" id="r_a2269e66ce1776bac9436030219f2667a"><td class="memItemLeft" align="right" valign="top"><a id="a2269e66ce1776bac9436030219f2667a" name="a2269e66ce1776bac9436030219f2667a"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>merge</b> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; n_dim &gt; new_pnt)</td></tr>
+<tr class="memdesc:a2269e66ce1776bac9436030219f2667a"><td class="mdescLeft">&#160;</td><td class="mdescRight">updates <code>*this</code> to point to <code>new_pnt</code> if <code>new_pnt</code> is closer <br /></td></tr>
+<tr class="separator:a2269e66ce1776bac9436030219f2667a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a31037c9b5ff9e19835effa998f080932" id="r_a31037c9b5ff9e19835effa998f080932"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; n_dim &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a31037c9b5ff9e19835effa998f080932">point</a> () const</td></tr>
 <tr class="memdesc:a31037c9b5ff9e19835effa998f080932"><td class="mdescLeft">&#160;</td><td class="mdescRight">Current best estimate for nearest point.  <br /></td></tr>
 <tr class="separator:a31037c9b5ff9e19835effa998f080932"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -194,7 +193,7 @@ template&lt;int n_dim = dyn&gt; </div>
 </div><div class="memdoc">
 
 <p>Initializes an empty point. </p>
-<p>This point is considered "empty" and <code><a class="el" href="#a31037c9b5ff9e19835effa998f080932" title="Current best estimate for nearest point.">point()</a></code> won't work until <code><a class="el" href="#aa58760382c297c0188e3f95a61accc54" title="sets *this to the nearest of *this and other">merge()</a></code>ed with a non-empty <code><a class="el" href="classhexed_1_1Nearest__point.html" title="Helper class for finding the nearest point to a given reference point.">Nearest_point</a></code>. </p><dl class="params"><dt>Parameters</dt><dd>
+<p>This point is considered "empty" and <code><a class="el" href="#a31037c9b5ff9e19835effa998f080932" title="Current best estimate for nearest point.">point()</a></code> won't work until <code><a class="el" href="#a4457952db14f28c53567f23029f7258f" title="sets *this to the nearest of *this and other">merge()</a></code>ed with a non-empty <code><a class="el" href="classhexed_1_1Nearest__point.html" title="Helper class for finding the nearest point to a given reference point.">Nearest_point</a></code>. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">ref</td><td>Sets <code><a class="el" href="#a7d2fd5e0e814a89c3695ceefc412d1c7" title="reference point that you want to find the nearest point to">reference()</a></code> </td></tr>
     <tr><td class="paramname">max_distance</td><td>Optionally initialize the distance to a finite value so that only points within this distance will be considered. </td></tr>
@@ -239,6 +238,36 @@ template&lt;int n_dim = dyn&gt; </div>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a4457952db14f28c53567f23029f7258f" name="a4457952db14f28c53567f23029f7258f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4457952db14f28c53567f23029f7258f">&#9670;&#160;</a></span>merge()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;int n_dim = dyn&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool <a class="el" href="classhexed_1_1Nearest__point.html">hexed::Nearest_point</a>&lt; n_dim &gt;::merge </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Nearest__point.html">Nearest_point</a>&lt; n_dim &gt;</td>          <td class="paramname"><span class="paramname"><em>other</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>sets <code>*this</code> to the nearest of <code>*this</code> and <code>other</code> </p>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> iff the nearest point turned out to be <code>other</code> </dd></dl>
+
+</div>
+</div>
 <a id="a31037c9b5ff9e19835effa998f080932" name="a31037c9b5ff9e19835effa998f080932"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a31037c9b5ff9e19835effa998f080932">&#9670;&#160;</a></span>point()</h2>
 

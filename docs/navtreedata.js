@@ -40,7 +40,8 @@ var NAVTREE =
         [ "All", "namespacemembers.html", null ],
         [ "Functions", "namespacemembers_func.html", null ],
         [ "Variables", "namespacemembers_vars.html", null ],
-        [ "Typedefs", "namespacemembers_type.html", null ]
+        [ "Typedefs", "namespacemembers_type.html", null ],
+        [ "Enumerations", "namespacemembers_enum.html", null ]
       ] ]
     ] ],
     [ "Classes", "annotated.html", [
@@ -69,16 +70,17 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "Array_8hpp.html",
-"classhexed_1_1Boundary__expr.html#a943b77bbca3547ae31fd8e1600b4a286",
-"classhexed_1_1Element.html#a704dd0c7f9484363d231f3629075c5af",
+"classhexed_1_1Basis.html#a3f9dc734076085cf9a46786cd0e837c0",
+"classhexed_1_1Elem__nonsmooth.html",
 "classhexed_1_1Has__tree.html#aa6a4e367c11bbcc53e7e28523399ed9e",
-"classhexed_1_1Multiple__ptr.html#a2edc467b8ce660e43779a138939a0737",
-"classhexed_1_1Qpoint__expr.html#a2dffc8ba4b940a49d087632644c9bb6e",
-"classhexed_1_1Spatial_1_1Write__face.html",
-"classhexed_1_1Tree.html#a2ef01b66b60ed9cd772bad96ce432cb8",
-"classhexed_1_1pde_1_1Smooth__art__visc.html",
-"namespacehexed.html#a37e4a0200dca501e4e3d29f78a45aaff",
-"parameters.html#vis_n_sample"
+"classhexed_1_1Mortal__ptr.html#a8b43e1dc661d253a12737ec0bb9f226b",
+"classhexed_1_1Riemann__invariants.html#a6aa9448bf6dcc29ab18c1c0d0915f41e",
+"classhexed_1_1Storage__params.html#a535ff3ebf917388ef91ce5c5bace017e",
+"classhexed_1_1Tree.html#afc0aecd981ad1d98462a988439e9582d",
+"classhexed_1_1next_1_1Boundary__block.html#a511da9b7f6505f2010eee6301528d2c1",
+"classhexedpy_1_1constants_1_1imperial.html",
+"namespacehexed_1_1config.html#af06476846edadcd4a104b9e0b7194a2a",
+"structhexed_1_1next_1_1Vertex_1_1Snap__result.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

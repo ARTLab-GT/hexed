@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -121,7 +121,7 @@ Units and physical quantities</h1>
 <li>Unless otherwise specified, all angles are radian. Note, however, the radian is a concept for measuring angles, not an SI base unit (the "unit" rad is <a href="https://en.wikipedia.org/wiki/Radian">technically a dimensionless constant equal to 1</a>).</li>
 <li>If you need to perform any unit conversions or reference physical constants, please use the values defined in <code><a class="el" href="namespacehexed_1_1constants.html" title="Mathematical and physical constants.">hexed::constants</a></code>, which are based on formal exact definitions (as opposed to approximations to some number of digits). In practice, of course, this isn't that important, but some obsessive part of my brain wants to know that all unit conversions are perfectly consistent up to machine precision.</li>
 <li>If an extensive thermodynamic quantity (e.g., mass, volume, energy, as opposed to an intensive quantity like temperature or pressure) is specified without a reference quantity, it means per unit volume. For example, "energy" specified without other context will be in units of \( J/m^3 \).<ul>
-<li>As a result, "mass" and "density" are synonymous. In fact, prefer "mass" so that all the conserved variables (momentum, mass, energy) are consistently extensive.</li>
+<li>As a result, "mass" and "density" are synonymous.</li>
 </ul>
 </li>
 <li>Stagnation quantities shall be referred to as such. The word "total" shall not be used to indicate stagnation quantities. To clarify, for any thermodynamic variable, the <em>stagnation</em> value of that variable is the value it would take if the material in question were isentropically decelerated to zero velocity. For energy-type variables, "total" refers to the sum of internal (static) and kinetic components. With that in mind, please recall the following results of basic aerodynamics:<ul>
@@ -130,11 +130,11 @@ Units and physical quantities</h1>
 <li>The total enthalpy \( h_t = \rho h + \frac12 \rho v^2 \) <b>is</b> equal to the stagnation enthalpy \( h_0 \).</li>
 </ul>
 </li>
+<li>To improve stability, Hexed formulates the k- \(\omega\) turbulence model in terms of \( \rho \tilde{\omega} = \rho \ln \omega \) instead of \( \rho \omega \), as in the work of Bassi et al. <a class="el" href="citelist.html#CITEREF_bassi_k_omega">[1]</a>. In Hexed, the quantity \( \rho \tilde{\omega} \) shall be defined as the "Bassi dissipation", whereas \( \omega \) shall be referred to as the "specific turbulent dissipation". The physics-minded reader may object that \( \omega \) is a dimensional quantity (with units of \( s^{-1} \)) and therefore taking its logarithm is forbidden. However, the Bassi dissipation only appears in the model equations inside a derivative or an exponential, so including a nondimensionalization factor inside the logarithm would have no effect on the solution to the equations.</li>
 </ul>
 <h2><a class="anchor" id="state_vector"></a>
 State vector</h2>
-<p>The flow state vector (often simply referred to as <code>state</code>) consists of the conserved variables. It has components [momentum, mass, total energy] (a.k.a. [ \( \rho \vec{v} \), \( \rho \), \( \rho e + \frac12 \rho v^2 \)]). E.g., in 3D that is [<code>momentum0</code> ( \(x\)-direction), <code>momentum1</code> ( \(y\)-direction), <code>momentum2</code> ( \(z\)-direction), mass, total energy].</p>
-<p>This order is different from most codes, which use the order (mass, momentum, energy). The order for Hexed was chosen because it groups the vector and scalar quantities together and because the \(i\)th component of the state vector is equal to the \(i\)th component of momentum. The latter makes the code for certain formulae cleaner.</p>
+<p>The flow state vector (often simply referred to as <code>state</code>) consists of the conserved variables. It has components <b>[momentum, density, total energy, [turbulent kinetic energy, Bassi dissipation]]</b> (a.k.a. [ \( \rho \vec{v} \), \( \rho \), \( \rho e + \frac12 \rho v^2 \), \( \rho k \), \( \rho \ln \omega \)]). The components of the momentum take up the first \( n_\text{dim} \) components of the state vector (where \( n_\text{dim} \) is the number of dimensions) and the turbulence variables are only included for RANS simulations. For example, for 2D turbulent flow, the state vector is [momentum \(_0\) ( \(x\)-direction), momentum \(_1\) ( \(y\)-direction), density, energy, TKE, Bassi dissipation] whereas for for 3D laminar flow, it is [momentum \(_0\), momentum \(_1\), momentum \(_2\), density, energy]. This order is different from most codes, which use the order (mass, momentum, energy). The order for Hexed was chosen because it groups the vector and scalar quantities together and because the \(i\)th component of the state vector is equal to the \(i\)th component of momentum. The latter makes the code for certain formulae cleaner.</p>
 <h1><a class="anchor" id="Terminology"></a>
 Terminology</h1>
 <p>Hexed uses some terms that are non-standard, or at least not completely universal. They are defined as follows:</p><ul>

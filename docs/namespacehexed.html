@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -114,6 +114,7 @@ $(function(){initNavTree('namespacehexed.html',''); initResizable(true); });
 <a href="#namespaces">Namespaces</a> &#124;
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
+<a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a> &#124;
 <a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">hexed Namespace Reference</div></div>
@@ -128,8 +129,11 @@ Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1assert.html">assert</a></td></tr>
 <tr class="memdesc:namespacehexed_1_1assert"><td class="mdescLeft">&#160;</td><td class="mdescRight">utilities for custom assertions <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1brep.html">brep</a></td></tr>
+<tr class="memdesc:namespacehexed_1_1brep"><td class="mdescLeft">&#160;</td><td class="mdescRight">Implementation of the Boundary Representation (BRep) for solid geometry. <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1config.html">config</a></td></tr>
-<tr class="memdesc:namespacehexed_1_1config"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="classhexed_1_1Namespace.html">Namespace</a> for options configured at build time. See <a class="el" href="hexed__config_8hpp_8in.html">hexed_config.hpp.in</a>. <br /></td></tr>
+<tr class="memdesc:namespacehexed_1_1config"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="classhexed_1_1Namespace.html">Namespace</a> for options configured at build time. <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1constants.html">constants</a></td></tr>
 <tr class="memdesc:namespacehexed_1_1constants"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mathematical and physical constants. <br /></td></tr>
@@ -137,8 +141,8 @@ Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1criteria.html">criteria</a></td></tr>
 <tr class="memdesc:namespacehexed_1_1criteria"><td class="mdescLeft">&#160;</td><td class="mdescRight">A namespace for functions to be used as refinement criteria. <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1hil__properties.html">hil_properties</a></td></tr>
-<tr class="memdesc:namespacehexed_1_1hil__properties"><td class="mdescLeft">&#160;</td><td class="mdescRight">functions that assign properties of objects to HIL variables <br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1hdf5__utils.html">hdf5_utils</a></td></tr>
+<tr class="memdesc:namespacehexed_1_1hdf5__utils"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convenience wrappers for some common and verbose HDF5 operations. <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1iterative.html">iterative</a></td></tr>
 <tr class="memdesc:namespacehexed_1_1iterative"><td class="mdescLeft">&#160;</td><td class="mdescRight">iterative solvers for linear equations, in particular Krylov subspace methods <br /></td></tr>
@@ -149,14 +153,22 @@ Namespaces</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1mutual.html">mutual</a></td></tr>
 <tr class="memdesc:namespacehexed_1_1mutual"><td class="mdescLeft">&#160;</td><td class="mdescRight">a namespace for mutually-connected objects <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1pde.html">pde</a></td></tr>
-<tr class="memdesc:namespacehexed_1_1pde"><td class="mdescLeft">&#160;</td><td class="mdescRight">This namespace contains classes representing the different PDEs Hexed can solve. <br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1next.html">next</a></td></tr>
+<tr class="memdesc:namespacehexed_1_1next"><td class="mdescLeft">&#160;</td><td class="mdescRight">namespace for refactored functionality that may clash with existing names <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1printers.html">printers</a></td></tr>
+<tr class="memdesc:namespacehexed_1_1printers"><td class="mdescLeft">&#160;</td><td class="mdescRight">Global <code><a class="el" href="classhexed_1_1Printer.html" title="abstract base class for handling different variations of printing things for user">Printer</a></code> objects that any function can use to print messages. <br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">namespace &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehexed_1_1vis__variables.html">vis_variables</a></td></tr>
+<tr class="memdesc:namespacehexed_1_1vis__variables"><td class="mdescLeft">&#160;</td><td class="mdescRight">functions that assign visualization data to HIL variables <br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
 Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Accessible__mesh.html">Accessible_mesh</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A mesh that supports access to the actual elements with the numerical data they contain.  <a href="classhexed_1_1Accessible__mesh.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Advection.html">Advection</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Advection__state.html">Advection_state</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetches the advection states used for computing the smoothness-based artfificial viscosity.  <a href="classhexed_1_1Advection__state.html#details">More...</a><br /></td></tr>
@@ -176,22 +188,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Basis.html">Basis</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents a basis of <a href="https://en.wikipedia.org/wiki/Lagrange_polynomial">Lagrange polynomials</a>.  <a href="classhexed_1_1Basis.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Boundary.html">Boundary</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Boundary__condition.html">Boundary_condition</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A <code><a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a></code> that also provides details about the connection for the neighbor flux computation and requests for a particular <code><a class="el" href="classhexed_1_1Boundary__condition.html">Boundary_condition</a></code> to be applied to it.  <a href="classhexed_1_1Boundary__connection.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Boundary__expr.html">Boundary_expr</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates a <a class="el" href="classhexed_1_1Struct__expr.html#struct_expr">structured expression</a>.  <a href="classhexed_1_1Boundary__expr.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Boundary__func.html">Boundary_func</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A funtion that can be evaluated at any quadrature point which is on a boundary.  <a href="classhexed_1_1Boundary__func.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Cache__bc.html">Cache_bc</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Case.html">Case</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -203,17 +202,13 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Component.html">Component</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">returns a component of another <code><a class="el" href="classhexed_1_1Qpoint__func.html" title="Represents a function which can be evaluated at quadrature points.">Qpoint_func</a></code>  <a href="classhexed_1_1Component.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Compound__edge.html">Compound_edge</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Compound__geom.html">Compound_geom</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Combines multiple <code><a class="el" href="classhexed_1_1Surface__geom.html" title="Represents a surface geometry implicitly for meshing.">Surface_geom</a></code>s into one.  <a href="classhexed_1_1Compound__geom.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Compound__printer.html">Compound_printer</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code><a class="el" href="classhexed_1_1Printer.html" title="abstract base class for handling different variations of printing things for user">Printer</a></code> which is just a combination of other printers.  <a href="classhexed_1_1Compound__printer.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Con__dir.html">Con_dir</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Con__dir_3_01Deformed__element_01_4.html">Con_dir&lt; Deformed_element &gt;</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Con__dir_3_01Element_01_4.html">Con_dir&lt; Element &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Concat__func.html">Concat_func</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">concatenates the output of a vector of function-type objects (derived from <code><a class="el" href="classhexed_1_1Output__data.html" title="Represents some numerical data which is of interest to the end user.">Output_data</a></code>)  <a href="classhexed_1_1Concat__func.html#details">More...</a><br /></td></tr>
@@ -221,16 +216,17 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Concatenation.html">Concatenation</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A <code><a class="el" href="classhexed_1_1Sequence.html" title="An interface for general sequence-type containers.">Sequence</a></code> formed by concatenating two <code><a class="el" href="classhexed_1_1Sequence.html" title="An interface for general sequence-type containers.">Sequence</a></code>s.  <a href="classhexed_1_1Concatenation.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Connection.html">Connection</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Connection__new.html">Connection_new</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Describes the direction in which to faces are connected.  <a href="classhexed_1_1Connection__direction.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Constant__func.html">Constant_func</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Always returns the same constant (vector) value.  <a href="classhexed_1_1Constant__func.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Convergence__monitor.html">Convergence_monitor</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Monitors whether some variable has converged to a definite value.  <a href="classhexed_1_1Convergence__monitor.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Copy.html">Copy</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mostly used for testing, but you can maybe get away with it for supersonic outlets.  <a href="classhexed_1_1Copy.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Csv.html">Csv</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes output in Comma-Separated Value format.  <a href="classhexed_1_1Csv.html#details">More...</a><br /></td></tr>
@@ -250,6 +246,8 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Doublet.html">Doublet</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Eikonal.html">Eikonal</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Elem__average.html">Elem_average</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">computes the average of the provided <code><a class="el" href="classhexed_1_1Qpoint__func.html" title="Represents a function which can be evaluated at quadrature points.">Qpoint_func</a></code> within the element by Gaussian quadrature  <a href="classhexed_1_1Elem__average.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -262,19 +260,13 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Element.html">Element</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stores data associated with one mesh element.  <a href="classhexed_1_1Element.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Element__connection.html">Element_connection</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Element__container.html">Element_container</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Element__face__connection.html">Element_face_connection</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Element__func.html">Element_func</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">a function that has a single value for each element  <a href="classhexed_1_1Element__func.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Element__info.html">Element_info</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">an <code><a class="el" href="classhexed_1_1Element__func.html" title="a function that has a single value for each element">Element_func</a></code> that doesn't depend on a <code><a class="el" href="classhexed_1_1Basis.html" title="Represents a basis of Lagrange polynomials.">Basis</a></code> or the time  <a href="classhexed_1_1Element__info.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Element__new.html">Element_new</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Empty__func.html">Empty_func</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns an empty vector. You can pass this to <code>Solver::visualize_field_tecplot</code> if you just want to visualize the position.  <a href="classhexed_1_1Empty__func.html#details">More...</a><br /></td></tr>
@@ -287,25 +279,25 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Error__func.html">Error_func</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Expression__bc.html">Expression_bc</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the boundary condition explicitly based on a <code>HIL</code> expression.  <a href="classhexed_1_1Expression__bc.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Face.html">Face</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Face__connection.html">Face_connection</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Face__connection_3_01Deformed__element_01_4.html">Face_connection&lt; Deformed_element &gt;</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Face__permutation__dynamic.html">Face_permutation_dynamic</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Face__refinement.html">Face_refinement</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Fix__admis__coef.html">Fix_admis_coef</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">fetches the <code>Element::fix_admis_coef</code>  <a href="classhexed_1_1Fix__admis__coef.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Fix__nonphysical.html">Fix_nonphysical</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Flow__bc.html">Flow_bc</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Abstract class representing an arbitrary flow boundary condition (as opposed to a mesh BC).  <a href="classhexed_1_1Flow__bc.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Abstract class representing an arbitrary flow boundary condition.  <a href="classhexed_1_1Flow__bc.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Freestream.html">Freestream</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the ghost state to the provided freestream state.  <a href="classhexed_1_1Freestream.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Function__bc.html">Function_bc</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Like <code><a class="el" href="classhexed_1_1Freestream.html" title="Sets the ghost state to the provided freestream state.">Freestream</a></code>, but sets state to the value of an arbitrary <code><a class="el" href="classhexed_1_1Surface__func.html" title="A class of functions that can be evaluated at a point on a surface, without reference to a Boundary_c...">Surface_func</a></code> instead of a constant.  <a href="classhexed_1_1Function__bc.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Gauss__legendre.html">Gauss_legendre</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="classhexed_1_1Basis.html" title="Represents a basis of Lagrange polynomials.">Basis</a> based on <a href="https://en.wikipedia.org/wiki/Gauss%E2%80%93Legendre_quadrature">Gauss-Legendre</a> quadrature.  <a href="classhexed_1_1Gauss__legendre.html#details">More...</a><br /></td></tr>
@@ -313,26 +305,28 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Gauss__lobatto.html">Gauss_lobatto</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="classhexed_1_1Basis.html" title="Represents a basis of Lagrange polynomials.">Basis</a> based on <a href="https://mathworld.wolfram.com/LobattoQuadrature.html">Gauss-Lobatto</a> quadrature.  <a href="classhexed_1_1Gauss__lobatto.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Geom__mbc.html">Geom_mbc</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">snaps to a <code><a class="el" href="classhexed_1_1Surface__geom.html" title="Represents a surface geometry implicitly for meshing.">Surface_geom</a></code>  <a href="classhexed_1_1Geom__mbc.html#details">More...</a><br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Geom__edge.html">Geom_edge</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Hanging.html">Hanging</a></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Gradient.html">Gradient</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Hanging__vertex__matcher.html">Hanging_vertex_matcher</a></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhexed_1_1Hard__kernel__connection.html">Hard_kernel_connection</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The minimal amount of data that the kernels need about a <code><a class="el" href="classhexed_1_1Neighbor__connection.html">Neighbor_connection</a></code>  <a href="structhexed_1_1Hard__kernel__connection.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Has__tree.html">Has_tree</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns 1 if the element has a <code><a class="el" href="classhexed_1_1Tree.html" title="Bin/quad/octree data structure.">Tree</a></code> pointer, else 0.  <a href="classhexed_1_1Has__tree.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Heat__flux.html">Heat_flux</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes heat flux into surface.  <a href="classhexed_1_1Heat__flux.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Hil__exception.html">Hil_exception</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1History__monitor.html">History_monitor</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">monitors the history of some variable over iterations and computes the bounds over a specified window  <a href="classhexed_1_1History__monitor.html#details">More...</a><br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1History__stats.html">History_stats</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes statistics about the convergence history of some variable.  <a href="classhexed_1_1History__stats.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Hypersphere.html">Hypersphere</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents hypersphere in any dimensionality.  <a href="classhexed_1_1Hypersphere.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Iges__parser.html">Iges_parser</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parses IGES files to obtain parameter values.  <a href="classhexed_1_1Iges__parser.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhexed_1_1Implicit__options.html">Implicit_options</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Index.html">Index</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Provides a view of some elements of a <code><a class="el" href="classhexed_1_1Sequence.html" title="An interface for general sequence-type containers.">Sequence</a></code> identified by a sequence of indices.  <a href="classhexed_1_1Index.html#details">More...</a><br /></td></tr>
@@ -341,6 +335,8 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Is__deformed.html">Is_deformed</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns 1 if the element is deformed, otherwise 0.  <a href="classhexed_1_1Is__deformed.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Is__physical__result.html">Is_physical_result</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Iteration__status.html">Iteration_status</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Contains high-level diagnostic information about the status of a time-marching scheme.  <a href="classhexed_1_1Iteration__status.html#details">More...</a><br /></td></tr>
@@ -355,16 +351,19 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a vector with one element: the Jacobian determinant at the quadrature point.  <a href="classhexed_1_1Jacobian__det__func.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Kernel.html">Kernel</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Kernel__connection.html">Kernel_connection</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents a connection between elements as the kernel sees it.  <a href="classhexed_1_1Kernel__connection.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Base class for a "kernel". "Kernel" is a word which here means a callable object which accepts dimensionality and row size as template arguments to improve performance.  <a href="classhexed_1_1Kernel.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Kernel__element.html">Kernel_element</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents an element as the kernels see it.  <a href="classhexed_1_1Kernel__element.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhexed_1_1Kernel__face__refinement.html">Kernel_face_refinement</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The minimal amount of data that the kernels need about <code><a class="el" href="classhexed_1_1Face__refinement.html">Face_refinement</a></code>  <a href="structhexed_1_1Kernel__face__refinement.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Laplace.html">Laplace</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Layer__sequence.html">Layer_sequence</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Selects a growth profile for anisotropic wall layers.  <a href="classhexed_1_1Layer__sequence.html#details">More...</a><br /></td></tr>
@@ -376,7 +375,7 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">represents a linear equation in an arbitrary vector space with a black-box operator  <a href="classhexed_1_1Linear__equation.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Lock.html">Lock</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">wrapper for <a href="https://www.openmp.org/spec-html/5.0/openmpse31.html">OpenMP lock routines</a>.  <a href="classhexed_1_1Lock.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">wrapper for <a href="https://www.openmp.org/spec-html/5.0/openmpse31.html">OpenMP <b>nested</b> lock routines</a>.  <a href="classhexed_1_1Lock.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Mach.html">Mach</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes <a class="el" href="classhexed_1_1Mach.html" title="Computes Mach number.">Mach</a> number.  <a href="classhexed_1_1Mach.html#details">More...</a><br /></td></tr>
@@ -386,8 +385,7 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Mesh.html">Mesh</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Mesh__bc.html">Mesh_bc</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Abstract class representing a mesh boundary condition.  <a href="classhexed_1_1Mesh__bc.html#details">More...</a><br /></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhexed_1_1Mesh__assessment.html">Mesh_assessment</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Mesh__by__type.html">Mesh_by_type</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -397,33 +395,23 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Mortal__ptr.html">Mortal_ptr</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">a pointer to a <code><a class="el" href="classhexed_1_1Mortal.html" title="represents an object that could die at any moment">Mortal</a></code> object that will be updated if the object is destroyed or moved.  <a href="classhexed_1_1Mortal__ptr.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Multiple__ptr.html">Multiple_ptr</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Like a <code><a class="el" href="classhexed_1_1Mutual__ptr.html" title="For creating pairs of mutually connected pointers in a robust way.">Mutual_ptr</a></code>, except it can accept multiple partners.  <a href="classhexed_1_1Multiple__ptr.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Mutual__ptr.html">Mutual_ptr</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">For creating pairs of mutually connected pointers in a robust way.  <a href="classhexed_1_1Mutual__ptr.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Namespace.html">Namespace</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Navier__stokes.html">Navier_stokes</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Nearest__point.html">Nearest_point</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Helper class for finding the nearest point to a given reference point.  <a href="classhexed_1_1Nearest__point.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Neighbor__connection.html">Neighbor_connection</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1No__slip.html">No_slip</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">No-slip wall boundary condition.  <a href="classhexed_1_1No__slip.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Nominal__pos.html">Nominal_pos</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Nonpenetration.html">Nonpenetration</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies the inside state and flips the sign of the surface-normal velocity.  <a href="classhexed_1_1Nonpenetration.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Normalized__nonsmooth.html">Normalized_nonsmooth</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">same as <code><a class="el" href="classhexed_1_1Elem__nonsmooth.html" title="compute the elementwise nonsmoothness indicator of the provided function">Elem_nonsmooth</a></code>, but normalized by <code><a class="el" href="classhexed_1_1Elem__l2.html" title="computes the  norm of the provided Qpoint_func within the element by Gaussian quadrature">Elem_l2</a></code>  <a href="classhexed_1_1Normalized__nonsmooth.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Null__mbc.html">Null_mbc</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">provides snapping functions that do nothing  <a href="classhexed_1_1Null__mbc.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Occt.html">Occt</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Wrapper interface for CAD geometry defined by <a href="https://dev.opencascade.org/doc/overview/html/index.html">Open CASCADE Technology</a> (OCCT).  <a href="classhexed_1_1Occt.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Outflow.html">Outflow</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">for supersonic outlets  <a href="classhexed_1_1Outflow.html#details">More...</a><br /></td></tr>
@@ -436,8 +424,6 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Path.html">Path</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds a file in the working directory or system paths.  <a href="classhexed_1_1Path.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Physical__basis.html">Physical_basis</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Physical__residual.html">Physical_residual</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">returns the residual of the Navier-Stokes equations, not weighted by local time step  <a href="classhexed_1_1Physical__residual.html#details">More...</a><br /></td></tr>
@@ -469,15 +455,6 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Printer.html">Printer</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">abstract base class for handling different variations of printing things for user  <a href="classhexed_1_1Printer.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhexed_1_1Printer__set.html">Printer_set</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A complete set of printers that support messages with various purposes.  <a href="structhexed_1_1Printer__set.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Ptr__base.html">Ptr_base</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Abstract base class for implementing mutually-connected pointers.  <a href="classhexed_1_1Ptr__base.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Qpoint__expr.html">Qpoint_expr</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates a <a class="el" href="classhexed_1_1Struct__expr.html#struct_expr">structured expression</a>.  <a href="classhexed_1_1Qpoint__expr.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Qpoint__func.html">Qpoint_func</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents a function which can be evaluated at quadrature points.  <a href="classhexed_1_1Qpoint__func.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -492,8 +469,6 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Record.html">Record</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns <code><a class="el" href="classhexed_1_1Kernel__element.html#a7ad95dba0339c299d033925df49ff104" title="for algorithms to book-keep general information">Element::record</a></code>  <a href="classhexed_1_1Record.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Refined__connection.html">Refined_connection</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Refined__face.html">Refined_face</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -525,6 +500,8 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Abstract base class for <code><a class="el" href="classhexed_1_1Simplex__geom.html" title="Represents discrete geometry composed of simplices.">Simplex_geom</a></code> exposing the dimensionality-independent functionality.  <a href="classhexed_1_1Simplex__geom__nd.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Slice.html">Slice</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Smooth__art__visc.html">Smooth_art_visc</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Sod.html">Sod</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initial consition for classic <a class="el" href="classhexed_1_1Sod.html" title="Initial consition for classic Sod problem.">Sod</a> problem.  <a href="classhexed_1_1Sod.html#details">More...</a><br /></td></tr>
@@ -573,7 +550,7 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">evaluates a <em>structured expression</em> in HIL  <a href="classhexed_1_1Struct__expr.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Surface__func.html">Surface_func</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A class of functions that can be evaluated at a point on a surface, without reference to a <code><a class="el" href="classhexed_1_1Boundary__connection.html" title="A Boundary_face that also provides details about the connection for the neighbor flux computation and...">Boundary_connection</a></code> object.  <a href="classhexed_1_1Surface__func.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A class of functions that can be evaluated at a point on a surface, without reference to a <code><a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a></code> object.  <a href="classhexed_1_1Surface__func.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Surface__geom.html">Surface_geom</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents a surface geometry implicitly for meshing.  <a href="classhexed_1_1Surface__geom.html#details">More...</a><br /></td></tr>
@@ -598,7 +575,11 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Tree.html">Tree</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bin/quad/octree data structure.  <a href="classhexed_1_1Tree.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Typed__bound__connection.html">Typed_bound_connection</a></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Tree__curve.html">Tree_curve</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Tree__curve__edge.html">Tree_curve_edge</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Tree__curve__geom.html">Tree_curve_geom</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Uncertainty.html">Uncertainty</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">function to fetch the value of the <code>uncertainty</code> member of the <code><a class="el" href="classhexed_1_1Element.html" title="Stores data associated with one mesh element.">Element</a></code>.  <a href="classhexed_1_1Uncertainty.html#details">More...</a><br /></td></tr>
@@ -609,15 +590,10 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Velocity.html">Velocity</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes velocity vector.  <a href="classhexed_1_1Velocity.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Vertex.html">Vertex</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents a vertex in a deformed grid.  <a href="classhexed_1_1Vertex.html#details">More...</a><br /></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1View__by__type.html">View_by_type</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Vis__data.html">Vis_data</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Viscous__stress.html">Viscous_stress</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes viscous stress at surface.  <a href="classhexed_1_1Viscous__stress.html#details">More...</a><br /></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes data to be visualized for a single element.  <a href="classhexed_1_1Vis__data.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1Visualizer.html">Visualizer</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">General interface for writing visualization data in different file formats.  <a href="classhexed_1_1Visualizer.html#details">More...</a><br /></td></tr>
@@ -628,10 +604,6 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:ade19dbb3e642d7a902bc463b1e291847" id="r_ade19dbb3e642d7a902bc463b1e291847"><td class="memItemLeft" align="right" valign="top"><a id="ade19dbb3e642d7a902bc463b1e291847" name="ade19dbb3e642d7a902bc463b1e291847"></a>
-typedef <a class="el" href="classhexed_1_1Concat__func.html">Concat_func</a>&lt; <a class="el" href="classhexed_1_1Boundary__func.html">Boundary_func</a>, <a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;, int, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>Bf_concat</b></td></tr>
-<tr class="memdesc:ade19dbb3e642d7a902bc463b1e291847"><td class="mdescLeft">&#160;</td><td class="mdescRight">concatenates <code><a class="el" href="classhexed_1_1Boundary__func.html" title="A funtion that can be evaluated at any quadrature point which is on a boundary.">Boundary_func</a></code>s <br /></td></tr>
-<tr class="separator:ade19dbb3e642d7a902bc463b1e291847"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afd1687d99f6723f082df0ceb9da4f015" id="r_afd1687d99f6723f082df0ceb9da4f015"><td class="memItemLeft" align="right" valign="top"><a id="afd1687d99f6723f082df0ceb9da4f015" name="afd1687d99f6723f082df0ceb9da4f015"></a>
 typedef <a class="el" href="classhexed_1_1Concat__func.html">Concat_func</a>&lt; <a class="el" href="classhexed_1_1Element__func.html">Element_func</a>, <a class="el" href="classhexed_1_1Element.html">Element</a> &amp;, const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>Ef_concat</b></td></tr>
 <tr class="memdesc:afd1687d99f6723f082df0ceb9da4f015"><td class="mdescLeft">&#160;</td><td class="mdescRight">Concatenates <code><a class="el" href="classhexed_1_1Element__func.html" title="a function that has a single value for each element">Element_func</a></code>s. <br /></td></tr>
@@ -640,6 +612,14 @@ typedef <a class="el" href="classhexed_1_1Concat__func.html">Concat_func</a>&lt;
 typedef <a class="el" href="classhexed_1_1Concat__func.html">Concat_func</a>&lt; <a class="el" href="classhexed_1_1Element__func.html">Element_func</a>, <a class="el" href="classhexed_1_1Element.html">Element</a> &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>Ei_concat</b></td></tr>
 <tr class="memdesc:a9991fefbda4c4952a8e9886c768b5de9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Concatenates <code><a class="el" href="classhexed_1_1Element__info.html" title="an Element_func that doesn&#39;t depend on a Basis or the time">Element_info</a></code>s. <br /></td></tr>
 <tr class="separator:a9991fefbda4c4952a8e9886c768b5de9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad444d317f9e486e08dc50773c56ed134" id="r_ad444d317f9e486e08dc50773c56ed134"><td class="memItemLeft" align="right" valign="top"><a id="ad444d317f9e486e08dc50773c56ed134" name="ad444d317f9e486e08dc50773c56ed134"></a>
+typedef <a class="el" href="classhexed_1_1Concat__func.html">Concat_func</a>&lt; <a class="el" href="classhexed_1_1Qpoint__func.html">Qpoint_func</a>, <a class="el" href="classhexed_1_1Element.html">Element</a> &amp;, const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;, int, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>Qf_concat</b></td></tr>
+<tr class="memdesc:ad444d317f9e486e08dc50773c56ed134"><td class="mdescLeft">&#160;</td><td class="mdescRight">Concatenates <code><a class="el" href="classhexed_1_1Qpoint__func.html" title="Represents a function which can be evaluated at quadrature points.">Qpoint_func</a></code>s. <br /></td></tr>
+<tr class="separator:ad444d317f9e486e08dc50773c56ed134"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0a699c8e9a51e32ecbb55ee2434e3ec9" id="r_a0a699c8e9a51e32ecbb55ee2434e3ec9"><td class="memTemplParams" colspan="2"><a id="a0a699c8e9a51e32ecbb55ee2434e3ec9" name="a0a699c8e9a51e32ecbb55ee2434e3ec9"></a>
+template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a0a699c8e9a51e32ecbb55ee2434e3ec9"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><b>reduced_vector</b> = std::vector&lt;T&gt;</td></tr>
+<tr class="separator:a0a699c8e9a51e32ecbb55ee2434e3ec9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aeef038f03a0676446e834deca06c6736" id="r_aeef038f03a0676446e834deca06c6736"><td class="memTemplParams" colspan="2"><a id="aeef038f03a0676446e834deca06c6736" name="aeef038f03a0676446e834deca06c6736"></a>
 template&lt;int rows = dyn, int cols = 1&gt; </td></tr>
 <tr class="memitem:aeef038f03a0676446e834deca06c6736"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><b>Mat</b> = Eigen::Matrix&lt;double, rows, cols&gt;</td></tr>
@@ -650,13 +630,46 @@ template&lt;int rows = dyn, int cols = dyn&gt; </td></tr>
 <tr class="memitem:a9b3c2231582c37957044632c9ac4caea"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><b>Mat_rm</b> = Eigen::Matrix&lt;double, rows, cols, Eigen::RowMajor&gt;</td></tr>
 <tr class="memdesc:a9b3c2231582c37957044632c9ac4caea"><td class="mdescLeft">&#160;</td><td class="mdescRight">convenience alias for <code>Eigen::Matrix&lt;double, rows = dyn, cols = dyn, Eigen::RowMajor&gt;</code> <br /></td></tr>
 <tr class="separator:a9b3c2231582c37957044632c9ac4caea"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad444d317f9e486e08dc50773c56ed134" id="r_ad444d317f9e486e08dc50773c56ed134"><td class="memItemLeft" align="right" valign="top"><a id="ad444d317f9e486e08dc50773c56ed134" name="ad444d317f9e486e08dc50773c56ed134"></a>
-typedef <a class="el" href="classhexed_1_1Concat__func.html">Concat_func</a>&lt; <a class="el" href="classhexed_1_1Qpoint__func.html">Qpoint_func</a>, <a class="el" href="classhexed_1_1Element.html">Element</a> &amp;, const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;, int, double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>Qf_concat</b></td></tr>
-<tr class="memdesc:ad444d317f9e486e08dc50773c56ed134"><td class="mdescLeft">&#160;</td><td class="mdescRight">Concatenates <code><a class="el" href="classhexed_1_1Qpoint__func.html" title="Represents a function which can be evaluated at quadrature points.">Qpoint_func</a></code>s. <br /></td></tr>
-<tr class="separator:ad444d317f9e486e08dc50773c56ed134"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac9dafa549f084e0982bb69ecaaad7e1f" id="r_ac9dafa549f084e0982bb69ecaaad7e1f"><td class="memItemLeft" align="right" valign="top"><a id="ac9dafa549f084e0982bb69ecaaad7e1f" name="ac9dafa549f084e0982bb69ecaaad7e1f"></a>
+typedef intmax_t&#160;</td><td class="memItemRight" valign="bottom"><b>Int</b></td></tr>
+<tr class="memdesc:ac9dafa549f084e0982bb69ecaaad7e1f"><td class="mdescLeft">&#160;</td><td class="mdescRight">basic integer type to use for potentially-large numbers, such as sizes <br /></td></tr>
+<tr class="separator:ac9dafa549f084e0982bb69ecaaad7e1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a20fdc4065398936c1b9d857ab5482d33" id="r_a20fdc4065398936c1b9d857ab5482d33"><td class="memItemLeft" align="right" valign="top"><a id="a20fdc4065398936c1b9d857ab5482d33" name="a20fdc4065398936c1b9d857ab5482d33"></a>
+typedef <a class="el" href="classhexed_1_1Navier__stokes.html">Navier_stokes</a>&lt; false, laminar &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>euler</b></td></tr>
+<tr class="separator:a20fdc4065398936c1b9d857ab5482d33"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac5e0236e8dd9c42165b7b91a88803bfb" id="r_ac5e0236e8dd9c42165b7b91a88803bfb"><td class="memItemLeft" align="right" valign="top"><a id="ac5e0236e8dd9c42165b7b91a88803bfb" name="ac5e0236e8dd9c42165b7b91a88803bfb"></a>
+typedef <a class="el" href="classhexed_1_1Navier__stokes.html">Navier_stokes</a>&lt; false, k_omega &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>k_omega_euler</b></td></tr>
+<tr class="separator:ac5e0236e8dd9c42165b7b91a88803bfb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac9b213ebf1daaddff91a8ee91abb2016" id="r_ac9b213ebf1daaddff91a8ee91abb2016"><td class="memItemLeft" align="right" valign="top"><a id="ac9b213ebf1daaddff91a8ee91abb2016" name="ac9b213ebf1daaddff91a8ee91abb2016"></a>
+typedef <a class="el" href="classhexed_1_1Navier__stokes.html">Navier_stokes</a>&lt; true, laminar &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>ns</b></td></tr>
+<tr class="separator:ac9b213ebf1daaddff91a8ee91abb2016"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae129e423bd84b736caf517346494ac63" id="r_ae129e423bd84b736caf517346494ac63"><td class="memItemLeft" align="right" valign="top"><a id="ae129e423bd84b736caf517346494ac63" name="ae129e423bd84b736caf517346494ac63"></a>
+typedef <a class="el" href="classhexed_1_1Navier__stokes.html">Navier_stokes</a>&lt; true, k_omega &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>rans</b></td></tr>
+<tr class="separator:ae129e423bd84b736caf517346494ac63"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:a319dcbb20086384328b0baf464ffa28f" id="r_a319dcbb20086384328b0baf464ffa28f"><td class="memItemLeft" align="right" valign="top"><a id="a319dcbb20086384328b0baf464ffa28f" name="a319dcbb20086384328b0baf464ffa28f"></a>enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a319dcbb20086384328b0baf464ffa28f">Time_scheme</a> { <br />
+&#160;&#160;<b>explicit_steady</b>
+, <b>explicit_unsteady</b>
+, <b>backward_euler</b>
+, <b>crank_nicolson</b>
+, <br />
+&#160;&#160;<b>dirk2</b>
+<br />
+ }</td></tr>
+<tr class="memdesc:a319dcbb20086384328b0baf464ffa28f"><td class="mdescLeft">&#160;</td><td class="mdescRight">enumerates the currently-supported time integration schemes <br /></td></tr>
+<tr class="separator:a319dcbb20086384328b0baf464ffa28f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a55f57a13e4d70460e0153e88ba1f3bd2" id="r_a55f57a13e4d70460e0153e88ba1f3bd2"><td class="memItemLeft" align="right" valign="top"><a id="a55f57a13e4d70460e0153e88ba1f3bd2" name="a55f57a13e4d70460e0153e88ba1f3bd2"></a>enum &#160;</td><td class="memItemRight" valign="bottom"><b>Turbulence_model</b> { <b>laminar</b>
+, <b>k_omega</b>
+ }</td></tr>
+<tr class="separator:a55f57a13e4d70460e0153e88ba1f3bd2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a06030a800123044d5a9a0507a8235241" id="r_a06030a800123044d5a9a0507a8235241"><td class="memItemLeft" align="right" valign="top"><a id="a06030a800123044d5a9a0507a8235241" name="a06030a800123044d5a9a0507a8235241"></a>
+std::vector&lt; <a class="el" href="#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>hypercubes</b> (<a class="el" href="#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> n_var, <a class="el" href="#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> n_dim, <a class="el" href="#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> row_size)</td></tr>
+<tr class="separator:a06030a800123044d5a9a0507a8235241"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae27b3bcf6f7de39d0acc27b76f2ad684" id="r_ae27b3bcf6f7de39d0acc27b76f2ad684"><td class="memTemplParams" colspan="2"><a id="ae27b3bcf6f7de39d0acc27b76f2ad684" name="ae27b3bcf6f7de39d0acc27b76f2ad684"></a>
 template&lt;typename T &gt; </td></tr>
 <tr class="memitem:ae27b3bcf6f7de39d0acc27b76f2ad684"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>operator-</b> (const <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt; &amp;op0, const <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt; &amp;op1)</td></tr>
@@ -749,10 +762,52 @@ template&lt;typename T &gt; </td></tr>
 template&lt;typename T &gt; </td></tr>
 <tr class="memitem:ae4c439c2c2bd228b0e7457a7caf9da88"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>operator+</b> (const <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt; &amp;op0)</td></tr>
 <tr class="separator:ae4c439c2c2bd228b0e7457a7caf9da88"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a44c8627cdb4f4aa234f6fb30b48080f8" id="r_a44c8627cdb4f4aa234f6fb30b48080f8"><td class="memTemplParams" colspan="2">template&lt;typename... format_args&gt; </td></tr>
-<tr class="memitem:a44c8627cdb4f4aa234f6fb30b48080f8"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a44c8627cdb4f4aa234f6fb30b48080f8">format_str</a> (int max_chars, std::string fstring, format_args... args)</td></tr>
-<tr class="memdesc:a44c8627cdb4f4aa234f6fb30b48080f8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard string formatting.  <br /></td></tr>
-<tr class="separator:a44c8627cdb4f4aa234f6fb30b48080f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac640611c43ea8669be238af81074bd85" id="r_ac640611c43ea8669be238af81074bd85"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:ac640611c43ea8669be238af81074bd85"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ac640611c43ea8669be238af81074bd85">to_string</a> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt; arr)</td></tr>
+<tr class="memdesc:ac640611c43ea8669be238af81074bd85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Overload of <code><a class="el" href="#ac640611c43ea8669be238af81074bd85" title="Overload of hexed::to_string for Arrays.">hexed::to_string</a></code> for <code><a class="el" href="classhexed_1_1Array.html" title="Represents a dynamic-sized multidimensional array.">Array</a></code>s.  <br /></td></tr>
+<tr class="separator:ac640611c43ea8669be238af81074bd85"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2500e14ef8e2febf94228e6c601d0452" id="r_a2500e14ef8e2febf94228e6c601d0452"><td class="memItemLeft" align="right" valign="top"><a id="a2500e14ef8e2febf94228e6c601d0452" name="a2500e14ef8e2febf94228e6c601d0452"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_advection</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, double wall_shock_width, double shock_width_growth, int offset)</td></tr>
+<tr class="separator:a2500e14ef8e2febf94228e6c601d0452"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad817976ec6f27734f5bc5853060970a1" id="r_ad817976ec6f27734f5bc5853060970a1"><td class="memItemLeft" align="right" valign="top"><a id="ad817976ec6f27734f5bc5853060970a1" name="ad817976ec6f27734f5bc5853060970a1"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_eikonal</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, double convective_safety, double diffusive_safety, std::function&lt; void()&gt; state_bc, std::function&lt; void()&gt; flux_bc, double smoothing, double gradient_smoothing, double base_diffusion)</td></tr>
+<tr class="separator:ad817976ec6f27734f5bc5853060970a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f05c8b4814b3c80437e38dc9db81bd4" id="r_a2f05c8b4814b3c80437e38dc9db81bd4"><td class="memItemLeft" align="right" valign="top"><a id="a2f05c8b4814b3c80437e38dc9db81bd4" name="a2f05c8b4814b3c80437e38dc9db81bd4"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_euler</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>)</td></tr>
+<tr class="separator:a2f05c8b4814b3c80437e38dc9db81bd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0a23e90bc3dd4fdcec6443f364ea5d7a" id="r_a0a23e90bc3dd4fdcec6443f364ea5d7a"><td class="memItemLeft" align="right" valign="top"><a id="a0a23e90bc3dd4fdcec6443f364ea5d7a" name="a0a23e90bc3dd4fdcec6443f364ea5d7a"></a>
+std::unique_ptr&lt; <a class="el" href="classhexed_1_1Face__permutation__dynamic.html">Face_permutation_dynamic</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>compute_face_permutation</b> (int n_dim, int row_size, <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a>, double *data, Turbulence_model model)</td></tr>
+<tr class="separator:a0a23e90bc3dd4fdcec6443f364ea5d7a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a46dce26ee4fbd9a3b61f56411dc11012" id="r_a46dce26ee4fbd9a3b61f56411dc11012"><td class="memItemLeft" align="right" valign="top"><a id="a46dce26ee4fbd9a3b61f56411dc11012" name="a46dce26ee4fbd9a3b61f56411dc11012"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_fix_nonphysical</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, std::function&lt; void()&gt; flux_bc)</td></tr>
+<tr class="separator:a46dce26ee4fbd9a3b61f56411dc11012"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3085b3116068f1fd890e4e3698e7bf73" id="r_a3085b3116068f1fd890e4e3698e7bf73"><td class="memItemLeft" align="right" valign="top"><a id="a3085b3116068f1fd890e4e3698e7bf73" name="a3085b3116068f1fd890e4e3698e7bf73"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_gradient</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, std::function&lt; void()&gt; state_bc, std::function&lt; void()&gt; flux_bc, int read_offset, int write_offset)</td></tr>
+<tr class="separator:a3085b3116068f1fd890e4e3698e7bf73"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a58a5266a2184b9de77a8c0843dd5a1f7" id="r_a58a5266a2184b9de77a8c0843dd5a1f7"><td class="memItemLeft" align="right" valign="top"><a id="a58a5266a2184b9de77a8c0843dd5a1f7" name="a58a5266a2184b9de77a8c0843dd5a1f7"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_navier_stokes</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, std::function&lt; void()&gt; flux_bc, <a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a> visc, <a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a> therm_cond, double spec_turb_kin_ener_ambient, double spec_turb_diss_amb)</td></tr>
+<tr class="separator:a58a5266a2184b9de77a8c0843dd5a1f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a86ee4142040bffd1f4e486103843f950" id="r_a86ee4142040bffd1f4e486103843f950"><td class="memItemLeft" align="right" valign="top"><a id="a86ee4142040bffd1f4e486103843f950" name="a86ee4142040bffd1f4e486103843f950"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_prolong</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, bool scale=false, bool offset=false)</td></tr>
+<tr class="separator:a86ee4142040bffd1f4e486103843f950"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af0d647715c3ab9bea41ad478c0a61948" id="r_af0d647715c3ab9bea41ad478c0a61948"><td class="memItemLeft" align="right" valign="top"><a id="af0d647715c3ab9bea41ad478c0a61948" name="af0d647715c3ab9bea41ad478c0a61948"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_prolong_advection</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>)</td></tr>
+<tr class="separator:af0d647715c3ab9bea41ad478c0a61948"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a14ea5a3a74690bfe1c58418e91b6dd16" id="r_a14ea5a3a74690bfe1c58418e91b6dd16"><td class="memItemLeft" align="right" valign="top"><a id="a14ea5a3a74690bfe1c58418e91b6dd16" name="a14ea5a3a74690bfe1c58418e91b6dd16"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_restrict</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, bool scale=true, bool offset=false)</td></tr>
+<tr class="separator:a14ea5a3a74690bfe1c58418e91b6dd16"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab81f998d404caa9c570b8bb0290995c0" id="r_ab81f998d404caa9c570b8bb0290995c0"><td class="memItemLeft" align="right" valign="top"><a id="ab81f998d404caa9c570b8bb0290995c0" name="ab81f998d404caa9c570b8bb0290995c0"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_smooth_av</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, std::function&lt; void()&gt; flux_bc, double diff_time, double chebyshev_step, double wall_shock_width, double shock_width_growth)</td></tr>
+<tr class="separator:ab81f998d404caa9c570b8bb0290995c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aca4e6befa2c62487bcc8357208ba3b38" id="r_aca4e6befa2c62487bcc8357208ba3b38"><td class="memItemLeft" align="right" valign="top"><a id="aca4e6befa2c62487bcc8357208ba3b38" name="aca4e6befa2c62487bcc8357208ba3b38"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_write_face</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>)</td></tr>
+<tr class="separator:aca4e6befa2c62487bcc8357208ba3b38"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a39186aeea3b980af710a7ee61993794f" id="r_a39186aeea3b980af710a7ee61993794f"><td class="memItemLeft" align="right" valign="top"><a id="a39186aeea3b980af710a7ee61993794f" name="a39186aeea3b980af710a7ee61993794f"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_write_face_advection</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, int offset)</td></tr>
+<tr class="separator:a39186aeea3b980af710a7ee61993794f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afbbad76f27d181de573aaaef0d732308" id="r_afbbad76f27d181de573aaaef0d732308"><td class="memItemLeft" align="right" valign="top"><a id="afbbad76f27d181de573aaaef0d732308" name="afbbad76f27d181de573aaaef0d732308"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_write_face_smooth_av</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>)</td></tr>
+<tr class="separator:afbbad76f27d181de573aaaef0d732308"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab124f7ee9691cfcad95abb8882f064e9" id="r_ab124f7ee9691cfcad95abb8882f064e9"><td class="memTemplParams" colspan="2">template&lt;typename T , typename C &gt; </td></tr>
 <tr class="memitem:ab124f7ee9691cfcad95abb8882f064e9"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#ab124f7ee9691cfcad95abb8882f064e9">erase_if</a> (std::vector&lt; T &gt; &amp;vec, C condition)</td></tr>
 <tr class="memdesc:ab124f7ee9691cfcad95abb8882f064e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Erase every element <code>x</code> in a vector where <code>condition(x)</code> evaluates to <code>true</code>.  <br /></td></tr>
@@ -760,61 +815,40 @@ template&lt;typename T &gt; </td></tr>
 <tr class="memitem:a89441d449b2f0a9dab990aac1064c0ba" id="r_a89441d449b2f0a9dab990aac1064c0ba"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a89441d449b2f0a9dab990aac1064c0ba">filter_limit</a> (int n_dim, double *data, const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;basis, double decay_rate)</td></tr>
 <tr class="memdesc:a89441d449b2f0a9dab990aac1064c0ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Applies a low-pass filter to polynomial data.  <br /></td></tr>
 <tr class="separator:a89441d449b2f0a9dab990aac1064c0ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3a730f481b6258b40c7eca57a1ccda7d" id="r_a3a730f481b6258b40c7eca57a1ccda7d"><td class="memTemplParams" colspan="2"><a id="a3a730f481b6258b40c7eca57a1ccda7d" name="a3a730f481b6258b40c7eca57a1ccda7d"></a>
-template&lt;template&lt; int, int &gt; typename kernel, typename... constructor_args&gt; </td></tr>
-<tr class="memitem:a3a730f481b6258b40c7eca57a1ccda7d"><td class="memTemplItemLeft" align="right" valign="top">kernel_lookup::ptr_t&lt; kernel &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>kernel_factory</b> (int n_dim, int row_size, constructor_args &amp;&amp;... args)</td></tr>
+<tr class="memitem:a44c8627cdb4f4aa234f6fb30b48080f8" id="r_a44c8627cdb4f4aa234f6fb30b48080f8"><td class="memTemplParams" colspan="2">template&lt;typename... format_args&gt; </td></tr>
+<tr class="memitem:a44c8627cdb4f4aa234f6fb30b48080f8"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a44c8627cdb4f4aa234f6fb30b48080f8">format_str</a> (int max_chars, std::string fstring, format_args... args)</td></tr>
+<tr class="memdesc:a44c8627cdb4f4aa234f6fb30b48080f8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Standard string formatting.  <br /></td></tr>
+<tr class="separator:a44c8627cdb4f4aa234f6fb30b48080f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a931a94d35535509f569ac3d68bbbe599" id="r_a931a94d35535509f569ac3d68bbbe599"><td class="memTemplParams" colspan="2"><a id="a931a94d35535509f569ac3d68bbbe599" name="a931a94d35535509f569ac3d68bbbe599"></a>
+template&lt;typename... format_args&gt; </td></tr>
+<tr class="memitem:a931a94d35535509f569ac3d68bbbe599"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><b>format_str</b> (std::string fstring, format_args... args)</td></tr>
+<tr class="memdesc:a931a94d35535509f569ac3d68bbbe599"><td class="mdescLeft">&#160;</td><td class="mdescRight">sets <code>max_chars</code> to 200. <br /></td></tr>
+<tr class="separator:a931a94d35535509f569ac3d68bbbe599"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad501e4d7b1a013dc9dfb3c4e019e4e04" id="r_ad501e4d7b1a013dc9dfb3c4e019e4e04"><td class="memItemLeft" align="right" valign="top"><a id="ad501e4d7b1a013dc9dfb3c4e019e4e04" name="ad501e4d7b1a013dc9dfb3c4e019e4e04"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_string</b> (<a class="el" href="classhexed_1_1Is__physical__result.html">Is_physical_result</a>)</td></tr>
+<tr class="separator:ad501e4d7b1a013dc9dfb3c4e019e4e04"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a730f481b6258b40c7eca57a1ccda7d" id="r_a3a730f481b6258b40c7eca57a1ccda7d"><td class="memTemplParams" colspan="2">template&lt;template&lt; int, int &gt; typename kernel, typename... constructor_args&gt; </td></tr>
+<tr class="memitem:a3a730f481b6258b40c7eca57a1ccda7d"><td class="memTemplItemLeft" align="right" valign="top">kernel_lookup::ptr_t&lt; kernel &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a3a730f481b6258b40c7eca57a1ccda7d">kernel_factory</a> (int n_dim, int row_size, constructor_args &amp;&amp;... args)</td></tr>
+<tr class="memdesc:a3a730f481b6258b40c7eca57a1ccda7d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets a <code>std::unique_ptr</code> to a <code>base_t</code> of <code>kernel</code>.  <br /></td></tr>
 <tr class="separator:a3a730f481b6258b40c7eca57a1ccda7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2f05c8b4814b3c80437e38dc9db81bd4" id="r_a2f05c8b4814b3c80437e38dc9db81bd4"><td class="memItemLeft" align="right" valign="top"><a id="a2f05c8b4814b3c80437e38dc9db81bd4" name="a2f05c8b4814b3c80437e38dc9db81bd4"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_euler</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>)</td></tr>
-<tr class="separator:a2f05c8b4814b3c80437e38dc9db81bd4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1c5bb43254e9834b41a06c9acb2e3dd9" id="r_a1c5bb43254e9834b41a06c9acb2e3dd9"><td class="memItemLeft" align="right" valign="top"><a id="a1c5bb43254e9834b41a06c9acb2e3dd9" name="a1c5bb43254e9834b41a06c9acb2e3dd9"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_advection</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, double advect_length)</td></tr>
-<tr class="separator:a1c5bb43254e9834b41a06c9acb2e3dd9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a600c100bd886ab0dacae62460f28e274" id="r_a600c100bd886ab0dacae62460f28e274"><td class="memItemLeft" align="right" valign="top"><a id="a600c100bd886ab0dacae62460f28e274" name="a600c100bd886ab0dacae62460f28e274"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_navier_stokes</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, std::function&lt; void()&gt; flux_bc, <a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a> visc, <a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a> therm_cond)</td></tr>
-<tr class="separator:a600c100bd886ab0dacae62460f28e274"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7915fe96e9455e1d8a0b18e3c6a64d35" id="r_a7915fe96e9455e1d8a0b18e3c6a64d35"><td class="memItemLeft" align="right" valign="top"><a id="a7915fe96e9455e1d8a0b18e3c6a64d35" name="a7915fe96e9455e1d8a0b18e3c6a64d35"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_smooth_av</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, std::function&lt; void()&gt; flux_bc, double diff_time, double chebyshev_step)</td></tr>
-<tr class="separator:a7915fe96e9455e1d8a0b18e3c6a64d35"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aca52f0c11f20d50002b19df76b1178d1" id="r_aca52f0c11f20d50002b19df76b1178d1"><td class="memItemLeft" align="right" valign="top"><a id="aca52f0c11f20d50002b19df76b1178d1" name="aca52f0c11f20d50002b19df76b1178d1"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_fix_therm_admis</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, std::function&lt; void()&gt; flux_bc)</td></tr>
-<tr class="separator:aca52f0c11f20d50002b19df76b1178d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adef0135f2b58a7323d025cd3bcda4bf5" id="r_adef0135f2b58a7323d025cd3bcda4bf5"><td class="memItemLeft" align="right" valign="top"><a id="adef0135f2b58a7323d025cd3bcda4bf5" name="adef0135f2b58a7323d025cd3bcda4bf5"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>max_dt_advection</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, double convective_safety, double diffusive_safety, bool local_time)</td></tr>
+<tr class="separator:adef0135f2b58a7323d025cd3bcda4bf5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2803e0eb03436b0720639a17c4dda5cd" id="r_a2803e0eb03436b0720639a17c4dda5cd"><td class="memItemLeft" align="right" valign="top"><a id="a2803e0eb03436b0720639a17c4dda5cd" name="a2803e0eb03436b0720639a17c4dda5cd"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>max_dt_eikonal</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, double convective_safety, double diffusive_safety, double smoothing, double gradient_smoothing, double base_diffusion)</td></tr>
+<tr class="separator:a2803e0eb03436b0720639a17c4dda5cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1ae25ab93af18dbb4eacb1f3db5b03f5" id="r_a1ae25ab93af18dbb4eacb1f3db5b03f5"><td class="memItemLeft" align="right" valign="top"><a id="a1ae25ab93af18dbb4eacb1f3db5b03f5" name="a1ae25ab93af18dbb4eacb1f3db5b03f5"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>max_dt_euler</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, double convective_safety, double diffusive_safety, bool local_time)</td></tr>
 <tr class="separator:a1ae25ab93af18dbb4eacb1f3db5b03f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac1e9dc462fa4a4cb0b8935924c773bb8" id="r_ac1e9dc462fa4a4cb0b8935924c773bb8"><td class="memItemLeft" align="right" valign="top"><a id="ac1e9dc462fa4a4cb0b8935924c773bb8" name="ac1e9dc462fa4a4cb0b8935924c773bb8"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><b>max_dt_navier_stokes</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, double convective_safety, double diffusive_safety, bool local_time, <a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a> visc, <a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a> therm_cond)</td></tr>
-<tr class="separator:ac1e9dc462fa4a4cb0b8935924c773bb8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab66e2bea859d06fed113932fca03f980" id="r_ab66e2bea859d06fed113932fca03f980"><td class="memItemLeft" align="right" valign="top"><a id="ab66e2bea859d06fed113932fca03f980" name="ab66e2bea859d06fed113932fca03f980"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><b>max_dt_advection</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, double convective_safety, double diffusive_safety, bool local_time, double advect_length)</td></tr>
-<tr class="separator:ab66e2bea859d06fed113932fca03f980"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a763251fcf40c82f776c0100312d461ba" id="r_a763251fcf40c82f776c0100312d461ba"><td class="memItemLeft" align="right" valign="top"><a id="a763251fcf40c82f776c0100312d461ba" name="a763251fcf40c82f776c0100312d461ba"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>max_dt_fix_nonphysical</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, double convective_safety, double diffusive_safety, bool local_time)</td></tr>
+<tr class="separator:a763251fcf40c82f776c0100312d461ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73e5d4eb3c84f52eb9a6849d2bd9d107" id="r_a73e5d4eb3c84f52eb9a6849d2bd9d107"><td class="memItemLeft" align="right" valign="top"><a id="a73e5d4eb3c84f52eb9a6849d2bd9d107" name="a73e5d4eb3c84f52eb9a6849d2bd9d107"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>max_dt_navier_stokes</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, double convective_safety, double diffusive_safety, bool local_time, <a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a> visc, <a class="el" href="classhexed_1_1Transport__model.html">Transport_model</a> therm_cond, double spec_turb_kin_ener_ambient, double spec_turb_diss_ambient)</td></tr>
+<tr class="separator:a73e5d4eb3c84f52eb9a6849d2bd9d107"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab1500c40d7e07ec96edcee47df373da9" id="r_ab1500c40d7e07ec96edcee47df373da9"><td class="memItemLeft" align="right" valign="top"><a id="ab1500c40d7e07ec96edcee47df373da9" name="ab1500c40d7e07ec96edcee47df373da9"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>max_dt_smooth_av</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, double convective_safety, double diffusive_safety, bool local_time)</td></tr>
 <tr class="separator:ab1500c40d7e07ec96edcee47df373da9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4129c4f02e9803280a46f5ec40f89a70" id="r_a4129c4f02e9803280a46f5ec40f89a70"><td class="memItemLeft" align="right" valign="top"><a id="a4129c4f02e9803280a46f5ec40f89a70" name="a4129c4f02e9803280a46f5ec40f89a70"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><b>max_dt_fix_therm_admis</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, <a class="el" href="structhexed_1_1Kernel__options.html">Kernel_options</a>, double convective_safety, double diffusive_safety, bool local_time)</td></tr>
-<tr class="separator:a4129c4f02e9803280a46f5ec40f89a70"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a86ee4142040bffd1f4e486103843f950" id="r_a86ee4142040bffd1f4e486103843f950"><td class="memItemLeft" align="right" valign="top"><a id="a86ee4142040bffd1f4e486103843f950" name="a86ee4142040bffd1f4e486103843f950"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_prolong</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, bool scale=false, bool offset=false)</td></tr>
-<tr class="separator:a86ee4142040bffd1f4e486103843f950"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a14ea5a3a74690bfe1c58418e91b6dd16" id="r_a14ea5a3a74690bfe1c58418e91b6dd16"><td class="memItemLeft" align="right" valign="top"><a id="a14ea5a3a74690bfe1c58418e91b6dd16" name="a14ea5a3a74690bfe1c58418e91b6dd16"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_restrict</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, bool scale=true, bool offset=false)</td></tr>
-<tr class="separator:a14ea5a3a74690bfe1c58418e91b6dd16"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af0d647715c3ab9bea41ad478c0a61948" id="r_af0d647715c3ab9bea41ad478c0a61948"><td class="memItemLeft" align="right" valign="top"><a id="af0d647715c3ab9bea41ad478c0a61948" name="af0d647715c3ab9bea41ad478c0a61948"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_prolong_advection</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>)</td></tr>
-<tr class="separator:af0d647715c3ab9bea41ad478c0a61948"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1d9cd0c9c85427e1812bb2b00c218499" id="r_a1d9cd0c9c85427e1812bb2b00c218499"><td class="memItemLeft" align="right" valign="top"><a id="a1d9cd0c9c85427e1812bb2b00c218499" name="a1d9cd0c9c85427e1812bb2b00c218499"></a>
-std::unique_ptr&lt; <a class="el" href="classhexed_1_1Face__permutation__dynamic.html">Face_permutation_dynamic</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>face_permutation</b> (int n_dim, int row_size, <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a>, double *data)</td></tr>
-<tr class="separator:a1d9cd0c9c85427e1812bb2b00c218499"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aca4e6befa2c62487bcc8357208ba3b38" id="r_aca4e6befa2c62487bcc8357208ba3b38"><td class="memItemLeft" align="right" valign="top"><a id="aca4e6befa2c62487bcc8357208ba3b38" name="aca4e6befa2c62487bcc8357208ba3b38"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_write_face</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>)</td></tr>
-<tr class="separator:aca4e6befa2c62487bcc8357208ba3b38"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae478fdca0f3e82d1041e4cc162835bed" id="r_ae478fdca0f3e82d1041e4cc162835bed"><td class="memItemLeft" align="right" valign="top"><a id="ae478fdca0f3e82d1041e4cc162835bed" name="ae478fdca0f3e82d1041e4cc162835bed"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_write_face_advection</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>)</td></tr>
-<tr class="separator:ae478fdca0f3e82d1041e4cc162835bed"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afbbad76f27d181de573aaaef0d732308" id="r_afbbad76f27d181de573aaaef0d732308"><td class="memItemLeft" align="right" valign="top"><a id="afbbad76f27d181de573aaaef0d732308" name="afbbad76f27d181de573aaaef0d732308"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compute_write_face_smooth_av</b> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>)</td></tr>
-<tr class="separator:afbbad76f27d181de573aaaef0d732308"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6d92fa88bd9a154a9e4803d8c19fbc9a" id="r_a6d92fa88bd9a154a9e4803d8c19fbc9a"><td class="memItemLeft" align="right" valign="top"><a id="a6d92fa88bd9a154a9e4803d8c19fbc9a" name="a6d92fa88bd9a154a9e4803d8c19fbc9a"></a>
 template&lt;&gt; </td></tr>
 <tr class="memitem:a6d92fa88bd9a154a9e4803d8c19fbc9a"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><b>Namespace::type_name&lt; std::string &gt;</b> ()</td></tr>
@@ -831,7 +865,7 @@ template&lt;typename ref_t , typename ptr_t &gt; </td></tr>
 <tr class="memitem:ac7b28b547d389c47b2453c66953b4ce9"><td class="memTemplItemLeft" align="right" valign="top">ref_t&#160;</td><td class="memTemplItemRight" valign="bottom"><b>ptr_convert</b> (ptr_t &amp;ptr)</td></tr>
 <tr class="separator:ac7b28b547d389c47b2453c66953b4ce9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad30456c4bcf152b101648a951b5ff6b2" id="r_ad30456c4bcf152b101648a951b5ff6b2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad30456c4bcf152b101648a951b5ff6b2">stabilizing_art_visc</a> (<a class="el" href="structhexed_1_1Kernel__mesh.html">Kernel_mesh</a>, double char_speed)</td></tr>
-<tr class="memdesc:ad30456c4bcf152b101648a951b5ff6b2"><td class="mdescLeft">&#160;</td><td class="mdescRight">helper function for <code><a class="el" href="classhexed_1_1Solver.html#a94354a21cf357c3e8769d47bc064dc65" title="set the Laplacian artificial viscosity to a minimal value that will encourage thermodynamic admissibi...">Solver::set_art_visc_admis</a></code>  <br /></td></tr>
+<tr class="memdesc:ad30456c4bcf152b101648a951b5ff6b2"><td class="mdescLeft">&#160;</td><td class="mdescRight">helper function for <code>Solver::set_art_visc_admis</code>  <br /></td></tr>
 <tr class="separator:ad30456c4bcf152b101648a951b5ff6b2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a37e4a0200dca501e4e3d29f78a45aaff" id="r_a37e4a0200dca501e4e3d29f78a45aaff"><td class="memItemLeft" align="right" valign="top">std::array&lt; double, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a37e4a0200dca501e4e3d29f78a45aaff">standard_atmosphere</a> (double alt_geom, double temp_offset=0)</td></tr>
 <tr class="memdesc:a37e4a0200dca501e4e3d29f78a45aaff"><td class="mdescLeft">&#160;</td><td class="mdescRight">computes the <a href="http://www.aviationchief.com/uploads/9/2/0/9/92098238/icao_doc_7488_-_manual_of_icao_standard_atmosphere_-_3rd_edition_-_1994.pdf">ICAO Standard atmosphere</a>  <br /></td></tr>
@@ -840,15 +874,46 @@ template&lt;typename ref_t , typename ptr_t &gt; </td></tr>
 std::array&lt; double, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>standard_atmosphere_geopot</b> (double alt_geopot, double temp_offset=0)</td></tr>
 <tr class="memdesc:af79dfd5d97d62dc3ef249a37b8cf6099"><td class="mdescLeft">&#160;</td><td class="mdescRight">same as <code><a class="el" href="#a37e4a0200dca501e4e3d29f78a45aaff" title="computes the ICAO Standard atmosphere">standard_atmosphere()</a></code>, but accepts geopotential altitude instead of geometric <br /></td></tr>
 <tr class="separator:af79dfd5d97d62dc3ef249a37b8cf6099"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa5278cdb2534f807f884b64e7929600c" id="r_aa5278cdb2534f807f884b64e7929600c"><td class="memItemLeft" align="right" valign="top"><a id="aa5278cdb2534f807f884b64e7929600c" name="aa5278cdb2534f807f884b64e7929600c"></a>
+constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_time_accurate</b> (<a class="el" href="#a319dcbb20086384328b0baf464ffa28f">Time_scheme</a> ts)</td></tr>
+<tr class="memdesc:aa5278cdb2534f807f884b64e7929600c"><td class="mdescLeft">&#160;</td><td class="mdescRight">true iff the time scheme can provide accurate transient history <br /></td></tr>
+<tr class="separator:aa5278cdb2534f807f884b64e7929600c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6162ac49864d8798a1e7da8a966123ef" id="r_a6162ac49864d8798a1e7da8a966123ef"><td class="memItemLeft" align="right" valign="top"><a id="a6162ac49864d8798a1e7da8a966123ef" name="a6162ac49864d8798a1e7da8a966123ef"></a>
+constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_implicit</b> (<a class="el" href="#a319dcbb20086384328b0baf464ffa28f">Time_scheme</a> ts)</td></tr>
+<tr class="memdesc:a6162ac49864d8798a1e7da8a966123ef"><td class="mdescLeft">&#160;</td><td class="mdescRight">true iff the scheme uses pseudotime iteration to solve an implicit time marching formula <br /></td></tr>
+<tr class="separator:a6162ac49864d8798a1e7da8a966123ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add27a232657a3a45399282d430ac5606" id="r_add27a232657a3a45399282d430ac5606"><td class="memItemLeft" align="right" valign="top"><a id="add27a232657a3a45399282d430ac5606" name="add27a232657a3a45399282d430ac5606"></a>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>n_extra_stage</b> (<a class="el" href="#a319dcbb20086384328b0baf464ffa28f">Time_scheme</a> ts)</td></tr>
+<tr class="separator:add27a232657a3a45399282d430ac5606"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acad154fd8a6ac11922deb63e9509593f" id="r_acad154fd8a6ac11922deb63e9509593f"><td class="memItemLeft" align="right" valign="top"><a id="acad154fd8a6ac11922deb63e9509593f" name="acad154fd8a6ac11922deb63e9509593f"></a>
+constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>n_total_stage</b> (<a class="el" href="#a319dcbb20086384328b0baf464ffa28f">Time_scheme</a> ts)</td></tr>
+<tr class="separator:acad154fd8a6ac11922deb63e9509593f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abf6eb584602290ede666c338d97994dc" id="r_abf6eb584602290ede666c338d97994dc"><td class="memTemplParams" colspan="2"><a id="abf6eb584602290ede666c338d97994dc" name="abf6eb584602290ede666c338d97994dc"></a>
+template&lt;typename T &gt; </td></tr>
+<tr class="memitem:abf6eb584602290ede666c338d97994dc"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><b>to_mat</b> (T begin, T <a class="el" href="#a29379601c4efd3a7e573e925da55babb">end</a>)</td></tr>
+<tr class="memdesc:abf6eb584602290ede666c338d97994dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an <code>Eigen::VectorXd</code> from iterators <code>begin()</code> and <code><a class="el" href="#a29379601c4efd3a7e573e925da55babb" title="can be passed to Array::operator()">end()</a></code> to arithmetic types. <br /></td></tr>
+<tr class="separator:abf6eb584602290ede666c338d97994dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3ec5ddafd96fb113da0c3b5a4284ed14" id="r_a3ec5ddafd96fb113da0c3b5a4284ed14"><td class="memTemplParams" colspan="2"><a id="a3ec5ddafd96fb113da0c3b5a4284ed14" name="a3ec5ddafd96fb113da0c3b5a4284ed14"></a>
+template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a3ec5ddafd96fb113da0c3b5a4284ed14"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><b>to_mat</b> (const T &amp;range)</td></tr>
+<tr class="memdesc:a3ec5ddafd96fb113da0c3b5a4284ed14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs an <code>Eigen::VectorXd</code> from any object supporting <code>begin()</code> and <code><a class="el" href="#a29379601c4efd3a7e573e925da55babb" title="can be passed to Array::operator()">end()</a></code> members. <br /></td></tr>
+<tr class="separator:a3ec5ddafd96fb113da0c3b5a4284ed14"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a69c6ecbcd69551c2c046e7ffd430baee" id="r_a69c6ecbcd69551c2c046e7ffd430baee"><td class="memItemLeft" align="right" valign="top"><a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a69c6ecbcd69551c2c046e7ffd430baee">resize</a> (const <a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; &amp;vec, <a class="el" href="#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> size)</td></tr>
+<tr class="memdesc:a69c6ecbcd69551c2c046e7ffd430baee"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a copy of <code>vec</code> resized to <code>size</code>.  <br /></td></tr>
+<tr class="separator:a69c6ecbcd69551c2c046e7ffd430baee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a877ce451e43dad3bf1cfa121781ba099" id="r_a877ce451e43dad3bf1cfa121781ba099"><td class="memTemplParams" colspan="2"><a id="a877ce451e43dad3bf1cfa121781ba099" name="a877ce451e43dad3bf1cfa121781ba099"></a>
 template&lt;typename T &gt; </td></tr>
 <tr class="memitem:a877ce451e43dad3bf1cfa121781ba099"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><b>gotcha</b> (T)</td></tr>
 <tr class="memdesc:a877ce451e43dad3bf1cfa121781ba099"><td class="mdescLeft">&#160;</td><td class="mdescRight">don't ask <br /></td></tr>
 <tr class="separator:a877ce451e43dad3bf1cfa121781ba099"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aca08798a4bce34b042fd22d8fb924818" id="r_aca08798a4bce34b042fd22d8fb924818"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
-<tr class="memitem:aca08798a4bce34b042fd22d8fb924818"><td class="memTemplItemLeft" align="right" valign="top">T &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#aca08798a4bce34b042fd22d8fb924818">printed</a> (T &amp;t)</td></tr>
-<tr class="memdesc:aca08798a4bce34b042fd22d8fb924818"><td class="mdescLeft">&#160;</td><td class="mdescRight">prints its argument and then returns it  <br /></td></tr>
-<tr class="separator:aca08798a4bce34b042fd22d8fb924818"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a08f2dd2374e3daa4f789a60b49c1774b" id="r_a08f2dd2374e3daa4f789a60b49c1774b"><td class="memTemplParams" colspan="2"><a id="a08f2dd2374e3daa4f789a60b49c1774b" name="a08f2dd2374e3daa4f789a60b49c1774b"></a>
+template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a08f2dd2374e3daa4f789a60b49c1774b"><td class="memTemplItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memTemplItemRight" valign="bottom"><b>always_false</b> ()</td></tr>
+<tr class="separator:a08f2dd2374e3daa4f789a60b49c1774b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a70d9b62f962662b4594a2a527252a22b" id="r_a70d9b62f962662b4594a2a527252a22b"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a70d9b62f962662b4594a2a527252a22b"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="#a70d9b62f962662b4594a2a527252a22b">printed</a> (T t)</td></tr>
+<tr class="memdesc:a70d9b62f962662b4594a2a527252a22b"><td class="mdescLeft">&#160;</td><td class="mdescRight">prints its argument and then returns it  <br /></td></tr>
+<tr class="separator:a70d9b62f962662b4594a2a527252a22b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a98cc921c8953f6754765e262932325d4" id="r_a98cc921c8953f6754765e262932325d4"><td class="memTemplParams" colspan="2"><a id="a98cc921c8953f6754765e262932325d4" name="a98cc921c8953f6754765e262932325d4"></a>
 template&lt;typename T &gt; </td></tr>
 <tr class="memitem:a98cc921c8953f6754765e262932325d4"><td class="memTemplItemLeft" align="right" valign="top">T *&#160;</td><td class="memTemplItemRight" valign="bottom"><b>new_copy</b> (const T &amp;t)</td></tr>
@@ -867,6 +932,59 @@ template&lt;typename T &gt; </td></tr>
 template&lt;typename T &gt; </td></tr>
 <tr class="memitem:ad79e1c1d45f731ce9f22674aaf772049"><td class="memTemplItemLeft" align="right" valign="top">std::add_pointer&lt; T &gt;::type&#160;</td><td class="memTemplItemRight" valign="bottom"><b>addr_if_possible</b> (T &amp;&amp;arg)</td></tr>
 <tr class="separator:ad79e1c1d45f731ce9f22674aaf772049"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad640d54786789e112e68eb29015689e3" id="r_ad640d54786789e112e68eb29015689e3"><td class="memItemLeft" align="right" valign="top"><a id="ad640d54786789e112e68eb29015689e3" name="ad640d54786789e112e68eb29015689e3"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>file_extension</b> (std::string file_name)</td></tr>
+<tr class="memdesc:ad640d54786789e112e68eb29015689e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">gets the extension of a file name and converts it to lowercase <br /></td></tr>
+<tr class="separator:ad640d54786789e112e68eb29015689e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7dc42240587fee3c4493d517f16d77b0" id="r_a7dc42240587fee3c4493d517f16d77b0"><td class="memItemLeft" align="right" valign="top"><a id="a7dc42240587fee3c4493d517f16d77b0" name="a7dc42240587fee3c4493d517f16d77b0"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_lower</b> (std::string)</td></tr>
+<tr class="memdesc:a7dc42240587fee3c4493d517f16d77b0"><td class="mdescLeft">&#160;</td><td class="mdescRight">converts a string to lowercase <br /></td></tr>
+<tr class="separator:a7dc42240587fee3c4493d517f16d77b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a86d77b9f4ca20bc95602721f88960c7b" id="r_a86d77b9f4ca20bc95602721f88960c7b"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a86d77b9f4ca20bc95602721f88960c7b">to_string</a> (int)</td></tr>
+<tr class="memdesc:a86d77b9f4ca20bc95602721f88960c7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents its argument as a human-readable string.  <br /></td></tr>
+<tr class="separator:a86d77b9f4ca20bc95602721f88960c7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a54ce657e572a4237fd51596becc1a0a7" id="r_a54ce657e572a4237fd51596becc1a0a7"><td class="memItemLeft" align="right" valign="top"><a id="a54ce657e572a4237fd51596becc1a0a7" name="a54ce657e572a4237fd51596becc1a0a7"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_string</b> (<a class="el" href="#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>)</td></tr>
+<tr class="memdesc:a54ce657e572a4237fd51596becc1a0a7"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a54ce657e572a4237fd51596becc1a0a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae6e4ddd5d6acef29e6b625f3f3d2a5d5" id="r_ae6e4ddd5d6acef29e6b625f3f3d2a5d5"><td class="memItemLeft" align="right" valign="top"><a id="ae6e4ddd5d6acef29e6b625f3f3d2a5d5" name="ae6e4ddd5d6acef29e6b625f3f3d2a5d5"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_string</b> (double)</td></tr>
+<tr class="memdesc:ae6e4ddd5d6acef29e6b625f3f3d2a5d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:ae6e4ddd5d6acef29e6b625f3f3d2a5d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaf143b89b2480450c1ee76f05abd27d6" id="r_aaf143b89b2480450c1ee76f05abd27d6"><td class="memItemLeft" align="right" valign="top"><a id="aaf143b89b2480450c1ee76f05abd27d6" name="aaf143b89b2480450c1ee76f05abd27d6"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_string</b> (std::string)</td></tr>
+<tr class="memdesc:aaf143b89b2480450c1ee76f05abd27d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:aaf143b89b2480450c1ee76f05abd27d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aefc90d95d98e1be8bc713025a280f333" id="r_aefc90d95d98e1be8bc713025a280f333"><td class="memItemLeft" align="right" valign="top"><a id="aefc90d95d98e1be8bc713025a280f333" name="aefc90d95d98e1be8bc713025a280f333"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_string</b> (const char *)</td></tr>
+<tr class="memdesc:aefc90d95d98e1be8bc713025a280f333"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:aefc90d95d98e1be8bc713025a280f333"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9346a01860c496184555f39ac6149c3d" id="r_a9346a01860c496184555f39ac6149c3d"><td class="memItemLeft" align="right" valign="top"><a id="a9346a01860c496184555f39ac6149c3d" name="a9346a01860c496184555f39ac6149c3d"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_string</b> (bool)</td></tr>
+<tr class="memdesc:a9346a01860c496184555f39ac6149c3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a9346a01860c496184555f39ac6149c3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6df2f04178e6016f48ae5567a71f9c5b" id="r_a6df2f04178e6016f48ae5567a71f9c5b"><td class="memItemLeft" align="right" valign="top"><a id="a6df2f04178e6016f48ae5567a71f9c5b" name="a6df2f04178e6016f48ae5567a71f9c5b"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_string</b> (<a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; <a class="el" href="#a264a08e8f62dd1618e4678b01e00bdf5">dyn</a>, <a class="el" href="#a264a08e8f62dd1618e4678b01e00bdf5">dyn</a> &gt; mat)</td></tr>
+<tr class="memdesc:a6df2f04178e6016f48ae5567a71f9c5b"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a6df2f04178e6016f48ae5567a71f9c5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a178db0174bc1db3a1fa4f83f960d127e" id="r_a178db0174bc1db3a1fa4f83f960d127e"><td class="memItemLeft" align="right" valign="top"><a id="a178db0174bc1db3a1fa4f83f960d127e" name="a178db0174bc1db3a1fa4f83f960d127e"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_string</b> (void *)</td></tr>
+<tr class="memdesc:a178db0174bc1db3a1fa4f83f960d127e"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a178db0174bc1db3a1fa4f83f960d127e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad0c6dca4dfed319b338670545ca75dfb" id="r_ad0c6dca4dfed319b338670545ca75dfb"><td class="memTemplParams" colspan="2"><a id="ad0c6dca4dfed319b338670545ca75dfb" name="ad0c6dca4dfed319b338670545ca75dfb"></a>
+template&lt;typename T &gt; </td></tr>
+<tr class="memitem:ad0c6dca4dfed319b338670545ca75dfb"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><b>to_string</b> (T *p, <a class="el" href="#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> n)</td></tr>
+<tr class="memdesc:ad0c6dca4dfed319b338670545ca75dfb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Represents an array of objects which themselves are representable with <code><a class="el" href="#ac640611c43ea8669be238af81074bd85" title="Overload of hexed::to_string for Arrays.">to_string()</a></code> <br /></td></tr>
+<tr class="separator:ad0c6dca4dfed319b338670545ca75dfb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d8d245b2fa6561121129984715d1ff8" id="r_a8d8d245b2fa6561121129984715d1ff8"><td class="memItemLeft" align="right" valign="top"><a id="a8d8d245b2fa6561121129984715d1ff8" name="a8d8d245b2fa6561121129984715d1ff8"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>str_cat</b> ()</td></tr>
+<tr class="memdesc:a8d8d245b2fa6561121129984715d1ff8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Overload of <code><a class="el" href="#a950fece95cadbdc0cb4475a4ad1b24dc" title="Converts all arguments to strings with to_string() and then concatenates them.">str_cat(T, U...)</a></code> that returns an empty string. <br /></td></tr>
+<tr class="separator:a8d8d245b2fa6561121129984715d1ff8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a950fece95cadbdc0cb4475a4ad1b24dc" id="r_a950fece95cadbdc0cb4475a4ad1b24dc"><td class="memTemplParams" colspan="2"><a id="a950fece95cadbdc0cb4475a4ad1b24dc" name="a950fece95cadbdc0cb4475a4ad1b24dc"></a>
+template&lt;typename T , typename... U&gt; </td></tr>
+<tr class="memitem:a950fece95cadbdc0cb4475a4ad1b24dc"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><b>str_cat</b> (T arg, U... args)</td></tr>
+<tr class="memdesc:a950fece95cadbdc0cb4475a4ad1b24dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Converts all arguments to strings with <code><a class="el" href="#ac640611c43ea8669be238af81074bd85" title="Overload of hexed::to_string for Arrays.">to_string()</a></code> and then concatenates them. <br /></td></tr>
+<tr class="separator:a950fece95cadbdc0cb4475a4ad1b24dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad2a01e3a2b39468ee3a7931009b46c08" id="r_ad2a01e3a2b39468ee3a7931009b46c08"><td class="memItemLeft" align="right" valign="top"><a id="ad2a01e3a2b39468ee3a7931009b46c08" name="ad2a01e3a2b39468ee3a7931009b46c08"></a>
 std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>face_vertex_inds</b> (int n_dim, const <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a> &amp;)</td></tr>
 <tr class="memdesc:ad2a01e3a2b39468ee3a7931009b46c08"><td class="mdescLeft">&#160;</td><td class="mdescRight">The indices required to permute the vertices of face 1 of a connection to match face 0. <br /></td></tr>
@@ -874,57 +992,39 @@ std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>f
 <tr class="memitem:a5f641968e5b21a11e587d6a288e29836" id="r_a5f641968e5b21a11e587d6a288e29836"><td class="memItemLeft" align="right" valign="top">std::array&lt; std::vector&lt; int &gt;, 2 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5f641968e5b21a11e587d6a288e29836">vertex_inds</a> (int n_dim, const <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a> &amp;)</td></tr>
 <tr class="memdesc:a5f641968e5b21a11e587d6a288e29836"><td class="mdescLeft">&#160;</td><td class="mdescRight">The indices of the element vertices which participate in a deformed connection.  <br /></td></tr>
 <tr class="separator:a5f641968e5b21a11e587d6a288e29836"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab3d73aecbdc63f818b31f6f961dbb5e8" id="r_ab3d73aecbdc63f818b31f6f961dbb5e8"><td class="memItemLeft" align="right" valign="top"><a id="ab3d73aecbdc63f818b31f6f961dbb5e8" name="ab3d73aecbdc63f818b31f6f961dbb5e8"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>exists</b> (<a class="el" href="classhexed_1_1Tree.html">Tree</a> *tree)</td></tr>
+<tr class="separator:ab3d73aecbdc63f818b31f6f961dbb5e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5161c3c1f86ac476858ecdedbe9a2b07" id="r_a5161c3c1f86ac476858ecdedbe9a2b07"><td class="memItemLeft" align="right" valign="top"><a id="a5161c3c1f86ac476858ecdedbe9a2b07" name="a5161c3c1f86ac476858ecdedbe9a2b07"></a>
 <a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a>&#160;</td><td class="memItemRight" valign="bottom"><b>incr_res_cache</b> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a> params)</td></tr>
 <tr class="separator:a5161c3c1f86ac476858ecdedbe9a2b07"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a838f16b7e2f0c478b977b21590e80d39" id="r_a838f16b7e2f0c478b977b21590e80d39"><td class="memItemLeft" align="right" valign="top"><a id="a838f16b7e2f0c478b977b21590e80d39" name="a838f16b7e2f0c478b977b21590e80d39"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>request_connection</b> (<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;elem, int n_dim, int i_dim, bool i_sign, int j_dim, bool j_sign)</td></tr>
 <tr class="separator:a838f16b7e2f0c478b977b21590e80d39"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab3d73aecbdc63f818b31f6f961dbb5e8" id="r_ab3d73aecbdc63f818b31f6f961dbb5e8"><td class="memItemLeft" align="right" valign="top"><a id="ab3d73aecbdc63f818b31f6f961dbb5e8" name="ab3d73aecbdc63f818b31f6f961dbb5e8"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>exists</b> (<a class="el" href="classhexed_1_1Tree.html">Tree</a> *tree)</td></tr>
-<tr class="separator:ab3d73aecbdc63f818b31f6f961dbb5e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac4639e791c9bb8888ef2ad7256672cba" id="r_ac4639e791c9bb8888ef2ad7256672cba"><td class="memItemLeft" align="right" valign="top"><a id="ac4639e791c9bb8888ef2ad7256672cba" name="ac4639e791c9bb8888ef2ad7256672cba"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>compute_direction</b> (int n_dim, int i_dim, bool is_positive)</td></tr>
+<tr class="separator:ac4639e791c9bb8888ef2ad7256672cba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a35adfc4772aafe7e457aad2a42a92483" id="r_a35adfc4772aafe7e457aad2a42a92483"><td class="memItemLeft" align="right" valign="top"><a id="a35adfc4772aafe7e457aad2a42a92483" name="a35adfc4772aafe7e457aad2a42a92483"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>compute_direction</b> (int n_dim, int i_face)</td></tr>
+<tr class="separator:a35adfc4772aafe7e457aad2a42a92483"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae61f13f9c88d43c81ada3ae98142349b" id="r_ae61f13f9c88d43c81ada3ae98142349b"><td class="memItemLeft" align="right" valign="top"><a id="ae61f13f9c88d43c81ada3ae98142349b" name="ae61f13f9c88d43c81ada3ae98142349b"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>has_existent_children</b> (<a class="el" href="classhexed_1_1Tree.html">Tree</a> *t)</td></tr>
 <tr class="separator:ae61f13f9c88d43c81ada3ae98142349b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a13f027cd489062e86c58e6f109e6c3f6" id="r_a13f027cd489062e86c58e6f109e6c3f6"><td class="memItemLeft" align="right" valign="top"><a id="a13f027cd489062e86c58e6f109e6c3f6" name="a13f027cd489062e86c58e6f109e6c3f6"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_def</b> (<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;elem)</td></tr>
 <tr class="separator:a13f027cd489062e86c58e6f109e6c3f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acf3f317e67e124284c2282d89ef39119" id="r_acf3f317e67e124284c2282d89ef39119"><td class="memTemplParams" colspan="2"><a id="acf3f317e67e124284c2282d89ef39119" name="acf3f317e67e124284c2282d89ef39119"></a>
-template&lt;typename T &gt; </td></tr>
-<tr class="memitem:acf3f317e67e124284c2282d89ef39119"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>h5_write_row</b> (H5::DataSet &amp;dset, int cols, int i_row, T *data)</td></tr>
-<tr class="separator:acf3f317e67e124284c2282d89ef39119"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a265bd8e4a29bfd622dc49f270a6f2310" id="r_a265bd8e4a29bfd622dc49f270a6f2310"><td class="memTemplParams" colspan="2"><a id="a265bd8e4a29bfd622dc49f270a6f2310" name="a265bd8e4a29bfd622dc49f270a6f2310"></a>
-template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a265bd8e4a29bfd622dc49f270a6f2310"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>h5_write_value</b> (H5::DataSet &amp;dset, int i_row, T data)</td></tr>
-<tr class="separator:a265bd8e4a29bfd622dc49f270a6f2310"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a13d6aa0d148c10e413976391b18bb37a" id="r_a13d6aa0d148c10e413976391b18bb37a"><td class="memTemplParams" colspan="2"><a id="a13d6aa0d148c10e413976391b18bb37a" name="a13d6aa0d148c10e413976391b18bb37a"></a>
-template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a13d6aa0d148c10e413976391b18bb37a"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>h5_add_attr</b> (H5::H5Object &amp;obj, std::string name, T value, H5::DataType dtype=H5::PredType::NATIVE_INT)</td></tr>
-<tr class="separator:a13d6aa0d148c10e413976391b18bb37a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5140a3e741c504126830e0d6faa628b9" id="r_a5140a3e741c504126830e0d6faa628b9"><td class="memTemplParams" colspan="2"><a id="a5140a3e741c504126830e0d6faa628b9" name="a5140a3e741c504126830e0d6faa628b9"></a>
-template&lt;typename T  = int&gt; </td></tr>
-<tr class="memitem:a5140a3e741c504126830e0d6faa628b9"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><b>h5_get_attr</b> (H5::H5Object &amp;obj, std::string name, H5::DataType dtype=H5::PredType::NATIVE_INT)</td></tr>
-<tr class="separator:a5140a3e741c504126830e0d6faa628b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac5b49bf795e430f47571daced6cfba2e" id="r_ac5b49bf795e430f47571daced6cfba2e"><td class="memItemLeft" align="right" valign="top"><a id="ac5b49bf795e430f47571daced6cfba2e" name="ac5b49bf795e430f47571daced6cfba2e"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>update_pos</b> (<a class="el" href="classhexed_1_1next_1_1Vertex.html">next::Vertex</a> &amp;vert, <a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; 3 &gt; pos)</td></tr>
+<tr class="separator:ac5b49bf795e430f47571daced6cfba2e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ada8b04beaaedb95c095c46e9e2df1db7" id="r_ada8b04beaaedb95c095c46e9e2df1db7"><td class="memItemLeft" align="right" valign="top"><a id="ada8b04beaaedb95c095c46e9e2df1db7" name="ada8b04beaaedb95c095c46e9e2df1db7"></a>
 <a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a>&#160;</td><td class="memItemRight" valign="bottom"><b>read_params</b> (std::string file_name)</td></tr>
 <tr class="separator:ada8b04beaaedb95c095c46e9e2df1db7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad2195f9de692acfa5fa5d6507532ed9d" id="r_ad2195f9de692acfa5fa5d6507532ed9d"><td class="memItemLeft" align="right" valign="top"><a id="ad2195f9de692acfa5fa5d6507532ed9d" name="ad2195f9de692acfa5fa5d6507532ed9d"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><b>read_root_sz</b> (std::string file_name)</td></tr>
-<tr class="separator:ad2195f9de692acfa5fa5d6507532ed9d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0d50769be1a7e44351bd9bb475d2004f" id="r_a0d50769be1a7e44351bd9bb475d2004f"><td class="memTemplParams" colspan="2"><a id="a0d50769be1a7e44351bd9bb475d2004f" name="a0d50769be1a7e44351bd9bb475d2004f"></a>
-template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a0d50769be1a7e44351bd9bb475d2004f"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>h5_read_row</b> (H5::DataSet &amp;dset, int cols, int i_row, T *data)</td></tr>
-<tr class="separator:a0d50769be1a7e44351bd9bb475d2004f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8b0214189e6cf5d13205a2b847677727" id="r_a8b0214189e6cf5d13205a2b847677727"><td class="memTemplParams" colspan="2"><a id="a8b0214189e6cf5d13205a2b847677727" name="a8b0214189e6cf5d13205a2b847677727"></a>
-template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a8b0214189e6cf5d13205a2b847677727"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><b>h5_read_value</b> (H5::DataSet &amp;dset, int i_row)</td></tr>
-<tr class="separator:a8b0214189e6cf5d13205a2b847677727"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aff0dfeb28658e61b9c554921edba2f40" id="r_aff0dfeb28658e61b9c554921edba2f40"><td class="memItemLeft" align="right" valign="top"><a id="aff0dfeb28658e61b9c554921edba2f40" name="aff0dfeb28658e61b9c554921edba2f40"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>write_polymesh_file</b> (std::string dir_name, std::string name, std::string cls, int n_entries, std::function&lt; std::string(int)&gt; entries, std::string note=&quot;&quot;)</td></tr>
 <tr class="separator:aff0dfeb28658e61b9c554921edba2f40"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6bd67a8ccaa7b84c92764e40b225f37f" id="r_a6bd67a8ccaa7b84c92764e40b225f37f"><td class="memItemLeft" align="right" valign="top"><a id="a6bd67a8ccaa7b84c92764e40b225f37f" name="a6bd67a8ccaa7b84c92764e40b225f37f"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>copy_state</b> (<a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;bf)</td></tr>
-<tr class="separator:a6bd67a8ccaa7b84c92764e40b225f37f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a486aa4705b71e3ad795e2fd7e2bf233c" id="r_a486aa4705b71e3ad795e2fd7e2bf233c"><td class="memItemLeft" align="right" valign="top"><a id="a486aa4705b71e3ad795e2fd7e2bf233c" name="a486aa4705b71e3ad795e2fd7e2bf233c"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>copy_state</b> (<a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;con)</td></tr>
+<tr class="separator:a486aa4705b71e3ad795e2fd7e2bf233c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a596717edbb26fee433b1b76283dc5e17" id="r_a596717edbb26fee433b1b76283dc5e17"><td class="memTemplParams" colspan="2"><a id="a596717edbb26fee433b1b76283dc5e17" name="a596717edbb26fee433b1b76283dc5e17"></a>
 template&lt;int n_dim&gt; </td></tr>
 <tr class="memitem:a596717edbb26fee433b1b76283dc5e17"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><b>apply_char</b> (<a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; state, <a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; normal, int sign, <a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; inside, <a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; outside)</td></tr>
@@ -932,9 +1032,9 @@ template&lt;int n_dim&gt; </td></tr>
 <tr class="memitem:aba4b2af04af3fd1060d27ef529e19f66" id="r_aba4b2af04af3fd1060d27ef529e19f66"><td class="memItemLeft" align="right" valign="top"><a id="aba4b2af04af3fd1060d27ef529e19f66" name="aba4b2af04af3fd1060d27ef529e19f66"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>reflect_normal</b> (double *gh_f, double *nrml, int nq, int nd)</td></tr>
 <tr class="separator:aba4b2af04af3fd1060d27ef529e19f66"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa9c97cff7af6e7f231a36b9024c5e078" id="r_aa9c97cff7af6e7f231a36b9024c5e078"><td class="memItemLeft" align="right" valign="top"><a id="aa9c97cff7af6e7f231a36b9024c5e078" name="aa9c97cff7af6e7f231a36b9024c5e078"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>reflect_momentum</b> (<a class="el" href="classhexed_1_1Boundary__face.html">Boundary_face</a> &amp;bf)</td></tr>
-<tr class="separator:aa9c97cff7af6e7f231a36b9024c5e078"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac7448dc08189169178aeda15197be19e" id="r_ac7448dc08189169178aeda15197be19e"><td class="memItemLeft" align="right" valign="top"><a id="ac7448dc08189169178aeda15197be19e" name="ac7448dc08189169178aeda15197be19e"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>reflect_momentum</b> (<a class="el" href="classhexed_1_1Boundary__connection.html">Boundary_connection</a> &amp;con)</td></tr>
+<tr class="separator:ac7448dc08189169178aeda15197be19e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a187de4f6fff9b404b79283144c09501c" id="r_a187de4f6fff9b404b79283144c09501c"><td class="memItemLeft" align="right" valign="top"><a id="a187de4f6fff9b404b79283144c09501c" name="a187de4f6fff9b404b79283144c09501c"></a>
 std::string&#160;</td><td class="memItemRight" valign="bottom"><b>strip_trailing_digits</b> (std::string s)</td></tr>
 <tr class="separator:a187de4f6fff9b404b79283144c09501c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -944,35 +1044,73 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>force_symlink</b> (co
 <tr class="memitem:a3939c03c00c7b91e0224f26470361808" id="r_a3939c03c00c7b91e0224f26470361808"><td class="memItemLeft" align="right" valign="top"><a id="a3939c03c00c7b91e0224f26470361808" name="a3939c03c00c7b91e0224f26470361808"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>read_char</b> (char *c, int n)</td></tr>
 <tr class="separator:a3939c03c00c7b91e0224f26470361808"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3f58c5d785efa84a2f710d5c7bdc959b" id="r_a3f58c5d785efa84a2f710d5c7bdc959b"><td class="memItemLeft" align="right" valign="top"><a id="a3f58c5d785efa84a2f710d5c7bdc959b" name="a3f58c5d785efa84a2f710d5c7bdc959b"></a>
-std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>get_shape</b> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a> params)</td></tr>
-<tr class="separator:a3f58c5d785efa84a2f710d5c7bdc959b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a67bd5615bf5c3ef2e960bd5efc594a1e" id="r_a67bd5615bf5c3ef2e960bd5efc594a1e"><td class="memItemLeft" align="right" valign="top"><a id="a67bd5615bf5c3ef2e960bd5efc594a1e" name="a67bd5615bf5c3ef2e960bd5efc594a1e"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>iterate</b> (const TopoDS_Shape &amp;shape, TopAbs_ShapeEnum shape_type, std::function&lt; void(const TopoDS_Shape &amp;)&gt; callback)</td></tr>
-<tr class="separator:a67bd5615bf5c3ef2e960bd5efc594a1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4725bbb5c92ea95f8d4af77640c8a0bc" id="r_a4725bbb5c92ea95f8d4af77640c8a0bc"><td class="memItemLeft" align="right" valign="top"><a id="a4725bbb5c92ea95f8d4af77640c8a0bc" name="a4725bbb5c92ea95f8d4af77640c8a0bc"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>collect_curves</b> (std::vector&lt; opencascade::handle&lt; Geom2d_Curve &gt; &gt; &amp;curves, const TopoDS_Shape &amp;shape)</td></tr>
-<tr class="separator:a4725bbb5c92ea95f8d4af77640c8a0bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a54433c2e1f6c4196d72e69e697cc88af" id="r_a54433c2e1f6c4196d72e69e697cc88af"><td class="memItemLeft" align="right" valign="top"><a id="a54433c2e1f6c4196d72e69e697cc88af" name="a54433c2e1f6c4196d72e69e697cc88af"></a>
+<a class="el" href="classhexed_1_1Face.html">Face</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>find_element_face</b> (<a class="el" href="classhexed_1_1Face.html">Face</a> &amp;face, bool upstream)</td></tr>
+<tr class="separator:a54433c2e1f6c4196d72e69e697cc88af"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9500b069e307f0c3499a4709df6c11b1" id="r_a9500b069e307f0c3499a4709df6c11b1"><td class="memItemLeft" align="right" valign="top"><a id="a9500b069e307f0c3499a4709df6c11b1" name="a9500b069e307f0c3499a4709df6c11b1"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>find_elements</b> (<a class="el" href="classhexed_1_1Face.html">Face</a> &amp;face, std::vector&lt; <a class="el" href="classhexed_1_1Element.html">Element</a> * &gt; &amp;elems, std::vector&lt; int &gt; bounds, bool upstream)</td></tr>
+<tr class="separator:a9500b069e307f0c3499a4709df6c11b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aef96a9fb0b8feac43c8e1e223a2d891d" id="r_aef96a9fb0b8feac43c8e1e223a2d891d"><td class="memItemLeft" align="right" valign="top"><a id="aef96a9fb0b8feac43c8e1e223a2d891d" name="aef96a9fb0b8feac43c8e1e223a2d891d"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_eol</b> (char c)</td></tr>
+<tr class="separator:aef96a9fb0b8feac43c8e1e223a2d891d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5ab7153759daad4a5dccbaba2dc12c9f" id="r_a5ab7153759daad4a5dccbaba2dc12c9f"><td class="memItemLeft" align="right" valign="top"><a id="a5ab7153759daad4a5dccbaba2dc12c9f" name="a5ab7153759daad4a5dccbaba2dc12c9f"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator==</b> (<a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a> dir0, <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a> dir1)</td></tr>
+<tr class="separator:a5ab7153759daad4a5dccbaba2dc12c9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a11c00bbf47d726b75b5e6fdd9b0269ab" id="r_a11c00bbf47d726b75b5e6fdd9b0269ab"><td class="memItemLeft" align="right" valign="top"><a id="a11c00bbf47d726b75b5e6fdd9b0269ab" name="a11c00bbf47d726b75b5e6fdd9b0269ab"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_string</b> (<a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a> dir)</td></tr>
+<tr class="separator:a11c00bbf47d726b75b5e6fdd9b0269ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a70da0a91e5f243135082c0fa0f0da513" id="r_a70da0a91e5f243135082c0fa0f0da513"><td class="memItemLeft" align="right" valign="top"><a id="a70da0a91e5f243135082c0fa0f0da513" name="a70da0a91e5f243135082c0fa0f0da513"></a>
+std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator&lt;&lt;</b> (std::ostream &amp;stream, <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a> dir)</td></tr>
+<tr class="separator:a70da0a91e5f243135082c0fa0f0da513"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac61f0584c3c34de100994a2931115b5d" id="r_ac61f0584c3c34de100994a2931115b5d"><td class="memItemLeft" align="right" valign="top"><a id="ac61f0584c3c34de100994a2931115b5d" name="ac61f0584c3c34de100994a2931115b5d"></a>
 std::vector&lt; <a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; 2, 2 &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>segments</b> (const <a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; <a class="el" href="#a264a08e8f62dd1618e4678b01e00bdf5">dyn</a>, <a class="el" href="#a264a08e8f62dd1618e4678b01e00bdf5">dyn</a> &gt; &amp;points)</td></tr>
 <tr class="separator:ac61f0584c3c34de100994a2931115b5d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae5238e85cc8164758a4def5fc1892072" id="r_ae5238e85cc8164758a4def5fc1892072"><td class="memItemLeft" align="right" valign="top"><a id="ae5238e85cc8164758a4def5fc1892072" name="ae5238e85cc8164758a4def5fc1892072"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>max_fun</b> (double x, double y)</td></tr>
+<tr class="separator:ae5238e85cc8164758a4def5fc1892072"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4190149b9edbdb8fe9c898bd6cd7fcf4" id="r_a4190149b9edbdb8fe9c898bd6cd7fcf4"><td class="memItemLeft" align="right" valign="top"><a id="a4190149b9edbdb8fe9c898bd6cd7fcf4" name="a4190149b9edbdb8fe9c898bd6cd7fcf4"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>min_fun</b> (double x, double y)</td></tr>
+<tr class="separator:a4190149b9edbdb8fe9c898bd6cd7fcf4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a81d02b2c5547513a535f6d974b3558d0" id="r_a81d02b2c5547513a535f6d974b3558d0"><td class="memItemLeft" align="right" valign="top"><a id="a81d02b2c5547513a535f6d974b3558d0" name="a81d02b2c5547513a535f6d974b3558d0"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>objective</b> (const std::vector&lt; double &gt; &amp;arg, std::vector&lt; double &gt; &amp;, void *data)</td></tr>
 <tr class="separator:a81d02b2c5547513a535f6d974b3558d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5a2bdab14bb7a9d44a545f37358d99ba" id="r_a5a2bdab14bb7a9d44a545f37358d99ba"><td class="memItemLeft" align="right" valign="top"><a id="a5a2bdab14bb7a9d44a545f37358d99ba" name="a5a2bdab14bb7a9d44a545f37358d99ba"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator==</b> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a> par0, <a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a> par1)</td></tr>
+<tr class="separator:a5a2bdab14bb7a9d44a545f37358d99ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a54b6d943d143a4cf69d5240544ba4ec2" id="r_a54b6d943d143a4cf69d5240544ba4ec2"><td class="memItemLeft" align="right" valign="top"><a id="a54b6d943d143a4cf69d5240544ba4ec2" name="a54b6d943d143a4cf69d5240544ba4ec2"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator!=</b> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a> par0, <a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a> par1)</td></tr>
+<tr class="separator:a54b6d943d143a4cf69d5240544ba4ec2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:accd6bd593bec92d3afcbdad879011f9b" id="r_accd6bd593bec92d3afcbdad879011f9b"><td class="memItemLeft" align="right" valign="top"><a id="accd6bd593bec92d3afcbdad879011f9b" name="accd6bd593bec92d3afcbdad879011f9b"></a>
+std::string&#160;</td><td class="memItemRight" valign="bottom"><b>to_string</b> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a> par)</td></tr>
+<tr class="separator:accd6bd593bec92d3afcbdad879011f9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4c3482e1bc4b96dbbf049ed166475f59" id="r_a4c3482e1bc4b96dbbf049ed166475f59"><td class="memItemLeft" align="right" valign="top"><a id="a4c3482e1bc4b96dbbf049ed166475f59" name="a4c3482e1bc4b96dbbf049ed166475f59"></a>
 std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>get_side</b> (std::string code, bool right=false)</td></tr>
 <tr class="separator:a4c3482e1bc4b96dbbf049ed166475f59"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6fa16442a68d25b0d8664e4a6f8f05d4" id="r_a6fa16442a68d25b0d8664e4a6f8f05d4"><td class="memItemLeft" align="right" valign="top"><a id="a6fa16442a68d25b0d8664e4a6f8f05d4" name="a6fa16442a68d25b0d8664e4a6f8f05d4"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>check</b> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; &amp;nodes)</td></tr>
+<tr class="separator:a6fa16442a68d25b0d8664e4a6f8f05d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a63924678db809405f2db25e8abd6a3ed" id="r_a63924678db809405f2db25e8abd6a3ed"><td class="memItemLeft" align="right" valign="top"><a id="a63924678db809405f2db25e8abd6a3ed" name="a63924678db809405f2db25e8abd6a3ed"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>check</b> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; &amp;&amp;data)</td></tr>
+<tr class="separator:a63924678db809405f2db25e8abd6a3ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:aeedbde2620b830e04cbce2c59114cc88" id="r_aeedbde2620b830e04cbce2c59114cc88"><td class="memItemLeft" align="right" valign="top"><a id="aeedbde2620b830e04cbce2c59114cc88" name="aeedbde2620b830e04cbce2c59114cc88"></a>
-constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>whatever</b> = -1</td></tr>
-<tr class="memdesc:aeedbde2620b830e04cbce2c59114cc88"><td class="mdescLeft">&#160;</td><td class="mdescRight">used in <code><a class="el" href="classhexed_1_1Array.html" title="Represents a dynamic-sized multidimensional array.">Array</a>&lt;T&gt;::reshaped()</code> <br /></td></tr>
-<tr class="separator:aeedbde2620b830e04cbce2c59114cc88"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6fd1be198604b9305aae6b5e4b60098c" id="r_a6fd1be198604b9305aae6b5e4b60098c"><td class="memItemLeft" align="right" valign="top"><a id="a6fd1be198604b9305aae6b5e4b60098c" name="a6fd1be198604b9305aae6b5e4b60098c"></a>
-constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>same</b> = -2</td></tr>
-<tr class="memdesc:a6fd1be198604b9305aae6b5e4b60098c"><td class="mdescLeft">&#160;</td><td class="mdescRight">used in <code><a class="el" href="classhexed_1_1Array.html" title="Represents a dynamic-sized multidimensional array.">Array</a>&lt;T&gt;::reshaped()</code> <br /></td></tr>
-<tr class="separator:a6fd1be198604b9305aae6b5e4b60098c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a625cbcf7c42dca27fe6e6cb391b04591" id="r_a625cbcf7c42dca27fe6e6cb391b04591"><td class="memItemLeft" align="right" valign="top"><a id="a625cbcf7c42dca27fe6e6cb391b04591" name="a625cbcf7c42dca27fe6e6cb391b04591"></a>
+constexpr <a class="el" href="#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><b>whatever</b> = -1</td></tr>
+<tr class="memdesc:a625cbcf7c42dca27fe6e6cb391b04591"><td class="mdescLeft">&#160;</td><td class="mdescRight">used in <code><a class="el" href="classhexed_1_1Array.html#ac3a874ddf5ce60cc92a3bd4ec44358de" title="Returns an array referencing the same data as this but with a different shape.">Array::reshaped()</a></code> <br /></td></tr>
+<tr class="separator:a625cbcf7c42dca27fe6e6cb391b04591"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a456d307d651fdc5c071be1acc28e6a0b" id="r_a456d307d651fdc5c071be1acc28e6a0b"><td class="memItemLeft" align="right" valign="top"><a id="a456d307d651fdc5c071be1acc28e6a0b" name="a456d307d651fdc5c071be1acc28e6a0b"></a>
+constexpr <a class="el" href="#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><b>same</b> = -2</td></tr>
+<tr class="memdesc:a456d307d651fdc5c071be1acc28e6a0b"><td class="mdescLeft">&#160;</td><td class="mdescRight">used in <code><a class="el" href="classhexed_1_1Array.html#ac3a874ddf5ce60cc92a3bd4ec44358de" title="Returns an array referencing the same data as this but with a different shape.">Array::reshaped()</a></code> <br /></td></tr>
+<tr class="separator:a456d307d651fdc5c071be1acc28e6a0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29379601c4efd3a7e573e925da55babb" id="r_a29379601c4efd3a7e573e925da55babb"><td class="memItemLeft" align="right" valign="top"><a id="a29379601c4efd3a7e573e925da55babb" name="a29379601c4efd3a7e573e925da55babb"></a>
+constexpr <a class="el" href="#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><b>end</b> = std::numeric_limits&lt;<a class="el" href="#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&gt;::max()</td></tr>
+<tr class="memdesc:a29379601c4efd3a7e573e925da55babb"><td class="mdescLeft">&#160;</td><td class="mdescRight">can be passed to <code>Array::operator()</code> <br /></td></tr>
+<tr class="separator:a29379601c4efd3a7e573e925da55babb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adfc99352c3a0cc7f6e721448c6a8d3da" id="r_adfc99352c3a0cc7f6e721448c6a8d3da"><td class="memItemLeft" align="right" valign="top"><a id="adfc99352c3a0cc7f6e721448c6a8d3da" name="adfc99352c3a0cc7f6e721448c6a8d3da"></a>
+const auto&#160;</td><td class="memItemRight" valign="bottom"><b>inviscid</b> = Transport_model::inviscid()</td></tr>
+<tr class="memdesc:adfc99352c3a0cc7f6e721448c6a8d3da"><td class="mdescLeft">&#160;</td><td class="mdescRight">always returns zero <br /></td></tr>
+<tr class="separator:adfc99352c3a0cc7f6e721448c6a8d3da"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a264a08e8f62dd1618e4678b01e00bdf5" id="r_a264a08e8f62dd1618e4678b01e00bdf5"><td class="memItemLeft" align="right" valign="top"><a id="a264a08e8f62dd1618e4678b01e00bdf5" name="a264a08e8f62dd1618e4678b01e00bdf5"></a>
 const int&#160;</td><td class="memItemRight" valign="bottom"><b>dyn</b> = Eigen::Dynamic</td></tr>
 <tr class="memdesc:a264a08e8f62dd1618e4678b01e00bdf5"><td class="mdescLeft">&#160;</td><td class="mdescRight">convenience alias for <code>Eigen::dynamic</code> <br /></td></tr>
@@ -989,18 +1127,18 @@ const auto&#160;</td><td class="memItemRight" valign="bottom"><b>last</b> = Eige
 constexpr double&#160;</td><td class="memItemRight" valign="bottom"><b>huge</b> = std::numeric_limits&lt;double&gt;::max()</td></tr>
 <tr class="memdesc:a06682de47504c676a52137c7636470a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">convenience alias for largest double value <br /></td></tr>
 <tr class="separator:a06682de47504c676a52137c7636470a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adfc99352c3a0cc7f6e721448c6a8d3da" id="r_adfc99352c3a0cc7f6e721448c6a8d3da"><td class="memItemLeft" align="right" valign="top"><a id="adfc99352c3a0cc7f6e721448c6a8d3da" name="adfc99352c3a0cc7f6e721448c6a8d3da"></a>
-const auto&#160;</td><td class="memItemRight" valign="bottom"><b>inviscid</b> = Transport_model::inviscid()</td></tr>
-<tr class="memdesc:adfc99352c3a0cc7f6e721448c6a8d3da"><td class="mdescLeft">&#160;</td><td class="mdescRight">always returns zero <br /></td></tr>
-<tr class="separator:adfc99352c3a0cc7f6e721448c6a8d3da"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a720e91da897b9be281bbb6fedb1217e5" id="r_a720e91da897b9be281bbb6fedb1217e5"><td class="memItemLeft" align="right" valign="top"><a id="a720e91da897b9be281bbb6fedb1217e5" name="a720e91da897b9be281bbb6fedb1217e5"></a>
 const double&#160;</td><td class="memItemRight" valign="bottom"><b>heat_rat</b> = 1.4</td></tr>
 <tr class="separator:a720e91da897b9be281bbb6fedb1217e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa1e39fe9394bf05c5d940fa8e8159f28" id="r_aa1e39fe9394bf05c5d940fa8e8159f28"><td class="memItemLeft" align="right" valign="top"><a id="aa1e39fe9394bf05c5d940fa8e8159f28" name="aa1e39fe9394bf05c5d940fa8e8159f28"></a>
+const double&#160;</td><td class="memItemRight" valign="bottom"><b>dirk2_gamma</b> = 1 - std::sqrt(.5)</td></tr>
+<tr class="separator:aa1e39fe9394bf05c5d940fa8e8159f28"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa0ad672a4e76ce3a67136bbe02122f64" id="r_aa0ad672a4e76ce3a67136bbe02122f64"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::array&lt; double, 2 &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa0ad672a4e76ce3a67136bbe02122f64">alt_temp</a></td></tr>
 <tr class="separator:aa0ad672a4e76ce3a67136bbe02122f64"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Global namespace for all of the C++ API of Hexed. </p>
+<p>The purpose of this file is to provide a way to specify the number of dimensions and row size of the kernels at run-time, whereas in the kernel implementations these are compile-time parameters. The idea is that if we require that the parameters be within a finite range, we can simply instantiate the kernel templates for every possible combination of parameters. This is obviously not efficient in terms of compilation work load or executable size, but it provides optimal execution speed and run-time flexibility, which for our purpose is more important. </p>
 </div><h2 class="groupheader">Function Documentation</h2>
 <a id="ab124f7ee9691cfcad95abb8882f064e9" name="ab124f7ee9691cfcad95abb8882f064e9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab124f7ee9691cfcad95abb8882f064e9">&#9670;&#160;</a></span>erase_if()</h2>
@@ -1089,12 +1227,43 @@ template&lt;typename... format_args&gt; </div>
 </div><div class="memdoc">
 
 <p>Standard string formatting. </p>
-<p>Basically a knockoff of <code>std::format</code> in C++20 (which at the time of writing we can't use on the lab machines). Invokes <code>snprintf</code>, but works in terms of <code>std::string</code>s and handles buffer creation for you. Will allocate a buffer of size <code>max_chars</code>. Throws an exception if resulting formatted string is larger than <code>max_chars</code>. </p>
+<p>Basically a knockoff of <code>std::format</code> in C++20 (which at the time of writing we can't use on the lab machines). Invokes <code>snprintf</code>, but works in terms of <code>std::string</code>s and handles buffer creation for you. If length of resulting string is greater than <code>max_chars</code>, it will iteratively allocate more characters. </p>
 
 </div>
 </div>
-<a id="aca08798a4bce34b042fd22d8fb924818" name="aca08798a4bce34b042fd22d8fb924818"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aca08798a4bce34b042fd22d8fb924818">&#9670;&#160;</a></span>printed()</h2>
+<a id="a3a730f481b6258b40c7eca57a1ccda7d" name="a3a730f481b6258b40c7eca57a1ccda7d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3a730f481b6258b40c7eca57a1ccda7d">&#9670;&#160;</a></span>kernel_factory()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;template&lt; int, int &gt; typename kernel, typename... constructor_args&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">kernel_lookup::ptr_t&lt; kernel &gt; hexed::kernel_factory </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>n_dim</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>row_size</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">constructor_args &amp;&amp;...</td>          <td class="paramname"><span class="paramname"><em>args</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Gets a <code>std::unique_ptr</code> to a <code>base_t</code> of <code>kernel</code>. </p>
+<p>The underlying kernel will be instantiated with <code>n_dim</code> and <code>row_size</code> provided as template arguments. Arguments must satisfy <code>3 &gt;= n_dim &gt; 0</code> and <code><a class="el" href="namespacehexed_1_1config.html#ae2b5f6cd69b37a5ec8d33f6361f0025b" title="maximum row size that a Basis is allowed to have">config::max_row_size</a> &gt;= row_size &gt; 1</code>. </p>
+
+</div>
+</div>
+<a id="a70d9b62f962662b4594a2a527252a22b" name="a70d9b62f962662b4594a2a527252a22b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a70d9b62f962662b4594a2a527252a22b">&#9670;&#160;</a></span>printed()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1102,9 +1271,9 @@ template&lt;typename... format_args&gt; </div>
 template&lt;typename T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">T &amp; hexed::printed </td>
+          <td class="memname">T hexed::printed </td>
           <td>(</td>
-          <td class="paramtype">T &amp;</td>          <td class="paramname"><span class="paramname"><em>t</em></span></td><td>)</td>
+          <td class="paramtype">T</td>          <td class="paramname"><span class="paramname"><em>t</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -1135,6 +1304,30 @@ template&lt;typename T &gt; </div>
 
 </div>
 </div>
+<a id="a69c6ecbcd69551c2c046e7ffd430baee" name="a69c6ecbcd69551c2c046e7ffd430baee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a69c6ecbcd69551c2c046e7ffd430baee">&#9670;&#160;</a></span>resize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a> hexed::resize </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>vec</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a></td>          <td class="paramname"><span class="paramname"><em>size</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Returns a copy of <code>vec</code> resized to <code>size</code>. </p>
+<p>If <code>size</code> is less than <code>vec.size()</code>, the trailing entries are deleted. If <code>size</code> is greater than <code>vec.size()</code>, trailing zeros are appended. Otherwise, entries are preserved. </p>
+
+</div>
+</div>
 <a id="ad30456c4bcf152b101648a951b5ff6b2" name="ad30456c4bcf152b101648a951b5ff6b2"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad30456c4bcf152b101648a951b5ff6b2">&#9670;&#160;</a></span>stabilizing_art_visc()</h2>
 
@@ -1154,7 +1347,7 @@ template&lt;typename T &gt; </div>
       </table>
 </div><div class="memdoc">
 
-<p>helper function for <code><a class="el" href="classhexed_1_1Solver.html#a94354a21cf357c3e8769d47bc064dc65" title="set the Laplacian artificial viscosity to a minimal value that will encourage thermodynamic admissibi...">Solver::set_art_visc_admis</a></code> </p>
+<p>helper function for <code>Solver::set_art_visc_admis</code> </p>
 <p>Sets the <code><a class="el" href="classhexed_1_1Element.html#ad9e510917cc62bf7956c51a251d819fc" title="Pointer to state data at faces. Must be populated by user.">Element::uncertainty</a></code> in the elements based on the smoothness of specific volume <code>char_speed</code> determines a final linear scaling parameter (usually based on the characteristic speed of the flow) </p>
 
 </div>
@@ -1191,6 +1384,48 @@ template&lt;typename T &gt; </div>
 
 </div>
 </div>
+<a id="ac640611c43ea8669be238af81074bd85" name="ac640611c43ea8669be238af81074bd85"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac640611c43ea8669be238af81074bd85">&#9670;&#160;</a></span>to_string() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string hexed::to_string </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt;</td>          <td class="paramname"><span class="paramname"><em>arr</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Overload of <code><a class="el" href="#ac640611c43ea8669be238af81074bd85" title="Overload of hexed::to_string for Arrays.">hexed::to_string</a></code> for <code><a class="el" href="classhexed_1_1Array.html" title="Represents a dynamic-sized multidimensional array.">Array</a></code>s. </p>
+<p>Works as long as <code>to_string(T)</code> is defined. </p>
+
+</div>
+</div>
+<a id="a86d77b9f4ca20bc95602721f88960c7b" name="a86d77b9f4ca20bc95602721f88960c7b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a86d77b9f4ca20bc95602721f88960c7b">&#9670;&#160;</a></span>to_string() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string hexed::to_string </td>
+          <td>(</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>i</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Represents its argument as a human-readable string. </p>
+<p>like <code>std::to_string</code>, but overloaded for some <code>hexed</code> types. There should be overloads for most things you might want to print. If you want an overload that isn't here, let <a class="el" href="index.html#Contact">me</a> know. </p>
+
+</div>
+</div>
 <a id="a5f641968e5b21a11e587d6a288e29836" name="a5f641968e5b21a11e587d6a288e29836"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5f641968e5b21a11e587d6a288e29836">&#9670;&#160;</a></span>vertex_inds()</h2>
 
@@ -1211,7 +1446,7 @@ template&lt;typename T &gt; </div>
 </div><div class="memdoc">
 
 <p>The indices of the element vertices which participate in a deformed connection. </p>
-<p>Ordering is such that vertices which align in physical space correspond in the lists and the vertices of face 0 are ordered in the same way as they would be if the face were considered in isolation. </p>
+<p>Ordering is such that vertices which must be merged correspond in the lists and the vertices of face 0 are ordered in the same way as they would be if the face were considered in isolation. </p>
 
 </div>
 </div>

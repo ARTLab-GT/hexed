@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -117,6 +117,11 @@ $(function(){initNavTree('classhexed_1_1Kernel.html',''); initResizable(true); }
   <div class="headertitle"><div class="title">hexed::Kernel&lt; T, U &gt; Class Template Reference<span class="mlabels"><span class="mlabel">abstract</span></span></div></div>
 </div><!--header-->
 <div class="contents">
+
+<p>Base class for a "kernel". "Kernel" is a word which here means a callable object which accepts dimensionality and row size as template arguments to improve performance.  
+ <a href="#details">More...</a></p>
+
+<p><code>#include &lt;kernel_factory.hpp&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-types" name="pub-types"></a>
 Public Types</h2></td></tr>
@@ -135,7 +140,10 @@ virtual U&#160;</td><td class="memItemRight" valign="bottom"><b>operator()</b> (
 virtual U&#160;</td><td class="memItemRight" valign="bottom"><b>operator()</b> (<a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; T &gt; &amp;sequence, <a class="el" href="classhexed_1_1Stopwatch__tree.html">Stopwatch_tree</a> &amp;category_tree, std::string name)</td></tr>
 <tr class="separator:a690bdaf6ebf4705566b0577cf44defc3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<h2 class="groupheader">Member Function Documentation</h2>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><div class="compoundTemplParams">template&lt;typename T, typename U = void&gt;<br />
+class hexed::Kernel&lt; T, U &gt;</div><p>Base class for a "kernel". "Kernel" is a word which here means a callable object which accepts dimensionality and row size as template arguments to improve performance. </p>
+</div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="a5a932adb79ec7f4b1db963fd4d7e8e00" name="a5a932adb79ec7f4b1db963fd4d7e8e00"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5a932adb79ec7f4b1db963fd4d7e8e00">&#9670;&#160;</a></span>operator()()</h2>
 

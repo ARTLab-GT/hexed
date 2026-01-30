@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -135,6 +135,12 @@ Functions</h2></td></tr>
 <tr class="memitem:ae1d6020a2ef51a88b8f56c74f2b964d2" id="r_ae1d6020a2ef51a88b8f56c74f2b964d2"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae1d6020a2ef51a88b8f56c74f2b964d2">joukowsky</a> (thickness, camber=0., n_points=1000, scale=True)</td></tr>
 <tr class="memdesc:ae1d6020a2ef51a88b8f56c74f2b964d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">constructs a <a href="https://en.wikipedia.org/wiki/Joukowsky_transform">Joukowsky airfoil</a>  <br /></td></tr>
 <tr class="separator:ae1d6020a2ef51a88b8f56c74f2b964d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5fa8bfea9a6a7b96927c9ca844144c1c" id="r_a5fa8bfea9a6a7b96927c9ca844144c1c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5fa8bfea9a6a7b96927c9ca844144c1c">sort_curve</a> (data, coords, start_at=0, closed=True)</td></tr>
+<tr class="memdesc:a5fa8bfea9a6a7b96927c9ca844144c1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns data sorted into a continuous curve.  <br /></td></tr>
+<tr class="separator:a5fa8bfea9a6a7b96927c9ca844144c1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af9f0e62321388391cf7c566230247732" id="r_af9f0e62321388391cf7c566230247732"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af9f0e62321388391cf7c566230247732">read_history</a> (output_directory)</td></tr>
+<tr class="memdesc:af9f0e62321388391cf7c566230247732"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads the convergence history from <code>output.txt</code> and returns it as a <a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">pandas.DataFrame</a>.  <br /></td></tr>
+<tr class="separator:af9f0e62321388391cf7c566230247732"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
@@ -220,9 +226,77 @@ Variables</h2></td></tr>
     <tr><td class="paramname">closure</td><td>If and how to close the trailing edge. There are 3 options:<ul>
 <li><code>"warp"</code>: Close the trailing edge by adding a 4th-degree polyomial of \( x_0 \) to \( x_1 \).</li>
 <li><code>"segment"</code>: Close the trailing edge by adding a line segment connecting the last point to the first point, causing the array to be <code>(n_points + 1)*2</code> instead of <code>n_points*2</code>.</li>
+<li><code>"extend"</code>: Extends the \( x_0 \) domain until the point where the upper and lower surface meet and then rescales the whole airfoil to keep the chord equal to 1. This stays faithful to the original polynomial profile, but slightly decreases the thickness. This is the method used in the classic <a href="https://turbmodels.larc.nasa.gov/naca0012_val.html">NASA validation case</a>. Extension and rescaling are applied <b>after</b> the camber addition.</li>
 <li><code>"none"</code>, <code>None</code>, or <code>False</code>: Don't close the trailing edge. </li>
 </ul>
 </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="af9f0e62321388391cf7c566230247732" name="af9f0e62321388391cf7c566230247732"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af9f0e62321388391cf7c566230247732">&#9670;&#160;</a></span>read_history()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">hexedpy.utils.read_history </td>
+          <td>(</td>
+          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em>output_directory</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Reads the convergence history from <code>output.txt</code> and returns it as a <a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">pandas.DataFrame</a>. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">output_directory</td><td>The <a class="el" href="input_parameters.html#working_dir">working_dir</a> of the simulation you want to read the history of (e.g. <code>hexed_out</code> if you used the default <code>working_dir</code>). Can be an absolute or relative path. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a5fa8bfea9a6a7b96927c9ca844144c1c" name="a5fa8bfea9a6a7b96927c9ca844144c1c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5fa8bfea9a6a7b96927c9ca844144c1c">&#9670;&#160;</a></span>sort_curve()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">hexedpy.utils.sort_curve </td>
+          <td>(</td>
+          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em>coords</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em>start_at</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em>closed</em></span><span class="paramdefsep"> = </span><span class="paramdefval">True</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Returns data sorted into a continuous curve. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">data</td><td>A <a href="https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html">pandas.DataFrame</a> containing the data (coordinates and flow variables) to be sorted </td></tr>
+    <tr><td class="paramname">coords</td><td>Labels of columns to treat as coordinates </td></tr>
+    <tr><td class="paramname">start_at</td><td>Index of point to start at </td></tr>
+    <tr><td class="paramname">closed</td><td>If true, will append an additional copy of the start point to the end to ensure that the final curve is closed. </td></tr>
   </table>
   </dd>
 </dl>

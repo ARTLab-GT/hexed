@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['mat_0',['Mat',['../namespacehexed.html#aeef038f03a0676446e834deca06c6736',1,'hexed']]],
-  ['mat_5frm_1',['Mat_rm',['../namespacehexed.html#a9b3c2231582c37957044632c9ac4caea',1,'hexed']]]
+  ['path_0',['path',['../classhexed_1_1Path.html#ab2bff4e661c5896f0bd10d4ec3bbcf1f',1,'hexed::Path']]],
+  ['pointer_5ft_1',['Pointer_t',['../classhexed_1_1next_1_1Sequence.html#a37670e58d8a04535012b8dea4ee34be4',1,'hexed::next::Sequence']]]
 ];

@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -138,14 +138,14 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:afb50f234bf2d2e9e1beaa3dbf86f93f1" id="r_afb50f234bf2d2e9e1beaa3dbf86f93f1"><td class="memItemLeft" align="right" valign="top"><a id="afb50f234bf2d2e9e1beaa3dbf86f93f1" name="afb50f234bf2d2e9e1beaa3dbf86f93f1"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Face_permutation</b> (<a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a> direction, double *target)</td></tr>
 <tr class="separator:afb50f234bf2d2e9e1beaa3dbf86f93f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a178f0c3238212ea8c38557042deb1070" id="r_a178f0c3238212ea8c38557042deb1070"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a178f0c3238212ea8c38557042deb1070">match_faces</a> ()</td></tr>
-<tr class="separator:a178f0c3238212ea8c38557042deb1070"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad8b2880497d42afdd036823c95be867b" id="r_ad8b2880497d42afdd036823c95be867b"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad8b2880497d42afdd036823c95be867b">restore</a> ()</td></tr>
-<tr class="separator:ad8b2880497d42afdd036823c95be867b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3cbbaf6f08ccf45c1b617e637657a100" id="r_a3cbbaf6f08ccf45c1b617e637657a100"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3cbbaf6f08ccf45c1b617e637657a100">match_faces</a> () override</td></tr>
+<tr class="separator:a3cbbaf6f08ccf45c1b617e637657a100"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d3f2ca778adb7eba4e9fc575d5540eb" id="r_a8d3f2ca778adb7eba4e9fc575d5540eb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8d3f2ca778adb7eba4e9fc575d5540eb">restore</a> () override</td></tr>
+<tr class="separator:a8d3f2ca778adb7eba4e9fc575d5540eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a178f0c3238212ea8c38557042deb1070" name="a178f0c3238212ea8c38557042deb1070"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a178f0c3238212ea8c38557042deb1070">&#9670;&#160;</a></span>match_faces()</h2>
+<a id="a3cbbaf6f08ccf45c1b617e637657a100" name="a3cbbaf6f08ccf45c1b617e637657a100"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3cbbaf6f08ccf45c1b617e637657a100">&#9670;&#160;</a></span>match_faces()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -158,7 +158,7 @@ template&lt;int n_dim, int row_size&gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">virtual void <a class="el" href="classhexed_1_1Spatial.html">hexed::Spatial</a>&lt; Pde_templ, is_deformed &gt;::Face_permutation&lt; n_dim, row_size &gt;::match_faces </td>
+          <td class="memname">void <a class="el" href="classhexed_1_1Spatial.html">hexed::Spatial</a>&lt; Pde_templ, is_deformed &gt;::Face_permutation&lt; n_dim, row_size &gt;::match_faces </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
@@ -166,7 +166,7 @@ template&lt;int n_dim, int row_size&gt; </div>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -175,8 +175,8 @@ template&lt;int n_dim, int row_size&gt; </div>
 
 </div>
 </div>
-<a id="ad8b2880497d42afdd036823c95be867b" name="ad8b2880497d42afdd036823c95be867b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad8b2880497d42afdd036823c95be867b">&#9670;&#160;</a></span>restore()</h2>
+<a id="a8d3f2ca778adb7eba4e9fc575d5540eb" name="a8d3f2ca778adb7eba4e9fc575d5540eb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8d3f2ca778adb7eba4e9fc575d5540eb">&#9670;&#160;</a></span>restore()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -189,7 +189,7 @@ template&lt;int n_dim, int row_size&gt; </div>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">virtual void <a class="el" href="classhexed_1_1Spatial.html">hexed::Spatial</a>&lt; Pde_templ, is_deformed &gt;::Face_permutation&lt; n_dim, row_size &gt;::restore </td>
+          <td class="memname">void <a class="el" href="classhexed_1_1Spatial.html">hexed::Spatial</a>&lt; Pde_templ, is_deformed &gt;::Face_permutation&lt; n_dim, row_size &gt;::restore </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
@@ -197,7 +197,7 @@ template&lt;int n_dim, int row_size&gt; </div>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">

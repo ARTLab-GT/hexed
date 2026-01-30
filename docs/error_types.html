@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -123,15 +123,27 @@ HIL Exception</h1>
 <h1><a class="anchor" id="user_error"></a>
 User Error</h1>
 <ul>
-<li><code><a class="el" href="classhexed_1_1assert_1_1User__error.html" title="represents an exception which clearly results from a mistake made by the user">hexed::assert::User_error</a></code></li>
+<li><code><a class="el" href="classhexed_1_1assert_1_1User__error.html" title="Represents an exception which clearly results from a mistake made by the user.">hexed::assert::User_error</a></code></li>
 </ul>
-<p>This one is almost certainly your fault. This type of error indicates a basic mistake in the input parameters (such as an invalid <a class="el" href="parameters.html#row_size">row_size</a> or specifying the wrong number of freestream variables). Unlike a <a class="el" href="#hil_exception">HIL Exception</a>, this indicates that your input file is (probably) valid <a class="el" href="hil.html">Hexed Interface Language</a> code, but what you're specifying with that code doesn't make sense.</p>
+<p>This one is almost certainly your fault. This type of error indicates a basic mistake in the input parameters (such as an invalid <a class="el" href="input_parameters.html#row_size">row_size</a> or specifying the wrong number of freestream variables). Unlike a <a class="el" href="#hil_exception">HIL Exception</a>, this indicates that your input file is (probably) valid <a class="el" href="hil.html">Hexed Interface Language</a> code, but what you're specifying with that code doesn't make sense.</p>
+<h1><a class="anchor" id="not_implemented_error"></a>
+Feature-Not-Implemented Error</h1>
+<ul>
+<li><code><a class="el" href="classhexed_1_1assert_1_1Not__implemented__error.html" title="Indicates that the user invoked functionality which should be implemented in the future but isn&#39;t yet...">hexed::assert::Not_implemented_error</a></code></li>
+</ul>
+<p>This one is not your fault. It indicates that you told Hexed to do something that it ought to be able to do, and that I plan for it to be capable of in future releases, but that I haven't implemented yet. If you encounter this error, I would appreciate feedback to help prioritize future development.</p>
+<h1><a class="anchor" id="internal_error"></a>
+Internal Error</h1>
+<ul>
+<li><code><a class="el" href="classhexed_1_1assert_1_1Internal__error.html" title="Indicates that a situation has been encountered which should not be possible, regardless of user inpu...">hexed::assert::Internal_error</a></code></li>
+</ul>
+<p>This indicates that you have encountered a bug. The code encountered some kind of invalid state (a <a class="el" href="assert_8hpp.html#a0241cc0d9e41a02387efa41db018d78d">HEXED_ASSERT</a> assertion failed or an exception was explicitly thrown with <a class="el" href="assert_8hpp.html#ade8714594dc98eba28ec4c62898bf5c8">HEXED_THROW</a> ). This may have been precipitated by a mistake you made in the input file (which tends to create situations I did not expect), but the fact that it was caught as an <code>Internal_error</code> rather than a <code>User_error</code> still indicates a bug. It would be appreciated if you could report it to <a class="el" href="index.html#Contact">me</a> .</p>
 <h1><a class="anchor" id="numerical_error"></a>
 Numerical Exception</h1>
 <ul>
-<li><code><a class="el" href="classhexed_1_1assert_1_1Numerical__exception.html" title="represents a fatal problem in the numerics of the code (such as nonphysical values)">hexed::assert::Numerical_exception</a></code></li>
+<li><code><a class="el" href="classhexed_1_1assert_1_1Numerical__exception.html" title="Represents a fatal problem in the numerics of the code (such as nonphysical values)">hexed::assert::Numerical_exception</a></code></li>
 </ul>
-<p>The most frustrating thing about CFD is that no solver is guaranteed to converge for all meshes and all problems. This error indicates that apparently, you have found a case where this solver does not converge. For example, it will be thrown if the code encounters NaN values or nonphysical states (e.g. nonpositive density) and cannot recover. This error could likely be avoided by improvements to the algorithms or adjustments to your input parameters, but it is not necessarily the result of a blatant mistake on anyone's part. If you believe this error is actually the result of a bug or of some inputs you provided that were clearly wrong, please let <a class="el" href="index.html#Contact">me</a> know.</p>
+<p>The most frustrating thing about CFD is that no solver is guaranteed to converge for all meshes and all problems. This error indicates that apparently, you have found a case where this solver does not converge. For example, it will be thrown if the code encounters NaN values or nonphysical states (e.g. non-positive density) and cannot recover. This error could likely be avoided by improvements to the algorithms or adjustments to your input parameters, but it is not necessarily the result of a blatant mistake on anyone's part. If you believe this error is actually the result of a bug or of some inputs you provided that were clearly wrong, please let <a class="el" href="index.html#Contact">me</a> know.</p>
 <h1><a class="anchor" id="other_exceptions"></a>
 Other Exceptions</h1>
 <ul>
@@ -145,7 +157,7 @@ Segmentation fault</h1>
 <li><code>Segmentation fault (core dumpted)</code></li>
 <li><code>SIGSEGV</code></li>
 </ul>
-<p>Woah, this is embarrassing. Please let <a class="el" href="index.html#Contact">me</a> know and also laugh at me. </p>
+<p>Whoa, this is embarrassing. Please let <a class="el" href="index.html#Contact">me</a> know and also laugh at me. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </div><!-- doc-content -->

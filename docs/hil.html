@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -145,7 +145,7 @@ Types and Literals</h1>
 <div class="line">chars</div>
 </div><!-- fragment --></li>
 </ul>
-<dl class="section warning"><dt>Warning</dt><dd>If you have never programmed in a low-level language before, beware of <a href="https://en.wikipedia.org/wiki/Integer_overflow">integer overflow</a>.</dd></dl>
+<dl class="section warning"><dt>Warning</dt><dd>If you have never programmed in a low-level language before, beware of <a href="https://en.wikipedia.org/wiki/Integer_overflow">integer overflow</a>, especially when converting floating point values to integers.</dd></dl>
 <h1><a class="anchor" id="Operators"></a>
 Operators</h1>
 <p>HIL supports a variety of <em>operators</em>, which in this context means things that take in input values (operands), which can be literals or variable references, and produce an output. Some of these operators are implemented as functions in other languages, but HIL has no concept of a function. So-called unary operators are placed directly before their operand and binary operators are placed between their operands. The operators are listed below with their precedence. Operators with a lower precedence level are evaluated before those with a higher precedence number, and operators with the same precedence level are evaluated left-to-right. <code>()</code> can be used to override the precedence order and evaluate the enclosed expression(s) first.</p>
@@ -189,7 +189,7 @@ Operators</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>print</code>   </td><td class="markdownTableBodyNone">string   </td><td class="markdownTableBodyNone">prints to stdout (without adding a newline) and evaluates to the empty string    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>println</code>   </td><td class="markdownTableBodyNone">string   </td><td class="markdownTableBodyNone">prints to stdout and then prints a newline (like the Python <code>print</code> function) and evaluates to the empty string    </td></tr>
+<td class="markdownTableBodyNone"><code>println</code>   </td><td class="markdownTableBodyNone">string   </td><td class="markdownTableBodyNone"><a class="anchor" id="println"></a>prints to stdout and then prints a newline (like the Python <code>print</code> function) and evaluates to the empty string    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>shell</code>   </td><td class="markdownTableBodyNone">string   </td><td class="markdownTableBodyNone">executes the operand in the system shell and returns the return code (integer)    </td></tr>
 <tr class="markdownTableRowOdd">
@@ -398,7 +398,7 @@ Iteration</h2>
 </div><!-- fragment --><p> Note that this is a while loop, not a for loop, so you still have to manually define and increment your index variable.</p>
 <h2><a class="anchor" id="Functions"></a>
 Functions</h2>
-<p>HIL does not have a concept of a function as it exists in ordinary languages. However, you can accomplish basically the same things with macros, as long as you're okay with making the arguments and return value(s) global variables. For example, here is a "function" to compute an integer logarithm \( \lceil \log_{\mathtt{log\_base}} \mathtt{log\_arg} \rceil \). It's basically a port of <code><a class="el" href="namespacehexed_1_1math.html#aa22c33a8526443106a5fb9755fd74f3e" title="Integer logarithm.">hexed::math::log</a></code>. Of course, you could also implement it as <code>ceil(log log_arg / log log_base)</code>, but where's the fun in that? </p><div class="fragment"><div class="line">int_log = {</div>
+<p>HIL does not have a concept of a function as it exists in ordinary languages. However, you can accomplish basically the same things with macros, as long as you're okay with making the arguments and return value(s) global variables. For example, here is a "function" to compute an integer logarithm \( \lceil \log_{\mathtt{log\_base}} \mathtt{log\_arg} \rceil \). It's basically a port of <code><a class="el" href="namespacehexed_1_1math.html#a0b7847abc220f7e700c21594eceba864" title="Integer logarithm.">hexed::math::log</a></code>. Of course, you could also implement it as <code>ceil(log log_arg / log log_base)</code>, but where's the fun in that? </p><div class="fragment"><div class="line">int_log = {</div>
 <div class="line">    log_return = 0</div>
 <div class="line">    compare = 1</div>
 <div class="line">    while = {compare &lt; log_arg}</div>

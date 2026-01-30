@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -185,17 +185,12 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a90a7dabff8c22667c96462f2588868a6" id="r_a90a7dabff8c22667c96462f2588868a6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Mortal__ptr.html">Mortal_ptr</a>&lt; T &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a90a7dabff8c22667c96462f2588868a6">mine</a></td></tr>
 <tr class="memdesc:a90a7dabff8c22667c96462f2588868a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">The object that <code>this</code> is a proxy for in reciprocal connections.  <br /></td></tr>
 <tr class="separator:a90a7dabff8c22667c96462f2588868a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="inherit_header pub_attribs_classhexed_1_1mutual_1_1Multiple"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_attribs_classhexed_1_1mutual_1_1Multiple')"><img src="closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">hexed::mutual::Multiple&lt; T, U &gt;</a></td></tr>
-<tr class="memitem:aa5200b8750793aa8de8361515eba1552 inherit pub_attribs_classhexed_1_1mutual_1_1Multiple" id="r_aa5200b8750793aa8de8361515eba1552"><td class="memItemLeft" align="right" valign="top">
-std::vector&lt; <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; U, T &gt; * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>_partners</b></td></tr>
-<tr class="separator:aa5200b8750793aa8de8361515eba1552 inherit pub_attribs_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header pro_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; T, U &gt;</a></td></tr>
-<tr class="memitem:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_af879b15e305c3ba3b4541c3a34c2838b"><td class="memItemLeft" align="right" valign="top">
-void&#160;</td><td class="memItemRight" valign="bottom"><b>_connect</b> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; U, T &gt; &amp;that)</td></tr>
-<tr class="memdesc:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">mutually connects <code>this</code> and <code>that</code> by calling both of their <code><a class="el" href="classhexed_1_1mutual_1_1Base.html#a805af8ae927a4e2f4e6eb216936e8dab" title="takes the necessary steps to connect this to that, without worrying about anything on that&#39;s end">_set()</a></code> member functions <br /></td></tr>
+<tr class="memitem:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_af879b15e305c3ba3b4541c3a34c2838b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1mutual_1_1Base.html#af879b15e305c3ba3b4541c3a34c2838b">_connect</a> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; U, T &gt; &amp;that)</td></tr>
+<tr class="memdesc:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">may be overridden by derived classes to provide partners to data of some arbitrary type <code>T</code>  <br /></td></tr>
 <tr class="separator:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_a73cb219a6412d415c02c1d7500f730eb"><td class="memItemLeft" align="right" valign="top">
 void&#160;</td><td class="memItemRight" valign="bottom"><b>_disconnect</b> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; U, T &gt; &amp;that)</td></tr>
@@ -204,12 +199,16 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>_disconnect</b> (<a c
 <tr class="inherit_header pro_static_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_static_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Static Protected Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; T, U &gt;</a></td></tr>
 <tr class="memitem:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base" id="r_a5f740c8da15c53af10fefaf493d4127f"><td class="memItemLeft" align="right" valign="top">
 static U *&#160;</td><td class="memItemRight" valign="bottom"><b>_yours</b> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; U, T &gt; &amp;that)</td></tr>
-<tr class="memdesc:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">Accesses the <code><a class="el" href="classhexed_1_1mutual_1_1Base.html#aeeed0b817fca1e67a790bbb8047a1cf2" title="may be overridden by derrived classes to provide partners to data of some arbitrary type T">_mine()</a></code> of <code>that</code> <br /></td></tr>
+<tr class="memdesc:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">Accesses the <code>_mine()</code> of <code>that</code> <br /></td></tr>
 <tr class="separator:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base" id="r_a751975e7405f0ca09b12b459d052b78c"><td class="memItemLeft" align="right" valign="top">
 static const U *&#160;</td><td class="memItemRight" valign="bottom"><b>_yours</b> (const <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; U, T &gt; &amp;that)</td></tr>
 <tr class="memdesc:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
 <tr class="separator:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_attribs_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_attribs_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Protected Attributes inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; T, U &gt;</a></td></tr>
+<tr class="memitem:ada381fb91093abc2366bd321d7679e90 inherit pro_attribs_classhexed_1_1mutual_1_1Base" id="r_ada381fb91093abc2366bd321d7679e90"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1Lock.html">Lock</a>&#160;</td><td class="memItemRight" valign="bottom"><b>_lock</b></td></tr>
+<tr class="separator:ada381fb91093abc2366bd321d7679e90 inherit pro_attribs_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><div class="compoundTemplParams">template&lt;typename T, typename U&gt;<br />

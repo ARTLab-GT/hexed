@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -131,51 +131,95 @@ Inheritance diagram for hexed::Element:</div>
  <div class="center">
   <img src="classhexed_1_1Element.png" usemap="#hexed::Element_map" alt=""/>
   <map id="hexed::Element_map" name="hexed::Element_map">
-<area href="classhexed_1_1Kernel__element.html" title="Represents an element as the kernels see it." alt="hexed::Kernel_element" shape="rect" coords="0,0,157,24"/>
-<area href="classhexed_1_1Deformed__element.html" title="Represents an Element which is not a perfect axis-aligned square/cube." alt="hexed::Deformed_element" shape="rect" coords="0,112,157,136"/>
+<area href="classhexed_1_1Kernel__element.html" title="Represents an element as the kernels see it." alt="hexed::Kernel_element" shape="rect" coords="0,112,219,136"/>
+<area href="classhexed_1_1Mortal.html" title="represents an object that could die at any moment" alt="hexed::Mortal" shape="rect" coords="229,112,448,136"/>
+<area href="classhexed_1_1mutual_1_1Multiple.html" alt="hexed::mutual::Multiple&lt; void, void &gt;" shape="rect" coords="229,56,448,80"/>
+<area href="classhexed_1_1mutual_1_1Base.html" alt="hexed::mutual::Base&lt; void, void &gt;" shape="rect" coords="229,0,448,24"/>
+<area href="classhexed_1_1Deformed__element.html" title="Represents an Element which is not a perfect axis-aligned square/cube." alt="hexed::Deformed_element" shape="rect" coords="114,224,333,248"/>
   </map>
 </div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:abd975b691563fca7a1501bbde2bb5c61" id="r_abd975b691563fca7a1501bbde2bb5c61"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abd975b691563fca7a1501bbde2bb5c61">Element</a> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a>, std::vector&lt; int &gt; pos={}, double mesh_size=1., int ref_level=0, <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; origin_arg=<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;::Zero(3), int <a class="el" href="#a338af07fa8188620421564621c52a131">aniso_ref_level</a>=0)</td></tr>
-<tr class="separator:abd975b691563fca7a1501bbde2bb5c61"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a704dd0c7f9484363d231f3629075c5af" id="r_a704dd0c7f9484363d231f3629075c5af"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a704dd0c7f9484363d231f3629075c5af">get_is_deformed</a> ()</td></tr>
-<tr class="separator:a704dd0c7f9484363d231f3629075c5af"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abbc78223ead28309e9fd4c5c0cb9fc18" id="r_abbc78223ead28309e9fd4c5c0cb9fc18"><td class="memItemLeft" align="right" valign="top"><a id="abbc78223ead28309e9fd4c5c0cb9fc18" name="abbc78223ead28309e9fd4c5c0cb9fc18"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>Element</b> (const <a class="el" href="classhexed_1_1Element.html">Element</a> &amp;)=delete</td></tr>
-<tr class="memdesc:abbc78223ead28309e9fd4c5c0cb9fc18"><td class="mdescLeft">&#160;</td><td class="mdescRight">Can't copy an <a class="el" href="classhexed_1_1Element.html" title="Stores data associated with one mesh element.">Element</a>. Doing so would have to either duplicate or break vertex connections, both of which seem error prone. <br /></td></tr>
+<tr class="memitem:a2022ce3256674a3b7965bf732c30c0ca" id="r_a2022ce3256674a3b7965bf732c30c0ca"><td class="memItemLeft" align="right" valign="top"><a id="a2022ce3256674a3b7965bf732c30c0ca" name="a2022ce3256674a3b7965bf732c30c0ca"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>Element</b> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a>, <a class="el" href="classhexed_1_1Tree.html">Tree</a> &amp;<a class="el" href="#a85c7df50a79732ebb54741f4a10a17c9">tree</a>, int aniso_ref_level=0)</td></tr>
+<tr class="separator:a2022ce3256674a3b7965bf732c30c0ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abbc78223ead28309e9fd4c5c0cb9fc18" id="r_abbc78223ead28309e9fd4c5c0cb9fc18"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abbc78223ead28309e9fd4c5c0cb9fc18">Element</a> (const <a class="el" href="classhexed_1_1Element.html">Element</a> &amp;)=delete</td></tr>
 <tr class="separator:abbc78223ead28309e9fd4c5c0cb9fc18"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad63371f6d53900609cc5ee53cfdec7ee" id="r_ad63371f6d53900609cc5ee53cfdec7ee"><td class="memItemLeft" align="right" valign="top"><a id="ad63371f6d53900609cc5ee53cfdec7ee" name="ad63371f6d53900609cc5ee53cfdec7ee"></a>
 <a class="el" href="classhexed_1_1Element.html">Element</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="classhexed_1_1Element.html">Element</a> &amp;)=delete</td></tr>
 <tr class="separator:ad63371f6d53900609cc5ee53cfdec7ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a700c85c725dab8f68bb68eb9bfea4a56" id="r_a700c85c725dab8f68bb68eb9bfea4a56"><td class="memItemLeft" align="right" valign="top"><a id="a700c85c725dab8f68bb68eb9bfea4a56" name="a700c85c725dab8f68bb68eb9bfea4a56"></a>
-<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a>&#160;</td><td class="memItemRight" valign="bottom"><b>storage_params</b> ()</td></tr>
-<tr class="separator:a700c85c725dab8f68bb68eb9bfea4a56"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5f022dc71ed14c9d7ddadcd2921341f9" id="r_a5f022dc71ed14c9d7ddadcd2921341f9"><td class="memItemLeft" align="right" valign="top">virtual std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5f022dc71ed14c9d7ddadcd2921341f9">position</a> (const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;, int i_qpoint)</td></tr>
-<tr class="separator:a5f022dc71ed14c9d7ddadcd2921341f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adfb07e0ff1d5febf22115e56d83ad50c" id="r_adfb07e0ff1d5febf22115e56d83ad50c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adfb07e0ff1d5febf22115e56d83ad50c">face_position</a> (const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;, int i_face, int i_face_qpoint)</td></tr>
-<tr class="memdesc:adfb07e0ff1d5febf22115e56d83ad50c"><td class="mdescLeft">&#160;</td><td class="mdescRight">obtains face position based on interior qpoint positions (as defined by <code>position()</code>)  <br /></td></tr>
-<tr class="separator:adfb07e0ff1d5febf22115e56d83ad50c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a704dd0c7f9484363d231f3629075c5af" id="r_a704dd0c7f9484363d231f3629075c5af"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a704dd0c7f9484363d231f3629075c5af">get_is_deformed</a> ()</td></tr>
+<tr class="memdesc:a704dd0c7f9484363d231f3629075c5af"><td class="mdescLeft">&#160;</td><td class="mdescRight">for determining whether a pointer is deformed  <br /></td></tr>
+<tr class="separator:a704dd0c7f9484363d231f3629075c5af"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a34c465c73431685d2c08846a93bf344d" id="r_a34c465c73431685d2c08846a93bf344d"><td class="memItemLeft" align="right" valign="top"><a id="a34c465c73431685d2c08846a93bf344d" name="a34c465c73431685d2c08846a93bf344d"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_extruded</b> ()</td></tr>
+<tr class="separator:a34c465c73431685d2c08846a93bf344d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad3c98dfb3259939fab000d8b0390f051" id="r_ad3c98dfb3259939fab000d8b0390f051"><td class="memItemLeft" align="right" valign="top"><a id="ad3c98dfb3259939fab000d8b0390f051" name="ad3c98dfb3259939fab000d8b0390f051"></a>
+<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a>&#160;</td><td class="memItemRight" valign="bottom"><b>storage_params</b> () const</td></tr>
+<tr class="separator:ad3c98dfb3259939fab000d8b0390f051"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a672563fbb50c57af8c42eeb361d13e36" id="r_a672563fbb50c57af8c42eeb361d13e36"><td class="memItemLeft" align="right" valign="top"><a id="a672563fbb50c57af8c42eeb361d13e36" name="a672563fbb50c57af8c42eeb361d13e36"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>position</b> (const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;) const</td></tr>
+<tr class="separator:a672563fbb50c57af8c42eeb361d13e36"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e942978dbb5661bcf50b3508bba4268" id="r_a4e942978dbb5661bcf50b3508bba4268"><td class="memItemLeft" align="right" valign="top"><a id="a4e942978dbb5661bcf50b3508bba4268" name="a4e942978dbb5661bcf50b3508bba4268"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>face_position</b> (const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;) const</td></tr>
+<tr class="separator:a4e942978dbb5661bcf50b3508bba4268"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2bca94498ded4a463e6ee51c129f16ca" id="r_a2bca94498ded4a463e6ee51c129f16ca"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2bca94498ded4a463e6ee51c129f16ca">set_jacobian</a> (const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;basis)</td></tr>
 <tr class="separator:a2bca94498ded4a463e6ee51c129f16ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a312b1e1fb92f8b5841d7cb0faad8d978" id="r_a312b1e1fb92f8b5841d7cb0faad8d978"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a312b1e1fb92f8b5841d7cb0faad8d978">nominal_size</a> () const override</td></tr>
-<tr class="memdesc:a312b1e1fb92f8b5841d7cb0faad8d978"><td class="mdescLeft">&#160;</td><td class="mdescRight">nominal edge length of the element before any vertex motion  <br /></td></tr>
-<tr class="separator:a312b1e1fb92f8b5841d7cb0faad8d978"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adf0560566190821cf264a665a2dabf69" id="r_adf0560566190821cf264a665a2dabf69"><td class="memItemLeft" align="right" valign="top"><a id="adf0560566190821cf264a665a2dabf69" name="adf0560566190821cf264a665a2dabf69"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>nominal_size</b> () const</td></tr>
+<tr class="separator:adf0560566190821cf264a665a2dabf69"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a226664dbba03287a9ca45069c2eeebe6" id="r_a226664dbba03287a9ca45069c2eeebe6"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a226664dbba03287a9ca45069c2eeebe6">nominal_shape</a> (int i_dim) const override</td></tr>
+<tr class="memdesc:a226664dbba03287a9ca45069c2eeebe6"><td class="mdescLeft">&#160;</td><td class="mdescRight">nominal edge length of the element along the <code>i_dim</code>th dimension before any vertex motion  <br /></td></tr>
+<tr class="separator:a226664dbba03287a9ca45069c2eeebe6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8abd081555290bbe6c0a9e284f877eab" id="r_a8abd081555290bbe6c0a9e284f877eab"><td class="memItemLeft" align="right" valign="top"><a id="a8abd081555290bbe6c0a9e284f877eab" name="a8abd081555290bbe6c0a9e284f877eab"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>nominal_volume</b> () const</td></tr>
+<tr class="separator:a8abd081555290bbe6c0a9e284f877eab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aab89adb538119bcc940fadfde105d3ec" id="r_aab89adb538119bcc940fadfde105d3ec"><td class="memItemLeft" align="right" valign="top"><a id="aab89adb538119bcc940fadfde105d3ec" name="aab89adb538119bcc940fadfde105d3ec"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>refinement_level</b> ()</td></tr>
-<tr class="memdesc:aab89adb538119bcc940fadfde105d3ec"><td class="mdescLeft">&#160;</td><td class="mdescRight">indicates how many times this element has been isotropically refined <br /></td></tr>
 <tr class="separator:aab89adb538119bcc940fadfde105d3ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a338af07fa8188620421564621c52a131" id="r_a338af07fa8188620421564621c52a131"><td class="memItemLeft" align="right" valign="top"><a id="a338af07fa8188620421564621c52a131" name="a338af07fa8188620421564621c52a131"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>aniso_ref_level</b> ()</td></tr>
-<tr class="memdesc:a338af07fa8188620421564621c52a131"><td class="mdescLeft">&#160;</td><td class="mdescRight">indicates how many times this element has been anisotropically refined <br /></td></tr>
 <tr class="separator:a338af07fa8188620421564621c52a131"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3d01df7238e5f2dc12fe8d441565df89" id="r_a3d01df7238e5f2dc12fe8d441565df89"><td class="memItemLeft" align="right" valign="top"><a id="a3d01df7238e5f2dc12fe8d441565df89" name="a3d01df7238e5f2dc12fe8d441565df89"></a>
-std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>nominal_position</b> ()</td></tr>
-<tr class="separator:a3d01df7238e5f2dc12fe8d441565df89"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3df9e0babff9a5bdd334179c07028343" id="r_a3df9e0babff9a5bdd334179c07028343"><td class="memItemLeft" align="right" valign="top"><a id="a3df9e0babff9a5bdd334179c07028343" name="a3df9e0babff9a5bdd334179c07028343"></a>
+int &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>desired_refinement</b> (int i_dim)</td></tr>
+<tr class="separator:a3df9e0babff9a5bdd334179c07028343"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a531382b419095968fbe9495b16c5328e" id="r_a531382b419095968fbe9495b16c5328e"><td class="memItemLeft" align="right" valign="top"><a id="a531382b419095968fbe9495b16c5328e" name="a531382b419095968fbe9495b16c5328e"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>desired_refinement</b> (int i_dim) const</td></tr>
+<tr class="separator:a531382b419095968fbe9495b16c5328e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a96fa625571e275641d5e0886abb0681d" id="r_a96fa625571e275641d5e0886abb0681d"><td class="memItemLeft" align="right" valign="top"><a id="a96fa625571e275641d5e0886abb0681d" name="a96fa625571e275641d5e0886abb0681d"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>refinement_floor</b> ()</td></tr>
+<tr class="separator:a96fa625571e275641d5e0886abb0681d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e82d43451a8215081e8bef36bc385e7" id="r_a6e82d43451a8215081e8bef36bc385e7"><td class="memItemLeft" align="right" valign="top"><a id="a6e82d43451a8215081e8bef36bc385e7" name="a6e82d43451a8215081e8bef36bc385e7"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>nominal_position</b> ()</td></tr>
+<tr class="separator:a6e82d43451a8215081e8bef36bc385e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4bd6ddecd06a9c788d35f9c1d67a3129" id="r_a4bd6ddecd06a9c788d35f9c1d67a3129"><td class="memItemLeft" align="right" valign="top"><a id="a4bd6ddecd06a9c788d35f9c1d67a3129" name="a4bd6ddecd06a9c788d35f9c1d67a3129"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>wall_distance</b> () const</td></tr>
+<tr class="memdesc:a4bd6ddecd06a9c788d35f9c1d67a3129"><td class="mdescLeft">&#160;</td><td class="mdescRight">The distance from the farthest vertex to the wall. <br /></td></tr>
+<tr class="separator:a4bd6ddecd06a9c788d35f9c1d67a3129"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae68ee472678b0fe4a3c0268080a1cb3a" id="r_ae68ee472678b0fe4a3c0268080a1cb3a"><td class="memItemLeft" align="right" valign="top"><a id="ae68ee472678b0fe4a3c0268080a1cb3a" name="ae68ee472678b0fe4a3c0268080a1cb3a"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>wall_dimension</b> ()</td></tr>
+<tr class="separator:ae68ee472678b0fe4a3c0268080a1cb3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abe8a3ee4e45ac381a4e2cb6a350700c1" id="r_abe8a3ee4e45ac381a4e2cb6a350700c1"><td class="memItemLeft" align="right" valign="top"><a id="abe8a3ee4e45ac381a4e2cb6a350700c1" name="abe8a3ee4e45ac381a4e2cb6a350700c1"></a>
+int&#160;</td><td class="memItemRight" valign="bottom"><b>boundary_face</b> ()</td></tr>
+<tr class="separator:abe8a3ee4e45ac381a4e2cb6a350700c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1fe9ec08e66e7ec064c824500370e21c" id="r_a1fe9ec08e66e7ec064c824500370e21c"><td class="memItemLeft" align="right" valign="top"><a id="a1fe9ec08e66e7ec064c824500370e21c" name="a1fe9ec08e66e7ec064c824500370e21c"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>has_wall</b> ()</td></tr>
+<tr class="separator:a1fe9ec08e66e7ec064c824500370e21c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2fce1ac0539dd1916e205eaccbde8b8c" id="r_a2fce1ac0539dd1916e205eaccbde8b8c"><td class="memItemLeft" align="right" valign="top"><a id="a2fce1ac0539dd1916e205eaccbde8b8c" name="a2fce1ac0539dd1916e205eaccbde8b8c"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_sharp</b> (int i_dim)</td></tr>
+<tr class="separator:a2fce1ac0539dd1916e205eaccbde8b8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaad61e364f96260c422169576549052c" id="r_aaad61e364f96260c422169576549052c"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaad61e364f96260c422169576549052c">stage</a> (int i_stage)</td></tr>
-<tr class="memdesc:aaad61e364f96260c422169576549052c"><td class="mdescLeft">&#160;</td><td class="mdescRight">pointer to state data for <code>i_stage</code>th Runge-Kutta stage.  <br /></td></tr>
+<tr class="memdesc:aaad61e364f96260c422169576549052c"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="classhexed_1_1Pointer.html" title="Abstract base class for implementing pointer objects.">Pointer</a> to state data for <code>i_stage</code>th time integration stage.  <br /></td></tr>
 <tr class="separator:aaad61e364f96260c422169576549052c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0007289c33094aca8738a26f9b498566" id="r_a0007289c33094aca8738a26f9b498566"><td class="memItemLeft" align="right" valign="top"><a id="a0007289c33094aca8738a26f9b498566" name="a0007289c33094aca8738a26f9b498566"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>flow_state</b> ()</td></tr>
+<tr class="memdesc:a0007289c33094aca8738a26f9b498566"><td class="mdescLeft">&#160;</td><td class="mdescRight">layout: [i_var][i_qpoint] <br /></td></tr>
+<tr class="separator:a0007289c33094aca8738a26f9b498566"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9dee56c59843896b318127d0fe485297" id="r_a9dee56c59843896b318127d0fe485297"><td class="memItemLeft" align="right" valign="top"><a id="a9dee56c59843896b318127d0fe485297" name="a9dee56c59843896b318127d0fe485297"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>numeric_state</b> ()</td></tr>
+<tr class="memdesc:a9dee56c59843896b318127d0fe485297"><td class="mdescLeft">&#160;</td><td class="mdescRight">layout: [i_var][i_qpoint] <br /></td></tr>
+<tr class="separator:a9dee56c59843896b318127d0fe485297"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae7aaad64775d0bee5369ab559c8f9bd7" id="r_ae7aaad64775d0bee5369ab559c8f9bd7"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae7aaad64775d0bee5369ab559c8f9bd7">advection_state</a> ()</td></tr>
 <tr class="separator:ae7aaad64775d0bee5369ab559c8f9bd7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afddd6f6f13f2c22afe1ed53c1facdd3c" id="r_afddd6f6f13f2c22afe1ed53c1facdd3c"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afddd6f6f13f2c22afe1ed53c1facdd3c">time_step_scale</a> () override</td></tr>
@@ -189,35 +233,24 @@ double *&#160;</td><td class="memItemRight" valign="bottom"><b>bulk_av_coef</b> 
 double *&#160;</td><td class="memItemRight" valign="bottom"><b>laplacian_av_coef</b> ()</td></tr>
 <tr class="memdesc:a4337befabd8973a2a45df2c5f2cd9cc3"><td class="mdescLeft">&#160;</td><td class="mdescRight">layout: [i_qpoint] <br /></td></tr>
 <tr class="separator:a4337befabd8973a2a45df2c5f2cd9cc3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2b3c0dd95dd0c9d5f5ffd87a506e7058" id="r_a2b3c0dd95dd0c9d5f5ffd87a506e7058"><td class="memItemLeft" align="right" valign="top"><a id="a2b3c0dd95dd0c9d5f5ffd87a506e7058" name="a2b3c0dd95dd0c9d5f5ffd87a506e7058"></a>
-double *&#160;</td><td class="memItemRight" valign="bottom"><b>art_visc_forcing</b> ()</td></tr>
-<tr class="memdesc:a2b3c0dd95dd0c9d5f5ffd87a506e7058"><td class="mdescLeft">&#160;</td><td class="mdescRight">layout: [i_forcing][i_qpoint] <br /></td></tr>
+<tr class="memitem:a2b3c0dd95dd0c9d5f5ffd87a506e7058" id="r_a2b3c0dd95dd0c9d5f5ffd87a506e7058"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2b3c0dd95dd0c9d5f5ffd87a506e7058">art_visc_forcing</a> ()</td></tr>
 <tr class="separator:a2b3c0dd95dd0c9d5f5ffd87a506e7058"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0c89b4c389ed036fbfe2cbed3214b24e" id="r_a0c89b4c389ed036fbfe2cbed3214b24e"><td class="memItemLeft" align="right" valign="top">virtual double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0c89b4c389ed036fbfe2cbed3214b24e">node_adjustments</a> ()</td></tr>
-<tr class="memdesc:a0c89b4c389ed036fbfe2cbed3214b24e"><td class="mdescLeft">&#160;</td><td class="mdescRight">overriden by <code><a class="el" href="classhexed_1_1Deformed__element.html" title="Represents an Element which is not a perfect axis-aligned square/cube.">Deformed_element</a></code>  <br /></td></tr>
-<tr class="separator:a0c89b4c389ed036fbfe2cbed3214b24e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abd1006064ce46043bf49c4a5235d34ce" id="r_abd1006064ce46043bf49c4a5235d34ce"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abd1006064ce46043bf49c4a5235d34ce">mask</a> () const override</td></tr>
 <tr class="memdesc:abd1006064ce46043bf49c4a5235d34ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">returns whether the element is included in the masked mesh.  <br /></td></tr>
 <tr class="separator:abd1006064ce46043bf49c4a5235d34ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4d506b3daa76cab2d36e48d69bde081e" id="r_a4d506b3daa76cab2d36e48d69bde081e"><td class="memItemLeft" align="right" valign="top">virtual double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4d506b3daa76cab2d36e48d69bde081e">jacobian</a> (int i_dim, int j_dim, int i_qpoint)</td></tr>
-<tr class="memdesc:a4d506b3daa76cab2d36e48d69bde081e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute the Jacobian matrix.  <br /></td></tr>
-<tr class="separator:a4d506b3daa76cab2d36e48d69bde081e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8ffef0e35aef8c15106a209662e82b98" id="r_a8ffef0e35aef8c15106a209662e82b98"><td class="memItemLeft" align="right" valign="top">virtual double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8ffef0e35aef8c15106a209662e82b98">jacobian_determinant</a> (int i_qpoint)</td></tr>
-<tr class="memdesc:a8ffef0e35aef8c15106a209662e82b98"><td class="mdescLeft">&#160;</td><td class="mdescRight">determinant of <code>jacobian</code>  <br /></td></tr>
-<tr class="separator:a8ffef0e35aef8c15106a209662e82b98"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a47686ad55be4704d84a09b23090bdeb6" id="r_a47686ad55be4704d84a09b23090bdeb6"><td class="memItemLeft" align="right" valign="top"><a id="a47686ad55be4704d84a09b23090bdeb6" name="a47686ad55be4704d84a09b23090bdeb6"></a>
-<a class="el" href="classhexed_1_1Vertex.html">Vertex</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>vertex</b> (int i_vertex)</td></tr>
-<tr class="separator:a47686ad55be4704d84a09b23090bdeb6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aaf0965de6edb5ed63524851554108d1f" id="r_aaf0965de6edb5ed63524851554108d1f"><td class="memTemplParams" colspan="2"><a id="aaf0965de6edb5ed63524851554108d1f" name="aaf0965de6edb5ed63524851554108d1f"></a>
-template&lt;int i_dim&gt; </td></tr>
-<tr class="memitem:aaf0965de6edb5ed63524851554108d1f"><td class="memTemplItemLeft" align="right" valign="top">double &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>vertex_position</b> (int i_vertex)</td></tr>
-<tr class="separator:aaf0965de6edb5ed63524851554108d1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad77722b5510f18ee1f0b6ecb5731f3a8" id="r_ad77722b5510f18ee1f0b6ecb5731f3a8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad77722b5510f18ee1f0b6ecb5731f3a8">push_shareable_value</a> (std::function&lt; double(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;, int i_vertex)&gt;)</td></tr>
-<tr class="memdesc:ad77722b5510f18ee1f0b6ecb5731f3a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">functions to communicate with nodal neighbors  <br /></td></tr>
-<tr class="separator:ad77722b5510f18ee1f0b6ecb5731f3a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae30c584df4c77dca7d8ea526432933c3" id="r_ae30c584df4c77dca7d8ea526432933c3"><td class="memItemLeft" align="right" valign="top"><a id="ae30c584df4c77dca7d8ea526432933c3" name="ae30c584df4c77dca7d8ea526432933c3"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>fetch_shareable_value</b> (std::function&lt; double &amp;(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;, int i_vertex)&gt; access_fun, std::function&lt; double(<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;)&gt; reduction=Vertex::vector_max)</td></tr>
-<tr class="separator:ae30c584df4c77dca7d8ea526432933c3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abfcd81aa970c0c1407299ce51ec8e8bc" id="r_abfcd81aa970c0c1407299ce51ec8e8bc"><td class="memItemLeft" align="right" valign="top"><a id="abfcd81aa970c0c1407299ce51ec8e8bc" name="abfcd81aa970c0c1407299ce51ec8e8bc"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>spectral_uncert</b> ()</td></tr>
+<tr class="memdesc:abfcd81aa970c0c1407299ce51ec8e8bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">layout: [i_dim] <br /></td></tr>
+<tr class="separator:abfcd81aa970c0c1407299ce51ec8e8bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a500fe04a4638307253a23aa2101e17b7" id="r_a500fe04a4638307253a23aa2101e17b7"><td class="memItemLeft" align="right" valign="top">virtual double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a500fe04a4638307253a23aa2101e17b7">jacobian</a> (int i_dim, int j_dim, int i_qpoint) const</td></tr>
+<tr class="memdesc:a500fe04a4638307253a23aa2101e17b7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Compute the Jacobian matrix.  <br /></td></tr>
+<tr class="separator:a500fe04a4638307253a23aa2101e17b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad588b2babe964eef642eeaa4a40b9b76" id="r_ad588b2babe964eef642eeaa4a40b9b76"><td class="memItemLeft" align="right" valign="top">virtual double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad588b2babe964eef642eeaa4a40b9b76">jacobian_determinant</a> (int i_qpoint) const</td></tr>
+<tr class="memdesc:ad588b2babe964eef642eeaa4a40b9b76"><td class="mdescLeft">&#160;</td><td class="mdescRight">determinant of <code>jacobian</code>  <br /></td></tr>
+<tr class="separator:ad588b2babe964eef642eeaa4a40b9b76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa533d04dea4246c534f3f29c0d503d64" id="r_aa533d04dea4246c534f3f29c0d503d64"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa533d04dea4246c534f3f29c0d503d64">mean_shape</a> (const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;) const</td></tr>
+<tr class="memdesc:aa533d04dea4246c534f3f29c0d503d64"><td class="mdescLeft">&#160;</td><td class="mdescRight">Effective element dimensions accounting for deformation.  <br /></td></tr>
+<tr class="separator:aa533d04dea4246c534f3f29c0d503d64"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab96b26d56f8fd7b83e04c45b05d99552" id="r_ab96b26d56f8fd7b83e04c45b05d99552"><td class="memItemLeft" align="right" valign="top">double &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab96b26d56f8fd7b83e04c45b05d99552">vertex_time_step_scale</a> (int i_vertex) override</td></tr>
 <tr class="memdesc:ab96b26d56f8fd7b83e04c45b05d99552"><td class="mdescLeft">&#160;</td><td class="mdescRight">Time step scale at the vertices. TSS in the interior is set by interpolating this.  <br /></td></tr>
 <tr class="separator:ab96b26d56f8fd7b83e04c45b05d99552"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -227,28 +260,69 @@ double &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>vertex_elwise
 <tr class="memitem:a5091a582b039994806f3b0ee989c69ac" id="r_a5091a582b039994806f3b0ee989c69ac"><td class="memItemLeft" align="right" valign="top"><a id="a5091a582b039994806f3b0ee989c69ac" name="a5091a582b039994806f3b0ee989c69ac"></a>
 double &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>vertex_fix_admis_coef</b> (int i_vertex)</td></tr>
 <tr class="separator:a5091a582b039994806f3b0ee989c69ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aee0b35834c2a1a3fc30081c9e373a3a8" id="r_aee0b35834c2a1a3fc30081c9e373a3a8"><td class="memItemLeft" align="right" valign="top"><a id="aee0b35834c2a1a3fc30081c9e373a3a8" name="aee0b35834c2a1a3fc30081c9e373a3a8"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>set_needs_smooth</b> (bool)</td></tr>
-<tr class="memdesc:aee0b35834c2a1a3fc30081c9e373a3a8"><td class="mdescLeft">&#160;</td><td class="mdescRight">sets the <code><a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.html#afcf2eded92c39b2fb42127dad71dbce7" title="whether this element needs this vertex to be smoothed">Vertex::Transferable_ptr::needs_smooth</a></code> of the vertices <br /></td></tr>
-<tr class="separator:aee0b35834c2a1a3fc30081c9e373a3a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6f34297643048c5acfc9429f8461df84" id="r_a6f34297643048c5acfc9429f8461df84"><td class="memItemLeft" align="right" valign="top"><a id="a6f34297643048c5acfc9429f8461df84" name="a6f34297643048c5acfc9429f8461df84"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>set_face</b> (int i_face, double *data)</td></tr>
 <tr class="separator:a6f34297643048c5acfc9429f8461df84"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a174c92b856800bc36b85ecb52d9cb2cd" id="r_a174c92b856800bc36b85ecb52d9cb2cd"><td class="memItemLeft" align="right" valign="top"><a id="a174c92b856800bc36b85ecb52d9cb2cd" name="a174c92b856800bc36b85ecb52d9cb2cd"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_connected</b> (int i_face)</td></tr>
 <tr class="separator:a174c92b856800bc36b85ecb52d9cb2cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad8fb115cd2db174092f6bb85e008aa9" id="r_aad8fb115cd2db174092f6bb85e008aa9"><td class="memItemLeft" align="right" valign="top"><a id="aad8fb115cd2db174092f6bb85e008aa9" name="aad8fb115cd2db174092f6bb85e008aa9"></a>
+<a class="el" href="classhexed_1_1Face.html">Face</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>face</b> (int i_face)</td></tr>
+<tr class="separator:aad8fb115cd2db174092f6bb85e008aa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1e5d5cb40cdbb2988b37008f1032c868" id="r_a1e5d5cb40cdbb2988b37008f1032c868"><td class="memItemLeft" align="right" valign="top"><a id="a1e5d5cb40cdbb2988b37008f1032c868" name="a1e5d5cb40cdbb2988b37008f1032c868"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>create_shape</b> (<a class="el" href="classhexed_1_1next_1_1Mesh__blocks.html">next::Mesh_blocks</a> &amp;, int boundary_face=<a class="el" href="classhexed_1_1next_1_1Mesh__blocks.html#a0012e64eb0d40625ae179582052fa7f3">next::Mesh_blocks::no_face</a>)</td></tr>
+<tr class="separator:a1e5d5cb40cdbb2988b37008f1032c868"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a60479655a71f476fba8be19c12b34af0" id="r_a60479655a71f476fba8be19c12b34af0"><td class="memItemLeft" align="right" valign="top"><a id="a60479655a71f476fba8be19c12b34af0" name="a60479655a71f476fba8be19c12b34af0"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>create_fake</b> (<a class="el" href="classhexed_1_1next_1_1Mesh__blocks.html">next::Mesh_blocks</a> &amp;)</td></tr>
+<tr class="separator:a60479655a71f476fba8be19c12b34af0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac4029c86f8269353ebb3ff11bfab35bc" id="r_ac4029c86f8269353ebb3ff11bfab35bc"><td class="memItemLeft" align="right" valign="top"><a id="ac4029c86f8269353ebb3ff11bfab35bc" name="ac4029c86f8269353ebb3ff11bfab35bc"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>shared_fake</b> () const</td></tr>
+<tr class="separator:ac4029c86f8269353ebb3ff11bfab35bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af53d9959157f5395769efa9a803a3c5b" id="r_af53d9959157f5395769efa9a803a3c5b"><td class="memItemLeft" align="right" valign="top"><a id="af53d9959157f5395769efa9a803a3c5b" name="af53d9959157f5395769efa9a803a3c5b"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>split_shape</b> (<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;split_from, double at, int from_face)</td></tr>
+<tr class="separator:af53d9959157f5395769efa9a803a3c5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afaece2fcaccbdd1f2c743804d7b77463" id="r_afaece2fcaccbdd1f2c743804d7b77463"><td class="memItemLeft" align="right" valign="top"><a id="afaece2fcaccbdd1f2c743804d7b77463" name="afaece2fcaccbdd1f2c743804d7b77463"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>glue_shape</b> (std::shared_ptr&lt; <a class="el" href="classhexed_1_1next_1_1Element__shape.html">next::Element_shape</a> &gt;, std::array&lt; std::vector&lt; double &gt;, 2 &gt; corners)</td></tr>
+<tr class="separator:afaece2fcaccbdd1f2c743804d7b77463"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9a663fe109b2d882ac99675962ca1315" id="r_a9a663fe109b2d882ac99675962ca1315"><td class="memItemLeft" align="right" valign="top"><a id="a9a663fe109b2d882ac99675962ca1315" name="a9a663fe109b2d882ac99675962ca1315"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>glue_shape</b> (<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;glue_to, std::array&lt; std::vector&lt; double &gt;, 2 &gt; corners)</td></tr>
+<tr class="separator:a9a663fe109b2d882ac99675962ca1315"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab210b9edb2023f46d71ac75984a93735" id="r_ab210b9edb2023f46d71ac75984a93735"><td class="memItemLeft" align="right" valign="top"><a id="ab210b9edb2023f46d71ac75984a93735" name="ab210b9edb2023f46d71ac75984a93735"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>destroy_shape</b> ()</td></tr>
+<tr class="separator:ab210b9edb2023f46d71ac75984a93735"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3928338682e26f36e4af06c98b076f9f" id="r_a3928338682e26f36e4af06c98b076f9f"><td class="memItemLeft" align="right" valign="top"><a id="a3928338682e26f36e4af06c98b076f9f" name="a3928338682e26f36e4af06c98b076f9f"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>destroy_fake</b> ()</td></tr>
+<tr class="separator:a3928338682e26f36e4af06c98b076f9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a75834d76a775fab477ecdbf9f8c88aca" id="r_a75834d76a775fab477ecdbf9f8c88aca"><td class="memItemLeft" align="right" valign="top"><a id="a75834d76a775fab477ecdbf9f8c88aca" name="a75834d76a775fab477ecdbf9f8c88aca"></a>
+<a class="el" href="classhexed_1_1next_1_1Element__shape.html">next::Element_shape</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>shape</b> ()</td></tr>
+<tr class="separator:a75834d76a775fab477ecdbf9f8c88aca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4d26df5ce29b2917c5d7375490496541" id="r_a4d26df5ce29b2917c5d7375490496541"><td class="memItemLeft" align="right" valign="top"><a id="a4d26df5ce29b2917c5d7375490496541" name="a4d26df5ce29b2917c5d7375490496541"></a>
+const <a class="el" href="classhexed_1_1next_1_1Element__shape.html">next::Element_shape</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>shape</b> () const</td></tr>
+<tr class="separator:a4d26df5ce29b2917c5d7375490496541"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aadfd75d2244e22f6e911fa4f560f7da9" id="r_aadfd75d2244e22f6e911fa4f560f7da9"><td class="memItemLeft" align="right" valign="top"><a id="aadfd75d2244e22f6e911fa4f560f7da9" name="aadfd75d2244e22f6e911fa4f560f7da9"></a>
+<a class="el" href="classhexed_1_1next_1_1Element__shape.html">next::Element_shape</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>fake_shape</b> ()</td></tr>
+<tr class="separator:aadfd75d2244e22f6e911fa4f560f7da9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5c7bede25fdc6c520680ba93d4c53a97" id="r_a5c7bede25fdc6c520680ba93d4c53a97"><td class="memItemLeft" align="right" valign="top"><a id="a5c7bede25fdc6c520680ba93d4c53a97" name="a5c7bede25fdc6c520680ba93d4c53a97"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>has_shape</b> () const</td></tr>
+<tr class="separator:a5c7bede25fdc6c520680ba93d4c53a97"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab9dc3eb99f727aebc9c138cb5f4ff10b" id="r_ab9dc3eb99f727aebc9c138cb5f4ff10b"><td class="memItemLeft" align="right" valign="top"><a id="ab9dc3eb99f727aebc9c138cb5f4ff10b" name="ab9dc3eb99f727aebc9c138cb5f4ff10b"></a>
+<a class="el" href="classhexed_1_1next_1_1Element__shape.html">next::Element_shape</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>active_shape</b> ()</td></tr>
+<tr class="separator:ab9dc3eb99f727aebc9c138cb5f4ff10b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab445df160bc040cafbd9ff11fb032e63" id="r_ab445df160bc040cafbd9ff11fb032e63"><td class="memItemLeft" align="right" valign="top"><a id="ab445df160bc040cafbd9ff11fb032e63" name="ab445df160bc040cafbd9ff11fb032e63"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>remember_pos</b> ()</td></tr>
+<tr class="separator:ab445df160bc040cafbd9ff11fb032e63"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4703fb0a83bc0033e3a4e2ba1cf6c402" id="r_a4703fb0a83bc0033e3a4e2ba1cf6c402"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4703fb0a83bc0033e3a4e2ba1cf6c402">state</a> () override</td></tr>
 <tr class="memdesc:a4703fb0a83bc0033e3a4e2ba1cf6c402"><td class="mdescLeft">&#160;</td><td class="mdescRight">pointer to the data where the state variables are stored  <br /></td></tr>
 <tr class="separator:a4703fb0a83bc0033e3a4e2ba1cf6c402"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac936915e86baee7b72d8bff7a4d8236b" id="r_ac936915e86baee7b72d8bff7a4d8236b"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac936915e86baee7b72d8bff7a4d8236b">residual_cache</a> () override</td></tr>
 <tr class="separator:ac936915e86baee7b72d8bff7a4d8236b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af7fb337ca70f778f184e3620cbaafb8f" id="r_af7fb337ca70f778f184e3620cbaafb8f"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af7fb337ca70f778f184e3620cbaafb8f">face</a> (int i_face, bool is_ldg) override</td></tr>
+<tr class="memdesc:af7fb337ca70f778f184e3620cbaafb8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">where the extrapolated face data is stored  <br /></td></tr>
 <tr class="separator:af7fb337ca70f778f184e3620cbaafb8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4cca75ed994210a44ef2185923e7805a" id="r_a4cca75ed994210a44ef2185923e7805a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4cca75ed994210a44ef2185923e7805a">deformed</a> () const override</td></tr>
-<tr class="memdesc:a4cca75ed994210a44ef2185923e7805a"><td class="mdescLeft">&#160;</td><td class="mdescRight">where the extrapolated face data is stored  <br /></td></tr>
+<tr class="memdesc:a4cca75ed994210a44ef2185923e7805a"><td class="mdescLeft">&#160;</td><td class="mdescRight">whether this element is deformed  <br /></td></tr>
 <tr class="separator:a4cca75ed994210a44ef2185923e7805a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a62482abb8c96b8404a8f625fdcb295b1" id="r_a62482abb8c96b8404a8f625fdcb295b1"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a62482abb8c96b8404a8f625fdcb295b1">reference_level_normals</a> () override</td></tr>
-<tr class="memdesc:a62482abb8c96b8404a8f625fdcb295b1"><td class="mdescLeft">&#160;</td><td class="mdescRight">whether this element is deformed  <br /></td></tr>
 <tr class="separator:a62482abb8c96b8404a8f625fdcb295b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acdcee35058975984f4698c3f751d86bb" id="r_acdcee35058975984f4698c3f751d86bb"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acdcee35058975984f4698c3f751d86bb">jacobian_determinant</a> () override</td></tr>
 <tr class="memdesc:acdcee35058975984f4698c3f751d86bb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Jacobian determinant of reference -&gt; physical coordinate transform.  <br /></td></tr>
@@ -256,9 +330,42 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_connected</b> (int
 <tr class="memitem:a3be3f89873d0fec0e837030cd7afa2e9" id="r_a3be3f89873d0fec0e837030cd7afa2e9"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3be3f89873d0fec0e837030cd7afa2e9">kernel_face_normal</a> (int i_face) override</td></tr>
 <tr class="memdesc:a3be3f89873d0fec0e837030cd7afa2e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">where the extrapolated face area-weighted normal vectors are stored  <br /></td></tr>
 <tr class="separator:a3be3f89873d0fec0e837030cd7afa2e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afcbd9ad81dcbb9e162629cb2bb12a48b" id="r_afcbd9ad81dcbb9e162629cb2bb12a48b"><td class="memItemLeft" align="right" valign="top">double *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afcbd9ad81dcbb9e162629cb2bb12a48b">debug_variables</a> () override</td></tr>
+<tr class="memdesc:afcbd9ad81dcbb9e162629cb2bb12a48b"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="classhexed_1_1Pointer.html" title="Abstract base class for implementing pointer objects.">Pointer</a> to any debug variables that can be populated by the kernels to visualize arbitrary quantities.  <br /></td></tr>
+<tr class="separator:afcbd9ad81dcbb9e162629cb2bb12a48b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5aae41f1a58d3ec85f9a15f3a7cb0c86" id="r_a5aae41f1a58d3ec85f9a15f3a7cb0c86"><td class="memItemLeft" align="right" valign="top">double &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5aae41f1a58d3ec85f9a15f3a7cb0c86">uncert</a> () override</td></tr>
 <tr class="memdesc:a5aae41f1a58d3ec85f9a15f3a7cb0c86"><td class="mdescLeft">&#160;</td><td class="mdescRight">place to store some uncertainty metric  <br /></td></tr>
 <tr class="separator:a5aae41f1a58d3ec85f9a15f3a7cb0c86"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_methods_classhexed_1_1mutual_1_1Multiple"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1mutual_1_1Multiple')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">hexed::mutual::Multiple&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:ac5709169f0c82d616972cdfc1e9ea726 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_ac5709169f0c82d616972cdfc1e9ea726"><td class="memItemLeft" align="right" valign="top">
+&#160;</td><td class="memItemRight" valign="bottom"><b>Multiple</b> (const <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;)=delete</td></tr>
+<tr class="separator:ac5709169f0c82d616972cdfc1e9ea726 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae7b87ca4d9447502837fe6e84932e905 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_ae7b87ca4d9447502837fe6e84932e905"><td class="memItemLeft" align="right" valign="top">
+&#160;</td><td class="memItemRight" valign="bottom"><b>Multiple</b> (<a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;&amp;that)</td></tr>
+<tr class="memdesc:ae7b87ca4d9447502837fe6e84932e905 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="mdescLeft">&#160;</td><td class="mdescRight">steals all of <code>that</code>'s partners, leaving <code>that</code> unconnected <br /></td></tr>
+<tr class="separator:ae7b87ca4d9447502837fe6e84932e905 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8e5b792c6fb2683c8a61dae4b6cc5789 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_a8e5b792c6fb2683c8a61dae4b6cc5789"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;)=delete</td></tr>
+<tr class="separator:a8e5b792c6fb2683c8a61dae4b6cc5789 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a74659e42b69d3f5368acbb6a61bb89c3 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_a74659e42b69d3f5368acbb6a61bb89c3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1mutual_1_1Multiple.html#a74659e42b69d3f5368acbb6a61bb89c3">operator=</a> (<a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;&amp;that)</td></tr>
+<tr class="memdesc:a74659e42b69d3f5368acbb6a61bb89c3 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="mdescLeft">&#160;</td><td class="mdescRight">steals all of <code>that</code>'s partners, leaving <code>that</code> unconnected  <br /></td></tr>
+<tr class="separator:a74659e42b69d3f5368acbb6a61bb89c3 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a230649ea636b1b0752747c3221612530 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_a230649ea636b1b0752747c3221612530"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>partners</b> ()</td></tr>
+<tr class="memdesc:a230649ea636b1b0752747c3221612530 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="mdescLeft">&#160;</td><td class="mdescRight">provides access to the list of partners <br /></td></tr>
+<tr class="separator:a230649ea636b1b0752747c3221612530 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29572e0aa91e2dc245516805ba8196e4 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_a29572e0aa91e2dc245516805ba8196e4"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; const <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>partners</b> () const</td></tr>
+<tr class="memdesc:a29572e0aa91e2dc245516805ba8196e4 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="mdescLeft">&#160;</td><td class="mdescRight">provides access to the list of partners <br /></td></tr>
+<tr class="separator:a29572e0aa91e2dc245516805ba8196e4 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:aeeed0b817fca1e67a790bbb8047a1cf2 inherit pub_methods_classhexed_1_1mutual_1_1Base" id="r_aeeed0b817fca1e67a790bbb8047a1cf2"><td class="memItemLeft" align="right" valign="top">
+virtual void *&#160;</td><td class="memItemRight" valign="bottom"><b>_mine</b> ()</td></tr>
+<tr class="separator:aeeed0b817fca1e67a790bbb8047a1cf2 inherit pub_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pub_methods_classhexed_1_1mutual_1_1Base" id="r_a8ea607c1db97e907d1eb3a13bc4c83a2"><td class="memItemLeft" align="right" valign="top">
+virtual const void *&#160;</td><td class="memItemRight" valign="bottom"><b>_mine</b> () const</td></tr>
+<tr class="memdesc:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pub_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pub_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -269,10 +376,10 @@ std::array&lt; int, 6 &gt;&#160;</td><td class="memItemRight" valign="bottom"><b
 <tr class="memitem:ad9e510917cc62bf7956c51a251d819fc" id="r_ad9e510917cc62bf7956c51a251d819fc"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad9e510917cc62bf7956c51a251d819fc">uncertainty</a> = 0</td></tr>
 <tr class="memdesc:ad9e510917cc62bf7956c51a251d819fc"><td class="mdescLeft">&#160;</td><td class="mdescRight"><a class="el" href="classhexed_1_1Pointer.html" title="Abstract base class for implementing pointer objects.">Pointer</a> to state data at faces. Must be populated by user.  <br /></td></tr>
 <tr class="separator:ad9e510917cc62bf7956c51a251d819fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a493fd08b7c45a1b6a8259b635803f18c" id="r_a493fd08b7c45a1b6a8259b635803f18c"><td class="memItemLeft" align="right" valign="top"><a id="a493fd08b7c45a1b6a8259b635803f18c" name="a493fd08b7c45a1b6a8259b635803f18c"></a>
-<a class="el" href="classhexed_1_1Mutual__ptr.html">Mutual_ptr</a>&lt; <a class="el" href="classhexed_1_1Element.html">Element</a>, <a class="el" href="classhexed_1_1Tree.html">Tree</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>tree</b></td></tr>
-<tr class="memdesc:a493fd08b7c45a1b6a8259b635803f18c"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code><a class="el" href="classhexed_1_1Tree.html" title="Bin/quad/octree data structure.">Tree</a></code> this element was created from <br /></td></tr>
-<tr class="separator:a493fd08b7c45a1b6a8259b635803f18c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a85c7df50a79732ebb54741f4a10a17c9" id="r_a85c7df50a79732ebb54741f4a10a17c9"><td class="memItemLeft" align="right" valign="top"><a id="a85c7df50a79732ebb54741f4a10a17c9" name="a85c7df50a79732ebb54741f4a10a17c9"></a>
+<a class="el" href="classhexed_1_1Reciprocal__ptr.html">Reciprocal_ptr</a>&lt; <a class="el" href="classhexed_1_1Element.html">Element</a>, <a class="el" href="classhexed_1_1Tree.html">Tree</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>tree</b></td></tr>
+<tr class="memdesc:a85c7df50a79732ebb54741f4a10a17c9"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code><a class="el" href="classhexed_1_1Tree.html" title="Bin/quad/octree data structure.">Tree</a></code> this element was created from <br /></td></tr>
+<tr class="separator:a85c7df50a79732ebb54741f4a10a17c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3d44aa7a67b705b7f5132fb2664c9dfc" id="r_a3d44aa7a67b705b7f5132fb2664c9dfc"><td class="memItemLeft" align="right" valign="top"><a id="a3d44aa7a67b705b7f5132fb2664c9dfc" name="a3d44aa7a67b705b7f5132fb2664c9dfc"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>unrefinement_locked</b> = false</td></tr>
 <tr class="memdesc:a3d44aa7a67b705b7f5132fb2664c9dfc"><td class="mdescLeft">&#160;</td><td class="mdescRight">if this is set to <code>true</code>, <code>Mesh_interface::update()</code> won't unrefine it <br /></td></tr>
@@ -289,15 +396,33 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>needs_snapping</b> = 
 const <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&#160;</td><td class="memItemRight" valign="bottom"><b>origin</b></td></tr>
 <tr class="memdesc:ae2f761464918630dba4e4fa0e8b7fc65"><td class="mdescLeft">&#160;</td><td class="mdescRight">origin which integer coordinates are relative to <br /></td></tr>
 <tr class="separator:ae2f761464918630dba4e4fa0e8b7fc65"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0fe40d32c2c0c55493673990f8025235" id="r_a0fe40d32c2c0c55493673990f8025235"><td class="memItemLeft" align="right" valign="top"><a id="a0fe40d32c2c0c55493673990f8025235" name="a0fe40d32c2c0c55493673990f8025235"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>residual</b></td></tr>
+<tr class="separator:a0fe40d32c2c0c55493673990f8025235"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f3e81e1c49945b88d6ea2e6b2631783" id="r_a2f3e81e1c49945b88d6ea2e6b2631783"><td class="memItemLeft" align="right" valign="top"><a id="a2f3e81e1c49945b88d6ea2e6b2631783" name="a2f3e81e1c49945b88d6ea2e6b2631783"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><b>flux_uncert</b></td></tr>
+<tr class="separator:a2f3e81e1c49945b88d6ea2e6b2631783"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9cab506f72c61ed9c60022fd125e1b68" id="r_a9cab506f72c61ed9c60022fd125e1b68"><td class="memItemLeft" align="right" valign="top"><a id="a9cab506f72c61ed9c60022fd125e1b68" name="a9cab506f72c61ed9c60022fd125e1b68"></a>
 <a class="el" href="classhexed_1_1Lock.html">Lock</a>&#160;</td><td class="memItemRight" valign="bottom"><b>lock</b></td></tr>
 <tr class="memdesc:a9cab506f72c61ed9c60022fd125e1b68"><td class="mdescLeft">&#160;</td><td class="mdescRight">for any tasks where multiple threads might access an element simultaneously <br /></td></tr>
 <tr class="separator:a9cab506f72c61ed9c60022fd125e1b68"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a084d33a1784117586b685e2df265b6d3" id="r_a084d33a1784117586b685e2df265b6d3"><td class="memItemLeft" align="right" valign="top"><a id="a084d33a1784117586b685e2df265b6d3" name="a084d33a1784117586b685e2df265b6d3"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>has_shock</b></td></tr>
+<tr class="separator:a084d33a1784117586b685e2df265b6d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5685bc14aa6feb3acf2384408a99e6c0" id="r_a5685bc14aa6feb3acf2384408a99e6c0"><td class="memItemLeft" align="right" valign="top"><a id="a5685bc14aa6feb3acf2384408a99e6c0" name="a5685bc14aa6feb3acf2384408a99e6c0"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>spread_shock</b></td></tr>
+<tr class="separator:a5685bc14aa6feb3acf2384408a99e6c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_attribs_classhexed_1_1Kernel__element"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_attribs_classhexed_1_1Kernel__element')"><img src="closed.png" alt="-"/>&#160;Public Attributes inherited from <a class="el" href="classhexed_1_1Kernel__element.html">hexed::Kernel_element</a></td></tr>
 <tr class="memitem:a7ad95dba0339c299d033925df49ff104 inherit pub_attribs_classhexed_1_1Kernel__element" id="r_a7ad95dba0339c299d033925df49ff104"><td class="memItemLeft" align="right" valign="top">
 int&#160;</td><td class="memItemRight" valign="bottom"><b>record</b> = 0</td></tr>
 <tr class="memdesc:a7ad95dba0339c299d033925df49ff104 inherit pub_attribs_classhexed_1_1Kernel__element"><td class="mdescLeft">&#160;</td><td class="mdescRight">for algorithms to book-keep general information <br /></td></tr>
 <tr class="separator:a7ad95dba0339c299d033925df49ff104 inherit pub_attribs_classhexed_1_1Kernel__element"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac8fab011b3d264eec5b2177c02245a11 inherit pub_attribs_classhexed_1_1Kernel__element" id="r_ac8fab011b3d264eec5b2177c02245a11"><td class="memItemLeft" align="right" valign="top">
+double&#160;</td><td class="memItemRight" valign="bottom"><b>ts_ratio_diffusion</b> = 0</td></tr>
+<tr class="separator:ac8fab011b3d264eec5b2177c02245a11 inherit pub_attribs_classhexed_1_1Kernel__element"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a87e3d06bd80ad7e2b34dbbd1ec252f43 inherit pub_attribs_classhexed_1_1Kernel__element" id="r_a87e3d06bd80ad7e2b34dbbd1ec252f43"><td class="memItemLeft" align="right" valign="top">
+double&#160;</td><td class="memItemRight" valign="bottom"><b>ts_ratio_decay</b> = 0</td></tr>
+<tr class="separator:a87e3d06bd80ad7e2b34dbbd1ec252f43 inherit pub_attribs_classhexed_1_1Kernel__element"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
@@ -308,9 +433,20 @@ static constexpr bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_d
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-methods" name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
-<tr class="memitem:af7c59d2e13d32b74b7c6a30172679715" id="r_af7c59d2e13d32b74b7c6a30172679715"><td class="memItemLeft" align="right" valign="top"><a id="af7c59d2e13d32b74b7c6a30172679715" name="af7c59d2e13d32b74b7c6a30172679715"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>Element</b> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a>, std::vector&lt; int &gt; pos, double mesh_size, int ref_level, <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; origin_arg, bool mobile_vertices, int aniso_r_level)</td></tr>
-<tr class="separator:af7c59d2e13d32b74b7c6a30172679715"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0cead605e85c0b5e6883324b4a8e161e" id="r_a0cead605e85c0b5e6883324b4a8e161e"><td class="memItemLeft" align="right" valign="top"><a id="a0cead605e85c0b5e6883324b4a8e161e" name="a0cead605e85c0b5e6883324b4a8e161e"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>Element</b> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a>, <a class="el" href="classhexed_1_1Tree.html">Tree</a> &amp;, bool mobile_vertices, int aniso_r_level, bool is_def)</td></tr>
+<tr class="separator:a0cead605e85c0b5e6883324b4a8e161e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abf49a254bac1fea9616d97d6a9e57001" id="r_abf49a254bac1fea9616d97d6a9e57001"><td class="memItemLeft" align="right" valign="top"><a id="abf49a254bac1fea9616d97d6a9e57001" name="abf49a254bac1fea9616d97d6a9e57001"></a>
+<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; 3 &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>_compute_pos</b> () const</td></tr>
+<tr class="separator:abf49a254bac1fea9616d97d6a9e57001"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_af879b15e305c3ba3b4541c3a34c2838b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1mutual_1_1Base.html#af879b15e305c3ba3b4541c3a34c2838b">_connect</a> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">may be overridden by derived classes to provide partners to data of some arbitrary type <code>T</code>  <br /></td></tr>
+<tr class="separator:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_a73cb219a6412d415c02c1d7500f730eb"><td class="memItemLeft" align="right" valign="top">
+void&#160;</td><td class="memItemRight" valign="bottom"><b>_disconnect</b> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">mutually disconnects <code>this</code> and <code>that</code> by calling both of their <code><a class="el" href="classhexed_1_1mutual_1_1Base.html#a26dde95d6491766fbc6e7f64aa7a5562">_unset()</a></code> member functions <br /></td></tr>
+<tr class="separator:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-attribs" name="pro-attribs"></a>
 Protected Attributes</h2></td></tr>
@@ -320,65 +456,56 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:aa010a3123b5c0e63de5fe6ad019044b7" id="r_aa010a3123b5c0e63de5fe6ad019044b7"><td class="memItemLeft" align="right" valign="top"><a id="aa010a3123b5c0e63de5fe6ad019044b7" name="aa010a3123b5c0e63de5fe6ad019044b7"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>n_dim</b></td></tr>
 <tr class="separator:aa010a3123b5c0e63de5fe6ad019044b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5fc9a5fec81def40c36a9ee7619aeaa1" id="r_a5fc9a5fec81def40c36a9ee7619aeaa1"><td class="memItemLeft" align="right" valign="top"><a id="a5fc9a5fec81def40c36a9ee7619aeaa1" name="a5fc9a5fec81def40c36a9ee7619aeaa1"></a>
-std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>_nom_pos</b></td></tr>
-<tr class="separator:a5fc9a5fec81def40c36a9ee7619aeaa1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a810fb4713100bc47a634ddf36279d55c" id="r_a810fb4713100bc47a634ddf36279d55c"><td class="memItemLeft" align="right" valign="top"><a id="a810fb4713100bc47a634ddf36279d55c" name="a810fb4713100bc47a634ddf36279d55c"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><b>_nom_sz</b></td></tr>
-<tr class="separator:a810fb4713100bc47a634ddf36279d55c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a816e186c695b88d9f1221e3ac007ccd0" id="r_a816e186c695b88d9f1221e3ac007ccd0"><td class="memItemLeft" align="right" valign="top"><a id="a816e186c695b88d9f1221e3ac007ccd0" name="a816e186c695b88d9f1221e3ac007ccd0"></a>
-int&#160;</td><td class="memItemRight" valign="bottom"><b>_r_level</b></td></tr>
-<tr class="separator:a816e186c695b88d9f1221e3ac007ccd0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2ec8e748d819f9bb6e4bc9c62d254c66" id="r_a2ec8e748d819f9bb6e4bc9c62d254c66"><td class="memItemLeft" align="right" valign="top"><a id="a2ec8e748d819f9bb6e4bc9c62d254c66" name="a2ec8e748d819f9bb6e4bc9c62d254c66"></a>
 int&#160;</td><td class="memItemRight" valign="bottom"><b>_aniso_r_level</b></td></tr>
 <tr class="separator:a2ec8e748d819f9bb6e4bc9c62d254c66"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a72fe6cd1c34f82892f67a352307fb8eb" id="r_a72fe6cd1c34f82892f67a352307fb8eb"><td class="memItemLeft" align="right" valign="top"><a id="a72fe6cd1c34f82892f67a352307fb8eb" name="a72fe6cd1c34f82892f67a352307fb8eb"></a>
-std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.html">Vertex::Transferable_ptr</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>vertices</b></td></tr>
-<tr class="separator:a72fe6cd1c34f82892f67a352307fb8eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3ebdf0632a17d87857fed57c004ccb74" id="r_a3ebdf0632a17d87857fed57c004ccb74"><td class="memItemLeft" align="right" valign="top"><a id="a3ebdf0632a17d87857fed57c004ccb74" name="a3ebdf0632a17d87857fed57c004ccb74"></a>
+std::unique_ptr&lt; <a class="el" href="classhexed_1_1next_1_1Element__shape.html">next::Element_shape</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>_shape</b></td></tr>
+<tr class="separator:a3ebdf0632a17d87857fed57c004ccb74"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_attribs_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_attribs_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Protected Attributes inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:ada381fb91093abc2366bd321d7679e90 inherit pro_attribs_classhexed_1_1mutual_1_1Base" id="r_ada381fb91093abc2366bd321d7679e90"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1Lock.html">Lock</a>&#160;</td><td class="memItemRight" valign="bottom"><b>_lock</b></td></tr>
+<tr class="separator:ada381fb91093abc2366bd321d7679e90 inherit pro_attribs_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
+Additional Inherited Members</h2></td></tr>
+<tr class="inherit_header pro_static_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_static_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Static Protected Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base" id="r_a5f740c8da15c53af10fefaf493d4127f"><td class="memItemLeft" align="right" valign="top">
+static void *&#160;</td><td class="memItemRight" valign="bottom"><b>_yours</b> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">Accesses the <code>_mine()</code> of <code>that</code> <br /></td></tr>
+<tr class="separator:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base" id="r_a751975e7405f0ca09b12b459d052b78c"><td class="memItemLeft" align="right" valign="top">
+static const void *&#160;</td><td class="memItemRight" valign="bottom"><b>_yours</b> (const <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Stores data associated with one mesh element. </p>
 <p>Container only&mdash;does not have implementations of or information about the basis and algorithms. This class represents a Cartesian (i.e., regular) element. See also derived class <code><a class="el" href="classhexed_1_1Deformed__element.html" title="Represents an Element which is not a perfect axis-aligned square/cube.">Deformed_element</a></code>. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="abd975b691563fca7a1501bbde2bb5c61" name="abd975b691563fca7a1501bbde2bb5c61"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abd975b691563fca7a1501bbde2bb5c61">&#9670;&#160;</a></span>Element()</h2>
+<a id="abbc78223ead28309e9fd4c5c0cb9fc18" name="abbc78223ead28309e9fd4c5c0cb9fc18"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abbc78223ead28309e9fd4c5c0cb9fc18">&#9670;&#160;</a></span>Element()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">hexed::Element::Element </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a></td>          <td class="paramname"><span class="paramname"><em>params_arg</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramtype">const <a class="el" href="classhexed_1_1Element.html">Element</a> &amp;</td>          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
-          <td class="paramtype">std::vector&lt; int &gt;</td>          <td class="paramname"><span class="paramname"><em>pos</em></span><span class="paramdefsep"> = </span><span class="paramdefval">{}</span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>mesh_size</em></span><span class="paramdefsep"> = </span><span class="paramdefval">1.</span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>ref_level</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;</td>          <td class="paramname"><span class="paramname"><em>origin_arg</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;::Zero(3)</span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>aniso_ref_level</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0</span>&#160;)</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">delete</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
-<p>The <code><a class="el" href="classhexed_1_1Storage__params.html" title="the parameters of the numerical scheme that are necessary to determine storage requirements">Storage_params</a></code> defines the amount of storage that must be allocated. <code>pos</code> specifies the position of vertex 0 relative to <code>origin_arg</code> in intervals of the nominal size. The nominal size is defined to be <code>mesh_size</code>/(2^<code>ref_level</code>). The vertices will be spaced at intervals of the nominal size. Only the first <code>n_dim</code> elements of <code>origin_arg</code> are considered. </p>
+<p>Can't copy an <a class="el" href="classhexed_1_1Element.html" title="Stores data associated with one mesh element.">Element</a>. Doing so would have to either duplicate or break vertex connections, both of which seem error prone. </p>
 
 </div>
 </div>
@@ -398,6 +525,54 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
       </table>
 </div><div class="memdoc">
 <p>layout: [i_node][i_qpoint] </p><dl class="section note"><dt>Note</dt><dd><code>0 &lt;= i_node &lt; row_size</code> </dd></dl>
+
+</div>
+</div>
+<a id="a2b3c0dd95dd0c9d5f5ffd87a506e7058" name="a2b3c0dd95dd0c9d5f5ffd87a506e7058"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2b3c0dd95dd0c9d5f5ffd87a506e7058">&#9670;&#160;</a></span>art_visc_forcing()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double * hexed::Element::art_visc_forcing </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>layout: [i_forcing][i_qpoint] </p>
+
+</div>
+</div>
+<a id="afcbd9ad81dcbb9e162629cb2bb12a48b" name="afcbd9ad81dcbb9e162629cb2bb12a48b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afcbd9ad81dcbb9e162629cb2bb12a48b">&#9670;&#160;</a></span>debug_variables()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double * hexed::Element::debug_variables </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p><a class="el" href="classhexed_1_1Pointer.html" title="Abstract base class for implementing pointer objects.">Pointer</a> to any debug variables that can be populated by the kernels to visualize arbitrary quantities. </p>
+<p>This will be a valid pointer iff <code>config::debug_variables</code> &gt; 0. </p>
+
+<p>Implements <a class="el" href="classhexed_1_1Kernel__element.html#a3a7e8cf87a39a98adf510afad02370dd">hexed::Kernel_element</a>.</p>
 
 </div>
 </div>
@@ -424,7 +599,7 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
 </table>
 </div><div class="memdoc">
 
-<p>where the extrapolated face data is stored </p>
+<p>whether this element is deformed </p>
 
 <p>Implements <a class="el" href="classhexed_1_1Kernel__element.html#a1b2db6280d1e975fe4a19d3af507bd09">hexed::Kernel_element</a>.</p>
 
@@ -457,36 +632,9 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
 </table>
 </div><div class="memdoc">
 
-<p>Implements <a class="el" href="classhexed_1_1Kernel__element.html">hexed::Kernel_element</a>.</p>
+<p>where the extrapolated face data is stored </p>
 
-</div>
-</div>
-<a id="adfb07e0ff1d5febf22115e56d83ad50c" name="adfb07e0ff1d5febf22115e56d83ad50c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adfb07e0ff1d5febf22115e56d83ad50c">&#9670;&#160;</a></span>face_position()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; double &gt; hexed::Element::face_position </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>basis</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>i_face</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>i_face_qpoint</em></span>&#160;)</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>obtains face position based on interior qpoint positions (as defined by <code>position()</code>) </p>
-<dl class="section note"><dt>Note</dt><dd>ignores vertex positions </dd></dl>
+<p>Implements <a class="el" href="classhexed_1_1Kernel__element.html#ad8c9d4def49ff7a692b7617fecbea90e">hexed::Kernel_element</a>.</p>
 
 </div>
 </div>
@@ -512,14 +660,15 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
   </tr>
 </table>
 </div><div class="memdoc">
+
 <p>for determining whether a pointer is deformed </p>
 
 <p>Reimplemented in <a class="el" href="classhexed_1_1Deformed__element.html#a47c3f3c72c4364be0914123dac67f7fc">hexed::Deformed_element</a>.</p>
 
 </div>
 </div>
-<a id="a4d506b3daa76cab2d36e48d69bde081e" name="a4d506b3daa76cab2d36e48d69bde081e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4d506b3daa76cab2d36e48d69bde081e">&#9670;&#160;</a></span>jacobian()</h2>
+<a id="a500fe04a4638307253a23aa2101e17b7" name="a500fe04a4638307253a23aa2101e17b7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a500fe04a4638307253a23aa2101e17b7">&#9670;&#160;</a></span>jacobian()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -540,7 +689,7 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>i_qpoint</em></span>&#160;)</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>i_qpoint</em></span>&#160;) const</td>
         </tr>
       </table>
   </td>
@@ -551,9 +700,9 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
 </div><div class="memdoc">
 
 <p>Compute the Jacobian matrix. </p>
-<p>I.e., derivative of <code>i_dim</code>th physical coordinate wrt <code>j_dim</code>th reference coordinate. Trivial for this class, may be non-trivial for derived (see <code><a class="el" href="classhexed_1_1Deformed__element.html" title="Represents an Element which is not a perfect axis-aligned square/cube.">Deformed_element</a></code>). For convenience, not performance. For high-performance, use <code>double* <a class="el" href="classhexed_1_1Deformed__element.html#a118e2d6d29f887f6481e231c2c2b7a6c" title="Compute the Jacobian matrix.">Deformed_element::jacobian()</a></code> </p>
+<p>I.e., derivative of <code>i_dim</code>th physical coordinate wrt <code>j_dim</code>th reference coordinate. Trivial for this class, may be non-trivial for derived (see <code><a class="el" href="classhexed_1_1Deformed__element.html" title="Represents an Element which is not a perfect axis-aligned square/cube.">Deformed_element</a></code>). For convenience, not performance. For high-performance, use <code>double* <a class="el" href="classhexed_1_1Deformed__element.html#abc8339f3fec2af2e8a661c6a7199ca9f" title="Compute the Jacobian matrix.">Deformed_element::jacobian()</a></code> </p>
 
-<p>Reimplemented in <a class="el" href="classhexed_1_1Deformed__element.html#a118e2d6d29f887f6481e231c2c2b7a6c">hexed::Deformed_element</a>.</p>
+<p>Reimplemented in <a class="el" href="classhexed_1_1Deformed__element.html#abc8339f3fec2af2e8a661c6a7199ca9f">hexed::Deformed_element</a>.</p>
 
 </div>
 </div>
@@ -587,8 +736,8 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
 
 </div>
 </div>
-<a id="a8ffef0e35aef8c15106a209662e82b98" name="a8ffef0e35aef8c15106a209662e82b98"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8ffef0e35aef8c15106a209662e82b98">&#9670;&#160;</a></span>jacobian_determinant() <span class="overload">[2/2]</span></h2>
+<a id="ad588b2babe964eef642eeaa4a40b9b76" name="ad588b2babe964eef642eeaa4a40b9b76"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad588b2babe964eef642eeaa4a40b9b76">&#9670;&#160;</a></span>jacobian_determinant() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -600,7 +749,7 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
           <td class="memname">virtual double hexed::Element::jacobian_determinant </td>
           <td>(</td>
           <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>i_qpoint</em></span></td><td>)</td>
-          <td></td>
+          <td> const</td>
         </tr>
       </table>
   </td>
@@ -612,7 +761,7 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
 
 <p>determinant of <code>jacobian</code> </p>
 
-<p>Reimplemented in <a class="el" href="classhexed_1_1Deformed__element.html#a3d889a580911706c2c6c0ecab9b26c62">hexed::Deformed_element</a>.</p>
+<p>Reimplemented in <a class="el" href="classhexed_1_1Deformed__element.html#a6f7e4e0c74936da55adcfb95fdb1633a">hexed::Deformed_element</a>.</p>
 
 </div>
 </div>
@@ -676,37 +825,28 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
 
 </div>
 </div>
-<a id="a0c89b4c389ed036fbfe2cbed3214b24e" name="a0c89b4c389ed036fbfe2cbed3214b24e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0c89b4c389ed036fbfe2cbed3214b24e">&#9670;&#160;</a></span>node_adjustments()</h2>
+<a id="aa533d04dea4246c534f3f29c0d503d64" name="aa533d04dea4246c534f3f29c0d503d64"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa533d04dea4246c534f3f29c0d503d64">&#9670;&#160;</a></span>mean_shape()</h2>
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">virtual double * hexed::Element::node_adjustments </td>
+          <td class="memname"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; hexed::Element::mean_shape </td>
           <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
-          <td></td>
+          <td class="paramtype">const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>basis</em></span></td><td>)</td>
+          <td> const</td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
-<p>overriden by <code><a class="el" href="classhexed_1_1Deformed__element.html" title="Represents an Element which is not a perfect axis-aligned square/cube.">Deformed_element</a></code> </p>
-
-<p>Reimplemented in <a class="el" href="classhexed_1_1Deformed__element.html#a0fc18bfe38fcab4135fa064c90af472e">hexed::Deformed_element</a>.</p>
+<p>Effective element dimensions accounting for deformation. </p>
+<p>layout: [i_dim] <code>mean_shape[i_dim]</code> is the mean over the element of the norm of the <code>i_dim</code>th column of the Jacobian matrix. </p>
 
 </div>
 </div>
-<a id="a312b1e1fb92f8b5841d7cb0faad8d978" name="a312b1e1fb92f8b5841d7cb0faad8d978"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a312b1e1fb92f8b5841d7cb0faad8d978">&#9670;&#160;</a></span>nominal_size()</h2>
+<a id="a226664dbba03287a9ca45069c2eeebe6" name="a226664dbba03287a9ca45069c2eeebe6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a226664dbba03287a9ca45069c2eeebe6">&#9670;&#160;</a></span>nominal_shape()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -715,73 +855,22 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">double hexed::Element::nominal_size </td>
+          <td class="memname">double hexed::Element::nominal_shape </td>
           <td>(</td>
-          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>i_dim</em></span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p>nominal edge length of the element before any vertex motion </p>
+<p>nominal edge length of the element along the <code>i_dim</code>th dimension before any vertex motion </p>
 
-<p>Implements <a class="el" href="classhexed_1_1Kernel__element.html#a0c2b09802474e4a290cd3c4339e2090c">hexed::Kernel_element</a>.</p>
-
-</div>
-</div>
-<a id="a5f022dc71ed14c9d7ddadcd2921341f9" name="a5f022dc71ed14c9d7ddadcd2921341f9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5f022dc71ed14c9d7ddadcd2921341f9">&#9670;&#160;</a></span>position()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt; double &gt; hexed::Element::position </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>basis</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>i_qpoint</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Reimplemented in <a class="el" href="classhexed_1_1Deformed__element.html#a5ab9901af4f3bb69ca35bea20e880992">hexed::Deformed_element</a>.</p>
-
-</div>
-</div>
-<a id="ad77722b5510f18ee1f0b6ecb5731f3a8" name="ad77722b5510f18ee1f0b6ecb5731f3a8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad77722b5510f18ee1f0b6ecb5731f3a8">&#9670;&#160;</a></span>push_shareable_value()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void hexed::Element::push_shareable_value </td>
-          <td>(</td>
-          <td class="paramtype">std::function&lt; double(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;, int i_vertex)&gt;</td>          <td class="paramname"><span class="paramname"><em>fun</em></span></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>functions to communicate with nodal neighbors </p>
-<p>writes shareable value to vertices so that shared value can be determined </p>
+<p>Implements <a class="el" href="classhexed_1_1Kernel__element.html#aef6beb243051c39ec4681cf059d2c62b">hexed::Kernel_element</a>.</p>
 
 </div>
 </div>
@@ -807,8 +896,6 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
   </tr>
 </table>
 </div><div class="memdoc">
-
-<p>whether this element is deformed </p>
 <p>the <code>j_dim</code>th component (in physical space) of the normal vector of the level surface of the <code>i_dim</code>th reference coordinate which passes through the <code>i_qpoint</code>th quadrature point. the magnitude of the normal vector is weighted by the surface area in physical space. equivalent definition (note <code>i_dim</code>, <code>j_dim</code> transposed): </p><p class="formulaDsp">
 \[ J^{-1}_{j_{dim}, i_{dim}} |J| \]
 </p>
@@ -888,7 +975,7 @@ std::vector&lt; <a class="el" href="classhexed_1_1Vertex_1_1Transferable__ptr.ht
       </table>
 </div><div class="memdoc">
 
-<p>pointer to state data for <code>i_stage</code>th Runge-Kutta stage. </p>
+<p><a class="el" href="classhexed_1_1Pointer.html" title="Abstract base class for implementing pointer objects.">Pointer</a> to state data for <code>i_stage</code>th time integration stage. </p>
 <p>layout: [i_var][i_qpoint] </p>
 
 </div>

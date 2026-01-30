@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -111,6 +111,7 @@ $(function(){initNavTree('classhexed_1_1Tree.html',''); initResizable(true); });
 
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="classhexed_1_1Tree-members.html">List of all members</a>  </div>
@@ -122,82 +123,221 @@ $(function(){initNavTree('classhexed_1_1Tree.html',''); initResizable(true); });
  <a href="#details">More...</a></p>
 
 <p><code>#include &lt;Tree.hpp&gt;</code></p>
+<div class="dynheader">
+Inheritance diagram for hexed::Tree:</div>
+<div class="dyncontent">
+ <div class="center">
+  <img src="classhexed_1_1Tree.png" usemap="#hexed::Tree_map" alt=""/>
+  <map id="hexed::Tree_map" name="hexed::Tree_map">
+<area href="classhexed_1_1Mortal.html" title="represents an object that could die at any moment" alt="hexed::Mortal" shape="rect" coords="0,112,219,136"/>
+<area href="classhexed_1_1mutual_1_1Multiple.html" alt="hexed::mutual::Multiple&lt; void, void &gt;" shape="rect" coords="0,56,219,80"/>
+<area href="classhexed_1_1mutual_1_1Base.html" alt="hexed::mutual::Base&lt; void, void &gt;" shape="rect" coords="0,0,219,24"/>
+  </map>
+</div></div>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhexed_1_1Tree_1_1Connection__neighbors.html">Connection_neighbors</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:ab7d776dda57115b407f5791154e6823c" id="r_ab7d776dda57115b407f5791154e6823c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab7d776dda57115b407f5791154e6823c">Tree</a> (int n_dim, double root_size, <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; origin=<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;::Zero(3))</td></tr>
 <tr class="memdesc:ab7d776dda57115b407f5791154e6823c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructs the root element of a tree.  <br /></td></tr>
 <tr class="separator:ab7d776dda57115b407f5791154e6823c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a140d1e294484f49fd849351ce8ed4253" id="r_a140d1e294484f49fd849351ce8ed4253"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a140d1e294484f49fd849351ce8ed4253">Tree</a> (std::string file_name)</td></tr>
+<tr class="memdesc:a140d1e294484f49fd849351ce8ed4253"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads a tree from a file previously written with <code><a class="el" href="#a609f7bebdb5dcf1e07cbde2b1d37dd24" title="Writes the structure of this tree to a file.">write()</a></code>.  <br /></td></tr>
+<tr class="separator:a140d1e294484f49fd849351ce8ed4253"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader">basic instance information</div></td></tr>
 <tr class="memitem:a7c70a5559293823f039a01ff4c0b4213" id="r_a7c70a5559293823f039a01ff4c0b4213"><td class="memItemLeft" align="right" valign="top"><a id="a7c70a5559293823f039a01ff4c0b4213" name="a7c70a5559293823f039a01ff4c0b4213"></a>
 <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&#160;</td><td class="memItemRight" valign="bottom"><b>origin</b> () const</td></tr>
 <tr class="separator:a7c70a5559293823f039a01ff4c0b4213"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ace5332a019fcc9f6c7a65002727d0418" id="r_ace5332a019fcc9f6c7a65002727d0418"><td class="memItemLeft" align="right" valign="top"><a id="ace5332a019fcc9f6c7a65002727d0418" name="ace5332a019fcc9f6c7a65002727d0418"></a>
-int&#160;</td><td class="memItemRight" valign="bottom"><b>refinement_level</b> () const</td></tr>
-<tr class="memdesc:ace5332a019fcc9f6c7a65002727d0418"><td class="mdescLeft">&#160;</td><td class="mdescRight">how many calls of <code>refine</code> were required to generate this element. E.g. the root element has refinement level 0. <br /></td></tr>
+<tr class="memitem:ace5332a019fcc9f6c7a65002727d0418" id="r_ace5332a019fcc9f6c7a65002727d0418"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ace5332a019fcc9f6c7a65002727d0418">refinement_level</a> () const</td></tr>
+<tr class="memdesc:ace5332a019fcc9f6c7a65002727d0418"><td class="mdescLeft">&#160;</td><td class="mdescRight">how many calls of <code>refine</code> were required to generate this element.  <br /></td></tr>
 <tr class="separator:ace5332a019fcc9f6c7a65002727d0418"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a963fb816d2a1dff71deb021a4bfe7139" id="r_a963fb816d2a1dff71deb021a4bfe7139"><td class="memItemLeft" align="right" valign="top">Eigen::VectorXi&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a963fb816d2a1dff71deb021a4bfe7139">coordinates</a> () const</td></tr>
-<tr class="memdesc:a963fb816d2a1dff71deb021a4bfe7139"><td class="mdescLeft">&#160;</td><td class="mdescRight">coordinates of vertex 0 of this element relative to <code>origin</code> in multiples of the cell size  <br /></td></tr>
-<tr class="separator:a963fb816d2a1dff71deb021a4bfe7139"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a20dffa3490cffdd4dbe9066df8004a85" id="r_a20dffa3490cffdd4dbe9066df8004a85"><td class="memItemLeft" align="right" valign="top"><a id="a20dffa3490cffdd4dbe9066df8004a85" name="a20dffa3490cffdd4dbe9066df8004a85"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>anisotropic_refinement_level</b> () const</td></tr>
+<tr class="separator:a20dffa3490cffdd4dbe9066df8004a85"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6e140de1fe925d3f2ea8489901085561" id="r_a6e140de1fe925d3f2ea8489901085561"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6e140de1fe925d3f2ea8489901085561">desired_refinement_level</a> () const</td></tr>
+<tr class="memdesc:a6e140de1fe925d3f2ea8489901085561"><td class="mdescLeft">&#160;</td><td class="mdescRight">Total desired refinement level.  <br /></td></tr>
+<tr class="separator:a6e140de1fe925d3f2ea8489901085561"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5ccb3cfab8a7c43aac2431441ffa331f" id="r_a5ccb3cfab8a7c43aac2431441ffa331f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5ccb3cfab8a7c43aac2431441ffa331f">coordinates</a> () const</td></tr>
+<tr class="memdesc:a5ccb3cfab8a7c43aac2431441ffa331f"><td class="mdescLeft">&#160;</td><td class="mdescRight">coordinates of vertex 0 of this element relative to <code>origin</code> in multiples of the cell size  <br /></td></tr>
+<tr class="separator:a5ccb3cfab8a7c43aac2431441ffa331f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0b9c3164a257474060dbf77dbb707e37" id="r_a0b9c3164a257474060dbf77dbb707e37"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0b9c3164a257474060dbf77dbb707e37">nominal_size</a> () const</td></tr>
 <tr class="memdesc:a0b9c3164a257474060dbf77dbb707e37"><td class="mdescLeft">&#160;</td><td class="mdescRight">the size of the element in physical coordinates (before any deformation of the actual DG element)  <br /></td></tr>
 <tr class="separator:a0b9c3164a257474060dbf77dbb707e37"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a63cd0ef272323cf7c3606ba917ee6034" id="r_a63cd0ef272323cf7c3606ba917ee6034"><td class="memItemLeft" align="right" valign="top"><a id="a63cd0ef272323cf7c3606ba917ee6034" name="a63cd0ef272323cf7c3606ba917ee6034"></a>
+<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&#160;</td><td class="memItemRight" valign="bottom"><b>nominal_shape</b> () const</td></tr>
+<tr class="separator:a63cd0ef272323cf7c3606ba917ee6034"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad54d5761469e23f1842acfb743c48b15" id="r_ad54d5761469e23f1842acfb743c48b15"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad54d5761469e23f1842acfb743c48b15">nominal_position</a> () const</td></tr>
 <tr class="memdesc:ad54d5761469e23f1842acfb743c48b15"><td class="mdescLeft">&#160;</td><td class="mdescRight">the position of vertex 0 of the element in physical coordinates  <br /></td></tr>
 <tr class="separator:ad54d5761469e23f1842acfb743c48b15"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a55319ba2f5602a536098c559766937ec" id="r_a55319ba2f5602a536098c559766937ec"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a55319ba2f5602a536098c559766937ec">center</a> () const</td></tr>
 <tr class="separator:a55319ba2f5602a536098c559766937ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4e58a58effd00be233a5875be418d25" id="r_ab4e58a58effd00be233a5875be418d25"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab4e58a58effd00be233a5875be418d25">leaf_index</a> () const</td></tr>
+<tr class="memdesc:ab4e58a58effd00be233a5875be418d25"><td class="mdescLeft">&#160;</td><td class="mdescRight">Lowest index of the leaves of this tree in a global ordering.  <br /></td></tr>
+<tr class="separator:ab4e58a58effd00be233a5875be418d25"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a59b439641e1fe49574186086a87825a2" id="r_a59b439641e1fe49574186086a87825a2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a59b439641e1fe49574186086a87825a2">total_index</a> () const</td></tr>
+<tr class="memdesc:a59b439641e1fe49574186086a87825a2"><td class="mdescLeft">&#160;</td><td class="mdescRight">An index that uniquely identifies this branch in the whole tree (not just the leaves).  <br /></td></tr>
+<tr class="separator:a59b439641e1fe49574186086a87825a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a98a6c5e99abac38c13b155c4fdfbab09" id="r_a98a6c5e99abac38c13b155c4fdfbab09"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a98a6c5e99abac38c13b155c4fdfbab09">n_leaves</a> () const</td></tr>
+<tr class="memdesc:a98a6c5e99abac38c13b155c4fdfbab09"><td class="mdescLeft">&#160;</td><td class="mdescRight">The number of leaves descended from <code>this</code>.  <br /></td></tr>
+<tr class="separator:a98a6c5e99abac38c13b155c4fdfbab09"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a43d84eb7b39f318d1057f281fc6d32cc" id="r_a43d84eb7b39f318d1057f281fc6d32cc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a43d84eb7b39f318d1057f281fc6d32cc">n_total</a> () const</td></tr>
+<tr class="memdesc:a43d84eb7b39f318d1057f281fc6d32cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the total number of trees descended from <code>this</code>.  <br /></td></tr>
+<tr class="separator:a43d84eb7b39f318d1057f281fc6d32cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader">parent/child status</div></td></tr>
 <tr class="memitem:a71a9b66dc5274ec6b64655bfeafb0a90" id="r_a71a9b66dc5274ec6b64655bfeafb0a90"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a71a9b66dc5274ec6b64655bfeafb0a90">parent</a> ()</td></tr>
 <tr class="separator:a71a9b66dc5274ec6b64655bfeafb0a90"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a907c6f923732b8dd9baaf0b2dd23db4c" id="r_a907c6f923732b8dd9baaf0b2dd23db4c"><td class="memItemLeft" align="right" valign="top"><a id="a907c6f923732b8dd9baaf0b2dd23db4c" name="a907c6f923732b8dd9baaf0b2dd23db4c"></a>
-std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>children</b> ()</td></tr>
-<tr class="memdesc:a907c6f923732b8dd9baaf0b2dd23db4c"><td class="mdescLeft">&#160;</td><td class="mdescRight">If this cell has been refined, then this vector contains pointers to its children. If it has not, the vector is empty. <br /></td></tr>
+<tr class="memitem:ad039e52143d1f642f905349f4ab6bae4" id="r_ad039e52143d1f642f905349f4ab6bae4"><td class="memItemLeft" align="right" valign="top"><a id="ad039e52143d1f642f905349f4ab6bae4" name="ad039e52143d1f642f905349f4ab6bae4"></a>
+<a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>graft_parent</b> ()</td></tr>
+<tr class="memdesc:ad039e52143d1f642f905349f4ab6bae4"><td class="mdescLeft">&#160;</td><td class="mdescRight">If grafted, the tree <code>this</code> was created from. Otherwise <code>nullptr</code>. <br /></td></tr>
+<tr class="separator:ad039e52143d1f642f905349f4ab6bae4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a907c6f923732b8dd9baaf0b2dd23db4c" id="r_a907c6f923732b8dd9baaf0b2dd23db4c"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a907c6f923732b8dd9baaf0b2dd23db4c">children</a> ()</td></tr>
 <tr class="separator:a907c6f923732b8dd9baaf0b2dd23db4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a339ca339a0d3f4fdfaa062daf281aa7d" id="r_a339ca339a0d3f4fdfaa062daf281aa7d"><td class="memItemLeft" align="right" valign="top"><a id="a339ca339a0d3f4fdfaa062daf281aa7d" name="a339ca339a0d3f4fdfaa062daf281aa7d"></a>
-<a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>root</b> ()</td></tr>
-<tr class="memdesc:a339ca339a0d3f4fdfaa062daf281aa7d"><td class="mdescLeft">&#160;</td><td class="mdescRight">fetch the root element of this tree <br /></td></tr>
-<tr class="separator:a339ca339a0d3f4fdfaa062daf281aa7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac53d05ae7417588ff7c52b5850a1bf98" id="r_ac53d05ae7417588ff7c52b5850a1bf98"><td class="memItemLeft" align="right" valign="top"><a id="ac53d05ae7417588ff7c52b5850a1bf98" name="ac53d05ae7417588ff7c52b5850a1bf98"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_root</b> () const</td></tr>
-<tr class="memdesc:ac53d05ae7417588ff7c52b5850a1bf98"><td class="mdescLeft">&#160;</td><td class="mdescRight">gives the same result as <code>!parent()</code> <br /></td></tr>
-<tr class="separator:ac53d05ae7417588ff7c52b5850a1bf98"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a71e2c3c06b4328f1ef0f0c7da295bc8a" id="r_a71e2c3c06b4328f1ef0f0c7da295bc8a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a71e2c3c06b4328f1ef0f0c7da295bc8a">is_leaf</a> () const</td></tr>
-<tr class="separator:a71e2c3c06b4328f1ef0f0c7da295bc8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad2cf1677197e8813b061c62d24afc1d1" id="r_ad2cf1677197e8813b061c62d24afc1d1"><td class="memItemLeft" align="right" valign="top"><a id="ad2cf1677197e8813b061c62d24afc1d1" name="ad2cf1677197e8813b061c62d24afc1d1"></a>
+std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>unique_children</b> ()</td></tr>
+<tr class="separator:ad2cf1677197e8813b061c62d24afc1d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab1ba656348eb36002d25183c456a6980" id="r_ab1ba656348eb36002d25183c456a6980"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab1ba656348eb36002d25183c456a6980">root</a> (bool <a class="el" href="#ab5463ee24bd8eb8cd74e90076753d6f9">graft</a>=true)</td></tr>
+<tr class="memdesc:ab1ba656348eb36002d25183c456a6980"><td class="mdescLeft">&#160;</td><td class="mdescRight">Fetches the root element of this tree.  <br /></td></tr>
+<tr class="separator:ab1ba656348eb36002d25183c456a6980"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afc0f50695a3506a47ec9c5373052f423" id="r_afc0f50695a3506a47ec9c5373052f423"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afc0f50695a3506a47ec9c5373052f423">is_root</a> (bool <a class="el" href="#ab5463ee24bd8eb8cd74e90076753d6f9">graft</a>=true)</td></tr>
+<tr class="memdesc:afc0f50695a3506a47ec9c5373052f423"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks whether <code>this</code> is the root of the tree.  <br /></td></tr>
+<tr class="separator:afc0f50695a3506a47ec9c5373052f423"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af1f12fdba6461c3e08fa524f68c3ac64" id="r_af1f12fdba6461c3e08fa524f68c3ac64"><td class="memItemLeft" align="right" valign="top"><a id="af1f12fdba6461c3e08fa524f68c3ac64" name="af1f12fdba6461c3e08fa524f68c3ac64"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_graft</b> ()</td></tr>
+<tr class="memdesc:af1f12fdba6461c3e08fa524f68c3ac64"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code>true</code> iff <code>this</code> was created by grafting. <br /></td></tr>
+<tr class="separator:af1f12fdba6461c3e08fa524f68c3ac64"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac37c766ef1418c7bb8baa14eef7be87e" id="r_ac37c766ef1418c7bb8baa14eef7be87e"><td class="memItemLeft" align="right" valign="top"><a id="ac37c766ef1418c7bb8baa14eef7be87e" name="ac37c766ef1418c7bb8baa14eef7be87e"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_leaf</b> ()</td></tr>
+<tr class="memdesc:ac37c766ef1418c7bb8baa14eef7be87e"><td class="mdescLeft">&#160;</td><td class="mdescRight">gives the same result as <code><a class="el" href="#a907c6f923732b8dd9baaf0b2dd23db4c">children()</a>.empty()</code> <br /></td></tr>
+<tr class="separator:ac37c766ef1418c7bb8baa14eef7be87e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1b01feab8338c8123e9ee528d8ddc9ec" id="r_a1b01feab8338c8123e9ee528d8ddc9ec"><td class="memItemLeft" align="right" valign="top"><a id="a1b01feab8338c8123e9ee528d8ddc9ec" name="a1b01feab8338c8123e9ee528d8ddc9ec"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_refined</b> (int i_dim)</td></tr>
+<tr class="separator:a1b01feab8338c8123e9ee528d8ddc9ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a81640ec8abb160e778f0cce4aa91973b" id="r_a81640ec8abb160e778f0cce4aa91973b"><td class="memItemLeft" align="right" valign="top"><a id="a81640ec8abb160e778f0cce4aa91973b" name="a81640ec8abb160e778f0cce4aa91973b"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>has_graft_connection</b> ()</td></tr>
+<tr class="separator:a81640ec8abb160e778f0cce4aa91973b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader">modifiers</div></td></tr>
-<tr class="memitem:a1742fe161314764b7904dd28644ae716" id="r_a1742fe161314764b7904dd28644ae716"><td class="memItemLeft" align="right" valign="top"><a id="a1742fe161314764b7904dd28644ae716" name="a1742fe161314764b7904dd28644ae716"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>refine</b> ()</td></tr>
-<tr class="memdesc:a1742fe161314764b7904dd28644ae716"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates \(2^{\verb|n_dim|}\) child elements with refinement level one greater than this element and cover the same volume. Must be leaf. <br /></td></tr>
-<tr class="separator:a1742fe161314764b7904dd28644ae716"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a12da3629aaff2a42eb188d8e02ad6342" id="r_a12da3629aaff2a42eb188d8e02ad6342"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a12da3629aaff2a42eb188d8e02ad6342">unrefine</a> ()</td></tr>
-<tr class="separator:a12da3629aaff2a42eb188d8e02ad6342"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab2aef86dae847d84f1f77eca4e9e7636" id="r_ab2aef86dae847d84f1f77eca4e9e7636"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab2aef86dae847d84f1f77eca4e9e7636">refine</a> (std::vector&lt; bool &gt; refine_dims)</td></tr>
+<tr class="memdesc:ab2aef86dae847d84f1f77eca4e9e7636"><td class="mdescLeft">&#160;</td><td class="mdescRight">Refines anisotropically along an arbitrary number of dimensions.  <br /></td></tr>
+<tr class="separator:ab2aef86dae847d84f1f77eca4e9e7636"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afc0aecd981ad1d98462a988439e9582d" id="r_afc0aecd981ad1d98462a988439e9582d"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afc0aecd981ad1d98462a988439e9582d">refine</a> ()</td></tr>
+<tr class="memdesc:afc0aecd981ad1d98462a988439e9582d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Isotropic refinement.  <br /></td></tr>
+<tr class="separator:afc0aecd981ad1d98462a988439e9582d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae409f7c80318174bd67a2d3e27fde88d" id="r_ae409f7c80318174bd67a2d3e27fde88d"><td class="memItemLeft" align="right" valign="top"><a id="ae409f7c80318174bd67a2d3e27fde88d" name="ae409f7c80318174bd67a2d3e27fde88d"></a>
+std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>refine</b> (int i_dim)</td></tr>
+<tr class="memdesc:ae409f7c80318174bd67a2d3e27fde88d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Equivalent to <code>refine(std::vector&lt;bool&gt;)</code> on a vector with exactly one <code>true</code> element. <br /></td></tr>
+<tr class="separator:ae409f7c80318174bd67a2d3e27fde88d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4714dc10fe1f7b5af532f99515d9a140" id="r_a4714dc10fe1f7b5af532f99515d9a140"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4714dc10fe1f7b5af532f99515d9a140">unrefine</a> (std::vector&lt; bool &gt; unrefine_dims)</td></tr>
+<tr class="memdesc:a4714dc10fe1f7b5af532f99515d9a140"><td class="mdescLeft">&#160;</td><td class="mdescRight">Unrefines anisotropically along an arbitrary number of dimensions.  <br /></td></tr>
+<tr class="separator:a4714dc10fe1f7b5af532f99515d9a140"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ce0dbf1d3bb38a9b681398b55428326" id="r_a1ce0dbf1d3bb38a9b681398b55428326"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1ce0dbf1d3bb38a9b681398b55428326">unrefine</a> ()</td></tr>
+<tr class="memdesc:a1ce0dbf1d3bb38a9b681398b55428326"><td class="mdescLeft">&#160;</td><td class="mdescRight">Isotropic unrefinement.  <br /></td></tr>
+<tr class="separator:a1ce0dbf1d3bb38a9b681398b55428326"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab11e27802db878afc7a695e54d5372d5" id="r_ab11e27802db878afc7a695e54d5372d5"><td class="memItemLeft" align="right" valign="top"><a id="ab11e27802db878afc7a695e54d5372d5" name="ab11e27802db878afc7a695e54d5372d5"></a>
+std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>unrefine</b> (int i_dim)</td></tr>
+<tr class="memdesc:ab11e27802db878afc7a695e54d5372d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Equivalent to <code>unrefine(std::vector&lt;bool&gt;)</code> on a vector with exactly one <code>true</code> element. <br /></td></tr>
+<tr class="separator:ab11e27802db878afc7a695e54d5372d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5f94b544f370b79d89c69d1ad34ac5ac" id="r_a5f94b544f370b79d89c69d1ad34ac5ac"><td class="memItemLeft" align="right" valign="top"><a id="a5f94b544f370b79d89c69d1ad34ac5ac" name="a5f94b544f370b79d89c69d1ad34ac5ac"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>force_unrefine</b> ()</td></tr>
+<tr class="memdesc:a5f94b544f370b79d89c69d1ad34ac5ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deletes all child elements and descendents thereof. This element is now a leaf. <br /></td></tr>
+<tr class="separator:a5f94b544f370b79d89c69d1ad34ac5ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab5463ee24bd8eb8cd74e90076753d6f9" id="r_ab5463ee24bd8eb8cd74e90076753d6f9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab5463ee24bd8eb8cd74e90076753d6f9">graft</a> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt; ref_level, <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt; coords)</td></tr>
+<tr class="memdesc:ab5463ee24bd8eb8cd74e90076753d6f9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a new tree outside the existing refinement heirarchy.  <br /></td></tr>
+<tr class="separator:ab5463ee24bd8eb8cd74e90076753d6f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adc1c8fac1e62ec90a5462b173b0d086d" id="r_adc1c8fac1e62ec90a5462b173b0d086d"><td class="memItemLeft" align="right" valign="top"><a id="adc1c8fac1e62ec90a5462b173b0d086d" name="adc1c8fac1e62ec90a5462b173b0d086d"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>connect</b> (std::array&lt; std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;, 2 &gt;, <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a>)</td></tr>
+<tr class="separator:adc1c8fac1e62ec90a5462b173b0d086d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d761bddaa0defe140cd15b4562598b7" id="r_a1d761bddaa0defe140cd15b4562598b7"><td class="memItemLeft" align="right" valign="top"><a id="a1d761bddaa0defe140cd15b4562598b7" name="a1d761bddaa0defe140cd15b4562598b7"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>connect</b> (std::array&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> *, 2 &gt;, <a class="el" href="classhexed_1_1Connection__direction.html">Connection_direction</a>)</td></tr>
+<tr class="separator:a1d761bddaa0defe140cd15b4562598b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5c995884a69a3c7e6244273edc29476d" id="r_a5c995884a69a3c7e6244273edc29476d"><td class="memItemLeft" align="right" valign="top"><a id="a5c995884a69a3c7e6244273edc29476d" name="a5c995884a69a3c7e6244273edc29476d"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>delete_grafts</b> ()</td></tr>
+<tr class="memdesc:a5c995884a69a3c7e6244273edc29476d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deletes and disconnects all grafted trees, including their descendent. Can only be called on the root. <br /></td></tr>
+<tr class="separator:a5c995884a69a3c7e6244273edc29476d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d3bae17e9817d0f9d843f9d84fa7ac4" id="r_a2d3bae17e9817d0f9d843f9d84fa7ac4"><td class="memItemLeft" align="right" valign="top"><a id="a2d3bae17e9817d0f9d843f9d84fa7ac4" name="a2d3bae17e9817d0f9d843f9d84fa7ac4"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>update_indices</b> ()</td></tr>
+<tr class="memdesc:a2d3bae17e9817d0f9d843f9d84fa7ac4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Updates the <code><a class="el" href="#ab4e58a58effd00be233a5875be418d25" title="Lowest index of the leaves of this tree in a global ordering.">leaf_index()</a></code> and <code><a class="el" href="#a98a6c5e99abac38c13b155c4fdfbab09" title="The number of leaves descended from this.">n_leaves()</a></code> of the entire tree. Can only be called on the root. <br /></td></tr>
+<tr class="separator:a2d3bae17e9817d0f9d843f9d84fa7ac4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader">traversing functions</div></td></tr>
-<tr class="memitem:aaaf2e8869d649001b51a1f000e57028e" id="r_aaaf2e8869d649001b51a1f000e57028e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aaaf2e8869d649001b51a1f000e57028e">find_leaf</a> (int ref_level, Eigen::VectorXi coords, Eigen::VectorXi bias=Eigen::VectorXi::Zero(3))</td></tr>
-<tr class="memdesc:aaaf2e8869d649001b51a1f000e57028e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds a leaf which contains a specified set of integer coordinates.  <br /></td></tr>
-<tr class="separator:aaaf2e8869d649001b51a1f000e57028e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a295e2a8ace6b335b9e332320a1ba4cfa" id="r_a295e2a8ace6b335b9e332320a1ba4cfa"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a295e2a8ace6b335b9e332320a1ba4cfa">find_leaf</a> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt; ref_level, <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt; coords, <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt; bias=<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;::make_uniform({3}, 0))</td></tr>
+<tr class="memdesc:a295e2a8ace6b335b9e332320a1ba4cfa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds a leaf which contains a specified set of integer coordinates.  <br /></td></tr>
+<tr class="separator:a295e2a8ace6b335b9e332320a1ba4cfa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adb24a6c89ad6bcf77f02002404350ac1" id="r_adb24a6c89ad6bcf77f02002404350ac1"><td class="memItemLeft" align="right" valign="top"><a id="adb24a6c89ad6bcf77f02002404350ac1" name="adb24a6c89ad6bcf77f02002404350ac1"></a>
+<a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>find_leaf</b> (int ref_level, <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt; coords, <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt; bias=<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;::make_uniform({3}, 0))</td></tr>
+<tr class="memdesc:adb24a6c89ad6bcf77f02002404350ac1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Overload for isotropic refinement level. <br /></td></tr>
+<tr class="separator:adb24a6c89ad6bcf77f02002404350ac1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a23ae23c2b059321baacc4f203beaa852" id="r_a23ae23c2b059321baacc4f203beaa852"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a23ae23c2b059321baacc4f203beaa852">find_leaf</a> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; <a class="el" href="#ad54d5761469e23f1842acfb743c48b15">nominal_position</a>)</td></tr>
 <tr class="memdesc:a23ae23c2b059321baacc4f203beaa852"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds a leaf which contains a specified point in physical space.  <br /></td></tr>
 <tr class="separator:a23ae23c2b059321baacc4f203beaa852"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8742470dfa8231138ec0512918af6002" id="r_a8742470dfa8231138ec0512918af6002"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8742470dfa8231138ec0512918af6002">find_neighbor</a> (Eigen::VectorXi direction)</td></tr>
-<tr class="memdesc:a8742470dfa8231138ec0512918af6002"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds a leaf neighbor of this element in the specified direction.  <br /></td></tr>
-<tr class="separator:a8742470dfa8231138ec0512918af6002"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a29f09ef5a27c3ed084944799e18a1414" id="r_a29f09ef5a27c3ed084944799e18a1414"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a29f09ef5a27c3ed084944799e18a1414">find_neighbors</a> (Eigen::VectorXi direction)</td></tr>
-<tr class="memdesc:a29f09ef5a27c3ed084944799e18a1414"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds all leaf neighbors of this element in a specified direction.  <br /></td></tr>
-<tr class="separator:a29f09ef5a27c3ed084944799e18a1414"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a319484112583969e76afab16b8b9894c" id="r_a319484112583969e76afab16b8b9894c"><td class="memItemLeft" align="right" valign="top"><a id="a319484112583969e76afab16b8b9894c" name="a319484112583969e76afab16b8b9894c"></a>
-int&#160;</td><td class="memItemRight" valign="bottom"><b>count</b> ()</td></tr>
-<tr class="memdesc:a319484112583969e76afab16b8b9894c"><td class="mdescLeft">&#160;</td><td class="mdescRight">total number of tree elements descended from this tree (including itself) <br /></td></tr>
-<tr class="separator:a319484112583969e76afab16b8b9894c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a453f6fbe408f0fe1348b0baa6bbb3f09" id="r_a453f6fbe408f0fe1348b0baa6bbb3f09"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a453f6fbe408f0fe1348b0baa6bbb3f09">find_neighbor</a> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt; direction)</td></tr>
+<tr class="memdesc:a453f6fbe408f0fe1348b0baa6bbb3f09"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds a leaf neighbor of this element in the specified direction.  <br /></td></tr>
+<tr class="separator:a453f6fbe408f0fe1348b0baa6bbb3f09"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9122a07f459eb1e0477ead8e63c8c03a" id="r_a9122a07f459eb1e0477ead8e63c8c03a"><td class="memItemLeft" align="right" valign="top"><a id="a9122a07f459eb1e0477ead8e63c8c03a" name="a9122a07f459eb1e0477ead8e63c8c03a"></a>
+<a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>find_neighbor</b> (int i_face)</td></tr>
+<tr class="memdesc:a9122a07f459eb1e0477ead8e63c8c03a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Equivalent to <code>find_neighbor(<a class="el" href="classhexed_1_1Array.html" title="Represents a dynamic-sized multidimensional array.">Array</a>&lt;int&gt;)</code> with <code>direction[i_face/2] == <a class="el" href="namespacehexed_1_1math.html#a0cf1f9dee834e4293708192a939f2482" title="returns 1 if condition is true, otherwise -1">math::sign</a>(i_face%2)</code>. <br /></td></tr>
+<tr class="separator:a9122a07f459eb1e0477ead8e63c8c03a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a49945483438b5ff570c72a3eb060c0f2" id="r_a49945483438b5ff570c72a3eb060c0f2"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a49945483438b5ff570c72a3eb060c0f2">find_neighbors</a> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt; direction)</td></tr>
+<tr class="memdesc:a49945483438b5ff570c72a3eb060c0f2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds all leaf neighbors of this element in a specified direction.  <br /></td></tr>
+<tr class="separator:a49945483438b5ff570c72a3eb060c0f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7342674df22638d943b0337f28272c6a" id="r_a7342674df22638d943b0337f28272c6a"><td class="memItemLeft" align="right" valign="top"><a id="a7342674df22638d943b0337f28272c6a" name="a7342674df22638d943b0337f28272c6a"></a>
+std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>find_neighbors</b> (int i_face)</td></tr>
+<tr class="memdesc:a7342674df22638d943b0337f28272c6a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Equivalent to <code>find_neighbors(<a class="el" href="classhexed_1_1Array.html" title="Represents a dynamic-sized multidimensional array.">Array</a>&lt;int&gt;)</code> with <code>direction[i_face/2] == <a class="el" href="namespacehexed_1_1math.html#a0cf1f9dee834e4293708192a939f2482" title="returns 1 if condition is true, otherwise -1">math::sign</a>(i_face%2)</code>. <br /></td></tr>
+<tr class="separator:a7342674df22638d943b0337f28272c6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af767a27e546d201f0005a719ff368372" id="r_af767a27e546d201f0005a719ff368372"><td class="memItemLeft" align="right" valign="top"><a id="af767a27e546d201f0005a719ff368372" name="af767a27e546d201f0005a719ff368372"></a>
+<a class="el" href="structhexed_1_1Tree_1_1Connection__neighbors.html">Connection_neighbors</a>&#160;</td><td class="memItemRight" valign="bottom"><b>find_connection_neighbors</b> (int i_face)</td></tr>
+<tr class="separator:af767a27e546d201f0005a719ff368372"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3e21ba30c8917a300ecf513c604676e1" id="r_a3e21ba30c8917a300ecf513c604676e1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Tree.html">Tree</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3e21ba30c8917a300ecf513c604676e1">find_index</a> (<a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> index, bool leaf=false)</td></tr>
+<tr class="memdesc:a3e21ba30c8917a300ecf513c604676e1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds a <code><a class="el" href="classhexed_1_1Tree.html" title="Bin/quad/octree data structure.">Tree</a></code> instance with a specific total or leaf index.  <br /></td></tr>
+<tr class="separator:a3e21ba30c8917a300ecf513c604676e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab5ae77279959866628049bc8b95a37eb" id="r_ab5ae77279959866628049bc8b95a37eb"><td class="memItemLeft" align="right" valign="top"><a id="ab5ae77279959866628049bc8b95a37eb" name="ab5ae77279959866628049bc8b95a37eb"></a>
+<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>needs_refine</b> (std::function&lt; bool(<a class="el" href="classhexed_1_1Tree.html">Tree</a> *)&gt; include)</td></tr>
+<tr class="separator:ab5ae77279959866628049bc8b95a37eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9d8127276a527dc024c779e124b97d5e" id="r_a9d8127276a527dc024c779e124b97d5e"><td class="memItemLeft" align="right" valign="top"><a id="a9d8127276a527dc024c779e124b97d5e" name="a9d8127276a527dc024c779e124b97d5e"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>visualize</b> (std::string format, std::string name)</td></tr>
+<tr class="separator:a9d8127276a527dc024c779e124b97d5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_methods_classhexed_1_1mutual_1_1Multiple"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1mutual_1_1Multiple')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">hexed::mutual::Multiple&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:ac5709169f0c82d616972cdfc1e9ea726 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_ac5709169f0c82d616972cdfc1e9ea726"><td class="memItemLeft" align="right" valign="top">
+&#160;</td><td class="memItemRight" valign="bottom"><b>Multiple</b> (const <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;)=delete</td></tr>
+<tr class="separator:ac5709169f0c82d616972cdfc1e9ea726 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae7b87ca4d9447502837fe6e84932e905 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_ae7b87ca4d9447502837fe6e84932e905"><td class="memItemLeft" align="right" valign="top">
+&#160;</td><td class="memItemRight" valign="bottom"><b>Multiple</b> (<a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;&amp;that)</td></tr>
+<tr class="memdesc:ae7b87ca4d9447502837fe6e84932e905 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="mdescLeft">&#160;</td><td class="mdescRight">steals all of <code>that</code>'s partners, leaving <code>that</code> unconnected <br /></td></tr>
+<tr class="separator:ae7b87ca4d9447502837fe6e84932e905 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8e5b792c6fb2683c8a61dae4b6cc5789 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_a8e5b792c6fb2683c8a61dae4b6cc5789"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;)=delete</td></tr>
+<tr class="separator:a8e5b792c6fb2683c8a61dae4b6cc5789 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a74659e42b69d3f5368acbb6a61bb89c3 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_a74659e42b69d3f5368acbb6a61bb89c3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1mutual_1_1Multiple.html#a74659e42b69d3f5368acbb6a61bb89c3">operator=</a> (<a class="el" href="classhexed_1_1mutual_1_1Multiple.html">Multiple</a> &amp;&amp;that)</td></tr>
+<tr class="memdesc:a74659e42b69d3f5368acbb6a61bb89c3 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="mdescLeft">&#160;</td><td class="mdescRight">steals all of <code>that</code>'s partners, leaving <code>that</code> unconnected  <br /></td></tr>
+<tr class="separator:a74659e42b69d3f5368acbb6a61bb89c3 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a230649ea636b1b0752747c3221612530 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_a230649ea636b1b0752747c3221612530"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>partners</b> ()</td></tr>
+<tr class="memdesc:a230649ea636b1b0752747c3221612530 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="mdescLeft">&#160;</td><td class="mdescRight">provides access to the list of partners <br /></td></tr>
+<tr class="separator:a230649ea636b1b0752747c3221612530 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29572e0aa91e2dc245516805ba8196e4 inherit pub_methods_classhexed_1_1mutual_1_1Multiple" id="r_a29572e0aa91e2dc245516805ba8196e4"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; const <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>partners</b> () const</td></tr>
+<tr class="memdesc:a29572e0aa91e2dc245516805ba8196e4 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="mdescLeft">&#160;</td><td class="mdescRight">provides access to the list of partners <br /></td></tr>
+<tr class="separator:a29572e0aa91e2dc245516805ba8196e4 inherit pub_methods_classhexed_1_1mutual_1_1Multiple"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:aeeed0b817fca1e67a790bbb8047a1cf2 inherit pub_methods_classhexed_1_1mutual_1_1Base" id="r_aeeed0b817fca1e67a790bbb8047a1cf2"><td class="memItemLeft" align="right" valign="top">
+virtual void *&#160;</td><td class="memItemRight" valign="bottom"><b>_mine</b> ()</td></tr>
+<tr class="separator:aeeed0b817fca1e67a790bbb8047a1cf2 inherit pub_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pub_methods_classhexed_1_1mutual_1_1Base" id="r_a8ea607c1db97e907d1eb3a13bc4c83a2"><td class="memItemLeft" align="right" valign="top">
+virtual const void *&#160;</td><td class="memItemRight" valign="bottom"><b>_mine</b> () const</td></tr>
+<tr class="memdesc:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pub_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a8ea607c1db97e907d1eb3a13bc4c83a2 inherit pub_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:a5cbb45f2a14e4f6afa661d81bad58316" id="r_a5cbb45f2a14e4f6afa661d81bad58316"><td class="memItemLeft" align="right" valign="top"><a id="a5cbb45f2a14e4f6afa661d81bad58316" name="a5cbb45f2a14e4f6afa661d81bad58316"></a>
 const int&#160;</td><td class="memItemRight" valign="bottom"><b>n_dim</b></td></tr>
 <tr class="separator:a5cbb45f2a14e4f6afa661d81bad58316"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2ef01b66b60ed9cd772bad96ce432cb8" id="r_a2ef01b66b60ed9cd772bad96ce432cb8"><td class="memItemLeft" align="right" valign="top"><a id="a2ef01b66b60ed9cd772bad96ce432cb8" name="a2ef01b66b60ed9cd772bad96ce432cb8"></a>
-<a class="el" href="classhexed_1_1Mutual__ptr.html">Mutual_ptr</a>&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a>, <a class="el" href="classhexed_1_1Element.html">Element</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>elem</b></td></tr>
-<tr class="memdesc:a2ef01b66b60ed9cd772bad96ce432cb8"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code><a class="el" href="classhexed_1_1Element.html" title="Stores data associated with one mesh element.">Element</a></code> generated from this tree (to be managed by the user of this class) <br /></td></tr>
-<tr class="separator:a2ef01b66b60ed9cd772bad96ce432cb8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a805566f219ed1ec14384af076e455805" id="r_a805566f219ed1ec14384af076e455805"><td class="memItemLeft" align="right" valign="top"><a id="a805566f219ed1ec14384af076e455805" name="a805566f219ed1ec14384af076e455805"></a>
+<a class="el" href="classhexed_1_1Reciprocal__ptr.html">Reciprocal_ptr</a>&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a>, <a class="el" href="classhexed_1_1Element.html">Element</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>elem</b></td></tr>
+<tr class="memdesc:a805566f219ed1ec14384af076e455805"><td class="mdescLeft">&#160;</td><td class="mdescRight"><code><a class="el" href="classhexed_1_1Element.html" title="Stores data associated with one mesh element.">Element</a></code> generated from this tree (to be managed by the user of this class) <br /></td></tr>
+<tr class="separator:a805566f219ed1ec14384af076e455805"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9b765d4800c4b76f004c8747efd5fad4" id="r_a9b765d4800c4b76f004c8747efd5fad4"><td class="memItemLeft" align="right" valign="top"><a id="a9b765d4800c4b76f004c8747efd5fad4" name="a9b765d4800c4b76f004c8747efd5fad4"></a>
 <a class="el" href="classhexed_1_1Deformed__element.html">Deformed_element</a> *&#160;</td><td class="memItemRight" valign="bottom"><b>def_elem</b> = nullptr</td></tr>
 <tr class="memdesc:a9b765d4800c4b76f004c8747efd5fad4"><td class="mdescLeft">&#160;</td><td class="mdescRight">if <code>elem</code> points to a deformed element, this can also be set to allow it to be accessed as deformed <br /></td></tr>
@@ -224,21 +364,59 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_status</b> (int)<
 <tr class="memitem:ace29bf94fd7bb34c80fc3e8665141880" id="r_ace29bf94fd7bb34c80fc3e8665141880"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ace29bf94fd7bb34c80fc3e8665141880">flood_fill</a> (int status)</td></tr>
 <tr class="memdesc:ace29bf94fd7bb34c80fc3e8665141880"><td class="mdescLeft">&#160;</td><td class="mdescRight">Executes flood fill algorithm starting with this element.  <br /></td></tr>
 <tr class="separator:ace29bf94fd7bb34c80fc3e8665141880"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a779a27b020bc62bc8088c0fa04edddd9" id="r_a779a27b020bc62bc8088c0fa04edddd9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a779a27b020bc62bc8088c0fa04edddd9">clear_status</a> ()</td></tr>
+<tr class="memitem:a779a27b020bc62bc8088c0fa04edddd9" id="r_a779a27b020bc62bc8088c0fa04edddd9"><td class="memItemLeft" align="right" valign="top"><a id="a779a27b020bc62bc8088c0fa04edddd9" name="a779a27b020bc62bc8088c0fa04edddd9"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>clear_status</b> ()</td></tr>
+<tr class="memdesc:a779a27b020bc62bc8088c0fa04edddd9"><td class="mdescLeft">&#160;</td><td class="mdescRight">sets the flood fill status of this and all child elements to <code>unprocessed</code> <br /></td></tr>
 <tr class="separator:a779a27b020bc62bc8088c0fa04edddd9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader">Miscellaneous</h2></td></tr>
+<tr class="memitem:a609f7bebdb5dcf1e07cbde2b1d37dd24" id="r_a609f7bebdb5dcf1e07cbde2b1d37dd24"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a609f7bebdb5dcf1e07cbde2b1d37dd24">write</a> (std::string file_name)</td></tr>
+<tr class="memdesc:a609f7bebdb5dcf1e07cbde2b1d37dd24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes the structure of this tree to a file.  <br /></td></tr>
+<tr class="separator:a609f7bebdb5dcf1e07cbde2b1d37dd24"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aeb4e7e01262529ff12fd2f5744771ea9" id="r_aeb4e7e01262529ff12fd2f5744771ea9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeb4e7e01262529ff12fd2f5744771ea9">traverse</a> (std::function&lt; void(<a class="el" href="classhexed_1_1Tree.html">Tree</a> &amp;)&gt; task, bool include_fake=false)</td></tr>
+<tr class="memdesc:aeb4e7e01262529ff12fd2f5744771ea9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Calls <code>task</code> on every tree in index order.  <br /></td></tr>
+<tr class="separator:aeb4e7e01262529ff12fd2f5744771ea9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af125a405130676a18a33180dbc41f52e" id="r_af125a405130676a18a33180dbc41f52e"><td class="memItemLeft" align="right" valign="top"><a id="af125a405130676a18a33180dbc41f52e" name="af125a405130676a18a33180dbc41f52e"></a>
+static <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>get_direction</b> (int i_face, int n_dim)</td></tr>
+<tr class="memdesc:af125a405130676a18a33180dbc41f52e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Converts between face indices and neighbor search directions. <br /></td></tr>
+<tr class="separator:af125a405130676a18a33180dbc41f52e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
+Additional Inherited Members</h2></td></tr>
+<tr class="inherit_header pro_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Protected Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_af879b15e305c3ba3b4541c3a34c2838b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhexed_1_1mutual_1_1Base.html#af879b15e305c3ba3b4541c3a34c2838b">_connect</a> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">may be overridden by derived classes to provide partners to data of some arbitrary type <code>T</code>  <br /></td></tr>
+<tr class="separator:af879b15e305c3ba3b4541c3a34c2838b inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base" id="r_a73cb219a6412d415c02c1d7500f730eb"><td class="memItemLeft" align="right" valign="top">
+void&#160;</td><td class="memItemRight" valign="bottom"><b>_disconnect</b> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">mutually disconnects <code>this</code> and <code>that</code> by calling both of their <code><a class="el" href="classhexed_1_1mutual_1_1Base.html#a26dde95d6491766fbc6e7f64aa7a5562">_unset()</a></code> member functions <br /></td></tr>
+<tr class="separator:a73cb219a6412d415c02c1d7500f730eb inherit pro_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_static_methods_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_static_methods_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Static Protected Member Functions inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base" id="r_a5f740c8da15c53af10fefaf493d4127f"><td class="memItemLeft" align="right" valign="top">
+static void *&#160;</td><td class="memItemRight" valign="bottom"><b>_yours</b> (<a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">Accesses the <code>_mine()</code> of <code>that</code> <br /></td></tr>
+<tr class="separator:a5f740c8da15c53af10fefaf493d4127f inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base" id="r_a751975e7405f0ca09b12b459d052b78c"><td class="memItemLeft" align="right" valign="top">
+static const void *&#160;</td><td class="memItemRight" valign="bottom"><b>_yours</b> (const <a class="el" href="classhexed_1_1mutual_1_1Base.html">Base</a>&lt; void, void &gt; &amp;that)</td></tr>
+<tr class="memdesc:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="mdescLeft">&#160;</td><td class="mdescRight">This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts. <br /></td></tr>
+<tr class="separator:a751975e7405f0ca09b12b459d052b78c inherit pro_static_methods_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_attribs_classhexed_1_1mutual_1_1Base"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pro_attribs_classhexed_1_1mutual_1_1Base')"><img src="closed.png" alt="-"/>&#160;Protected Attributes inherited from <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; void, void &gt;</a></td></tr>
+<tr class="memitem:ada381fb91093abc2366bd321d7679e90 inherit pro_attribs_classhexed_1_1mutual_1_1Base" id="r_ada381fb91093abc2366bd321d7679e90"><td class="memItemLeft" align="right" valign="top">
+<a class="el" href="classhexed_1_1Lock.html">Lock</a>&#160;</td><td class="memItemRight" valign="bottom"><b>_lock</b></td></tr>
+<tr class="separator:ada381fb91093abc2366bd321d7679e90 inherit pro_attribs_classhexed_1_1mutual_1_1Base"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Bin/quad/octree data structure. </p>
 <p>Used to compute the mesh topology, i.e. which cells are connected to which and how. Only knows about the nominal position and size of elements, not deformity or flow variables. In other words, this structure represents the Cartesian elements before any deformation happens. This structure also does not know about any extrusion (for now, anyway). A few general notes about the API:</p><ul>
-<li>Each <code><a class="el" href="classhexed_1_1Tree.html" title="Bin/quad/octree data structure.">Tree</a></code> instance is referred to as an "element" of the tree. It's <code><a class="el" href="#a907c6f923732b8dd9baaf0b2dd23db4c" title="If this cell has been refined, then this vector contains pointers to its children....">children()</a></code>, their <code><a class="el" href="#a907c6f923732b8dd9baaf0b2dd23db4c" title="If this cell has been refined, then this vector contains pointers to its children....">children()</a></code>, etc. are referred to as its "descendents". It's <code><a class="el" href="#a71a9b66dc5274ec6b64655bfeafb0a90">parent()</a></code>, their <code><a class="el" href="#a71a9b66dc5274ec6b64655bfeafb0a90">parent()</a></code>s, etc. are referred to as its "ancestors".</li>
-<li>Most of the recursive traversal functions look only down, not up. That is, they search the element you invoke them on and all its descendents, but not its ancestors. Thus if you want to search the whole tree, you should call the function on the root (which hopefully you would have done anyway). The notable exception is <code><a class="el" href="#a8742470dfa8231138ec0512918af6002" title="Finds a leaf neighbor of this element in the specified direction.">find_neighbor()</a></code>, which <em>does</em> go all the way up to the root before starting the recursive search.</li>
-<li><a class="el" href="classhexed_1_1Tree.html" title="Bin/quad/octree data structure.">Tree</a> elements are never reallocated, so any pointer to a tree element remains valid when the tree is modified as long as that element is not deleted with <code><a class="el" href="#a12da3629aaff2a42eb188d8e02ad6342">unrefine()</a></code>. Of course, <code><a class="el" href="#a12da3629aaff2a42eb188d8e02ad6342">unrefine()</a></code> deletes tree elements so it can create dangling pointers.</li>
+<li>Each <code><a class="el" href="classhexed_1_1Tree.html" title="Bin/quad/octree data structure.">Tree</a></code> instance is referred to as an "element" of the tree. It's <code><a class="el" href="#a907c6f923732b8dd9baaf0b2dd23db4c">children()</a></code>, their <code><a class="el" href="#a907c6f923732b8dd9baaf0b2dd23db4c">children()</a></code>, etc. are referred to as its "descendents". It's <code><a class="el" href="#a71a9b66dc5274ec6b64655bfeafb0a90">parent()</a></code>, their <code><a class="el" href="#a71a9b66dc5274ec6b64655bfeafb0a90">parent()</a></code>s, etc. are referred to as its "ancestors".</li>
+<li>Most of the recursive traversal functions look only down, not up. That is, they search the element you invoke them on and all its descendents, but not its ancestors. Thus if you want to search the whole tree, you should call the function on the root (which hopefully you would have done anyway). The notable exception is <code><a class="el" href="#a453f6fbe408f0fe1348b0baa6bbb3f09" title="Finds a leaf neighbor of this element in the specified direction.">find_neighbor()</a></code>, which <em>does</em> go all the way up to the root before starting the recursive search.</li>
+<li><a class="el" href="classhexed_1_1Tree.html" title="Bin/quad/octree data structure.">Tree</a> elements are never reallocated, so any pointer to a tree element remains valid when the tree is modified as long as that element is not deleted with <code><a class="el" href="#a1ce0dbf1d3bb38a9b681398b55428326" title="Isotropic unrefinement.">unrefine()</a></code>. Of course, <code><a class="el" href="#a1ce0dbf1d3bb38a9b681398b55428326" title="Isotropic unrefinement.">unrefine()</a></code> deletes tree elements so it can create dangling pointers.</li>
 </ul>
 <p><b>Thread safety</b></p>
 <p>Multiple calls to traversing functions may be made concurrently, and multiple elements may be modified concurrently. However, concurrent attempts to modify the same element (directly or indirectly) or modifying elements and calling a traversing function concurrently may result in data races. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="ab7d776dda57115b407f5791154e6823c" name="ab7d776dda57115b407f5791154e6823c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab7d776dda57115b407f5791154e6823c">&#9670;&#160;</a></span>Tree()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ab7d776dda57115b407f5791154e6823c">&#9670;&#160;</a></span>Tree() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -273,6 +451,26 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_status</b> (int)<
 
 </div>
 </div>
+<a id="a140d1e294484f49fd849351ce8ed4253" name="a140d1e294484f49fd849351ce8ed4253"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a140d1e294484f49fd849351ce8ed4253">&#9670;&#160;</a></span>Tree() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">hexed::Tree::Tree </td>
+          <td>(</td>
+          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>file_name</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Reads a tree from a file previously written with <code><a class="el" href="#a609f7bebdb5dcf1e07cbde2b1d37dd24" title="Writes the structure of this tree to a file.">write()</a></code>. </p>
+<p>New trees will automatically <code><a class="el" href="#a2d3bae17e9817d0f9d843f9d84fa7ac4" title="Updates the leaf_index() and n_leaves() of the entire tree. Can only be called on the root.">update_indices()</a></code> (resulting in the same <code><a class="el" href="#ab4e58a58effd00be233a5875be418d25" title="Lowest index of the leaves of this tree in a global ordering.">leaf_index()</a></code> and <code><a class="el" href="#a98a6c5e99abac38c13b155c4fdfbab09" title="The number of leaves descended from this.">n_leaves()</a></code> as the original) but will forget the <code><a class="el" href="#a805566f219ed1ec14384af076e455805" title="Element generated from this tree (to be managed by the user of this class)">Tree::elem</a></code>, <code><a class="el" href="#a9b765d4800c4b76f004c8747efd5fad4" title="if elem points to a deformed element, this can also be set to allow it to be accessed as deformed">Tree::def_elem</a></code>, and <code><a class="el" href="#ad7dc989cdd31b53a29d54e76f90fc72f" title="As the name implies, used to store whatever random information you want.">Tree::misc_data</a></code>. File extension (<code>.tree.h5</code>) is added automatically. </p>
+
+</div>
+</div>
 <h2 class="groupheader">Member Function Documentation</h2>
 <a id="a55319ba2f5602a536098c559766937ec" name="a55319ba2f5602a536098c559766937ec"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a55319ba2f5602a536098c559766937ec">&#9670;&#160;</a></span>center()</h2>
@@ -292,32 +490,32 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_status</b> (int)<
 
 </div>
 </div>
-<a id="a779a27b020bc62bc8088c0fa04edddd9" name="a779a27b020bc62bc8088c0fa04edddd9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a779a27b020bc62bc8088c0fa04edddd9">&#9670;&#160;</a></span>clear_status()</h2>
+<a id="a907c6f923732b8dd9baaf0b2dd23db4c" name="a907c6f923732b8dd9baaf0b2dd23db4c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a907c6f923732b8dd9baaf0b2dd23db4c">&#9670;&#160;</a></span>children()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void hexed::Tree::clear_status </td>
+          <td class="memname">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt; hexed::Tree::children </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>sets the flood fill status of this and all child elements to <code>unprocessed</code> </p>
+<p>If this cell has been refined, then this vector contains pointers to its children. If it has not, the vector is empty. </p>
 
 </div>
 </div>
-<a id="a963fb816d2a1dff71deb021a4bfe7139" name="a963fb816d2a1dff71deb021a4bfe7139"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a963fb816d2a1dff71deb021a4bfe7139">&#9670;&#160;</a></span>coordinates()</h2>
+<a id="a5ccb3cfab8a7c43aac2431441ffa331f" name="a5ccb3cfab8a7c43aac2431441ffa331f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5ccb3cfab8a7c43aac2431441ffa331f">&#9670;&#160;</a></span>coordinates()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">Eigen::VectorXi hexed::Tree::coordinates </td>
+          <td class="memname"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt; hexed::Tree::coordinates </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td> const</td>
@@ -330,8 +528,52 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_status</b> (int)<
 
 </div>
 </div>
-<a id="aaaf2e8869d649001b51a1f000e57028e" name="aaaf2e8869d649001b51a1f000e57028e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aaaf2e8869d649001b51a1f000e57028e">&#9670;&#160;</a></span>find_leaf() <span class="overload">[1/2]</span></h2>
+<a id="a6e140de1fe925d3f2ea8489901085561" name="a6e140de1fe925d3f2ea8489901085561"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6e140de1fe925d3f2ea8489901085561">&#9670;&#160;</a></span>desired_refinement_level()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt; hexed::Tree::desired_refinement_level </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Total desired refinement level. </p>
+<p><code>anisotropic_refinement_level()</code> plus <code>elem-&gt;desired_refinement()</code>, if <code>elem</code> is not null. </p>
+
+</div>
+</div>
+<a id="a3e21ba30c8917a300ecf513c604676e1" name="a3e21ba30c8917a300ecf513c604676e1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3e21ba30c8917a300ecf513c604676e1">&#9670;&#160;</a></span>find_index()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classhexed_1_1Tree.html">Tree</a> * hexed::Tree::find_index </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a></td>          <td class="paramname"><span class="paramname"><em>index</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>leaf</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Finds a <code><a class="el" href="classhexed_1_1Tree.html" title="Bin/quad/octree data structure.">Tree</a></code> instance with a specific total or leaf index. </p>
+<p>If <code>leaf</code> is true, finds a tree with the specified leaf index. Otherwise, finds a tree with the specified total index. If there is not tree with the specified index descended from <code>this</code>, returns <code>nullptr</code>. </p>
+
+</div>
+</div>
+<a id="a295e2a8ace6b335b9e332320a1ba4cfa" name="a295e2a8ace6b335b9e332320a1ba4cfa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a295e2a8ace6b335b9e332320a1ba4cfa">&#9670;&#160;</a></span>find_leaf() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -339,31 +581,24 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_status</b> (int)<
         <tr>
           <td class="memname"><a class="el" href="classhexed_1_1Tree.html">Tree</a> * hexed::Tree::find_leaf </td>
           <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>ref_level</em></span>, </td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;</td>          <td class="paramname"><span class="paramname"><em>ref_level</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">Eigen::VectorXi</td>          <td class="paramname"><span class="paramname"><em>coords</em></span>, </td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>coords</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">Eigen::VectorXi</td>          <td class="paramname"><span class="paramname"><em>bias</em></span><span class="paramdefsep"> = </span><span class="paramdefval">Eigen::VectorXi::Zero(3)</span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;</td>          <td class="paramname"><span class="paramname"><em>bias</em></span><span class="paramdefsep"> = </span><span class="paramdefval"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt;int&gt;::make_uniform({3},&#160;0)</span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>Finds a leaf which contains a specified set of integer coordinates. </p>
 <dl class="section note"><dt>Note</dt><dd>Only considers this element and its descendents, not neighbors that share the same root.</dd></dl>
-<p>Recursively searches this tree and its descendents for a leaf element which contains the point determined by <code>coords</code> and <code>ref_level</code>. If no element is found (i.e. if the specified coordinates are outside this cell) then <code>nullptr</code> is returned. For each dimension, if the corresponding element of <code>bias</code> is 0, then the point is permitted to lie on the lower face of that dimension but not the upper face. If the corresponding element of <code>bias</code> is 1, then it may lie on the upper face but not the lower. Example: The element with refinement level 2 and coordinates {1, 2}:</p><ul>
-<li>contains <code>{ref_level = 2, coords = {1, 2}, bias = {0, 0}}</code></li>
-<li>does not contain <code>{ref_level = 2, coords = {2, 2}, bias = {0, 0}}</code></li>
-<li>contains <code>{ref_level = 2, coords = {2, 2}, bias = {1, 0}}</code></li>
-<li>does not contain <code>{ref_level = 2, coords = {2, 2}, bias = {1, 1}}</code></li>
-<li>contains <code>{ref_level = 3, coords = {3, 5}}</code> regardless of <code>bias</code>.</li>
-</ul>
-<p>The arguments <code>coords</code> and <code>bias</code> must have at least <code>n_dim</code> elements and only the first <code>n_dim</code> are read. All elements of <code>bias</code> must be either 0 or 1, or the behavior is unspecified. <code>ref_level</code> must be nonnegative, but there are no restrictions on how it relates to the refinement levels of the cells to be searched. </p>
+<p>Recursively searches this tree and its descendents for a leaf element which contains the point determined by <code>_coords</code> and <code>_ref_level</code>. If no element is found (i.e. if the specified coordinates are outside this cell) then <code>nullptr</code> is returned. For each dimension, if the corresponding element of <code>bias</code> is 0, then the point is permitted to lie on the lower face of that dimension but not the upper face. If the corresponding element of <code>bias</code> is 1, then it may lie on the upper face but not the lower. The arguments <code>_coords</code> and <code>bias</code> must have at least <code>n_dim</code> elements and only the first <code>n_dim</code> are read. All elements of <code>bias</code> must be either 0 or 1, or the behavior is unspecified. <code>_ref_level</code> must be nonnegative, but there are no restrictions on how it relates to the refinement levels of the cells to be searched. </p>
 
 </div>
 </div>
@@ -388,8 +623,8 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_status</b> (int)<
 
 </div>
 </div>
-<a id="a8742470dfa8231138ec0512918af6002" name="a8742470dfa8231138ec0512918af6002"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8742470dfa8231138ec0512918af6002">&#9670;&#160;</a></span>find_neighbor()</h2>
+<a id="a453f6fbe408f0fe1348b0baa6bbb3f09" name="a453f6fbe408f0fe1348b0baa6bbb3f09"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a453f6fbe408f0fe1348b0baa6bbb3f09">&#9670;&#160;</a></span>find_neighbor()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -397,7 +632,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_status</b> (int)<
         <tr>
           <td class="memname"><a class="el" href="classhexed_1_1Tree.html">Tree</a> * hexed::Tree::find_neighbor </td>
           <td>(</td>
-          <td class="paramtype">Eigen::VectorXi</td>          <td class="paramname"><span class="paramname"><em>direction</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;</td>          <td class="paramname"><span class="paramname"><em>direction</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -405,11 +640,12 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_status</b> (int)<
 
 <p>Finds a leaf neighbor of this element in the specified direction. </p>
 <p>Recursively searches the entire <code><a class="el" href="classhexed_1_1Tree.html" title="Bin/quad/octree data structure.">Tree</a></code> (all decendents of this element's root) for the nearest element which is a leaf and whose vertex 0 is in the direction specified by <code>direction</code> from this element's vertex 0. All elements of <code>direction</code> must be -1, 0, 1. If no neighbor is found, <code>nullptr</code> is returned. </p><dl class="section note"><dt>Note</dt><dd>If exactly one element of <code>direction</code> is nonzero, this function finds a face neighbor. If there are multiple neighbors on the same face, the one with the lowest coordinates is returned and other neighbors can be found by locating the appropriate neighbors of that cell. If more than one element of <code>direction</code> is nonzero, then edge or vertex neighbors are returned. </dd></dl>
+<dl class="todo"><dt><b><a class="el" href="todo.html#_todo000009">Todo</a></b></dt><dd>document behavior for grafted connections </dd></dl>
 
 </div>
 </div>
-<a id="a29f09ef5a27c3ed084944799e18a1414" name="a29f09ef5a27c3ed084944799e18a1414"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a29f09ef5a27c3ed084944799e18a1414">&#9670;&#160;</a></span>find_neighbors()</h2>
+<a id="a49945483438b5ff570c72a3eb060c0f2" name="a49945483438b5ff570c72a3eb060c0f2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a49945483438b5ff570c72a3eb060c0f2">&#9670;&#160;</a></span>find_neighbors()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -417,14 +653,14 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_status</b> (int)<
         <tr>
           <td class="memname">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt; hexed::Tree::find_neighbors </td>
           <td>(</td>
-          <td class="paramtype">Eigen::VectorXi</td>          <td class="paramname"><span class="paramname"><em>direction</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;</td>          <td class="paramname"><span class="paramname"><em>direction</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>Finds all leaf neighbors of this element in a specified direction. </p>
-<p>Finds all elements in the entire tree which border on this one in a given direction. If the neighbors have the same or lower refinement level, this vector will contain one element which is equal to <code>find_neighbor(direction)</code>. If the neighbors have a higher refinement level, it will find all of them instead of returning the one with the lowest coordinates. In particular, if exactly one element of <code>direction</code> is nonzero, you will get a vector of all the neighbors on a specific face. If no neighbors are found, the vector will be empty. Neighbors are returned in a depth-first, row-major order. </p>
+<p>Finds all elements in the entire tree which border on this one in a given direction. If the neighbors have the same or lower refinement level, this vector will contain one element which is equal to <code>find_neighbor(direction)</code>. If the neighbors have a higher refinement level, it will find all of them instead of returning the one with the lowest coordinates. In particular, if exactly one element of <code>direction</code> is nonzero, you will get a vector of all the neighbors on a specific face. If no neighbors are found, the vector will be empty. Neighbors are returned in a depth-first, row-major order (in the coordinates of their own root, in the case of grafted neighbors). </p>
 
 </div>
 </div>
@@ -448,21 +684,107 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_status</b> (int)<
 
 </div>
 </div>
-<a id="a71e2c3c06b4328f1ef0f0c7da295bc8a" name="a71e2c3c06b4328f1ef0f0c7da295bc8a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a71e2c3c06b4328f1ef0f0c7da295bc8a">&#9670;&#160;</a></span>is_leaf()</h2>
+<a id="ab5463ee24bd8eb8cd74e90076753d6f9" name="ab5463ee24bd8eb8cd74e90076753d6f9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab5463ee24bd8eb8cd74e90076753d6f9">&#9670;&#160;</a></span>graft()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">bool hexed::Tree::is_leaf </td>
+          <td class="memname"><a class="el" href="classhexed_1_1Tree.html">Tree</a> * hexed::Tree::graft </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;</td>          <td class="paramname"><span class="paramname"><em>ref_level</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>coords</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Adds a new tree outside the existing refinement heirarchy. </p>
+<p>A tree created this way and all its descendents are said to be "grafted". By default, this tree will not have any neighbors, regardless of its ref level and coordinates. <code>connect()</code> can be called to establish a neighbor connection with other trees. Grafted trees can be refined, and their descendents will share their neighbor connections. For the purpose of indexing (see <code><a class="el" href="#ab4e58a58effd00be233a5875be418d25" title="Lowest index of the leaves of this tree in a global ordering.">leaf_index()</a></code>), a tree created with <code><a class="el" href="#ab5463ee24bd8eb8cd74e90076753d6f9" title="Adds a new tree outside the existing refinement heirarchy.">graft()</a></code> is considered to be descended from the tree that <code><a class="el" href="#ab5463ee24bd8eb8cd74e90076753d6f9" title="Adds a new tree outside the existing refinement heirarchy.">graft()</a></code> was called on. Furthermore, it will only be assigned an index if you subsequently connect the grafted tree to the tree you called <code><a class="el" href="#ab5463ee24bd8eb8cd74e90076753d6f9" title="Adds a new tree outside the existing refinement heirarchy.">graft()</a></code> on. Therefore, it is recommended to graft trees from a tree you intend to connect them to. </p>
+
+</div>
+</div>
+<a id="afc0f50695a3506a47ec9c5373052f423" name="afc0f50695a3506a47ec9c5373052f423"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afc0f50695a3506a47ec9c5373052f423">&#9670;&#160;</a></span>is_root()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool hexed::Tree::is_root </td>
+          <td>(</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>graft</em></span><span class="paramdefsep"> = </span><span class="paramdefval">true</span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Checks whether <code>this</code> is the root of the tree. </p>
+<p>Depending on <code>graft</code>, this can check for either the graft root or the global root. See <code><a class="el" href="#ab1ba656348eb36002d25183c456a6980" title="Fetches the root element of this tree.">root()</a></code> for more details. </p>
+
+</div>
+</div>
+<a id="ab4e58a58effd00be233a5875be418d25" name="ab4e58a58effd00be233a5875be418d25"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab4e58a58effd00be233a5875be418d25">&#9670;&#160;</a></span>leaf_index()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> hexed::Tree::leaf_index </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>gives the same result as <code><a class="el" href="#a907c6f923732b8dd9baaf0b2dd23db4c" title="If this cell has been refined, then this vector contains pointers to its children....">children()</a>.empty()</code> </p>
+
+<p>Lowest index of the leaves of this tree in a global ordering. </p>
+<p>Every leaf is assigned an index that uniquely identifies it in the global tree (starting with 0). If <code>this</code> is a leaf, then <code><a class="el" href="#ab4e58a58effd00be233a5875be418d25" title="Lowest index of the leaves of this tree in a global ordering.">leaf_index()</a></code> returns that index. If <code>this</code> is not a leaf, then <code><a class="el" href="#ab4e58a58effd00be233a5875be418d25" title="Lowest index of the leaves of this tree in a global ordering.">leaf_index()</a></code> returns the lowest index of all the leaves descended from <code>this</code>. New elements created by refinement/coarsening will have an index of -1 until <code><a class="el" href="#a2d3bae17e9817d0f9d843f9d84fa7ac4" title="Updates the leaf_index() and n_leaves() of the entire tree. Can only be called on the root.">update_indices()</a></code> is called to recompute the indices of the entire tree. All leaves descended from <code>this</code> will have consecutive indices, implying that the difference between the lowest and highest indices is equal to <code><a class="el" href="#a98a6c5e99abac38c13b155c4fdfbab09" title="The number of leaves descended from this.">n_leaves()</a> - 1</code>. </p><dl class="section warning"><dt>Warning</dt><dd>Any modifications to the tree (refinement, unrefinement, grafting) will invalidate the indices of any leaves that formerly had higher indices than the modified leaves. Indices will not be accurate again until <code><a class="el" href="#a2d3bae17e9817d0f9d843f9d84fa7ac4" title="Updates the leaf_index() and n_leaves() of the entire tree. Can only be called on the root.">update_indices()</a></code> is called on the root. </dd></dl>
+
+</div>
+</div>
+<a id="a98a6c5e99abac38c13b155c4fdfbab09" name="a98a6c5e99abac38c13b155c4fdfbab09"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a98a6c5e99abac38c13b155c4fdfbab09">&#9670;&#160;</a></span>n_leaves()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> hexed::Tree::n_leaves </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>The number of leaves descended from <code>this</code>. </p>
+<dl class="section warning"><dt>Warning</dt><dd>This count is computed by <code><a class="el" href="#a2d3bae17e9817d0f9d843f9d84fa7ac4" title="Updates the leaf_index() and n_leaves() of the entire tree. Can only be called on the root.">update_indices()</a></code>. As a result, <code><a class="el" href="#a98a6c5e99abac38c13b155c4fdfbab09" title="The number of leaves descended from this.">n_leaves()</a></code> is inexpensive to call, but modifications to any of the descendents of <code>this</code> will cause it to be inaccurate until <code><a class="el" href="#a2d3bae17e9817d0f9d843f9d84fa7ac4" title="Updates the leaf_index() and n_leaves() of the entire tree. Can only be called on the root.">update_indices()</a></code> is called again. </dd></dl>
+
+</div>
+</div>
+<a id="a43d84eb7b39f318d1057f281fc6d32cc" name="a43d84eb7b39f318d1057f281fc6d32cc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a43d84eb7b39f318d1057f281fc6d32cc">&#9670;&#160;</a></span>n_total()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> hexed::Tree::n_total </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Returns the total number of trees descended from <code>this</code>. </p>
+<p>Includes leaves, non-leavs, grafts, and <code>this</code> itself. </p><dl class="section warning"><dt>Warning</dt><dd>This count is computed by <code><a class="el" href="#a2d3bae17e9817d0f9d843f9d84fa7ac4" title="Updates the leaf_index() and n_leaves() of the entire tree. Can only be called on the root.">update_indices()</a></code>. As a result, <code><a class="el" href="#a43d84eb7b39f318d1057f281fc6d32cc" title="Returns the total number of trees descended from this.">n_total()</a></code> is inexpensive to call, but modifications to any of the descendents of <code>this</code> will cause it to be inaccurate until <code><a class="el" href="#a2d3bae17e9817d0f9d843f9d84fa7ac4" title="Updates the leaf_index() and n_leaves() of the entire tree. Can only be called on the root.">update_indices()</a></code> is called again. </dd></dl>
 
 </div>
 </div>
@@ -520,25 +842,192 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>set_status</b> (int)<
         </tr>
       </table>
 </div><div class="memdoc">
-<p>If this element is not the root, then this is a pointer to the element which was refined to obtain this element. If it is the root, then this is <code>nullptr</code>. </p>
+<p>If this element is not the root or a graft root, then this is a pointer to the element which was refined to obtain this element. If it is the root, then this is <code>nullptr</code>. </p>
 
 </div>
 </div>
-<a id="a12da3629aaff2a42eb188d8e02ad6342" name="a12da3629aaff2a42eb188d8e02ad6342"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a12da3629aaff2a42eb188d8e02ad6342">&#9670;&#160;</a></span>unrefine()</h2>
+<a id="afc0aecd981ad1d98462a988439e9582d" name="afc0aecd981ad1d98462a988439e9582d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afc0aecd981ad1d98462a988439e9582d">&#9670;&#160;</a></span>refine() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void hexed::Tree::unrefine </td>
+          <td class="memname">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt; hexed::Tree::refine </td>
           <td>(</td>
           <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Deletes all child elements (and descendents thereof). This element is now a leaf. </p>
+
+<p>Isotropic refinement. </p>
+<p>Equivalent to <code>refine(std::vector&lt;bool&gt;)</code> on a vector of all <code>true</code>. </p>
+
+</div>
+</div>
+<a id="ab2aef86dae847d84f1f77eca4e9e7636" name="ab2aef86dae847d84f1f77eca4e9e7636"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab2aef86dae847d84f1f77eca4e9e7636">&#9670;&#160;</a></span>refine() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt; hexed::Tree::refine </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; bool &gt;</td>          <td class="paramname"><span class="paramname"><em>refine_dims</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Refines anisotropically along an arbitrary number of dimensions. </p>
+<p>Will refine along dimension <code>i</code> iff <code>refine_dims[i]</code> is <code>true</code>. <code>refine_dims</code> must have size <code>n_dim</code>. If all entries of <code>refine_dims</code> are <code>true</code>, the refenement is isotropic. If none are <code>true</code>, no refinement is performed. Must be leaf in order to refine. Will also attempt to simplify the structure of the tree to reduce the number of branches and make the refinement level just before the leaves as isotropic as possible (to allow the leaves maximal freedom to unrefine along any dimension). This will not change any of the leaves, but may invalidate pointers to branches that are neither roots or leaves, <em>including <code>this</code></em>. </p><dl class="section return"><dt>Returns</dt><dd>Pointers to the new leaves created by refining. </dd></dl>
+<dl class="section warning"><dt>Warning</dt><dd>If refinement simplification occurs, <code>this</code> may be destroyed! </dd></dl>
+
+</div>
+</div>
+<a id="ace5332a019fcc9f6c7a65002727d0418" name="ace5332a019fcc9f6c7a65002727d0418"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace5332a019fcc9f6c7a65002727d0418">&#9670;&#160;</a></span>refinement_level()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int hexed::Tree::refinement_level </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>how many calls of <code>refine</code> were required to generate this element. </p>
+<p>E.g. the root element has refinement level 0. </p>
+
+</div>
+</div>
+<a id="ab1ba656348eb36002d25183c456a6980" name="ab1ba656348eb36002d25183c456a6980"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab1ba656348eb36002d25183c456a6980">&#9670;&#160;</a></span>root()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classhexed_1_1Tree.html">Tree</a> * hexed::Tree::root </td>
+          <td>(</td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>graft</em></span><span class="paramdefsep"> = </span><span class="paramdefval">true</span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Fetches the root element of this tree. </p>
+<p>If <code>graft == true</code> <em>and</em> <code>this</code> is grafted, then this will be only the <em>graft</em> root. That is, it will traverse up the parent hierarchy, but when it gets to the original grafted tree that was refined to create <code>this</code>, it will stop and return that tree. If <code>graft == false</code>, then it will traverse graft-parent relations as well, so it will always return the global root of the entire tree. </p>
+
+</div>
+</div>
+<a id="a59b439641e1fe49574186086a87825a2" name="a59b439641e1fe49574186086a87825a2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a59b439641e1fe49574186086a87825a2">&#9670;&#160;</a></span>total_index()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> hexed::Tree::total_index </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>An index that uniquely identifies this branch in the whole tree (not just the leaves). </p>
+<p>All <code><a class="el" href="classhexed_1_1Tree.html" title="Bin/quad/octree data structure.">Tree</a></code> instances are assigned indices that uniquely and consecutively identify them among all <code><a class="el" href="classhexed_1_1Tree.html" title="Bin/quad/octree data structure.">Tree</a></code>s descended from the same root. (This is different from the <code><a class="el" href="#ab4e58a58effd00be233a5875be418d25" title="Lowest index of the leaves of this tree in a global ordering.">leaf_index()</a></code>, which is only unique for the leaves.) This function returns that index. Like <code><a class="el" href="#ab4e58a58effd00be233a5875be418d25" title="Lowest index of the leaves of this tree in a global ordering.">leaf_index()</a></code>, descendents are indexed consecutively and the difference between the highest index of any descendent of <code>this</code> is <code><a class="el" href="#a43d84eb7b39f318d1057f281fc6d32cc" title="Returns the total number of trees descended from this.">n_total()</a> - 1</code>. </p><dl class="section warning"><dt>Warning</dt><dd>Any modifications to the tree (refinement, unrefinement, grafting) will invalidate the indices of any leaves that formerly had higher indices than the modified leaves. Indices will not be accurate again until <code><a class="el" href="#a2d3bae17e9817d0f9d843f9d84fa7ac4" title="Updates the leaf_index() and n_leaves() of the entire tree. Can only be called on the root.">update_indices()</a></code> is called on the root. </dd></dl>
+
+</div>
+</div>
+<a id="aeb4e7e01262529ff12fd2f5744771ea9" name="aeb4e7e01262529ff12fd2f5744771ea9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aeb4e7e01262529ff12fd2f5744771ea9">&#9670;&#160;</a></span>traverse()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void hexed::Tree::traverse </td>
+          <td>(</td>
+          <td class="paramtype">std::function&lt; void(<a class="el" href="classhexed_1_1Tree.html">Tree</a> &amp;)&gt;</td>          <td class="paramname"><span class="paramname"><em>task</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>include_fake</em></span><span class="paramdefsep"> = </span><span class="paramdefval">false</span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Calls <code>task</code> on every tree in index order. </p>
+<p>If <code>include_fake</code> is <code>true</code>, this will include certain "fake trees" which are automatically created to facilitate hanging-node graft connections but are not assigned <code>total_index</code> values or accessible by neighbor-finding algorithms. By default, these trees are skipped. </p>
+
+</div>
+</div>
+<a id="a1ce0dbf1d3bb38a9b681398b55428326" name="a1ce0dbf1d3bb38a9b681398b55428326"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1ce0dbf1d3bb38a9b681398b55428326">&#9670;&#160;</a></span>unrefine() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt; hexed::Tree::unrefine </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Isotropic unrefinement. </p>
+<p>Equivalent to <code>unrefine(std::vector&lt;bool&gt;)</code> on a vector of all <code>true</code>. </p>
+
+</div>
+</div>
+<a id="a4714dc10fe1f7b5af532f99515d9a140" name="a4714dc10fe1f7b5af532f99515d9a140"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4714dc10fe1f7b5af532f99515d9a140">&#9670;&#160;</a></span>unrefine() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; <a class="el" href="classhexed_1_1Tree.html">Tree</a> * &gt; hexed::Tree::unrefine </td>
+          <td>(</td>
+          <td class="paramtype">std::vector&lt; bool &gt;</td>          <td class="paramname"><span class="paramname"><em>unrefine_dims</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Unrefines anisotropically along an arbitrary number of dimensions. </p>
+<p>Will refine along dimension <code>i</code> iff <code>refine_dims[i]</code> is <code>true</code>. For each <code>i</code> where <code>unrefine_dims[i]</code> is <code>true</code>, <code>is_refined[i]</code> must also be true, or else it throws. Each child must also be a leaf, or else it also throws. </p>
+
+</div>
+</div>
+<a id="a609f7bebdb5dcf1e07cbde2b1d37dd24" name="a609f7bebdb5dcf1e07cbde2b1d37dd24"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a609f7bebdb5dcf1e07cbde2b1d37dd24">&#9670;&#160;</a></span>write()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void hexed::Tree::write </td>
+          <td>(</td>
+          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>file_name</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Writes the structure of this tree to a file. </p>
+<p>File extension (<code>.tree.h5</code>) is added automatically. </p>
 
 </div>
 </div>

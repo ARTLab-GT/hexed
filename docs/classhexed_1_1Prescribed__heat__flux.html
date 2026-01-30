@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -137,9 +137,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a1789ef992665d40469b4134503ac3118" id="r_a1789ef992665d40469b4134503ac3118"><td class="memItemLeft" align="right" valign="top"><a id="a1789ef992665d40469b4134503ac3118" name="a1789ef992665d40469b4134503ac3118"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Prescribed_heat_flux</b> (double h=0.)</td></tr>
 <tr class="separator:a1789ef992665d40469b4134503ac3118"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9999c536040ee2719de6268a1e57d8d1" id="r_a9999c536040ee2719de6268a1e57d8d1"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9999c536040ee2719de6268a1e57d8d1">ghost_energy</a> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; state) override</td></tr>
-<tr class="memdesc:a9999c536040ee2719de6268a1e57d8d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">prescribes the total energy at the wall as a function of the current state  <br /></td></tr>
-<tr class="separator:a9999c536040ee2719de6268a1e57d8d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a164d8e74b7746a0253c960172d59fc8f" id="r_a164d8e74b7746a0253c960172d59fc8f"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a164d8e74b7746a0253c960172d59fc8f">ghost_energy</a> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; scalar_state) override</td></tr>
+<tr class="memdesc:a164d8e74b7746a0253c960172d59fc8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Prescribes the total energy at the wall as a function of the current state.  <br /></td></tr>
+<tr class="separator:a164d8e74b7746a0253c960172d59fc8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0b84d00add9bd767784fb6df2f304f34" id="r_a0b84d00add9bd767784fb6df2f304f34"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a0b84d00add9bd767784fb6df2f304f34">ghost_heat_flux</a> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;, double) override</td></tr>
 <tr class="memdesc:a0b84d00add9bd767784fb6df2f304f34"><td class="mdescLeft">&#160;</td><td class="mdescRight">prescribes the wall heat flux as a function of the state and current heat flux  <br /></td></tr>
 <tr class="separator:a0b84d00add9bd767784fb6df2f304f34"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -154,8 +154,8 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>heat_flux</b></td><
 <div class="textblock"><p>prescribes the heat flux but doesn't touch the energy </p>
 <p>setting the heat flux to 0 gives you an adiabatic BC </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a9999c536040ee2719de6268a1e57d8d1" name="a9999c536040ee2719de6268a1e57d8d1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9999c536040ee2719de6268a1e57d8d1">&#9670;&#160;</a></span>ghost_energy()</h2>
+<a id="a164d8e74b7746a0253c960172d59fc8f" name="a164d8e74b7746a0253c960172d59fc8f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a164d8e74b7746a0253c960172d59fc8f">&#9670;&#160;</a></span>ghost_energy()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -166,7 +166,7 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>heat_flux</b></td><
         <tr>
           <td class="memname">double hexed::Prescribed_heat_flux::ghost_energy </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;</td>          <td class="paramname"><span class="paramname"><em>state</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;</td>          <td class="paramname"><span class="paramname"><em>scalar_state</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -177,10 +177,10 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>heat_flux</b></td><
 </table>
 </div><div class="memdoc">
 
-<p>prescribes the total energy at the wall as a function of the current state </p>
-<dl class="section note"><dt>Note</dt><dd>might give you back the current energy if this is a Neumann BC </dd></dl>
+<p>Prescribes the total energy at the wall as a function of the current state. </p>
+<p><code>scalar_state</code> should include all the state variables from density onwards (skipping the momentum). </p><dl class="section note"><dt>Note</dt><dd>might give you back the current energy if this is a Neumann BC </dd></dl>
 
-<p>Implements <a class="el" href="classhexed_1_1Thermal__bc.html#a93de92a2d86c0dbce72b132d538b92d8">hexed::Thermal_bc</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Thermal__bc.html#a2608249118cc4cb5f028c4b74c4591c9">hexed::Thermal_bc</a>.</p>
 
 </div>
 </div>
@@ -196,7 +196,7 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>heat_flux</b></td><
         <tr>
           <td class="memname">double hexed::Prescribed_heat_flux::ghost_heat_flux </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;</td>          <td class="paramname"><span class="paramname"><em>state</em></span>, </td>
+          <td class="paramtype"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;</td>          <td class="paramname"><span class="paramname"><em>scalar_state</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -214,7 +214,7 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>heat_flux</b></td><
 <p>prescribes the wall heat flux as a function of the state and current heat flux </p>
 <dl class="section note"><dt>Note</dt><dd>might give you back the current heat flux if this is a Dirichlet BC </dd></dl>
 
-<p>Implements <a class="el" href="classhexed_1_1Thermal__bc.html#a2638c541e1819e12091e08c97e7504c7">hexed::Thermal_bc</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Thermal__bc.html#a0b24e38c47677d8006858a8216cbb9b7">hexed::Thermal_bc</a>.</p>
 
 </div>
 </div>

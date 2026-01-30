@@ -1,5 +1,6 @@
 var classhexed_1_1Pressure__outflow =
 [
-    [ "apply_flux", "classhexed_1_1Pressure__outflow.html#a6f091b55bd799cce91df0a49f80dd614", null ],
-    [ "apply_state", "classhexed_1_1Pressure__outflow.html#a96372f9a56b2b8e77e2b98293aea1ecd", null ]
+    [ "apply_flux", "classhexed_1_1Pressure__outflow.html#a776543428cb4332a7c00434b9f26a5c4", null ],
+    [ "apply_state", "classhexed_1_1Pressure__outflow.html#a7a896e7ace8a61488a18f7501e6342a3", null ],
+    [ "smooth", "classhexed_1_1Pressure__outflow.html#a2f20e5e93a5e7662351f9e59dd49ff77", null ]
 ];

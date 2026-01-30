@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -125,13 +125,13 @@ $(function(){initNavTree('classhexedpy_1_1utils_1_1History__plot.html',''); init
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:adb4a50a8a2bc5d32b6c4b3260ff835be" id="r_adb4a50a8a2bc5d32b6c4b3260ff835be"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adb4a50a8a2bc5d32b6c4b3260ff835be">__init__</a> (self, directory=&quot;hexed_out&quot;, interval=0.2)</td></tr>
-<tr class="memdesc:adb4a50a8a2bc5d32b6c4b3260ff835be"><td class="mdescLeft">&#160;</td><td class="mdescRight">creates and shows an animated history plot  <br /></td></tr>
-<tr class="separator:adb4a50a8a2bc5d32b6c4b3260ff835be"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d887b8ed4cf41e4a16d435aa6063531" id="r_a8d887b8ed4cf41e4a16d435aa6063531"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8d887b8ed4cf41e4a16d435aa6063531">__init__</a> (self, directory=&quot;hexed_out&quot;, interval=2.)</td></tr>
+<tr class="memdesc:a8d887b8ed4cf41e4a16d435aa6063531"><td class="mdescLeft">&#160;</td><td class="mdescRight">creates and shows an animated history plot  <br /></td></tr>
+<tr class="separator:a8d887b8ed4cf41e4a16d435aa6063531"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
-<tr class="memitem:afc9989b739ea3377dfd2306c2a024d29" id="r_afc9989b739ea3377dfd2306c2a024d29"><td class="memItemLeft" align="right" valign="top">list&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afc9989b739ea3377dfd2306c2a024d29">column_blacklist</a> = [&quot;flow_time&quot;, &quot;time_step&quot;]</td></tr>
+<tr class="memitem:afc9989b739ea3377dfd2306c2a024d29" id="r_afc9989b739ea3377dfd2306c2a024d29"><td class="memItemLeft" align="right" valign="top">list&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afc9989b739ea3377dfd2306c2a024d29">column_blacklist</a> = [&quot;flow_time&quot;, &quot;time_step&quot;, &quot;time_stage&quot;]</td></tr>
 <tr class="memdesc:afc9989b739ea3377dfd2306c2a024d29"><td class="mdescLeft">&#160;</td><td class="mdescRight">names of output columns <b>not</b> to plot  <br /></td></tr>
 <tr class="separator:afc9989b739ea3377dfd2306c2a024d29"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
@@ -170,6 +170,9 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:aac67d5240ab6cbf4e28e14c6b6e05b2e" id="r_aac67d5240ab6cbf4e28e14c6b6e05b2e"><td class="memItemLeft" align="right" valign="top"><a id="aac67d5240ab6cbf4e28e14c6b6e05b2e" name="aac67d5240ab6cbf4e28e14c6b6e05b2e"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>_lines</b></td></tr>
 <tr class="separator:aac67d5240ab6cbf4e28e14c6b6e05b2e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af2c0fe1364659330bcb94e279e8e90bb" id="r_af2c0fe1364659330bcb94e279e8e90bb"><td class="memItemLeft" align="right" valign="top"><a id="af2c0fe1364659330bcb94e279e8e90bb" name="af2c0fe1364659330bcb94e279e8e90bb"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>_monitor_window</b></td></tr>
+<tr class="separator:af2c0fe1364659330bcb94e279e8e90bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a09f399a59e8963c2485124d2e078055a" id="r_a09f399a59e8963c2485124d2e078055a"><td class="memItemLeft" align="right" valign="top"><a id="a09f399a59e8963c2485124d2e078055a" name="a09f399a59e8963c2485124d2e078055a"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>_plot_columns</b></td></tr>
 <tr class="separator:a09f399a59e8963c2485124d2e078055a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -182,13 +185,22 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:ae50ab4079a547760f37506d13e985c5d" id="r_ae50ab4079a547760f37506d13e985c5d"><td class="memItemLeft" align="right" valign="top"><a id="ae50ab4079a547760f37506d13e985c5d" name="ae50ab4079a547760f37506d13e985c5d"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>_curves</b></td></tr>
 <tr class="separator:ae50ab4079a547760f37506d13e985c5d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae4441541b830f3fbe880a2d7cca74441" id="r_ae4441541b830f3fbe880a2d7cca74441"><td class="memItemLeft" align="right" valign="top"><a id="ae4441541b830f3fbe880a2d7cca74441" name="ae4441541b830f3fbe880a2d7cca74441"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>_stats</b></td></tr>
+<tr class="separator:ae4441541b830f3fbe880a2d7cca74441"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5876e60cd6c85f5d72934873baec938c" id="r_a5876e60cd6c85f5d72934873baec938c"><td class="memItemLeft" align="right" valign="top"><a id="a5876e60cd6c85f5d72934873baec938c" name="a5876e60cd6c85f5d72934873baec938c"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>_i_unsteady_res</b></td></tr>
+<tr class="separator:a5876e60cd6c85f5d72934873baec938c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acd2f1e2d5789632068d558c4d1916d4b" id="r_acd2f1e2d5789632068d558c4d1916d4b"><td class="memItemLeft" align="right" valign="top"><a id="acd2f1e2d5789632068d558c4d1916d4b" name="acd2f1e2d5789632068d558c4d1916d4b"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>_iter_scatter</b></td></tr>
+<tr class="separator:acd2f1e2d5789632068d558c4d1916d4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>creates a real-time, interactive plot of the convergence history </p>
-<p>Convergence history is obtained from the <code>output.txt</code> file which contains the console output of <a class="el" href="running.html#hexecute">hexecute</a>. Every column in the output whose name is not in <code><a class="el" href="#afc9989b739ea3377dfd2306c2a024d29" title="names of output columns not to plot">History_plot.column_blacklist</a></code> will be plotted in its own subplot. Columns with names ending in <code>residual</code> will be plotted on a log scale. A <code><a class="el" href="classhexedpy_1_1utils_1_1History__plot.html" title="creates a real-time, interactive plot of the convergence history">History_plot</a></code> instance should be created in a separate process from the solver but may be created before, after, or during the simulation&mdash;the plot will not appear until an <code>output.txt</code> file exists. A <code><a class="el" href="classhexedpy_1_1utils_1_1History__plot.html" title="creates a real-time, interactive plot of the convergence history">History_plot</a></code> can be created directly from the <a class="el" href="hil.html">HIL</a> solver script with $<a class="el" href="parameters.html#plot_history">plot_history</a>. </p>
+<p>Convergence history is obtained from the <code>output.txt</code> file which contains the console output of <a class="el" href="running.html#hexecute">hexecute</a>. Every column in the output whose name is not in <code><a class="el" href="#afc9989b739ea3377dfd2306c2a024d29" title="names of output columns not to plot">History_plot.column_blacklist</a></code> will be plotted in its own subplot. Columns with names ending in <code>residual</code> or <code>error</code> will be plotted on a log scale. A <code><a class="el" href="classhexedpy_1_1utils_1_1History__plot.html" title="creates a real-time, interactive plot of the convergence history">History_plot</a></code> instance should be created in a separate process from the solver but may be created before, after, or during the simulation&mdash;the plot will not appear until an <code>output.txt</code> file exists. A <code><a class="el" href="classhexedpy_1_1utils_1_1History__plot.html" title="creates a real-time, interactive plot of the convergence history">History_plot</a></code> can be created directly from the <a class="el" href="hil.html">HIL</a> solver script with $<a class="el" href="solver_macros.html#plot_history">plot_history</a>. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="adb4a50a8a2bc5d32b6c4b3260ff835be" name="adb4a50a8a2bc5d32b6c4b3260ff835be"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adb4a50a8a2bc5d32b6c4b3260ff835be">&#9670;&#160;</a></span>__init__()</h2>
+<a id="a8d887b8ed4cf41e4a16d435aa6063531" name="a8d887b8ed4cf41e4a16d435aa6063531"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8d887b8ed4cf41e4a16d435aa6063531">&#9670;&#160;</a></span>__init__()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -206,7 +218,7 @@ Protected Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em>interval</em></span><span class="paramdefsep"> = </span><span class="paramdefval">0.2</span>&#160;)</td>
+          <td class="paramtype"></td>          <td class="paramname"><span class="paramname"><em>interval</em></span><span class="paramdefsep"> = </span><span class="paramdefval">2.</span>&#160;)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -233,7 +245,7 @@ Protected Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">list hexedpy.utils.History_plot.column_blacklist = [&quot;flow_time&quot;, &quot;time_step&quot;]</td>
+          <td class="memname">list hexedpy.utils.History_plot.column_blacklist = [&quot;flow_time&quot;, &quot;time_step&quot;, &quot;time_stage&quot;]</td>
         </tr>
       </table>
   </td>

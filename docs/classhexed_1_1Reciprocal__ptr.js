@@ -1,6 +1,8 @@
 var classhexed_1_1Reciprocal__ptr =
 [
     [ "Reciprocal_ptr", "classhexed_1_1Reciprocal__ptr.html#aa9acf742e59d3da45216a98551fe8e2a", null ],
+    [ "get", "classhexed_1_1Reciprocal__ptr.html#abce2bff751d256e9c699476991508b65", null ],
+    [ "get", "classhexed_1_1Reciprocal__ptr.html#ab9d66ccfbfc3b0b6d9aed3f1931f4812", null ],
     [ "operator bool", "classhexed_1_1Reciprocal__ptr.html#a7dfa2d80446bf12eb98266a3ebfe515e", null ],
     [ "operator*", "classhexed_1_1Reciprocal__ptr.html#a2e010036308f555b56f2c65bb1c80bb0", null ],
     [ "operator*", "classhexed_1_1Reciprocal__ptr.html#a088e2a304942ff8ff521089d358b29af", null ],

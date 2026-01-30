@@ -1,5 +1,5 @@
 var classhexed_1_1Thermal__bc =
 [
-    [ "ghost_energy", "classhexed_1_1Thermal__bc.html#a93de92a2d86c0dbce72b132d538b92d8", null ],
-    [ "ghost_heat_flux", "classhexed_1_1Thermal__bc.html#a2638c541e1819e12091e08c97e7504c7", null ]
+    [ "ghost_energy", "classhexed_1_1Thermal__bc.html#a2608249118cc4cb5f028c4b74c4591c9", null ],
+    [ "ghost_heat_flux", "classhexed_1_1Thermal__bc.html#a0b24e38c47677d8006858a8216cbb9b7", null ]
 ];

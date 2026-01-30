@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -118,7 +118,7 @@ $(function(){initNavTree('classhexed_1_1Reciprocal__list.html',''); initResizabl
 <table class="directory">
   <tr class="even"><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Base.html#af879b15e305c3ba3b4541c3a34c2838b">_connect</a>(Base&lt; U, T &gt; &amp;that)</td><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; T, U &gt;</a></td><td class="entry"><span class="mlabel">inline</span><span class="mlabel">protected</span></td></tr>
   <tr class="odd"><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Base.html#a73cb219a6412d415c02c1d7500f730eb">_disconnect</a>(Base&lt; U, T &gt; &amp;that)</td><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; T, U &gt;</a></td><td class="entry"><span class="mlabel">inline</span><span class="mlabel">protected</span></td></tr>
-  <tr bgcolor="#f0f0f0" class="even"><td class="entry"><b>_partners</b> (defined in <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">hexed::mutual::Multiple&lt; T, U &gt;</a>)</td><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Multiple.html">hexed::mutual::Multiple&lt; T, U &gt;</a></td><td class="entry"></td></tr>
+  <tr bgcolor="#f0f0f0" class="even"><td class="entry"><b>_lock</b> (defined in <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; T, U &gt;</a>)</td><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; T, U &gt;</a></td><td class="entry"><span class="mlabel">protected</span></td></tr>
   <tr class="odd"><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Base.html#a5f740c8da15c53af10fefaf493d4127f">_yours</a>(Base&lt; U, T &gt; &amp;that)</td><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; T, U &gt;</a></td><td class="entry"><span class="mlabel">inline</span><span class="mlabel">protected</span><span class="mlabel">static</span></td></tr>
   <tr class="even"><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Base.html#a751975e7405f0ca09b12b459d052b78c">_yours</a>(const Base&lt; U, T &gt; &amp;that)</td><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; T, U &gt;</a></td><td class="entry"><span class="mlabel">inline</span><span class="mlabel">protected</span><span class="mlabel">static</span></td></tr>
   <tr class="odd"><td class="entry"><a class="el" href="classhexed_1_1Reciprocal__list.html#aea9326ee84cb5f552b90782ffc7c3ed2">add</a>(mutual::Base&lt; U, T &gt; &amp;that)</td><td class="entry"><a class="el" href="classhexed_1_1Reciprocal__list.html">hexed::Reciprocal_list&lt; T, U &gt;</a></td><td class="entry"><span class="mlabel">inline</span></td></tr>
@@ -135,7 +135,8 @@ $(function(){initNavTree('classhexed_1_1Reciprocal__list.html',''); initResizabl
   <tr class="even"><td class="entry"><a class="el" href="classhexed_1_1Reciprocal__list.html#a77ee0ff10021308192ae71d196c43872">remove</a>(mutual::Base&lt; U, T &gt; &amp;that)</td><td class="entry"><a class="el" href="classhexed_1_1Reciprocal__list.html">hexed::Reciprocal_list&lt; T, U &gt;</a></td><td class="entry"><span class="mlabel">inline</span></td></tr>
   <tr class="odd"><td class="entry"><a class="el" href="classhexed_1_1Reciprocal__list.html#affa492214b84d8c8ac194a16ea35df8b">theirs</a>()</td><td class="entry"><a class="el" href="classhexed_1_1Reciprocal__list.html">hexed::Reciprocal_list&lt; T, U &gt;</a></td><td class="entry"><span class="mlabel">inline</span></td></tr>
   <tr class="even"><td class="entry"><a class="el" href="classhexed_1_1Reciprocal__list.html#aaf40822f27b2863a43066a3ac3a2fdd8">theirs</a>() const</td><td class="entry"><a class="el" href="classhexed_1_1Reciprocal__list.html">hexed::Reciprocal_list&lt; T, U &gt;</a></td><td class="entry"><span class="mlabel">inline</span></td></tr>
-  <tr bgcolor="#f0f0f0" class="odd"><td class="entry"><b>~Multiple</b>() (defined in <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">hexed::mutual::Multiple&lt; T, U &gt;</a>)</td><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Multiple.html">hexed::mutual::Multiple&lt; T, U &gt;</a></td><td class="entry"><span class="mlabel">inline</span></td></tr>
+  <tr bgcolor="#f0f0f0" class="odd"><td class="entry"><b>~Base</b>()=default (defined in <a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; T, U &gt;</a>)</td><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Base.html">hexed::mutual::Base&lt; T, U &gt;</a></td><td class="entry"><span class="mlabel">virtual</span></td></tr>
+  <tr bgcolor="#f0f0f0" class="even"><td class="entry"><b>~Multiple</b>() (defined in <a class="el" href="classhexed_1_1mutual_1_1Multiple.html">hexed::mutual::Multiple&lt; T, U &gt;</a>)</td><td class="entry"><a class="el" href="classhexed_1_1mutual_1_1Multiple.html">hexed::mutual::Multiple&lt; T, U &gt;</a></td><td class="entry"><span class="mlabel">inline</span><span class="mlabel">virtual</span></td></tr>
 </table></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

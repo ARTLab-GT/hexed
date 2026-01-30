@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -122,35 +122,35 @@ Inheritance diagram for hexed::Spatial&lt; Pde_templ, is_deformed &gt;::Prolong_
  <div class="center">
   <img src="classhexed_1_1Spatial_1_1Prolong__refined.png" usemap="#hexed::Spatial_3C_20Pde_5Ftempl_2C_20is_5Fdeformed_20_3E::Prolong_5Frefined_3C_20n_5Fdim_2C_20row_5Fsize_20_3E_map" alt=""/>
   <map id="hexed::Spatial_3C_20Pde_5Ftempl_2C_20is_5Fdeformed_20_3E::Prolong_5Frefined_3C_20n_5Fdim_2C_20row_5Fsize_20_3E_map" name="hexed::Spatial_3C_20Pde_5Ftempl_2C_20is_5Fdeformed_20_3E::Prolong_5Frefined_3C_20n_5Fdim_2C_20row_5Fsize_20_3E_map">
-<area href="classhexed_1_1Kernel.html" alt="hexed::Kernel&lt; Refined_face &amp; &gt;" shape="rect" coords="0,0,463,24"/>
+<area href="classhexed_1_1Kernel.html" alt="hexed::Kernel&lt; std::vector&lt; Kernel_face_refinement &gt; &amp; &gt;" shape="rect" coords="0,0,463,24"/>
   </map>
 </div></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a4e61715d2c5b65e779b2529f52c2212b" id="r_a4e61715d2c5b65e779b2529f52c2212b"><td class="memItemLeft" align="right" valign="top"><a id="a4e61715d2c5b65e779b2529f52c2212b" name="a4e61715d2c5b65e779b2529f52c2212b"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>Prolong_refined</b> (const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;basis, int mask, bool scale=false, bool offset=false)</td></tr>
-<tr class="separator:a4e61715d2c5b65e779b2529f52c2212b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a50b3dbadb7cb79eba799f3efe38b904b" id="r_a50b3dbadb7cb79eba799f3efe38b904b"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a50b3dbadb7cb79eba799f3efe38b904b">operator()</a> (<a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Refined__face.html">Refined_face</a> &amp; &gt; &amp;ref_faces)</td></tr>
-<tr class="separator:a50b3dbadb7cb79eba799f3efe38b904b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="inherit_header pub_methods_classhexed_1_1Kernel"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1Kernel')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1Kernel.html">hexed::Kernel&lt; Refined_face &amp; &gt;</a></td></tr>
+<tr class="memitem:a95fe127e6e00e5e2ab83577b1a5ed0e4" id="r_a95fe127e6e00e5e2ab83577b1a5ed0e4"><td class="memItemLeft" align="right" valign="top"><a id="a95fe127e6e00e5e2ab83577b1a5ed0e4" name="a95fe127e6e00e5e2ab83577b1a5ed0e4"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>Prolong_refined</b> (const <a class="el" href="classhexed_1_1Basis.html">Basis</a> &amp;basis, int mask, int n_var, bool scale=false, bool offset=false)</td></tr>
+<tr class="separator:a95fe127e6e00e5e2ab83577b1a5ed0e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a500159759d647dd1d8bab3c5f0299102" id="r_a500159759d647dd1d8bab3c5f0299102"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a500159759d647dd1d8bab3c5f0299102">operator()</a> (<a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; std::vector&lt; <a class="el" href="structhexed_1_1Kernel__face__refinement.html">Kernel_face_refinement</a> &gt; &amp; &gt; &amp;ref_faces)</td></tr>
+<tr class="separator:a500159759d647dd1d8bab3c5f0299102"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pub_methods_classhexed_1_1Kernel"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_methods_classhexed_1_1Kernel')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="classhexed_1_1Kernel.html">hexed::Kernel&lt; std::vector&lt; Kernel_face_refinement &gt; &amp; &gt;</a></td></tr>
 <tr class="memitem:a5a5782720f1526f422428b06669ed339 inherit pub_methods_classhexed_1_1Kernel" id="r_a5a5782720f1526f422428b06669ed339"><td class="memItemLeft" align="right" valign="top">
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>operator()</b> (<a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Refined__face.html">Refined_face</a> &amp; &gt; &amp;sequence, <a class="el" href="classhexed_1_1Stopwatch__tree.html">Stopwatch_tree</a> &amp;tree)</td></tr>
+virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>operator()</b> (<a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; std::vector&lt; <a class="el" href="structhexed_1_1Kernel__face__refinement.html">Kernel_face_refinement</a> &gt; &amp; &gt; &amp;sequence, <a class="el" href="classhexed_1_1Stopwatch__tree.html">Stopwatch_tree</a> &amp;tree)</td></tr>
 <tr class="separator:a5a5782720f1526f422428b06669ed339 inherit pub_methods_classhexed_1_1Kernel"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a690bdaf6ebf4705566b0577cf44defc3 inherit pub_methods_classhexed_1_1Kernel" id="r_a690bdaf6ebf4705566b0577cf44defc3"><td class="memItemLeft" align="right" valign="top">
-virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>operator()</b> (<a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Refined__face.html">Refined_face</a> &amp; &gt; &amp;sequence, <a class="el" href="classhexed_1_1Stopwatch__tree.html">Stopwatch_tree</a> &amp;category_tree, std::string name)</td></tr>
+virtual void&#160;</td><td class="memItemRight" valign="bottom"><b>operator()</b> (<a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; std::vector&lt; <a class="el" href="structhexed_1_1Kernel__face__refinement.html">Kernel_face_refinement</a> &gt; &amp; &gt; &amp;sequence, <a class="el" href="classhexed_1_1Stopwatch__tree.html">Stopwatch_tree</a> &amp;category_tree, std::string name)</td></tr>
 <tr class="separator:a690bdaf6ebf4705566b0577cf44defc3 inherit pub_methods_classhexed_1_1Kernel"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
-<tr class="inherit_header pub_types_classhexed_1_1Kernel"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_types_classhexed_1_1Kernel')"><img src="closed.png" alt="-"/>&#160;Public Types inherited from <a class="el" href="classhexed_1_1Kernel.html">hexed::Kernel&lt; Refined_face &amp; &gt;</a></td></tr>
+<tr class="inherit_header pub_types_classhexed_1_1Kernel"><td colspan="2" onclick="javascript:dynsection.toggleInherit('pub_types_classhexed_1_1Kernel')"><img src="closed.png" alt="-"/>&#160;Public Types inherited from <a class="el" href="classhexed_1_1Kernel.html">hexed::Kernel&lt; std::vector&lt; Kernel_face_refinement &gt; &amp; &gt;</a></td></tr>
 <tr class="memitem:a482aa999cdd2f50e9edbc5626a358c9c inherit pub_types_classhexed_1_1Kernel" id="r_a482aa999cdd2f50e9edbc5626a358c9c"><td class="memItemLeft" align="right" valign="top">
-typedef std::unique_ptr&lt; <a class="el" href="classhexed_1_1Kernel.html">Kernel</a>&lt; <a class="el" href="classhexed_1_1Refined__face.html">Refined_face</a> &amp;, void &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>ptr_t</b></td></tr>
+typedef std::unique_ptr&lt; <a class="el" href="classhexed_1_1Kernel.html">Kernel</a>&lt; std::vector&lt; <a class="el" href="structhexed_1_1Kernel__face__refinement.html">Kernel_face_refinement</a> &gt; &amp;, void &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>ptr_t</b></td></tr>
 <tr class="separator:a482aa999cdd2f50e9edbc5626a358c9c inherit pub_types_classhexed_1_1Kernel"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a50b3dbadb7cb79eba799f3efe38b904b" name="a50b3dbadb7cb79eba799f3efe38b904b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a50b3dbadb7cb79eba799f3efe38b904b">&#9670;&#160;</a></span>operator()()</h2>
+<a id="a500159759d647dd1d8bab3c5f0299102" name="a500159759d647dd1d8bab3c5f0299102"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a500159759d647dd1d8bab3c5f0299102">&#9670;&#160;</a></span>operator()()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -165,7 +165,7 @@ template&lt;int n_dim, int row_size&gt; </div>
         <tr>
           <td class="memname">virtual void <a class="el" href="classhexed_1_1Spatial.html">hexed::Spatial</a>&lt; Pde_templ, is_deformed &gt;::Prolong_refined&lt; n_dim, row_size &gt;::operator() </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Refined__face.html">Refined_face</a> &amp; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>ref_faces</em></span></td><td>)</td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; std::vector&lt; <a class="el" href="structhexed_1_1Kernel__face__refinement.html">Kernel_face_refinement</a> &gt; &amp; &gt; &amp;</td>          <td class="paramname"><span class="paramname"><em>ref_faces</em></span></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -176,7 +176,7 @@ template&lt;int n_dim, int row_size&gt; </div>
 </table>
 </div><div class="memdoc">
 
-<p>Implements <a class="el" href="classhexed_1_1Kernel.html">hexed::Kernel&lt; Refined_face &amp; &gt;</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Kernel.html">hexed::Kernel&lt; std::vector&lt; Kernel_face_refinement &gt; &amp; &gt;</a>.</p>
 
 </div>
 </div>

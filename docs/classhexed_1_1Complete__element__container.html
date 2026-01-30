@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -140,8 +140,8 @@ Public Member Functions</h2></td></tr>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Complete_element_container</b> (<a class="el" href="classhexed_1_1Storage__params.html">Storage_params</a> storage_params, double root_spacing)</td></tr>
 <tr class="memdesc:a52e1c744cc2bfcff4f0a431246c17472"><td class="mdescLeft">&#160;</td><td class="mdescRight">construct with the same data as <code>Mesh::Mesh</code> <br /></td></tr>
 <tr class="separator:a52e1c744cc2bfcff4f0a431246c17472"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9b93b2b8dc08cfacd4f56705cba73f1b" id="r_a9b93b2b8dc08cfacd4f56705cba73f1b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9b93b2b8dc08cfacd4f56705cba73f1b">emplace</a> (int ref_level, std::vector&lt; int &gt; position, <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; origin, int aniso_ref_level=0) override</td></tr>
-<tr class="separator:a9b93b2b8dc08cfacd4f56705cba73f1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9981e97f8e5288f0473ce8006a0cd484" id="r_a9981e97f8e5288f0473ce8006a0cd484"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a9981e97f8e5288f0473ce8006a0cd484">emplace</a> (<a class="el" href="classhexed_1_1Tree.html">Tree</a> &amp;tree, int aniso_ref_level=0) override</td></tr>
+<tr class="separator:a9981e97f8e5288f0473ce8006a0cd484"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afa1cb7475087b4c0f2cab02219de3653" id="r_afa1cb7475087b4c0f2cab02219de3653"><td class="memItemLeft" align="right" valign="top">element_t &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afa1cb7475087b4c0f2cab02219de3653">at</a> (int ref_level, int serial_n) override</td></tr>
 <tr class="memdesc:afa1cb7475087b4c0f2cab02219de3653"><td class="mdescLeft">&#160;</td><td class="mdescRight">access an element by refinement level and serial number  <br /></td></tr>
 <tr class="separator:afa1cb7475087b4c0f2cab02219de3653"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -152,8 +152,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac4631f7674fe1875ce0f613618e0cf20" id="r_ac4631f7674fe1875ce0f613618e0cf20"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Sequence.html">Sequence</a>&lt; <a class="el" href="classhexed_1_1Element.html">Element</a> &amp; &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac4631f7674fe1875ce0f613618e0cf20">element_view</a> ()</td></tr>
 <tr class="memdesc:ac4631f7674fe1875ce0f613618e0cf20"><td class="mdescLeft">&#160;</td><td class="mdescRight">same as <code><a class="el" href="#a0d8ac83bf60ac5929f0c2325f2e47db6" title="Provides a Vector_view which can be used to efficiently iterate through the elements,...">elements()</a></code> except views elements as type <code><a class="el" href="classhexed_1_1Element.html" title="Stores data associated with one mesh element.">Element</a>&amp;</code>  <br /></td></tr>
 <tr class="separator:ac4631f7674fe1875ce0f613618e0cf20"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac1ca5b17500fcfd7deb3888b9f95b535" id="r_ac1ca5b17500fcfd7deb3888b9f95b535"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac1ca5b17500fcfd7deb3888b9f95b535">purge</a> (std::function&lt; bool(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;)&gt; predicate=[](<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;elem){return elem.record !=0;}) override</td></tr>
-<tr class="separator:ac1ca5b17500fcfd7deb3888b9f95b535"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad1a6122d8cd896a06b8787be925073a" id="r_aad1a6122d8cd896a06b8787be925073a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aad1a6122d8cd896a06b8787be925073a">purge</a> (std::function&lt; bool(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;)&gt; predicate=[](<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;elem){return elem.record==2;}) override</td></tr>
+<tr class="separator:aad1a6122d8cd896a06b8787be925073a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae3a44c6060d4353381815c2c3834a4eb" id="r_ae3a44c6060d4353381815c2c3834a4eb"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::array&lt; int, 2 &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae3a44c6060d4353381815c2c3834a4eb">elem_handles</a> () override</td></tr>
 <tr class="memdesc:ae3a44c6060d4353381815c2c3834a4eb"><td class="mdescLeft">&#160;</td><td class="mdescRight">return the currently valid set of <code>ref_level</code>, <code>serial_n</code> combinations  <br /></td></tr>
 <tr class="separator:ae3a44c6060d4353381815c2c3834a4eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -281,8 +281,8 @@ template&lt;typename element_t &gt; </div>
 
 </div>
 </div>
-<a id="a9b93b2b8dc08cfacd4f56705cba73f1b" name="a9b93b2b8dc08cfacd4f56705cba73f1b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9b93b2b8dc08cfacd4f56705cba73f1b">&#9670;&#160;</a></span>emplace()</h2>
+<a id="a9981e97f8e5288f0473ce8006a0cd484" name="a9981e97f8e5288f0473ce8006a0cd484"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9981e97f8e5288f0473ce8006a0cd484">&#9670;&#160;</a></span>emplace()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -295,17 +295,7 @@ template&lt;typename element_t &gt; </div>
         <tr>
           <td class="memname">int <a class="el" href="classhexed_1_1Complete__element__container.html">hexed::Complete_element_container</a>&lt; element_t &gt;::emplace </td>
           <td>(</td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>ref_level</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; int &gt;</td>          <td class="paramname"><span class="paramname"><em>position</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;</td>          <td class="paramname"><span class="paramname"><em>origin</em></span>, </td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Tree.html">Tree</a> &amp;</td>          <td class="paramname"><span class="paramname"><em></em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -321,12 +311,12 @@ template&lt;typename element_t &gt; </div>
 </div><div class="memdoc">
 <p>Construct an element, add it to the container, and return a permanent, arbitrary serial number which is unique among elements of the same refinement level. </p>
 
-<p>Implements <a class="el" href="classhexed_1_1Element__container.html#a9232df20d1681205570f422f226ef938">hexed::Element_container</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Element__container.html#a4aeb2f3382ee6b7b99920fc450255d48">hexed::Element_container</a>.</p>
 
 </div>
 </div>
-<a id="ac1ca5b17500fcfd7deb3888b9f95b535" name="ac1ca5b17500fcfd7deb3888b9f95b535"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac1ca5b17500fcfd7deb3888b9f95b535">&#9670;&#160;</a></span>purge()</h2>
+<a id="aad1a6122d8cd896a06b8787be925073a" name="aad1a6122d8cd896a06b8787be925073a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aad1a6122d8cd896a06b8787be925073a">&#9670;&#160;</a></span>purge()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -339,7 +329,7 @@ template&lt;typename element_t &gt; </div>
         <tr>
           <td class="memname">int <a class="el" href="classhexed_1_1Complete__element__container.html">hexed::Complete_element_container</a>&lt; element_t &gt;::purge </td>
           <td>(</td>
-          <td class="paramtype">std::function&lt; bool(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;)&gt;</td>          <td class="paramname"><span class="paramname"><em>predicate</em></span><span class="paramdefsep"> = </span><span class="paramdefval">[](<a class="el" href="classhexed_1_1Element.html">Element</a>&amp;&#160;elem){return&#160;elem.record&#160;!=&#160;0;}</span></td><td>)</td>
+          <td class="paramtype">std::function&lt; bool(<a class="el" href="classhexed_1_1Element.html">Element</a> &amp;)&gt;</td>          <td class="paramname"><span class="paramname"><em>predicate</em></span><span class="paramdefsep"> = </span><span class="paramdefval">[](<a class="el" href="classhexed_1_1Element.html">Element</a>&amp;&#160;elem){return&#160;elem.record&#160;==&#160;2;}</span></td><td>)</td>
           <td></td>
         </tr>
       </table>

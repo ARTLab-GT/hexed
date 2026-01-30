@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -149,18 +149,18 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a864722a1c5536b945b8df155f8bf2df6" id="r_a864722a1c5536b945b8df155f8bf2df6"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a864722a1c5536b945b8df155f8bf2df6">write_block</a> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; pos, <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; vars)=0</td></tr>
 <tr class="memdesc:a864722a1c5536b945b8df155f8bf2df6"><td class="mdescLeft">&#160;</td><td class="mdescRight">writes a structured block of data  <br /></td></tr>
 <tr class="separator:a864722a1c5536b945b8df155f8bf2df6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aade29c76130cb915e1e0f4ca332ff1c7" id="r_aade29c76130cb915e1e0f4ca332ff1c7"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aade29c76130cb915e1e0f4ca332ff1c7">write_unstruct</a> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt; elements, <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; pos, <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; vars)=0</td></tr>
-<tr class="memdesc:aade29c76130cb915e1e0f4ca332ff1c7"><td class="mdescLeft">&#160;</td><td class="mdescRight">writes unstructured data  <br /></td></tr>
-<tr class="separator:aade29c76130cb915e1e0f4ca332ff1c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2a17b97d34fd6cb4691c467ad1add636" id="r_a2a17b97d34fd6cb4691c467ad1add636"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2a17b97d34fd6cb4691c467ad1add636">write_unstruct</a> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt; elements, <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; pos, <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; vars)=0</td></tr>
+<tr class="memdesc:a2a17b97d34fd6cb4691c467ad1add636"><td class="mdescLeft">&#160;</td><td class="mdescRight">writes unstructured data  <br /></td></tr>
+<tr class="separator:a2a17b97d34fd6cb4691c467ad1add636"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
 <tr class="memitem:adef37d3060aac83d05adbed30d5ab6b1" id="r_adef37d3060aac83d05adbed30d5ab6b1"><td class="memItemLeft" align="right" valign="top">static std::unique_ptr&lt; <a class="el" href="classhexed_1_1Visualizer.html">Visualizer</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adef37d3060aac83d05adbed30d5ab6b1">create</a> (std::string format, int n_dim_geom, int n_dim_topo, std::string file_name, std::vector&lt; std::string &gt; variable_names, double time, <a class="el" href="#aa805255774e18ff55ae64616c961e881">elem_type</a> element_type)</td></tr>
 <tr class="memdesc:adef37d3060aac83d05adbed30d5ab6b1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a <code><a class="el" href="classhexed_1_1Visualizer.html" title="General interface for writing visualization data in different file formats.">Visualizer</a></code> object, selecting the appropriate backend based on the requested file format.  <br /></td></tr>
 <tr class="separator:adef37d3060aac83d05adbed30d5ab6b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad97b18c8b941feb410b4047e7b2334ca" id="r_ad97b18c8b941feb410b4047e7b2334ca"><td class="memItemLeft" align="right" valign="top">static std::unique_ptr&lt; <a class="el" href="classhexed_1_1Visualizer.html">Visualizer</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad97b18c8b941feb410b4047e7b2334ca">create</a> (std::string format, int n_dim_geom, int n_dim_topo, std::string file_name, const <a class="el" href="classhexed_1_1Output__data.html">Output_data</a> &amp;, double time, <a class="el" href="#aa805255774e18ff55ae64616c961e881">elem_type</a>)</td></tr>
-<tr class="memdesc:ad97b18c8b941feb410b4047e7b2334ca"><td class="mdescLeft">&#160;</td><td class="mdescRight">overload of <code>create(std::string, int, int, std::string, std::vector&lt;std::string&gt;, double, elem_type)</code>  <br /></td></tr>
-<tr class="separator:ad97b18c8b941feb410b4047e7b2334ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa99b49854cef6df97014a75f78aa5100" id="r_aa99b49854cef6df97014a75f78aa5100"><td class="memItemLeft" align="right" valign="top">static std::unique_ptr&lt; <a class="el" href="classhexed_1_1Visualizer.html">Visualizer</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa99b49854cef6df97014a75f78aa5100">create_legacy</a> (std::string format, int n_dim_geom, int n_dim_topo, std::string file_name, const <a class="el" href="classhexed_1_1Output__data.html">Output_data</a> &amp;, double time, <a class="el" href="#aa805255774e18ff55ae64616c961e881">elem_type</a>)</td></tr>
+<tr class="memdesc:aa99b49854cef6df97014a75f78aa5100"><td class="mdescLeft">&#160;</td><td class="mdescRight">overload of <code>create(std::string, int, int, std::string, std::vector&lt;std::string&gt;, double, elem_type)</code>  <br /></td></tr>
+<tr class="separator:aa99b49854cef6df97014a75f78aa5100"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
@@ -194,65 +194,8 @@ Static Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ad97b18c8b941feb410b4047e7b2334ca" name="ad97b18c8b941feb410b4047e7b2334ca"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad97b18c8b941feb410b4047e7b2334ca">&#9670;&#160;</a></span>create() <span class="overload">[1/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::unique_ptr&lt; <a class="el" href="classhexed_1_1Visualizer.html">Visualizer</a> &gt; hexed::Visualizer::create </td>
-          <td>(</td>
-          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>format</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>n_dim_geom</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>n_dim_topo</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>file_name</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="classhexed_1_1Output__data.html">Output_data</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>dat</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>time</em></span>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="#aa805255774e18ff55ae64616c961e881">elem_type</a></td>          <td class="paramname"><span class="paramname"><em>elem_t</em></span>&#160;)</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">static</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>overload of <code>create(std::string, int, int, std::string, std::vector&lt;std::string&gt;, double, elem_type)</code> </p>
-<p>The number and names of variables are determined from the <code><a class="el" href="classhexed_1_1Output__data.html" title="Represents some numerical data which is of interest to the end user.">Output_data</a></code> supplied. </p>
-
-</div>
-</div>
 <a id="adef37d3060aac83d05adbed30d5ab6b1" name="adef37d3060aac83d05adbed30d5ab6b1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adef37d3060aac83d05adbed30d5ab6b1">&#9670;&#160;</a></span>create() <span class="overload">[2/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#adef37d3060aac83d05adbed30d5ab6b1">&#9670;&#160;</a></span>create()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -325,6 +268,63 @@ Static Public Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="aa99b49854cef6df97014a75f78aa5100" name="aa99b49854cef6df97014a75f78aa5100"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa99b49854cef6df97014a75f78aa5100">&#9670;&#160;</a></span>create_legacy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::unique_ptr&lt; <a class="el" href="classhexed_1_1Visualizer.html">Visualizer</a> &gt; hexed::Visualizer::create_legacy </td>
+          <td>(</td>
+          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>format</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>n_dim_geom</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int</td>          <td class="paramname"><span class="paramname"><em>n_dim_topo</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::string</td>          <td class="paramname"><span class="paramname"><em>file_name</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classhexed_1_1Output__data.html">Output_data</a> &amp;</td>          <td class="paramname"><span class="paramname"><em>dat</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double</td>          <td class="paramname"><span class="paramname"><em>time</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="#aa805255774e18ff55ae64616c961e881">elem_type</a></td>          <td class="paramname"><span class="paramname"><em>elem_t</em></span>&#160;)</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>overload of <code>create(std::string, int, int, std::string, std::vector&lt;std::string&gt;, double, elem_type)</code> </p>
+<p>The number and names of variables are determined from the <code><a class="el" href="classhexed_1_1Output__data.html" title="Represents some numerical data which is of interest to the end user.">Output_data</a></code> supplied. </p>
+
+</div>
+</div>
 <a id="a864722a1c5536b945b8df155f8bf2df6" name="a864722a1c5536b945b8df155f8bf2df6"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a864722a1c5536b945b8df155f8bf2df6">&#9670;&#160;</a></span>write_block()</h2>
 
@@ -365,8 +365,8 @@ Static Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="aade29c76130cb915e1e0f4ca332ff1c7" name="aade29c76130cb915e1e0f4ca332ff1c7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aade29c76130cb915e1e0f4ca332ff1c7">&#9670;&#160;</a></span>write_unstruct()</h2>
+<a id="a2a17b97d34fd6cb4691c467ad1add636" name="a2a17b97d34fd6cb4691c467ad1add636"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a17b97d34fd6cb4691c467ad1add636">&#9670;&#160;</a></span>write_unstruct()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -377,7 +377,7 @@ Static Public Attributes</h2></td></tr>
         <tr>
           <td class="memname">virtual void hexed::Visualizer::write_unstruct </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; int &gt;</td>          <td class="paramname"><span class="paramname"><em>elements</em></span>, </td>
+          <td class="paramtype"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt;</td>          <td class="paramname"><span class="paramname"><em>elements</em></span>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -398,7 +398,7 @@ Static Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>writes unstructured data </p>
-<p>Unstructured data is specified by a list of vertices, each of which has values of position and field variables associated with it, and a list of elements, each of which is specified by the indices of its vertices. All elements must be the same type (e.g. line segment, triangle, quad, etc.) and the element type is inferred from the number of vertices for each element. If you call <code><a class="el" href="#aade29c76130cb915e1e0f4ca332ff1c7" title="writes unstructured data">write_unstruct()</a></code> multiple times on the same <code><a class="el" href="classhexed_1_1Visualizer.html" title="General interface for writing visualization data in different file formats.">Visualizer</a></code>, the vertex indices you supply should restart from 0. </p><dl class="params"><dt>Parameters</dt><dd>
+<p>Unstructured data is specified by a list of vertices, each of which has values of position and field variables associated with it, and a list of elements, each of which is specified by the indices of its vertices. All elements must be the same type (e.g. line segment, triangle, quad, etc.) and the element type is inferred from the number of vertices for each element. If you call <code><a class="el" href="#a2a17b97d34fd6cb4691c467ad1add636" title="writes unstructured data">write_unstruct()</a></code> multiple times on the same <code><a class="el" href="classhexed_1_1Visualizer.html" title="General interface for writing visualization data in different file formats.">Visualizer</a></code>, the vertex indices you supply should restart from 0. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">elements</td><td>Indices of the vertices for each element. Layout: [i_element][i_vertex] E.g. for a mesh containing 2 quadrilateral elements, <code>elements</code> will have shape {2, 4}. </td></tr>
     <tr><td class="paramname">pos</td><td>Position data for all vertices. Layout: [i_dim][i_vertex] E.g. if the above mesh was specifying a surface in 3D space and the two quadrilateral elements shared exactly one edge, <code>pos</code> would have shape {3, 6} (there would be 6 total vertices, 4 for each element minus 2 shared) </td></tr>
@@ -407,7 +407,7 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p>Implemented in <a class="el" href="classhexed_1_1Csv.html#a6a63e3e9cbf22f013881ffb75f88a832">hexed::Csv</a>, <a class="el" href="classhexed_1_1Tecplot__file.html#abdc83b038f4b548c336b444f5287c158">hexed::Tecplot_file</a>, and <a class="el" href="classhexed_1_1Xdmf__wrapper.html#a7c5e74685f1e4b60f5f03dd8707693aa">hexed::Xdmf_wrapper</a>.</p>
+<p>Implemented in <a class="el" href="classhexed_1_1Csv.html#a7de539a98355b5ace68851a09e721c66">hexed::Csv</a>, and <a class="el" href="classhexed_1_1Xdmf__wrapper.html#a44880db559c7a6c76bbe167dcd603255">hexed::Xdmf_wrapper</a>.</p>
 
 </div>
 </div>

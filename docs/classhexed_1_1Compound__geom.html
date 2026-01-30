@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -140,16 +140,51 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:abe53fe4716ff44af00db9c037b66404f" id="r_abe53fe4716ff44af00db9c037b66404f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Nearest__point.html">Nearest_point</a>&lt; <a class="el" href="namespacehexed.html#a264a08e8f62dd1618e4678b01e00bdf5">dyn</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#abe53fe4716ff44af00db9c037b66404f">nearest_point</a> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; point, double max_distance=<a class="el" href="namespacehexed.html#a06682de47504c676a52137c7636470a1">huge</a>, double distance_guess=<a class="el" href="namespacehexed.html#a06682de47504c676a52137c7636470a1">huge</a>) override</td></tr>
 <tr class="memdesc:abe53fe4716ff44af00db9c037b66404f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the point on the surface which is nearest to <code>point</code> within <code>max_distance</code>.  <br /></td></tr>
 <tr class="separator:abe53fe4716ff44af00db9c037b66404f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab93eee9323238e75ad0b98c580607c8a" id="r_ab93eee9323238e75ad0b98c580607c8a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab93eee9323238e75ad0b98c580607c8a">intersections</a> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; point0, <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; point1) override</td></tr>
-<tr class="memdesc:ab93eee9323238e75ad0b98c580607c8a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the set of intersection points between a line and the surface.  <br /></td></tr>
-<tr class="separator:ab93eee9323238e75ad0b98c580607c8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a817a36f19b1e5abf8a9560314e8d2d0b" id="r_a817a36f19b1e5abf8a9560314e8d2d0b"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a817a36f19b1e5abf8a9560314e8d2d0b">intersections</a> (<a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; point0, <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt; point1, bool high_precision=true) override</td></tr>
+<tr class="memdesc:a817a36f19b1e5abf8a9560314e8d2d0b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the set of intersection points between a line and the surface.  <br /></td></tr>
+<tr class="separator:a817a36f19b1e5abf8a9560314e8d2d0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2a6d31c75429ee339bd416cacc229cf9" id="r_a2a6d31c75429ee339bd416cacc229cf9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; const <a class="el" href="classhexed_1_1Geom__edge.html">Geom_edge</a> &amp; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2a6d31c75429ee339bd416cacc229cf9">edges</a> () override</td></tr>
+<tr class="memdesc:a2a6d31c75429ee339bd416cacc229cf9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a list of any geometry edges that require mesh edges to be snapped to them.  <br /></td></tr>
+<tr class="separator:a2a6d31c75429ee339bd416cacc229cf9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aef4acceae620dfa920c81351bce72a91" id="r_aef4acceae620dfa920c81351bce72a91"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; 3 &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aef4acceae620dfa920c81351bce72a91">points</a> () override</td></tr>
+<tr class="separator:aef4acceae620dfa920c81351bce72a91"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Combines multiple <code><a class="el" href="classhexed_1_1Surface__geom.html" title="Represents a surface geometry implicitly for meshing.">Surface_geom</a></code>s into one. </p>
 <p>The nearest point to the compound geometry is the nearest of the nearest points on the component geometries and the intersection set is the union of the intersection sets of the components. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="ab93eee9323238e75ad0b98c580607c8a" name="ab93eee9323238e75ad0b98c580607c8a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab93eee9323238e75ad0b98c580607c8a">&#9670;&#160;</a></span>intersections()</h2>
+<a id="a2a6d31c75429ee339bd416cacc229cf9" name="a2a6d31c75429ee339bd416cacc229cf9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a6d31c75429ee339bd416cacc229cf9">&#9670;&#160;</a></span>edges()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; const <a class="el" href="classhexed_1_1Geom__edge.html">Geom_edge</a> &amp; &gt; hexed::Compound_geom::edges </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Returns a list of any geometry edges that require mesh edges to be snapped to them. </p>
+<p>Only used in 3D. Default implementation returns an empty sequence, but derived classes may override. </p>
+
+<p>Reimplemented from <a class="el" href="classhexed_1_1Surface__geom.html#a7e9c150ba52e044a4c95f85b304ba976">hexed::Surface_geom</a>.</p>
+
+</div>
+</div>
+<a id="a817a36f19b1e5abf8a9560314e8d2d0b" name="a817a36f19b1e5abf8a9560314e8d2d0b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a817a36f19b1e5abf8a9560314e8d2d0b">&#9670;&#160;</a></span>intersections()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -165,7 +200,12 @@ Public Member Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;</td>          <td class="paramname"><span class="paramname"><em>point1</em></span>&#160;)</td>
+          <td class="paramtype"><a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt;&gt;</td>          <td class="paramname"><span class="paramname"><em>point1</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool</td>          <td class="paramname"><span class="paramname"><em>high_precision</em></span><span class="paramdefsep"> = </span><span class="paramdefval">true</span>&#160;)</td>
         </tr>
       </table>
   </td>
@@ -176,9 +216,9 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Computes the set of intersection points between a line and the surface. </p>
-<p>The line is defined parametrically to be the set of points \( [\text{point0}] + t [\text{point1}] \) for all \( t \in \mathbb{R} \). Returns the (potentially empty) set of \( t \) values where the line intersects the surface. </p>
+<p>The line is defined parametrically to be the set of points \( [\text{point0}] + t [\text{point1}] \) for all \( t \in \mathbb{R} \). Returns the (potentially empty) set of \( t \) values where the line intersects the surface. </p><dl class="deprecated"><dt><b><a class="el" href="deprecated.html#_deprecated000001">Deprecated</a></b></dt><dd>Newer methods should be based purely on nearest point projections. </dd></dl>
 
-<p>Implements <a class="el" href="classhexed_1_1Surface__geom.html#a38ec14ffea92f0b1c1e3cf3a3597ffb8">hexed::Surface_geom</a>.</p>
+<p>Implements <a class="el" href="classhexed_1_1Surface__geom.html#a44b6389734d87965f2fe76f02a822dc7">hexed::Surface_geom</a>.</p>
 
 </div>
 </div>
@@ -225,6 +265,33 @@ Public Member Functions</h2></td></tr>
 </dl>
 
 <p>Implements <a class="el" href="classhexed_1_1Surface__geom.html#ac5fce4db8860381c8ddf56e92abf82e4">hexed::Surface_geom</a>.</p>
+
+</div>
+</div>
+<a id="aef4acceae620dfa920c81351bce72a91" name="aef4acceae620dfa920c81351bce72a91"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aef4acceae620dfa920c81351bce72a91">&#9670;&#160;</a></span>points()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classhexed_1_1next_1_1Sequence.html">next::Sequence</a>&lt; <a class="el" href="namespacehexed.html#aeef038f03a0676446e834deca06c6736">Mat</a>&lt; 3 &gt; &gt; hexed::Compound_geom::points </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Reimplemented from <a class="el" href="classhexed_1_1Surface__geom.html">hexed::Surface_geom</a>.</p>
 
 </div>
 </div>

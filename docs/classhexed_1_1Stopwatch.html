@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -135,11 +135,11 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a946b5bc30864048242cf770aac37a1a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Starts measuring time.  <br /></td></tr>
 <tr class="separator:a946b5bc30864048242cf770aac37a1a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad713d4ac2d938afca61d78958dc6808e" id="r_ad713d4ac2d938afca61d78958dc6808e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad713d4ac2d938afca61d78958dc6808e">pause</a> ()</td></tr>
-<tr class="memdesc:ad713d4ac2d938afca61d78958dc6808e"><td class="mdescLeft">&#160;</td><td class="mdescRight">pauses measurement and updates <code><a class="el" href="#a808f81ba4233ade51d2303f2c5a63c54" title="total elapsed time between start()s and stop()s since the last reset()">time()</a></code>  <br /></td></tr>
+<tr class="memdesc:ad713d4ac2d938afca61d78958dc6808e"><td class="mdescLeft">&#160;</td><td class="mdescRight">pauses measurement and updates <code><a class="el" href="#a808f81ba4233ade51d2303f2c5a63c54" title="time currently on the stopwatch">time()</a></code>  <br /></td></tr>
 <tr class="separator:ad713d4ac2d938afca61d78958dc6808e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aaa1b27e06e2190fd01b69322ce0dc576" id="r_aaa1b27e06e2190fd01b69322ce0dc576"><td class="memItemLeft" align="right" valign="top"><a id="aaa1b27e06e2190fd01b69322ce0dc576" name="aaa1b27e06e2190fd01b69322ce0dc576"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>reset</b> ()</td></tr>
-<tr class="memdesc:aaa1b27e06e2190fd01b69322ce0dc576"><td class="mdescLeft">&#160;</td><td class="mdescRight">resets <code><a class="el" href="#a808f81ba4233ade51d2303f2c5a63c54" title="total elapsed time between start()s and stop()s since the last reset()">time()</a></code> to zero <br /></td></tr>
+<tr class="memdesc:aaa1b27e06e2190fd01b69322ce0dc576"><td class="mdescLeft">&#160;</td><td class="mdescRight">resets <code><a class="el" href="#a808f81ba4233ade51d2303f2c5a63c54" title="time currently on the stopwatch">time()</a></code> to zero <br /></td></tr>
 <tr class="separator:aaa1b27e06e2190fd01b69322ce0dc576"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a31fe2fe416c25427f55e5183cd7e0054" id="r_a31fe2fe416c25427f55e5183cd7e0054"><td class="memItemLeft" align="right" valign="top"><a id="a31fe2fe416c25427f55e5183cd7e0054" name="a31fe2fe416c25427f55e5183cd7e0054"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>running</b> () const</td></tr>
@@ -149,9 +149,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>running</b> () const<
 int&#160;</td><td class="memItemRight" valign="bottom"><b>n_calls</b> () const</td></tr>
 <tr class="memdesc:a9144a8dc8fa288b798f4a01f568a3aed"><td class="mdescLeft">&#160;</td><td class="mdescRight">number of times the stopwatch has been <code>stop</code>ped. <br /></td></tr>
 <tr class="separator:a9144a8dc8fa288b798f4a01f568a3aed"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a808f81ba4233ade51d2303f2c5a63c54" id="r_a808f81ba4233ade51d2303f2c5a63c54"><td class="memItemLeft" align="right" valign="top"><a id="a808f81ba4233ade51d2303f2c5a63c54" name="a808f81ba4233ade51d2303f2c5a63c54"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><b>time</b> () const</td></tr>
-<tr class="memdesc:a808f81ba4233ade51d2303f2c5a63c54"><td class="mdescLeft">&#160;</td><td class="mdescRight">total elapsed time between <code><a class="el" href="#a946b5bc30864048242cf770aac37a1a1" title="Starts measuring time.">start()</a></code>s and <code>stop()</code>s since the last <code><a class="el" href="#aaa1b27e06e2190fd01b69322ce0dc576" title="resets time() to zero">reset()</a></code> <br /></td></tr>
+<tr class="memitem:a808f81ba4233ade51d2303f2c5a63c54" id="r_a808f81ba4233ade51d2303f2c5a63c54"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a808f81ba4233ade51d2303f2c5a63c54">time</a> () const</td></tr>
+<tr class="memdesc:a808f81ba4233ade51d2303f2c5a63c54"><td class="mdescLeft">&#160;</td><td class="mdescRight">time currently on the stopwatch  <br /></td></tr>
 <tr class="separator:a808f81ba4233ade51d2303f2c5a63c54"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a230d13dbe5f4c13bed7b419249aa2cab" id="r_a230d13dbe5f4c13bed7b419249aa2cab"><td class="memItemLeft" align="right" valign="top"><a id="a230d13dbe5f4c13bed7b419249aa2cab" name="a230d13dbe5f4c13bed7b419249aa2cab"></a>
 <a class="el" href="classhexed_1_1Stopwatch.html">Stopwatch</a>&#160;</td><td class="memItemRight" valign="bottom"><b>operator+</b> (<a class="el" href="classhexed_1_1Stopwatch.html">Stopwatch</a> other) const</td></tr>
@@ -180,7 +179,7 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>time</b> () const</
       </table>
 </div><div class="memdoc">
 
-<p>pauses measurement and updates <code><a class="el" href="#a808f81ba4233ade51d2303f2c5a63c54" title="total elapsed time between start()s and stop()s since the last reset()">time()</a></code> </p>
+<p>pauses measurement and updates <code><a class="el" href="#a808f81ba4233ade51d2303f2c5a63c54" title="time currently on the stopwatch">time()</a></code> </p>
 <p>Throws an exception if not running. </p>
 
 </div>
@@ -202,6 +201,26 @@ double&#160;</td><td class="memItemRight" valign="bottom"><b>time</b> () const</
 
 <p>Starts measuring time. </p>
 <p>Throws an exception if already running. </p>
+
+</div>
+</div>
+<a id="a808f81ba4233ade51d2303f2c5a63c54" name="a808f81ba4233ade51d2303f2c5a63c54"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a808f81ba4233ade51d2303f2c5a63c54">&#9670;&#160;</a></span>time()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double hexed::Stopwatch::time </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>time currently on the stopwatch </p>
+<p>Specifically, the total elapsed time between <code><a class="el" href="#a946b5bc30864048242cf770aac37a1a1" title="Starts measuring time.">start()</a></code>s and <code>stop()</code>s since the last <code><a class="el" href="#aaa1b27e06e2190fd01b69322ce0dc576" title="resets time() to zero">reset()</a></code>, plus time since last <code><a class="el" href="#a946b5bc30864048242cf770aac37a1a1" title="Starts measuring time.">start()</a></code> if <code><a class="el" href="#a31fe2fe416c25427f55e5183cd7e0054" title="false if the stopwatch has been stopped since the last time it was started">running()</a></code>. </p>
 
 </div>
 </div>

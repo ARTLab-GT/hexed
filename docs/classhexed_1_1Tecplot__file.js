@@ -16,6 +16,5 @@ var classhexed_1_1Tecplot__file =
     [ "Tecplot_file", "classhexed_1_1Tecplot__file.html#aa19076aa5a81880b542a7e83e2eeb4cc", null ],
     [ "Tecplot_file", "classhexed_1_1Tecplot__file.html#a9bd6db599d5aa2a0e75480cae012acc3", null ],
     [ "operator=", "classhexed_1_1Tecplot__file.html#a0cf1d2dc1dfc9ff0df7859ec2f61e8f0", null ],
-    [ "write_block", "classhexed_1_1Tecplot__file.html#a16b5268bae4acb20bd24baf4ef647104", null ],
-    [ "write_unstruct", "classhexed_1_1Tecplot__file.html#abdc83b038f4b548c336b444f5287c158", null ]
+    [ "write_block", "classhexed_1_1Tecplot__file.html#a16b5268bae4acb20bd24baf4ef647104", null ]
 ];

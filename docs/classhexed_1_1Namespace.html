@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -153,13 +153,16 @@ template&lt;typename T &gt; </td></tr>
 template&lt;typename T &gt; </td></tr>
 <tr class="memitem:ab9c225c488e67515abf65b9a82044f9f"><td class="memTemplItemLeft" align="right" valign="top">std::optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>lookup</b> (std::string name)</td></tr>
 <tr class="separator:ab9c225c488e67515abf65b9a82044f9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a298420c34946dae6d3c72052907990a0" id="r_a298420c34946dae6d3c72052907990a0"><td class="memTemplParams" colspan="2"><a id="a298420c34946dae6d3c72052907990a0" name="a298420c34946dae6d3c72052907990a0"></a>
-template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a298420c34946dae6d3c72052907990a0"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><b>get</b> (std::string name)</td></tr>
-<tr class="separator:a298420c34946dae6d3c72052907990a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a658f382f2a1fd31278b2ec4c996e4307" id="r_a658f382f2a1fd31278b2ec4c996e4307"><td class="memTemplParams" colspan="2"><a id="a658f382f2a1fd31278b2ec4c996e4307" name="a658f382f2a1fd31278b2ec4c996e4307"></a>
+template&lt;typename T , typename Error_type  = std::runtime_error&gt; </td></tr>
+<tr class="memitem:a658f382f2a1fd31278b2ec4c996e4307"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><b>get</b> (std::string name, std::string message=&quot;&quot;)</td></tr>
+<tr class="separator:a658f382f2a1fd31278b2ec4c996e4307"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a87a814c5bab8340eadf8317162ebfdfb" id="r_a87a814c5bab8340eadf8317162ebfdfb"><td class="memItemLeft" align="right" valign="top"><a id="a87a814c5bab8340eadf8317162ebfdfb" name="a87a814c5bab8340eadf8317162ebfdfb"></a>
 std::vector&lt; std::string &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>names</b> () const</td></tr>
 <tr class="separator:a87a814c5bab8340eadf8317162ebfdfb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae86bdf10003a84c30cc90a3e5d6d3027" id="r_ae86bdf10003a84c30cc90a3e5d6d3027"><td class="memItemLeft" align="right" valign="top"><a id="ae86bdf10003a84c30cc90a3e5d6d3027" name="ae86bdf10003a84c30cc90a3e5d6d3027"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>assign_array</b> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt;, std::string name)</td></tr>
+<tr class="separator:ae86bdf10003a84c30cc90a3e5d6d3027"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aadff42da9233ad34f073e58924318397" id="r_aadff42da9233ad34f073e58924318397"><td class="memItemLeft" align="right" valign="top"><a id="aadff42da9233ad34f073e58924318397" name="aadff42da9233ad34f073e58924318397"></a>
 template&lt;&gt; </td></tr>
 <tr class="memitem:aadff42da9233ad34f073e58924318397"><td class="memTemplItemLeft" align="right" valign="top">std::map&lt; std::string, std::unique_ptr&lt; <a class="el" href="classhexed_1_1Namespace_1_1Variable.html">Namespace::Variable</a>&lt; int &gt; &gt; &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>_get_map</b> ()</td></tr>
@@ -172,6 +175,26 @@ template&lt;&gt; </td></tr>
 template&lt;&gt; </td></tr>
 <tr class="memitem:a5631c351defa80cb357b08709f008402"><td class="memTemplItemLeft" align="right" valign="top">std::map&lt; std::string, std::unique_ptr&lt; <a class="el" href="classhexed_1_1Namespace_1_1Variable.html">Namespace::Variable</a>&lt; std::string &gt; &gt; &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>_get_map</b> ()</td></tr>
 <tr class="separator:a5631c351defa80cb357b08709f008402"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9b19e1699a601977d482dd7a59aff52f" id="r_a9b19e1699a601977d482dd7a59aff52f"><td class="memItemLeft" align="right" valign="top"><a id="a9b19e1699a601977d482dd7a59aff52f" name="a9b19e1699a601977d482dd7a59aff52f"></a>
+template&lt;&gt; </td></tr>
+<tr class="memitem:a9b19e1699a601977d482dd7a59aff52f"><td class="memTemplItemLeft" align="right" valign="top">std::map&lt; std::string, std::unique_ptr&lt; <a class="el" href="classhexed_1_1Namespace_1_1Variable.html">Namespace::Variable</a>&lt; <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; &gt; &gt; &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>_get_map</b> ()</td></tr>
+<tr class="separator:a9b19e1699a601977d482dd7a59aff52f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aadff42da9233ad34f073e58924318397" id="r_aadff42da9233ad34f073e58924318397"><td class="memItemLeft" align="right" valign="top"><a id="aadff42da9233ad34f073e58924318397" name="aadff42da9233ad34f073e58924318397"></a>
+template&lt;&gt; </td></tr>
+<tr class="memitem:aadff42da9233ad34f073e58924318397"><td class="memTemplItemLeft" align="right" valign="top">std::map&lt; std::string, std::unique_ptr&lt; <a class="el" href="classhexed_1_1Namespace_1_1Variable.html">Namespace::Variable</a>&lt; int &gt; &gt; &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>_get_map</b> ()</td></tr>
+<tr class="separator:aadff42da9233ad34f073e58924318397"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa35e8300d847b69ec96d5dd20420198e" id="r_aa35e8300d847b69ec96d5dd20420198e"><td class="memItemLeft" align="right" valign="top"><a id="aa35e8300d847b69ec96d5dd20420198e" name="aa35e8300d847b69ec96d5dd20420198e"></a>
+template&lt;&gt; </td></tr>
+<tr class="memitem:aa35e8300d847b69ec96d5dd20420198e"><td class="memTemplItemLeft" align="right" valign="top">std::map&lt; std::string, std::unique_ptr&lt; <a class="el" href="classhexed_1_1Namespace_1_1Variable.html">Namespace::Variable</a>&lt; double &gt; &gt; &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>_get_map</b> ()</td></tr>
+<tr class="separator:aa35e8300d847b69ec96d5dd20420198e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5631c351defa80cb357b08709f008402" id="r_a5631c351defa80cb357b08709f008402"><td class="memItemLeft" align="right" valign="top"><a id="a5631c351defa80cb357b08709f008402" name="a5631c351defa80cb357b08709f008402"></a>
+template&lt;&gt; </td></tr>
+<tr class="memitem:a5631c351defa80cb357b08709f008402"><td class="memTemplItemLeft" align="right" valign="top">std::map&lt; std::string, std::unique_ptr&lt; <a class="el" href="classhexed_1_1Namespace_1_1Variable.html">Namespace::Variable</a>&lt; std::string &gt; &gt; &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>_get_map</b> ()</td></tr>
+<tr class="separator:a5631c351defa80cb357b08709f008402"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9b19e1699a601977d482dd7a59aff52f" id="r_a9b19e1699a601977d482dd7a59aff52f"><td class="memItemLeft" align="right" valign="top"><a id="a9b19e1699a601977d482dd7a59aff52f" name="a9b19e1699a601977d482dd7a59aff52f"></a>
+template&lt;&gt; </td></tr>
+<tr class="memitem:a9b19e1699a601977d482dd7a59aff52f"><td class="memTemplItemLeft" align="right" valign="top">std::map&lt; std::string, std::unique_ptr&lt; <a class="el" href="classhexed_1_1Namespace_1_1Variable.html">Namespace::Variable</a>&lt; <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; double &gt; &gt; &gt; &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>_get_map</b> ()</td></tr>
+<tr class="separator:a9b19e1699a601977d482dd7a59aff52f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
@@ -187,6 +210,10 @@ template&lt;&gt; </td></tr>
 template&lt;&gt; </td></tr>
 <tr class="memitem:a11f95d5069a75d4fdec3143f9addeaf0"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><b>type_name</b> ()</td></tr>
 <tr class="separator:a11f95d5069a75d4fdec3143f9addeaf0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a11f95d5069a75d4fdec3143f9addeaf0" id="r_a11f95d5069a75d4fdec3143f9addeaf0"><td class="memItemLeft" align="right" valign="top"><a id="a11f95d5069a75d4fdec3143f9addeaf0" name="a11f95d5069a75d4fdec3143f9addeaf0"></a>
+template&lt;&gt; </td></tr>
+<tr class="memitem:a11f95d5069a75d4fdec3143f9addeaf0"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><b>type_name</b> ()</td></tr>
+<tr class="separator:a11f95d5069a75d4fdec3143f9addeaf0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -194,8 +221,9 @@ Public Attributes</h2></td></tr>
 std::vector&lt; std::shared_ptr&lt; <a class="el" href="classhexed_1_1Namespace.html">Namespace</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>supers</b></td></tr>
 <tr class="separator:aa6dc94c2c196578bacd4091efccf7d74"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<hr/>The documentation for this class was generated from the following file:<ul>
+<hr/>The documentation for this class was generated from the following files:<ul>
 <li>/home/micaiah/Desktop/hexed/include/<b>Namespace.hpp</b></li>
+<li>/home/micaiah/Desktop/hexed/libhexed/<b>Namespace.cpp</b></li>
 </ul>
 </div><!-- contents -->
 </div><!-- doc-content -->

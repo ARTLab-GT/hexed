@@ -6,6 +6,6 @@ var classhexed_1_1Complete__element__container =
     [ "elem_handles", "classhexed_1_1Complete__element__container.html#ae3a44c6060d4353381815c2c3834a4eb", null ],
     [ "element_view", "classhexed_1_1Complete__element__container.html#ac4631f7674fe1875ce0f613618e0cf20", null ],
     [ "elements", "classhexed_1_1Complete__element__container.html#a0d8ac83bf60ac5929f0c2325f2e47db6", null ],
-    [ "emplace", "classhexed_1_1Complete__element__container.html#a9b93b2b8dc08cfacd4f56705cba73f1b", null ],
+    [ "emplace", "classhexed_1_1Complete__element__container.html#a9981e97f8e5288f0473ce8006a0cd484", null ],
     [ "write_sns", "classhexed_1_1Complete__element__container.html#a549cf6f236532f760b98a5322ed7ab2c", null ]
 ];

@@ -40,7 +40,7 @@ MathJax.Hub.Config({
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">hexed<span id="projectnumber">&#160;0.3.0</span>
+   <div id="projectname">hexed<span id="projectnumber">&#160;0.4.0</span>
    </div>
   </td>
     <td>        <div id="MSearchBox" class="MSearchBoxInactive">
@@ -123,6 +123,7 @@ $(function(){initNavTree('Array_8hpp.html',''); initResizable(true); });
 <p>Defines `Array` and related macros, functions, and constants.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;vector&gt;</code><br />
+<code>#include &lt;typeinfo&gt;</code><br />
 <code>#include &quot;<a class="el" href="assert_8hpp.html">assert.hpp</a>&quot;</code><br />
 <code>#include &quot;math.hpp&quot;</code><br />
 <code>#include &quot;Iterator.hpp&quot;</code><br />
@@ -160,6 +161,9 @@ Macros</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a06030a800123044d5a9a0507a8235241" id="r_a06030a800123044d5a9a0507a8235241"><td class="memItemLeft" align="right" valign="top"><a id="a06030a800123044d5a9a0507a8235241" name="a06030a800123044d5a9a0507a8235241"></a>
+std::vector&lt; <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>hexed::hypercubes</b> (<a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> n_var, <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> n_dim, <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a> row_size)</td></tr>
+<tr class="separator:a06030a800123044d5a9a0507a8235241"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae27b3bcf6f7de39d0acc27b76f2ad684" id="r_ae27b3bcf6f7de39d0acc27b76f2ad684"><td class="memTemplParams" colspan="2"><a id="ae27b3bcf6f7de39d0acc27b76f2ad684" name="ae27b3bcf6f7de39d0acc27b76f2ad684"></a>
 template&lt;typename T &gt; </td></tr>
 <tr class="memitem:ae27b3bcf6f7de39d0acc27b76f2ad684"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>hexed::operator-</b> (const <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt; &amp;op0, const <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt; &amp;op1)</td></tr>
@@ -252,17 +256,25 @@ template&lt;typename T &gt; </td></tr>
 template&lt;typename T &gt; </td></tr>
 <tr class="memitem:ae4c439c2c2bd228b0e7457a7caf9da88"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>hexed::operator+</b> (const <a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt; &amp;op0)</td></tr>
 <tr class="separator:ae4c439c2c2bd228b0e7457a7caf9da88"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac640611c43ea8669be238af81074bd85" id="r_ac640611c43ea8669be238af81074bd85"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:ac640611c43ea8669be238af81074bd85"><td class="memTemplItemLeft" align="right" valign="top">std::string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacehexed.html#ac640611c43ea8669be238af81074bd85">hexed::to_string</a> (<a class="el" href="classhexed_1_1Array.html">Array</a>&lt; T &gt; arr)</td></tr>
+<tr class="memdesc:ac640611c43ea8669be238af81074bd85"><td class="mdescLeft">&#160;</td><td class="mdescRight">Overload of <code><a class="el" href="namespacehexed.html#ac640611c43ea8669be238af81074bd85" title="Overload of hexed::to_string for Arrays.">hexed::to_string</a></code> for <code><a class="el" href="classhexed_1_1Array.html" title="Represents a dynamic-sized multidimensional array.">Array</a></code>s.  <br /></td></tr>
+<tr class="separator:ac640611c43ea8669be238af81074bd85"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
-<tr class="memitem:aeedbde2620b830e04cbce2c59114cc88" id="r_aeedbde2620b830e04cbce2c59114cc88"><td class="memItemLeft" align="right" valign="top"><a id="aeedbde2620b830e04cbce2c59114cc88" name="aeedbde2620b830e04cbce2c59114cc88"></a>
-constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>hexed::whatever</b> = -1</td></tr>
-<tr class="memdesc:aeedbde2620b830e04cbce2c59114cc88"><td class="mdescLeft">&#160;</td><td class="mdescRight">used in <code><a class="el" href="classhexed_1_1Array.html" title="Represents a dynamic-sized multidimensional array.">Array</a>&lt;T&gt;::reshaped()</code> <br /></td></tr>
-<tr class="separator:aeedbde2620b830e04cbce2c59114cc88"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6fd1be198604b9305aae6b5e4b60098c" id="r_a6fd1be198604b9305aae6b5e4b60098c"><td class="memItemLeft" align="right" valign="top"><a id="a6fd1be198604b9305aae6b5e4b60098c" name="a6fd1be198604b9305aae6b5e4b60098c"></a>
-constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>hexed::same</b> = -2</td></tr>
-<tr class="memdesc:a6fd1be198604b9305aae6b5e4b60098c"><td class="mdescLeft">&#160;</td><td class="mdescRight">used in <code><a class="el" href="classhexed_1_1Array.html" title="Represents a dynamic-sized multidimensional array.">Array</a>&lt;T&gt;::reshaped()</code> <br /></td></tr>
-<tr class="separator:a6fd1be198604b9305aae6b5e4b60098c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a625cbcf7c42dca27fe6e6cb391b04591" id="r_a625cbcf7c42dca27fe6e6cb391b04591"><td class="memItemLeft" align="right" valign="top"><a id="a625cbcf7c42dca27fe6e6cb391b04591" name="a625cbcf7c42dca27fe6e6cb391b04591"></a>
+constexpr <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><b>hexed::whatever</b> = -1</td></tr>
+<tr class="memdesc:a625cbcf7c42dca27fe6e6cb391b04591"><td class="mdescLeft">&#160;</td><td class="mdescRight">used in <code><a class="el" href="classhexed_1_1Array.html#ac3a874ddf5ce60cc92a3bd4ec44358de" title="Returns an array referencing the same data as this but with a different shape.">Array::reshaped()</a></code> <br /></td></tr>
+<tr class="separator:a625cbcf7c42dca27fe6e6cb391b04591"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a456d307d651fdc5c071be1acc28e6a0b" id="r_a456d307d651fdc5c071be1acc28e6a0b"><td class="memItemLeft" align="right" valign="top"><a id="a456d307d651fdc5c071be1acc28e6a0b" name="a456d307d651fdc5c071be1acc28e6a0b"></a>
+constexpr <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><b>hexed::same</b> = -2</td></tr>
+<tr class="memdesc:a456d307d651fdc5c071be1acc28e6a0b"><td class="mdescLeft">&#160;</td><td class="mdescRight">used in <code><a class="el" href="classhexed_1_1Array.html#ac3a874ddf5ce60cc92a3bd4ec44358de" title="Returns an array referencing the same data as this but with a different shape.">Array::reshaped()</a></code> <br /></td></tr>
+<tr class="separator:a456d307d651fdc5c071be1acc28e6a0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29379601c4efd3a7e573e925da55babb" id="r_a29379601c4efd3a7e573e925da55babb"><td class="memItemLeft" align="right" valign="top"><a id="a29379601c4efd3a7e573e925da55babb" name="a29379601c4efd3a7e573e925da55babb"></a>
+constexpr <a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&#160;</td><td class="memItemRight" valign="bottom"><b>hexed::end</b> = std::numeric_limits&lt;<a class="el" href="namespacehexed.html#ac9dafa549f084e0982bb69ecaaad7e1f">Int</a>&gt;::max()</td></tr>
+<tr class="memdesc:a29379601c4efd3a7e573e925da55babb"><td class="mdescLeft">&#160;</td><td class="mdescRight">can be passed to <code>Array::operator()</code> <br /></td></tr>
+<tr class="separator:a29379601c4efd3a7e573e925da55babb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Defines `Array` and related macros, functions, and constants. </p>
@@ -283,15 +295,15 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>hexed::same<
 </div><div class="memdoc">
 <b>Value:</b><div class="fragment"><div class="line">    Array&lt;T&gt;&amp; <span class="keyword">operator</span> BIN_OP(<span class="keyword">const</span> Array&lt;T&gt;&amp; that) { \</div>
 <div class="line">      HEXED_ARRAY_ASSERT(that.size() == size(), <span class="stringliteral">&quot;array sizes must match for arithmetic&quot;</span>); \</div>
-<div class="line">      for (<span class="keywordtype">int</span> i = 0; i &lt; size(); ++i) { \</div>
-<div class="line">        _data[i] BIN_OP that[i]; \</div>
+<div class="line">      for (Int i = 0; i &lt; size(); ++i) { \</div>
+<div class="line">        (*this)[i] BIN_OP that[i]; \</div>
 <div class="line">      } \</div>
 <div class="line">      <span class="keywordflow">return</span> *<span class="keyword">this</span>; \</div>
 <div class="line">    } \</div>
 <div class="line">    <span class="keyword">template</span> &lt;<span class="keyword">typename</span> Scalar&gt; \</div>
 <div class="line">    Array&lt;T&gt;&amp; <span class="keyword">operator</span> BIN_OP(Scalar s) { \</div>
-<div class="line">      for (<span class="keywordtype">int</span> i = 0; i &lt; size(); ++i) { \</div>
-<div class="line">        _data[i] BIN_OP s; \</div>
+<div class="line">      for (Int i = 0; i &lt; size(); ++i) { \</div>
+<div class="line">        (*this)[i] BIN_OP s; \</div>
 <div class="line">      } \</div>
 <div class="line">      <span class="keywordflow">return</span> *<span class="keyword">this</span>; \</div>
 <div class="line">    } \</div>
@@ -316,19 +328,19 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>hexed::same<
 <div class="line">  Array&lt;T&gt; <span class="keyword">operator</span> BIN_OP(<span class="keyword">const</span> Array&lt;T&gt;&amp; op0, <span class="keyword">const</span> Array&lt;T&gt;&amp; op1) { \</div>
 <div class="line">    HEXED_ARRAY_ASSERT(op0.size() == op1.size(), <span class="stringliteral">&quot;array sizes must match for arithmetic&quot;</span>); \</div>
 <div class="line">    Array&lt;T&gt; result = op0.copy(); \</div>
-<div class="line">    for (<span class="keywordtype">int</span> i = 0; i &lt; op0.size(); ++i) result[i] = op0[i] BIN_OP op1[i]; \</div>
+<div class="line">    for (Int i = 0; i &lt; op0.size(); ++i) result[i] = op0[i] BIN_OP op1[i]; \</div>
 <div class="line">    <span class="keywordflow">return</span> result; \</div>
 <div class="line">  } \</div>
 <div class="line">  <span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt; \</div>
 <div class="line">  Array&lt;T&gt; <span class="keyword">operator</span> BIN_OP(<span class="keyword">const</span> Array&lt;T&gt;&amp; op0, <span class="keyword">const</span> T&amp; op1) { \</div>
 <div class="line">    Array&lt;T&gt; result = op0.copy(); \</div>
-<div class="line">    for (<span class="keywordtype">int</span> i = 0; i &lt; op0.size(); ++i) result[i] = op0[i] BIN_OP op1; \</div>
+<div class="line">    for (Int i = 0; i &lt; op0.size(); ++i) result[i] = op0[i] BIN_OP op1; \</div>
 <div class="line">    <span class="keywordflow">return</span> result; \</div>
 <div class="line">  } \</div>
 <div class="line">  <span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt; \</div>
 <div class="line">  Array&lt;T&gt; <span class="keyword">operator</span> BIN_OP(<span class="keyword">const</span> T&amp; op0, <span class="keyword">const</span> Array&lt;T&gt;&amp; op1) { \</div>
 <div class="line">    Array&lt;T&gt; result = op1.copy(); \</div>
-<div class="line">    for (<span class="keywordtype">int</span> i = 0; i &lt; op1.size(); ++i) result[i] = op0 BIN_OP op1[i]; \</div>
+<div class="line">    for (Int i = 0; i &lt; op1.size(); ++i) result[i] = op0 BIN_OP op1[i]; \</div>
 <div class="line">    <span class="keywordflow">return</span> result; \</div>
 <div class="line">  }</div>
 </div><!-- fragment -->
@@ -351,7 +363,7 @@ constexpr int&#160;</td><td class="memItemRight" valign="bottom"><b>hexed::same<
 <b>Value:</b><div class="fragment"><div class="line">  <span class="keyword">template</span> &lt;<span class="keyword">typename</span> T&gt; \</div>
 <div class="line">  Array&lt;T&gt; <span class="keyword">operator</span> UN_OP(<span class="keyword">const</span> Array&lt;T&gt;&amp; op0) { \</div>
 <div class="line">    Array&lt;T&gt; result = op0.copy(); \</div>
-<div class="line">    for (<span class="keywordtype">int</span> i = 0; i &lt; op0.size(); ++i) result[i] = UN_OP op0[i]; \</div>
+<div class="line">    for (Int i = 0; i &lt; op0.size(); ++i) result[i] = UN_OP op0[i]; \</div>
 <div class="line">    <span class="keywordflow">return</span> result; \</div>
 <div class="line">  }</div>
 </div><!-- fragment -->

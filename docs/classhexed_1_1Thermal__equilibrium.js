@@ -1,5 +1,5 @@
 var classhexed_1_1Thermal__equilibrium =
 [
-    [ "ghost_energy", "classhexed_1_1Thermal__equilibrium.html#a567c1ae7df87f6f1a776ee4af8ff8a72", null ],
-    [ "ghost_heat_flux", "classhexed_1_1Thermal__equilibrium.html#a28e1e74e0729e16c3f13921135ee85b7", null ]
+    [ "ghost_energy", "classhexed_1_1Thermal__equilibrium.html#a0a9b825f6ab2a9983320d2c2d6538330", null ],
+    [ "ghost_heat_flux", "classhexed_1_1Thermal__equilibrium.html#aa626ea2fa1d6083776a8164954cbc342", null ]
 ];

@@ -23,6 +23,6 @@ var classhexed_1_1Stream__printer =
       [ "reverse", "classhexed_1_1Stream__printer.html#a4aa4ba6a61de529620b2a7ad91bd0cb5a79f86b139de8afd39ef8a8864ce12dfd", null ],
       [ "hidden", "classhexed_1_1Stream__printer.html#a4aa4ba6a61de529620b2a7ad91bd0cb5ab1f1a31e1405f02644a4c6eb713779b3", null ]
     ] ],
-    [ "Stream_printer", "classhexed_1_1Stream__printer.html#a7d19f2b6b96841e7a2313c6c2ae085ea", null ],
-    [ "operator()", "classhexed_1_1Stream__printer.html#a5ce88a8ee3b52c2f8aabe4b9377d5e41", null ]
+    [ "Stream_printer", "classhexed_1_1Stream__printer.html#ac7c5f00367f2c1d34bae1c1383799947", null ],
+    [ "operator()", "classhexed_1_1Stream__printer.html#a0ea6f65805cc44cf7db63a5d7db36d9b", null ]
 ];
