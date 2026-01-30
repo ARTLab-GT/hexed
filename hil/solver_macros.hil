@@ -82,8 +82,12 @@ print_vars = print_vars + {total_mass = integral_field_density;}
 iterate = {
     update
     compute_residuals
-    $compute_force
-    $compute_heating
+    case0 = {}
+    case1 = {
+        $compute_force
+        $compute_heating
+    }
+    $$({case} + has_geometry)
     {compute initial residual for normalization}
     case0 = {}
     case1 = {
@@ -152,8 +156,12 @@ If you want those steps to be done automatically as well, use \ref simulate inst
 "}
 solve = {
     compute_residuals
-    $compute_force
-    $compute_heating
+    case0 = {}
+    case1 = {
+        $compute_force
+        $compute_heating
+    }
+    $$({case} + has_geometry)
     init_monitors
     $write_init
     $vis_init
@@ -331,19 +339,6 @@ set_ramping = {
         }
         $$({case} + (!hexed_ramped & ($ramp_if) != 0))
     }
-}
-
-vortex_gaussian = {(vortex_nondim_veloc*exp((1. - ((pos0 - freestream0/freestream2*flow_time)^2 + (pos1 - freestream1/freestream2*flow_time)^2)/vortex_argmax_radius^2)/2.))}
-vortex_scalar = {(1 - (heat_rat - 1.)/2*$vortex_gaussian^2)}
-vortex_momentum0 = {((freestream0/freestream2 - pos1/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed_expr)*$vortex_mass)}
-vortex_momentum1 = {((freestream1/freestream2 + pos0/vortex_argmax_radius*$vortex_gaussian*$freestream_sound_speed_expr)*$vortex_mass)}
-vortex_mass = {(freestream2*$vortex_scalar^(1./(heat_rat - 1.)))}
-vortex_energy = {($freestream_spec_int_ener*$vortex_scalar*$vortex_mass + 0.5*($vortex_momentum0^2 + $vortex_momentum1^2)/$vortex_mass)}
-vortex = {
-    momentum0 = $vortex_momentum0
-    momentum1 = $vortex_momentum1
-    density = $vortex_mass
-    energy = $vortex_energy
 }
 
 momentum_expr = {momentum0 = momentum0; momentum1 = momentum1; momentum2 = momentum2;}

@@ -554,7 +554,7 @@ Case::Case(std::string input_script)
     auto geom = _make_geom();
     if (geom.use_count()) {
       printers::info("  Fitting geometry...\n");
-      _has_geom = true;
+      _inter.variables->assign("has_geometry", 1);
       _solver().mesh().set_surface(geom, _make_bc(_vars("surface_bc")),
                                    _get_vector("flood_fill_start", _vari("n_dim")));
       _solver().calc_jacobian();

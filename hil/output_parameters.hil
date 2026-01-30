@@ -74,3 +74,6 @@ residual_momentum = 0.
 residual_density = 0.
 {"Residual of the energy equation."}
 residual_energy = 0.
+
+{"Will be set to \ref true if some surface geometry is loaded."}
+has_geometry = false
