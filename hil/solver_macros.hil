@@ -56,6 +56,8 @@ start = {
         print_vars = print_vars + unsteady_residual_expr
     }
     $$({case} + (!steady & implicit))
+    case1 = {iteration_expr = iteration_expr + {flow_time = flow_time; time_step = time_step;}}
+    $$({case} + !steady)
     println({    Monitor window: } + monitor_window)
 }
 

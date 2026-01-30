@@ -799,18 +799,18 @@ void Solver::_init_stage_storage(int stage) {
     Array<double> res_cache({n_res_cache, n_var, nq}, elem.residual_cache());
     Array<double> tss({nq}, elem.time_step_scale());
     if (_time_scheme == backward_euler) {
-      res_cache(n_res_cache - 1) = state/time_step;
+      res_cache(1 + elem.get_is_deformed()) = state/time_step;
     } else if (_time_scheme == crank_nicolson) {
       for (int i_var = 0; i_var < n_var; ++i_var) {
-        res_cache(n_res_cache - 1)(i_var) = res_cache(0)(i_var)/tss + state(i_var)/(.5*time_step);
+        res_cache(1 + elem.get_is_deformed())(i_var) = res_cache(0)(i_var)/tss + state(i_var)/(.5*time_step);
       }
     } else if (_time_scheme == dirk2) {
       if (stage) {
         for (int i_var = 0; i_var < n_var; ++i_var) {
-          res_cache(n_res_cache - 1)(i_var) += res_cache(0)(i_var)/tss*(1 - dirk2_gamma)/dirk2_gamma;
+          res_cache(1 + elem.get_is_deformed())(i_var) += res_cache(0)(i_var)/tss*(1 - dirk2_gamma)/dirk2_gamma;
         }
       } else {
-        res_cache(n_res_cache - 1) = state/(dirk2_gamma*time_step);
+        res_cache(1 + elem.get_is_deformed()) = state/(dirk2_gamma*time_step);
       }
     }
   }
@@ -964,7 +964,7 @@ void Solver::_update_recursive(int preti_level, double safety) {
 }
 
 void Solver::update() {
-  stopwatch.stopwatch.start(); // ready or not the clock is countin'
+  stopwatch.stopwatch.start();
   double safety = _namespace->get<double>("max_safety");
   double cheby_safety = _namespace->get<double>("cheby_safety");
   int inner = 0;

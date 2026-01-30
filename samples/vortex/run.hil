@@ -22,11 +22,9 @@ done = {flow_time >= 5.999e-3}
 time_step_done = {pseudotime_iteration > 400}
 time_step = 1e-3/4
 implicit_scheme = {dirk2}
-max_safety = 0.3
-print_freq = 10
-vis_freq = 100
+vis_freq = 1
 steady = false
-implicit = true
+amr = false
 
 $simulate
 integrand_field = {errsq = (density - $vortex_mass)^2}
